@@ -4,7 +4,7 @@
 
 **Time context:** July 2026. Version/price/regulatory claims trace to the source docs (which carry inline primary-source citations); treat exact `$`/dates as snapshots and pin *architecture*, not vendor IDs.
 
-**Source map:** `[research:models]`=01-llm-models-and-cost · `[research:voice]`=02-voice-ai · `[research:3d]`=03-3d-avatars · `[research:market]`=04-market-competitors · `[research:guidelines]`=05-clinical-guideline-grounding · `[research:regulatory]`=06-regulatory-compliance · `[research:assessment]`=07-assessment-science · `[stake:learners]`=01 · `[stake:educators]`=02 · `[stake:institution]`=03 · `[stake:policy]`=04 · `[stake:builders]`=05.
+**Source map:** `[research:models]`=01-llm-models-and-cost · `[research:voice]`=02-voice-ai · `[research:3d]`=03-3d-avatars · `[research:market]`=04-market-competitors · `[research:guidelines]`=05-clinical-guideline-grounding · `[research:regulatory]`=06-regulatory-compliance · `[research:assessment]`=07-assessment-science · `[research:fully-open-stack]`=11-fully-open-source-stack · `[stake:learners]`=01 · `[stake:educators]`=02 · `[stake:institution]`=03 · `[stake:policy]`=04 · `[stake:builders]`=05.
 
 ---
 
@@ -206,6 +206,12 @@
 ### 3.7 Enterprise-readiness gates (each is a potential veto)
 
 HECVAT 4 (321 Qs incl. 32-Q AI/ML section) · SOC 2 Type II · VPAT/WCAG 2.2 AA · annual third-party pen-test · encryption at rest (AES-256) + in transit (TLS 1.2+) · DPA/BAA templates ready · named subprocessor list + EU/UK residency · uptime SLA + status page · incident-response plan. Any one missing = weeks of delay or veto `[stake:institution]`. Certification roadmap: **ISO/IEC 42001** (AI management) + ISO 27001 + EU AI Act conformity as compounding procurement moats `[stake:policy]`.
+
+### 3.8 Open-source & sovereignty (buildable end-to-end on open source)
+
+- **No mandatory proprietary dependency.** AcuDx **must be buildable end-to-end on open source**: every layer has a **permissive-open default**, and any proprietary vendor is an **optional premium tier with a named open fallback**, never a build requirement. This holds for the layers earlier docs named a proprietary vendor for — voice (Deepgram/Cartesia/ElevenLabs → **Whisper large-v3 + TR-medical LoRA** / **Chatterbox v3**, both MIT), avatars (Anam/Tavus/HeyGen/Simli → **LivePortrait + MuseTalk**, both MIT + **Audio2Face-3D** + R3F), embeddings/rerank (Voyage/Cohere → **BGE-M3 / bge-reranker-v2-m3**, Apache), identity (Auth0/Okta → **Keycloak**, Apache; **ltijs** for LTI 1.3), realtime transport (**LiveKit** self-host, Apache), and the data plane (**Postgres + Valkey + NATS/Kafka + ClickHouse + SeaweedFS + OpenTofu**) — see the authoritative per-layer map in `[research:fully-open-stack]` (`docs/research/11-fully-open-source-stack.md`).
+- **Sovereign / air-gapped deployment is a supported target.** The platform must be deliverable as a **single self-hostable appliance a Türkiye ministry (T.C. Sağlık Bakanlığı / KVKK) or a privacy-max institution runs entirely on-prem with ZERO third-party data egress** — the compliance/residency answer for the on-prem SKU (AD-6, AD-7), satisfied *structurally* because no layer must phone home to a vendor `[research:fully-open-stack §A]`.
+- **License discipline is a build constraint, not a preference.** The default-open pick for each layer is chosen to be **commercially and clinically clean** (permissive MIT/Apache/BSD preferred). Non-commercial-weight traps (XTTS-v2/F5-TTS/InstantID-encoder/FLUX.1-dev), copyleft/relicensed components (Zitadel-AGPL, Redis/Terraform BSL/SSPL → use **Valkey/OpenTofu**), and medical Prohibited-Use terms (Gemma-3 / MedGemma HAI-DEF) are **flagged and avoided or isolated** per `[research:fully-open-stack]`. What is traded going fully open/air-gapped is *last-mile polish + ops-outsourcing* (top-end voice/avatar realism, the rare frontier-reasoning escalation), **not functional capability** — every layer has a working open path.
 
 ---
 

@@ -15,6 +15,19 @@ and grading are *identical* to the text path; voice only changes how the learner
 *arrives* and how the persona's utterance *leaves*. This is the load-bearing consequence of
 choosing the composable cascade over native speech-to-speech (invariant **V-1**).
 
+**Open-source-first (the DEFAULT).** The default AcuDx voice stack is **fully open and
+self-hostable** — open STT + open LLM + open TTS, orchestrated by self-hosted **LiveKit Agents**,
+served through the **Model Gateway** (arch/02). The proprietary vendors named throughout this doc
+(Deepgram, Cartesia, ElevenLabs, Gemini Live) are demoted to an **optional managed premium tier**,
+each with a named open fallback that is the actual default. This is what makes AcuDx
+**sovereign / air-gappable** for a Turkish ministry (Sağlık Bakanlığı / KVKK) or a privacy-max
+institution with **zero third-party data egress**, and what floors COGS. The open-source-by-default
+map is authoritative in [`../research/11-fully-open-source-stack.md`](../research/11-fully-open-source-stack.md)
+(§6 STT, §7 TTS, §8 orchestration); the open-first voice stack is specified in **§0 below**, and
+the vendor rows that follow are read as *"managed premium option → open default fallback."* The
+cascade architecture, latency budget, barge-in, and every invariant are **unchanged** — only the
+default *engine contents* of the STT and TTS boxes change.
+
 **Grounding & integration.** The STT/TTS/turn-taking technology selection is pinned in
 [`../research/02-voice-ai.md`](../research/02-voice-ai.md); this doc consumes it and does not
 re-derive vendor choices. The turn loop, `PersonaTurnInput`/`PersonaOutput`, `affect` schema,
@@ -61,20 +74,89 @@ completing an encounter (**V-5**).
 
 ---
 
+## 0. Open-source-first voice stack (the DEFAULT; vendors are optional premium)
+
+Every box in the cascade has a **permissive open, self-hosted default** and an **optional managed
+premium** with the same interface. Nothing below changes the turn loop, the gates, the clocks, or the
+latency *budget* (§4) — it changes which engine sits in the STT and TTS boxes by default. All open
+engines are served **through the Model Gateway / Voice Agent** exactly as the vendor engines are, so
+the boundary discipline in §14 (STT/TTS SDKs live only inside the Voice Agent) is unchanged.
+
+### 0.1 The default open engines (verified July 2026)
+
+| Stage | **OPEN default (self-hosted)** | License | Turkish | Optional managed premium | Why the vendor survives (only) as premium |
+|---|---|---|---|---|---|
+| **STT — Turkish + medical** | **Whisper large-v3 (+ large-v3-turbo) + TR-medical LoRA**, wrapped with **faster-whisper / WhisperX / WhisperLive** for streaming | ✅ MIT (Whisper, faster-whisper, WhisperLive); ⚠️ WhisperX BSD-2/-4 (verify) | ✅ **TR native** (LoRA closes medical WER) | **Deepgram Nova-3 Turkish** | ops-outsourced streaming, vendor SLA, lower p95 under burst |
+| **STT — EN / European streaming** | **NVIDIA Parakeet-tdt-0.6b-v3 / Canary / Nemotron-ASR-Streaming**; **Parakeet-1.1b-rnnt-multilingual** (this one *does* include TR) | ✅ CC-BY-4.0 | ⛔ Parakeet-tdt-v3 = **25 European langs, NO Turkish**; use 1.1b-rnnt or Whisper-TR for TR | **Deepgram Flux** | managed convenience only |
+| **STT — on-prem full-duplex** | **Kyutai STT (Unmute)** | ✅ CC-BY-4.0 | multilingual (verify TR) | — | — |
+| **TTS — expressive live (default)** | **Chatterbox Multilingual v3 (Resemble AI)** — 0.5B Llama backbone, **PerTh watermark on every self-hosted output** | ✅ **MIT** | ✅ **TR in the 23-lang set** | **ElevenLabs v3 / Cartesia Sonic-3** | top-end TR *emotional* realism for cinematic distress peaks |
+| **TTS — fast / edge / utility** | **Kokoro** (82M, CPU-capable) + **Piper** (edge) | ✅ Apache-2.0 (Kokoro); ✅ MIT (Piper) | ⛔ Kokoro **no TR** → **Piper has TR voices** (use Piper for TR edge/utility) | ElevenLabs Flash v2.5 | latency floor / last-resort fallback |
+| **Orchestration** | **LiveKit Agents** self-host (room-first, multiplayer §15) — or **Pipecat** (v1.0, Apr 2026) for the solo pipeline path | ✅ Apache-2.0 (LiveKit server + SDK); ✅ BSD-2 (Pipecat) | — | LiveKit Cloud / Pipecat Cloud | managed infra only; the SDK is identical |
+| **VAD / turn-taking** | **Silero VAD** + **LiveKit turn-detector** / **Pipecat Smart-Turn** | ✅ MIT | — | — | already open (unchanged §5–6) |
+| **Native S2S (cinematic on-prem)** | **Kyutai Moshi + Mimi codec** / **Ultravox** (bring-your-own-LLM) | ✅ CC-BY-4.0 (Moshi); ✅ MIT (Ultravox) | multilingual (Moshi verify TR; Ultravox inherits Qwen TR) | **Gemini Live 2.5** (§11, V-6) | raw fluidity where reasoning inspectability is waived |
+
+**Three license/coverage facts that pin the defaults** (from research/11 §6–8, web-verified Jul 2026):
+1. **Parakeet-tdt-0.6b-v3 has no Turkish** (25 European languages only) → the **Turkish** STT default is
+   **Whisper-v3 + TR-medical LoRA**, not Parakeet. Parakeet/Canary are the EN/EU streaming default.
+2. **Chatterbox v3 is the rare model that is MIT + Turkish + expressive + watermarked** — its embedded
+   **PerTh watermark** directly serves the EU AI Act Art. 50(2) synthetic-audio obligation (§8.4), so it
+   *replaces* ElevenLabs/Cartesia as the default and *helps* compliance rather than needing extra marking.
+3. **XTTS-v2 and F5-TTS are NOT shippable** (XTTS = CPML non-commercial with Coqui defunct → no license
+   purchasable; F5 weights = CC-BY-NC) — do **not** use them as a default; they are internal-experiment only.
+
+### 0.2 Default cascade (open) vs the same cascade with vendors
+
+```
+DEFAULT (open, sovereign-capable):
+  mic → LiveKit SFU → Voice Agent
+      → STT:  Whisper-v3 + TR-LoRA (faster-whisper streaming)   [TR]  |  Parakeet/Canary  [EN/EU]
+      → Encounter Service turn loop → Model Gateway (Qwen3, open) → FactAssertionGate + Safety
+      → TTS:  Chatterbox v3 (live, watermarked)  |  Piper/Kokoro (utility/edge)
+      → LiveKit → speaker + captions
+
+OPTIONAL MANAGED PREMIUM (same interface, per-tenant flag, BAA + region-pinned per AD-6):
+      STT: Deepgram Flux / Nova-3 Medical      TTS: Cartesia Sonic-3 (live) / cached ElevenLabs v3 (peaks)
+```
+
+The Voice Agent `SttConfig.chain` / `TtsConfig.liveEngine` (§14) select which engine serves; **the
+turn loop is unaware which one did.** A tenant flips a config from `whisper-tr`/`chatterbox` to
+`deepgram-flux`/`cartesia-sonic-3` — no code path changes. This is the same failover machinery §10
+already uses, extended so the *default entry* in each chain is open.
+
+### 0.3 Self-hosted latency reality (honest budget note)
+
+The §4 budget (`<800 ms p50` voice-to-voice) was computed against **managed** engine TTFB numbers
+(Deepgram Flux EoT ~180 ms, Cartesia TTFA ~90 ms). Self-hosted open engines meet it **only with the
+right serving**, and the honest deltas are:
+
+| Stage | Managed (§4 baseline) | Self-hosted open — reality |
+|---|---|---|
+| End-of-turn / STT final | Deepgram Flux ~180 ms EoT | **Whisper is not natively streaming**: use faster-whisper/WhisperLive VAD-chunking + Silero EoT; expect **~150–350 ms** EoT depending on chunk size and GPU. Parakeet/Canary streaming ~80 ms–1 s controllable (EN/EU). |
+| TTS time-to-first-audio | Cartesia Sonic-3 ~90 ms | **Chatterbox ~150–400 ms TTFA** on a warm GPU (heavier than Cartesia); **Piper/Kokoro ~<100 ms on CPU** for utility lines. Sentence-chunk streaming (§3) still applies. |
+| Net voice-to-voice p50 | ~525 ms | **~600–900 ms** on a warm, co-located single-GPU node; inside SLO for most turns, **tighter than managed** — mitigate with (a) GPU warm-pools (no cold start), (b) TensorRT-LLM/optimized Whisper builds, (c) the pre-rendered backchannel filler (§4.1) and cached emotional peaks (§8.1), which are engine-independent and cost $0 on replay. |
+
+**Rule:** open engines are the default; where a specific tenant/cohort has a **hard p95 latency SLO**
+(OSCE, high-burst) that a self-hosted node can't meet, that tenant may flip the STT/TTS box to the
+managed premium — a per-tenant knob, not a redesign. Air-gapped tenants accept the self-hosted latency
+envelope (still within budget for the vast majority of turns) as the price of zero egress. Cost of the
+two paths is compared in §12.4.
+
+---
+
 ## 2. End-to-end signal path
 
 ```mermaid
 flowchart LR
   MIC[Learner mic<br/>Opus 48kHz] --> LK[LiveKit SFU<br/>WebRTC room]
   LK --> VA[Voice Agent<br/>LiveKit Agents worker]
-  VA --> STT[Deepgram Flux<br/>+ Nova-3 Medical keyterms]
+  VA --> STT[STT: Whisper-v3+TR-LoRA default<br/>OR Deepgram Flux premium]
   STT -->|partial + EoT| VA
   VA -->|final transcript + confidence| ES[Encounter Service<br/>turn loop]
   ES --> DIR[Director + FactAssertionGate<br/>+ Safety Interceptor]
   DIR -->|ChatRequest stream:true| MG[Model Gateway chat<br/>Haiku 4.5 to Sonnet 5]
   MG -->|text deltas + affect| ES
   ES -->|utterance text + affect + persona voice_id| VA
-  VA --> TTS[Cartesia Sonic-3 live<br/>OR cached ElevenLabs v3 peak]
+  VA --> TTS[TTS: Chatterbox v3 default<br/>OR Cartesia/ElevenLabs premium]
   TTS -->|Opus frames| LK
   LK --> SPK[Learner speaker<br/>+ live captions]
   ES -.append EncounterEvent.-> EL[(Event Log<br/>hash-chained)]
@@ -96,10 +178,10 @@ transcript out-of-band (§9).
 | Mic capture, Opus encode | Client (LiveKit client) | yes | none |
 | SFU transport | **Realtime Media** (LiveKit SFU) | yes | none |
 | VAD / endpointing / barge-in / STT / TTS orchestration | **Voice Pipeline** (LiveKit Agents worker) | yes | none |
-| STT inference | Deepgram Flux + Nova-3 Medical | yes | none |
+| STT inference | **Whisper-v3 + TR-LoRA (default)** / Parakeet-Canary [EN/EU]; Deepgram Flux + Nova-3 (premium) | yes | none |
 | Turn loop, speaker select, fact resolution, gates | **Encounter Service** + **Director** (arch/01) | yes | Director resolves from **Case State Store** |
 | Persona text generation | **Persona Agents** via **Model Gateway** `chat()` (arch/02) | yes | **none** (two-tier boundary) |
-| TTS inference | Cartesia Sonic-3 (live) / cached ElevenLabs v3 (peaks) | yes | none |
+| TTS inference | **Chatterbox v3 (default, watermarked)** / Piper-Kokoro (utility); Cartesia Sonic-3 + cached ElevenLabs v3 (premium peaks) | yes | none |
 | Assessment transcript | **Voice Pipeline** batch re-STT → **Assessment Service** | no (clock 3) | verbatim record |
 
 The single most important row: the persona LLM has **no clinical authority** in voice, exactly as in
@@ -454,8 +536,12 @@ interrupts the encounter.
 **Every** synthesized or replayed audio segment is machine-detectably marked with **C2PA Content
 Credentials** at generation time, per arch/09 §7 and **V-3**/regulatory. The manifest records
 `{generator: "acudx-voice", voice_id, model_config_id, created_at, synthetic:true}` and is signed with
-a KMS key. Peak clips carry their C2PA manifest baked at render time; live Cartesia output carries a
-per-segment manifest attached by the Voice Agent. The Art. 50(1) **AI-disclosure** ("you are speaking
+a KMS key. Peak clips carry their C2PA manifest baked at render time; live TTS output carries a
+per-segment manifest attached by the Voice Agent. **On the open default, Chatterbox v3 additionally
+embeds a PerTh audio watermark in every self-hosted output** — a second, in-signal marking layer
+that complements the C2PA manifest and satisfies Art. 50(2) even if a manifest is stripped in
+transit; the managed premium engines (Cartesia/ElevenLabs) rely on the C2PA manifest alone, so the
+open path is here the *stronger* provenance posture, not the weaker one. The Art. 50(1) **AI-disclosure** ("you are speaking
 with an AI patient") is acknowledged at `encounter.start` (`ai_disclosure_ack=true`, arch/09 §7) and
 is a precondition the Encounter Service checks before the first TTS byte.
 
@@ -569,8 +655,35 @@ encounter (~4 patient turns/min):
    before it ever compromises safety.
 
 **Scale sanity check** (research/02): a 5,000-student cohort at ~180k voice-minutes/month lands at
-**~$9k–16k/month** on the composable default, vs **$50k+** on naive uncached OpenAI Realtime — the gap
-that makes cohort-scale voice viable.
+**~$9k–16k/month** on the *managed-composable* default, vs **$50k+** on naive uncached OpenAI Realtime —
+the gap that makes cohort-scale voice viable.
+
+### 12.4 Open self-hosted vs managed voice — COGS (research/11 §B)
+
+The table above is the **managed** cascade (Deepgram + Cartesia). The **open self-hosted** default
+collapses the two dominant per-minute lines (STT $0.004, live TTS $0.030) into **GPU time only**:
+
+| Line | Managed (default table) | **Open self-hosted (the DEFAULT)** |
+|---|---|---|
+| STT live | Deepgram $0.004/min | Whisper-v3 + faster-whisper on shared GPU → **~$0.001–0.004/min**, batched/high-util |
+| TTS live | Cartesia $0.030/min | Chatterbox v3 on shared GPU → **~$0.003–0.010/min**; Piper/Kokoro utility lines ~$0 (CPU) |
+| TTS peaks | cached, ~$0 | cached, ~$0 (engine-independent) |
+| Assessment re-STT | Deepgram batch $0.004 | Whisper batch on GPU → **~$0.001–0.003/min** |
+| **Voice STT+TTS per 12-min encounter** | managed → **~$0.60–1.35** | **~$0.05–0.15** (GPU-time only) |
+
+**The trade (the catch):** self-hosting converts a *variable per-minute vendor fee* into a *fixed
+GPU + MLOps cost*. **Utilization is the #1 lever** — an idle STT/TTS GPU inflates $/min fast, and
+voice+avatar self-host **breaks even at a higher sustained concurrency** than text-only. So the routing
+rule mirrors the LLM break-even logic (arch/02 §7):
+
+- **All-open (self-hosted voice)** for **high-volume institutions** and **every air-gapped / sovereign
+  tenant** (zero egress is non-negotiable there, and volume amortizes the GPU).
+- **Managed premium (Deepgram/Cartesia/ElevenLabs)** for **low-volume tenants** (below GPU break-even,
+  where per-minute is genuinely cheaper) and the **top-realism TR-emotional upsell tier**.
+
+Net: the open default takes the fully-loaded voice line from **~$0.60–1.35 → ~$0.05–0.15 per
+encounter** (a ~5–20× saving) for tenants at scale, at the cost of running the GPUs — exactly the
+posture in [`../research/11-fully-open-source-stack.md`](../research/11-fully-open-source-stack.md) §B.
 
 ---
 
@@ -674,8 +787,11 @@ interface TtsConfig {
 **Boundary discipline.** The Voice Agent **never** imports a vendor LLM SDK (that is a hard CI lint,
 arch/02 §1) and **never** resolves a clinical fact — it forwards text up and speaks text down. STT and
 TTS vendor SDKs live only inside the Voice Agent, exactly as LLM SDKs live only inside the Model
-Gateway's `ProviderAdapter` (arch/02 §10). BAAs are signed with every voice vendor in the path
-(Deepgram, Cartesia, ElevenLabs) and region-pinned per **AD-6** / arch/09.
+Gateway's `ProviderAdapter` (arch/02 §10). **On the open default, the STT/TTS engines are self-hosted
+in-tenant, so there is no third-party BAA to sign and no egress** — the sovereign posture (§0). When a
+tenant opts into the **managed premium** tier, BAAs are signed with every voice vendor then in the path
+(Deepgram, Cartesia, ElevenLabs) and region-pinned per **AD-6** / arch/09; the open engines require
+only the same in-tenant DPA the rest of the appliance runs under.
 
 ---
 
