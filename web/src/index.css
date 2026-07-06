@@ -1,0 +1,290 @@
+@import "tailwindcss";
+
+/* Self-hosted fonts (NO CDN) */
+@import "@fontsource-variable/geist";
+@import "@fontsource/geist-mono";
+
+/* ============================================================
+   AcuDx design tokens — medkit design language
+   Light = default (clinical white). Dark via .dark class.
+   Vitals-monitor tokens are ALWAYS dark in both themes.
+   All values are the locked AcuDx tokens (WCAG 2.2 AA).
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* ---- Brand (single locked blue accent) ---- */
+  --brand-50: #eff6ff;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+
+  /* Brand gradient (SPARSE — app frame accent + logo mark only) */
+  --grad-teal: #2dd4bf;
+  --grad-blue: #3b82f6;
+  --grad-pink: #f472b6;
+
+  /* ---- Surfaces & text (light) ---- */
+  --bg: #ffffff;
+  --bg-subtle: #f8fafc;
+  --surface: #ffffff;
+  --fg: #0f172a;
+  --fg-muted: #64748b;
+  --border: #e2e8f0;
+
+  /* ---- Clinical semantic states (NEVER color alone) ---- */
+  --state-normal: #10b981; /* normal / in range */
+  --state-caution: #f59e0b; /* elevated / caution */
+  --state-warning: #f97316; /* warning */
+  --state-critical: #ef4444; /* critical */
+
+  /* ---- Feedback dual-axis (orthogonal, always paired with icon) ---- */
+  --axis-clinical: #2563eb; /* ◆ clinical reasoning */
+  --axis-communication: #7c3aed; /* ● communication */
+
+  /* ---- Calibration (directional, never good/bad) ---- */
+  --calib-line: #0f172a; /* identity y=x diagonal */
+  --calib-over: #c2603a; /* over-confident direction */
+  --calib-under: #3a7bc2; /* under-confident direction */
+  --calib-well: #10b981; /* well-calibrated band */
+
+  /* ---- Radius (ONE scale) ---- */
+  --r-card: 16px;
+  --r-control: 10px;
+
+  /* ---- Soft, slate-tinted shadows (no harsh black) ---- */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.06);
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 200ms;
+  --dur-base: 300ms;
+  --dur-slow: 400ms;
+
+  /* ---- Fonts (self-hosted) ---- */
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+
+  /* ---- Vitals monitor — ALWAYS dark (both themes) ---- */
+  --monitor-bg: #0b1220;
+  --monitor-border: #1e293b;
+  --monitor-fg: #e2e8f0;
+  --monitor-dim: #64748b;
+  --monitor-online: #10b981;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --brand-50: #172554;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+
+  --bg: #0b1120;
+  --bg-subtle: #0f172a;
+  --surface: #111827;
+  --fg: #e2e8f0;
+  --fg-muted: #94a3b8;
+  --border: #1e293b;
+
+  /* Clinical states hold hue in dark (contrast verified on dark surfaces) */
+  --state-normal: #10b981;
+  --state-caution: #f59e0b;
+  --state-warning: #f97316;
+  --state-critical: #ef4444;
+
+  --axis-clinical: #60a5fa;
+  --axis-communication: #a78bfa;
+
+  --calib-line: #e2e8f0;
+  --calib-over: #e0865c;
+  --calib-under: #60a5fa;
+  --calib-well: #10b981;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  /* Vitals monitor stays dark — unchanged across themes */
+  --monitor-bg: #0b1220;
+  --monitor-border: #1e293b;
+  --monitor-fg: #e2e8f0;
+  --monitor-dim: #64748b;
+  --monitor-online: #10b981;
+}
+
+/* ============================================================
+   Map tokens -> Tailwind theme (CSS-first @theme).
+   Enables classes: bg-surface, text-fg, text-muted,
+   border-border, bg-brand, rounded-card, rounded-control,
+   shadow-soft, font-sans, font-mono, text-state-*, etc.
+   ============================================================ */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-border: var(--border);
+
+  --color-brand: var(--brand-600);
+  --color-brand-hover: var(--brand-700);
+  --color-brand-tint: var(--brand-50);
+
+  --color-grad-teal: var(--grad-teal);
+  --color-grad-blue: var(--grad-blue);
+  --color-grad-pink: var(--grad-pink);
+
+  --color-state-normal: var(--state-normal);
+  --color-state-caution: var(--state-caution);
+  --color-state-warning: var(--state-warning);
+  --color-state-critical: var(--state-critical);
+
+  --color-axis-clinical: var(--axis-clinical);
+  --color-axis-communication: var(--axis-communication);
+
+  --color-calib-line: var(--calib-line);
+  --color-calib-over: var(--calib-over);
+  --color-calib-under: var(--calib-under);
+  --color-calib-well: var(--calib-well);
+
+  --color-monitor-bg: var(--monitor-bg);
+  --color-monitor-border: var(--monitor-border);
+  --color-monitor-fg: var(--monitor-fg);
+  --color-monitor-dim: var(--monitor-dim);
+  --color-monitor-online: var(--monitor-online);
+
+  --radius-card: var(--r-card);
+  --radius-control: var(--r-control);
+
+  --shadow-soft: var(--shadow-sm);
+  --shadow-soft-md: var(--shadow-md);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --ease-out: var(--ease-out);
+}
+
+/* ============================================================
+   Base element styles — premium, grain-free, calm
+   ============================================================ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--bg-subtle);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.55;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Tabular numerals for any monospace numeric readout (vitals) */
+  .font-mono,
+  [class*="font-mono"] {
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: 0.01em;
+  }
+
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  /* Focus-visible ring — clinical, high-contrast, never clipped */
+  :where(button, a, [role="button"], input, select, textarea, [tabindex]):focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 4px var(--brand-600);
+    border-radius: var(--r-control);
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--brand-600) 22%, transparent);
+  }
+}
+
+/* ============================================================
+   Utilities — the teal->pink gradient app frame accent
+   ============================================================ */
+@utility gradient-frame {
+  /* 2-3px teal->blue->pink border around the app shell */
+  position: relative;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(120deg, var(--grad-teal), var(--grad-blue), var(--grad-pink)) border-box;
+  border: 2.5px solid transparent;
+}
+
+@utility gradient-text {
+  background: linear-gradient(105deg, var(--grad-teal), var(--grad-blue), var(--grad-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+@utility gradient-mark {
+  background: linear-gradient(135deg, var(--grad-teal), var(--grad-blue), var(--grad-pink));
+}
+
+/* ============================================================
+   Keyframes
+   ============================================================ */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--state-critical) 45%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--state-critical) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--state-critical) 0%, transparent);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   Reduced motion — honor at the system level
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

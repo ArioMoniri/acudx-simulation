@@ -1,0 +1,316 @@
+{
+  "app": {
+    "name": "AcuDx",
+    "tagline": "Klinik muhakeme, prova edildi.",
+    "eduDisclaimer": "Yalnızca eğitim amaçlıdır. Gerçek hasta bakımı için değildir.",
+    "aiLabel": "YZ"
+  },
+  "nav": {
+    "home": "Ana sayfa",
+    "encounter": "Görüşme",
+    "feedback": "Geri bildirim",
+    "account": "Hesap",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat",
+    "skipToContent": "İçeriğe geç"
+  },
+  "actions": {
+    "start": "Başlat",
+    "startEncounter": "Görüşmeyi başlat",
+    "continue": "Devam et",
+    "resume": "Kaldığın yerden devam et",
+    "back": "Geri",
+    "next": "İleri",
+    "submit": "Gönder",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "retry": "Yeniden dene",
+    "close": "Kapat",
+    "send": "Gönder",
+    "viewFeedback": "Geri bildirimi gör",
+    "viewAsTable": "Tablo olarak gör",
+    "showEvidence": "Kanıtı göster",
+    "orderTest": "Tetkik iste",
+    "requestExam": "Muayene iste",
+    "commitDiagnosis": "Tanıyı belirle",
+    "rateConfidence": "Güvenini değerlendir"
+  },
+  "language": {
+    "label": "Dil",
+    "en": "İngilizce",
+    "tr": "Türkçe",
+    "switchTo": "{{lang}} diline geç"
+  },
+  "theme": {
+    "label": "Tema",
+    "light": "Açık",
+    "dark": "Koyu",
+    "toggle": "Temayı değiştir",
+    "toLight": "Açık temaya geç",
+    "toDark": "Koyu temaya geç"
+  },
+  "home": {
+    "title": "Vaka seni prova etmeden önce vakayı prova et.",
+    "subtitle": "Metin öncelikli acil tıp rol yapma; yapılandırılmış, kanıta dayalı geri bildirim ve bir kalibrasyon aynası ile.",
+    "primaryCta": "Bir görüşme başlat",
+    "primaryCtaContinue": "Görüşmeye devam et",
+    "secondaryCta": "Örnek geri bildirim raporunu gör",
+    "casesHeading": "Mevcut vakalar",
+    "continueHeading": "Kaldığın yerden devam et",
+    "welcome": "Tekrar hoş geldiniz, Dr. Yılmaz",
+    "welcomeSub": "Bir acil tıp vakasına devam edin veya kalibrasyonunuzun nasıl gittiğini inceleyin.",
+    "greetingEyebrow": "Eğitiminiz",
+    "resumeChip": "Devam eden: göğüs ağrısı, 58E",
+    "statsHeading": "Bu dönem bir bakışta",
+    "snapshotHeading": "Kalibrasyon anlık görünümü",
+    "snapshotSub": "Güven-performans farkınız daralıyor.",
+    "recommendedHeading": "Önerilen vakalar",
+    "recommendedSub": "Şu anki seviyenize uygun acil tıp vakaları.",
+    "recentHeading": "Son geri bildirimler",
+    "recentSub": "Son görüşmelerinizden biçimlendirici notlar.",
+    "viewAllCases": "Tüm vakaları gör",
+    "noPublicLeaderboard": "Tasarım gereği özel. Herkese açık sıralama yok.",
+    "empty": {
+      "casesTitle": "Henüz eşleşen vaka yok",
+      "casesBody": "Yeni acil tıp vakaları düzenli olarak eklenir. Kısa süre sonra tekrar bakın.",
+      "feedbackTitle": "Henüz geri bildirim yok",
+      "feedbackBody": "Biçimlendirici geri bildirimi burada görmek için ilk görüşmenizi tamamlayın."
+    }
+  },
+  "stats": {
+    "completed": "Tamamlanan",
+    "streak": "Güncel seri",
+    "gap": "Kalibrasyon farkı",
+    "days": "gün",
+    "trendingUp": "Yükseliyor",
+    "trendingDown": "Düşüyor"
+  },
+  "caseCard": {
+    "difficulty": "Zorluk",
+    "guideline": "Kılavuz",
+    "estimate": "~{{minutes}} dk",
+    "languages": "Dil seçenekleri",
+    "difficultyLevel": {
+      "foundation": "Temel",
+      "core": "Orta",
+      "advanced": "İleri"
+    }
+  },
+  "recentFeedback": {
+    "topBand": "En yüksek seviye",
+    "safetyFlag": "Güvenlik açısından kritik bir atlama vardı",
+    "noSafety": "Güvenlik açısından kritik atlama yok",
+    "today": "Bugün",
+    "daysAgo": "{{count}} gün önce",
+    "daysAgo_one": "Dün",
+    "open": "Raporu aç"
+  },
+  "encounter": {
+    "title": "Görüşme",
+    "patient": "Hasta",
+    "doctor": "Sen",
+    "colleague": "Meslektaş",
+    "examiner": "Sınav görevlisi",
+    "stageLabel": "Aşama",
+    "stages": {
+      "history": "Anamnez",
+      "exam": "Muayene",
+      "tests": "Tetkikler",
+      "ddx": "Ayırıcı tanı",
+      "diagnosis": "Tanı",
+      "management": "Tedavi yönetimi"
+    },
+    "composerPlaceholder": "Hastayla konuş veya bir tetkik iste...",
+    "aiTyping": "Hasta yanıt veriyor",
+    "quickActions": "Hızlı işlemler",
+    "caseChip": "58E - Göğüs ağrısı - Acil",
+    "transcriptLabel": "Görüşme kaydı",
+    "you": "Sen",
+    "voiceMode": "Sesli mod",
+    "attach": "Dosya veya sonuç ekle",
+    "sendHint": "Göndermek için Enter, yeni satır için Shift+Enter",
+    "affect": {
+      "distress": "Ağrılı, endişeli",
+      "guarded": "Çekingen, yorgun",
+      "relieved": "Daha sakin, işbirlikçi"
+    },
+    "portrait": {
+      "title": "Hasta",
+      "caption": "Terli, hafif sıkıntılı",
+      "sign": "Klinik bulgu"
+    },
+    "monitorActions": "Hasta başı işlemler",
+    "guidance": {
+      "title": "Rehberlik",
+      "toggle": "Rehberlik",
+      "on": "Açık",
+      "off": "Kapalı",
+      "abstained": "Bu adım için henüz dayanaklı rehberlik yok.",
+      "citation": "Kaynak",
+      "lastReviewed": "Son gözden geçirme",
+      "educationOnly": "Yalnızca eğitim"
+    },
+    "safety": {
+      "title": "Güvenlik uyarısı",
+      "resources": "Destek kaynakları"
+    },
+    "resumeToast": "Oturum geri yüklendi."
+  },
+  "vitals": {
+    "title": "Yaşamsal bulgu monitörü",
+    "online": "Canlı",
+    "paused": "Duraklatıldı",
+    "stale": "Güncel veri yok",
+    "updatedAgo": "{{seconds}} sn önce güncellendi",
+    "hr": "Kalp hızı",
+    "hrShort": "KH",
+    "bp": "Kan basıncı",
+    "bpShort": "KB",
+    "rr": "Solunum hızı",
+    "rrShort": "SH",
+    "spo2": "Oksijen satürasyonu",
+    "spo2Short": "SpO2",
+    "temp": "Vücut sıcaklığı",
+    "tempShort": "Ateş",
+    "units": {
+      "bpm": "atım/dk",
+      "mmhg": "mmHg",
+      "brpm": "/dk",
+      "percent": "%",
+      "celsius": "°C"
+    },
+    "trend": {
+      "rising": "yükseliyor",
+      "falling": "düşüyor",
+      "steady": "sabit"
+    },
+    "table": {
+      "caption": "Yaşamsal bulgular, güncel değer ve durum",
+      "vital": "Bulgu",
+      "value": "Değer",
+      "status": "Durum",
+      "trend": "Eğilim"
+    }
+  },
+  "states": {
+    "normal": "Normal",
+    "caution": "İzlenmeli",
+    "warning": "Anormal",
+    "critical": "Kritik",
+    "aboveRange": "Sınırın üstünde",
+    "belowRange": "Sınırın altında",
+    "inRange": "Normal aralıkta"
+  },
+  "feedback": {
+    "title": "Geri bildirim",
+    "subtitle": "Çift eksenli, kanıta dayalı, yalnızca seviye. Gizli puan yok.",
+    "encounterTitle": "Akut göğüs ağrısı, 58E - Acil",
+    "formativeBadge": "Biçimlendirici - pratik",
+    "safetyStripTitle": "Güvenlik açısından kritik: bir dahaki sefere bunu kontrol et",
+    "safetyStripClean": "Bu görüşmede güvenlik açısından kritik bir atlama yok.",
+    "bandScale": "Seviye ölçeği",
+    "achievedBand": "Ulaştığın seviye: {{band}}",
+    "clinicalGroup": "Klinik",
+    "communicationGroup": "İletişim ve profesyonellik",
+    "remediationHeading": "Sonraki adımlar",
+    "remediation": {
+      "spacedRepetition": "Aralıklı tekrara ekle",
+      "harderVariant": "Daha zor bir varyantı dene",
+      "note": "Buradaki hiçbir şey puanlanmaz veya sıralanmaz. Pratik kuyruğunu besler."
+    },
+    "dualAxis": {
+      "title": "Muhakeme ve iletişim",
+      "clinical": "Klinik muhakeme",
+      "communication": "İletişim",
+      "orthogonalNote": "Bunlar birbirinden bağımsız değerlendirilir."
+    },
+    "domainsHeading": "Alanlara göre",
+    "domains": {
+      "history": "Anamnez alma",
+      "exam": "Muayene ve tetkikler",
+      "reasoning": "Klinik muhakeme",
+      "communication": "İletişim",
+      "management": "Tedavi yönetimi",
+      "professionalism": "Profesyonellik"
+    },
+    "withheld": "Bunu değerlendirmek için henüz yeterli güvenilirlik yok.",
+    "gapsHeading": "Eksikler ve sonraki adımlar",
+    "gap": {
+      "evidence": "Görüşme kaydından",
+      "recurrence": "Son dönemde {{count}} kez görüldü",
+      "recurrence_one": "Son dönemde bir kez görüldü",
+      "safetyCritical": "Güvenlik açısından kritik",
+      "remediation": "Bunu çalış",
+      "schedule": "Tekrar planla",
+      "acknowledge": "Onayla"
+    },
+    "citationsHeading": "Kaynaklar",
+    "provenance": {
+      "mode": "Mod",
+      "version": "Sürüm",
+      "reportContent": "İçeriği bildir"
+    }
+  },
+  "calibration": {
+    "title": "Güven ile performans",
+    "subtitle": "Güveninin performansınla ne kadar örtüştüğü. Bu, geliştirebileceğin bir beceridir.",
+    "axisConfidence": "Güvenin",
+    "axisCompetence": "Ölçülen performans",
+    "identityLine": "İyi kalibre",
+    "direction": {
+      "over": "Güven, performansın önüne geçmiş",
+      "under": "Performans, güvenin önünde",
+      "well": "İyi kalibre edilmiş"
+    },
+    "quadrant": {
+      "calibratedStrong": "Kalibre ve güçlü",
+      "calibratedGrowing": "Kalibre ve gelişmekte",
+      "blindSpot": "Güven, performansın önünde",
+      "hiddenStrength": "Performans, güvenin önünde"
+    },
+    "trajectory": "Son görüşmelerdeki farkın",
+    "trajectoryArrow": "Oturumlar boyunca gelişiyor",
+    "insufficient": "Bunu çizmek için henüz yeterli kanıt yok.",
+    "readout": "Sade dille özet",
+    "explainer": "Her nokta bir alandır. Kesikli çizgi üzerindeki noktalar, güveninin performansınla örtüştüğü anlamına gelir. Bu bir not değil, geliştirilebilir bir beceridir.",
+    "legend": {
+      "point": "Alan",
+      "identity": "Tam kalibre",
+      "over": "Aşırı güvenli",
+      "under": "Yetersiz güvenli",
+      "trajectory": "Son gidişat"
+    },
+    "table": {
+      "caption": "Alanlara göre kalibrasyon",
+      "domain": "Alan",
+      "confidence": "Güven",
+      "competence": "Performans",
+      "direction": "Yön",
+      "trend": "Eğilim"
+    }
+  },
+  "bands": {
+    "emerging": "Başlangıç",
+    "developing": "Gelişmekte",
+    "proficient": "Yeterli",
+    "strong": "Güçlü",
+    "exemplary": "Örnek düzeyde",
+    "withheld": "Belirtilmedi"
+  },
+  "confidenceAnchors": {
+    "low": "Emin değilim",
+    "mid": "Kısmen",
+    "high": "Çok eminim"
+  },
+  "common": {
+    "loading": "Yükleniyor",
+    "empty": "Burada henüz bir şey yok",
+    "error": "Bir şeyler ters gitti",
+    "errorBody": "Bunu yükleyemedik. Görüşme kaydın güvende.",
+    "emptyEncounters": "Henüz görüşme yok. İlk vakanı başlat.",
+    "of": "/",
+    "years": "yaşında",
+    "male": "erkek",
+    "female": "kadın"
+  }
+}

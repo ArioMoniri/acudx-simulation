@@ -1,0 +1,316 @@
+{
+  "app": {
+    "name": "AcuDx",
+    "tagline": "Clinical reasoning, rehearsed.",
+    "eduDisclaimer": "For education only. Not for real patient care.",
+    "aiLabel": "AI"
+  },
+  "nav": {
+    "home": "Home",
+    "encounter": "Encounter",
+    "feedback": "Feedback",
+    "account": "Account",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "skipToContent": "Skip to content"
+  },
+  "actions": {
+    "start": "Start",
+    "startEncounter": "Start encounter",
+    "continue": "Continue",
+    "resume": "Resume",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "close": "Close",
+    "send": "Send",
+    "viewFeedback": "View feedback",
+    "viewAsTable": "View as table",
+    "showEvidence": "Show evidence",
+    "orderTest": "Order test",
+    "requestExam": "Request exam",
+    "commitDiagnosis": "Commit diagnosis",
+    "rateConfidence": "Rate your confidence"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "tr": "Turkish",
+    "switchTo": "Switch to {{lang}}"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "toggle": "Toggle theme",
+    "toLight": "Switch to light theme",
+    "toDark": "Switch to dark theme"
+  },
+  "home": {
+    "title": "Rehearse the case before the case rehearses you.",
+    "subtitle": "Text-first emergency-medicine roleplay with structured, evidence-anchored feedback and a calibration mirror.",
+    "primaryCta": "Start an encounter",
+    "primaryCtaContinue": "Continue encounter",
+    "secondaryCta": "See a sample feedback report",
+    "casesHeading": "Available cases",
+    "continueHeading": "Continue where you left off",
+    "welcome": "Welcome back, Dr. Yılmaz",
+    "welcomeSub": "Pick up an emergency-medicine case, or review where your calibration is trending.",
+    "greetingEyebrow": "Your training",
+    "resumeChip": "In progress: chest pain, 58M",
+    "statsHeading": "This term at a glance",
+    "snapshotHeading": "Calibration snapshot",
+    "snapshotSub": "Your confidence-performance gap is narrowing.",
+    "recommendedHeading": "Recommended cases",
+    "recommendedSub": "Emergency-medicine cases matched to where you are now.",
+    "recentHeading": "Recent feedback",
+    "recentSub": "Formative notes from your last few encounters.",
+    "viewAllCases": "View all cases",
+    "noPublicLeaderboard": "Private by design. No public leaderboard.",
+    "empty": {
+      "casesTitle": "No cases matched yet",
+      "casesBody": "New emergency-medicine cases are added regularly. Check back soon.",
+      "feedbackTitle": "No feedback yet",
+      "feedbackBody": "Finish your first encounter to see formative feedback here."
+    }
+  },
+  "stats": {
+    "completed": "Completed",
+    "streak": "Current streak",
+    "gap": "Calibration gap",
+    "days": "days",
+    "trendingUp": "Trending up",
+    "trendingDown": "Trending down"
+  },
+  "caseCard": {
+    "difficulty": "Difficulty",
+    "guideline": "Guideline",
+    "estimate": "~{{minutes}} min",
+    "languages": "Available in",
+    "difficultyLevel": {
+      "foundation": "Foundation",
+      "core": "Core",
+      "advanced": "Advanced"
+    }
+  },
+  "recentFeedback": {
+    "topBand": "Top band",
+    "safetyFlag": "Had a safety-critical miss",
+    "noSafety": "No safety-critical misses",
+    "today": "Today",
+    "daysAgo": "{{count}} days ago",
+    "daysAgo_one": "Yesterday",
+    "open": "Open report"
+  },
+  "encounter": {
+    "title": "Encounter",
+    "patient": "Patient",
+    "doctor": "You",
+    "colleague": "Colleague",
+    "examiner": "Examiner",
+    "stageLabel": "Stage",
+    "stages": {
+      "history": "History",
+      "exam": "Examination",
+      "tests": "Investigations",
+      "ddx": "Differential",
+      "diagnosis": "Diagnosis",
+      "management": "Management"
+    },
+    "composerPlaceholder": "Type to the patient, or order a test...",
+    "aiTyping": "Patient is responding",
+    "quickActions": "Quick actions",
+    "caseChip": "58M - Chest pain - Emergency",
+    "transcriptLabel": "Encounter transcript",
+    "you": "You",
+    "voiceMode": "Voice mode",
+    "attach": "Attach a file or result",
+    "sendHint": "Press Enter to send, Shift+Enter for a new line",
+    "affect": {
+      "distress": "In pain, anxious",
+      "guarded": "Guarded, tired",
+      "relieved": "Calmer, cooperative"
+    },
+    "portrait": {
+      "title": "Patient",
+      "caption": "Diaphoretic, mild distress",
+      "sign": "Clinical sign"
+    },
+    "monitorActions": "Bedside actions",
+    "guidance": {
+      "title": "Guidance",
+      "toggle": "Guidance",
+      "on": "On",
+      "off": "Off",
+      "abstained": "No grounded guidance for this step yet.",
+      "citation": "Source",
+      "lastReviewed": "Last reviewed",
+      "educationOnly": "Education only"
+    },
+    "safety": {
+      "title": "Safety check",
+      "resources": "Support resources"
+    },
+    "resumeToast": "Session resumed."
+  },
+  "vitals": {
+    "title": "Vitals monitor",
+    "online": "Live",
+    "paused": "Paused",
+    "stale": "No fresh data",
+    "updatedAgo": "Updated {{seconds}}s ago",
+    "hr": "Heart rate",
+    "hrShort": "HR",
+    "bp": "Blood pressure",
+    "bpShort": "BP",
+    "rr": "Respiratory rate",
+    "rrShort": "RR",
+    "spo2": "Oxygen saturation",
+    "spo2Short": "SpO2",
+    "temp": "Temperature",
+    "tempShort": "Temp",
+    "units": {
+      "bpm": "bpm",
+      "mmhg": "mmHg",
+      "brpm": "/min",
+      "percent": "%",
+      "celsius": "°C"
+    },
+    "trend": {
+      "rising": "rising",
+      "falling": "falling",
+      "steady": "steady"
+    },
+    "table": {
+      "caption": "Vital signs, current reading and status",
+      "vital": "Vital",
+      "value": "Value",
+      "status": "Status",
+      "trend": "Trend"
+    }
+  },
+  "states": {
+    "normal": "Normal",
+    "caution": "Watch",
+    "warning": "Abnormal",
+    "critical": "Critical",
+    "aboveRange": "Above range",
+    "belowRange": "Below range",
+    "inRange": "In range"
+  },
+  "feedback": {
+    "title": "Feedback",
+    "subtitle": "Dual-axis, evidence-anchored, band-only. No hidden score.",
+    "encounterTitle": "Acute chest pain, 58M - Emergency",
+    "formativeBadge": "Formative - practice",
+    "safetyStripTitle": "Safety-critical: check this next time",
+    "safetyStripClean": "No safety-critical misses in this encounter.",
+    "bandScale": "Band scale",
+    "achievedBand": "You reached: {{band}}",
+    "clinicalGroup": "Clinical",
+    "communicationGroup": "Communication and professionalism",
+    "remediationHeading": "Next steps",
+    "remediation": {
+      "spacedRepetition": "Add to spaced repetition",
+      "harderVariant": "Retry a harder variant",
+      "note": "Nothing here is graded or ranked. It feeds your practice queue."
+    },
+    "dualAxis": {
+      "title": "Reasoning and communication",
+      "clinical": "Clinical reasoning",
+      "communication": "Communication",
+      "orthogonalNote": "These are scored independently."
+    },
+    "domainsHeading": "By domain",
+    "domains": {
+      "history": "History-taking",
+      "exam": "Examination and investigations",
+      "reasoning": "Clinical reasoning",
+      "communication": "Communication",
+      "management": "Management",
+      "professionalism": "Professionalism"
+    },
+    "withheld": "Not enough reliability to score this yet.",
+    "gapsHeading": "Gaps and next steps",
+    "gap": {
+      "evidence": "From the transcript",
+      "recurrence": "Seen {{count}}x recently",
+      "recurrence_one": "Seen once recently",
+      "safetyCritical": "Safety-critical",
+      "remediation": "Practice this",
+      "schedule": "Schedule a review",
+      "acknowledge": "Acknowledge"
+    },
+    "citationsHeading": "Sources",
+    "provenance": {
+      "mode": "Mode",
+      "version": "Version",
+      "reportContent": "Report content"
+    }
+  },
+  "calibration": {
+    "title": "Confidence vs performance",
+    "subtitle": "How well your confidence matches your performance. This is a skill you can train.",
+    "axisConfidence": "Your confidence",
+    "axisCompetence": "Measured performance",
+    "identityLine": "Well-calibrated",
+    "direction": {
+      "over": "Confidence ran ahead of performance",
+      "under": "Performance ahead of confidence",
+      "well": "Well-calibrated"
+    },
+    "quadrant": {
+      "calibratedStrong": "Calibrated and strong",
+      "calibratedGrowing": "Calibrated and growing",
+      "blindSpot": "Confidence ahead of performance",
+      "hiddenStrength": "Performance ahead of confidence"
+    },
+    "trajectory": "Your gap over recent encounters",
+    "trajectoryArrow": "Improving across sessions",
+    "insufficient": "Not enough evidence yet to plot this.",
+    "readout": "Plain-language summary",
+    "explainer": "Each dot is one domain. Dots on the dashed line mean your confidence matched your performance. This is a trainable skill, not a grade.",
+    "legend": {
+      "point": "Domain",
+      "identity": "Perfectly calibrated",
+      "over": "Overconfident",
+      "under": "Underconfident",
+      "trajectory": "Recent trajectory"
+    },
+    "table": {
+      "caption": "Calibration by domain",
+      "domain": "Domain",
+      "confidence": "Confidence",
+      "competence": "Performance",
+      "direction": "Direction",
+      "trend": "Trend"
+    }
+  },
+  "bands": {
+    "emerging": "Emerging",
+    "developing": "Developing",
+    "proficient": "Proficient",
+    "strong": "Strong",
+    "exemplary": "Exemplary",
+    "withheld": "Withheld"
+  },
+  "confidenceAnchors": {
+    "low": "Not confident",
+    "mid": "Somewhat",
+    "high": "Very confident"
+  },
+  "common": {
+    "loading": "Loading",
+    "empty": "Nothing here yet",
+    "error": "Something went wrong",
+    "errorBody": "We could not load this. Your transcript is safe.",
+    "emptyEncounters": "No encounters yet. Start your first case.",
+    "of": "of",
+    "years": "years",
+    "male": "male",
+    "female": "female"
+  }
+}
