@@ -1,6 +1,10 @@
 export { Sparkline, type SparklineProps } from "./Sparkline";
 export { ProgressStages, type ProgressStagesProps } from "./ProgressStages";
 export { CaseCard, type CaseCardProps } from "./CaseCard";
+export {
+  CaseInstanceCard,
+  type CaseInstanceCardProps,
+} from "./CaseInstanceCard";
 export { ChatMessage, type ChatMessageProps } from "./ChatMessage";
 export { EncounterChat, type EncounterChatProps } from "./EncounterChat";
 export { GuidanceCard, type GuidanceCardProps } from "./GuidanceCard";

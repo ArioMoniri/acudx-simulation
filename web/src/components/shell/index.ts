@@ -4,3 +4,5 @@ export { PageContainer, type PageContainerProps } from "./PageContainer";
 export { Wordmark } from "./Wordmark";
 export { LanguageSwitcher } from "./LanguageSwitcher";
 export { ThemeToggle } from "./ThemeToggle";
+export { RoleSwitcher } from "./RoleSwitcher";
+export { GuidedTour } from "./GuidedTour";

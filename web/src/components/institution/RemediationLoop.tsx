@@ -1,0 +1,269 @@
+import { useTranslation } from "react-i18next";
+import {
+  MagnifyingGlass,
+  Stethoscope,
+  ClipboardText,
+  ArrowsClockwise,
+  FileText,
+  CheckCircle,
+  Circle,
+  DotsThreeCircle,
+  Export,
+  WarningCircle,
+  ArrowRight,
+} from "@phosphor-icons/react";
+import { Card, Badge, Button } from "@/components/ui";
+import { CitationPill } from "@/components";
+import { cn } from "@/lib/cn";
+import { useLang } from "@/lib/useLang";
+import {
+  remediationRecords,
+  REMEDIATION_STAGES,
+  type RemediationRecord,
+  type RemediationStage,
+  type RemediationStageStatus,
+} from "@/data/institution";
+
+const stageIcon: Record<RemediationStage, typeof MagnifyingGlass> = {
+  detect: MagnifyingGlass,
+  diagnose: Stethoscope,
+  prescribe: ClipboardText,
+  reassess: ArrowsClockwise,
+  document: FileText,
+};
+
+const statusIcon: Record<RemediationStageStatus, typeof CheckCircle> = {
+  done: CheckCircle,
+  active: DotsThreeCircle,
+  pending: Circle,
+};
+
+/** A five-step closed-loop tracker: detect -> diagnose -> prescribe -> re-assess -> document. */
+function LoopTracker({ record }: { record: RemediationRecord }) {
+  const { t } = useTranslation();
+  return (
+    <ol
+      className="flex flex-wrap items-stretch gap-1.5"
+      aria-label={t("institution.remediation.loopAria")}
+    >
+      {REMEDIATION_STAGES.map((stage, i) => {
+        const status = record.status[stage];
+        const StageIcon = stageIcon[stage];
+        const StatusIcon = statusIcon[status];
+        const statusWord = t(`institution.remediation.status.${status}`);
+        return (
+          <li key={stage} className="flex items-center gap-1.5">
+            <span
+              className={cn(
+                "flex items-center gap-1.5 rounded-control border px-2 py-1",
+                status === "done"
+                  ? "border-transparent bg-[color-mix(in_srgb,var(--state-normal)_12%,transparent)] text-[color:var(--state-normal)]"
+                  : status === "active"
+                    ? "border-brand bg-brand-tint text-brand"
+                    : "border-dashed border-border bg-surface text-muted",
+              )}
+            >
+              <StageIcon weight="bold" className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="text-[11px] font-semibold">
+                {t(`institution.remediation.stage.${stage}`)}
+              </span>
+              <StatusIcon
+                weight={status === "pending" ? "regular" : "fill"}
+                className="h-3.5 w-3.5 shrink-0"
+                aria-hidden
+              />
+              <span className="sr-only">{statusWord}</span>
+            </span>
+            {i < REMEDIATION_STAGES.length - 1 ? (
+              <ArrowRight
+                weight="bold"
+                className="h-3 w-3 shrink-0 text-border"
+                aria-hidden
+              />
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function RemediationCard({ record }: { record: RemediationRecord }) {
+  const { t } = useTranslation();
+  const lang = useLang();
+  const closed = record.status.document === "done";
+
+  return (
+    <li>
+      <Card
+        padding="md"
+        className={cn(
+          "flex flex-col gap-3.5",
+          closed ? "" : "border-l-2 border-l-[color:var(--state-warning)]",
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <span
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-control"
+              style={{
+                backgroundColor: closed
+                  ? "color-mix(in srgb, var(--state-normal) 14%, transparent)"
+                  : "color-mix(in srgb, var(--state-warning) 16%, transparent)",
+                color: closed
+                  ? "var(--state-normal)"
+                  : "var(--state-warning)",
+              }}
+              aria-hidden
+            >
+              {closed ? (
+                <CheckCircle weight="fill" className="h-4.5 w-4.5" />
+              ) : (
+                <WarningCircle weight="fill" className="h-4.5 w-4.5" />
+              )}
+            </span>
+            <div>
+              <p className="font-mono text-sm font-semibold text-fg">
+                {record.learnerHandle}
+              </p>
+              <p className="text-xs text-muted">
+                {t(`institution.section.${record.sectionKey}`)}
+                {" · "}
+                {t("institution.remediation.opened", { days: record.openedDaysAgo })}
+              </p>
+            </div>
+          </div>
+          {closed ? (
+            <Badge tone="normal">
+              <CheckCircle weight="fill" className="h-3 w-3" aria-hidden />
+              {t("institution.remediation.closed")}
+            </Badge>
+          ) : (
+            <Badge tone="warning">
+              <WarningCircle weight="fill" className="h-3 w-3" aria-hidden />
+              {t("institution.remediation.open")}
+            </Badge>
+          )}
+        </div>
+
+        {/* Trigger — why they surfaced */}
+        <p className="text-sm text-fg">{t(record.triggerKey)}</p>
+
+        {/* The closed-loop tracker */}
+        <LoopTracker record={record} />
+
+        {/* Diagnose — the gaps */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {t("institution.remediation.diagnosedGaps")}
+          </p>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {record.gaps.map((gap, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-2 rounded-control bg-bg-subtle px-2.5 py-1.5"
+              >
+                <span
+                  className="mt-1.5 h-2 w-2 shrink-0 rotate-45"
+                  style={{
+                    backgroundColor:
+                      gap.domain === "communication" ||
+                      gap.domain === "professionalism"
+                        ? "var(--axis-communication)"
+                        : "var(--axis-clinical)",
+                    borderRadius:
+                      gap.domain === "communication" ||
+                      gap.domain === "professionalism"
+                        ? "9999px"
+                        : "0",
+                  }}
+                  aria-hidden
+                />
+                <span className="min-w-0 flex-1 text-xs text-fg">
+                  {gap.detail[lang]}
+                </span>
+                <span className="shrink-0 text-[11px] font-medium text-muted">
+                  {t("institution.remediation.recurrence", {
+                    count: gap.recurrence,
+                  })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Prescribe */}
+        <div className="rounded-control border border-border bg-surface p-3">
+          <div className="flex items-center gap-1.5">
+            <ClipboardText
+              weight="bold"
+              className="h-3.5 w-3.5 text-brand"
+              aria-hidden
+            />
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+              {t("institution.remediation.prescribed")}
+            </p>
+          </div>
+          <p className="mt-1.5 text-sm text-fg">{record.prescription[lang]}</p>
+          <div className="mt-2">
+            <CitationPill citationId={record.citationId} lang={lang} />
+          </div>
+        </div>
+
+        {/* Re-assess outcome (once closed) */}
+        {record.reassessOutcome ? (
+          <div className="flex items-start gap-2 rounded-control bg-[color-mix(in_srgb,var(--state-normal)_10%,transparent)] p-3">
+            <ArrowsClockwise
+              weight="bold"
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--state-normal)]"
+              aria-hidden
+            />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--state-normal)]">
+                {t("institution.remediation.reassessed")}
+              </p>
+              <p className="mt-1 text-sm text-fg">
+                {record.reassessOutcome[lang]}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Actions */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant={closed ? "secondary" : "primary"}
+            trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
+          >
+            {closed
+              ? t("institution.remediation.viewRecord")
+              : t("institution.remediation.openRemediation")}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            leadingIcon={<Export weight="bold" className="h-4 w-4" />}
+          >
+            {t("institution.remediation.exportRecord")}
+          </Button>
+        </div>
+      </Card>
+    </li>
+  );
+}
+
+/** RemediationLoop — the at-risk closed-loop list, the renewal-driving money feature (IN-2). */
+export function RemediationLoop() {
+  const openCount = remediationRecords.filter(
+    (r) => r.status.document !== "done",
+  ).length;
+  return (
+    <ul className="flex flex-col gap-3" aria-label="remediation">
+      {remediationRecords.map((r) => (
+        <RemediationCard key={r.id} record={r} />
+      ))}
+      <li className="sr-only">{openCount}</li>
+    </ul>
+  );
+}

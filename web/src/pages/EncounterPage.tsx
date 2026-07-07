@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import { List, X } from "@phosphor-icons/react";
+import type { StartSelection } from "./StartPage";
 
 import { PageContainer } from "@/components/shell";
 import { ProgressStages } from "@/components";
@@ -75,23 +77,56 @@ export function EncounterPage() {
   const top = useEntry();
   const body = useEntry(0.06);
 
+  const location = useLocation();
+  // Session setup handed over from the Start page (docs/design/01 Journey 1.5).
+  // A "Surprise me" pick (or no chief complaint) yields a random draw; a family
+  // pick constrains the generator; guidance seeds the drawer's initial state.
+  // The Case Library can also hand over a fully built CaseInstance directly
+  // ("Start this case"), which takes precedence over a generator selection.
+  const routeState = location.state as
+    | { start?: StartSelection; caseInstance?: CaseInstance }
+    | null;
+  const startSelection = routeState?.start;
+  const providedCase = routeState?.caseInstance;
+
   const state = useEncounterState();
-  const [guidanceOn, setGuidanceOn] = useState(true);
+  const [guidanceOn, setGuidanceOn] = useState(startSelection?.guidance ?? true);
   const [railOpen, setRailOpen] = useState(false);
 
   // Keep a local reference to the active case so the page can render the banner
   // even during a stage transition. Source of truth is the store.
   const caseInstance = state.caseInstance;
 
-  // Start with the curated ACS seed case on mount, and reset on unmount so the
-  // store + its pending timers are cleared when leaving the workspace. Runs on
-  // every mount (including the StrictMode dev double-invoke) so the store is
-  // never left empty by a cleanup that outran its start.
+  // On mount, start the encounter. If the learner arrived from the Start page
+  // with constraints, generate a matching case; otherwise open the curated ACS
+  // seed. Reset on unmount so the store + its pending timers are cleared when
+  // leaving the workspace. Runs on every mount (including the StrictMode dev
+  // double-invoke) so the store is never left empty by a cleanup that outran
+  // its start.
   useEffect(() => {
-    startEncounter(chestPainNstemiCase);
+    if (providedCase) {
+      // Exact case chosen from the Case Library.
+      startEncounter(providedCase);
+    } else if (startSelection) {
+      startEncounter(
+        startSelection.chiefComplaint
+          ? generateCase({
+              seedMode: "constrained",
+              chiefComplaint: startSelection.chiefComplaint,
+              difficulty: startSelection.difficulty,
+              locale: lang,
+            })
+          : generateCase({ seedMode: "random", locale: lang }),
+      );
+    } else {
+      startEncounter(chestPainNstemiCase);
+    }
     return () => {
       resetEncounter();
     };
+    // Intentionally mount-only: the selection is captured at arrival and a
+    // language change mid-encounter must not silently regenerate the case.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadCase = useCallback((next: CaseInstance) => {

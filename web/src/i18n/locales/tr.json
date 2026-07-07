@@ -9,10 +9,24 @@
     "home": "Ana sayfa",
     "encounter": "Görüşme",
     "feedback": "Geri bildirim",
+    "start": "Başla",
+    "cases": "Vakalar",
+    "rooms": "Odalar",
+    "progress": "İlerleme",
+    "authoring": "Vaka hazırlama",
+    "review": "İnceleme",
+    "institution": "Kurum",
     "account": "Hesap",
     "openMenu": "Menüyü aç",
     "closeMenu": "Menüyü kapat",
     "skipToContent": "İçeriğe geç"
+  },
+  "role": {
+    "viewAs": "Şu rolde görüntüle",
+    "viewAsRole": "{{role}} olarak görüntüle",
+    "learner": "Öğrenci",
+    "educator": "Eğitmen",
+    "dean": "Dekan"
   },
   "actions": {
     "start": "Başlat",
@@ -75,6 +89,204 @@
       "casesBody": "Yeni acil tıp vakaları düzenli olarak eklenir. Kısa süre sonra tekrar bakın.",
       "feedbackTitle": "Henüz geri bildirim yok",
       "feedbackBody": "Biçimlendirici geri bildirimi burada görmek için ilk görüşmenizi tamamlayın."
+    }
+  },
+  "progress": {
+    "eyebrow": "İlerlemeniz",
+    "title": "Sıralama değil, yetkinlik",
+    "subtitle": "Buradaki her şey açıklarınızı kapatmayı ve kalibrasyonunuzu sıkılaştırmayı ödüllendirir. Özeldir, biçimlendiricidir ve yalnızca size aittir.",
+    "level": {
+      "sectionLabel": "Seviye ve seri",
+      "eyebrow": "Seviye {{level}}",
+      "toNext": "Seviye {{level}} için ilerleme",
+      "valueText": "Bir sonraki seviyeye giden yolun %{{percent}}'i",
+      "remaining": "{{xp}} XP kaldı; yalnızca gelişerek kazanılır",
+      "xpTotal": "Toplam XP",
+      "whyHeading": "Neden kazandınız",
+      "reason": {
+        "calibrationTightened": "Kalibrasyon sıkılaştı",
+        "gapClosed": "Açık kapandı",
+        "bandUp": "Bant yükseldi",
+        "epaEntrusted": "EPA'da yetki verildi",
+        "safetyNetting": "Güvenlik ağı"
+      }
+    },
+    "streak": {
+      "eyebrow": "Güncel seri",
+      "days": "gün",
+      "best": "Kişisel rekor",
+      "weekLabel": "Son yedi gününüz",
+      "weekday": {
+        "mon": "Pzt",
+        "tue": "Sal",
+        "wed": "Çar",
+        "thu": "Per",
+        "fri": "Cum",
+        "sat": "Cmt",
+        "sun": "Paz"
+      },
+      "dayState": {
+        "practised": "Pratik yapıldı",
+        "freeze": "Dondurma kullanıldı, seri korundu",
+        "rest": "Dinlenme günü",
+        "today": "Bugün, bir tekrar kaldı",
+        "upcoming": "Yaklaşan"
+      },
+      "freezes": "{{total}} dondurmadan {{left}} tanesi kaldı. Zorlu bir hafta serinizi bozmaz.",
+      "graceNote": "Dün bir tolerans günüyle karşılandı. Her şeyi bir anda telafi etme baskısı yok."
+    },
+    "mastery": {
+      "heading": "Yetkinlik haritası",
+      "subtitle": "Altı yetkinlik alanındaki konumunuz; geçen haftaya göre değişimle birlikte bant olarak gösterilir.",
+      "notEnough": "Henüz yeterli güvenilir kanıt yok ({{count}} görüşme). Bir bandı açmak için pratiğe devam edin.",
+      "rowAria": "{{domain}}: {{band}} bandına ulaşıldı",
+      "delta": {
+        "up": "Geçen haftaya göre bir bant yükseldi",
+        "down": "Geçen haftaya göre bir bant düştü",
+        "steady": "Geçen haftaya göre sabit"
+      },
+      "deltaShort": {
+        "up": "Yükseldi",
+        "down": "Düştü",
+        "steady": "Sabit"
+      }
+    },
+    "epa": {
+      "heading": "Yetki verilebilir etkinlikler",
+      "subtitle": "Temel EPA'lar ve kazandığınız denetim düzeyi. Yetki verildi, bu etkinlikleri uzaktan denetimle uygulayabileceğiniz anlamına gelir.",
+      "entrusted": "Yetki verildi",
+      "levelShort": "5 üzerinden {{level}}. düzey",
+      "demonstrations": "Bu düzeyin ardında {{count}} gösterim var",
+      "scaleAria": "{{code}}: 5 üzerinden {{level}}. yetki düzeyi",
+      "level": {
+        "1": "Gözlem",
+        "2": "Doğrudan denetim",
+        "3": "Dolaylı denetim",
+        "4": "Uzaktan denetim",
+        "5": "Başkalarını denetleme"
+      }
+    },
+    "trajectory": {
+      "heading": "Kalibrasyon gidişatı",
+      "subtitle": "Son oturumlar boyunca güven-performans farkınız ve Brier puanınız. İkisinin de düşmesi hedeftir.",
+      "gapLabel": "Güven farkı",
+      "brierLabel": "Brier puanı",
+      "gapDrop": "{{points}} puan düştü",
+      "lowerBetter": "Düşük olması daha iyi",
+      "perDomain": "Alanlara göre",
+      "domainNow": "Şu an %{{percent}} fark",
+      "domainSpark": "{{domain}} fark eğilimi, {{points}} puan daraldı",
+      "openReport": "Tam raporu aç",
+      "empty": "Gidişatı çizmek için henüz yeterli oturum yok."
+    },
+    "badges": {
+      "heading": "Kilometre taşları",
+      "subtitle": "Yetkinlik ve yetki verilen etkinlikler için kimlik kilometre taşları. Hacimle değil, gösterdiklerinizle kazanılır.",
+      "count": "{{total}} taştan {{earned}} tanesi kazanıldı",
+      "earned": "Kazanıldı",
+      "progressAria": "{{badge}}: kazanmaya %{{percent}} kaldı",
+      "inProgress": "Devam ediyor"
+    },
+    "review": {
+      "heading": "Aralıklı tekrar",
+      "subtitle": "Geçmiş açıklarınızdan planlanan kartlar; her biri tam unutmadan önce geri dönecek şekilde aralıklandırılır. Her kart kaynaklıdır.",
+      "dueBadge": "{{count}} tanesi şimdi zamanı",
+      "startReview": "Tekrarı başlat",
+      "state": {
+        "due": "Zamanı geldi",
+        "learning": "Öğreniliyor",
+        "scheduled": "Planlandı"
+      },
+      "recall": "Hatırlama %{{percent}}",
+      "stability": "{{days}} gündür kalıcı",
+      "dueNow": "Zamanı geldi",
+      "dueInDays": "{{count}} gün sonra",
+      "dueInDays_other": "{{count}} gün sonra"
+    },
+    "cohort": {
+      "heading": "Gelişime göre karşılaştır",
+      "explainer": "Yalnızca ne kadar geliştiğinize göre sıralanan, ham performansa göre değil, isteğe bağlı ve anonimleştirilmiş bir kohort görünümü. İsim yok, küresel sıralama yok.",
+      "toggleAria": "Kohort gelişim karşılaştırmasını göster",
+      "on": "Açık",
+      "off": "Kapalı",
+      "offNote": "Varsayılan olarak kapalı. Gelişiminizi anonim bir kohorta göre görmek için bunu açın. İstediğiniz zaman kapatabilirsiniz.",
+      "yourImprovement": "Bu ayki gelişiminiz",
+      "vsMedian": "Kohort ortanca gelişimi {{median}} puan",
+      "percentileLabel": "Gelişim yüzdelik dilimi",
+      "percentileNote": "{{size}} anonim öğrenci arasında. Yalnızca gelişim, asla yetkinlik değil."
+    }
+  },
+  "start": {
+    "eyebrow": "Yeni oturum",
+    "title": "Görüşmenizi hazırlayın",
+    "subtitle": "Birkaç seçim vakayı, rolünüzü ve uygulamanın ne kadar yardım edeceğini belirler. Her ayarı sonradan değiştirebilirsiniz.",
+    "mode": {
+      "heading": "Nasıl pratik yapmak istersiniz?",
+      "hint": "Tek başına modda her şeyi yapay zeka yürütür. Odalar ve izleme yakında geliyor."
+    },
+    "role": {
+      "heading": "Hangi rolü üstleneceksiniz?",
+      "hint": "Rolünüz vakayı, eylemlerinizin kapsamını ve neye göre değerlendirileceğinizi değiştirir."
+    },
+    "complaint": {
+      "heading": "Hasta hangi yakınmayla başvursun?",
+      "hint": "Bir ana yakınma seçin veya uygulamanın sizin için seçmesine izin verin."
+    },
+    "tune": {
+      "heading": "Oturumu ayarlayın",
+      "hint": "Zorluğu belirleyin, dilinizi onaylayın ve rehberliğin açık başlayıp başlamayacağını seçin."
+    },
+    "difficulty": {
+      "label": "Zorluk",
+      "valueText": "5 üzerinden {{level}}. seviye, {{label}}",
+      "forgiveness": "Düşük seviyeler rehberlik ekler ve deneyimsiz soruları asla cezalandırmaz."
+    },
+    "language": {
+      "label": "Dil",
+      "hint": "Görüşmenin tamamı bu dilde yürür."
+    },
+    "guidance": {
+      "label": "Rehberlik",
+      "hint": "Durakladığınızda kaynak gösterilen Sokratik ipuçları. Hiçbiri notlandırmaya girmez."
+    },
+    "summary": "{{role}} rolünde {{difficulty}} bir {{complaint}} vakası yürüteceksiniz.",
+    "begin": "Görüşmeyi başlat",
+    "eduNote": "Yalnızca eğitim amaçlıdır. Sentetik hastalar. Gerçek hasta bakımı için değildir."
+  },
+  "cases": {
+    "eyebrow": "Olgu kütüphanesi",
+    "title": "Olgulara göz atın ve olgu üretin",
+    "subtitle": "Seçilmiş bir olguyla başlayın ya da sonsuz sayıda yeni sentetik hasta üretin. Her olgu kılavuzlara dayanır ve öğretmek için tasarlanmıştır.",
+    "eduNote": "Yalnızca eğitim amaçlıdır. Sentetik hastalar. Gerçek hasta bakımı için değildir.",
+    "generate": {
+      "heading": "Olgu üret",
+      "hint": "İstediğiniz anda yeni bir sentetik hasta oluşturun. Üretici, sıklık ve öğretim değerine göre seçim yapar, ardından olguyu kütüphaneye eklemeden önce iç tutarlılık açısından denetler.",
+      "complaintLegend": "Ana yakınma",
+      "surprise": "Sürpriz olsun",
+      "difficultyLegend": "Zorluk",
+      "difficultyValueText": "5 üzerinden {{level}}. düzey, {{label}}",
+      "unlimited": "Her seferinde yeni ve tekrarlamayan. Üretilen olgular kütüphanenin en üstüne eklenir.",
+      "action": "Olgu üret"
+    },
+    "filters": {
+      "label": "Filtreler",
+      "clear": "Filtreleri temizle",
+      "all": "Tümü",
+      "specialty": "Uzmanlık alanı",
+      "complaint": "Ana yakınma",
+      "difficulty": "Zorluk"
+    },
+    "results": {
+      "label": "Olgular",
+      "count_one": "{{count}} olgu",
+      "count_other": "{{count}} olgu",
+      "empty": "Bu filtrelere uyan olgu henüz yok. Filtreleri değiştirin veya yeni bir olgu üretin."
+    },
+    "card": {
+      "ageSex": "{{age}} yaş, {{sex}}",
+      "generated": "Üretilmiş",
+      "codeLabel": "{{system}} kodu {{code}}",
+      "start": "Bu olguyu başlat"
     }
   },
   "stats": {
@@ -416,6 +628,106 @@
       "trend": "Eğilim"
     }
   },
+  "rooms": {
+    "you": "Siz",
+    "lobby": {
+      "title": "Ekip odaları",
+      "subtitle": "Gerçek klinik ekip çalışmasını deneyimleyin: tek bir canlı vakada birden çok kişi, her biri farklı bir rolde; boş koltukları yapay zeka doldurur. Tek kişilik çalışma bunun tek kişilik hâlidir.",
+      "create": "Oda oluştur",
+      "openRooms": "Açık odalar",
+      "empty": "Şu anda açık oda yok. Ekip provası başlatmak için bir oda oluşturun.",
+      "prodNote": "Bu, benzetilmiş katılımla bir önizlemedir. Canlı sürümde odalar kendi sunucumuzda barındırılan LiveKit gerçek zamanlı katmanında çalışır; yazılı ekip odaları erişilebilir tabandır, ses ve 3B ise ücretli özelliklerdir."
+    },
+    "status": {
+      "open": "Açık",
+      "in-progress": "Devam ediyor",
+      "debrief": "Değerlendirme"
+    },
+    "locale": {
+      "tr": "Türkçe oda",
+      "en": "İngilizce oda"
+    },
+    "role": {
+      "doctor": "Hekim",
+      "nurse": "Hemşire",
+      "paramedic": "Paramedik"
+    },
+    "presence": {
+      "active": "Etkin",
+      "idle": "Beklemede",
+      "reconnecting": "Yeniden bağlanıyor"
+    },
+    "seat": {
+      "aiHeld": "Yapay zeka",
+      "open": "Boş koltuk"
+    },
+    "teamLead": {
+      "hat": "Ekip lideri"
+    },
+    "card": {
+      "rosterLabel": "Rol listesi",
+      "seatsFilled": "{{total}} koltuğun {{filled}} tanesi dolu",
+      "hostedBy": "Kuran: {{name}}",
+      "takeSeat": "Koltuğa geç",
+      "rejoin": "Yeniden katıl"
+    },
+    "create": {
+      "title": "Oda oluştur",
+      "subtitle": "Bir vaka seçin ve hangi rollerin insan koltuğu olacağını belirleyin. Kalanları yapay zeka doldurur.",
+      "caseLabel": "Vaka",
+      "difficulty": "Zorluk 5 üzerinden {{level}}",
+      "rolesLabel": "Roller",
+      "rolesHint": "İnsan koltuğu için bir rolü açın veya yapay zekanın oynaması için kapalı bırakın.",
+      "human": "İnsan koltuğu",
+      "aiBacked": "Yapay zeka",
+      "roleToggle": "{{role}} rolünü insan koltuğu yap",
+      "backfillLabel": "Boş rolleri yapay zeka ile doldur",
+      "backfillHint": "Yapay zeka katılımcıları tam yetkili ekip üyesi olarak katılır ve her zaman etiketlenir.",
+      "confirm": "Oda oluştur"
+    },
+    "inroom": {
+      "backToLobby": "Odalar",
+      "participants": "Katılımcılar",
+      "participantsLabel": "Oda katılımcıları",
+      "teamClock": "Ekip saati",
+      "speaking": "Konuşuyor",
+      "aiNote": "Yapay zeka koltukları açıkça etiketlenir ve sırayla, görünür biçimde söz alır. Değerlendirmede asla insan gibi puanlanmazlar.",
+      "actionsLabel": "İşlemleriniz",
+      "yourScope": "{{role}} sizsiniz",
+      "requestFloor": "Söz iste",
+      "escalateSbar": "Yükselt (SBAR)",
+      "delegate": "Görev ata",
+      "canOrderNote": "Bu vaka için istem girebilirsiniz. Onaylamadan önce güvenlik kontrollerini teyit edin.",
+      "cannotOrderNote": "Bu rol doğrudan istem giremez. Hekimi yönlendirebilirsiniz; talebiniz değerlendirme kanıtı olarak kaydedilir, böylece yanıtsız kalsa bile kaybolmaz.",
+      "promptDoctor": "Hekimi yönlendir",
+      "floor": "Ekip zemini",
+      "floorLabel": "Ekip zemini dökümü",
+      "tabInterview": "Anamnez",
+      "tabFloor": "Ekip zemini",
+      "tabDebrief": "Değerlendirme",
+      "acknowledge": "Teyit et",
+      "readBackToken": "Geri oku: {{token}}",
+      "loopClosed": "Döngü kapandı",
+      "floorNote": "Kapalı döngü iletişim puanlanır. İstemler, ilaç ve doz kilitli belirteç olarak geri okunur."
+    },
+    "floorKind": {
+      "handover": "Devir",
+      "order": "İstem",
+      "ack": "Teyit edildi",
+      "readback": "Geri okuma",
+      "escalate": "Yükseltme",
+      "assess": "Değerlendirme"
+    },
+    "debrief": {
+      "label": "Ekip değerlendirmesi",
+      "title": "Değerlendirme",
+      "subtitle": "Bireysel notlarınız ile ekibin klinik notları ayrı tutulur; böylece zayıf ekipteki güçlü lider ya da tersi durum net görülür.",
+      "individual": "Liderliğiniz",
+      "team": "Ekip klinik",
+      "noHat": "Bu çalışmada ekip lideri şapkasını takmadınız, bu nedenle bireysel liderlik notu yok.",
+      "note": "Yapay zeka rolleri etiketlenir ve asla insan gibi puanlanmaz. Tam kalibrasyon ve çift eksenli döküm geri bildiriminizde yer alır."
+    }
+  },
   "states": {
     "normal": "Normal",
     "caution": "İzlenmeli",
@@ -562,6 +874,149 @@
       "trend": "Eğilim"
     }
   },
+  "institution": {
+    "eyebrow": "Dekanlık",
+    "title": "Kohort yetkinlik panosu",
+    "subtitle": "Acil tıp kohortunuzun nasıl ilerlediği, tekrar eden eksiklerin nerede olduğu ve akreditasyon için gereken kanıtlar.",
+    "privacyBanner": "Toplu ve role dayalı görünüm. Bir öğrencinin özel kalibrasyonu burada asla gösterilmez.",
+    "section": {
+      "y4": "4. sınıf",
+      "y5": "5. sınıf",
+      "y6": "6. sınıf"
+    },
+    "kpi": {
+      "sectionLabel": "Kohort başlık göstergeleri",
+      "activeLearners": "Etkin öğrenciler",
+      "activeLearnersHint": "Son 14 günde pratik yaptı",
+      "encounters": "Karşılaşmalar",
+      "encountersHint": "Bu dönem tamamlanan",
+      "competenceRise": "Yetkinlik artışı",
+      "competenceRiseHint": "Ayrı tutulan vakada ölçülen kazanç",
+      "calibrationGap": "Kalibrasyon farkı",
+      "calibrationGapHint": "Kohort güveni eksi performans",
+      "safetyResolved": "Giderilen güvenlik atlamaları",
+      "safetyResolvedHint": "Remediasyondan sonra kapatıldı",
+      "remediationClosed": "Kapatılan remediasyon",
+      "remediationClosedHint": "Tam olarak belgelenen döngüler",
+      "improving": "iyileşiyor",
+      "worsening": "ilgi gerektiriyor",
+      "steady": "sabit"
+    },
+    "heatmap": {
+      "heading": "Kohort yetkinlik ısı haritası",
+      "headingSub": "Her öğrenci altı yetkinlik alanında; bantlanmış ve kanıt alıntısına kadar detaylandırılabilir.",
+      "title": "Alanlara göre öğrenciler",
+      "subtitle": "Bantlar güvenilirlik eşiğine tabidir. Karşılaşmaya ve kanıt alıntısına inmek için bir öğrenci veya hücre seçin.",
+      "matrixLabel": "Yetkinlik ısı haritası, alanlara göre öğrenciler",
+      "tableCaption": "Her öğrencinin altı alandaki yetkinlik bandı; her hücrede detay inme olanağıyla.",
+      "tableEquivCaption": "Yetkinlik ısı haritasının tablo eşdeğeri: her öğrencinin altı alandaki yetkinlik bandı.",
+      "learnerCol": "Öğrenci",
+      "sectionCol": "Bölüm",
+      "atRiskTag": "Riskli",
+      "viewToggleLabel": "Isı haritası görünümü",
+      "viewMatrix": "Isı haritası",
+      "roleGatedNote": "Role dayalı görünüm: dekan bantlanmış yetkinliği görür ve değerlendiricinin kanıt alıntısına inebilir, ancak bir öğrencinin özel kalibrasyon grafiğini asla göremez.",
+      "cellAria": "{{learner}}, {{domain}}: {{band}}, {{count}} karşılaşma. Detaya inmek için etkinleştirin.",
+      "cellWithheldAria": "{{learner}}, {{domain}}: bant belirtilmedi, henüz yeterli güvenilir kanıt yok.",
+      "drillLearnerAria": "{{learner}} öğrencisinin ayrıntısına in",
+      "drillTitle": "Ayrıntı: {{learner}}",
+      "drillPath": "Kohort, bölüm, öğrenci, karşılaşma, kanıt alıntısı. En geniş eksik: {{domain}}.",
+      "evidenceCaption": "Değerlendiricinin kullandığı, öğrencinin kendi dilindeki birebir kanıt alıntısı.",
+      "frameworkChip": "Çerçeve: ACGME Milestones",
+      "frameworkTip": "Yalnızca çapraz eşleme görünümü. Çerçeve değiştirmek aynı kanıtı yeniden eşler; asla yeniden puanlamaz.",
+      "switchFramework": "Çerçeve görünümünü değiştir"
+    },
+    "remediation": {
+      "heading": "Riskli öğrenciler ve remediasyon",
+      "headingSub": "Kapalı döngü: sapta, tanımla, reçetele, yeniden değerlendir, belgele. Her kayıt dışa aktarılabilir.",
+      "openCount": "{{count}} açık",
+      "loopAria": "Remediasyon döngüsü aşamaları",
+      "stage": {
+        "detect": "Sapta",
+        "diagnose": "Tanımla",
+        "prescribe": "Reçetele",
+        "reassess": "Yeniden değerlendir",
+        "document": "Belgele"
+      },
+      "status": {
+        "done": "tamam",
+        "active": "sürüyor",
+        "pending": "başlamadı"
+      },
+      "trigger": {
+        "safety": "Akut koroner sendrom şüphesinde tekrar eden güvenlik açısından kritik atlamalarla ortaya çıktı.",
+        "stalled": "Birkaç karşılaşma boyunca duraklayan yetkinlikle ortaya çıktı."
+      },
+      "diagnosedGaps": "Tanımlanan eksikler",
+      "recurrence": "{{count}} kez görüldü",
+      "prescribed": "Reçetelendi",
+      "reassessed": "Yeniden değerlendirildi",
+      "opened": "{{days}} gün önce açıldı",
+      "open": "Açık",
+      "closed": "Kapalı döngü",
+      "openRemediation": "Remediasyonu aç",
+      "viewRecord": "Kaydı görüntüle",
+      "exportRecord": "Kaydı dışa aktar"
+    },
+    "calibration": {
+      "heading": "Toplu kalibrasyon",
+      "headingSub": "Kohortun sistematik olarak nerede fazla veya az güvenli olduğu; müfredat sinyali olarak okunur.",
+      "title": "Konuya göre sistematik kalibrasyon sapması",
+      "subtitle": "Kohort düzeyinde bir müfredat tanısı. Klinik bir konuda aşırı güven, öğretim önceliğidir.",
+      "headline": "Müfredat sinyali",
+      "headlineBody": "Kohort {{topic}} konusunda sistematik olarak {{points}} puan fazla güvenli. Bir sonraki blokta önceliklendirin.",
+      "direction": {
+        "over": "Fazla güvenli",
+        "under": "Az güvenli",
+        "well": "İyi kalibre"
+      },
+      "ppShort": "yp",
+      "learnerCount": "{{count}} öğrenci",
+      "rowAria": "{{topic}}: {{direction}}, {{points}} puan.",
+      "privacyNote": "Yalnızca toplu veri. Hiçbir öğrencinin bireysel kalibrasyonu burada açığa çıkmaz (kalibrasyon asla sıralanmaz)."
+    },
+    "export": {
+      "heading": "Akreditasyon dışa aktarımı",
+      "headingSub": "Tek tıkla, çerçeveye etiketli, kimliksizleştirilmiş, çapraz eşleme sürümü damgalı.",
+      "title": "Kimliksizleştirilmiş bir dışa aktarım oluşturun",
+      "subtitle": "Dışa aktarımı akreditasyon çerçevelerinize etiketleyin. Kanıt çapraz eşlenir, asla yeniden puanlanmaz.",
+      "frameworks": "Çerçeveler",
+      "mapped": "{{total}} unsurdan {{mapped}} tanesi",
+      "scope": {
+        "cohort": "Tüm kohort",
+        "window": "Bu değerlendirme dönemi",
+        "deidentified": "Kimliksizleştirilmiş",
+        "fairness": "Adalet denetimini dahil et"
+      },
+      "deidentifiedOn": "Kimliksizleştirildi",
+      "deidentifiedOff": "Yeniden tanımlanabilir, gözden geçirin",
+      "fairnessOn": "Adalet denetimi dahil",
+      "fairnessOff": "Adalet denetimi eksik",
+      "generate": "Dışa aktarım oluştur",
+      "blocked": "Dışa aktarımı oluşturmak için adalet denetimini dahil edin."
+    },
+    "fairness": {
+      "heading": "Adalet denetimi",
+      "headingSub": "İsteğe bağlı değil, zorunlu. Puan dağılımları dil alt grubuna göre, Türkçe ve İngilizce ayrımıyla.",
+      "title": "Dil alt grubu adaleti",
+      "subtitle": "Türkçe birincil ve İngilizce birincil alt gruplar için ayrı ayrı verilmiştir.",
+      "invariant": "Klinik eksen dille ilişkilenmemelidir. Aksan ve ikinci dil biçimi asla puanlanmaz, bu nedenle klinik bantlar alt gruplar arasında eşleşmelidir.",
+      "tableCaption": "Türkçe birincil ve İngilizce birincil alt gruplar için adalet göstergeleri ve tolerans içinde durum bilgisi.",
+      "metricCol": "Gösterge",
+      "trCol": "TR ({{count}})",
+      "enCol": "EN ({{count}})",
+      "statusCol": "Durum",
+      "metric": {
+        "clinicalBand": "Medyan klinik bant",
+        "commBand": "Medyan iletişim bandı",
+        "refusalRate": "Model reddetme oranı",
+        "sttFallback": "Konuşmadan metne geri düşme oranı"
+      },
+      "withinTolerance": "Tolerans içinde",
+      "flagged": "İnceleme için işaretlendi",
+      "footnote": "Daha yüksek Türkçe konuşmadan metne geri düşme oranı, ses yolunun bir özelliğidir ve şeffaf biçimde gösterilir. Asla bir yetkinlik puanını etkilemez."
+    }
+  },
   "bands": {
     "emerging": "Başlangıç",
     "developing": "Gelişmekte",
@@ -585,5 +1040,270 @@
     "years": "yaşında",
     "male": "erkek",
     "female": "kadın"
+  },
+  "authoring": {
+    "eyebrow": "Eğitmen içerik hazırlama",
+    "title": "Taslaktan imzalı, sürümlü vakaya",
+    "subtitle": "Yapay zeka vakayı taslar, yetkili merci belgeli hekimdir. Her klinik olgu, öğrenci görmeden önce dayanaklandırılır, atıflanır ve kilitlenir.",
+    "aiHumanNote": "Yapay zeka taslar. Adı belirtilen bir hekim inceler, düzenler ve imzalar. İmza kapısı kural olarak değil, kodda uygulanır.",
+    "eduNote": "Tüm hastalar sentetiktir ve her vaka yalnızca eğitim amaçlıdır. Gerçek hasta bakımı için değildir.",
+    "pipeline": {
+      "heading": "İçerik hazırlama süreci",
+      "headingSub": "Vaka taslağından izlenen, yayımlanmış vakaya altı aşama. Ortayı yapay zeka taslar; önemli her kapıda kalem hekimdedir.",
+      "aria": "Vaka hazırlama süreci, altı aşama",
+      "actor": {
+        "ai": "YZ taslağı",
+        "human": "Hekim",
+        "auto": "Otomatik"
+      },
+      "state": {
+        "done": "Tamamlandı",
+        "active": "İncelemede",
+        "pending": "Bekliyor"
+      },
+      "stage": {
+        "blueprint": {
+          "title": "Şablon",
+          "desc": "Yakınma, hedefler, düzey, ülke ve konsey, diller."
+        },
+        "draft": {
+          "title": "YZ taslağı",
+          "desc": "Persona, vaka durumu, vital sürücüler, rubrik maddeleri ve çapalar."
+        },
+        "review": {
+          "title": "Uzman incelemesi ve kilit",
+          "desc": "Olgular hekim tarafından düzenlenir, dayanaklandırılır, atıflanır ve kilitlenir."
+        },
+        "psychometric": {
+          "title": "Akran ve psikometri",
+          "desc": "Akran onayı, değerlendiriciler arası uyum, güçlük, DIF kontrolü."
+        },
+        "publish": {
+          "title": "Yayın ve sürüm",
+          "desc": "İmza, vakayı ve rubriği sürüm özetleriyle dondurur."
+        },
+        "monitor": {
+          "title": "İzleme",
+          "desc": "Güncellik izlemi, atıflı kılavuz değişimini yeniden inceleme için işaretler."
+        }
+      }
+    },
+    "blueprint": {
+      "heading": "Vaka şablonu",
+      "headingSub": "Yapay zekanın taslağını çıkardığı brif. Ülke ve konsey, öğrenme yerelinden bağımsızdır.",
+      "difficulty": "Güçlük",
+      "level": "Öğrenci düzeyi",
+      "council": "Ülke ve konsey",
+      "locales": "İçerik yerelleri",
+      "objectives": "Öğrenme hedefleri"
+    },
+    "editor": {
+      "heading": "Uzman incelemesi ve kilit",
+      "headingSub": "İnsanın yetkili olduğu çekirdek. Solda kaynaklı YZ taslağı olguları; sağda rubrik ve altı alanlık kapsamı. Bir olgu, atıflanıp kilitlenmeden öğrenciye ulaşamaz.",
+      "factsHeading": "Kilitli olgular ve köken bilgisi",
+      "factsSub": "Her klinik olgu, atıflı ve sürümlü bir kılavuz referansı ve bir kilit durumu taşır. Dayanaksız bir olgu kilitlenemez.",
+      "rubricHeading": "Rubrik maddeleri",
+      "rubricSub": "Her maddenin davranış çapaları, bir ağırlığı, bir alanı ve bir güvenlik işareti vardır. Alan kümesi sabittir.",
+      "coverage": "Alan kapsamı",
+      "coverageComplete": "Altı yetkinlik alanının tamamı kapsandı",
+      "weight": "Ağırlık {{value}}",
+      "safetyCritical": "Güvenlik açısından kritik",
+      "humanEdited": "Hekim düzenledi",
+      "trPending": "Türkçe çapa bekliyor",
+      "flaggedCount": "{{count}} olgu dayanak gerektiriyor",
+      "flaggedCount_other": "{{count}} olgu dayanak gerektiriyor",
+      "flaggedNote": "Bu olgu, atıflı bir kaynağa dayandırılamadı. İnceleme için bekletiliyor ve çözülene kadar yayını engelliyor.",
+      "kind": {
+        "persona": "Hasta personası",
+        "vitals": "Triyaj vitalleri",
+        "finding": "Muayene bulgusu",
+        "result": "Tetkik sonucu",
+        "medication": "İlaç",
+        "safety": "Güvenlik kontrolü"
+      },
+      "status": {
+        "locked": "Kilitli",
+        "editedLocked": "Düzenlendi ve kilitlendi",
+        "open": "Atıflı, kilitli değil",
+        "flagged": "Dayanak gerekli"
+      }
+    },
+    "psychometric": {
+      "heading": "Akran ve psikometri ön kontrolü",
+      "sub": "İncelemecinin imzadan önce tarttığı madde kalitesi sinyalleri. Pilot kohort kimliksizleştirilmiş ve küçüktür; bunların hiçbiri kamuya açık bir ölçüt değildir.",
+      "agreement": "Akran incelemeci",
+      "kappa": "Değerlendiriciler arası uyum",
+      "difficulty": "Pilot güçlüğü",
+      "dif": "Adalet (DIF)"
+    },
+    "signoff": {
+      "sectionHeading": "İmza ve yayın",
+      "sectionSub": "Kesin kapı: her olgu dayanaklandırılana ve belgeli bir hekim ortak imza atana kadar yayın devre dışıdır. İmza, vakayı ve rubriği sürüm özetleriyle dondurur.",
+      "heading": "Yayına hazırlık",
+      "sub": "Belgeli hekim ortak imza atmadan önce ön kontrolü, yerel bazında durumu, olgu kilidi durumunu ve sürüm özetlerini gözden geçirin.",
+      "gatedBadge": "Kapalı",
+      "publishedBadge": "Yayımlandı",
+      "localeHeading": "Yerel bazında inceleme",
+      "locale": {
+        "en": "İngilizce içerik ve rubrik",
+        "tr": "Türkçe içerik ve rubrik"
+      },
+      "localeReviewed": "{{name}} inceledi",
+      "localeInReview": "İncelemede",
+      "localeNote": "Bir vaka, yalnızca içeriği ve rubriği hekim düzeyinde dil incelemesinden geçen yerelde sunulur. Türkçe içerik, bir Türk incelemeci imzalayana kadar İngilizceden geride kalabilir.",
+      "factsClear": "Tüm klinik olgular dayanaklandırıldı ve kilitlendi.",
+      "factsBlocked": "{{count}} olgu henüz dayanaklandırılıp kilitlenmedi. Yayından önce çözün.",
+      "factsBlocked_other": "{{count}} olgu henüz dayanaklandırılıp kilitlenmedi. Yayından önce çözün.",
+      "versionHeading": "Sürüm köken bilgisi",
+      "caseHash": "Vaka sürüm özeti",
+      "rubricHash": "Rubrik sürüm özeti",
+      "guidelineSet": "Kılavuz kümesi",
+      "cosignLabel": "Kayıtlı belgeli hekim benim ve bu vakayı yayımlanmak üzere onaylıyorum.",
+      "signedConfirmation": "{{name}} tarafından ortak imzalandı. Vaka ve rubrik donduruldu.",
+      "groundedOn": "Dayanak",
+      "modelProvenance": "Kendi sunucumuzda barındırılan, büyük açık ağırlıklı bir modelce taslandı ve aileler arası çapraz doğrulandı. Ticari bir sağlayıcı adı belirtilmez.",
+      "publish": "Vakayı yayımla",
+      "unpublish": "Taslağa döndür",
+      "blockedByFacts": "Her klinik olgu dayanaklandırılıp kilitlenene kadar yayın engellidir.",
+      "blockedByCosign": "Belgeli hekim ortak imza atana kadar yayın engellidir."
+    },
+    "monitor": {
+      "heading": "Yayımlanmış ve izleniyor",
+      "headingSub": "Sürüm özetleri ve son inceleme tarihleriyle yayımlanmış vakalarınız. Bir kılavuz değişikliği vakayı yeniden inceleme için işaretler; hiçbir şey kendiliğinden yayımlanmaz ve hiçbir şey kendiliğinden yeniden yazılmaz.",
+      "lastReviewed": "İncelendi: {{date}}",
+      "encounters": "{{count}} karşılaşma",
+      "encounters_other": "{{count}} karşılaşma",
+      "localeOffered": "sunuluyor",
+      "localePending": "incelemeci bekliyor",
+      "open": "Vakayı aç",
+      "review": "Şimdi incele",
+      "status": {
+        "live": "Yayında",
+        "flagged": "Kılavuz değişti",
+        "enOnly": "Yalnızca İngilizce"
+      }
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Vaka sizi prova etmeden, vakayı prova edin.",
+      "subtitle": "Metin öncelikli bir klinik simülatör: bir HBS içinde sentetik hasta çalışın, kanıta dayalı geri bildirim alın ve kalibrasyonunuzu görün.",
+      "primaryCta": "Demoya girin",
+      "secondaryCta": "Geri bildirim raporunu görün",
+      "bilingualNote": "Türkçe ve İngilizcede, metin ve seste birinci sınıf.",
+      "panelTitle": "Bir karşılaşma, üç aşama",
+      "panelRow": {
+        "chat": "HBS içinde sentetik bir hastayla anamnez alın",
+        "generate": "Her vaka üretilir, hiç tekrarlanmaz",
+        "calibration": "Güven, yetkinliğe karşı ölçülür"
+      }
+    },
+    "trust": {
+      "label": "AcuDx'in güvenceleri",
+      "formative": "Yalnızca biçimlendirici",
+      "synthetic": "Sentetik hastalar",
+      "cited": "Kılavuz atıflı",
+      "accessible": "WCAG 2.2 AA",
+      "bilingual": "Türkçe ve İngilizce"
+    },
+    "phases": {
+      "heading": "Ürünün her aşamasını gezin",
+      "headingSub": "Her aşama, canlı demo ekranını açar. Dilediğiniz yerden başlayın ya da üst çubuktan rehberli turu izleyin.",
+      "roleplay": {
+        "title": "Rol yapma ve HBS",
+        "body": "Gerçek bir HBS kabuğu içinde sentetik hastayla anamnez alın, tetkik isteyin ve canlı vital monitörünü okuyun.",
+        "link": "Karşılaşmayı aç"
+      },
+      "cases": {
+        "title": "Dinamik vakalar",
+        "body": "Vakalar ICD ve DSM'den talep üzerine üretilir; böylece bir kohort vaka bankasını asla ezberleyemez.",
+        "link": "Gözat ve üret"
+      },
+      "guidance": {
+        "title": "Atıflı rehberlik",
+        "body": "Dayanaklı ve atıflı, cevabı asla vermeyen ve karşılaşmayı asla durdurmayan Sokratik ipuçları.",
+        "link": "Vakada rehberliği gör"
+      },
+      "feedback": {
+        "title": "Kalibrasyon geri bildirimi",
+        "body": "Çift eksenli, bantlı geri bildirim; özel bir kalibrasyon aynası ve her zaman öne çıkan güvenlik kritik kaçırmalar.",
+        "link": "Bir rapor okuyun"
+      },
+      "rooms": {
+        "title": "Çok oyunculu odalar",
+        "body": "Tek bir yetkili hasta durumu üzerinde hekim, hemşire ve paramedik rollerinde paylaşımlı bir vaka çalıştırın.",
+        "link": "Bir oda aç"
+      },
+      "progress": {
+        "title": "İlerleme",
+        "body": "Yetkinliği zaman içinde, geliştirilebilir bantlı bir beceri olarak izleyin; sayısal puan yok, kamuya açık sıralama yok.",
+        "link": "İlerlemeyi gör"
+      },
+      "institution": {
+        "title": "Kurum analitiği",
+        "body": "Dekan; kohort yetkinliğini, iyileştirme döngüsünü ve adalet denetimini toplu ve role göre kapalı olarak görür.",
+        "link": "Panoyu aç"
+      },
+      "sovereign": {
+        "title": "Açık ve egemen",
+        "body": "Kendi sunucumuzda barındırılan açık ağırlıklı modeller ve insanın yetkili olduğu vaka hazırlama. Ticari bağımlılık yok.",
+        "link": "İçerik hazırlamayı gör"
+      }
+    },
+    "closing": {
+      "heading": "Rehberli turu izleyin",
+      "body": "Her aşamayı görmek için dokuz ekranı sırayla gezin; ilk karşılaşmadan kalibrasyon geri bildirimine ve kurum panosuna kadar.",
+      "primaryCta": "Demoya girin",
+      "educatorCta": "Eğitmenler için",
+      "note": "Şu an {{lang}} dilinde. Üst çubuktan dili istediğiniz zaman değiştirin."
+    }
+  },
+  "tour": {
+    "button": "Rehberli tur",
+    "buttonShort": "Tur",
+    "title": "Demoyu gezin",
+    "description": "Her aşamayı sırayla adımlayın ya da herhangi bir ekrana geçin.",
+    "here": "Buradasınız",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "start": "Turu başlat",
+    "stops": {
+      "welcome": {
+        "title": "Karşılama",
+        "hint": "Ürün özeti ve demo girişi."
+      },
+      "start": {
+        "title": "Başlangıç",
+        "hint": "Dil, rol ve güçlük seçin."
+      },
+      "cases": {
+        "title": "Vakalar",
+        "hint": "Dinamik vakalara gözat ve üret."
+      },
+      "encounter": {
+        "title": "Karşılaşma",
+        "hint": "HBS içinde sentetik hasta çalışın."
+      },
+      "feedback": {
+        "title": "Geri bildirim",
+        "hint": "Atıflı, bantlı raporu okuyun."
+      },
+      "rooms": {
+        "title": "Odalar",
+        "hint": "Paylaşımlı çok oyunculu vaka çalıştırın."
+      },
+      "progress": {
+        "title": "İlerleme",
+        "hint": "Zaman içinde yetkinlik eğilimini görün."
+      },
+      "authoring": {
+        "title": "İçerik hazırlama",
+        "hint": "Eğitmen imza süreci."
+      },
+      "institution": {
+        "title": "Kurum",
+        "hint": "Dekanın kohort panosu."
+      }
+    }
   }
 }

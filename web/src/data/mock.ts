@@ -300,6 +300,15 @@ export const citations: Citation[] = [
     },
     lastReviewed: "2024-06-30",
   },
+  {
+    id: "titck-formulary",
+    label: "TİTCK",
+    source: {
+      en: "TİTCK national medicines formulary, drug interaction reference.",
+      tr: "TİTCK ulusal ilaç formüleri, ilaç etkileşim referansı.",
+    },
+    lastReviewed: "2025-03-12",
+  },
 ];
 
 export const guidanceHints: GuidanceHint[] = [

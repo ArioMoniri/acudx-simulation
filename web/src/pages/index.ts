@@ -1,3 +1,10 @@
 export { HomePage } from "./HomePage";
+export { LandingPage } from "./LandingPage";
+export { AuthoringPage } from "./AuthoringPage";
+export { StartPage } from "./StartPage";
+export { CasesPage } from "./CasesPage";
 export { EncounterPage } from "./EncounterPage";
 export { FeedbackPage } from "./FeedbackPage";
+export { ProgressPage } from "./ProgressPage";
+export { RoomPage } from "./RoomPage";
+export { InstitutionPage } from "./InstitutionPage";

@@ -2,28 +2,73 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { UserCircle } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
+import { useDemoRole, type DemoRole } from "@/lib/demoRole";
 import { Wordmark } from "./Wordmark";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
+import { RoleSwitcher } from "./RoleSwitcher";
+import { GuidedTour } from "./GuidedTour";
 
-const links = [
-  { to: "/", key: "nav.home", end: true },
-  { to: "/encounter", key: "nav.encounter", end: false },
-  { to: "/feedback", key: "nav.feedback", end: false },
-] as const;
+interface NavItem {
+  to: string;
+  key: string;
+  end?: boolean;
+}
 
 /**
- * TopNav — single-line app header: gradient wordmark, primary nav,
- * language + theme controls, account. Height <= 72px.
+ * Nav surfaces per demo vantage point (docs/design/01):
+ *   learner  → the solo learning loop (Journeys 1-5)
+ *   educator → the learner loop PLUS authoring + review (Journey 7)
+ *   dean     → the institution dashboard (Journey 8)
+ *
+ * Every label resolves to a real, reachable route so the nav never dead-ends;
+ * the existing Home / Encounter / Feedback screens stay reachable (Cases and
+ * Progress are their learner-facing names).
+ */
+const NAV_BY_ROLE: Record<DemoRole, NavItem[]> = {
+  learner: [
+    { to: "/", key: "nav.home", end: true },
+    { to: "/start", key: "nav.start" },
+    { to: "/cases", key: "nav.cases" },
+    { to: "/rooms", key: "nav.rooms" },
+    { to: "/progress", key: "nav.progress" },
+  ],
+  educator: [
+    { to: "/", key: "nav.home", end: true },
+    { to: "/cases", key: "nav.cases" },
+    { to: "/authoring", key: "nav.authoring" },
+    { to: "/feedback", key: "nav.review" },
+  ],
+  dean: [
+    { to: "/", key: "nav.home", end: true },
+    { to: "/institution", key: "nav.institution" },
+    { to: "/authoring", key: "nav.authoring" },
+  ],
+};
+
+const linkClasses = (isActive: boolean) =>
+  cn(
+    "inline-flex min-h-9 items-center rounded-control px-3 text-sm font-medium",
+    "transition-colors duration-200 ease-out focus-visible:outline-none",
+    isActive
+      ? "bg-brand-tint text-brand"
+      : "text-muted hover:bg-bg-subtle hover:text-fg",
+  );
+
+/**
+ * TopNav — single-line app header: gradient wordmark, role-scoped primary nav,
+ * a "View as" role switcher, language + theme controls, account. Height <= 72px.
  */
 export function TopNav() {
   const { t } = useTranslation();
+  const { role } = useDemoRole();
+  const links = NAV_BY_ROLE[role];
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/85 backdrop-blur-md">
       <nav
         aria-label={t("app.name")}
-        className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6"
+        className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6"
       >
         <NavLink
           to="/"
@@ -33,21 +78,13 @@ export function TopNav() {
           <Wordmark />
         </NavLink>
 
-        <ul className="ml-2 hidden items-center gap-1 md:flex">
+        <ul className="ml-1 hidden items-center gap-1 md:flex">
           {links.map((l) => (
-            <li key={l.to}>
+            <li key={l.key}>
               <NavLink
                 to={l.to}
                 end={l.end}
-                className={({ isActive }) =>
-                  cn(
-                    "inline-flex min-h-9 items-center rounded-control px-3 text-sm font-medium",
-                    "transition-colors duration-200 ease-out focus-visible:outline-none",
-                    isActive
-                      ? "bg-brand-tint text-brand"
-                      : "text-muted hover:bg-bg-subtle hover:text-fg",
-                  )
-                }
+                className={({ isActive }) => linkClasses(isActive)}
               >
                 {t(l.key)}
               </NavLink>
@@ -56,7 +93,9 @@ export function TopNav() {
         </ul>
 
         <div className="ml-auto flex items-center gap-2">
-          <LanguageSwitcher />
+          <GuidedTour className="hidden md:inline-flex" />
+          <RoleSwitcher className="hidden sm:flex" />
+          <LanguageSwitcher className="hidden sm:inline-flex" />
           <ThemeToggle />
           <button
             type="button"
@@ -73,27 +112,31 @@ export function TopNav() {
       </nav>
 
       {/* Compact nav for small screens — kept on one row, scrolls if needed */}
-      <ul className="flex items-center gap-1 overflow-x-auto border-t border-border px-4 py-1.5 md:hidden">
-        {links.map((l) => (
-          <li key={l.to} className="shrink-0">
-            <NavLink
-              to={l.to}
-              end={l.end}
-              className={({ isActive }) =>
-                cn(
-                  "inline-flex min-h-9 items-center rounded-control px-3 text-sm font-medium",
-                  "focus-visible:outline-none",
-                  isActive
-                    ? "bg-brand-tint text-brand"
-                    : "text-muted hover:text-fg",
-                )
-              }
-            >
-              {t(l.key)}
-            </NavLink>
-          </li>
-        ))}
-      </ul>
+      <div className="flex items-center gap-2 overflow-x-auto border-t border-border px-4 py-1.5 md:hidden">
+        <GuidedTour className="shrink-0" />
+        <RoleSwitcher className="shrink-0 sm:hidden" />
+        <ul className="flex items-center gap-1">
+          {links.map((l) => (
+            <li key={l.key} className="shrink-0">
+              <NavLink
+                to={l.to}
+                end={l.end}
+                className={({ isActive }) =>
+                  cn(
+                    "inline-flex min-h-9 items-center rounded-control px-3 text-sm font-medium",
+                    "focus-visible:outline-none",
+                    isActive
+                      ? "bg-brand-tint text-brand"
+                      : "text-muted hover:text-fg",
+                  )
+                }
+              >
+                {t(l.key)}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </div>
     </header>
   );
 }

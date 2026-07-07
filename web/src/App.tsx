@@ -4,7 +4,18 @@ import { motion, useReducedMotion } from "motion/react";
 
 import { AppFrame, PageContainer } from "@/components/shell";
 import { Button } from "@/components/ui";
-import { HomePage, EncounterPage, FeedbackPage } from "@/pages";
+import {
+  HomePage,
+  LandingPage,
+  AuthoringPage,
+  StartPage,
+  CasesPage,
+  EncounterPage,
+  FeedbackPage,
+  ProgressPage,
+  RoomPage,
+  InstitutionPage,
+} from "@/pages";
 
 /* -------------------------------------------------------------------------- */
 /* 404                                                                         */
@@ -41,8 +52,16 @@ export default function App() {
     <AppFrame>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/welcome" element={<LandingPage />} />
+        <Route path="/authoring" element={<AuthoringPage />} />
+        <Route path="/start" element={<StartPage />} />
+        <Route path="/cases" element={<CasesPage />} />
+        <Route path="/rooms" element={<RoomPage />} />
+        <Route path="/rooms/:id" element={<RoomPage />} />
         <Route path="/encounter" element={<EncounterPage />} />
         <Route path="/feedback" element={<FeedbackPage />} />
+        <Route path="/progress" element={<ProgressPage />} />
+        <Route path="/institution" element={<InstitutionPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AppFrame>

@@ -9,10 +9,24 @@
     "home": "Home",
     "encounter": "Encounter",
     "feedback": "Feedback",
+    "start": "Start",
+    "cases": "Cases",
+    "rooms": "Rooms",
+    "progress": "Progress",
+    "authoring": "Authoring",
+    "review": "Review",
+    "institution": "Institution",
     "account": "Account",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "skipToContent": "Skip to content"
+  },
+  "role": {
+    "viewAs": "View as",
+    "viewAsRole": "View as {{role}}",
+    "learner": "Learner",
+    "educator": "Educator",
+    "dean": "Dean"
   },
   "actions": {
     "start": "Start",
@@ -75,6 +89,204 @@
       "casesBody": "New emergency-medicine cases are added regularly. Check back soon.",
       "feedbackTitle": "No feedback yet",
       "feedbackBody": "Finish your first encounter to see formative feedback here."
+    }
+  },
+  "progress": {
+    "eyebrow": "Your progress",
+    "title": "Mastery, not a scoreboard",
+    "subtitle": "Everything here rewards closing your gaps and tightening your calibration. It is private, formative, and yours alone.",
+    "level": {
+      "sectionLabel": "Level and streak",
+      "eyebrow": "Level {{level}}",
+      "toNext": "Progress to level {{level}}",
+      "valueText": "{{percent}}% of the way to the next level",
+      "remaining": "{{xp}} XP to go, earned only by improving",
+      "xpTotal": "Total XP",
+      "whyHeading": "Why you earned it",
+      "reason": {
+        "calibrationTightened": "Calibration tightened",
+        "gapClosed": "Gap closed",
+        "bandUp": "Band moved up",
+        "epaEntrusted": "EPA entrusted",
+        "safetyNetting": "Safety-netting"
+      }
+    },
+    "streak": {
+      "eyebrow": "Current streak",
+      "days": "days",
+      "best": "Personal best",
+      "weekLabel": "Your last seven days",
+      "weekday": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "dayState": {
+        "practised": "Practised",
+        "freeze": "Freeze used, streak protected",
+        "rest": "Rest day",
+        "today": "Today, one rep left",
+        "upcoming": "Upcoming"
+      },
+      "freezes": "{{left}} of {{total}} freezes left. A rough week will not break your streak.",
+      "graceNote": "Yesterday was covered by a grace day. No pressure to catch up all at once."
+    },
+    "mastery": {
+      "heading": "Mastery map",
+      "subtitle": "Where you stand across the six competency domains, shown as bands with the change since last week.",
+      "notEnough": "Not enough reliable evidence yet ({{count}} encounters). Keep practising to unlock a band.",
+      "rowAria": "{{domain}}: reached {{band}}",
+      "delta": {
+        "up": "Up a band since last week",
+        "down": "Down a band since last week",
+        "steady": "Steady since last week"
+      },
+      "deltaShort": {
+        "up": "Up",
+        "down": "Down",
+        "steady": "Steady"
+      }
+    },
+    "epa": {
+      "heading": "Entrustable activities",
+      "subtitle": "Key EPAs and the level of supervision you have earned. Entrusted means you can practise these with distant supervision.",
+      "entrusted": "Entrusted",
+      "levelShort": "Level {{level}} of 5",
+      "demonstrations": "{{count}} demonstrations behind this level",
+      "scaleAria": "{{code}}: entrustment level {{level}} of 5",
+      "level": {
+        "1": "Observe",
+        "2": "Direct supervision",
+        "3": "Indirect supervision",
+        "4": "Distant supervision",
+        "5": "Supervise others"
+      }
+    },
+    "trajectory": {
+      "heading": "Calibration trajectory",
+      "subtitle": "Your confidence-performance gap and Brier score over recent sessions. Both trending down is the goal.",
+      "gapLabel": "Confidence gap",
+      "brierLabel": "Brier score",
+      "gapDrop": "Down {{points}} pts",
+      "lowerBetter": "Lower is better",
+      "perDomain": "By domain",
+      "domainNow": "Now {{percent}}% gap",
+      "domainSpark": "{{domain}} gap trend, narrowed {{points}} points",
+      "openReport": "Open the full report",
+      "empty": "Not enough sessions yet to plot a trajectory."
+    },
+    "badges": {
+      "heading": "Milestones",
+      "subtitle": "Identity milestones for competency and entrusted activities. Earned by what you demonstrated, never by volume.",
+      "count": "{{earned}} of {{total}} earned",
+      "earned": "Earned",
+      "progressAria": "{{badge}}: {{percent}}% toward earning",
+      "inProgress": "In progress"
+    },
+    "review": {
+      "heading": "Spaced review",
+      "subtitle": "Cards scheduled from your past gaps, spaced so each one returns just before you would forget it. Every card is cited.",
+      "dueBadge": "{{count}} due now",
+      "startReview": "Start review",
+      "state": {
+        "due": "Due now",
+        "learning": "Learning",
+        "scheduled": "Scheduled"
+      },
+      "recall": "Recall {{percent}}%",
+      "stability": "Stable for {{days}} days",
+      "dueNow": "Due now",
+      "dueInDays": "Due in {{count}} day",
+      "dueInDays_other": "Due in {{count}} days"
+    },
+    "cohort": {
+      "heading": "Compare on improvement",
+      "explainer": "An optional, anonymised cohort view ranked only on how much you have improved, never on raw performance. No names, no global ranking.",
+      "toggleAria": "Show cohort improvement comparison",
+      "on": "On",
+      "off": "Off",
+      "offNote": "Off by default. Turn this on to see your improvement against an anonymised cohort. You can turn it off at any time.",
+      "yourImprovement": "Your improvement this month",
+      "vsMedian": "Cohort median improvement is {{median}} points",
+      "percentileLabel": "Improvement percentile",
+      "percentileNote": "Among {{size}} anonymised learners. Improvement only, never competence."
+    }
+  },
+  "start": {
+    "eyebrow": "New session",
+    "title": "Set up your encounter",
+    "subtitle": "A few choices shape the case, your role, and how much the app helps. You can change every setting later.",
+    "mode": {
+      "heading": "How do you want to practice?",
+      "hint": "Solo runs everything with AI. Rooms and observing are coming soon."
+    },
+    "role": {
+      "heading": "Which role will you play?",
+      "hint": "Your role changes the case, the scope of your actions, and what you are scored on."
+    },
+    "complaint": {
+      "heading": "What should the patient present with?",
+      "hint": "Pick a chief complaint, or let the app choose one for you."
+    },
+    "tune": {
+      "heading": "Tune the session",
+      "hint": "Set the challenge, confirm your language, and choose whether guidance starts on."
+    },
+    "difficulty": {
+      "label": "Difficulty",
+      "valueText": "Level {{level}} of 5, {{label}}",
+      "forgiveness": "Lower levels add scaffolding and never penalise naive questions."
+    },
+    "language": {
+      "label": "Language",
+      "hint": "The whole encounter runs in this language."
+    },
+    "guidance": {
+      "label": "Guidance",
+      "hint": "Cited Socratic hints when you pause. Nothing is graded on them."
+    },
+    "summary": "You will run a {{difficulty}} {{complaint}} case as the {{role}}.",
+    "begin": "Begin encounter",
+    "eduNote": "For education only. Synthetic patients. Not for real patient care."
+  },
+  "cases": {
+    "eyebrow": "Case library",
+    "title": "Browse and generate cases",
+    "subtitle": "Start from a curated case or generate an endless supply of new synthetic patients. Every case is grounded in guidelines and built to teach.",
+    "eduNote": "For education only. Synthetic patients. Not for real patient care.",
+    "generate": {
+      "heading": "Generate a case",
+      "hint": "Build a fresh synthetic patient on demand. The generator draws by prevalence and teaching value, then checks the case for internal consistency before adding it.",
+      "complaintLegend": "Chief complaint",
+      "surprise": "Surprise me",
+      "difficultyLegend": "Difficulty",
+      "difficultyValueText": "Level {{level}} of 5, {{label}}",
+      "unlimited": "New each time and never repeating. Generated cases are added to the top of the library.",
+      "action": "Generate case"
+    },
+    "filters": {
+      "label": "Filters",
+      "clear": "Clear filters",
+      "all": "All",
+      "specialty": "Specialty",
+      "complaint": "Chief complaint",
+      "difficulty": "Difficulty"
+    },
+    "results": {
+      "label": "Cases",
+      "count_one": "{{count}} case",
+      "count_other": "{{count}} cases",
+      "empty": "No cases match these filters yet. Adjust the filters or generate a new case."
+    },
+    "card": {
+      "ageSex": "{{age}} y, {{sex}}",
+      "generated": "Generated",
+      "codeLabel": "{{system}} code {{code}}",
+      "start": "Start this case"
     }
   },
   "stats": {
@@ -416,6 +628,106 @@
       "trend": "Trend"
     }
   },
+  "rooms": {
+    "you": "You",
+    "lobby": {
+      "title": "Team rooms",
+      "subtitle": "Practice real clinical teamwork: several people in one live encounter, each a distinct role, with AI filling any empty seats. A solo run is just the one-person case.",
+      "create": "Create room",
+      "openRooms": "Open rooms",
+      "empty": "No open rooms right now. Create one to start a team drill.",
+      "prodNote": "This is a preview with simulated presence. In production, rooms run on a self-hosted LiveKit realtime layer; text team rooms are the accessible floor, and voice plus 3D are premium features."
+    },
+    "status": {
+      "open": "Open",
+      "in-progress": "In progress",
+      "debrief": "Debrief"
+    },
+    "locale": {
+      "tr": "Turkish room",
+      "en": "English room"
+    },
+    "role": {
+      "doctor": "Doctor",
+      "nurse": "Nurse",
+      "paramedic": "Paramedic"
+    },
+    "presence": {
+      "active": "Active",
+      "idle": "Idle",
+      "reconnecting": "Reconnecting"
+    },
+    "seat": {
+      "aiHeld": "AI-held",
+      "open": "Open seat"
+    },
+    "teamLead": {
+      "hat": "Team lead"
+    },
+    "card": {
+      "rosterLabel": "Role roster",
+      "seatsFilled": "{{filled}} of {{total}} seats filled",
+      "hostedBy": "Host: {{name}}",
+      "takeSeat": "Take a seat",
+      "rejoin": "Rejoin"
+    },
+    "create": {
+      "title": "Create a room",
+      "subtitle": "Pick a case and choose which roles are human seats. The rest are backfilled by AI.",
+      "caseLabel": "Case",
+      "difficulty": "Difficulty {{level}} of 5",
+      "rolesLabel": "Roles",
+      "rolesHint": "Turn a role on for a human seat, or leave it off to let AI play it.",
+      "human": "Human seat",
+      "aiBacked": "AI-backed",
+      "roleToggle": "Make {{role}} a human seat",
+      "backfillLabel": "Backfill empty roles with AI",
+      "backfillHint": "AI participants join as first-class team members and are always labelled.",
+      "confirm": "Create room"
+    },
+    "inroom": {
+      "backToLobby": "Rooms",
+      "participants": "Participants",
+      "participantsLabel": "Room participants",
+      "teamClock": "Team clock",
+      "speaking": "Speaking",
+      "aiNote": "AI-held seats are clearly labelled and take turns visibly. They are never scored as humans in the debrief.",
+      "actionsLabel": "Your actions",
+      "yourScope": "You are the {{role}}",
+      "requestFloor": "Request the floor",
+      "escalateSbar": "Escalate (SBAR)",
+      "delegate": "Delegate a task",
+      "canOrderNote": "You can place orders for this encounter. Confirm safety checks before you commit.",
+      "cannotOrderNote": "This role cannot place orders directly. You can prompt the doctor; your request is logged as assessment evidence, so it is not lost if it goes unanswered.",
+      "promptDoctor": "Prompt the doctor",
+      "floor": "Team floor",
+      "floorLabel": "Team floor transcript",
+      "tabInterview": "Interview",
+      "tabFloor": "Team floor",
+      "tabDebrief": "Debrief",
+      "acknowledge": "Acknowledge",
+      "readBackToken": "Read back: {{token}}",
+      "loopClosed": "Loop closed",
+      "floorNote": "Closed-loop communication is scored. Orders are read back with the drug and dose as locked tokens."
+    },
+    "floorKind": {
+      "handover": "Handover",
+      "order": "Order",
+      "ack": "Acknowledged",
+      "readback": "Read-back",
+      "escalate": "Escalation",
+      "assess": "Assessment"
+    },
+    "debrief": {
+      "label": "Team debrief",
+      "title": "Debrief",
+      "subtitle": "Your individual marks and the team's clinical marks are kept separate, so a strong lead on a weak team, or the reverse, is clear.",
+      "individual": "Your leadership",
+      "team": "Team clinical",
+      "noHat": "You did not wear the team-lead hat this run, so there are no individual leadership marks.",
+      "note": "AI-held roles are labelled and never scored as humans. Full calibration and the dual-axis breakdown appear in your feedback."
+    }
+  },
   "states": {
     "normal": "Normal",
     "caution": "Watch",
@@ -562,6 +874,149 @@
       "trend": "Trend"
     }
   },
+  "institution": {
+    "eyebrow": "Dean's office",
+    "title": "Cohort competency dashboard",
+    "subtitle": "How your emergency-medicine cohort is progressing, where the recurring gaps are, and the evidence you need for accreditation.",
+    "privacyBanner": "Aggregate and role-gated. A learner's private calibration is never shown here.",
+    "section": {
+      "y4": "Year 4",
+      "y5": "Year 5",
+      "y6": "Year 6"
+    },
+    "kpi": {
+      "sectionLabel": "Cohort headline metrics",
+      "activeLearners": "Active learners",
+      "activeLearnersHint": "Practised in the last 14 days",
+      "encounters": "Encounters",
+      "encountersHint": "Completed this term",
+      "competenceRise": "Competence rise",
+      "competenceRiseHint": "Measured gain on a held-out case",
+      "calibrationGap": "Calibration gap",
+      "calibrationGapHint": "Cohort confidence minus performance",
+      "safetyResolved": "Safety misses resolved",
+      "safetyResolvedHint": "Closed after remediation",
+      "remediationClosed": "Remediation closed",
+      "remediationClosedHint": "Loops fully documented",
+      "improving": "improving",
+      "worsening": "needs attention",
+      "steady": "steady"
+    },
+    "heatmap": {
+      "heading": "Cohort competency heatmap",
+      "headingSub": "Each learner across the six competency domains, banded and drillable to the evidence span.",
+      "title": "Learners by domain",
+      "subtitle": "Bands are reliability-gated. Select a learner or cell to drill down to the encounter and its evidence span.",
+      "matrixLabel": "Competency heatmap, learners by domain",
+      "tableCaption": "Competency band for each learner across the six domains, with a drill-down affordance per cell.",
+      "tableEquivCaption": "Table equivalent of the competency heatmap: competency band for each learner across the six domains.",
+      "learnerCol": "Learner",
+      "sectionCol": "Section",
+      "atRiskTag": "At risk",
+      "viewToggleLabel": "Heatmap view",
+      "viewMatrix": "Heatmap",
+      "roleGatedNote": "Role-gated view: the dean sees banded competency and can drill to the grader's evidence span, but never a learner's private calibration plot.",
+      "cellAria": "{{learner}}, {{domain}}: {{band}}, {{count}} encounters. Activate to drill down.",
+      "cellWithheldAria": "{{learner}}, {{domain}}: band withheld, not enough reliable evidence yet.",
+      "drillLearnerAria": "Drill down into learner {{learner}}",
+      "drillTitle": "Drill-down: {{learner}}",
+      "drillPath": "Cohort to section to learner to encounter to evidence span. Widest gap: {{domain}}.",
+      "evidenceCaption": "Verbatim evidence span the grader used, in the learner's own language.",
+      "frameworkChip": "Framework: ACGME Milestones",
+      "frameworkTip": "Crosswalk view only. Switching frameworks re-maps the same evidence; it never re-grades.",
+      "switchFramework": "Switch framework view"
+    },
+    "remediation": {
+      "heading": "At-risk and remediation",
+      "headingSub": "The closed loop: detect, diagnose, prescribe, re-assess, document. Each record is exportable.",
+      "openCount": "{{count}} open",
+      "loopAria": "Remediation loop stages",
+      "stage": {
+        "detect": "Detect",
+        "diagnose": "Diagnose",
+        "prescribe": "Prescribe",
+        "reassess": "Re-assess",
+        "document": "Document"
+      },
+      "status": {
+        "done": "done",
+        "active": "in progress",
+        "pending": "not started"
+      },
+      "trigger": {
+        "safety": "Surfaced by recurring safety-critical misses in suspected acute coronary syndrome.",
+        "stalled": "Surfaced by stalled competency across several encounters."
+      },
+      "diagnosedGaps": "Diagnosed gaps",
+      "recurrence": "Seen {{count}}x",
+      "prescribed": "Prescribed",
+      "reassessed": "Re-assessed",
+      "opened": "Opened {{days}} days ago",
+      "open": "Open",
+      "closed": "Closed loop",
+      "openRemediation": "Open remediation",
+      "viewRecord": "View record",
+      "exportRecord": "Export record"
+    },
+    "calibration": {
+      "heading": "Aggregate calibration",
+      "headingSub": "Where the cohort is systematically over or under-confident, read as a curriculum signal.",
+      "title": "Systematic miscalibration by topic",
+      "subtitle": "A curriculum diagnostic at the cohort level. Overconfidence on a clinical topic is a teaching priority.",
+      "headline": "Curriculum signal",
+      "headlineBody": "The cohort is systematically overconfident on {{topic}}, by {{points}} points. Prioritise it in the next block.",
+      "direction": {
+        "over": "Overconfident",
+        "under": "Underconfident",
+        "well": "Well-calibrated"
+      },
+      "ppShort": "pp",
+      "learnerCount": "{{count}} learners",
+      "rowAria": "{{topic}}: {{direction}} by {{points}} points.",
+      "privacyNote": "Aggregate only. No individual learner's calibration is exposed here (calibration is never ranked)."
+    },
+    "export": {
+      "heading": "Accreditation export",
+      "headingSub": "One click, framework-tagged, de-identified, with the crosswalk version stamped.",
+      "title": "Build a de-identified export",
+      "subtitle": "Tag the export to your accreditation frameworks. The evidence is crosswalked, never re-graded.",
+      "frameworks": "Frameworks",
+      "mapped": "{{mapped}} of {{total}} elements",
+      "scope": {
+        "cohort": "Whole cohort",
+        "window": "This assessment window",
+        "deidentified": "De-identified",
+        "fairness": "Include fairness audit"
+      },
+      "deidentifiedOn": "De-identified",
+      "deidentifiedOff": "Re-identifiable, review",
+      "fairnessOn": "Fairness audit included",
+      "fairnessOff": "Fairness audit missing",
+      "generate": "Generate export",
+      "blocked": "Include the fairness audit to generate the export."
+    },
+    "fairness": {
+      "heading": "Fairness audit",
+      "headingSub": "Required, not optional. Score distributions broken out by language subgroup, TR against EN.",
+      "title": "Language subgroup fairness",
+      "subtitle": "Broken out for the Turkish-primary and English-primary subgroups.",
+      "invariant": "The clinical axis must not track language. Accent and second-language form never score, so clinical bands should match across subgroups.",
+      "tableCaption": "Fairness metrics for the Turkish-primary and English-primary subgroups, with a within-tolerance status.",
+      "metricCol": "Metric",
+      "trCol": "TR ({{count}})",
+      "enCol": "EN ({{count}})",
+      "statusCol": "Status",
+      "metric": {
+        "clinicalBand": "Median clinical band",
+        "commBand": "Median communication band",
+        "refusalRate": "Model refusal rate",
+        "sttFallback": "Speech-to-text fallback rate"
+      },
+      "withinTolerance": "Within tolerance",
+      "flagged": "Flagged for review",
+      "footnote": "The higher Turkish speech-to-text fallback rate is a voice-path property, shown transparently. It never feeds a competence score."
+    }
+  },
   "bands": {
     "emerging": "Emerging",
     "developing": "Developing",
@@ -585,5 +1040,270 @@
     "years": "years",
     "male": "male",
     "female": "female"
+  },
+  "authoring": {
+    "eyebrow": "Educator authoring",
+    "title": "From blueprint to a signed, versioned case",
+    "subtitle": "AI drafts the case, a credentialed clinician stays authoritative. Every clinical fact is grounded, cited, and locked before a learner ever sees it.",
+    "aiHumanNote": "AI drafts. A named clinician reviews, edits, and signs off. The sign-off gate is enforced in code, not policy.",
+    "eduNote": "All patients are synthetic and every case is for education only. Not for real patient care.",
+    "pipeline": {
+      "heading": "The authoring pipeline",
+      "headingSub": "Six stages from a case blueprint to a monitored, published case. AI drafts the middle; the clinician holds the pen at every gate that matters.",
+      "aria": "Case authoring pipeline, six stages",
+      "actor": {
+        "ai": "AI draft",
+        "human": "Clinician",
+        "auto": "Automated"
+      },
+      "state": {
+        "done": "Complete",
+        "active": "In review",
+        "pending": "Pending"
+      },
+      "stage": {
+        "blueprint": {
+          "title": "Blueprint",
+          "desc": "Complaint, objectives, level, country and council, locales."
+        },
+        "draft": {
+          "title": "AI draft",
+          "desc": "Persona, case state, vitals drivers, rubric items and anchors."
+        },
+        "review": {
+          "title": "Expert review and lock",
+          "desc": "Facts edited, grounded, cited, and locked by a clinician."
+        },
+        "psychometric": {
+          "title": "Peer and psychometric",
+          "desc": "Peer endorsement, inter-rater agreement, difficulty, DIF check."
+        },
+        "publish": {
+          "title": "Publish and version",
+          "desc": "Sign-off freezes the case and rubric with version hashes."
+        },
+        "monitor": {
+          "title": "Monitor",
+          "desc": "Freshness watch flags cited-guideline drift for re-review."
+        }
+      }
+    },
+    "blueprint": {
+      "heading": "Case blueprint",
+      "headingSub": "The brief the AI drafted from. Country and council are independent of learning locale.",
+      "difficulty": "Difficulty",
+      "level": "Learner level",
+      "council": "Country and council",
+      "locales": "Content locales",
+      "objectives": "Learning objectives"
+    },
+    "editor": {
+      "heading": "Expert review and lock",
+      "headingSub": "The human-authoritative core. AI-drafted facts on the left with provenance; the rubric and its six-domain coverage on the right. A fact cannot reach a learner until it is cited and locked.",
+      "factsHeading": "Locked facts and provenance",
+      "factsSub": "Every clinical claim carries a cited, versioned guideline reference and a lock state. An ungrounded claim cannot be locked.",
+      "rubricHeading": "Rubric items",
+      "rubricSub": "Each item has behavioural anchors, a weight, a domain, and a safety flag. The domain enum is fixed.",
+      "coverage": "Domain coverage",
+      "coverageComplete": "All six competency domains covered",
+      "weight": "Weight {{value}}",
+      "safetyCritical": "Safety critical",
+      "humanEdited": "Edited by clinician",
+      "trPending": "Turkish anchor pending",
+      "flaggedCount": "{{count}} fact needs grounding",
+      "flaggedCount_other": "{{count}} facts need grounding",
+      "flaggedNote": "This claim could not be grounded to a cited source. It is held for review and blocks publish until resolved.",
+      "kind": {
+        "persona": "Patient persona",
+        "vitals": "Triage vitals",
+        "finding": "Exam finding",
+        "result": "Investigation result",
+        "medication": "Medication",
+        "safety": "Safety check"
+      },
+      "status": {
+        "locked": "Locked",
+        "editedLocked": "Edited and locked",
+        "open": "Cited, not locked",
+        "flagged": "Needs grounding"
+      }
+    },
+    "psychometric": {
+      "heading": "Peer and psychometric pre-flight",
+      "sub": "Item-quality signals a reviewer weighs before sign-off. The pilot cohort is de-identified and small; none of this is a public metric.",
+      "agreement": "Peer reviewers",
+      "kappa": "Inter-rater agreement",
+      "difficulty": "Pilot difficulty",
+      "dif": "Fairness (DIF)"
+    },
+    "signoff": {
+      "sectionHeading": "Sign-off and publish",
+      "sectionSub": "The hard gate: publish is disabled until every fact is grounded and a credentialed clinician co-signs. Sign-off freezes the case and rubric with version hashes.",
+      "heading": "Publish readiness",
+      "sub": "Review the pre-flight, the per-locale status, the fact-lock state, and the version hashes before the credentialed clinician co-signs.",
+      "gatedBadge": "Gated",
+      "publishedBadge": "Published",
+      "localeHeading": "Per-locale review",
+      "locale": {
+        "en": "English content and rubric",
+        "tr": "Turkish content and rubric"
+      },
+      "localeReviewed": "Reviewed by {{name}}",
+      "localeInReview": "In review",
+      "localeNote": "A case is only offered in a locale whose content and rubric passed clinician-fluent review. Turkish can trail English until a Turkish reviewer signs off.",
+      "factsClear": "All clinical facts are grounded and locked.",
+      "factsBlocked": "{{count}} fact is not yet grounded and locked. Resolve it before publish.",
+      "factsBlocked_other": "{{count}} facts are not yet grounded and locked. Resolve them before publish.",
+      "versionHeading": "Version provenance",
+      "caseHash": "Case version hash",
+      "rubricHash": "Rubric version hash",
+      "guidelineSet": "Guideline set",
+      "cosignLabel": "I am the credentialed clinician of record and I approve this case for publication.",
+      "signedConfirmation": "Co-signed by {{name}}. Case and rubric frozen.",
+      "groundedOn": "Grounded on",
+      "modelProvenance": "Drafted by a large open model, self-hosted, and cross-family verified. No commercial vendor is named.",
+      "publish": "Publish case",
+      "unpublish": "Return to draft",
+      "blockedByFacts": "Publish is blocked until every clinical fact is grounded and locked.",
+      "blockedByCosign": "Publish is blocked until the credentialed clinician co-signs."
+    },
+    "monitor": {
+      "heading": "Published and monitored",
+      "headingSub": "Your published cases with version hashes and last-reviewed dates. A guideline change flags a case for re-review; nothing auto-publishes and nothing is auto-rewritten.",
+      "lastReviewed": "Reviewed {{date}}",
+      "encounters": "{{count}} encounter",
+      "encounters_other": "{{count}} encounters",
+      "localeOffered": "offered",
+      "localePending": "reviewer pending",
+      "open": "Open case",
+      "review": "Review now",
+      "status": {
+        "live": "Live",
+        "flagged": "Guideline changed",
+        "enOnly": "English only"
+      }
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Rehearse the case before the case rehearses you.",
+      "subtitle": "A text-first clinical simulator: work a synthetic patient in an EHR, get evidence-anchored feedback, and see your calibration.",
+      "primaryCta": "Enter the demo",
+      "secondaryCta": "See a feedback report",
+      "bilingualNote": "First-class in Turkish and English, text and voice.",
+      "panelTitle": "One encounter, three phases",
+      "panelRow": {
+        "chat": "Interview a synthetic patient in the EHR",
+        "generate": "Every case generated, never repeated",
+        "calibration": "Confidence measured against competence"
+      }
+    },
+    "trust": {
+      "label": "What AcuDx guarantees",
+      "formative": "Formative only",
+      "synthetic": "Synthetic patients",
+      "cited": "Guideline cited",
+      "accessible": "WCAG 2.2 AA",
+      "bilingual": "Turkish and English"
+    },
+    "phases": {
+      "heading": "Walk every phase of the product",
+      "headingSub": "Each phase opens the live demo screen. Start anywhere, or take the guided tour from the top bar.",
+      "roleplay": {
+        "title": "Roleplay and EHR",
+        "body": "Interview a synthetic patient, order tests, and read a live vitals monitor inside a real EHR shell.",
+        "link": "Open the encounter"
+      },
+      "cases": {
+        "title": "Dynamic cases",
+        "body": "Cases are generated on demand from ICD and DSM, so a cohort can never memorise the bank.",
+        "link": "Browse and generate"
+      },
+      "guidance": {
+        "title": "Cited guidance",
+        "body": "Socratic hints, grounded and cited, that never hand over the answer and never block the encounter.",
+        "link": "See guidance in a case"
+      },
+      "feedback": {
+        "title": "Calibration feedback",
+        "body": "Dual-axis, banded feedback with a private calibration mirror and safety-critical misses surfaced always.",
+        "link": "Read a report"
+      },
+      "rooms": {
+        "title": "Multiplayer rooms",
+        "body": "Run a shared case across doctor, nurse, and paramedic roles over one authoritative patient state.",
+        "link": "Open a room"
+      },
+      "progress": {
+        "title": "Progress",
+        "body": "Track competence over time as trainable, banded skill, with no numeric score and no public leaderboard.",
+        "link": "View progress"
+      },
+      "institution": {
+        "title": "Institution analytics",
+        "body": "A dean sees cohort competency, the remediation loop, and a fairness audit, aggregate and role-gated.",
+        "link": "Open the dashboard"
+      },
+      "sovereign": {
+        "title": "Open and sovereign",
+        "body": "Open-weight models, self-hosted, with human-authoritative case authoring. No commercial vendor lock-in.",
+        "link": "See authoring"
+      }
+    },
+    "closing": {
+      "heading": "Take the guided tour",
+      "body": "Walk all nine screens in order to see every phase, from a first encounter through calibration feedback to the institution dashboard.",
+      "primaryCta": "Enter the demo",
+      "educatorCta": "For educators",
+      "note": "Currently in {{lang}}. Switch language any time from the top bar."
+    }
+  },
+  "tour": {
+    "button": "Guided tour",
+    "buttonShort": "Tour",
+    "title": "Walk the demo",
+    "description": "Step through every phase in order, or jump to any screen.",
+    "here": "You are here",
+    "previous": "Previous",
+    "next": "Next",
+    "start": "Start tour",
+    "stops": {
+      "welcome": {
+        "title": "Welcome",
+        "hint": "The product overview and demo entry."
+      },
+      "start": {
+        "title": "Start",
+        "hint": "Pick language, role, and difficulty."
+      },
+      "cases": {
+        "title": "Cases",
+        "hint": "Browse and generate dynamic cases."
+      },
+      "encounter": {
+        "title": "Encounter",
+        "hint": "Work a synthetic patient in the EHR."
+      },
+      "feedback": {
+        "title": "Feedback",
+        "hint": "Read the cited, banded report."
+      },
+      "rooms": {
+        "title": "Rooms",
+        "hint": "Run a shared multiplayer case."
+      },
+      "progress": {
+        "title": "Progress",
+        "hint": "See competence trend over time."
+      },
+      "authoring": {
+        "title": "Authoring",
+        "hint": "The educator sign-off pipeline."
+      },
+      "institution": {
+        "title": "Institution",
+        "hint": "The dean's cohort dashboard."
+      }
+    }
   }
 }

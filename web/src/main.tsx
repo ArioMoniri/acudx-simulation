@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import "./i18n";
 import "./index.css";
 import { ThemeProvider } from "@/lib/theme";
+import { DemoRoleProvider } from "@/lib/demoRole";
 import App from "./App";
 
 const rootEl = document.getElementById("root");
@@ -15,9 +16,11 @@ if (!rootEl) {
 createRoot(rootEl).render(
   <StrictMode>
     <ThemeProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <DemoRoleProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </DemoRoleProvider>
     </ThemeProvider>
   </StrictMode>,
 );
