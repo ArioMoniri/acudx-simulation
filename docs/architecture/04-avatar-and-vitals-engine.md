@@ -317,7 +317,16 @@ tier (open neural *or* vendor) is an affect upsell.
 | **Clinical-sign control** | **Full (shaders/blendshapes)** | Limited (Audio2Face-3D path keeps signs; pure LivePortrait/MuseTalk face does not) → monitor + caption | **None** — sign channel → monitor + caption |
 | Photorealism | Stylized | Photoreal-ish (neural) | Photoreal |
 | License / sovereignty | ✅ MIT, air-gappable | ✅ **MIT, self-hosted, air-gappable** | ⚠️ proprietary SaaS, egress → not for air-gapped |
+| **Air-gap compatible** | ✅ **Yes** (open, self-hosted, zero egress) | ✅ **Yes** (open, self-hosted, zero egress) | ⛔ **No** (managed SaaS egress; **DISABLED in air-gapped mode**) |
+| Default vs optional | **Default, always-available** | **Default streaming face, always-available** | **Optional managed add-on** (premium/OSCE only) |
 | Verdict | **Default** wherever signs matter | **Default streaming face** (open, ~$0, self-hosted) | **Gated** affect/OSCE upsell, vendor-SLA only |
+
+Every avatar capability is served by an **open, self-hosted model that is the default and always
+available** (Tier 0–2 client rendering, the Tier 2-neural open streaming face, and the open generated
+patient face of §4.6). The vendor streaming tier (Anam / Tavus / Simli / HeyGen) is an **optional
+managed add-on only**; in **air-gapped / sovereign mode it is DISABLED** and every tier above it — none
+of which egresses — remains fully functional, so an air-gapped tenant loses no avatar capability, only
+the optional vendor-SLA polish.
 
 **Explicit rejections (from research, restated so this doc is self-contained):** **Unity WebGL** rejected for web delivery (20–60 MB builds, slow TTI); **MetaHuman** premium/native only (web Creator sunset; heavy browser pipeline); **Soul Machines** dead (ceased ops Feb 2026 — do **not** design around it); in-browser Gaussian-splat driven faces tracked as an opportunistic **Phase-4** path to collapse streaming per-minute cost into client rendering, **not** committed until proven for driven, emotive, sign-controllable faces.
 

@@ -84,16 +84,24 @@ the boundary discipline in §14 (STT/TTS SDKs live only inside the Voice Agent) 
 
 ### 0.1 The default open engines (verified July 2026)
 
-| Stage | **OPEN default (self-hosted)** | License | Turkish | Optional managed premium | Why the vendor survives (only) as premium |
-|---|---|---|---|---|---|
-| **STT — Turkish + medical** | **Whisper large-v3 (+ large-v3-turbo) + TR-medical LoRA**, wrapped with **faster-whisper / WhisperX / WhisperLive** for streaming | ✅ MIT (Whisper, faster-whisper, WhisperLive); ⚠️ WhisperX BSD-2/-4 (verify) | ✅ **TR native** (LoRA closes medical WER) | **Deepgram Nova-3 Turkish** | ops-outsourced streaming, vendor SLA, lower p95 under burst |
-| **STT — EN / European streaming** | **NVIDIA Parakeet-tdt-0.6b-v3 / Canary / Nemotron-ASR-Streaming**; **Parakeet-1.1b-rnnt-multilingual** (this one *does* include TR) | ✅ CC-BY-4.0 | ⛔ Parakeet-tdt-v3 = **25 European langs, NO Turkish**; use 1.1b-rnnt or Whisper-TR for TR | **Deepgram Flux** | managed convenience only |
-| **STT — on-prem full-duplex** | **Kyutai STT (Unmute)** | ✅ CC-BY-4.0 | multilingual (verify TR) | — | — |
-| **TTS — expressive live (default)** | **Chatterbox Multilingual v3 (Resemble AI)** — 0.5B Llama backbone, **PerTh watermark on every self-hosted output** | ✅ **MIT** | ✅ **TR in the 23-lang set** | **ElevenLabs v3 / Cartesia Sonic-3** | top-end TR *emotional* realism for cinematic distress peaks |
-| **TTS — fast / edge / utility** | **Kokoro** (82M, CPU-capable) + **Piper** (edge) | ✅ Apache-2.0 (Kokoro); ✅ MIT (Piper) | ⛔ Kokoro **no TR** → **Piper has TR voices** (use Piper for TR edge/utility) | ElevenLabs Flash v2.5 | latency floor / last-resort fallback |
-| **Orchestration** | **LiveKit Agents** self-host (room-first, multiplayer §15) — or **Pipecat** (v1.0, Apr 2026) for the solo pipeline path | ✅ Apache-2.0 (LiveKit server + SDK); ✅ BSD-2 (Pipecat) | — | LiveKit Cloud / Pipecat Cloud | managed infra only; the SDK is identical |
-| **VAD / turn-taking** | **Silero VAD** + **LiveKit turn-detector** / **Pipecat Smart-Turn** | ✅ MIT | — | — | already open (unchanged §5–6) |
-| **Native S2S (cinematic on-prem)** | **Kyutai Moshi + Mimi codec** / **Ultravox** (bring-your-own-LLM) | ✅ CC-BY-4.0 (Moshi); ✅ MIT (Ultravox) | multilingual (Moshi verify TR; Ultravox inherits Qwen TR) | **Gemini Live 2.5** (§11, V-6) | raw fluidity where reasoning inspectability is waived |
+| Stage | **OPEN default (self-hosted, always-available)** | License | Turkish | Air-gap compatible | Optional managed premium (add-on) | Why the vendor survives (only) as premium |
+|---|---|---|---|---|---|---|
+| **STT — Turkish + medical** | **Whisper large-v3 (+ large-v3-turbo) + TR-medical LoRA**, wrapped with **faster-whisper / WhisperX / WhisperLive** for streaming | ✅ MIT (Whisper, faster-whisper, WhisperLive); ⚠️ WhisperX BSD-2/-4 (verify) | ✅ **TR native** (LoRA closes medical WER) | ✅ **Yes** (open, self-hosted) | **Deepgram Nova-3 Turkish** (⛔ DISABLED air-gapped) | ops-outsourced streaming, vendor SLA, lower p95 under burst |
+| **STT — EN / European streaming** | **NVIDIA Parakeet-tdt-0.6b-v3 / Canary / Nemotron-ASR-Streaming**; **Parakeet-1.1b-rnnt-multilingual** (this one *does* include TR) | ✅ CC-BY-4.0 | ⛔ Parakeet-tdt-v3 = **25 European langs, NO Turkish**; use 1.1b-rnnt or Whisper-TR for TR | ✅ **Yes** (open, self-hosted) | **Deepgram Flux** (⛔ DISABLED air-gapped) | managed convenience only |
+| **STT — on-prem full-duplex** | **Kyutai STT (Unmute)** | ✅ CC-BY-4.0 | multilingual (verify TR) | ✅ **Yes** (open, self-hosted) | — | — |
+| **TTS — expressive live (default)** | **Chatterbox Multilingual v3 (Resemble AI)** — 0.5B Llama backbone, **PerTh watermark on every self-hosted output** | ✅ **MIT** | ✅ **TR in the 23-lang set** | ✅ **Yes** (open, self-hosted) | **ElevenLabs v3 / Cartesia Sonic-3** (⛔ DISABLED air-gapped) | top-end TR *emotional* realism for cinematic distress peaks |
+| **TTS — fast / edge / utility** | **Kokoro** (82M, CPU-capable) + **Piper** (edge) | ✅ Apache-2.0 (Kokoro); ✅ MIT (Piper) | ⛔ Kokoro **no TR** → **Piper has TR voices** (use Piper for TR edge/utility) | ✅ **Yes** (open, self-hosted) | ElevenLabs Flash v2.5 (⛔ DISABLED air-gapped) | latency floor / last-resort fallback |
+| **Orchestration** | **LiveKit Agents** self-host (room-first, multiplayer §15) — or **Pipecat** (v1.0, Apr 2026) for the solo pipeline path | ✅ Apache-2.0 (LiveKit server + SDK); ✅ BSD-2 (Pipecat) | — | ✅ **Yes** (self-hosted) | LiveKit Cloud / Pipecat Cloud (⛔ DISABLED air-gapped) | managed infra only; the SDK is identical |
+| **VAD / turn-taking** | **Silero VAD** + **LiveKit turn-detector** / **Pipecat Smart-Turn** | ✅ MIT | — | ✅ **Yes** (open, self-hosted) | — | already open (unchanged §5–6) |
+| **Native S2S (cinematic on-prem)** | **Kyutai Moshi + Mimi codec** / **Ultravox** (bring-your-own-LLM) | ✅ CC-BY-4.0 (Moshi); ✅ MIT (Ultravox) | multilingual (Moshi verify TR; Ultravox inherits Qwen TR) | ✅ **Yes** (open, self-hosted) | **Gemini Live 2.5** (§11, V-6) (⛔ DISABLED air-gapped) | raw fluidity where reasoning inspectability is waived |
+
+**Air-gapped default.** Every stage above has an **open, self-hosted model that is the default and
+always available** — STT (Whisper-v3+TR-LoRA / Parakeet), TTS (Chatterbox / Piper / Kokoro), and native
+S2S (Moshi / Ultravox). The managed premium engines (Deepgram, Cartesia, ElevenLabs, Gemini Live) are
+**optional add-ons only**, and in **air-gapped / sovereign mode they are DISABLED** (zero egress). An
+air-gapped tenant runs the entire voice cascade — live conversation, barge-in, assessment re-STT, and
+cinematic S2S — on local open models with **no capability removed**, only the optional vendor-SLA polish
+and the lowest-p95-under-burst latency.
 
 **Three license/coverage facts that pin the defaults** (from research/11 §6–8, web-verified Jul 2026):
 1. **Parakeet-tdt-0.6b-v3 has no Turkish** (25 European languages only) → the **Turkish** STT default is

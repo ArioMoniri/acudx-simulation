@@ -536,6 +536,7 @@ Emitted via **OpenTelemetry**; read models in ClickHouse. Every metric is dimens
 | `gateway.refusal.rate` | counter | catches Fable-in-path or model-drift refusals |
 | `gateway.pii.block` | counter | any nonzero = real-PHI attempt → incident |
 | `gateway.tr.eval_gate_fail` | counter | a `locale=tr` config failing TurkishMMLU/Cetvel gate must never route |
+| `gateway.egress.blocked` | counter | under `AIRGAPPED` (§13.1.2) must read **0** in steady state; any nonzero = a caller/config tried to leave the boundary → incident |
 
 Escalation reason, KV-reuse, serving backend, GPU-seconds, and cost are also on the `ModelCallEvent` so **per-encounter cost and routing are auditable and replayable** from the Event Log, independent of the metrics pipeline.
 
@@ -576,6 +577,56 @@ The `ProviderAdapter` interface is **identical** for self-hosted pools and front
 
 ---
 
+## 13.1 Provider abstraction & air-gapped mode
+
+The identical-adapter property (§13) generalizes to a **hard product rule**: *every* external/managed provider AcuDx could use — for any capability, not just LLMs — is an **optional plugin behind a stable interface**, and **each slot ships with an OPEN self-hosted default that is always available**. There is no capability whose only implementation is a managed API. This makes a fully **air-gapped, zero-egress** deployment a **config flip, not a rewrite**, because the gateway is the single chokepoint (canon: *Model-Gateway-only*, §1) through which every model/voice/embed/avatar/image call already flows.
+
+### 13.1.1 Provider-slot table (open default = always air-gap compatible)
+
+Each **slot** is a capability the gateway resolves. The **open self-hosted default** is the always-available implementation (air-gap compatible = **yes**, by construction — it runs on owned GPUs with no egress). Managed add-ons are **optional** and **never** air-gap compatible (they require internet egress = **no**). The default column is what routes when no managed add-on is configured *and* is the only thing that routes under `AIRGAPPED` (§13.1.2).
+
+| Slot | Open self-hosted **default** (always available) | Optional managed add-on(s) | Air-gap compatible |
+|---|---|---|---|
+| `llm-reasoning` | **Qwen3.5-397B-A17B** (large-open, vLLM) | Anthropic Opus / OpenAI / Gemini (frontier escalation) | open ✅ · managed ❌ |
+| `llm-patient` | **Qwen3-32B** (SGLang, RadixAttention) | frontier only for subtle high-stakes personas | open ✅ · managed ❌ |
+| `grader` | **Qwen3.5-397B / DeepSeek V4** (cross-family, continuous batch) | frontier Opus Batch on contested ~10% | open ✅ · managed ❌ |
+| `medical-verifier` | **MedGemma 1.5 / Meditron 70B** (generate-then-verify, auditable) | — (no managed default; open is authoritative) | open ✅ |
+| `embeddings` | **BGE-M3** (100+ langs incl. TR) | Voyage / Cohere embed | open ✅ · managed ❌ |
+| `rerank` | **open BGE-reranker / Jina-open reranker** | Cohere Rerank | open ✅ · managed ❌ |
+| `stt` | **Whisper large-v3(-turbo)** (+TR-medical LoRA) / **Parakeet** (EN) | Deepgram | open ✅ · managed ❌ |
+| `tts` | **Chatterbox Multilingual v3 (MIT)** / **Piper** / **Kokoro** | ElevenLabs / Cartesia | open ✅ · managed ❌ |
+| `s2s` (speech↔speech) | **Moshi / Ultravox** (self-host) | Gemini-Live | open ✅ · managed ❌ |
+| `avatar-stream` | **LivePortrait + MuseTalk + Audio2Face-3D** (self-host) | Anam / Tavus | open ✅ · managed ❌ |
+| `image-gen` (generated patient face) | **Qwen-Image / FLUX-schnell + PuLID / PhotoMaker** | — (open is default; managed optional per tenant) | open ✅ |
+
+**Invariant:** a slot may have **zero** managed add-ons, but **never zero** open defaults. Adding a managed provider is additive (a new adapter registered against the slot); removing every managed provider must always leave a working system. The `medical-verifier` slot is deliberately open-only-authoritative (accreditation/auditability, §9) — a managed model may *cross-check* but never *replace* the open verifier.
+
+### 13.1.2 The `AIRGAPPED` deployment flag & no-egress guard
+
+`AIRGAPPED` is a deployment-level config flag (on `TenantPolicy` and/or the gateway process env; the process-level flag wins and cannot be re-enabled per-request). When set it **hard-disables every managed/external provider and all frontier-API escalation**, forcing **local-only** resolution across all slots. Escalation semantics do not disappear — they **retarget to a larger LOCAL model**, never the internet:
+
+- **Managed adapters unregistered.** At startup under `AIRGAPPED`, the adapter registry drops every adapter whose `backend === 'frontier-api'` (and every managed voice/embed/avatar/image adapter). They are not merely deprioritized — they are **not loadable**, so no code path can reach them.
+- **Escalation redirects to local.** `subtle_persona`, `grader_disagreement`, and unresolved-T2 signals (§4.1) that would have bumped to **T3 frontier** instead bump to the **largest promoted LOCAL model** for that slot (e.g. `llm-patient`/`llm-reasoning` escalate T1→T2 large-open and *stop there*; `grader` contested items go to a **larger local cross-family ensemble**, not Opus Batch). `frontierEscalatesTo` in each `ModelConfig` is ignored; `escalatesTo` (local) is the ceiling.
+- **No-egress guard (fail-closed).** A gateway-level guard rejects any resolved call whose endpoint is not on the **local allow-list** (loopback / in-VPC / on-prem GPU-pool CIDRs). Any non-local endpoint under `AIRGAPPED` throws `EgressBlocked` at resolution time (never at network time — it never dials out). The guard also refuses adapters advertising `backend: 'frontier-api'`. This is belt-and-suspenders on top of the unregistration above: even a mis-authored Registry config pointing at a public endpoint is rejected before a socket opens.
+- **Registry gate.** Under `AIRGAPPED`, a `ModelConfig` is unroutable if its `regionDeployments` endpoint fails the local allow-list, or if resolving it would select a managed family. `apiFirst` is incompatible with `AIRGAPPED` and is rejected at config-load (a pilot cannot be simultaneously API-first and air-gapped).
+- **Telemetry stays local.** OTel/ClickHouse/event-log sinks must resolve to in-VPC endpoints; the C2PA hook (§9) and eval-gate attestation (§12) run against the local model set. `gateway.egress.blocked` counter must read **0** in steady state; any nonzero value is an incident (a caller or config tried to leave the boundary).
+
+Because §13 already guarantees the `ProviderAdapter` interface is identical for open and managed backends, `AIRGAPPED` changes **which adapters are registered and which endpoints are allowed** — it does **not** touch the router, the 3-tier open policy, RadixAttention caching, or the batch pipeline. Air-gapped mode is the `onPremAppliance` path (§9) with the escape hatches welded shut: a coherent zero-egress deployment where every capability is served by a local open model and nothing calls the internet at runtime.
+
+```typescript
+// Additions to TenantPolicy (§10) — surgical, no interface break
+interface TenantPolicy {
+  // …existing fields…
+  airgapped?: boolean;              // hard zero-egress: drops all managed adapters,
+                                    // forbids frontier escalation, forces local-only routing.
+                                    // Process-level AIRGAPPED env overrides to true and locks it.
+  localEndpointAllowList?: string[];// loopback / VPC / on-prem GPU-pool CIDRs; the no-egress guard's allow-list
+}
+// When airgapped: frontierEscalationEnabled is forced false; apiFirst is rejected at config-load.
+```
+
+---
+
 ## 14. Trade-offs (explicit)
 
 | Decision | Chosen | Rejected alternative | Why |
@@ -590,6 +641,8 @@ The `ProviderAdapter` interface is **identical** for self-hosted pools and front
 | RAG-not-long-context, hard refuse on gap | Retrieve 2–5 passages (BGE-M3) | Stuff guideline PDFs into 1M ctx | Long-context is the #1 cost mistake and invites hallucination; abstain > confident-wrong. |
 | Turkish as a first-class route | TR model lane + TR eval gate + TR voice | English models with a translation shim | TR is agglutinative and medical-register-sensitive; a shim degrades persona fluency and terminology. Qwen's documented TR + TurkishMMLU/Cetvel gating is the honest path. |
 | Utilization as a first-class SLO | `gpu.utilization` gauge gates spend | Only track $/token | Under self-host the leak is idle GPUs, not per-token price; a 10%-loaded fleet erases the whole saving. |
+| Every managed provider is an optional plugin; every slot has an open self-hosted default | Open default always available; managed = additive add-on (§13.1) | A managed API as the only impl for any slot (STT/TTS/S2S/avatar/embed/rerank) | Removing all managed providers must always leave a working system; `AIRGAPPED` is then a config flip, not a rewrite. Enforced at the single gateway chokepoint. |
+| `AIRGAPPED` = hard zero-egress via unregister + no-egress guard | Drop managed adapters, retarget escalation to a larger *local* model, fail-closed on non-local endpoints (§13.1.2) | A runtime allow/deny toggle that still keeps frontier code paths reachable | Zero-egress must be structural (unloadable adapters + endpoint allow-list), not a hope; a mis-authored config must be rejected before a socket opens. |
 
 ---
 
