@@ -156,6 +156,230 @@
     },
     "resumeToast": "Oturum geri yüklendi."
   },
+  "ehr": {
+    "sim": {
+      "tag": "SİM",
+      "short": "sentetik hasta",
+      "full": "Simülasyon. Sentetik hasta. Yalnızca eğitim amaçlıdır.",
+      "synthetic": "sentetik hasta",
+      "education": "yalnızca eğitim"
+    },
+    "workspace": {
+      "caseMeta": "Zorluk {{difficulty}}/5 · {{provenance}}"
+    },
+    "provenance": {
+      "seed": "Seçilmiş vaka",
+      "generated": "Üretilmiş vaka"
+    },
+    "banner": {
+      "label": "Hasta künyesi",
+      "ageSex": "{{age}} y, {{sex}}",
+      "mrn": "Dosya no",
+      "chiefComplaint": "Ana yakınma",
+      "allergies": "Alerjiler",
+      "allergiesLabel": "Alerjiler, her zaman görünür",
+      "nkda": "Bilinen ilaç alerjisi yok",
+      "codeStatus": "Kod",
+      "esi": "ESI {{level}}",
+      "acuityLabel": "Aciliyet ESI {{level}}, {{state}}"
+    },
+    "encounterClass": {
+      "emergency": "Acil (Acil Servis)",
+      "ambulatory": "Poliklinik",
+      "inpatient": "Yatan hasta",
+      "prehospital": "Hastane öncesi"
+    },
+    "codeStatus": {
+      "full": "Tam resüsitasyon"
+    },
+    "storyboard": {
+      "label": "Hasta özeti",
+      "demographics": "Demografik bilgiler",
+      "weight": "Ağırlık",
+      "problemList": "Problem listesi",
+      "problemsEmpty": "Henüz problem eklenmedi. Değerlendirme ve planda oluşturun.",
+      "vitalsSnapshot": "Yaşamsal bulgu özeti",
+      "medList": "İlaçlar ve öykü",
+      "medsEmpty": "Burayı doldurmak için ilaçları ve geçmiş öyküyü sorun.",
+      "careTeam": "Bakım ekibi",
+      "open": "Hasta özetini aç",
+      "chart": "Hasta özeti"
+    },
+    "problemRole": {
+      "differential": "Ayırıcı",
+      "working": "Çalışma tanısı",
+      "plan": "Plan"
+    },
+    "careTeam": {
+      "you": "Sen",
+      "nurse": "Triyaj hemşiresi",
+      "roleClinician": "Tedavi eden hekim",
+      "roleNurse": "Hemşirelik"
+    },
+    "clock": {
+      "title": "Görüşme saati",
+      "label": "Görüşme saati, geçen dakika ve saniye"
+    },
+    "tabs": {
+      "chartReview": "Kart İncelemesi",
+      "interview": "Anamnez",
+      "flowsheets": "İzlem Çizelgesi",
+      "orders": "İstemler",
+      "results": "Sonuçlar",
+      "problemList": "Problem Listesi / Değerlendirme ve Plan"
+    },
+    "chartReview": {
+      "triageNote": "Triyaj notu",
+      "triageMeta": "{{class}} · triyaj",
+      "triageBody": "{{complaint}} ile başvuran {{age}} yaşında hasta. Geldiğinde monitöre bağlandı.",
+      "timeline": "Görüşme zaman çizelgesi",
+      "timelineEmpty": "Kartı işledikçe yaptığın işlemler burada sırayla görünecek.",
+      "atMin": "{{min}} dk"
+    },
+    "timeline": {
+      "question": "{{intent}} soruldu",
+      "exam": "Muayene: {{maneuver}}",
+      "order": "{{code}} istendi",
+      "result": "Sonuç geldi: {{code}}",
+      "diagnosis": "Tanı belirlendi: {{dx}}",
+      "note": "Not yazıldı"
+    },
+    "intents": {
+      "onset": "Başlangıç",
+      "location": "Yerleşim",
+      "character": "Karakter",
+      "radiation": "Yayılım",
+      "severity": "Şiddet",
+      "timing": "Zamanlama",
+      "aggravating": "Artıran etkenler",
+      "relieving": "Azaltan etkenler",
+      "associatedSymptoms": "Eşlik eden belirtiler",
+      "redFlags": "Alarm bulguları",
+      "pastMedicalHistory": "Özgeçmiş",
+      "medications": "İlaçlar",
+      "allergies": "Alerjiler",
+      "familyHistory": "Soygeçmiş",
+      "socialHistory": "Sosyal öykü",
+      "riskFactors": "Risk faktörleri",
+      "ice": "Düşünceler, kaygılar, beklentiler"
+    },
+    "maneuvers": {
+      "generalInspection": "Genel inspeksiyon",
+      "vitalsRecheck": "Yaşamsal bulguları yinele",
+      "cardiovascular": "Kalp oskültasyonu",
+      "respiratory": "Akciğer oskültasyonu",
+      "abdominal": "Karın palpasyonu",
+      "neurological": "Nörolojik muayene",
+      "musculoskeletal": "Kas-iskelet",
+      "skin": "Cilt",
+      "ent": "KBB",
+      "focusedSpecial": "Özel testler"
+    },
+    "interview": {
+      "empty": "Anamneze başla: aşağıdan bir soru seç, hasta yanıtlasın. Sormadan hiçbir şey görünmez.",
+      "noInfo": "Buna nasıl yanıt vereceğimi bilmiyorum.",
+      "askHeading": "Hastaya sor",
+      "askHint": "Her soru yalnızca sorduğunu ortaya çıkarır.",
+      "examHeading": "Muayene manevraları",
+      "examHint": "Bulguyu görmek için bir manevra iste.",
+      "extractionNote": "Anamnez ve muayene burada çıkarılır. Nesnel veriler İstemler sekmesinden istenir."
+    },
+    "flowsheet": {
+      "title": "Hemşire izlem çizelgesi",
+      "subtitle": "Zaman içinde kaydedilen yaşamsal bulgular.",
+      "caption": "Görüşme boyunca yaşamsal bulgular, her ölçüm için durum ile",
+      "time": "Zaman",
+      "minute": "{{min}} dk"
+    },
+    "orders": {
+      "category": {
+        "labs": "Laboratuvar",
+        "imaging": "Görüntüleme",
+        "meds": "İlaçlar",
+        "consults": "Konsültasyonlar"
+      },
+      "order": "İste",
+      "orderedShort": "İstendi",
+      "place": "{{name}} iste",
+      "ordered": "{{name}} zaten istendi",
+      "placedHeading": "Verilen istemler",
+      "placedEmpty": "Henüz istem verilmedi.",
+      "placedAt": "{{min}} dk'da verildi",
+      "pending": "Bekliyor",
+      "resulted": "Sonuçlandı",
+      "footnote": "Sonuçlar kısa bir simülasyon süresi sonra gelir. Sonuçlar sekmesine bakın.",
+      "expectedNote": "Bu vaka için {{count}} endike istem beklenir."
+    },
+    "results": {
+      "none": "Henüz sonuç yok. Sonuç görmek için bir istem verin.",
+      "pendingHeading": "Bekleyen",
+      "labsHeading": "Laboratuvar",
+      "labsCaption": "Referans aralıkları ve anormallik işaretleriyle laboratuvar sonuçları",
+      "analyte": "Tetkik",
+      "value": "Değer",
+      "reference": "Referans",
+      "flag": "İşaret",
+      "imagingHeading": "Görüntüleme ve raporlar",
+      "impression": "Yorum",
+      "reportedAt": "{{min}} dk'da raporlandı",
+      "interp": {
+        "normal": "Normal",
+        "high": "Yüksek",
+        "low": "Düşük",
+        "criticalHigh": "Kritik yüksek",
+        "criticalLow": "Kritik düşük",
+        "abnormal": "Anormal"
+      }
+    },
+    "ap": {
+      "pickerHeading": "Tanı ekle",
+      "searchPlaceholder": "Tanı veya ICD/DSM kodu ara...",
+      "addToDifferential": "{{name}} tanısını ayırıcıya ekle",
+      "add": "Ekle",
+      "added": "Eklendi",
+      "noMatches": "Eşleşen tanı yok.",
+      "differentialHeading": "Ayırıcı tanı",
+      "differentialEmpty": "Ayırıcı tanını oluşturmak için seçiciden aday ekle.",
+      "setWorking": "Çalışma tanısı yap",
+      "working": "Çalışma tanısı",
+      "committedNote": "Çalışma tanısı belirlendi: {{dx}}",
+      "planHeading": "Plan",
+      "planPlaceholder": "Tedavi ve taburculuk planını yaz...",
+      "savePlan": "Planı kaydet"
+    },
+    "avatar": {
+      "signs": {
+        "none": "Rahat, akut sıkıntı yok",
+        "cyanosis": "Siyanoz",
+        "pallor": "Solukluk",
+        "diaphoresis": "Terli",
+        "respiratoryDistress": "Solunum sıkıntısı",
+        "reducedLoc": "Bilinç düzeyinde azalma",
+        "jaundice": "Sarılık",
+        "flushing": "Kızarık"
+      }
+    },
+    "chiefComplaint": {
+      "chestPain": "Göğüs ağrısı",
+      "headache": "Baş ağrısı",
+      "abdominalPain": "Karın ağrısı",
+      "dyspnea": "Nefes darlığı"
+    },
+    "newCase": {
+      "button": "Yeni vaka",
+      "menuLabel": "Vaka üret veya yükle",
+      "random": "Rastgele vaka",
+      "randomHint": "ICD/DSM'den yaygınlık ve eğitim değerine göre örneklenir.",
+      "constrained": "Kısıtlı",
+      "chiefComplaint": "Ana yakınma",
+      "difficulty": "Zorluk",
+      "difficultyLevel": "Zorluk düzeyi 5 üzerinden {{level}}",
+      "diffMin": "Temel",
+      "diffMax": "Uzman",
+      "generate": "Vaka üret",
+      "seedHeading": "Seçilmiş vakalar"
+    }
+  },
   "vitals": {
     "title": "Yaşamsal bulgu monitörü",
     "online": "Canlı",
@@ -243,6 +467,55 @@
       "remediation": "Bunu çalış",
       "schedule": "Tekrar planla",
       "acknowledge": "Onayla"
+    },
+    "process": {
+      "heading": "Süreç ve zamanlama",
+      "subtitle": "Ne yapıldı, hangi sırayla ve ne kadar hızlı, kılavuz beklentileriyle karşılaştırıldı ve kaynak gösterildi.",
+      "minUnit": "dk",
+      "lastReviewed": "{{date}} tarihinde gözden geçirildi",
+      "citationAria": "Kaynak: {{source}}. Kaynağı aç.",
+      "criticalActions": "Kritik eylemlere kadar geçen süre",
+      "criticalActionsNote": "Her eylem, zamanında olsun olmasın, kılavuz hedefiyle karşılaştırılır ve kaynak gösterilir.",
+      "criticalTag": "Kritik",
+      "criticalActionTitle": "Zaman açısından kritik eylem. Atlanması ayrıca gösterilir.",
+      "status": {
+        "onTime": "Zamanında",
+        "late": "Geç",
+        "missed": "Atlandı"
+      },
+      "timing": {
+        "takenAnchor": "{{taken}}. dakikada istendi; hedef {{target}} dakika içinde",
+        "missedAnchor": "İstenmedi; hedef {{target}} dakika içinde"
+      },
+      "coverage": {
+        "label": "Anamnez kapsamı",
+        "hint": "Beklenen {{expected}} alandan {{covered}} tanesi soruldu"
+      },
+      "redundant": {
+        "label": "Gereksiz sorular",
+        "hint": "{{count}} hedef dışı soru"
+      },
+      "totalTime": {
+        "label": "Toplam görüşme süresi",
+        "hint": "Başvurudan yönlendirmeye kadar"
+      },
+      "timeToDx": {
+        "label": "Tanıya kadar geçen süre",
+        "correct": "Doğru çalışma tanısı",
+        "incorrect": "Çalışma tanısı henüz doğru değil"
+      },
+      "safety": {
+        "missTitle": "Güvenlik açısından kritik süreç atlaması: bunu gözden geçir",
+        "cleanTitle": "Güvenlik açısından kritik süreç atlaması yok",
+        "cleanNote": "Bu görüşmede zaman açısından kritik eylemler ve güvenlik kontrolleri tamamlandı."
+      },
+      "treatment": {
+        "heading": "Hastaya nasıl yaklaşıldı",
+        "communication": "İletişim",
+        "safety": "Güvenlik",
+        "met": "Yapıldı",
+        "notMet": "Atlandı"
+      }
     },
     "citationsHeading": "Kaynaklar",
     "provenance": {

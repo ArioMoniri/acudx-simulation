@@ -1,343 +1,279 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
-import {
-  PaperPlaneRight,
-  Microphone,
-  Paperclip,
-  Flask,
-  Stethoscope,
-  Circle,
-} from "@phosphor-icons/react";
+import { List, X } from "@phosphor-icons/react";
 
 import { PageContainer } from "@/components/shell";
-import { Badge, Switch, Tooltip } from "@/components/ui";
+import { ProgressStages } from "@/components";
 import {
-  ProgressStages,
-  EncounterChat,
-  GuidanceCard,
-  VitalCard,
-  PatientPortrait,
-} from "@/components";
-import {
-  chestPainCase,
-  transcript,
-  vitals,
-  guidanceHints,
-  type ClinicalState,
-  type VitalKey,
-} from "@/data/mock";
-import { useEntry, useLang } from "@/lib/useLang";
+  PatientBanner,
+  Storyboard,
+  ActivityTabs,
+  EncounterClock,
+  NewCaseMenu,
+  SimBadge,
+} from "@/components/ehr";
 import { cn } from "@/lib/cn";
+import { useEntry, useLang } from "@/lib/useLang";
+import { chestPainNstemiCase, getSeedCase } from "@/data/seedCases";
+import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
+import { signsFromVitals } from "@/components/ehr";
+import type { CaseInstance } from "@/domain/case";
+import {
+  resetEncounter,
+  startEncounter,
+  useEncounterState,
+} from "@/state/encounterStore";
+import type { EncounterStage as StoreStage } from "@/state/encounterStore";
+import type { EncounterStageMeta } from "@/data/mock";
+
+/* -------------------------------------------------------------------------- */
+/* Progress stages derived from the store stage                                */
+/* -------------------------------------------------------------------------- */
 
 /**
- * Bedside display overrides for this encounter's snapshot (brief-specified
- * numbers). History/trend come from the mock series; state is set so the
- * icon + label reads correctly for each override.
+ * The linear teaching path shown in the stepper. `key` reuses the mock stage
+ * union (ProgressStages only uses it as a React key + for the label lookup),
+ * `stages` maps the store's canonical stages onto each step.
  */
-const bedside: Partial<Record<VitalKey, { value: string; state: ClinicalState }>> =
-  {
-    hr: { value: "112", state: "caution" },
-    bp: { value: "148/92", state: "caution" },
-    rr: { value: "22", state: "caution" },
-    spo2: { value: "94", state: "caution" },
-    temp: { value: "37.1", state: "normal" },
-  };
+const PROGRESS_STAGES: {
+  key: EncounterStageMeta["key"];
+  stages: StoreStage[];
+  label: EncounterStageMeta["label"];
+}[] = [
+  { key: "history", stages: ["chart-review"], label: { en: "Chart review", tr: "Kart incelemesi" } },
+  { key: "exam", stages: ["interview", "exam"], label: { en: "Interview and exam", tr: "Anamnez ve muayene" } },
+  { key: "tests", stages: ["orders"], label: { en: "Orders", tr: "İstemler" } },
+  { key: "diagnosis", stages: ["results"], label: { en: "Results", tr: "Sonuçlar" } },
+  { key: "management", stages: ["assessment", "closed"], label: { en: "A and P", tr: "Değerlendirme ve plan" } },
+];
 
-/** EncounterPage — the signature emergency-medicine encounter screen. */
+const PROGRESS_META: EncounterStageMeta[] = PROGRESS_STAGES.map((s) => ({
+  key: s.key,
+  label: s.label,
+}));
+
+function progressIndexFor(stage: StoreStage): number {
+  const idx = PROGRESS_STAGES.findIndex((s) => s.stages.includes(stage));
+  return idx < 0 ? 1 : idx;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Page                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * EncounterPage — the EHR workspace (docs §2). PatientBanner (sticky) + the
+ * Storyboard rail + ActivityTabs, on a clean white workspace with the one dark
+ * vitals panel inside Flowsheets. startEncounter runs on mount with a case; a
+ * New case control regenerates random / constrained cases or loads a seed. The
+ * rail collapses to a drawer on mobile; the tab strip scrolls.
+ */
 export function EncounterPage() {
   const { t } = useTranslation();
   const lang = useLang();
-  const left = useEntry();
-  const right = useEntry(0.08);
+  const top = useEntry();
+  const body = useEntry(0.06);
 
+  const state = useEncounterState();
   const [guidanceOn, setGuidanceOn] = useState(true);
-  const [draft, setDraft] = useState("");
-  const [typing, setTyping] = useState(false);
-  const typingTimer = useRef<number | null>(null);
+  const [railOpen, setRailOpen] = useState(false);
 
-  // Current stage = the last stage present in the transcript (exam here).
-  const currentIndex = useMemo(() => {
-    const lastStage = transcript[transcript.length - 1]?.stage;
-    const idx = chestPainCase.stages.findIndex((s) => s.key === lastStage);
-    return idx < 0 ? 0 : idx;
+  // Keep a local reference to the active case so the page can render the banner
+  // even during a stage transition. Source of truth is the store.
+  const caseInstance = state.caseInstance;
+
+  // Start with the curated ACS seed case on mount, and reset on unmount so the
+  // store + its pending timers are cleared when leaving the workspace. Runs on
+  // every mount (including the StrictMode dev double-invoke) so the store is
+  // never left empty by a cleanup that outran its start.
+  useEffect(() => {
+    startEncounter(chestPainNstemiCase);
+    return () => {
+      resetEncounter();
+    };
   }, []);
 
-  const currentStageKey = chestPainCase.stages[currentIndex]?.key ?? "history";
-  const activeHint =
-    guidanceHints.find((h) => h.stage === currentStageKey) ?? guidanceHints[0];
+  const loadCase = useCallback((next: CaseInstance) => {
+    startEncounter(next);
+    setRailOpen(false);
+  }, []);
 
-  const affectByTurn = {
-    t2: t("encounter.affect.distress"),
-    t4: t("encounter.affect.distress"),
-    t6: t("encounter.affect.guarded"),
-  };
+  const handleRandom = useCallback(() => {
+    loadCase(generateCase({ seedMode: "random", locale: lang }));
+  }, [loadCase, lang]);
 
-  // Simulate a latency-free patient typing indicator on send (no network).
-  function handleSend() {
-    if (!draft.trim()) return;
-    setDraft("");
-    setTyping(true);
-    if (typingTimer.current) window.clearTimeout(typingTimer.current);
-    typingTimer.current = window.setTimeout(() => setTyping(false), 1400);
+  const handleConstrained = useCallback(
+    (chiefComplaint: ChiefComplaintFamily, difficulty: 1 | 2 | 3 | 4 | 5) => {
+      loadCase(
+        generateCase({
+          seedMode: "constrained",
+          chiefComplaint,
+          difficulty,
+          locale: lang,
+        }),
+      );
+    },
+    [loadCase, lang],
+  );
+
+  const handleLoadSeed = useCallback(
+    (id: string) => {
+      const seed = getSeedCase(id);
+      if (seed) loadCase(seed);
+    },
+    [loadCase],
+  );
+
+  // Affect label for the avatar/portrait, derived from the triage sign channel.
+  const affectLabel = useMemo(() => {
+    if (!caseInstance) return t("encounter.affect.distress");
+    const signs = signsFromVitals(caseInstance.triageVitals);
+    if (signs.some((s) => s.sign === "respiratory-distress" && s.intensity > 0.3)) {
+      return t("encounter.affect.distress");
+    }
+    if (signs.length === 0) return t("encounter.affect.relieved");
+    return t("encounter.affect.distress");
+  }, [caseInstance, t]);
+
+  const currentIndex = progressIndexFor(state.stage);
+
+  if (!caseInstance) {
+    return (
+      <PageContainer width="wide">
+        <p className="text-sm text-muted">{t("common.loading")}</p>
+      </PageContainer>
+    );
   }
 
-  const monitorVitals = vitals.map((v) => {
-    const o = bedside[v.key];
-    return o ? { ...v, value: o.value, state: o.state } : v;
-  });
+  const toolbar = (
+    <>
+      <EncounterClock variant="chip" className="hidden sm:inline-flex" />
+      <NewCaseMenu
+        lang={lang}
+        onRandom={handleRandom}
+        onConstrained={handleConstrained}
+        onLoadSeed={handleLoadSeed}
+      />
+      {/* Rail toggle on mobile */}
+      <button
+        type="button"
+        onClick={() => setRailOpen(true)}
+        aria-label={t("ehr.storyboard.open")}
+        className="inline-flex h-9 items-center gap-1.5 rounded-control border border-border bg-surface px-3 text-sm font-medium text-fg lg:hidden"
+      >
+        <List weight="bold" className="h-4 w-4" aria-hidden />
+        {t("ehr.storyboard.chart")}
+      </button>
+    </>
+  );
 
   return (
-    <PageContainer width="wide" className="flex flex-col gap-6">
-      {/* Top region: case chip, stages, guidance toggle */}
-      <motion.div
-        {...left}
-        className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge tone="brand">
-            <Stethoscope weight="bold" className="h-3.5 w-3.5" aria-hidden />
-            {t("encounter.caseChip")}
-          </Badge>
-          <span className="text-sm text-muted">{chestPainCase.title[lang]}</span>
-        </div>
-
-        <label className="inline-flex cursor-pointer items-center gap-2.5 self-start rounded-full border border-border bg-surface px-3 py-1.5 lg:self-auto">
-          <span className="text-sm font-medium text-fg">
-            {t("encounter.guidance.toggle")}
-          </span>
-          <Switch
-            checked={guidanceOn}
-            onCheckedChange={setGuidanceOn}
-            aria-label={t("encounter.guidance.toggle")}
-          />
-          <span className="text-xs text-muted">
-            {t(guidanceOn ? "encounter.guidance.on" : "encounter.guidance.off")}
-          </span>
-        </label>
+    <PageContainer width="wide" className="flex flex-col gap-4">
+      <motion.div {...top}>
+        <PatientBanner caseInstance={caseInstance} lang={lang} toolbar={toolbar} />
       </motion.div>
 
-      <motion.div {...left}>
+      {/* Progress stages (wired to the store stage) + case meta line */}
+      <motion.div
+        {...top}
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
         <ProgressStages
-          stages={chestPainCase.stages}
+          stages={PROGRESS_META}
           currentIndex={currentIndex}
           lang={lang}
           ariaLabel={t("encounter.stageLabel")}
         />
+        <p className="text-xs text-muted">
+          {t("ehr.workspace.caseMeta", {
+            difficulty: caseInstance.difficulty,
+            provenance: t(`ehr.provenance.${caseInstance.provenance}`),
+          })}
+        </p>
       </motion.div>
 
-      {/* Main two-column layout (stacks on mobile) */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(0,360px)]">
-        {/* LEFT: chat + composer */}
-        <motion.section
-          {...left}
-          className="flex min-h-[520px] flex-col rounded-card border border-border bg-bg-subtle"
-        >
-          <EncounterChat
-            turns={transcript}
+      {/* Workspace: rail + main */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,280px)_1fr]">
+        {/* Rail (desktop) */}
+        <motion.div {...body} className="hidden lg:block">
+          <Storyboard caseInstance={caseInstance} lang={lang} affectLabel={affectLabel} />
+        </motion.div>
+
+        {/* Main activity area */}
+        <motion.div {...body} className="min-w-0">
+          <ActivityTabs
+            caseInstance={caseInstance}
             lang={lang}
-            patientTyping={typing}
-            affectByTurn={affectByTurn}
-            className="max-h-[52vh] flex-1 px-3 sm:px-4"
+            affectLabel={affectLabel}
+            guidanceOn={guidanceOn}
+            onGuidanceChange={setGuidanceOn}
           />
-
-          {/* Composer */}
-          <div className="border-t border-border p-3 sm:p-4">
-            {guidanceOn && activeHint ? (
-              <GuidanceCard hint={activeHint} lang={lang} className="mb-3" />
-            ) : null}
-
-            <div className="flex items-end gap-2 rounded-card border border-border bg-surface p-2">
-              <div className="flex items-center gap-1">
-                <Tooltip content={t("encounter.voiceMode")}>
-                  <button
-                    type="button"
-                    aria-label={t("encounter.voiceMode")}
-                    className="grid h-9 w-9 place-items-center rounded-control text-muted transition-colors duration-200 ease-out hover:bg-bg-subtle hover:text-fg focus-visible:outline-none active:scale-[0.98]"
-                  >
-                    <Microphone weight="bold" className="h-5 w-5" aria-hidden />
-                  </button>
-                </Tooltip>
-                <Tooltip content={t("encounter.attach")}>
-                  <button
-                    type="button"
-                    aria-label={t("encounter.attach")}
-                    className="grid h-9 w-9 place-items-center rounded-control text-muted transition-colors duration-200 ease-out hover:bg-bg-subtle hover:text-fg focus-visible:outline-none active:scale-[0.98]"
-                  >
-                    <Paperclip weight="bold" className="h-5 w-5" aria-hidden />
-                  </button>
-                </Tooltip>
-              </div>
-
-              <label htmlFor="composer" className="sr-only">
-                {t("encounter.composerPlaceholder")}
-              </label>
-              <textarea
-                id="composer"
-                rows={1}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder={t("encounter.composerPlaceholder")}
-                className="max-h-32 min-h-[2.25rem] flex-1 resize-none bg-transparent px-1 py-2 text-sm text-fg placeholder:text-muted focus-visible:outline-none"
-              />
-
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={!draft.trim()}
-                aria-label={t("actions.send")}
-                className={cn(
-                  "grid h-9 w-9 shrink-0 place-items-center rounded-control bg-brand text-white",
-                  "transition-[background-color,transform] duration-200 ease-out",
-                  "hover:bg-brand-hover focus-visible:outline-none active:scale-[0.98]",
-                  "disabled:opacity-40 disabled:pointer-events-none",
-                )}
-              >
-                <PaperPlaneRight weight="fill" className="h-4 w-4" aria-hidden />
-              </button>
-            </div>
-            <p className="mt-1.5 px-1 text-[11px] text-muted">
-              {t("encounter.sendHint")}
-            </p>
-          </div>
-        </motion.section>
-
-        {/* RIGHT: dark vitals monitor + portrait */}
-        <motion.aside
-          {...right}
-          aria-label={t("vitals.title")}
-          className="rounded-card border p-4"
-          style={{
-            backgroundColor: "var(--monitor-bg)",
-            borderColor: "var(--monitor-border)",
-          }}
-        >
-          {/* Monitor header */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5" aria-hidden>
-                <span
-                  className="absolute inline-flex h-full w-full rounded-full opacity-75 motion-safe:animate-ping"
-                  style={{ backgroundColor: "var(--monitor-online)" }}
-                />
-                <span
-                  className="relative inline-flex h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: "var(--monitor-online)" }}
-                />
-              </span>
-              <span
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: "var(--monitor-online)" }}
-              >
-                {t("vitals.online")}
-              </span>
-              <span
-                className="text-xs"
-                style={{ color: "var(--monitor-dim)" }}
-              >
-                {chestPainCase.title[lang]}
-              </span>
-            </div>
-            <span
-              className="font-mono text-[11px]"
-              style={{ color: "var(--monitor-dim)" }}
-            >
-              {t("vitals.title")}
-            </span>
-          </div>
-
-          {/* Vital cards */}
-          <div className="mt-4 grid grid-cols-2 gap-2.5">
-            {monitorVitals.map((v) => (
-              <VitalCard key={v.key} vital={v} />
-            ))}
-          </div>
-
-          {/* Visually-hidden table equivalent for the whole monitor */}
-          <table className="sr-only">
-            <caption>{t("vitals.table.caption")}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{t("vitals.table.vital")}</th>
-                <th scope="col">{t("vitals.table.value")}</th>
-                <th scope="col">{t("vitals.table.status")}</th>
-                <th scope="col">{t("vitals.table.trend")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {monitorVitals.map((v) => (
-                <tr key={v.key}>
-                  <th scope="row">{t(`vitals.${v.labelKey}`)}</th>
-                  <td>
-                    {v.value}
-                    {v.unitKey ? ` ${t(`vitals.units.${v.unitKey}`)}` : ""}
-                  </td>
-                  <td>{t(`states.${v.state}`)}</td>
-                  <td>{t(`vitals.trend.${v.trend}`)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Patient portrait */}
-          <div className="mt-3">
-            <PatientPortrait
-              caption={t("encounter.portrait.caption")}
-              name={t("encounter.patient")}
-            />
-          </div>
-
-          {/* Bedside action chips */}
-          <div className="mt-3">
-            <p
-              className="mb-1.5 text-[11px] font-medium uppercase tracking-wide"
-              style={{ color: "var(--monitor-dim)" }}
-            >
-              {t("encounter.monitorActions")}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ease-out focus-visible:outline-none active:scale-[0.98]"
-                style={{
-                  color: "var(--monitor-fg)",
-                  backgroundColor:
-                    "color-mix(in srgb, var(--monitor-fg) 8%, transparent)",
-                }}
-              >
-                <Flask weight="bold" className="h-3.5 w-3.5" aria-hidden />
-                {t("actions.orderTest")}
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200 ease-out focus-visible:outline-none active:scale-[0.98]"
-                style={{
-                  color: "var(--monitor-fg)",
-                  backgroundColor:
-                    "color-mix(in srgb, var(--monitor-fg) 8%, transparent)",
-                }}
-              >
-                <Stethoscope weight="bold" className="h-3.5 w-3.5" aria-hidden />
-                {t("actions.requestExam")}
-              </button>
-            </div>
-          </div>
-
-          <p
-            className="mt-3 flex items-center gap-1 text-[10px]"
-            style={{ color: "var(--monitor-dim)" }}
-          >
-            <Circle weight="fill" className="h-1.5 w-1.5" aria-hidden />
-            {t("app.eduDisclaimer")}
-          </p>
-        </motion.aside>
+        </motion.div>
       </div>
+
+      {/* Persistent education-only footnote (interaction dock strip) */}
+      <SimBadge variant="bar" />
+
+      {/* Mobile rail drawer */}
+      {railOpen ? (
+        <MobileRailDrawer onClose={() => setRailOpen(false)} title={t("ehr.storyboard.chart")}>
+          <Storyboard caseInstance={caseInstance} lang={lang} affectLabel={affectLabel} />
+        </MobileRailDrawer>
+      ) : null}
     </PageContainer>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mobile rail drawer                                                          */
+/* -------------------------------------------------------------------------- */
+
+function MobileRailDrawer({
+  onClose,
+  title,
+  children,
+}: {
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={title}>
+      <div
+        className="absolute inset-0 bg-black/40 motion-safe:animate-[fade-up_0.2s_ease-out]"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        className={cn(
+          "absolute inset-y-0 left-0 flex w-[85%] max-w-sm flex-col gap-3 overflow-y-auto",
+          "border-r border-border bg-bg p-4 shadow-soft-md",
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-fg">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("actions.close")}
+            className="grid h-8 w-8 place-items-center rounded-control text-muted hover:bg-bg-subtle hover:text-fg focus-visible:outline-none"
+          >
+            <X weight="bold" className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
   );
 }

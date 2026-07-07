@@ -156,6 +156,230 @@
     },
     "resumeToast": "Session resumed."
   },
+  "ehr": {
+    "sim": {
+      "tag": "SIM",
+      "short": "synthetic patient",
+      "full": "Simulation. Synthetic patient. For education only.",
+      "synthetic": "synthetic patient",
+      "education": "education only"
+    },
+    "workspace": {
+      "caseMeta": "Difficulty {{difficulty}}/5 · {{provenance}}"
+    },
+    "provenance": {
+      "seed": "Curated case",
+      "generated": "Generated case"
+    },
+    "banner": {
+      "label": "Patient banner",
+      "ageSex": "{{age}} y, {{sex}}",
+      "mrn": "MRN",
+      "chiefComplaint": "Chief complaint",
+      "allergies": "Allergies",
+      "allergiesLabel": "Allergies, always visible",
+      "nkda": "No known drug allergies",
+      "codeStatus": "Code",
+      "esi": "ESI {{level}}",
+      "acuityLabel": "Acuity ESI {{level}}, {{state}}"
+    },
+    "encounterClass": {
+      "emergency": "Emergency (ED)",
+      "ambulatory": "Clinic",
+      "inpatient": "Inpatient",
+      "prehospital": "Prehospital"
+    },
+    "codeStatus": {
+      "full": "Full code"
+    },
+    "storyboard": {
+      "label": "Storyboard",
+      "demographics": "Demographics",
+      "weight": "Weight",
+      "problemList": "Problem list",
+      "problemsEmpty": "No problems added yet. Build them in A and P.",
+      "vitalsSnapshot": "Vitals snapshot",
+      "medList": "Medications and history",
+      "medsEmpty": "Ask about medications and past history to populate this.",
+      "careTeam": "Care team",
+      "open": "Open the storyboard",
+      "chart": "Storyboard"
+    },
+    "problemRole": {
+      "differential": "Differential",
+      "working": "Working",
+      "plan": "Plan"
+    },
+    "careTeam": {
+      "you": "You",
+      "nurse": "Triage nurse",
+      "roleClinician": "Treating clinician",
+      "roleNurse": "Nursing"
+    },
+    "clock": {
+      "title": "Encounter clock",
+      "label": "Encounter clock, minutes and seconds elapsed"
+    },
+    "tabs": {
+      "chartReview": "Chart Review",
+      "interview": "Interview",
+      "flowsheets": "Flowsheets",
+      "orders": "Orders",
+      "results": "Results",
+      "problemList": "Problem List / A&P"
+    },
+    "chartReview": {
+      "triageNote": "Triage note",
+      "triageMeta": "{{class}} · triage",
+      "triageBody": "{{age}}-year-old presenting with {{complaint}}. Placed on the monitor at arrival.",
+      "timeline": "Encounter timeline",
+      "timelineEmpty": "Your actions will appear here in order as you work the chart.",
+      "atMin": "{{min}} min"
+    },
+    "timeline": {
+      "question": "Asked about {{intent}}",
+      "exam": "Examined: {{maneuver}}",
+      "order": "Ordered {{code}}",
+      "result": "Result returned: {{code}}",
+      "diagnosis": "Committed diagnosis: {{dx}}",
+      "note": "Wrote a note"
+    },
+    "intents": {
+      "onset": "Onset",
+      "location": "Location",
+      "character": "Character",
+      "radiation": "Radiation",
+      "severity": "Severity",
+      "timing": "Timing",
+      "aggravating": "Aggravating factors",
+      "relieving": "Relieving factors",
+      "associatedSymptoms": "Associated symptoms",
+      "redFlags": "Red flags",
+      "pastMedicalHistory": "Past medical history",
+      "medications": "Medications",
+      "allergies": "Allergies",
+      "familyHistory": "Family history",
+      "socialHistory": "Social history",
+      "riskFactors": "Risk factors",
+      "ice": "Ideas, concerns, expectations"
+    },
+    "maneuvers": {
+      "generalInspection": "General inspection",
+      "vitalsRecheck": "Recheck vitals",
+      "cardiovascular": "Auscultate heart",
+      "respiratory": "Auscultate lungs",
+      "abdominal": "Palpate abdomen",
+      "neurological": "Neurological exam",
+      "musculoskeletal": "Musculoskeletal",
+      "skin": "Skin",
+      "ent": "ENT",
+      "focusedSpecial": "Special tests"
+    },
+    "interview": {
+      "empty": "Start the history: choose a question below and the patient will answer. Nothing is shown until you ask.",
+      "noInfo": "I am not sure how to answer that.",
+      "askHeading": "Ask the patient",
+      "askHint": "Each question reveals only what you ask for.",
+      "examHeading": "Exam maneuvers",
+      "examHint": "Request a maneuver to reveal the finding.",
+      "extractionNote": "History and exam are extracted here. Objective data is ordered in the Orders tab."
+    },
+    "flowsheet": {
+      "title": "Nursing flowsheet",
+      "subtitle": "Vital signs recorded over time.",
+      "caption": "Vital signs over the encounter, with status for each reading",
+      "time": "Time",
+      "minute": "{{min}} min"
+    },
+    "orders": {
+      "category": {
+        "labs": "Labs",
+        "imaging": "Imaging",
+        "meds": "Medications",
+        "consults": "Consults"
+      },
+      "order": "Order",
+      "orderedShort": "Ordered",
+      "place": "Order {{name}}",
+      "ordered": "{{name}} already ordered",
+      "placedHeading": "Placed orders",
+      "placedEmpty": "No orders placed yet.",
+      "placedAt": "Placed at {{min}} min",
+      "pending": "Pending",
+      "resulted": "Resulted",
+      "footnote": "Results return after a short simulated turnaround. Check the Results tab.",
+      "expectedNote": "{{count}} indicated orders are expected for this case."
+    },
+    "results": {
+      "none": "No results yet. Place an order to see results here.",
+      "pendingHeading": "Pending",
+      "labsHeading": "Laboratory",
+      "labsCaption": "Laboratory results with reference ranges and abnormal flags",
+      "analyte": "Test",
+      "value": "Value",
+      "reference": "Reference",
+      "flag": "Flag",
+      "imagingHeading": "Imaging and reports",
+      "impression": "Impression",
+      "reportedAt": "Reported at {{min}} min",
+      "interp": {
+        "normal": "Normal",
+        "high": "High",
+        "low": "Low",
+        "criticalHigh": "Critically high",
+        "criticalLow": "Critically low",
+        "abnormal": "Abnormal"
+      }
+    },
+    "ap": {
+      "pickerHeading": "Add a diagnosis",
+      "searchPlaceholder": "Search diagnoses or ICD/DSM code...",
+      "addToDifferential": "Add {{name}} to the differential",
+      "add": "Add",
+      "added": "Added",
+      "noMatches": "No matching diagnoses.",
+      "differentialHeading": "Differential",
+      "differentialEmpty": "Add candidates from the picker to build your differential.",
+      "setWorking": "Set as working",
+      "working": "Working",
+      "committedNote": "Working diagnosis committed: {{dx}}",
+      "planHeading": "Plan",
+      "planPlaceholder": "Write your management and disposition plan...",
+      "savePlan": "Save plan"
+    },
+    "avatar": {
+      "signs": {
+        "none": "Comfortable, no acute distress",
+        "cyanosis": "Cyanosis",
+        "pallor": "Pallor",
+        "diaphoresis": "Diaphoretic",
+        "respiratoryDistress": "Respiratory distress",
+        "reducedLoc": "Reduced level of consciousness",
+        "jaundice": "Jaundice",
+        "flushing": "Flushed"
+      }
+    },
+    "chiefComplaint": {
+      "chestPain": "Chest pain",
+      "headache": "Headache",
+      "abdominalPain": "Abdominal pain",
+      "dyspnea": "Dyspnea"
+    },
+    "newCase": {
+      "button": "New case",
+      "menuLabel": "Generate or load a case",
+      "random": "Random case",
+      "randomHint": "Sampled from ICD/DSM by prevalence and teaching value.",
+      "constrained": "Constrained",
+      "chiefComplaint": "Chief complaint",
+      "difficulty": "Difficulty",
+      "difficultyLevel": "Difficulty level {{level}} of 5",
+      "diffMin": "Foundation",
+      "diffMax": "Expert",
+      "generate": "Generate case",
+      "seedHeading": "Curated cases"
+    }
+  },
   "vitals": {
     "title": "Vitals monitor",
     "online": "Live",
@@ -243,6 +467,55 @@
       "remediation": "Practice this",
       "schedule": "Schedule a review",
       "acknowledge": "Acknowledge"
+    },
+    "process": {
+      "heading": "Process and timing",
+      "subtitle": "What was done, in what order, and how fast, measured against guideline expectations and cited.",
+      "minUnit": "min",
+      "lastReviewed": "Reviewed {{date}}",
+      "citationAria": "Source: {{source}}. Open provenance.",
+      "criticalActions": "Time to critical actions",
+      "criticalActionsNote": "Each action is measured against its guideline target and cited, whether on time or not.",
+      "criticalTag": "Critical",
+      "criticalActionTitle": "Time-critical action. A miss is surfaced separately.",
+      "status": {
+        "onTime": "On time",
+        "late": "Late",
+        "missed": "Missed"
+      },
+      "timing": {
+        "takenAnchor": "Ordered at {{taken}} min; target within {{target}} min",
+        "missedAnchor": "Not ordered; target within {{target}} min"
+      },
+      "coverage": {
+        "label": "History coverage",
+        "hint": "{{covered}} of {{expected}} expected areas asked"
+      },
+      "redundant": {
+        "label": "Redundant questions",
+        "hint": "{{count}} off-target question(s)"
+      },
+      "totalTime": {
+        "label": "Total encounter time",
+        "hint": "From arrival to disposition"
+      },
+      "timeToDx": {
+        "label": "Time to diagnosis",
+        "correct": "Correct working diagnosis",
+        "incorrect": "Working diagnosis not yet correct"
+      },
+      "safety": {
+        "missTitle": "Safety-critical process miss: review this",
+        "cleanTitle": "No safety-critical process misses",
+        "cleanNote": "Time-critical actions and safety checks were completed this encounter."
+      },
+      "treatment": {
+        "heading": "How the patient was treated",
+        "communication": "Communication",
+        "safety": "Safety",
+        "met": "Done",
+        "notMet": "Missed"
+      }
     },
     "citationsHeading": "Sources",
     "provenance": {

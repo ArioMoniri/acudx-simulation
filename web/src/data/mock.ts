@@ -531,6 +531,159 @@ export const feedbackReport: FeedbackReport = {
 };
 
 /* -------------------------------------------------------------------------- */
+/* Process-aware assessment fixture (docs/00-overview/04 §4)                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A representative event-sourced encounter run against the seed chest-pain /
+ * NSTEMI case (src/data/seedCases.ts chestPainNstemiCase). Feeding this to
+ * computeProcessMetrics (src/domain/processMetrics.ts) yields a realistic,
+ * teachable process report:
+ *   - ECG ordered LATE at 18 min (guideline target <= 10 min, ESC ACS 2023)
+ *   - Troponin (0/1 h) on time at 9 min; renal function on time at 12 min
+ *   - History coverage 8 / 10 expected intents (family history + ICE missed)
+ *   - 1 redundant question, 1 off-target question
+ *   - 1 low-value order (D-dimer, not indicated for this presentation)
+ *   - Correct diagnosis committed at 24 min
+ *   - Allergies NOT checked before prescribing -> safety-critical, surfaced
+ *     separately and always (§4.2, AS-8)
+ *
+ * Timestamps are encounter-clock offsets in ms. `meta` mirrors what the live
+ * encounter store (src/state/encounterStore.ts) records, so the same pure
+ * metrics function runs over mock and live logs identically.
+ *
+ * Typed structurally (not importing EncounterEvent) to avoid a data -> state
+ * import edge; the shape is validated by computeProcessMetrics at the call site.
+ */
+export interface ProcessEventFixture {
+  seq: number;
+  type:
+    | "question"
+    | "exam"
+    | "order"
+    | "result"
+    | "diagnosis"
+    | "note"
+    | "stage";
+  ref: string;
+  at: number;
+  meta?: Record<string, unknown>;
+}
+
+const MIN_MS = 60_000;
+
+export const feedbackEncounterEvents: ProcessEventFixture[] = [
+  { seq: 0, type: "stage", ref: "interview", at: 0, meta: { started: true } },
+  // History — 8 of 10 expected intents elicited; family-history + ice omitted.
+  { seq: 1, type: "question", ref: "onset", at: 0.4 * MIN_MS, meta: { hit: true, redundant: false } },
+  { seq: 2, type: "question", ref: "character", at: 1.1 * MIN_MS, meta: { hit: true, redundant: false } },
+  { seq: 3, type: "question", ref: "radiation", at: 1.8 * MIN_MS, meta: { hit: true, redundant: false } },
+  { seq: 4, type: "question", ref: "severity", at: 2.3 * MIN_MS, meta: { hit: true, redundant: false } },
+  { seq: 5, type: "question", ref: "severity", at: 3.0 * MIN_MS, meta: { hit: true, redundant: true } },
+  { seq: 6, type: "question", ref: "associated-symptoms", at: 3.6 * MIN_MS, meta: { hit: true, redundant: false } },
+  { seq: 7, type: "question", ref: "travel", at: 4.4 * MIN_MS, meta: { hit: false } },
+  { seq: 8, type: "question", ref: "risk-factors", at: 5.2 * MIN_MS, meta: { hit: true, redundant: false } },
+  { seq: 9, type: "question", ref: "past-medical-history", at: 6.0 * MIN_MS, meta: { hit: true, redundant: false } },
+  { seq: 10, type: "question", ref: "medications", at: 6.8 * MIN_MS, meta: { hit: true, redundant: false } },
+  // Exam.
+  { seq: 11, type: "exam", ref: "general-inspection", at: 7.5 * MIN_MS, meta: { hit: true } },
+  { seq: 12, type: "exam", ref: "cardiovascular", at: 8.2 * MIN_MS, meta: { hit: true } },
+  // Troponin on time (window 15 min).
+  { seq: 13, type: "order", ref: "67151-1", at: 9.0 * MIN_MS, meta: { indicated: true, lowValue: false } },
+  // Renal function on time (window 30 min).
+  { seq: 14, type: "order", ref: "2160-0", at: 12.0 * MIN_MS, meta: { indicated: true, lowValue: false } },
+  // Low-value D-dimer for a clear cardiac presentation (over-ordering).
+  { seq: 15, type: "order", ref: "48065-7", at: 14.0 * MIN_MS, meta: { indicated: false, lowValue: true } },
+  // ECG ordered LATE at 18 min (target <= 10 min).
+  { seq: 16, type: "order", ref: "11524-6", at: 18.0 * MIN_MS, meta: { indicated: true, lowValue: false } },
+  { seq: 17, type: "result", ref: "67151-1", at: 20.0 * MIN_MS, meta: {} },
+  { seq: 18, type: "result", ref: "11524-6", at: 22.0 * MIN_MS, meta: {} },
+  // Correct diagnosis committed at 24 min.
+  { seq: 19, type: "diagnosis", ref: "I21.4", at: 24.0 * MIN_MS, meta: { correct: true, display: "NSTEMI" } },
+];
+
+/**
+ * A treatment / safety behavior, each anchored to what happened and cited to a
+ * guideline. "How the patient was treated" (§4.1): communication + safety.
+ * `met` is derived from the run; `critical: true` marks a safety behavior that
+ * is surfaced separately and always when unmet (§4.2, AS-8).
+ */
+export interface TreatmentBehavior {
+  id: string;
+  kind: "communication" | "safety";
+  label: Bilingual;
+  /** What the student did (or did not do) — the evidence anchor. */
+  anchor: Bilingual;
+  met: boolean;
+  citationId: string;
+  /** Safety-critical when unmet is a hard miss (allergy check, etc.). */
+  critical: boolean;
+}
+
+export const treatmentBehaviors: TreatmentBehavior[] = [
+  {
+    id: "tb-concern",
+    kind: "communication",
+    label: {
+      en: "Addressed the patient's stated concern",
+      tr: "Hastanın dile getirdiği endişeyi ele aldı",
+    },
+    anchor: {
+      en: "Acknowledged the fear of a heart attack and explained the next steps.",
+      tr: "Kalp krizi korkusunu kabul etti ve sonraki adımları açıkladı.",
+    },
+    met: true,
+    citationId: "tepdad-em",
+    critical: false,
+  },
+  {
+    id: "tb-open",
+    kind: "communication",
+    label: {
+      en: "Used open questions before narrowing",
+      tr: "Daraltmadan önce açık uçlu sorular kullandı",
+    },
+    anchor: {
+      en: "Opened with an invitation to describe the problem in the patient's own words.",
+      tr: "Sorunu hastanın kendi ifadesiyle anlatması için açık bir davetle başladı.",
+    },
+    met: true,
+    citationId: "tepdad-em",
+    critical: false,
+  },
+  {
+    id: "tb-redflag",
+    kind: "safety",
+    label: {
+      en: "Screened cardiac red flags",
+      tr: "Kardiyak kırmızı bayrakları taradı",
+    },
+    anchor: {
+      en: "Elicited radiation, diaphoresis and nausea during the history.",
+      tr: "Anamnezde yayılım, terleme ve bulantıyı sorguladı.",
+    },
+    met: true,
+    citationId: "nice-ng185",
+    critical: false,
+  },
+  {
+    id: "tb-allergy",
+    kind: "safety",
+    label: {
+      en: "Checked allergies before prescribing",
+      tr: "Reçete etmeden önce alerjileri kontrol etti",
+    },
+    anchor: {
+      en: "Aspirin was started without confirming the allergy status on the banner.",
+      tr: "Alerji durumu banttan doğrulanmadan aspirin başlandı.",
+    },
+    met: false,
+    citationId: "esc-acs-2023",
+    critical: true,
+  },
+];
+
+/* -------------------------------------------------------------------------- */
 /* Home dashboard content                                                     */
 /* -------------------------------------------------------------------------- */
 
