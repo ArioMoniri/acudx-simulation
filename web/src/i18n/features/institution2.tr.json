@@ -1,0 +1,71 @@
+{
+  "institution": {
+    "heatmap": {
+      "drill": {
+        "regionLabel": "{{learner}} için detay çözümlemesi",
+        "closeAria": "{{learner}} için detay çözümlemesini kapat",
+        "path": "Kırılım: kohort, {{section}}, {{learner}}, {{domain}}",
+        "domainSwitchLabel": "Bir alanı inceleyin",
+        "bandLabel": "Bant",
+        "encountersLabel": "{{count}} değerlendirilmiş karşılaşma",
+        "evidenceLangNote": "Öğrencinin kendi dilinde gösteriliyor ({{lang}}).",
+        "takeHeading": "Değerlendirici okuması",
+        "withheldHeading": "Bant gizlendi",
+        "withheldBody": "Henüz yeterli güvenilir kanıt yok ({{count}} karşılaşma). Güvenilirlik eşiği aşıldığında bir bant görünür.",
+        "crosswalkChip": "ACGME {{tag}}",
+        "crosswalkTip": "ACGME Milestones öğesi {{tag}} ile eşlenir. Aynı kanıtın çapraz eşlemesidir, yeniden puanlama değildir.",
+        "openHint": "Bandın arkasındaki kanıtı incelemek için herhangi bir hücreyi seçin."
+      }
+    },
+    "remediation": {
+      "step": {
+        "summary": "{{total}} döngünün {{closed}} tanesi kapatıldı",
+        "progress": "Adım {{current}} / {{total}}: {{stage}}",
+        "closedLabel": "Döngü kapatıldı",
+        "back": "Geri",
+        "backAria": "{{learner}} için döngüyü bir adım geri al",
+        "advanceAria": "{{learner}} için {{stage}} adımını tamamla",
+        "markComplete": "{{stage}} adımını tamamla",
+        "close": "Döngüyü kapat",
+        "reset": "Sıfırla",
+        "reassessLogged": "Yeniden değerlendirme kaydedildi. Ayrıntılı sonuç öğrencinin özel akışında kalır.",
+        "live": "{{learner}}: {{stage}} sürüyor.",
+        "liveClosed": "{{learner}}: iyileştirme döngüsü kapatıldı."
+      }
+    },
+    "calibration": {
+      "filter": {
+        "heading": "Filtre",
+        "directionLabel": "Yön",
+        "axisLabel": "Eksen",
+        "all": "Tümü",
+        "clinical": "Klinik",
+        "communication": "İletişim",
+        "showing": "{{total}} konudan {{count}} tanesi gösteriliyor",
+        "empty": "Bu filtreyle eşleşen konu yok.",
+        "reset": "Filtreleri sıfırla"
+      }
+    },
+    "export": {
+      "preview": {
+        "regionLabel": "Kimliksizleştirilmiş dışa aktarma önizlemesi",
+        "heading": "Dışa aktarma önizlemesi",
+        "generatedNote": "Çapraz eşleme {{version}}",
+        "open": "Dışa aktarmayı önizle",
+        "close": "Önizlemeyi kapat",
+        "deidStamp": "Kimliksizleştirildi",
+        "reidWarn": "Yeniden kimliklendirilebilir, yayımdan önce inceleyin",
+        "fairnessAppended": "Adalet denetimi eklendi",
+        "frameworksHeading": "Etiketlenen çerçeveler",
+        "scopeHeading": "Kapsam",
+        "sampleHeading": "Kimliksizleştirilmiş örnek",
+        "sampleCaption": "Kohort satırlarının dışa aktarmada göründüğü haliyle bir örneği. Kimlikler maskelenmiş liste kodlarıdır.",
+        "andMore": "Ayrıca {{count}} öğrenci daha.",
+        "crosswalkHeading": "Alan çapraz eşlemesi ({{framework}})",
+        "download": "Dışa aktarmayı indir",
+        "downloadNote": "Yalnızca gösterim amaçlıdır. Bu cihazdan hiçbir dosya çıkmaz.",
+        "selectFrameworks": "Önizlemek için en az bir çerçeve seçin."
+      }
+    }
+  }
+}

@@ -55,6 +55,8 @@ export function bandCode(band: Band): string {
     case "exemplary":
       return "Ex";
     case "withheld":
-      return "—";
+      // Never rendered as text (withheld cells show a lock + word); kept
+      // non-em-dash to honour the zero-em-dash UI rule.
+      return "n/r";
   }
 }
