@@ -1,0 +1,5 @@
+{
+  "routeFallback": {
+    "loading": "Loading page"
+  }
+}
