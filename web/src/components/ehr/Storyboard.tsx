@@ -4,6 +4,7 @@ import {
   FirstAid,
   Heartbeat,
   Pill,
+  Stethoscope,
   UsersThree,
   Warning,
   ListChecks,
@@ -18,6 +19,7 @@ import {
 import { EncounterClock } from "./EncounterClock";
 import { conceptText, pick } from "./labels";
 import {
+  getDiscoveredExam,
   getDiscoveredHistory,
   useEncounterState,
 } from "@/state/encounterStore";
@@ -68,6 +70,15 @@ function Sparse({ text }: { text: string }) {
   return <p className="text-xs italic text-muted">{text}</p>;
 }
 
+/**
+ * Entrance for a rail item as it is newly disclosed. A single gentle fade-up so
+ * the rail visibly *populates* as the student works. The global
+ * `prefers-reduced-motion` rule (index.css) collapses the animation to nothing,
+ * and stable React keys mean only newly mounted items animate — items already on
+ * the rail stay put.
+ */
+const ITEM_ENTER = "motion-safe:animate-[fade-up_0.28s_ease-out]";
+
 /** Compact vitals snapshot cell (mono, tabular). Triage values, given-at-start. */
 function MiniVital({
   label,
@@ -111,6 +122,10 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
   // Meds + PMH are surfaced from discovered history intents (earned by asking).
   const meds = discoveredHistory.filter((h) => h.intent === "medications");
   const pmh = discoveredHistory.filter((h) => h.intent === "past-medical-history");
+  const medCount = meds.length + pmh.length;
+
+  // Exam findings are earned by requesting a maneuver (progressive disclosure).
+  const discoveredExam = getDiscoveredExam(state);
 
   const problems = state.problemList;
 
@@ -152,6 +167,11 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
         </dl>
       </div>
 
+      {/* Progressive-disclosure cue: the rail fills in as the chart is worked */}
+      <p className="border-b border-border px-4 py-1.5 text-[11px] italic text-muted">
+        {t("ehr.storyboard.populateHint")}
+      </p>
+
       {/* Problem list — grows from the store */}
       <Section
         icon={<ListChecks weight="bold" className="h-3.5 w-3.5" />}
@@ -165,7 +185,10 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
             {problems.map((p, i) => (
               <li
                 key={`${p.code}-${p.role}-${i}`}
-                className="flex items-center justify-between gap-2 text-xs"
+                className={cn(
+                  "flex items-center justify-between gap-2 text-xs",
+                  ITEM_ENTER,
+                )}
               >
                 <span className="min-w-0 truncate text-fg">{p.display}</span>
                 <span
@@ -230,17 +253,68 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
       <Section
         icon={<Pill weight="bold" className="h-3.5 w-3.5" />}
         title={t("ehr.storyboard.medList")}
+        count={medCount}
       >
-        {meds.length === 0 && pmh.length === 0 ? (
+        {medCount === 0 ? (
           <Sparse text={t("ehr.storyboard.medsEmpty")} />
         ) : (
           <ul className="flex flex-col gap-1 text-xs text-fg">
             {meds.map((m) => (
-              <li key={m.id}>{pick(m.answer, lang)}</li>
+              <li key={m.id} className={ITEM_ENTER}>
+                {pick(m.answer, lang)}
+              </li>
             ))}
             {pmh.map((h) => (
-              <li key={h.id} className="text-muted">
+              <li key={h.id} className={cn("text-muted", ITEM_ENTER)}>
                 {pick(h.answer, lang)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      {/* Exam findings — earned by requesting a maneuver */}
+      <Section
+        icon={<Stethoscope weight="bold" className="h-3.5 w-3.5" />}
+        title={t("ehr.storyboard.examFindings")}
+        count={discoveredExam.length}
+      >
+        {discoveredExam.length === 0 ? (
+          <Sparse text={t("ehr.storyboard.examEmpty")} />
+        ) : (
+          <ul className="flex flex-col gap-1.5 text-xs">
+            {discoveredExam.map((f) => (
+              <li key={f.id} className={cn("flex items-start gap-1.5", ITEM_ENTER)}>
+                {f.abnormal ? (
+                  <Warning
+                    weight="fill"
+                    className="mt-0.5 h-3 w-3 shrink-0 text-[color:var(--state-warning)]"
+                    aria-hidden
+                  />
+                ) : (
+                  <span
+                    aria-hidden
+                    className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--state-normal)]"
+                  />
+                )}
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-medium uppercase tracking-wide text-muted">
+                    {pick(f.system, lang)}
+                  </span>
+                  <span
+                    className={cn(
+                      "block",
+                      f.abnormal ? "font-medium text-fg" : "text-fg",
+                    )}
+                  >
+                    {pick(f.finding, lang)}
+                  </span>
+                  <span className="sr-only">
+                    {f.abnormal
+                      ? t("ehr.storyboard.abnormalFlag")
+                      : t("ehr.storyboard.normalFlag")}
+                  </span>
+                </span>
               </li>
             ))}
           </ul>

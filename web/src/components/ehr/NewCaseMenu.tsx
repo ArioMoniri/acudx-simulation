@@ -51,18 +51,27 @@ export function NewCaseMenu({
   const [complaint, setComplaint] = useState<ChiefComplaintFamily>("chest-pain");
   const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const firstItemRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
+
+  // Close and return focus to the trigger (used for Escape + item selection so
+  // keyboard users are never dropped at the top of the document).
+  function close() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
 
   // Dismiss on outside click / Escape.
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        setOpen(false); // outside click: leave focus where the pointer landed
       }
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") close();
     }
     document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onKey);
@@ -70,15 +79,19 @@ export function NewCaseMenu({
       document.removeEventListener("mousedown", onDocClick);
       document.removeEventListener("keydown", onKey);
     };
+    // `close` is stable enough for this handler; open toggling re-binds it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  function close() {
-    setOpen(false);
-  }
+  // Move focus into the menu when it opens so the popover is keyboard-usable.
+  useEffect(() => {
+    if (open) firstItemRef.current?.focus();
+  }, [open]);
 
   return (
     <div ref={rootRef} className="relative">
       <Button
+        ref={triggerRef}
         variant="secondary"
         size="sm"
         onClick={() => setOpen((v) => !v)}
@@ -96,10 +109,11 @@ export function NewCaseMenu({
           id={panelId}
           role="menu"
           aria-label={t("ehr.newCase.menuLabel")}
-          className="absolute right-0 z-40 mt-2 w-72 rounded-card border border-border bg-surface p-3 shadow-soft-md"
+          className="absolute right-0 z-40 mt-2 w-72 origin-top-right rounded-card border border-border bg-surface p-3 shadow-soft-md motion-safe:animate-[fade-up_0.16s_ease-out]"
         >
           {/* Random */}
           <button
+            ref={firstItemRef}
             type="button"
             role="menuitem"
             onClick={() => {

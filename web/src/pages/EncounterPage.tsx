@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
@@ -16,7 +16,8 @@ import {
   SimBadge,
 } from "@/components/ehr";
 import { cn } from "@/lib/cn";
-import { useEntry, useLang } from "@/lib/useLang";
+import { useLang } from "@/lib/useLang";
+import { useReveal } from "@/lib/motion";
 import { chestPainNstemiCase, getSeedCase } from "@/data/seedCases";
 import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
 import { signsFromVitals } from "@/components/ehr";
@@ -74,8 +75,10 @@ function progressIndexFor(stage: StoreStage): number {
 export function EncounterPage() {
   const { t } = useTranslation();
   const lang = useLang();
-  const top = useEntry();
-  const body = useEntry(0.06);
+  // Shared motion vocabulary (web/src/lib/motion.ts): a gentle fade-up cascade,
+  // collapsing to no motion under prefers-reduced-motion.
+  const top = useReveal();
+  const body = useReveal(0.06);
 
   const location = useLocation();
   // Session setup handed over from the Start page (docs/design/01 Journey 1.5).
@@ -274,7 +277,9 @@ function MobileRailDrawer({
   children: React.ReactNode;
 }) {
   const { t } = useTranslation();
+  const closeRef = useRef<HTMLButtonElement>(null);
 
+  // Escape to dismiss.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -282,6 +287,19 @@ function MobileRailDrawer({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Lock the background from scrolling behind the sheet, move focus into it, and
+  // return focus to the control that opened it on close.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      opener?.focus?.();
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={title}>
@@ -299,6 +317,7 @@ function MobileRailDrawer({
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-fg">{title}</h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             aria-label={t("actions.close")}
