@@ -1,8 +1,10 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { UserCircle } from "@phosphor-icons/react";
+import { UserCircle, Broadcast, WifiSlash } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import { useDemoRole, type DemoRole } from "@/lib/demoRole";
+import { useLiveBackend } from "@/lib/liveBackend";
+import { Switch, Tooltip } from "@/components/ui";
 import { Wordmark } from "./Wordmark";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeToggle } from "./ThemeToggle";
@@ -95,6 +97,7 @@ export function TopNav() {
         <div className="ml-auto flex items-center gap-2">
           <GuidedTour className="hidden md:inline-flex" />
           <RoleSwitcher className="hidden sm:flex" />
+          <LiveBackendToggle className="hidden sm:inline-flex" />
           <LanguageSwitcher className="hidden sm:inline-flex" />
           <ThemeToggle />
           <button
@@ -138,5 +141,58 @@ export function TopNav() {
         </ul>
       </div>
     </header>
+  );
+}
+
+/**
+ * LiveBackendToggle — opt into the live, open-model backend running on the pod.
+ * Off by default. While the gateway is unreachable the Switch is disabled and a
+ * visible "backend offline" note is shown, so the affordance never lies about
+ * what is available. Accessible: the Switch carries an aria-label, a tooltip
+ * explains the mode, and the offline note is real text (not tooltip-only).
+ */
+function LiveBackendToggle({ className }: { className?: string }) {
+  const { t } = useTranslation();
+  const { enabled, setEnabled, available, checking } = useLiveBackend();
+  const offline = !checking && !available;
+
+  return (
+    <Tooltip content={t("liveBackend.tooltip")}>
+      <span
+        className={cn(
+          "inline-flex items-center gap-2 rounded-control border border-border bg-surface px-2.5 py-1.5",
+          offline && "opacity-80",
+          className,
+        )}
+      >
+        {available ? (
+          <Broadcast
+            weight="bold"
+            className={cn("h-4 w-4", enabled ? "text-brand" : "text-muted")}
+            aria-hidden="true"
+          />
+        ) : (
+          <WifiSlash
+            weight="bold"
+            className="h-4 w-4 text-muted"
+            aria-hidden="true"
+          />
+        )}
+        <span className="text-xs font-medium text-fg">
+          {t("liveBackend.toggle")}
+        </span>
+        <Switch
+          checked={enabled}
+          onCheckedChange={setEnabled}
+          disabled={checking || !available}
+          aria-label={t("liveBackend.toggle")}
+        />
+        {offline ? (
+          <span className="text-[11px] text-muted">
+            {t("liveBackend.offline")}
+          </span>
+        ) : null}
+      </span>
+    </Tooltip>
   );
 }

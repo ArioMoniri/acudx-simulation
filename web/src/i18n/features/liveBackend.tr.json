@@ -1,0 +1,9 @@
+{
+  "liveBackend": {
+    "toggle": "Canlı",
+    "tooltip": "Poddaki canlı açık model arka ucunu kullanın. Mesajınız önce denetlenir, ardından yerel model tarafından yanıtlanır.",
+    "offline": "arka uç çevrimdışı",
+    "badge": "Canlı · pod",
+    "fallback": "Canlı arka uca ulaşılamadı, bu nedenle bu turu çevrimdışı simülasyon yanıtladı."
+  }
+}
