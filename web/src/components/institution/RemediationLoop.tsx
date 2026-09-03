@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   MagnifyingGlass,
@@ -11,6 +12,8 @@ import {
   Export,
   WarningCircle,
   ArrowRight,
+  ArrowLeft,
+  ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 import { Card, Badge, Button } from "@/components/ui";
 import { CitationPill } from "@/components";
@@ -38,8 +41,26 @@ const statusIcon: Record<RemediationStageStatus, typeof CheckCircle> = {
   pending: Circle,
 };
 
+const STAGE_COUNT = REMEDIATION_STAGES.length;
+const REASSESS_INDEX = REMEDIATION_STAGES.indexOf("reassess");
+
+/**
+ * The loop is modelled by a single `step` cursor (0..STAGE_COUNT): every stage
+ * before it is done, the stage at it is in progress, and `step === STAGE_COUNT`
+ * means the loop is closed. The baseline step is read back from the seed data.
+ */
+function baselineStep(record: RemediationRecord): number {
+  return REMEDIATION_STAGES.filter((s) => record.status[s] === "done").length;
+}
+
+function statusForIndex(i: number, step: number): RemediationStageStatus {
+  if (i < step) return "done";
+  if (i === step && step < STAGE_COUNT) return "active";
+  return "pending";
+}
+
 /** A five-step closed-loop tracker: detect -> diagnose -> prescribe -> re-assess -> document. */
-function LoopTracker({ record }: { record: RemediationRecord }) {
+function LoopTracker({ step }: { step: number }) {
   const { t } = useTranslation();
   return (
     <ol
@@ -47,15 +68,16 @@ function LoopTracker({ record }: { record: RemediationRecord }) {
       aria-label={t("institution.remediation.loopAria")}
     >
       {REMEDIATION_STAGES.map((stage, i) => {
-        const status = record.status[stage];
+        const status = statusForIndex(i, step);
         const StageIcon = stageIcon[stage];
         const StatusIcon = statusIcon[status];
         const statusWord = t(`institution.remediation.status.${status}`);
         return (
           <li key={stage} className="flex items-center gap-1.5">
             <span
+              aria-current={status === "active" ? "step" : undefined}
               className={cn(
-                "flex items-center gap-1.5 rounded-control border px-2 py-1",
+                "flex items-center gap-1.5 rounded-control border px-2 py-1 transition-colors",
                 status === "done"
                   ? "border-transparent bg-[color-mix(in_srgb,var(--state-normal)_12%,transparent)] text-[color:var(--state-normal)]"
                   : status === "active"
@@ -63,7 +85,11 @@ function LoopTracker({ record }: { record: RemediationRecord }) {
                     : "border-dashed border-border bg-surface text-muted",
               )}
             >
-              <StageIcon weight="bold" className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <StageIcon
+                weight="bold"
+                className="h-3.5 w-3.5 shrink-0"
+                aria-hidden
+              />
               <span className="text-[11px] font-semibold">
                 {t(`institution.remediation.stage.${stage}`)}
               </span>
@@ -74,7 +100,7 @@ function LoopTracker({ record }: { record: RemediationRecord }) {
               />
               <span className="sr-only">{statusWord}</span>
             </span>
-            {i < REMEDIATION_STAGES.length - 1 ? (
+            {i < STAGE_COUNT - 1 ? (
               <ArrowRight
                 weight="bold"
                 className="h-3 w-3 shrink-0 text-border"
@@ -88,10 +114,37 @@ function LoopTracker({ record }: { record: RemediationRecord }) {
   );
 }
 
-function RemediationCard({ record }: { record: RemediationRecord }) {
+function RemediationCard({
+  record,
+  step,
+  onAdvance,
+  onBack,
+  onReset,
+}: {
+  record: RemediationRecord;
+  step: number;
+  onAdvance: () => void;
+  onBack: () => void;
+  onReset: () => void;
+}) {
   const { t } = useTranslation();
   const lang = useLang();
-  const closed = record.status.document === "done";
+  const closed = step === STAGE_COUNT;
+  const base = baselineStep(record);
+  const activeStage = step < STAGE_COUNT ? REMEDIATION_STAGES[step] : null;
+  const activeStageWord = activeStage
+    ? t(`institution.remediation.stage.${activeStage}`)
+    : "";
+  const reassessDone = step > REASSESS_INDEX;
+
+  const liveText = closed
+    ? t("institution.remediation.step.liveClosed", {
+        learner: record.learnerHandle,
+      })
+    : t("institution.remediation.step.live", {
+        learner: record.learnerHandle,
+        stage: activeStageWord,
+      });
 
   return (
     <li>
@@ -105,14 +158,12 @@ function RemediationCard({ record }: { record: RemediationRecord }) {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <span
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-control"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-control transition-colors"
               style={{
                 backgroundColor: closed
                   ? "color-mix(in srgb, var(--state-normal) 14%, transparent)"
                   : "color-mix(in srgb, var(--state-warning) 16%, transparent)",
-                color: closed
-                  ? "var(--state-normal)"
-                  : "var(--state-warning)",
+                color: closed ? "var(--state-normal)" : "var(--state-warning)",
               }}
               aria-hidden
             >
@@ -129,7 +180,9 @@ function RemediationCard({ record }: { record: RemediationRecord }) {
               <p className="text-xs text-muted">
                 {t(`institution.section.${record.sectionKey}`)}
                 {" · "}
-                {t("institution.remediation.opened", { days: record.openedDaysAgo })}
+                {t("institution.remediation.opened", {
+                  days: record.openedDaysAgo,
+                })}
               </p>
             </div>
           </div>
@@ -149,8 +202,64 @@ function RemediationCard({ record }: { record: RemediationRecord }) {
         {/* Trigger — why they surfaced */}
         <p className="text-sm text-fg">{t(record.triggerKey)}</p>
 
-        {/* The closed-loop tracker */}
-        <LoopTracker record={record} />
+        {/* The closed-loop tracker (reflects the live step cursor) */}
+        <LoopTracker step={step} />
+
+        {/* Step progress read-out + controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted">
+            {closed
+              ? t("institution.remediation.step.closedLabel")
+              : t("institution.remediation.step.progress", {
+                  current: step + 1,
+                  total: STAGE_COUNT,
+                  stage: activeStageWord,
+                })}
+          </span>
+          <span className="flex-1" />
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onBack}
+            disabled={step === 0}
+            leadingIcon={<ArrowLeft weight="bold" className="h-4 w-4" />}
+            aria-label={t("institution.remediation.step.backAria", {
+              learner: record.learnerHandle,
+            })}
+          >
+            {t("institution.remediation.step.back")}
+          </Button>
+          {closed ? null : (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={onAdvance}
+              trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
+              aria-label={t("institution.remediation.step.advanceAria", {
+                learner: record.learnerHandle,
+                stage: activeStageWord,
+              })}
+            >
+              {step === STAGE_COUNT - 1
+                ? t("institution.remediation.step.close")
+                : t("institution.remediation.step.markComplete", {
+                    stage: activeStageWord,
+                  })}
+            </Button>
+          )}
+          {step !== base ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onReset}
+              leadingIcon={
+                <ArrowCounterClockwise weight="bold" className="h-4 w-4" />
+              }
+            >
+              {t("institution.remediation.step.reset")}
+            </Button>
+          ) : null}
+        </div>
 
         {/* Diagnose — the gaps */}
         <div>
@@ -210,8 +319,8 @@ function RemediationCard({ record }: { record: RemediationRecord }) {
           </div>
         </div>
 
-        {/* Re-assess outcome (once closed) */}
-        {record.reassessOutcome ? (
+        {/* Re-assess outcome (revealed once the re-assess stage is complete) */}
+        {reassessDone ? (
           <div className="flex items-start gap-2 rounded-control bg-[color-mix(in_srgb,var(--state-normal)_10%,transparent)] p-3">
             <ArrowsClockwise
               weight="bold"
@@ -223,23 +332,16 @@ function RemediationCard({ record }: { record: RemediationRecord }) {
                 {t("institution.remediation.reassessed")}
               </p>
               <p className="mt-1 text-sm text-fg">
-                {record.reassessOutcome[lang]}
+                {record.reassessOutcome
+                  ? record.reassessOutcome[lang]
+                  : t("institution.remediation.step.reassessLogged")}
               </p>
             </div>
           </div>
         ) : null}
 
-        {/* Actions */}
+        {/* Export record + live announcement */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            variant={closed ? "secondary" : "primary"}
-            trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
-          >
-            {closed
-              ? t("institution.remediation.viewRecord")
-              : t("institution.remediation.openRemediation")}
-          </Button>
           <Button
             size="sm"
             variant="ghost"
@@ -248,6 +350,9 @@ function RemediationCard({ record }: { record: RemediationRecord }) {
             {t("institution.remediation.exportRecord")}
           </Button>
         </div>
+        <p className="sr-only" role="status" aria-live="polite">
+          {liveText}
+        </p>
       </Card>
     </li>
   );
@@ -255,15 +360,72 @@ function RemediationCard({ record }: { record: RemediationRecord }) {
 
 /** RemediationLoop — the at-risk closed-loop list, the renewal-driving money feature (IN-2). */
 export function RemediationLoop() {
-  const openCount = remediationRecords.filter(
-    (r) => r.status.document !== "done",
+  const { t } = useTranslation();
+  const [steps, setSteps] = useState<Record<string, number>>(() =>
+    Object.fromEntries(remediationRecords.map((r) => [r.id, baselineStep(r)])),
+  );
+
+  const setStep = (id: string, next: number) =>
+    setSteps((prev) => ({
+      ...prev,
+      [id]: Math.max(0, Math.min(STAGE_COUNT, next)),
+    }));
+
+  const closedCount = remediationRecords.filter(
+    (r) => (steps[r.id] ?? baselineStep(r)) === STAGE_COUNT,
   ).length;
+  const total = remediationRecords.length;
+
   return (
-    <ul className="flex flex-col gap-3" aria-label="remediation">
-      {remediationRecords.map((r) => (
-        <RemediationCard key={r.id} record={r} />
-      ))}
-      <li className="sr-only">{openCount}</li>
-    </ul>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-bg-subtle px-3 py-2">
+        <p className="text-xs font-medium text-muted">
+          {t("institution.remediation.step.summary", {
+            closed: closedCount,
+            total,
+          })}
+        </p>
+        <div
+          className="flex items-center gap-1.5"
+          role="img"
+          aria-label={t("institution.remediation.step.summary", {
+            closed: closedCount,
+            total,
+          })}
+        >
+          {remediationRecords.map((r) => {
+            const isClosed = (steps[r.id] ?? baselineStep(r)) === STAGE_COUNT;
+            return (
+              <span
+                key={r.id}
+                aria-hidden
+                className="h-1.5 w-6 rounded-full"
+                style={{
+                  backgroundColor: isClosed
+                    ? "var(--state-normal)"
+                    : "color-mix(in srgb, var(--state-warning) 45%, transparent)",
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      <ul className="flex flex-col gap-3" aria-label="remediation">
+        {remediationRecords.map((r) => {
+          const step = steps[r.id] ?? baselineStep(r);
+          return (
+            <RemediationCard
+              key={r.id}
+              record={r}
+              step={step}
+              onAdvance={() => setStep(r.id, step + 1)}
+              onBack={() => setStep(r.id, step - 1)}
+              onReset={() => setStep(r.id, baselineStep(r))}
+            />
+          );
+        })}
+      </ul>
+    </div>
   );
 }

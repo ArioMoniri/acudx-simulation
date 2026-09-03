@@ -1,0 +1,71 @@
+{
+  "institution": {
+    "heatmap": {
+      "drill": {
+        "regionLabel": "Drill-down detail for {{learner}}",
+        "closeAria": "Close drill-down for {{learner}}",
+        "path": "Path: cohort, {{section}}, {{learner}}, {{domain}}",
+        "domainSwitchLabel": "Inspect a domain",
+        "bandLabel": "Band",
+        "encountersLabel": "{{count}} graded encounters",
+        "evidenceLangNote": "Shown in the learner's own language ({{lang}}).",
+        "takeHeading": "Grader read",
+        "withheldHeading": "Band withheld",
+        "withheldBody": "Not enough reliable evidence yet ({{count}} encounters). A band appears once reliability clears the threshold.",
+        "crosswalkChip": "ACGME {{tag}}",
+        "crosswalkTip": "Maps to ACGME Milestones element {{tag}}. A crosswalk of the same evidence, never a re-grade.",
+        "openHint": "Select any cell to inspect the evidence behind its band."
+      }
+    },
+    "remediation": {
+      "step": {
+        "summary": "{{closed}} of {{total}} loops closed",
+        "progress": "Step {{current}} of {{total}}: {{stage}}",
+        "closedLabel": "Loop closed",
+        "back": "Back",
+        "backAria": "Step {{learner}} back one loop stage",
+        "advanceAria": "Mark {{stage}} complete for {{learner}}",
+        "markComplete": "Complete {{stage}}",
+        "close": "Close loop",
+        "reset": "Reset",
+        "reassessLogged": "Re-assessment logged. The detailed outcome stays in the learner's private feed.",
+        "live": "{{learner}}: {{stage}} in progress.",
+        "liveClosed": "{{learner}}: remediation loop closed."
+      }
+    },
+    "calibration": {
+      "filter": {
+        "heading": "Filter",
+        "directionLabel": "Direction",
+        "axisLabel": "Axis",
+        "all": "All",
+        "clinical": "Clinical",
+        "communication": "Communication",
+        "showing": "Showing {{count}} of {{total}} topics",
+        "empty": "No topics match this filter.",
+        "reset": "Reset filters"
+      }
+    },
+    "export": {
+      "preview": {
+        "regionLabel": "De-identified export preview",
+        "heading": "Export preview",
+        "generatedNote": "Crosswalk {{version}}",
+        "open": "Preview export",
+        "close": "Close preview",
+        "deidStamp": "De-identified",
+        "reidWarn": "Re-identifiable, review before release",
+        "fairnessAppended": "Fairness audit appended",
+        "frameworksHeading": "Tagged frameworks",
+        "scopeHeading": "Scope",
+        "sampleHeading": "De-identified sample",
+        "sampleCaption": "A sample of the cohort rows as they appear in the export. Handles are masked roster codes.",
+        "andMore": "Plus {{count}} more learners.",
+        "crosswalkHeading": "Domain crosswalk ({{framework}})",
+        "download": "Download export",
+        "downloadNote": "Demonstration only. No file leaves this device.",
+        "selectFrameworks": "Select at least one framework to preview."
+      }
+    }
+  }
+}

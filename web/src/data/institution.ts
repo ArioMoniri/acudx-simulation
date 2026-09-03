@@ -604,6 +604,32 @@ export const aggregateCalibration: AggregateCalibrationTopic[] = [
     },
     citationId: "nice-ng185",
   },
+  {
+    id: "cal-consent",
+    topic: { en: "Shared decision and consent", tr: "Ortak karar ve onam" },
+    domain: "professionalism",
+    direction: "under",
+    gapPct: -11,
+    learners: 69,
+    signal: {
+      en: "Self-rating trails observed practice on consent conversations; name the skill so the cohort recognises it.",
+      tr: "Onam görüşmelerinde öz-değerlendirme gözlenen uygulamanın gerisinde; kohortun bunu fark etmesi için beceriyi adlandırın.",
+    },
+    citationId: "tepdad-em",
+  },
+  {
+    id: "cal-exam",
+    topic: { en: "Focused physical examination", tr: "Odaklı fizik muayene" },
+    domain: "exam",
+    direction: "well",
+    gapPct: 5,
+    learners: 91,
+    signal: {
+      en: "Confidence tracks competence on examination; keep the current teaching approach this window.",
+      tr: "Muayenede güven yeterlilikle örtüşüyor; bu dönem mevcut öğretim yaklaşımını sürdürün.",
+    },
+    citationId: "nice-ng185",
+  },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -758,4 +784,325 @@ export const fairnessMetrics: FairnessMetric[] = [
 export const fairnessCohort = {
   trLearners: 108,
   enLearners: 76,
+};
+
+/* -------------------------------------------------------------------------- */
+/* Heatmap drill-down evidence (IN-1) — cohort -> learner -> domain -> span    */
+/* -------------------------------------------------------------------------- */
+
+/** Which axis a competency domain belongs to (clinical vs communication). */
+export function axisOfDomain(
+  domain: FeedbackDomainKey,
+): "clinical" | "communication" {
+  return domain === "communication" || domain === "professionalism"
+    ? "communication"
+    : "clinical";
+}
+
+/** Coarse performance level a band maps to, for representative evidence. */
+export type EvidenceLevel = "weak" | "mid" | "strong";
+
+/** Bucket a band into a coarse evidence level; withheld has none. */
+export function bandLevel(band: Band): EvidenceLevel | null {
+  switch (band) {
+    case "emerging":
+    case "developing":
+      return "weak";
+    case "proficient":
+      return "mid";
+    case "strong":
+    case "exemplary":
+      return "strong";
+    case "withheld":
+      return null;
+  }
+}
+
+export interface DomainEvidence {
+  /** Verbatim encounter span, shown in the learner's OWN language (never re-scored). */
+  quote: Bilingual;
+  /** The grader's process-aware read, shown in the UI language. */
+  take: Bilingual;
+}
+
+/**
+ * Representative evidence spans per domain and performance level. The quote is
+ * a de-identified encounter span (learner or patient voice); the take is the
+ * grader's read. Content is realistic emergency-medicine practice; no names,
+ * only the clinical behaviour behind the band.
+ */
+export const DOMAIN_EVIDENCE: Record<
+  FeedbackDomainKey,
+  Record<EvidenceLevel, DomainEvidence>
+> = {
+  history: {
+    weak: {
+      quote: {
+        en: "So when did the pain start? Okay. Anything else? No? Right, let's move on.",
+        tr: "Peki ağrı ne zaman başladı? Tamam. Başka bir şey? Yok mu? Peki, devam edelim.",
+      },
+      take: {
+        en: "History closed early; radiation, exertion, and cardiac risk factors were not explored before narrowing.",
+        tr: "Anamnez erken kapatıldı; daraltmadan önce yayılım, efor ve kardiyak risk faktörleri sorgulanmadı.",
+      },
+    },
+    mid: {
+      quote: {
+        en: "Does the pain go anywhere, and does anything make it worse?",
+        tr: "Ağrı bir yere yayılıyor mu ve herhangi bir şey onu artırıyor mu?",
+      },
+      take: {
+        en: "Covered the core cardinal features; missed prior episodes and family history.",
+        tr: "Temel ayırt edici özellikleri sordu; geçmiş ataklar ve aile öyküsü atlandı.",
+      },
+    },
+    strong: {
+      quote: {
+        en: "Any pain into the jaw or left arm, sweating, or breathlessness alongside it?",
+        tr: "Çeneye ya da sol kola vuran ağrı, terleme veya buna eşlik eden nefes darlığı var mı?",
+      },
+      take: {
+        en: "Structured, hypothesis-driven history; screened red flags before narrowing the differential.",
+        tr: "Yapılandırılmış, hipotez odaklı anamnez; ayırıcı tanıyı daraltmadan önce kırmızı bayrakları taradı.",
+      },
+    },
+  },
+  exam: {
+    weak: {
+      quote: {
+        en: "I'll just listen to the chest quickly.",
+        tr: "Göğsü hızlıca bir dinleyeyim.",
+      },
+      take: {
+        en: "Auscultation only; vitals were not interpreted and focused cardiovascular steps were skipped.",
+        tr: "Yalnızca oskültasyon; vitaller yorumlanmadı ve odaklı kardiyovasküler adımlar atlandı.",
+      },
+    },
+    mid: {
+      quote: {
+        en: "Heart sounds are normal, chest is clear; I'll check the pulses too.",
+        tr: "Kalp sesleri normal, akciğerler temiz; nabızlara da bakayım.",
+      },
+      take: {
+        en: "Reasonable focused examination; findings were not reconciled with the vitals trend.",
+        tr: "Makul, odaklı muayene; bulgular vital seyriyle ilişkilendirilmedi.",
+      },
+    },
+    strong: {
+      quote: {
+        en: "Blood pressure is equal in both arms, no murmurs, calves are soft, and the JVP is not raised.",
+        tr: "Tansiyon iki kolda eşit, üfürüm yok, baldırlar yumuşak ve JVP artmamış.",
+      },
+      take: {
+        en: "Complete, targeted examination that actively ruled competing diagnoses in and out.",
+        tr: "Rakip tanıları etkin biçimde dışlayıp doğrulayan eksiksiz, hedefli muayene.",
+      },
+    },
+  },
+  reasoning: {
+    weak: {
+      quote: {
+        en: "It's probably just muscular, no need for an ECG.",
+        tr: "Muhtemelen sadece kas ağrısı, EKG'ye gerek yok.",
+      },
+      take: {
+        en: "Anchored on a benign cause and committed before any red-flag screening.",
+        tr: "İyi huylu bir nedene sabitlendi ve herhangi bir kırmızı bayrak taraması yapmadan karar verdi.",
+      },
+    },
+    mid: {
+      quote: {
+        en: "Could be reflux, but I want to rule out a cardiac cause first.",
+        tr: "Reflü olabilir ama önce kardiyak bir nedeni dışlamak istiyorum.",
+      },
+      take: {
+        en: "Held a safe differential; the ordering sequence lagged behind the working diagnosis.",
+        tr: "Güvenli bir ayırıcı tanı tuttu; tetkik isteme sırası çalışma tanısının gerisinde kaldı.",
+      },
+    },
+    strong: {
+      quote: {
+        en: "Given the risk factors I'll treat this as ACS until the ECG and troponin say otherwise.",
+        tr: "Risk faktörlerini göz önünde tutarak, EKG ve troponin aksini gösterene dek bunu AKS olarak ele alacağım.",
+      },
+      take: {
+        en: "Explicit, safety-first reasoning with a clear must-not-miss and a review plan.",
+        tr: "Kaçırılmaması gerekeni ve bir yeniden değerlendirme planını içeren açık, güvenlik öncelikli muhakeme.",
+      },
+    },
+  },
+  management: {
+    weak: {
+      quote: {
+        en: "Let's give something for the pain and see how it goes.",
+        tr: "Ağrı için bir şeyler verelim, nasıl gideceğine bakalım.",
+      },
+      take: {
+        en: "No time-critical first steps; aspirin and ECG timing were not addressed.",
+        tr: "Zaman kritik ilk adımlar yok; aspirin ve EKG zamanlaması ele alınmadı.",
+      },
+    },
+    mid: {
+      quote: {
+        en: "Aspirin now, get the ECG, and I'll reassess in ten minutes.",
+        tr: "Şimdi aspirin, EKG çekilsin ve on dakika sonra yeniden değerlendireceğim.",
+      },
+      take: {
+        en: "Correct first moves; the safety-netting and disposition plan were thin.",
+        tr: "İlk adımlar doğru; güvenlik ağı ve taburculuk planı zayıftı.",
+      },
+    },
+    strong: {
+      quote: {
+        en: "Aspirin, serial ECGs, cardiology referral, and clear return advice if the pain recurs.",
+        tr: "Aspirin, seri EKG'ler, kardiyoloji konsültasyonu ve ağrı tekrarlarsa net dönüş önerisi.",
+      },
+      take: {
+        en: "Complete, guideline-concordant management with explicit safety-netting.",
+        tr: "Açık güvenlik ağıyla eksiksiz, kılavuza uygun yönetim.",
+      },
+    },
+  },
+  communication: {
+    weak: {
+      quote: {
+        en: "The results are fine, you can go home.",
+        tr: "Sonuçlar iyi, eve gidebilirsiniz.",
+      },
+      take: {
+        en: "Information delivered without checking understanding or inviting questions.",
+        tr: "Anlayış kontrol edilmeden ve soru sorma fırsatı verilmeden bilgi aktarıldı.",
+      },
+    },
+    mid: {
+      quote: {
+        en: "So this looks like reflux; does that fit with how you've been feeling?",
+        tr: "Bu reflü gibi görünüyor; bu, kendinizi nasıl hissettiğinizle örtüşüyor mu?",
+      },
+      take: {
+        en: "Checked the patient's frame once; did not close the loop on the plan.",
+        tr: "Hastanın bakış açısını bir kez kontrol etti; plan üzerinde döngüyü kapatmadı.",
+      },
+    },
+    strong: {
+      quote: {
+        en: "I want to be sure I explained this well; can you tell me what you'll watch for at home?",
+        tr: "Bunu iyi anlattığımdan emin olmak istiyorum; evde neye dikkat edeceğinizi söyleyebilir misiniz?",
+      },
+      take: {
+        en: "Teach-back used to confirm understanding; empathic and clearly structured.",
+        tr: "Anlayışı doğrulamak için geri-öğretim kullanıldı; empatik ve net biçimde yapılandırılmış.",
+      },
+    },
+  },
+  professionalism: {
+    weak: {
+      quote: {
+        en: "I didn't get time to write it up, I'll remember the details.",
+        tr: "Yazmaya vakit bulamadım, ayrıntıları hatırlarım.",
+      },
+      take: {
+        en: "Documentation deferred; the handover would not be reconstructable from the record.",
+        tr: "Belgeleme ertelendi; devir teslim kayıttan yeniden oluşturulamazdı.",
+      },
+    },
+    mid: {
+      quote: {
+        en: "I've noted the plan; I'll flag the allergy to the nurse.",
+        tr: "Planı not ettim; alerjiyi hemşireye ileteceğim.",
+      },
+      take: {
+        en: "Dependable core habits; the shared-decision documentation was light.",
+        tr: "Güvenilir temel alışkanlıklar; ortak karar belgelemesi hafif kaldı.",
+      },
+    },
+    strong: {
+      quote: {
+        en: "I documented consent, the safety-net advice, and who to contact, and confirmed the allergy.",
+        tr: "Onamı, güvenlik ağı önerisini ve iletişim kişisini belgeledim ve alerjiyi doğruladım.",
+      },
+      take: {
+        en: "Thorough, accountable record-keeping that closes the loop for the next clinician.",
+        tr: "Bir sonraki klinisyen için döngüyü kapatan titiz, hesap verebilir kayıt tutma.",
+      },
+    },
+  },
+};
+
+/** One drill-down datum: the cell's band, its evidence weight, and the span. */
+export interface DrillDatum {
+  band: Band;
+  encounters: number;
+  /** Representative evidence, or null when the band is withheld (κ-gated). */
+  evidence: DomainEvidence | null;
+}
+
+/** Resolve the drill-down datum for a learner in one competency domain. */
+export function drillDatum(
+  learner: CohortLearner,
+  domain: FeedbackDomainKey,
+): DrillDatum {
+  const cell = learner.cells[domain];
+  const level = bandLevel(cell.band);
+  return {
+    band: cell.band,
+    encounters: cell.encounters,
+    evidence: level ? DOMAIN_EVIDENCE[domain][level] : null,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Accreditation crosswalk tags (IN-3 / IN-6) — domain -> framework element    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A representative crosswalk: which element of each framework a competency
+ * domain maps to. This is a crosswalk of the SAME evidence, never a re-grade
+ * (IN-6). Used by the export preview to show the framework tags a de-identified
+ * row would carry.
+ */
+export const FRAMEWORK_DOMAIN_TAG: Record<
+  string,
+  Record<FeedbackDomainKey, string>
+> = {
+  acgme: {
+    history: "PC1",
+    exam: "PC2",
+    reasoning: "MK1",
+    management: "PC3",
+    communication: "ICS1",
+    professionalism: "PROF1",
+  },
+  canmeds: {
+    history: "Medical Expert",
+    exam: "Medical Expert",
+    reasoning: "Medical Expert",
+    management: "Medical Expert",
+    communication: "Communicator",
+    professionalism: "Professional",
+  },
+  epa: {
+    history: "EPA 1",
+    exam: "EPA 3",
+    reasoning: "EPA 2",
+    management: "EPA 10",
+    communication: "EPA 6",
+    professionalism: "EPA 5",
+  },
+  lcme: {
+    history: "7.4",
+    exam: "7.3",
+    reasoning: "7.1",
+    management: "7.6",
+    communication: "7.8",
+    professionalism: "3.5",
+  },
+  tepdad: {
+    history: "UÇEP A1",
+    exam: "UÇEP A2",
+    reasoning: "UÇEP B1",
+    management: "UÇEP B2",
+    communication: "UÇEP C1",
+    professionalism: "UÇEP D1",
+  },
 };
