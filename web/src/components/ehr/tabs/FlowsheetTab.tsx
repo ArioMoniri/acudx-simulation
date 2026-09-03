@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { VitalCard } from "@/components/VitalCard";
-import { stateMap } from "@/components/clinicalState";
+import { stateMap, trendGlyph } from "@/components/clinicalState";
 import { PatientPortrait } from "@/components/PatientPortrait";
 import { EncounterClock } from "../EncounterClock";
 import { minutesOf } from "../labels";
@@ -130,11 +130,16 @@ function buildReadings(
   ];
 }
 
+const LEGEND_STATES: ClinicalState[] = ["normal", "caution", "warning", "critical"];
+
 /**
  * FlowsheetTab — the live dark vitals monitor (reused VitalCard) plus a nursing
- * flowsheet: vitals over time as a mono / tabular-nums table (docs §2.2). Status
- * is carried by an icon + text label per cell, never color alone (WCAG 1.4.1);
- * the whole monitor also has a visually-hidden table equivalent.
+ * flowsheet: a latest-vitals summary strip (value + trend vs baseline), then
+ * vitals over time as a mono / tabular-nums table (docs §2.2). The table header
+ * is sticky, rows are zebra-striped, and the most recent reading is marked so
+ * the current picture reads at a glance. Status is carried by an icon + text
+ * label per cell, never color alone (WCAG 1.4.1); the whole monitor also has a
+ * visually-hidden table equivalent, and a status key explains the icons.
  */
 export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
   const { t } = useTranslation();
@@ -145,6 +150,8 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
     () => buildReadings(triageVitals, trajectory),
     [triageVitals, trajectory],
   );
+
+  const lastIndex = trajectory.length - 1;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
@@ -219,39 +226,109 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
         </div>
       </section>
 
-      {/* Flowsheet — vitals over time */}
-      <section className="overflow-hidden rounded-card border border-border bg-surface">
-        <div className="border-b border-border px-4 py-3">
-          <h3 className="text-sm font-semibold text-fg">
-            {t("ehr.flowsheet.title")}
+      {/* Flowsheet — latest summary + vitals over time */}
+      <section className="flex flex-col gap-4">
+        {/* Latest vitals summary (value + trend vs baseline) */}
+        <div className="rounded-card border border-border bg-surface p-4">
+          <h3 className="mb-3 text-sm font-semibold text-fg">
+            {t("ehr2.flowsheet.summaryHeading")}
           </h3>
-          <p className="text-xs text-muted">{t("ehr.flowsheet.subtitle")}</p>
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+            {readings.map((v) => {
+              const present = stateMap[v.state];
+              const Icon = present.icon;
+              return (
+                <div key={v.key} className="flex flex-col gap-1">
+                  <dt className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                    {t(`vitals.${v.shortKey}`)}
+                  </dt>
+                  <dd className="flex items-baseline gap-1.5">
+                    <span className="font-mono text-xl font-semibold leading-none tabular-nums text-fg">
+                      {v.value}
+                    </span>
+                    <Icon
+                      weight="fill"
+                      className="h-3.5 w-3.5 shrink-0 self-center"
+                      style={{ color: present.colorVar }}
+                      aria-hidden
+                    />
+                    <span className="sr-only">{t(present.labelKey)}</span>
+                  </dd>
+                  <span className="flex items-center gap-1 text-[11px] text-muted">
+                    <span aria-hidden className="font-mono">
+                      {trendGlyph[v.trend]}
+                    </span>
+                    {t(`vitals.trend.${v.trend}`)}
+                    <span className="text-muted/70">{t("ehr2.flowsheet.baselineTrend")}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </dl>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] border-collapse text-sm">
-            <caption className="sr-only">{t("ehr.flowsheet.caption")}</caption>
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th scope="col" className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                  {t("ehr.flowsheet.time")}
-                </th>
-                {["hrShort", "bpShort", "rrShort", "spo2Short", "tempShort"].map((k) => (
-                  <th
-                    key={k}
-                    scope="col"
-                    className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted"
-                  >
-                    {t(`vitals.${k}`)}
+
+        {/* Vitals over time */}
+        <div className="overflow-hidden rounded-card border border-border bg-surface">
+          <div className="border-b border-border px-4 py-3">
+            <h3 className="text-sm font-semibold text-fg">
+              {t("ehr.flowsheet.title")}
+            </h3>
+            <p className="text-xs text-muted">{t("ehr.flowsheet.subtitle")}</p>
+          </div>
+          <div className="max-h-[420px] overflow-auto">
+            <table className="w-full min-w-[520px] border-collapse text-sm">
+              <caption className="sr-only">{t("ehr.flowsheet.caption")}</caption>
+              <thead className="sticky top-0 z-10 bg-surface">
+                <tr className="border-b border-border text-left">
+                  <th scope="col" className="bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                    {t("ehr.flowsheet.time")}
                   </th>
+                  {["hrShort", "bpShort", "rrShort", "spo2Short", "tempShort"].map((k) => (
+                    <th
+                      key={k}
+                      scope="col"
+                      className="bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted"
+                    >
+                      {t(`vitals.${k}`)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {trajectory.map((p, i) => (
+                  <FlowsheetRow
+                    key={i}
+                    point={p}
+                    minLabel={t("ehr.flowsheet.minute", { min: minutesOf(p.atMs) })}
+                    isLatest={i === lastIndex}
+                    zebra={i % 2 === 1}
+                  />
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {trajectory.map((p, i) => (
-                <FlowsheetRow key={i} point={p} minLabel={t("ehr.flowsheet.minute", { min: minutesOf(p.atMs) })} />
-              ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Status key */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
+              {t("ehr2.flowsheet.legendHeading")}
+            </span>
+            {LEGEND_STATES.map((s) => {
+              const present = stateMap[s];
+              const Icon = present.icon;
+              return (
+                <span key={s} className="inline-flex items-center gap-1 text-[11px] text-muted">
+                  <Icon
+                    weight="fill"
+                    className="h-3 w-3"
+                    style={{ color: present.colorVar }}
+                    aria-hidden
+                  />
+                  {t(present.labelKey)}
+                </span>
+              );
+            })}
+          </div>
         </div>
       </section>
     </div>
@@ -262,9 +339,13 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
 function FlowsheetRow({
   point,
   minLabel,
+  isLatest,
+  zebra,
 }: {
   point: VitalsTrajectoryPoint;
   minLabel: string;
+  isLatest: boolean;
+  zebra: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -277,12 +358,30 @@ function FlowsheetRow({
   ];
 
   return (
-    <tr className="border-b border-border last:border-b-0">
+    <tr
+      className={
+        "border-b border-border last:border-b-0 " +
+        (isLatest ? "bg-brand-tint/40" : zebra ? "bg-bg-subtle/40" : "")
+      }
+    >
       <th
         scope="row"
         className="whitespace-nowrap px-3 py-2 text-left font-mono text-xs tabular-nums text-muted"
       >
-        {minLabel}
+        <span className="flex items-center gap-1.5">
+          {isLatest ? (
+            <span
+              aria-hidden
+              className="inline-block h-3.5 w-0.5 rounded-full bg-brand"
+            />
+          ) : null}
+          {minLabel}
+          {isLatest ? (
+            <span className="rounded-full bg-brand-tint px-1.5 py-px text-[9px] font-semibold uppercase not-italic tracking-wide text-brand">
+              {t("ehr2.flowsheet.latest")}
+            </span>
+          ) : null}
+        </span>
       </th>
       {cells.map((c, i) => {
         const present = stateMap[c.state];
