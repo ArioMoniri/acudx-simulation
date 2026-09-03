@@ -2,7 +2,7 @@
 
 **AcuDx is the interaction-and-assessment layer for health-professions education.** Learners (medical, nursing, paramedic students and residents) practice full clinical encounters — history → exam → tests → differential → diagnosis → management — by roleplaying against AI patients, colleagues, and families in a simulated EHR, solo or in multiplayer role-based rooms. Every encounter returns a defensible, competency-mapped grade, a Dunning-Kruger **calibration plot** (self-rated confidence vs measured competence), and a gap→remediation loop; every clinical fact is grounded-or-refused against current country-specific guidelines, every synthetic asset is C2PA-marked, and every action is one event on one hash-chained log. It is **open-source-first, sovereign-capable (air-gappable on-prem), and bilingual EN/TR** by design.
 
-**Status: blueprint complete + runnable demo.** The `docs/` blueprint is a full architecture (11 service docs + overview + research + business + design + build plan); the `web/` app is a runnable presentation-and-domain-model prototype (three screens on client-side mock layers). The path from the demo to production is specified in `docs/build/`.
+**Status: blueprint complete + runnable demo + live open-model backend.** The `docs/` blueprint is a full architecture (11 service docs + overview + research + business + design + build plan); the `web/` app is a runnable presentation-and-domain-model prototype (three screens on client-side mock layers); and a pod-side FastAPI **Model Gateway** (`server/`) now serves real, open-weight, air-gapped patient turns, input guarding, and guideline grounding that the demo can call live. The stack is **functional end to end** (25 commits on `main`, the Batch-1 build issues closed). The path from the demo to production is specified in `docs/build/`.
 
 ---
 
@@ -15,6 +15,16 @@ npm --prefix web install && npm --prefix web run dev
 Then open the printed local URL. Three screens: **Home** (dashboard), **Encounter** (EHR workspace with vitals monitor + interaction dock), **Feedback** (6-domain bands + calibration plot + cited gaps). Toggle **EN/TR** and light/dark in the top nav. Everything runs client-side on mock data — no backend, no keys, no network. Education-only, synthetic patients, no real patient data.
 
 Stack: Vite · React 18 · TypeScript · Tailwind v4 · Radix · i18next (EN/TR) · react-router · Framer Motion. Build: `npm --prefix web run build` · typecheck: `npm --prefix web run typecheck` · lint: `npm --prefix web run lint`.
+
+---
+
+## Live backend (open, air-gapped)
+
+The demo runs standalone on mock data, but it can also drive a real, **fully open-weight** backend that runs entirely inside a GPU pod with **zero third-party egress**. A small FastAPI **Model Gateway** (`server/`) is the only path to a model: it guards every learner utterance (the Scope and Injection Guard), routes in-scope turns to a local Qwen2.5-7B patient persona, runs the FactAssertionGate on the output, and serves guideline grounding over a local embed + rerank pair.
+
+- **Flip it on from the top nav.** Deploy and start the gateway on the pod, open an SSH tunnel, run the demo, then turn on the **Live** switch (top nav). It is off by default, forced off whenever the backend is unreachable, and every call falls back to the mock path on failure, so the UI never breaks.
+- **Open + sovereign by construction.** Endpoints are `GET /health`, `GET /status`, `POST /v1/guard`, `POST /v1/patient/turn`, `POST /v1/ground`, all local. The patient model runs **CPU-only** (no VRAM, the pod GPU stays free), and `AIRGAPPED=true` refuses any non-local endpoint before a socket opens.
+- **Full step-by-step:** [`docs/build/02-live-backend-runbook.md`](docs/build/02-live-backend-runbook.md) (deploy the gateway, start the open model CPU-only, start the gateway, open the tunnel, `npm --prefix web run dev`, toggle Live, send a message), with resource-safety notes and a troubleshooting table. Gateway internals: [`server/README.md`](server/README.md).
 
 ---
 
