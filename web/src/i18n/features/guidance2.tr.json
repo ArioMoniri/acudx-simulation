@@ -1,0 +1,19 @@
+{
+  "encounter": {
+    "guidance": {
+      "provenance": {
+        "aria": "{{source}} kaynak bilgisi: yayımlayan kurum, sürüm, kanıt düzeyi ve inceleme tarihleri.",
+        "reviewed": "Son gözden geçirme {{date}}",
+        "issuer": "{{organization}} · {{edition}}",
+        "evidence": "Kanıt: {{grade}}",
+        "nextReview": "Sonraki gözden geçirme {{date}}"
+      },
+      "abstain": {
+        "title": "Kapsam dışında çekimser kalır",
+        "note": "{{scope}} kapsamına dayanır. Bu kapsamın dışında rehberlik tahmin yürütmek yerine çekimser kalır.",
+        "noteGeneric": "Belirli bir kılavuza dayanır. Doğrulanmış kapsamının dışında rehberlik tahmin yürütmek yerine çekimser kalır.",
+        "emptyBody": "Bu adım kapsanan kılavuzların dışında kaldığından ipucu verilmez. Kendi klinik muhakemenizle devam edin."
+      }
+    }
+  }
+}
