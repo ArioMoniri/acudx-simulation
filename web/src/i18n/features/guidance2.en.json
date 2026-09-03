@@ -1,0 +1,19 @@
+{
+  "encounter": {
+    "guidance": {
+      "provenance": {
+        "aria": "Provenance for {{source}}: issuing body, edition, evidence grade, and review dates.",
+        "reviewed": "Reviewed {{date}}",
+        "issuer": "{{organization}} · {{edition}}",
+        "evidence": "Evidence: {{grade}}",
+        "nextReview": "Next review {{date}}"
+      },
+      "abstain": {
+        "title": "Abstains outside scope",
+        "note": "Grounded to {{scope}}. Outside this scope, guidance holds back rather than guess.",
+        "noteGeneric": "Grounded to a specific guideline. Outside its validated scope, guidance holds back rather than guess.",
+        "emptyBody": "This step falls outside the covered guidelines, so no hint is offered. Continue with your own clinical reasoning."
+      }
+    }
+  }
+}
