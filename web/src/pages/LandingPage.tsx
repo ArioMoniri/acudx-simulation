@@ -21,7 +21,13 @@ import { PageContainer } from "@/components/shell";
 import { Wordmark } from "@/components/shell";
 import { SimBadge } from "@/components/ehr";
 import { Button, Card } from "@/components/ui";
-import { useEntry, useLang } from "@/lib/useLang";
+import { useLang } from "@/lib/useLang";
+import {
+  useReveal,
+  useStagger,
+  useStaggerItem,
+  useHoverLift,
+} from "@/lib/motion";
 import { cn } from "@/lib/cn";
 import { landingPhases, landingTrust, type LandingPhase } from "@/data/landing";
 
@@ -44,13 +50,14 @@ const phaseIcon: Record<LandingPhase["icon"], Icon> = {
 /* Phase card                                                                  */
 /* -------------------------------------------------------------------------- */
 
-function PhaseCard({ phase, delay }: { phase: LandingPhase; delay: number }) {
+function PhaseCard({ phase }: { phase: LandingPhase }) {
   const { t } = useTranslation();
-  const entry = useEntry(delay);
+  const item = useStaggerItem();
+  const lift = useHoverLift();
   const Icon = phaseIcon[phase.icon];
 
   return (
-    <motion.div {...entry} className="flex">
+    <motion.div {...item} {...lift} className="flex">
       <Link
         to={phase.to}
         className={cn(
@@ -102,10 +109,11 @@ function PhaseCard({ phase, delay }: { phase: LandingPhase; delay: number }) {
 export function LandingPage() {
   const { t } = useTranslation();
   const lang = useLang();
-  const hero = useEntry();
-  const trust = useEntry(0.08);
-  const phasesHead = useEntry(0.04);
-  const closing = useEntry(0.06);
+  const hero = useReveal();
+  const trust = useReveal(0.08);
+  const phasesHead = useReveal(0.04);
+  const closing = useReveal(0.06);
+  const phases = useStagger();
 
   const trustIcon: Record<(typeof landingTrust)[number], Icon> = {
     formative: CheckCircle,
@@ -225,11 +233,14 @@ export function LandingPage() {
             {t("landing.phases.headingSub")}
           </p>
         </motion.div>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {landingPhases.map((p, i) => (
-            <PhaseCard key={p.id} phase={p} delay={0.03 * i} />
+        <motion.div
+          {...phases.container}
+          className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        >
+          {landingPhases.map((p) => (
+            <PhaseCard key={p.id} phase={p} />
           ))}
-        </div>
+        </motion.div>
       </section>
 
       {/* Closing band — walk the demo */}

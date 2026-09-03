@@ -26,7 +26,13 @@ import {
   type DashboardStat,
   type RecentFeedbackItem,
 } from "@/data/mock";
-import { useEntry, useLang } from "@/lib/useLang";
+import { useLang } from "@/lib/useLang";
+import {
+  useReveal,
+  useStagger,
+  useStaggerItem,
+  useHoverLift,
+} from "@/lib/motion";
 import { cn } from "@/lib/cn";
 
 const statIcon: Record<DashboardStat["key"], typeof Trophy> = {
@@ -35,10 +41,11 @@ const statIcon: Record<DashboardStat["key"], typeof Trophy> = {
   gap: Target,
 };
 
-function StatTile({ stat, delay }: { stat: DashboardStat; delay: number }) {
+function StatTile({ stat }: { stat: DashboardStat }) {
   const { t } = useTranslation();
   const lang = useLang();
-  const entry = useEntry(delay);
+  const item = useStaggerItem();
+  const lift = useHoverLift();
   const Icon = statIcon[stat.key];
   const TrendIcon = stat.trend === "up" ? TrendUp : TrendDown;
   // "good" direction gets the normal-state color; otherwise stays muted.
@@ -47,8 +54,11 @@ function StatTile({ stat, delay }: { stat: DashboardStat; delay: number }) {
     (stat.trend === "down" && !stat.upIsGood);
 
   return (
-    <motion.div {...entry}>
-      <Card padding="lg" className="flex h-full flex-col gap-3">
+    <motion.div {...item} {...lift} className="flex">
+      <Card
+        padding="lg"
+        className="flex h-full w-full flex-col gap-3 transition-shadow duration-300 ease-out hover:shadow-soft-md"
+      >
         <div className="flex items-center justify-between">
           <span className="grid h-9 w-9 place-items-center rounded-control bg-brand-tint text-brand">
             <Icon weight="bold" className="h-4.5 w-4.5" aria-hidden />
@@ -92,13 +102,14 @@ const bandTone: Record<string, "brand" | "normal" | "neutral"> = {
 function RecentRow({ item }: { item: RecentFeedbackItem }) {
   const { t } = useTranslation();
   const lang = useLang();
+  const row = useStaggerItem();
   const when =
     item.daysAgo === 0
       ? t("recentFeedback.today")
       : t("recentFeedback.daysAgo", { count: item.daysAgo });
 
   return (
-    <li>
+    <motion.li {...row}>
       <Link
         to="/feedback"
         className={cn(
@@ -147,7 +158,7 @@ function RecentRow({ item }: { item: RecentFeedbackItem }) {
           aria-hidden
         />
       </Link>
-    </li>
+    </motion.li>
   );
 }
 
@@ -155,11 +166,15 @@ function RecentRow({ item }: { item: RecentFeedbackItem }) {
 export function HomePage() {
   const { t } = useTranslation();
   const lang = useLang();
-  const header = useEntry();
-  const cta = useEntry(0.06);
-  const snapshot = useEntry(0.12);
-  const cases = useEntry(0.16);
-  const recent = useEntry(0.2);
+  const header = useReveal();
+  const cta = useReveal(0.06);
+  const snapshot = useReveal(0.12);
+  const casesHead = useReveal(0.16);
+  const recentHead = useReveal(0.2);
+  const stats = useStagger();
+  const cards = useStagger();
+  const recent = useStagger();
+  const cardLift = useHoverLift();
 
   return (
     <PageContainer className="flex flex-col gap-10">
@@ -200,11 +215,11 @@ export function HomePage() {
 
       {/* Stat tiles */}
       <section aria-label={t("home.statsHeading")}>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {dashboardStats.map((s, i) => (
-            <StatTile key={s.key} stat={s} delay={0.04 * i} />
+        <motion.div {...stats.container} className="grid gap-4 sm:grid-cols-3">
+          {dashboardStats.map((s) => (
+            <StatTile key={s.key} stat={s} />
           ))}
-        </div>
+        </motion.div>
       </section>
 
       {/* Calibration snapshot + recommended cases */}
@@ -233,41 +248,58 @@ export function HomePage() {
           </Card>
         </motion.section>
 
-        <motion.section {...cases}>
-          <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-lg font-semibold tracking-tight text-fg">
-              {t("home.recommendedHeading")}
-            </h2>
-            <Link
-              to="/encounter"
-              className="text-sm font-medium text-brand hover:underline focus-visible:outline-none"
-            >
-              {t("home.viewAllCases")}
-            </Link>
-          </div>
-          <p className="mt-1 text-sm text-muted">{t("home.recommendedSub")}</p>
-          <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <section>
+          <motion.div {...casesHead}>
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-lg font-semibold tracking-tight text-fg">
+                {t("home.recommendedHeading")}
+              </h2>
+              <Link
+                to="/encounter"
+                className="text-sm font-medium text-brand hover:underline focus-visible:outline-none"
+              >
+                {t("home.viewAllCases")}
+              </Link>
+            </div>
+            <p className="mt-1 text-sm text-muted">{t("home.recommendedSub")}</p>
+          </motion.div>
+          <motion.div
+            {...cards.container}
+            className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          >
             {recommendedCases.map((c) => (
-              <CaseCard key={c.id} data={c} lang={lang} />
+              <motion.div
+                key={c.id}
+                {...cards.item}
+                {...cardLift}
+                className="flex"
+              >
+                <CaseCard data={c} lang={lang} />
+              </motion.div>
             ))}
-          </div>
-        </motion.section>
+          </motion.div>
+        </section>
       </div>
 
       {/* Recent feedback */}
-      <motion.section {...recent}>
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold tracking-tight text-fg">
-            {t("home.recentHeading")}
-          </h2>
-        </div>
-        <p className="mt-1 text-sm text-muted">{t("home.recentSub")}</p>
+      <section>
+        <motion.div {...recentHead}>
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="text-lg font-semibold tracking-tight text-fg">
+              {t("home.recentHeading")}
+            </h2>
+          </div>
+          <p className="mt-1 text-sm text-muted">{t("home.recentSub")}</p>
+        </motion.div>
         {recentFeedback.length > 0 ? (
-          <ul className="mt-3 flex flex-col gap-2.5">
+          <motion.ul
+            {...recent.container}
+            className="mt-3 flex flex-col gap-2.5"
+          >
             {recentFeedback.map((item) => (
               <RecentRow key={item.id} item={item} />
             ))}
-          </ul>
+          </motion.ul>
         ) : (
           <Card padding="lg" className="mt-3 border-dashed text-center">
             <p className="text-sm font-medium text-fg">
@@ -278,7 +310,7 @@ export function HomePage() {
             </p>
           </Card>
         )}
-      </motion.section>
+      </section>
     </PageContainer>
   );
 }
