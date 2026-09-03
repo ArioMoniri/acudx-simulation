@@ -6,6 +6,7 @@ import "./i18n";
 import "./index.css";
 import { ThemeProvider } from "@/lib/theme";
 import { DemoRoleProvider } from "@/lib/demoRole";
+import { LiveBackendProvider } from "@/lib/liveBackend";
 import App from "./App";
 
 const rootEl = document.getElementById("root");
@@ -17,9 +18,11 @@ createRoot(rootEl).render(
   <StrictMode>
     <ThemeProvider>
       <DemoRoleProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <LiveBackendProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </LiveBackendProvider>
       </DemoRoleProvider>
     </ThemeProvider>
   </StrictMode>,

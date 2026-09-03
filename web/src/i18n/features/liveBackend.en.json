@@ -1,0 +1,9 @@
+{
+  "liveBackend": {
+    "toggle": "Live",
+    "tooltip": "Use the live open-model backend on the pod. Your message is guarded first, then answered by the local model.",
+    "offline": "backend offline",
+    "badge": "Live · pod",
+    "fallback": "The live backend could not be reached, so the offline simulation answered this turn."
+  }
+}

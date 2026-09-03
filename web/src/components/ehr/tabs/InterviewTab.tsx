@@ -9,6 +9,8 @@ import {
   ShieldWarning,
   Lifebuoy,
   Target,
+  Broadcast,
+  WifiSlash,
   X,
 } from "@phosphor-icons/react";
 
@@ -30,6 +32,12 @@ import {
 } from "@/domain/scopeGuard";
 import { expectedIntents } from "@/domain/case";
 import type { QuestionIntent, ExamManeuver, CaseInstance } from "@/domain/case";
+import { useLiveBackend } from "@/lib/liveBackend";
+import {
+  guard as backendGuard,
+  patientTurn as backendPatientTurn,
+  type PatientTurnRequest,
+} from "@/lib/backend";
 import type { Lang, TranscriptTurn } from "@/data/mock";
 import { guidanceHints } from "@/data/mock";
 
@@ -112,11 +120,21 @@ export function InterviewTab({
 }: InterviewTabProps) {
   const { t } = useTranslation();
   const state = useEncounterState();
+  const live = useLiveBackend();
 
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState("");
   const [notice, setNotice] = useState<GuardNoticeState | null>(null);
   const typingTimer = useRef<number | null>(null);
+
+  // Live-backend transcript: doctor free text + REAL patient replies from the
+  // pod gateway, kept separate from the mock reveal-graph turns and merged for
+  // display. `fallbackNotice` flags a turn that silently fell back to the mock
+  // path after a backend error.
+  const [liveTurns, setLiveTurns] = useState<TranscriptTurn[]>([]);
+  const [liveAffect, setLiveAffect] = useState<Record<string, string>>({});
+  const [fallbackNotice, setFallbackNotice] = useState(false);
+  const liveSeq = useRef(0);
   useEffect(() => {
     return () => {
       if (typingTimer.current) window.clearTimeout(typingTimer.current);
@@ -184,6 +202,17 @@ export function InterviewTab({
     return { turns: turnsAcc, affectByTurn: affect };
   }, [state.events, caseInstance.groundTruth.history, affectLabel, t]);
 
+  // Merge the mock reveal-graph turns with any live-backend exchanges for the
+  // transcript. Live replies carry a "Live · pod" provenance caption.
+  const allTurns = useMemo(
+    () => [...turns, ...liveTurns],
+    [turns, liveTurns],
+  );
+  const allAffect = useMemo(
+    () => ({ ...affectByTurn, ...liveAffect }),
+    [affectByTurn, liveAffect],
+  );
+
   // A cited Socratic hint for the interview step (reuses the existing hints).
   const activeHint =
     guidanceHints.find((h) => h.stage === "history") ?? guidanceHints[0];
@@ -210,12 +239,12 @@ export function InterviewTab({
     );
   }
 
-  // Run the guard on the learner's free-text message, then route per class.
-  function handleSend(e?: React.FormEvent) {
-    e?.preventDefault();
-    const text = draft.trim();
-    if (!text) return;
-
+  /**
+   * The offline path: the client-side Scope & Injection Guard, routed per class.
+   * This is EXACTLY the pre-existing behavior and is what runs when Live mode is
+   * off, and what a failed backend call falls back to.
+   */
+  function routeClientVerdict(text: string) {
     const verdict = classifyUtterance(text, caseInstance);
     switch (verdict.class) {
       case "in-scope": {
@@ -262,7 +291,155 @@ export function InterviewTab({
         setNotice({ cls: "unsafe", utterance: text });
         break;
     }
+  }
+
+  /**
+   * Map the current case + transcript onto the gateway's /v1/patient/turn shape
+   * (server/app.py). The persona knows its whole story (narrative), and the
+   * qualitative answers are offered as sanctioned facts so the FactAssertionGate
+   * does not strip legitimate replies. `history` mirrors the transcript so far.
+   */
+  function buildCaseContext(): Record<string, unknown> {
+    const terms = new Set<string>();
+    const push = (s?: string) => {
+      const v = (s ?? "").trim();
+      if (v) terms.add(v);
+    };
+    push(caseInstance.chiefComplaint.en);
+    push(caseInstance.chiefComplaint.tr);
+    const dx = caseInstance.correctDiagnosis?.code;
+    push(dx?.text?.en);
+    push(dx?.text?.tr);
+    push(dx?.coding?.[0]?.display);
+    for (const d of caseInstance.differentials ?? []) {
+      push(d.code?.text?.en);
+      push(d.code?.text?.tr);
+      push(d.code?.coding?.[0]?.display);
+    }
+    for (const rf of caseInstance.redFlags ?? []) {
+      push(rf.en);
+      push(rf.tr);
+    }
+    for (const w of caseInstance.expectedWorkup ?? []) {
+      push(w.label.en);
+      push(w.label.tr);
+    }
+    return { scope_terms: Array.from(terms) };
+  }
+
+  function buildPatientTurnRequest(learnerMsg: string): PatientTurnRequest {
+    const persona = {
+      name: caseInstance.patient.name,
+      age: caseInstance.patient.ageYears,
+      affect_baseline: affectLabel,
+    };
+    const answers = caseInstance.groundTruth.history.map((h) => h.answer[lang]);
+    const history = [...turns, ...liveTurns].slice(-8).map((tt) => ({
+      role: tt.role === "doctor" ? "user" : "assistant",
+      content: tt[lang],
+    }));
+    return {
+      learner_msg: learnerMsg,
+      case_state: {
+        persona,
+        narrative: [caseInstance.chiefComplaint[lang], ...answers],
+        sanctioned_facts: answers,
+      },
+      persona,
+      history,
+      case_context: buildCaseContext(),
+    };
+  }
+
+  /** Append a doctor turn + a backend-sourced patient reply (badged "Live · pod"). */
+  function appendLiveExchange(doctorText: string, patientText: string) {
+    const n = liveSeq.current++;
+    const patId = `live-${n}-p`;
+    setLiveTurns((prev) => [
+      ...prev,
+      { id: `live-${n}-d`, role: "doctor", stage: "history", en: doctorText, tr: doctorText },
+      { id: patId, role: "patient", stage: "history", en: patientText, tr: patientText },
+    ]);
+    setLiveAffect((prev) => ({ ...prev, [patId]: t("liveBackend.badge") }));
+  }
+
+  /** Any backend failure lands here: note it, then run the offline path. */
+  function liveFallback(text: string) {
+    setFallbackNotice(true);
+    routeClientVerdict(text);
+  }
+
+  /**
+   * The live path: guard() on the pod first, then route by class exactly as the
+   * offline guard does — in-scope calls patientTurn() and renders the REAL reply;
+   * off-topic / answer-seeking / injection / unsafe reuse the existing notices.
+   * ANY backend error falls back to the mock path (badge cleared).
+   */
+  async function handleLiveSend(text: string) {
+    setNotice(null);
+    setFallbackNotice(false);
+    if (typingTimer.current) window.clearTimeout(typingTimer.current);
+    setTyping(true);
+    try {
+      const gres = await backendGuard(text, buildCaseContext());
+      if (!gres.ok) {
+        liveFallback(text);
+        return;
+      }
+      const verdict = gres.data;
+      const score = typeof verdict.score === "number" ? verdict.score : 0;
+      const rationale = verdict.rationale ?? "";
+
+      switch (verdict.cls) {
+        case "in-scope": {
+          const tres = await backendPatientTurn(buildPatientTurnRequest(text));
+          if (!tres.ok || !tres.data.utterance) {
+            liveFallback(text);
+            return;
+          }
+          appendLiveExchange(text, tres.data.utterance);
+          return;
+        }
+        case "off-topic":
+          logGuardOutcome({ type: "offtopic", utterance: text, score, rationale });
+          setNotice({ cls: "off-topic", utterance: text });
+          return;
+        case "answer-seeking":
+          logGuardOutcome({ type: "answer-seeking", utterance: text, score, rationale });
+          setNotice({ cls: "answer-seeking", utterance: text });
+          return;
+        case "injection":
+          logGuardOutcome({ type: "injection", utterance: text, score, rationale });
+          setNotice({ cls: "injection", utterance: text });
+          return;
+        case "unsafe":
+          logGuardOutcome({ type: "unsafe", utterance: text, score, rationale });
+          setNotice({ cls: "unsafe", utterance: text });
+          return;
+        default:
+          liveFallback(text);
+          return;
+      }
+    } catch {
+      // Belt and suspenders: the client never throws, but never trust the wire.
+      liveFallback(text);
+    } finally {
+      setTyping(false);
+    }
+  }
+
+  // Run the guard on the learner's free-text message, then route per class. When
+  // Live mode is on, this goes to the pod gateway; otherwise it stays offline.
+  function handleSend(e?: React.FormEvent) {
+    e?.preventDefault();
+    const text = draft.trim();
+    if (!text) return;
     setDraft("");
+    if (live.enabled) {
+      void handleLiveSend(text);
+    } else {
+      routeClientVerdict(text);
+    }
   }
 
   const askedIntents = new Set(
@@ -277,7 +454,7 @@ export function InterviewTab({
     <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,300px)]">
       {/* Dialogue column */}
       <div className="flex min-h-[420px] flex-col rounded-card border border-border bg-bg-subtle">
-        {turns.length === 0 ? (
+        {allTurns.length === 0 ? (
           <div className="flex flex-1 items-center justify-center p-8 text-center">
             <p className="max-w-xs text-sm text-muted">
               {t("ehr.interview.empty")}
@@ -285,10 +462,10 @@ export function InterviewTab({
           </div>
         ) : (
           <EncounterChat
-            turns={turns}
+            turns={allTurns}
             lang={lang}
             patientTyping={typing}
-            affectByTurn={affectByTurn}
+            affectByTurn={allAffect}
             className="max-h-[46vh] flex-1 px-3 sm:px-4"
           />
         )}
@@ -296,6 +473,9 @@ export function InterviewTab({
         {/* Guard notice + free-text composer */}
         <div className="border-t border-border p-3 sm:p-4">
           <GuardNotice notice={notice} onDismiss={() => setNotice(null)} />
+          {fallbackNotice ? (
+            <LiveFallbackNotice onDismiss={() => setFallbackNotice(false)} />
+          ) : null}
 
           <form onSubmit={handleSend} className="mt-2 flex items-center gap-2">
             <label htmlFor="acudx-ask" className="sr-only">
@@ -329,7 +509,18 @@ export function InterviewTab({
             <p className="text-[11px] text-muted">
               {t("scopeGuard.composer.hint")}
             </p>
-            <FocusIndicator offTask={offTask} />
+            <div className="flex shrink-0 items-center gap-2">
+              {live.enabled ? (
+                <Badge
+                  tone="brand"
+                  icon={<Broadcast weight="bold" className="h-3.5 w-3.5" />}
+                  title={t("liveBackend.tooltip")}
+                >
+                  {t("liveBackend.badge")}
+                </Badge>
+              ) : null}
+              <FocusIndicator offTask={offTask} />
+            </div>
           </div>
         </div>
 
@@ -414,6 +605,30 @@ function GuardNotice({
   return (
     <div aria-live="polite" role="status">
       {notice ? <GuardNoticeBody notice={notice} onDismiss={onDismiss} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Subtle notice shown when a live-backend turn could not reach the pod and the
+ * offline simulation answered instead. Non-blocking; the encounter continues.
+ */
+function LiveFallbackNotice({ onDismiss }: { onDismiss: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div
+      role="status"
+      className="mt-2 flex items-start justify-between gap-2 rounded-control border border-border bg-bg-subtle p-2.5"
+    >
+      <div className="flex min-w-0 items-start gap-2">
+        <WifiSlash
+          weight="bold"
+          className="mt-0.5 h-4 w-4 shrink-0 text-muted"
+          aria-hidden
+        />
+        <p className="min-w-0 text-xs text-muted">{t("liveBackend.fallback")}</p>
+      </div>
+      <DismissButton onDismiss={onDismiss} />
     </div>
   );
 }
