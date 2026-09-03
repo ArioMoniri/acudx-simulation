@@ -1,0 +1,37 @@
+{
+  "scopeGuard": {
+    "composer": {
+      "label": "Ask the patient in your own words",
+      "placeholder": "Type a question to the patient, then press Enter",
+      "send": "Send",
+      "hint": "Your message is screened for scope and safety before the patient hears it."
+    },
+    "focus": {
+      "onTask": "On task",
+      "offTaskCount_one": "{{count}} off-topic",
+      "offTaskCount_other": "{{count}} off-topic",
+      "tooltip": "How many questions drifted off the case. Off-topic and answer-seeking turns do not advance the clinical picture."
+    },
+    "youAsked": "You asked",
+    "dismiss": "Dismiss this notice",
+    "offTopic": {
+      "chip": "Off-topic · not advancing",
+      "reply": "I would rather talk about why I came in today, doctor.",
+      "note": "This did not move the clinical picture forward."
+    },
+    "answerSeeking": {
+      "chip": "In character · no answer given",
+      "reply": "I honestly do not know what is wrong. That is what I am hoping you can find out.",
+      "note": "The simulation will not hand you the diagnosis. Work it up."
+    },
+    "injection": {
+      "chip": "Message blocked",
+      "note": "That looked like an attempt to change the assistant's instructions, so it was not sent to the patient."
+    },
+    "unsafe": {
+      "title": "Let's take a moment",
+      "chip": "Support",
+      "note": "If you are struggling, please reach out to someone you trust or a local support line. We can pause the case whenever you need."
+    }
+  }
+}
