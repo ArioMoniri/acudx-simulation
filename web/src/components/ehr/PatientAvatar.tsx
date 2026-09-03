@@ -24,6 +24,10 @@
 
 import { useTranslation } from "react-i18next";
 import { PatientPortrait } from "@/components/PatientPortrait";
+import {
+  pickProfileForCase,
+  type PatientProfile,
+} from "@/domain/patientProfiles";
 
 /* -------------------------------------------------------------------------- */
 /* Driver interface (shared across all tiers)                                  */
@@ -90,6 +94,17 @@ export interface PatientAvatarProps {
   tier?: AvatarTier;
   /** Synthetic patient display name. */
   name: string;
+  /**
+   * Character profile driving the procedural avatar's appearance. When omitted,
+   * one is chosen deterministically from `conditionHint` + `seed` (falling back
+   * to `name`) so the same patient always renders the same face. Backward
+   * compatible: callers that pass nothing still get a stable, diverse avatar.
+   */
+  profile?: PatientProfile;
+  /** Chief-complaint family used to pick a fitting profile when none is given. */
+  conditionHint?: string;
+  /** Stable seed (e.g. case id) for deterministic profile selection. */
+  seed?: string | number;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -134,8 +149,17 @@ export function PatientAvatar({
   visemes,
   tier = "2d",
   name,
+  profile,
+  conditionHint,
+  seed,
 }: PatientAvatarProps) {
   const caption = useSignCaption(clinicalSigns, affect);
+
+  // Resolve the character profile that fronts this patient. Deterministic so
+  // the same case always shows the same face; the clinical-sign channel below
+  // still shades it, independent of identity.
+  const resolvedProfile: PatientProfile =
+    profile ?? pickProfileForCase(conditionHint ?? "", seed ?? name);
 
   // The driver object every tier consumes (assembled once so the mount slots
   // below can pass it straight through when they are implemented).
@@ -173,11 +197,20 @@ export function PatientAvatar({
     /* ---------------------------------------------------------------------- */
     case "2d":
     default:
-      // The 2D portrait IS the clinical-sign channel at T0. `driver` is passed
-      // through the caption so the same sign intensities that would shade a 3D
-      // face here shade the portrait's expression + carry the text equivalent.
+      // The 2D portrait IS the clinical-sign channel at T0. The same driver a
+      // 3D face would consume (affect + sign intensities) shades the procedural
+      // portrait's expression here, while the caption carries the text
+      // equivalent so the meaning is never color-only.
       void driver;
-      return <PatientPortrait caption={caption} name={name} />;
+      return (
+        <PatientPortrait
+          caption={caption}
+          name={name}
+          profile={resolvedProfile}
+          signs={clinicalSigns}
+          affect={affect}
+        />
+      );
   }
 }
 
