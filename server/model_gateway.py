@@ -275,10 +275,17 @@ class ModelGateway:
             self.probe(s.embed_url),
             self.probe(s.rerank_url),
         )
+        embed_model = getattr(s, "embed_model", None)
+        rerank_model = getattr(s, "rerank_model", None)
         return {
-            "llm": {"url": self.endpoint.base_url, "model": self.endpoint.model, **llm},
-            "embed": {"url": s.embed_url, **embed},
-            "rerank": {"url": s.rerank_url, **rerank},
+            "llm": {
+                "url": self.endpoint.base_url,
+                "model": self.endpoint.model,
+                "provider": self.endpoint.provider,
+                **llm,
+            },
+            "embed": {"url": s.embed_url, "model": embed_model, **embed},
+            "rerank": {"url": s.rerank_url, "model": rerank_model, **rerank},
         }
 
     # -- scope similarity (docs/architecture/13 §3.2 Layer 1) --------------- #

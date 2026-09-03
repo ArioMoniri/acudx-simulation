@@ -28,3 +28,7 @@ coverage/
 
 # Local Claude Code state
 .claude/
+
+# Python bytecode
+__pycache__/
+*.pyc

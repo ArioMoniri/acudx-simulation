@@ -7,9 +7,10 @@ touches a model goes through :class:`~server.model_gateway.ModelGateway`, so the
 Endpoints
 ---------
 GET  /health           liveness + resolved provider/model + air-gap state
-GET  /status           {disk, ram} + reachability of the LLM/embed/rerank pods
+GET  /status           {disk, ram} + per-endpoint reachability + model names
 POST /v1/guard         Scope & Injection Guard (docs/architecture/13 §3)
 POST /v1/patient/turn  guard -> route-by-class -> persona + gateway -> FactGate
+POST /v1/grade         decomposed, evidence-forced rubric grading -> banded score
 POST /v1/ground        delegates to server.grounding.ground() (sibling-owned)
 
 ``server.grounding`` is imported **lazily** (per request) so this app still
@@ -34,6 +35,7 @@ from pydantic import AliasChoices, BaseModel, Field
 from server.config import EgressBlocked, get_settings
 from server.model_gateway import GatewayError, ModelGateway
 from server.persona import build_patient_turn, fact_assertion_gate
+from server.rubric import grade_transcript
 from server.scope_guard import classify
 
 # Guard-class -> persona directive (docs/architecture/13 §3.1 routing).
@@ -134,6 +136,25 @@ class GroundRequest(BaseModel):
     k: int | None = None
 
 
+class GradeRequest(BaseModel):
+    # `transcript` may be a flat string OR a list of turns
+    # ({role|speaker, content|text}); `history`/`turns` are accepted aliases so
+    # the web app and orchestrator wire shapes both work (see rubric.normalize).
+    model_config = {"populate_by_name": True}
+    transcript: Any = Field(
+        default=None,
+        validation_alias=AliasChoices("transcript", "history", "turns"),
+    )
+    locale: str = "en"
+    concurrency: int | None = None
+
+
+class GradeResponse(BaseModel):
+    overall_band: str
+    domains: list[dict[str, Any]]
+    meta: dict[str, Any] | None = None
+
+
 def _gateway(app: FastAPI) -> ModelGateway:
     return app.state.gateway
 
@@ -209,6 +230,9 @@ async def status() -> dict[str, Any]:
     return {
         "status": "ok",
         "airgapped": s.airgapped,
+        "provider": gw.endpoint.provider,
+        "model": gw.endpoint.model,
+        "tiers": list(gw.tiers.keys()),
         "disk": _disk(s.status_disk_path),
         "ram": _ram(),
         "endpoints": endpoints,
@@ -281,6 +305,22 @@ async def patient_turn(req: PatientTurnRequest) -> PatientTurnResponse:
         flags=flags,
         meta=meta or None,
     )
+
+
+# --------------------------------------------------------------------------- #
+# /v1/grade  — decomposed, evidence-forced rubric grading (docs/architecture/02
+# GRADE tier). Each of the fixed rubric's items is graded independently at
+# temperature 0 through the gateway's `grade` tier; the model returns
+# {met, evidence_span (a forced verbatim quote), confidence} per item, and the
+# band is aggregated deterministically code-side. Bands only — never decimals.  #
+# --------------------------------------------------------------------------- #
+@app.post("/v1/grade", response_model=GradeResponse)
+async def grade(req: GradeRequest) -> GradeResponse:
+    gw = _gateway(app)
+    result = await grade_transcript(
+        req.transcript, gw, locale=req.locale, concurrency=req.concurrency,
+    )
+    return GradeResponse(**result)
 
 
 # --------------------------------------------------------------------------- #
