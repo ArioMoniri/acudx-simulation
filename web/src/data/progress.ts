@@ -548,3 +548,352 @@ export const cohortComparison: CohortComparison = {
   cohortSize: 48,
   improvementPercentile: 72,
 };
+
+/* -------------------------------------------------------------------------- */
+/* Mastery detail — evidence + trajectory behind each band (progressive reveal) */
+/* -------------------------------------------------------------------------- */
+
+/** One graded encounter that counts as evidence behind a domain's band. */
+export interface MasteryEvidence {
+  id: string;
+  /** Short encounter title. */
+  case: Bilingual;
+  /** What was demonstrated (or missed), in plain language. */
+  note: Bilingual;
+  daysAgo: number;
+}
+
+/**
+ * The detail behind a mastery band, revealed when a learner opens a domain.
+ * Everything is formative and specific: what moved the band, the concrete
+ * criterion for the next band, the recent band trajectory, and the encounters
+ * that count as evidence. A domain may link a spaced-review card so the learner
+ * can practise the exact gap.
+ */
+export interface MasteryDetail {
+  /** What moved this band recently. */
+  movedBy: Bilingual;
+  /** The concrete behaviour that reaches the next band. */
+  nextStep: Bilingual;
+  /** Recent band per graded window, oldest first (mini trajectory). */
+  bandHistory: Exclude<Band, "withheld">[];
+  /** Encounters behind the current band. */
+  evidence: MasteryEvidence[];
+  /** Optional linked spaced-review card to practise the gap. */
+  reviewCardId?: string;
+}
+
+/**
+ * Detail keyed by competency domain. Content is realistic emergency-medicine
+ * evidence. The withheld domain (professionalism) carries only a next-step so
+ * the learner knows exactly what unlocks a reliable band.
+ */
+export const masteryDetail: Partial<Record<FeedbackDomainKey, MasteryDetail>> = {
+  history: {
+    movedBy: {
+      en: "Your histories now open with a structured presenting-complaint frame and screen red flags before you close.",
+      tr: "Anamnezleriniz artık yapılandırılmış bir yakınma çerçevesiyle başlıyor ve kapatmadan önce alarm bulgularını tarıyor.",
+    },
+    nextStep: {
+      en: "Reach Exemplary by eliciting ideas, concerns and expectations in every encounter, not only when prompted.",
+      tr: "Örnek düzeye ulaşmak için hastanın düşünce, endişe ve beklentilerini yalnızca sorulduğunda değil her karşılaşmada öğrenin.",
+    },
+    bandHistory: ["proficient", "proficient", "strong"],
+    evidence: [
+      {
+        id: "ev-h1",
+        case: {
+          en: "58-year-old with central chest pain",
+          tr: "Santral göğüs ağrısı olan 58 yaşında hasta",
+        },
+        note: {
+          en: "Screened cardiac risk factors and red flags before examining.",
+          tr: "Muayeneden önce kardiyak risk faktörleri ve alarm bulguları tarandı.",
+        },
+        daysAgo: 1,
+      },
+      {
+        id: "ev-h2",
+        case: {
+          en: "Young adult with palpitations",
+          tr: "Çarpıntı ile başvuran genç erişkin",
+        },
+        note: {
+          en: "Built a structured history with a clear symptom timeline.",
+          tr: "Net bir semptom zaman çizelgesiyle yapılandırılmış öykü alındı.",
+        },
+        daysAgo: 4,
+      },
+    ],
+    reviewCardId: "rev-risk-factors",
+  },
+  exam: {
+    movedBy: {
+      en: "Hypothesis-driven examination is consistent; a full secondary survey is still sometimes skipped under time pressure.",
+      tr: "Hipoteze dayalı muayene tutarlı; zaman baskısı altında tam ikincil bakı hâlâ zaman zaman atlanıyor.",
+    },
+    nextStep: {
+      en: "Reach Strong by completing a focused secondary survey on every high-acuity presentation.",
+      tr: "Güçlü düzeye ulaşmak için her yüksek aciliyetli başvuruda odaklı bir ikincil bakı tamamlayın.",
+    },
+    bandHistory: ["developing", "proficient", "proficient"],
+    evidence: [
+      {
+        id: "ev-e1",
+        case: {
+          en: "Breathlessness in an older patient",
+          tr: "Yaşlı hastada nefes darlığı",
+        },
+        note: {
+          en: "Focused cardiorespiratory examination guided by the differential.",
+          tr: "Ayırıcı tanıya göre yönlendirilmiş odaklı kardiyorespiratuvar muayene.",
+        },
+        daysAgo: 2,
+      },
+      {
+        id: "ev-e2",
+        case: {
+          en: "Abdominal pain, query surgical",
+          tr: "Karın ağrısı, cerrahi şüphesi",
+        },
+        note: {
+          en: "Elicited peritonism but deferred a full secondary survey.",
+          tr: "Peritonizm saptandı ancak tam ikincil bakı ertelendi.",
+        },
+        daysAgo: 6,
+      },
+    ],
+    reviewCardId: "rev-troponin",
+  },
+  reasoning: {
+    movedBy: {
+      en: "You now commit to a leading diagnosis with a stated differential instead of an open-ended list.",
+      tr: "Artık açık uçlu bir liste yerine belirtilen bir ayırıcı tanıyla öncelikli tanıya karar veriyorsunuz.",
+    },
+    nextStep: {
+      en: "Reach Proficient by ordering the key rule-out test before starting empirical management.",
+      tr: "Yeterli düzeye ulaşmak için ampirik tedaviye başlamadan önce temel dışlama testini isteyin.",
+    },
+    bandHistory: ["emerging", "emerging", "developing"],
+    evidence: [
+      {
+        id: "ev-r1",
+        case: {
+          en: "Suspected acute coronary syndrome",
+          tr: "Akut koroner sendrom şüphesi",
+        },
+        note: {
+          en: "Committed to a leading diagnosis with a clear differential.",
+          tr: "Net bir ayırıcı tanıyla öncelikli tanıya karar verildi.",
+        },
+        daysAgo: 0,
+      },
+      {
+        id: "ev-r2",
+        case: {
+          en: "Headache with red flags",
+          tr: "Alarm bulgulu baş ağrısı",
+        },
+        note: {
+          en: "Ordered the key rule-out test late in the encounter.",
+          tr: "Temel dışlama testi karşılaşmanın geç aşamasında istendi.",
+        },
+        daysAgo: 3,
+      },
+    ],
+    reviewCardId: "rev-ecg-timing",
+  },
+  communication: {
+    movedBy: {
+      en: "Clear, jargon-free explanations and consistent safety-netting on discharge.",
+      tr: "Net, tıbbi jargon içermeyen açıklamalar ve taburculukta tutarlı güvenlik ağı.",
+    },
+    nextStep: {
+      en: "Reach Exemplary by checking understanding with teach-back on every discharge.",
+      tr: "Örnek düzeye ulaşmak için her taburculukta geri anlatma yöntemiyle hastanın anlayışını doğrulayın.",
+    },
+    bandHistory: ["strong", "strong", "strong"],
+    evidence: [
+      {
+        id: "ev-c1",
+        case: {
+          en: "Discharge after low-risk chest pain",
+          tr: "Düşük riskli göğüs ağrısı sonrası taburculuk",
+        },
+        note: {
+          en: "Gave clear, specific return-warning advice.",
+          tr: "Net ve belirgin geri dönüş uyarı önerileri verildi.",
+        },
+        daysAgo: 1,
+      },
+      {
+        id: "ev-c2",
+        case: {
+          en: "Anxious patient, uncertain diagnosis",
+          tr: "Endişeli hasta, belirsiz tanı",
+        },
+        note: {
+          en: "Explained the uncertainty without alarming the patient.",
+          tr: "Hastayı tedirgin etmeden belirsizlik açıklandı.",
+        },
+        daysAgo: 5,
+      },
+    ],
+    reviewCardId: "rev-safety-netting",
+  },
+  management: {
+    movedBy: {
+      en: "Initial management is appropriate, but escalation and senior review are sometimes late.",
+      tr: "İlk tedavi uygun ancak yükseltme ve kıdemli değerlendirmesi zaman zaman geç kalıyor.",
+    },
+    nextStep: {
+      en: "Reach Proficient by stating explicit escalation criteria and a time-to-review for unstable patients.",
+      tr: "Yeterli düzeye ulaşmak için stabil olmayan hastalar için açık yükseltme ölçütleri ve bir yeniden değerlendirme süresi belirtin.",
+    },
+    bandHistory: ["developing", "developing", "developing"],
+    evidence: [
+      {
+        id: "ev-m1",
+        case: {
+          en: "Sepsis of unclear source",
+          tr: "Kaynağı belirsiz sepsis",
+        },
+        note: {
+          en: "Started the sepsis bundle but escalated to seniors late.",
+          tr: "Sepsis paketi başlatıldı ancak kıdemlilere yükseltme geç yapıldı.",
+        },
+        daysAgo: 2,
+      },
+      {
+        id: "ev-m2",
+        case: {
+          en: "Acute asthma exacerbation",
+          tr: "Akut astım alevlenmesi",
+        },
+        note: {
+          en: "Appropriate first-line treatment with timely reassessment.",
+          tr: "Zamanında yeniden değerlendirmeyle uygun ilk basamak tedavi.",
+        },
+        daysAgo: 4,
+      },
+    ],
+    reviewCardId: "rev-ecg-timing",
+  },
+  professionalism: {
+    movedBy: {
+      en: "Not enough graded encounters yet to show a reliable band.",
+      tr: "Güvenilir bir bant göstermek için henüz yeterli değerlendirilmiş karşılaşma yok.",
+    },
+    nextStep: {
+      en: "Three more graded encounters are needed before a reliable band appears.",
+      tr: "Güvenilir bir bant görünmeden önce üç değerlendirilmiş karşılaşma daha gerekiyor.",
+    },
+    bandHistory: [],
+    evidence: [],
+  },
+};
+
+/* -------------------------------------------------------------------------- */
+/* Spaced-repetition scheduler — a compact, faithful FSRS forgetting model     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The four FSRS recall grades. They describe *how retrieval felt*, not a score:
+ *   again — you blanked, hard — effortful, good — recalled, easy — instant.
+ */
+export type ReviewGrade = "again" | "hard" | "good" | "easy";
+
+/** Grade order for the review UI (worst to best), left to right. */
+export const REVIEW_GRADE_ORDER: ReviewGrade[] = [
+  "again",
+  "hard",
+  "good",
+  "easy",
+];
+
+/**
+ * FSRS-4.5 forgetting-curve constants. Retrievability decays as a power law of
+ * elapsed time over stability: R(t, S) = (1 + FACTOR * t / S) ^ DECAY.
+ * With DECAY = -0.5, an interval equal to S yields exactly 90% retrievability.
+ */
+const FSRS_DECAY = -0.5;
+const FSRS_FACTOR = 19 / 81; // = 0.9^(1 / DECAY) - 1
+/** Target retention when scheduling the next review. */
+export const FSRS_TARGET_RETENTION = 0.9;
+
+/** Predicted retrievability after `days` given memory `stabilityDays`. */
+export function retrievabilityAfter(
+  days: number,
+  stabilityDays: number,
+): number {
+  const s = Math.max(stabilityDays, 0.1);
+  return Math.pow(1 + FSRS_FACTOR * (days / s), FSRS_DECAY);
+}
+
+/**
+ * Days for retrievability to fall to `retention` given `stabilityDays`.
+ * This is the next-review interval FSRS would pick for a target retention.
+ */
+export function forgettingInterval(
+  stabilityDays: number,
+  retention: number = FSRS_TARGET_RETENTION,
+): number {
+  const s = Math.max(stabilityDays, 0.1);
+  return (s / FSRS_FACTOR) * (Math.pow(retention, 1 / FSRS_DECAY) - 1);
+}
+
+/** Stability multiplier per grade for a successful review. */
+const STABILITY_GAIN: Record<Exclude<ReviewGrade, "again">, number> = {
+  hard: 1.2,
+  good: 1.9,
+  easy: 2.8,
+};
+
+/** The result of grading a card: the card's next scheduling state. */
+export interface ReviewSchedule {
+  /** New memory stability, in days. */
+  stabilityDays: number;
+  /** Days until the next review (0 means later in this same session). */
+  intervalDays: number;
+  /** Predicted retrievability at the moment shown. */
+  retrievability: number;
+  state: ReviewState;
+}
+
+/**
+ * scheduleReview — grade a card and compute its next FSRS schedule.
+ *
+ * A lapse (`again`) collapses stability toward a short relearning value and
+ * returns the card later in the same session. A successful grade grows
+ * stability with diminishing returns, so already-durable memories are not
+ * pushed out to unrealistic intervals. Deterministic and pure.
+ */
+export function scheduleReview(
+  card: Pick<ReviewCard, "stabilityDays">,
+  grade: ReviewGrade,
+): ReviewSchedule {
+  const prior = Math.max(card.stabilityDays, 0.5);
+
+  if (grade === "again") {
+    const stability = Math.round(Math.max(0.5, prior * 0.4) * 10) / 10;
+    return {
+      stabilityDays: stability,
+      intervalDays: 0,
+      retrievability: 0.45,
+      state: "learning",
+    };
+  }
+
+  // Diminishing returns: the gain shrinks as the memory is already durable.
+  const saturation = 0.6 + 0.4 / (1 + prior / 10);
+  const stability =
+    Math.round(prior * STABILITY_GAIN[grade] * saturation * 10) / 10;
+  const intervalDays = Math.max(1, Math.round(forgettingInterval(stability)));
+
+  return {
+    stabilityDays: stability,
+    intervalDays,
+    retrievability: 0.98,
+    state: intervalDays >= 14 ? "scheduled" : "learning",
+  };
+}
