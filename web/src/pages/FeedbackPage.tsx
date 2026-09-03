@@ -9,6 +9,7 @@ import {
   Info,
   Timer,
   Heartbeat,
+  Flask,
 } from "@phosphor-icons/react";
 
 import { PageContainer } from "@/components/shell";
@@ -85,6 +86,24 @@ export function FeedbackPage() {
   const coveragePct = Math.round(metrics.historyCoveragePct * 100);
   const expectedCount = expectedIntents(chestPainNstemiCase).length;
   const coveredCount = Math.round(metrics.historyCoveragePct * expectedCount);
+
+  // On-time rate across the timed (non low-value) expected actions, for a
+  // headline that frames the per-action list below it.
+  const actionTotal = metrics.timeToCriticalAction.length;
+  const onTimeCount = metrics.timeToCriticalAction.filter(
+    (a) => a.status === "onTime",
+  ).length;
+  const allOnTime = actionTotal > 0 && onTimeCount === actionTotal;
+
+  // Investigation stewardship (order appropriateness, §4). Low-value codes are
+  // given a human label where known, falling back to the raw order code.
+  const steward = metrics.orderAppropriateness;
+  const lowValueLabels: Record<string, { en: string; tr: string }> = {
+    "48065-7": { en: "D-dimer", tr: "D-dimer" },
+  };
+  const lowValueList = steward.lowValueCodes
+    .map((c) => lowValueLabels[c]?.[lang] ?? c)
+    .join(", ");
 
   return (
     <PageContainer className="flex flex-col gap-8">
@@ -210,7 +229,7 @@ export function FeedbackPage() {
           {t("calibration.subtitle")}
         </p>
         <Card padding="lg" className="mt-3">
-          <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,360px)_1fr]">
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
             <CalibrationPlot
               points={calibrationPoints}
               trajectory={calibrationTrajectory}
@@ -350,7 +369,7 @@ export function FeedbackPage() {
               label={t("feedback.process.timeToDx.label")}
               value={
                 metrics.timeToDiagnosisMs == null
-                  ? "—"
+                  ? "-"
                   : toMin(metrics.timeToDiagnosisMs)
               }
               unit={metrics.timeToDiagnosisMs == null ? undefined : t("feedback.process.minUnit")}
@@ -365,17 +384,99 @@ export function FeedbackPage() {
 
         {/* Time-to-critical-action list (each cited) */}
         <div className="mt-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-fg">
-            {t("feedback.process.criticalActions")}
-          </h3>
-          <p className="mt-1 text-xs text-muted">
-            {t("feedback.process.criticalActionsNote")}
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-fg">
+                {t("feedback.process.criticalActions")}
+              </h3>
+              <p className="mt-1 text-xs text-muted">
+                {t("feedback.process.criticalActionsNote")}
+              </p>
+            </div>
+            {actionTotal > 0 ? (
+              <span
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                style={{
+                  color: `var(${allOnTime ? "--state-normal" : "--state-caution"})`,
+                  borderColor: `color-mix(in srgb, var(${allOnTime ? "--state-normal" : "--state-caution"}) 40%, transparent)`,
+                  backgroundColor: `color-mix(in srgb, var(${allOnTime ? "--state-normal" : "--state-caution"}) 10%, transparent)`,
+                }}
+              >
+                {allOnTime ? (
+                  <CheckCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
+                ) : (
+                  <Timer weight="fill" className="h-3.5 w-3.5" aria-hidden />
+                )}
+                {t("feedback.process.onTimeSummary", {
+                  onTime: onTimeCount,
+                  total: actionTotal,
+                })}
+              </span>
+            ) : null}
+          </div>
           <div className="mt-3 grid gap-2.5 md:grid-cols-2">
             {metrics.timeToCriticalAction.map((a) => (
               <ProcessTimingCard key={a.expectationId} action={a} lang={lang} />
             ))}
           </div>
+        </div>
+
+        {/* Investigation stewardship — order appropriateness, cited (§4) */}
+        <div className="mt-5">
+          <div className="flex items-center gap-2">
+            <Flask weight="bold" className="h-4 w-4 text-brand" aria-hidden />
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-fg">
+              {t("feedback.process.stewardship.heading")}
+            </h3>
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            {t("feedback.process.stewardship.subtitle")}
+          </p>
+          <Card padding="md" className="mt-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <Stat
+                label={t("feedback.process.stewardship.indicated")}
+                value={steward.indicated}
+                hint={t("feedback.process.stewardship.indicatedHint")}
+              />
+              <Stat
+                label={t("feedback.process.stewardship.lowValue")}
+                value={steward.lowValue}
+                hint={t("feedback.process.stewardship.lowValueHint")}
+              />
+            </div>
+            <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
+              {steward.lowValue > 0 ? (
+                <p className="flex items-start gap-2 text-xs text-fg">
+                  <ShieldWarning
+                    weight="fill"
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--state-caution)]"
+                    aria-hidden
+                  />
+                  <span className="font-medium">
+                    {t("feedback.process.stewardship.flagged", {
+                      codes: lowValueList,
+                    })}
+                  </span>
+                </p>
+              ) : (
+                <p className="flex items-start gap-2 text-xs text-muted">
+                  <CheckCircle
+                    weight="fill"
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--state-normal)]"
+                    aria-hidden
+                  />
+                  {t("feedback.process.stewardship.cleanNote")}
+                </p>
+              )}
+              <p className="text-xs text-muted">
+                {t("feedback.process.stewardship.note")}
+              </p>
+              <span>
+                <CitationPill citationId="esc-acs-2023" lang={lang} />
+              </span>
+            </div>
+          </Card>
         </div>
 
         {/* How the patient was treated — communication + safety, cited */}

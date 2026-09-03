@@ -1,0 +1,38 @@
+{
+  "calibration": {
+    "readoutDefault": "Point to a dot, or tab to it, to read that domain.",
+    "readoutConfidence": "Confidence",
+    "readoutPerformance": "Performance",
+    "readoutGap": "Gap",
+    "gap": {
+      "over": "{{points}} pts overconfident",
+      "under": "{{points}} pts underconfident",
+      "well": "within {{points}} pts"
+    },
+    "pointAria": "{{domain}}. Confidence {{confidence}} percent, performance {{performance}} percent. {{direction}}.",
+    "quadrantLegend": {
+      "heading": "Reading the quadrants",
+      "hint": "Where a dot sits shows what to train next.",
+      "calibratedStrong": "High confidence, strong performance",
+      "calibratedGrowing": "Low confidence, still building",
+      "blindSpot": "Confident, but performance lags",
+      "hiddenStrength": "Performing better than you think"
+    }
+  },
+  "feedback": {
+    "process": {
+      "onTimeSummary": "{{onTime}} of {{total}} on time",
+      "stewardship": {
+        "heading": "Investigation stewardship",
+        "subtitle": "Whether each order was indicated by the presentation, measured against the expected workup and cited.",
+        "indicated": "Indicated orders",
+        "indicatedHint": "Matched the expected workup",
+        "lowValue": "Low-value orders",
+        "lowValueHint": "Not indicated for this presentation",
+        "flagged": "Flagged: {{codes}}",
+        "cleanNote": "No low-value orders. Every investigation was indicated.",
+        "note": "Order what the presentation indicates. Low-value tests add cost, delay, and incidental findings."
+      }
+    }
+  }
+}

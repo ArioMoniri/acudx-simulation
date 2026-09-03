@@ -1,0 +1,38 @@
+{
+  "calibration": {
+    "readoutDefault": "Bir alanı okumak için bir noktanın üzerine gelin veya sekme ile odaklanın.",
+    "readoutConfidence": "Güven",
+    "readoutPerformance": "Performans",
+    "readoutGap": "Fark",
+    "gap": {
+      "over": "{{points}} puan aşırı güven",
+      "under": "{{points}} puan düşük güven",
+      "well": "{{points}} puan içinde"
+    },
+    "pointAria": "{{domain}}. Güven yüzde {{confidence}}, performans yüzde {{performance}}. {{direction}}.",
+    "quadrantLegend": {
+      "heading": "Bölgeleri okuma",
+      "hint": "Bir noktanın konumu, sırada neyi çalışacağınızı gösterir.",
+      "calibratedStrong": "Yüksek güven, güçlü performans",
+      "calibratedGrowing": "Düşük güven, hâlâ gelişiyor",
+      "blindSpot": "Güvenli, ancak performans geride",
+      "hiddenStrength": "Düşündüğünüzden daha iyi performans"
+    }
+  },
+  "feedback": {
+    "process": {
+      "onTimeSummary": "{{total}} eylemden {{onTime}} tanesi zamanında",
+      "stewardship": {
+        "heading": "Akılcı tetkik kullanımı",
+        "subtitle": "Her istemin başvuru tarafından endike olup olmadığı, beklenen tetkik planına göre ölçülür ve kaynak gösterilir.",
+        "indicated": "Endike istemler",
+        "indicatedHint": "Beklenen tetkik planıyla eşleşti",
+        "lowValue": "Düşük değerli istemler",
+        "lowValueHint": "Bu başvuru için endike değil",
+        "flagged": "İşaretlenen: {{codes}}",
+        "cleanNote": "Düşük değerli istem yok. Tüm tetkikler endikeydi.",
+        "note": "Başvurunun gerektirdiğini isteyin. Düşük değerli tetkikler maliyet, gecikme ve rastlantısal bulgular ekler."
+      }
+    }
+  }
+}

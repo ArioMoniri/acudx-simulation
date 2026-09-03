@@ -1,7 +1,12 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
-import type { CalibrationPoint, FeedbackDomainKey, Lang } from "@/data/mock";
+import type {
+  CalibrationDirection,
+  CalibrationPoint,
+  FeedbackDomainKey,
+  Lang,
+} from "@/data/mock";
 
 export interface CalibrationPlotProps {
   points: CalibrationPoint[];
@@ -25,11 +30,19 @@ const sx = (v: number) => M.left + (v / 100) * PLOT_W;
 /** Map a 0..100 value to a y pixel (inverted: higher competence is higher up). */
 const sy = (v: number) => M.top + PLOT_H - (v / 100) * PLOT_H;
 
-const directionColor: Record<CalibrationPoint["direction"], string> = {
+const directionColor: Record<CalibrationDirection, string> = {
   over: "var(--calib-over)",
   under: "var(--calib-under)",
   well: "var(--calib-well)",
 };
+
+/** The four named quadrants, ordered to mirror the scatter (performance up). */
+const QUADRANTS: { key: string; tint: string }[] = [
+  { key: "hiddenStrength", tint: "var(--calib-under)" },
+  { key: "calibratedStrong", tint: "var(--calib-well)" },
+  { key: "calibratedGrowing", tint: "var(--calib-well)" },
+  { key: "blindSpot", tint: "var(--calib-over)" },
+];
 
 /** Two-letter domain glyph for the plotted marker. */
 function domainGlyph(key: FeedbackDomainKey): string {
@@ -48,19 +61,27 @@ function domainGlyph(key: FeedbackDomainKey): string {
  * CalibrationPlot — the signature scatter of self-rated confidence (x) against
  * measured competence (y). The dashed identity line is "perfectly calibrated";
  * points below-right are overconfident, above-left underconfident. A faint
- * arrow traces the recent trajectory toward the line. Fully accessible:
- * <title>/<desc>, per-point aria, and a visually-hidden data table.
+ * arrow traces the recent trajectory toward the line.
+ *
+ * In full mode (default) the scatter is interactive: each domain point is a
+ * focusable target that, on hover or keyboard focus, dims its neighbours, drops
+ * crosshair guides to both axes, and drives a live plain-language readout plus a
+ * quadrant legend. Compact (`small`) mode stays a static snapshot for the
+ * dashboard tile. Fully accessible either way: <title>/<desc>, per-point aria,
+ * an aria-live readout, and a visually-hidden data table.
  */
 export function CalibrationPlot({
   points,
   trajectory,
-  lang,
+  // `lang` stays in the public props (callers pass it) but the visible copy is
+  // fully driven by i18next `t()`, so it is intentionally not destructured here.
   small = false,
   className,
 }: CalibrationPlotProps) {
   const { t } = useTranslation();
   const titleId = useId();
   const descId = useId();
+  const [active, setActive] = useState<FeedbackDomainKey | null>(null);
 
   if (points.length === 0) {
     return (
@@ -69,6 +90,15 @@ export function CalibrationPlot({
       </div>
     );
   }
+
+  const interactive = !small;
+  const activePoint = active
+    ? points.find((p) => p.domain === active) ?? null
+    : null;
+
+  /** Clear only if we still own the active state (avoids enter/leave flicker). */
+  const release = (domain: FeedbackDomainKey) =>
+    setActive((cur) => (cur === domain ? null : cur));
 
   // Build the trajectory arrow: gaps shrink toward the identity line.
   // Anchor each session near the diagonal, walking from a larger to a smaller
@@ -102,7 +132,7 @@ export function CalibrationPlot({
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="h-auto w-full min-w-[280px]"
-          role="img"
+          role={interactive ? "group" : "img"}
           aria-labelledby={`${titleId} ${descId}`}
         >
           <title id={titleId}>{t("calibration.title")}</title>
@@ -211,7 +241,7 @@ export function CalibrationPlot({
 
           {/* Trajectory arrow */}
           {trajPath && trajHead ? (
-            <g opacity={0.85}>
+            <g opacity={activePoint ? 0.35 : 0.85}>
               <path
                 d={trajPath}
                 fill="none"
@@ -223,13 +253,61 @@ export function CalibrationPlot({
               <g
                 transform={`translate(${trajHead.x} ${trajHead.y}) rotate(${trajHead.angle})`}
               >
-                <path
-                  d="M0 0 L-5 -2.5 L-5 2.5 Z"
-                  fill="var(--fg-muted)"
-                />
+                <path d="M0 0 L-5 -2.5 L-5 2.5 Z" fill="var(--fg-muted)" />
               </g>
             </g>
           ) : null}
+
+          {/* Crosshair guides for the active point (full mode) */}
+          {interactive && activePoint
+            ? (() => {
+                const cx = sx(activePoint.confidence * 100);
+                const cy = sy(activePoint.competence * 100);
+                const color = directionColor[activePoint.direction];
+                return (
+                  <g pointerEvents="none">
+                    <line
+                      x1={cx}
+                      y1={cy}
+                      x2={cx}
+                      y2={M.top + PLOT_H}
+                      stroke={color}
+                      strokeWidth={1}
+                      strokeDasharray="3 3"
+                      opacity={0.55}
+                    />
+                    <line
+                      x1={M.left}
+                      y1={cy}
+                      x2={cx}
+                      y2={cy}
+                      stroke={color}
+                      strokeWidth={1}
+                      strokeDasharray="3 3"
+                      opacity={0.55}
+                    />
+                    <text
+                      x={cx}
+                      y={M.top + PLOT_H + 14}
+                      textAnchor="middle"
+                      className="text-[9px] font-bold"
+                      style={{ fill: color }}
+                    >
+                      {Math.round(activePoint.confidence * 100)}
+                    </text>
+                    <text
+                      x={M.left - 6}
+                      y={cy + 3}
+                      textAnchor="end"
+                      className="text-[9px] font-bold"
+                      style={{ fill: color }}
+                    >
+                      {Math.round(activePoint.competence * 100)}
+                    </text>
+                  </g>
+                );
+              })()
+            : null}
 
           {/* Domain points */}
           {points.map((p) => {
@@ -238,17 +316,70 @@ export function CalibrationPlot({
             const color = directionColor[p.direction];
             const domainName = t(`feedback.domains.${p.domain}`);
             const dirLabel = t(`calibration.direction.${p.direction}`);
+            const isActive = active === p.domain;
+            const dimmed = active !== null && !isActive;
+            const confPct = Math.round(p.confidence * 100);
+            const compPct = Math.round(p.competence * 100);
             return (
-              <g key={p.domain}>
+              <g
+                key={p.domain}
+                opacity={dimmed ? 0.35 : 1}
+                tabIndex={interactive ? 0 : undefined}
+                role={interactive ? "button" : undefined}
+                aria-label={
+                  interactive
+                    ? t("calibration.pointAria", {
+                        domain: domainName,
+                        confidence: confPct,
+                        performance: compPct,
+                        direction: dirLabel,
+                      })
+                    : undefined
+                }
+                className={interactive ? "cursor-pointer" : undefined}
+                onMouseEnter={interactive ? () => setActive(p.domain) : undefined}
+                onMouseLeave={interactive ? () => release(p.domain) : undefined}
+                onFocus={interactive ? () => setActive(p.domain) : undefined}
+                onBlur={interactive ? () => release(p.domain) : undefined}
+              >
+                {/* Larger transparent hit target for easy hover/focus. */}
+                {interactive ? (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={14}
+                    fill="transparent"
+                    stroke="transparent"
+                    strokeWidth={2}
+                  />
+                ) : null}
+                {isActive ? (
+                  <circle
+                    cx={cx}
+                    cy={cy}
+                    r={small ? 7 : 10}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={2}
+                    opacity={0.85}
+                    pointerEvents="none"
+                  />
+                ) : null}
                 <circle
                   cx={cx}
                   cy={cy}
-                  r={small ? 4 : 6}
+                  r={isActive ? (small ? 5 : 7.5) : small ? 4 : 6}
                   fill={color}
                   stroke="var(--surface)"
                   strokeWidth={2}
+                  // In interactive mode the transparent hit circle above captures
+                  // events; in snapshot (small) mode the marker itself must remain
+                  // hoverable so its native <title> tooltip works.
+                  pointerEvents={interactive ? "none" : undefined}
                 >
-                  <title>{`${domainName}: ${dirLabel}`}</title>
+                  {!interactive ? (
+                    <title>{`${domainName}: ${dirLabel}`}</title>
+                  ) : null}
                 </circle>
                 {!small ? (
                   <text
@@ -256,6 +387,7 @@ export function CalibrationPlot({
                     y={cy - 9}
                     textAnchor="middle"
                     className="fill-[color:var(--fg)] text-[8px] font-semibold"
+                    pointerEvents="none"
                   >
                     {domainGlyph(p.domain)}
                   </text>
@@ -288,6 +420,84 @@ export function CalibrationPlot({
           ) : null}
         </svg>
       </div>
+
+      {/* Live readout — driven by the hovered/focused point (full mode) */}
+      {!small ? (
+        <div
+          className="mt-3 rounded-control border border-border bg-bg-subtle p-3"
+          aria-live="polite"
+        >
+          {activePoint
+            ? (() => {
+                const color = directionColor[activePoint.direction];
+                const confPct = Math.round(activePoint.confidence * 100);
+                const compPct = Math.round(activePoint.competence * 100);
+                const gapPts = Math.abs(confPct - compPct);
+                const gapText = t(`calibration.gap.${activePoint.direction}`, {
+                  points: gapPts,
+                });
+                return (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-flex h-5 w-6 items-center justify-center rounded-full text-[10px] font-bold"
+                        style={{
+                          color,
+                          backgroundColor: `color-mix(in srgb, ${color} 16%, transparent)`,
+                        }}
+                        aria-hidden
+                      >
+                        {domainGlyph(activePoint.domain)}
+                      </span>
+                      <span className="text-sm font-semibold text-fg">
+                        {t(`feedback.domains.${activePoint.domain}`)}
+                      </span>
+                      <span
+                        className="ml-auto text-xs font-medium"
+                        style={{ color }}
+                      >
+                        {t(`calibration.direction.${activePoint.direction}`)}
+                      </span>
+                    </div>
+                    <div className="mt-2.5 grid grid-cols-3 gap-2">
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-muted">
+                          {t("calibration.readoutConfidence")}
+                        </span>
+                        <span className="font-mono text-sm font-semibold text-fg">
+                          {confPct}%
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-muted">
+                          {t("calibration.readoutPerformance")}
+                        </span>
+                        <span className="font-mono text-sm font-semibold text-fg">
+                          {compPct}%
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="text-[10px] uppercase tracking-wide text-muted">
+                          {t("calibration.readoutGap")}
+                        </span>
+                        <span
+                          className="text-center text-xs font-semibold leading-tight"
+                          style={{ color }}
+                        >
+                          {gapText}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
+            : (
+                <p className="text-xs text-muted">
+                  {t("calibration.readoutDefault")}
+                </p>
+              )}
+        </div>
+      ) : null}
 
       {/* Legend (full mode) */}
       {!small ? (
@@ -337,6 +547,42 @@ export function CalibrationPlot({
         </ul>
       ) : null}
 
+      {/* Quadrant legend (full mode) — reads the scatter as four regions. */}
+      {!small ? (
+        <div className="mt-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              {t("calibration.quadrantLegend.heading")}
+            </p>
+            <p className="text-[11px] text-muted">
+              {t("calibration.quadrantLegend.hint")}
+            </p>
+          </div>
+          <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {QUADRANTS.map((q) => (
+              <li
+                key={q.key}
+                className="flex items-start gap-2 rounded-control border border-border bg-surface p-2.5"
+              >
+                <span
+                  aria-hidden
+                  className="mt-0.5 inline-block h-2.5 w-2.5 shrink-0 rounded-sm"
+                  style={{ backgroundColor: q.tint }}
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-fg">
+                    {t(`calibration.quadrant.${q.key}`)}
+                  </p>
+                  <p className="text-[11px] leading-snug text-muted">
+                    {t(`calibration.quadrantLegend.${q.key}`)}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {/* Visually-hidden data table equivalent */}
       <figcaption className="sr-only">
         <table>
@@ -363,7 +609,6 @@ export function CalibrationPlot({
         <p>
           {t("calibration.trajectory")}:{" "}
           {(trajectory ?? []).map((g) => `${Math.round(g * 100)}%`).join(", ")}
-          {lang === "tr" ? "" : ""}
         </p>
       </figcaption>
     </figure>
