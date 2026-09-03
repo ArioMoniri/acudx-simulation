@@ -7,3 +7,4 @@ export { CompactVitals, type CompactVitalsProps } from "./CompactVitals";
 export { FloorPanel, type FloorPanelProps } from "./FloorPanel";
 export { DebriefPanel, type DebriefPanelProps } from "./DebriefPanel";
 export { RoleScopeBar, type RoleScopeBarProps } from "./RoleScopeBar";
+export { JoinByCode, type JoinByCodeProps } from "./JoinByCode";

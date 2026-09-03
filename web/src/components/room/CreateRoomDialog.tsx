@@ -5,7 +5,7 @@ import { X, Plus, Users, Robot } from "@phosphor-icons/react";
 import { Button, Switch } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { ROLE_ICON } from "./roleMeta";
-import { CLINICAL_ROLE_ORDER, type ClinicalRole } from "@/data/rooms";
+import { CLINICAL_ROLE_ORDER, type ClinicalRole, type RoomLocale } from "@/data/rooms";
 import { seedCases } from "@/data/seedCases";
 import type { Lang } from "@/data/mock";
 import { pick } from "@/components/ehr/labels";
@@ -14,11 +14,13 @@ export interface CreateRoomDialogProps {
   open: boolean;
   onClose: () => void;
   lang: Lang;
-  /** Called with the chosen case + which roles are human seats (rest AI). */
+  /** Called with the chosen case, which roles are human seats (rest AI), the
+   *  AI-backfill toggle, and the shared encounter language for the room. */
   onCreate: (config: {
     caseId: string;
     humanRoles: ClinicalRole[];
     aiBackfill: boolean;
+    locale: RoomLocale;
   }) => void;
 }
 
@@ -42,6 +44,7 @@ export function CreateRoomDialog({
   // The learner always holds Doctor by default; the rest start AI-backfilled.
   const [humanRoles, setHumanRoles] = useState<ClinicalRole[]>(["doctor"]);
   const [aiBackfill, setAiBackfill] = useState(true);
+  const [locale, setLocale] = useState<RoomLocale>(lang);
 
   // Reset the form each time the dialog opens.
   useEffect(() => {
@@ -49,8 +52,9 @@ export function CreateRoomDialog({
       setCaseId(seedCases[0]?.id ?? "");
       setHumanRoles(["doctor"]);
       setAiBackfill(true);
+      setLocale(lang);
     }
-  }, [open]);
+  }, [open, lang]);
 
   // Escape to close; move focus into the panel on open.
   useEffect(() => {
@@ -75,8 +79,10 @@ export function CreateRoomDialog({
   }
 
   function submit() {
-    onCreate({ caseId, humanRoles, aiBackfill });
+    onCreate({ caseId, humanRoles, aiBackfill, locale });
   }
+
+  const locales: RoomLocale[] = ["tr", "en"];
 
   return (
     <div
@@ -230,6 +236,40 @@ export function CreateRoomDialog({
             aria-label={t("rooms.create.backfillLabel")}
           />
         </label>
+
+        {/* Encounter language */}
+        <fieldset className="mt-5">
+          <legend className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {t("rooms.create.localeLabel")}
+          </legend>
+          <p className="mt-1 text-xs text-muted">{t("rooms.create.localeHint")}</p>
+          <div
+            className="mt-2 inline-flex rounded-control border border-border bg-bg-subtle p-1"
+            role="radiogroup"
+            aria-label={t("rooms.create.localeLabel")}
+          >
+            {locales.map((loc) => {
+              const selected = loc === locale;
+              return (
+                <button
+                  key={loc}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setLocale(loc)}
+                  className={cn(
+                    "min-h-9 rounded-[7px] px-3 text-sm font-medium transition-colors duration-200 ease-out focus-visible:outline-none",
+                    selected
+                      ? "bg-surface text-fg shadow-soft"
+                      : "text-muted hover:text-fg",
+                  )}
+                >
+                  {t(`rooms.locale.${loc}`)}
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
 
         {/* Actions */}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

@@ -1,25 +1,40 @@
 import { useTranslation } from "react-i18next";
-import { Crown, UsersThree, Info } from "@phosphor-icons/react";
+import { Crown, UsersThree, Info, ArrowsClockwise } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/cn";
-import { acsDebrief, type DebriefMark } from "@/data/rooms";
+import { acsDebrief, type DebriefData, type DebriefMark } from "@/data/rooms";
 import type { Lang } from "@/data/mock";
 
 export interface DebriefPanelProps {
   lang: Lang;
+  /** Debrief marks to render. Defaults to the ACS drill fixture. */
+  data?: DebriefData;
+  /** Whether this device wore the team-lead hat (overrides `data.woreHat`). */
+  woreHat?: boolean;
+  /** Live closed-loop tally from THIS session (shown as a real signal). */
+  loopsClosed?: { closed: number; total: number };
+  /** True once the session has ended; otherwise the marks are illustrative. */
+  live?: boolean;
 }
 
 /**
- * DebriefPanel — the debrief stub (Screen 6.4). Two clearly SEPARATED columns:
- * your INDIVIDUAL leadership marks (only if you wore the team-lead hat) and the
- * TEAM's shared CLINICAL marks — so a strong leader on a weak team (or the
- * reverse) is legible, and the two are never conflated. AI-held roles are
- * labelled and never scored as humans. Bars pair a numeric label with the fill
- * so the score is never colour- or width-only.
+ * DebriefPanel — the debrief (Screen 6.4). Two clearly SEPARATED columns: your
+ * INDIVIDUAL leadership marks (only if you wore the team-lead hat) and the TEAM's
+ * shared CLINICAL marks — so a strong leader on a weak team (or the reverse) is
+ * legible, and the two are never conflated. AI-held roles are labelled and never
+ * scored as humans. Bars pair a numeric label with the fill so the score is
+ * never colour- or width-only. When a live session drives it, the closed-loop
+ * tally the learner actually completed is surfaced as a real, earned signal.
  */
-export function DebriefPanel({ lang }: DebriefPanelProps) {
+export function DebriefPanel({
+  lang,
+  data = acsDebrief,
+  woreHat,
+  loopsClosed,
+  live = false,
+}: DebriefPanelProps) {
   const { t } = useTranslation();
-  const data = acsDebrief;
+  const showLeadership = woreHat ?? data.woreHat;
 
   return (
     <section
@@ -31,6 +46,26 @@ export function DebriefPanel({ lang }: DebriefPanelProps) {
         <p className="mt-1 text-xs text-muted">{t("rooms.debrief.subtitle")}</p>
       </div>
 
+      {/* Live closed-loop signal earned this session */}
+      {loopsClosed ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-border bg-bg-subtle px-3 py-2.5">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-fg">
+            <ArrowsClockwise weight="bold" className="h-3.5 w-3.5 text-brand" aria-hidden />
+            {t("rooms.debrief.loopsClosed")}
+          </span>
+          <span className="font-mono text-sm font-semibold tabular-nums text-fg">
+            {t("rooms.debrief.loopsValue", { closed: loopsClosed.closed, total: loopsClosed.total })}
+          </span>
+        </div>
+      ) : null}
+
+      {!live ? (
+        <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted">
+          <Info weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+          {t("rooms.debrief.pending")}
+        </p>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2">
         {/* Individual leadership marks */}
         <div className="rounded-control border border-border bg-bg-subtle p-3.5">
@@ -38,7 +73,7 @@ export function DebriefPanel({ lang }: DebriefPanelProps) {
             <Crown weight="fill" className="h-3.5 w-3.5 text-brand" aria-hidden />
             {t("rooms.debrief.individual")}
           </h3>
-          {data.woreHat ? (
+          {showLeadership ? (
             <ul className="mt-3 flex flex-col gap-3">
               {data.leadership.map((m, i) => (
                 <MarkRow key={i} mark={m} lang={lang} axis="communication" />
