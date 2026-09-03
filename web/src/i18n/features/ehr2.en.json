@@ -1,0 +1,79 @@
+{
+  "ehr2": {
+    "orders": {
+      "searchLabel": "Search orders",
+      "searchPlaceholder": "Search labs, imaging, medications...",
+      "clearSearch": "Clear search",
+      "noMatches": "No orders match your search.",
+      "itemsCount": "{{count}} available",
+      "summary": "{{placed}} placed, {{pending}} pending, {{resulted}} resulted",
+      "inProgressHeading": "In progress",
+      "resultedHeading": "Resulted",
+      "readyIn": "ready in ~{{sec}}s",
+      "readyNow": "finalising...",
+      "progressLabel": "{{name}} result progress",
+      "resultsHint": "Results appear in the Results tab as they finalise."
+    },
+    "results": {
+      "summaryHeading": "Result summary",
+      "resultedOf": "{{done}} of {{total}} orders resulted",
+      "pendingCount": "{{count}} pending",
+      "abnormalCount": "{{count}} abnormal",
+      "criticalCount": "{{count}} critical",
+      "criticalHeading": "Critical values",
+      "criticalNote": "Review and act on critical results without delay.",
+      "filterAbnormal": "Abnormal only",
+      "noAbnormal": "No abnormal results to show.",
+      "readyIn": "ready in ~{{sec}}s",
+      "finalReport": "Final report"
+    },
+    "flowsheet": {
+      "summaryHeading": "Latest vitals",
+      "baselineTrend": "vs baseline",
+      "legendHeading": "Status key",
+      "latest": "Latest"
+    },
+    "chartReview": {
+      "summaryHeading": "Activity so far",
+      "questions": "Questions",
+      "exams": "Exams",
+      "orders": "Orders",
+      "results": "Results",
+      "offTask": "off-task moves",
+      "offTaskHint": "moments the encounter drifted from the clinical task",
+      "filterLabel": "Filter timeline by activity",
+      "filterAll": "All",
+      "filterQuestions": "History",
+      "filterExam": "Exam",
+      "filterOrders": "Orders",
+      "filterResults": "Results",
+      "emptyFiltered": "No activity of this type yet.",
+      "noNewInfo": "No new information",
+      "repeated": "Repeated"
+    },
+    "ap": {
+      "optionsCount": "{{count}} options",
+      "differentialCount": "{{count}} in differential",
+      "rankLabel": "Priority {{n}}",
+      "quickPlanHeading": "Quick add to plan",
+      "dispositionHeading": "Disposition",
+      "insertHint": "Add a starting point, then edit before saving.",
+      "planCharCount": "{{count}} characters",
+      "planCount": "{{count}} plan entries",
+      "quick": {
+        "access": "Establish IV access and send bloods",
+        "monitor": "Continuous cardiac and SpO2 monitoring",
+        "analgesia": "Titrated analgesia and antiemetic",
+        "reassess": "Reassess after initial management",
+        "seniorReview": "Escalate for senior review"
+      },
+      "dispo": {
+        "admitWard": "Admit to ward",
+        "admitIcu": "Admit to intensive care",
+        "observation": "Observation unit",
+        "discharge": "Discharge with safety-netting",
+        "refer": "Refer to specialty"
+      }
+    }
+  }
+}

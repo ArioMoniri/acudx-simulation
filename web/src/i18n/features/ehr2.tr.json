@@ -1,0 +1,79 @@
+{
+  "ehr2": {
+    "orders": {
+      "searchLabel": "İstem ara",
+      "searchPlaceholder": "Laboratuvar, görüntüleme, ilaç ara...",
+      "clearSearch": "Aramayı temizle",
+      "noMatches": "Aramanızla eşleşen istem yok.",
+      "itemsCount": "{{count}} mevcut",
+      "summary": "{{placed}} verildi, {{pending}} bekliyor, {{resulted}} sonuçlandı",
+      "inProgressHeading": "İşlemde",
+      "resultedHeading": "Sonuçlandı",
+      "readyIn": "yaklaşık {{sec}} sn içinde hazır",
+      "readyNow": "sonlandırılıyor...",
+      "progressLabel": "{{name}} sonuç ilerlemesi",
+      "resultsHint": "Sonuçlar hazır oldukça Sonuçlar sekmesinde görünür."
+    },
+    "results": {
+      "summaryHeading": "Sonuç özeti",
+      "resultedOf": "{{total}} istemin {{done}} tanesi sonuçlandı",
+      "pendingCount": "{{count}} bekliyor",
+      "abnormalCount": "{{count}} anormal",
+      "criticalCount": "{{count}} kritik",
+      "criticalHeading": "Kritik değerler",
+      "criticalNote": "Kritik sonuçları geciktirmeden değerlendirin ve müdahale edin.",
+      "filterAbnormal": "Yalnızca anormal",
+      "noAbnormal": "Gösterilecek anormal sonuç yok.",
+      "readyIn": "yaklaşık {{sec}} sn içinde hazır",
+      "finalReport": "Nihai rapor"
+    },
+    "flowsheet": {
+      "summaryHeading": "Son vital bulgular",
+      "baselineTrend": "başlangıca göre",
+      "legendHeading": "Durum anahtarı",
+      "latest": "Son"
+    },
+    "chartReview": {
+      "summaryHeading": "Şu ana kadarki etkinlik",
+      "questions": "Sorular",
+      "exams": "Muayeneler",
+      "orders": "İstemler",
+      "results": "Sonuçlar",
+      "offTask": "konu dışı hamle",
+      "offTaskHint": "görüşmenin klinik görevden uzaklaştığı anlar",
+      "filterLabel": "Zaman çizelgesini etkinliğe göre filtrele",
+      "filterAll": "Tümü",
+      "filterQuestions": "Anamnez",
+      "filterExam": "Muayene",
+      "filterOrders": "İstemler",
+      "filterResults": "Sonuçlar",
+      "emptyFiltered": "Bu türde henüz etkinlik yok.",
+      "noNewInfo": "Yeni bilgi yok",
+      "repeated": "Tekrarlandı"
+    },
+    "ap": {
+      "optionsCount": "{{count}} seçenek",
+      "differentialCount": "Ayırıcı tanıda {{count}}",
+      "rankLabel": "Öncelik {{n}}",
+      "quickPlanHeading": "Plana hızlı ekle",
+      "dispositionHeading": "Sonlandırma",
+      "insertHint": "Bir başlangıç ekleyin, kaydetmeden önce düzenleyin.",
+      "planCharCount": "{{count}} karakter",
+      "planCount": "{{count}} plan girdisi",
+      "quick": {
+        "access": "Damar yolu aç ve kan tetkiki gönder",
+        "monitor": "Sürekli kardiyak ve SpO2 monitörizasyonu",
+        "analgesia": "Titre edilmiş analjezi ve antiemetik",
+        "reassess": "İlk tedaviden sonra yeniden değerlendir",
+        "seniorReview": "Uzman değerlendirmesi için yükselt"
+      },
+      "dispo": {
+        "admitWard": "Servise yatış",
+        "admitIcu": "Yoğun bakıma yatış",
+        "observation": "Gözlem birimi",
+        "discharge": "Güvenlik önerileriyle taburculuk",
+        "refer": "İlgili branşa yönlendirme"
+      }
+    }
+  }
+}
