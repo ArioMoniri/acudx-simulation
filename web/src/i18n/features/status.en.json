@@ -1,0 +1,14 @@
+{
+  "status": {
+    "pill": {
+      "online": "Live backend online",
+      "offline": "Live backend offline",
+      "checking": "Checking backend"
+    },
+    "boundary": {
+      "title": "This screen ran into a problem",
+      "body": "An unexpected error interrupted the page. Your progress and transcript are safe. Reload to continue where you left off.",
+      "reload": "Reload the page"
+    }
+  }
+}

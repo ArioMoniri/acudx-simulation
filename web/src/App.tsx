@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 
 import { AppFrame, PageContainer } from "@/components/shell";
 import { RouteFallback } from "@/components/shell/RouteFallback";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui";
 
 /* -------------------------------------------------------------------------- */
@@ -78,22 +79,24 @@ function NotFoundPage() {
 export default function App() {
   return (
     <AppFrame>
-      <Suspense fallback={<RouteFallback />}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/welcome" element={<LandingPage />} />
-          <Route path="/authoring" element={<AuthoringPage />} />
-          <Route path="/start" element={<StartPage />} />
-          <Route path="/cases" element={<CasesPage />} />
-          <Route path="/rooms" element={<RoomPage />} />
-          <Route path="/rooms/:id" element={<RoomPage />} />
-          <Route path="/encounter" element={<EncounterPage />} />
-          <Route path="/feedback" element={<FeedbackPage />} />
-          <Route path="/progress" element={<ProgressPage />} />
-          <Route path="/institution" element={<InstitutionPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
+      <ErrorBoundary>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/welcome" element={<LandingPage />} />
+            <Route path="/authoring" element={<AuthoringPage />} />
+            <Route path="/start" element={<StartPage />} />
+            <Route path="/cases" element={<CasesPage />} />
+            <Route path="/rooms" element={<RoomPage />} />
+            <Route path="/rooms/:id" element={<RoomPage />} />
+            <Route path="/encounter" element={<EncounterPage />} />
+            <Route path="/feedback" element={<FeedbackPage />} />
+            <Route path="/progress" element={<ProgressPage />} />
+            <Route path="/institution" element={<InstitutionPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </AppFrame>
   );
 }

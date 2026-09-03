@@ -1,0 +1,14 @@
+{
+  "status": {
+    "pill": {
+      "online": "Canlı arka uç çevrimiçi",
+      "offline": "Canlı arka uç çevrimdışı",
+      "checking": "Arka uç denetleniyor"
+    },
+    "boundary": {
+      "title": "Bu ekranda bir sorun oluştu",
+      "body": "Beklenmeyen bir hata sayfayı kesintiye uğrattı. İlerlemeniz ve görüşme kaydınız güvende. Kaldığınız yerden devam etmek için sayfayı yeniden yükleyin.",
+      "reload": "Sayfayı yeniden yükle"
+    }
+  }
+}
