@@ -113,7 +113,9 @@ class Settings(BaseSettings):
     #     and defensive — see model_gateway.embed()/rerank()). --------------- #
     embed_url: str = "http://127.0.0.1:8003"
     embed_dim: int = 768                 # ytu-ce-cosmos/modernbert-tr-embed
+    embed_model: str = "ytu-ce-cosmos/modernbert-tr-embed"
     rerank_url: str = "http://127.0.0.1:8004"
+    rerank_model: str = "ytu-ce-cosmos/modernbert-tr-reranker"
 
     # --- Air-gap ------------------------------------------------------------ #
     airgapped: bool = True
