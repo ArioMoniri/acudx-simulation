@@ -19,7 +19,8 @@ import { PageContainer } from "@/components/shell";
 import { Button, Card, Badge } from "@/components/ui";
 import { CaseInstanceCard } from "@/components";
 import { SimBadge } from "@/components/ehr";
-import { useEntry, useLang } from "@/lib/useLang";
+import { useLang } from "@/lib/useLang";
+import { useReveal, useHoverLift } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 import { seedCases } from "@/data/seedCases";
 import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
@@ -253,10 +254,11 @@ export function CasesPage() {
   const lang = useLang();
   const navigate = useNavigate();
 
-  const header = useEntry();
-  const genEntry = useEntry(0.05);
-  const filterEntry = useEntry(0.09);
-  const gridEntry = useEntry(0.13);
+  const header = useReveal();
+  const genEntry = useReveal(0.05);
+  const filterEntry = useReveal(0.09);
+  const gridEntry = useReveal(0.13);
+  const cardLift = useHoverLift();
 
   // Generated cases live in page state so the library grows without a reload,
   // demonstrating the unlimited non-repeating generation claim. Newest first.
@@ -428,9 +430,9 @@ export function CasesPage() {
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {visible.map((c) => (
-              <li key={c.id} className="flex">
+              <motion.li key={c.id} {...cardLift} className="flex">
                 <CaseInstanceCard data={c} lang={lang} onStart={startCase} />
-              </li>
+              </motion.li>
             ))}
           </ul>
         )}
