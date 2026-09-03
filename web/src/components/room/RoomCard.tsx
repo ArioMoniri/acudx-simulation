@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
@@ -12,6 +12,7 @@ import { Card, Badge, Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { RoleAvatar } from "./RoleAvatar";
 import { ROLE_ICON } from "./roleMeta";
+import { joinRoom } from "./roomStore";
 import {
   effectiveHolder,
   seatFill,
@@ -33,7 +34,14 @@ export interface RoomCardProps {
  */
 export function RoomCard({ room, lang }: RoomCardProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const fill = seatFill(room);
+
+  // Entering from the lobby genuinely takes an open seat, then routes in.
+  function enterRoom() {
+    joinRoom(room.id);
+    navigate(`/rooms/${room.id}`);
+  }
 
   const statusTone =
     room.status === "in-progress"
@@ -88,6 +96,10 @@ export function RoomCard({ room, lang }: RoomCardProps) {
         <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-subtle px-2.5 py-0.5 text-xs font-medium text-muted">
           <Users weight="bold" className="h-3 w-3" aria-hidden />
           {t("rooms.card.seatsFilled", { filled: fill.filled, total: fill.total })}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-subtle px-2.5 py-0.5 text-xs font-medium text-muted">
+          <span className="text-muted">{t("rooms.card.code")}</span>
+          <span className="font-mono tracking-wide text-fg">{room.joinCode}</span>
         </span>
       </div>
 
@@ -150,16 +162,14 @@ export function RoomCard({ room, lang }: RoomCardProps) {
           })}
         </span>
         <Button
-          asChild
           size="sm"
           variant={room.status === "open" ? "primary" : "secondary"}
+          onClick={enterRoom}
           trailingIcon={<ArrowRight weight="bold" className="h-3.5 w-3.5" />}
         >
-          <Link to={`/rooms/${room.id}`}>
-            {room.status === "in-progress"
-              ? t("rooms.card.rejoin")
-              : t("rooms.card.takeSeat")}
-          </Link>
+          {room.status === "in-progress"
+            ? t("rooms.card.rejoin")
+            : t("rooms.card.takeSeat")}
         </Button>
       </div>
     </Card>

@@ -1,0 +1,69 @@
+{
+  "rooms": {
+    "join": {
+      "title": "Kodla katıl",
+      "subtitle": "Bir ekip arkadaşından oda kodun mu var? Açık bir koltuğa oturmak için gir.",
+      "label": "Oda kodu",
+      "placeholder": "Oda kodu, örn. ACS-7K2",
+      "action": "Katıl",
+      "notFound": "Bu kodla eşleşen açık oda yok. Kontrol edip yeniden dene.",
+      "or": "veya"
+    },
+    "card": {
+      "code": "Kod",
+      "copyCode": "Oda kodunu kopyala",
+      "copied": "Kopyalandı"
+    },
+    "create": {
+      "localeLabel": "Görüşme dili",
+      "localeHint": "Tüm oda için ortak canlandırma dili."
+    },
+    "phase": {
+      "startSession": "Oturumu başlat",
+      "endSession": "Bitir ve değerlendir",
+      "reopen": "Odayı yeniden aç",
+      "startedNote": "Ekip saati işliyor. Roller kendi yetki alanlarına kilitli."
+    },
+    "invite": {
+      "label": "Davet kodu",
+      "copy": "Davet kodunu kopyala",
+      "copied": "Kopyalandı",
+      "hint": "Bir ekip arkadaşının açık koltuğa oturabilmesi için bu kodu paylaş."
+    },
+    "inroom": {
+      "takeThisSeat": "Koltuğa geç",
+      "takeSeatAria": "{{role}} koltuğuna geç",
+      "leaveSeat": "Koltuğu bırak",
+      "leaveSeatAria": "{{role}} koltuğunu bırak",
+      "ready": "Hazır",
+      "notReady": "Hazır değil",
+      "toggleReadyAria": "{{role}} koltuğu için hazır durumunu değiştir",
+      "makeLead": "Ekip lideri yap",
+      "makeLeadAria": "Ekip lideri şapkasını {{role}} rolüne ver",
+      "giveFloor": "Sözü ver",
+      "giveFloorAria": "Sözü {{role}} rolüne ver",
+      "handRaised": "El kaldırdı",
+      "hasFloor": "Söz sırası",
+      "seatControlsLabel": "Koltuk denetimleri",
+      "backfillInline": "AI yedek",
+      "backfillInlineAria": "Boş koltukları AI ile doldur",
+      "requestFloorAgain": "Söz isteniyor",
+      "lowerHand": "Eli indir",
+      "youRaised": "Elin kalkık. Ekip lideri sözü sana verecek.",
+      "youHaveFloor": "Söz sende",
+      "passFloor": "Sözü bırak",
+      "floorControlsLabel": "Söz ve sıra denetimi",
+      "observer": "İzleyici",
+      "observerScope": "Bu odayı izliyorsun. Odada rol almak için bir koltuğa geç.",
+      "delegatedNote": "Görev dağılımı ve talepler ekip tahtasına yazılır ve kanıt olarak kaydedilir.",
+      "sbarPosted": "Yükseltme ekip tahtasına yazıldı",
+      "youClosedLoop": "Bu döngüyü sen onayladın"
+    },
+    "debrief": {
+      "live": "Bu oturumdan canlı",
+      "loopsClosed": "Tamamladığın kapalı döngü onayları",
+      "loopsValue": "{{total}} içinden {{closed}}",
+      "pending": "Aşağıdaki notlar oturum bitene kadar örnektir."
+    }
+  }
+}

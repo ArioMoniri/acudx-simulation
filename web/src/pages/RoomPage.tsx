@@ -8,6 +8,11 @@ import {
   ArrowLeft,
   ShieldCheck,
   Broadcast,
+  Play,
+  Flag,
+  ArrowCounterClockwise,
+  Copy,
+  Check,
 } from "@phosphor-icons/react";
 
 import { PageContainer } from "@/components/shell";
@@ -22,23 +27,35 @@ import {
   FloorPanel,
   DebriefPanel,
   RoleScopeBar,
+  JoinByCode,
 } from "@/components/room";
+import {
+  useRoomList,
+  useRoomRuntime,
+  createRoom,
+  joinByCode,
+  takeSeat,
+  leaveSeat,
+  toggleReady,
+  setBackfill,
+  claimLead,
+  raiseHand,
+  lowerHand,
+  grantFloor,
+  passFloor,
+  escalateFloor,
+  delegateFloor,
+  promptDoctorFloor,
+  closeLoop,
+  setPhase,
+  closedLoopStats,
+  openLoopEvent,
+  type RoomRuntime,
+} from "@/components/room/roomStore";
 import { useEntry, useLang } from "@/lib/useLang";
-import {
-  rooms,
-  getRoom,
-  roomCase,
-  acsFloor,
-  type ClinicalRole,
-  type FloorEvent,
-  type Room,
-} from "@/data/rooms";
+import { roomCase, type ClinicalRole, type Room } from "@/data/rooms";
 import { getSeedCase } from "@/data/seedCases";
-import {
-  resetEncounter,
-  startEncounter,
-  useEncounterState,
-} from "@/state/encounterStore";
+import { resetEncounter, startEncounter, useEncounterState } from "@/state/encounterStore";
 
 /* -------------------------------------------------------------------------- */
 /* Lobby (/rooms)                                                              */
@@ -51,20 +68,34 @@ function Lobby() {
   const top = useEntry();
   const body = useEntry(0.06);
 
+  const roomsList = useRoomList();
   const [createOpen, setCreateOpen] = useState(false);
 
   const handleCreate = useCallback(
-    (config: { caseId: string; humanRoles: ClinicalRole[]; aiBackfill: boolean }) => {
-      // Mock creation: the first matching room for that case is opened, or the
-      // solo case fallback. In production this mints a real LiveKit room.
+    (config: {
+      caseId: string;
+      humanRoles: ClinicalRole[];
+      aiBackfill: boolean;
+      locale: "tr" | "en";
+    }) => {
       setCreateOpen(false);
-      const existing = rooms.find((r) => r.caseId === config.caseId && r.status === "open");
-      navigate(`/rooms/${existing ? existing.id : "appy-solo"}`);
+      const id = createRoom(config);
+      navigate(`/rooms/${id}`);
     },
     [navigate],
   );
 
-  const openRooms = rooms.filter((r) => r.status !== "debrief");
+  const handleJoin = useCallback(
+    (code: string): boolean => {
+      const id = joinByCode(code);
+      if (!id) return false;
+      navigate(`/rooms/${id}`);
+      return true;
+    },
+    [navigate],
+  );
+
+  const openRooms = roomsList.filter((r) => r.status !== "debrief");
 
   return (
     <PageContainer width="wide" className="flex flex-col gap-6">
@@ -87,6 +118,11 @@ function Lobby() {
         >
           {t("rooms.lobby.create")}
         </Button>
+      </motion.div>
+
+      {/* Join with a code */}
+      <motion.div {...body}>
+        <JoinByCode onJoin={handleJoin} />
       </motion.div>
 
       {/* Open rooms */}
@@ -132,25 +168,70 @@ function Lobby() {
 /* In-room (/rooms/:id)                                                         */
 /* -------------------------------------------------------------------------- */
 
-/** Which seat this device holds. Prefer a human "you" seat, else the host role. */
-function myRoleFor(room: Room): { role: ClinicalRole; teamLead: boolean } {
-  const mine = room.seats.find((s) => s.holder?.id === "u-me");
-  if (mine) return { role: mine.role, teamLead: mine.teamLead };
+/** Fallback scope when this device only observes: show the team lead's seat. */
+function leadRoleFor(room: Room): ClinicalRole {
   const lead = room.seats.find((s) => s.teamLead) ?? room.seats[0];
-  return { role: lead.role, teamLead: lead.teamLead };
+  return lead.role;
 }
 
-function InRoom({ room }: { room: Room }) {
+/** A small copy-to-clipboard invite chip so a teammate can join by code. */
+function InviteChip({ code }: { code: string }) {
+  const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
+
+  const copy = useCallback(async () => {
+    try {
+      if (!navigator.clipboard) return;
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard may be unavailable; the code stays visible to copy manually.
+    }
+  }, [code]);
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-subtle py-0.5 pl-2.5 pr-1 text-xs font-medium text-muted">
+      <span>{t("rooms.invite.label")}</span>
+      <span className="font-mono tracking-wide text-fg">{code}</span>
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={copied ? t("rooms.invite.copied") : t("rooms.invite.copy")}
+        className="grid h-6 w-6 place-items-center rounded-full text-muted transition-colors duration-200 hover:bg-surface hover:text-fg focus-visible:outline-none"
+      >
+        {copied ? (
+          <Check weight="bold" className="h-3.5 w-3.5 text-[color:var(--state-normal)]" aria-hidden />
+        ) : (
+          <Copy weight="bold" className="h-3.5 w-3.5" aria-hidden />
+        )}
+      </button>
+    </span>
+  );
+}
+
+function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
   const { t } = useTranslation();
   const lang = useLang();
   const top = useEntry();
   const body = useEntry(0.06);
 
-  const caseInstance = useMemo(() => roomCase(room) ?? getSeedCase("em-acs-001"), [room]);
-  const { role: myRole, teamLead } = useMemo(() => myRoleFor(room), [room]);
-  const canOrder = myRole === "doctor";
+  const room = runtime.room;
+  const caseInstance = useMemo(
+    () => roomCase(room) ?? getSeedCase("em-acs-001"),
+    [room.caseId],
+  );
 
-  // Seed the encounter store with the room's case so we can reuse the real
+  // Scope: the seat this device holds, or the lead's seat when only observing.
+  const mine = runtime.mine;
+  const observer = mine == null;
+  const effectiveRole: ClinicalRole = mine ?? leadRoleFor(room);
+  const mySeat = room.seats.find((s) => s.role === effectiveRole);
+  const teamLead = mySeat?.teamLead ?? false;
+  const iAmLead = !observer && teamLead;
+  const canOrder = !observer && effectiveRole === "doctor";
+
+  // Seed the encounter store with the room's case so we reuse the real
   // PatientBanner + Interview interaction over one authoritative Case State.
   const state = useEncounterState();
   useEffect(() => {
@@ -159,29 +240,53 @@ function InRoom({ room }: { room: Room }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.id]);
 
-  // Mock "who is speaking" — rotates through the seats every few seconds so the
-  // room feels live. Reduced-motion users still get the label; only the cadence
-  // is cosmetic.
-  const [speakingIdx, setSpeakingIdx] = useState(0);
+  // Ambient "who is speaking" rotation — paused while a seat explicitly holds
+  // the floor, so the granted floor is authoritative. Reduced-motion users still
+  // read the label; only the pulse is cosmetic.
+  const [rotIdx, setRotIdx] = useState(0);
   useEffect(() => {
-    const id = window.setInterval(() => {
-      setSpeakingIdx((n) => (n + 1) % room.seats.length);
+    if (runtime.floorHolder) return;
+    const iv = window.setInterval(() => {
+      setRotIdx((n) => (n + 1) % room.seats.length);
     }, 3200);
-    return () => window.clearInterval(id);
-  }, [room.seats.length]);
-  const speakingRole = room.seats[speakingIdx]?.role ?? null;
+    return () => window.clearInterval(iv);
+  }, [room.seats.length, runtime.floorHolder]);
+  const speakingRole: ClinicalRole | null =
+    runtime.floorHolder ?? room.seats[rotIdx % room.seats.length]?.role ?? null;
 
-  // Mock closed-loop comms: the ACS floor carries one open loop the learner can
-  // acknowledge / read back. Closing it flips it to a confirmed state.
-  const [events, setEvents] = useState<FloorEvent[]>(acsFloor);
-  const openLoopEvent = events.find((e) => e.loop === "open");
-  const handleCloseLoop = useCallback((id: string) => {
-    setEvents((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, loop: "closed" as const } : e)),
-    );
-  }, []);
+  const openLoop = openLoopEvent(runtime.floor);
+
+  // Controlled tabs: an ended session lands on the debrief; a seat switch that
+  // removes the interview tab falls back to the floor.
+  const initialTab = room.status === "debrief" ? "debrief" : canOrder ? "interview" : "floor";
+  const [tab, setTab] = useState<string>(initialTab);
+  useEffect(() => {
+    if (tab === "interview" && !canOrder) setTab("floor");
+  }, [tab, canOrder]);
 
   const [guidanceOn, setGuidanceOn] = useState(true);
+
+  // Floor + turn handlers (all act on the shared room state).
+  const handleTakeSeat = useCallback((role: ClinicalRole) => takeSeat(id, role), [id]);
+  const handleLeaveSeat = useCallback(() => leaveSeat(id), [id]);
+  const handleToggleReady = useCallback((role: ClinicalRole) => toggleReady(id, role), [id]);
+  const handleClaimLead = useCallback((role: ClinicalRole) => claimLead(id, role), [id]);
+  const handleGrantFloor = useCallback((role: ClinicalRole) => grantFloor(id, role), [id]);
+  const handleToggleBackfill = useCallback((on: boolean) => setBackfill(id, on), [id]);
+  const handleRequestFloor = useCallback(() => raiseHand(id, effectiveRole), [id, effectiveRole]);
+  const handleLowerHand = useCallback(() => lowerHand(id, effectiveRole), [id, effectiveRole]);
+  const handlePassFloor = useCallback(() => passFloor(id), [id]);
+  const handleEscalate = useCallback(() => escalateFloor(id, effectiveRole), [id, effectiveRole]);
+  const handleDelegate = useCallback(() => delegateFloor(id, effectiveRole), [id, effectiveRole]);
+  const handlePromptDoctor = useCallback(
+    () => promptDoctorFloor(id, effectiveRole),
+    [id, effectiveRole],
+  );
+  const handleCloseLoop = useCallback((evId: string) => closeLoop(id, evId), [id]);
+  const handleEndSession = useCallback(() => {
+    setPhase(id, "debrief");
+    setTab("debrief");
+  }, [id]);
 
   if (!caseInstance || !state.caseInstance) {
     return (
@@ -192,21 +297,20 @@ function InRoom({ room }: { room: Room }) {
   }
 
   const affectLabel = t("encounter.affect.distress");
+  const loopStats = closedLoopStats(runtime.floor);
 
   return (
     <PageContainer width="wide" className="flex flex-col gap-4">
-      {/* Back + room title */}
+      {/* Back + room title + phase control */}
       <motion.div {...top} className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Button asChild size="sm" variant="ghost" leadingIcon={<ArrowLeft weight="bold" className="h-4 w-4" />}>
             <Link to="/rooms">{t("rooms.inroom.backToLobby")}</Link>
           </Button>
           <span className="hidden text-muted sm:inline" aria-hidden>·</span>
-          <h1 className="text-lg font-semibold tracking-tight text-fg">
-            {room.title[lang]}
-          </h1>
+          <h1 className="text-lg font-semibold tracking-tight text-fg">{room.title[lang]}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge tone="neutral">{t(`rooms.locale.${room.locale}`)}</Badge>
           <Badge
             tone={room.status === "in-progress" ? "caution" : "normal"}
@@ -214,6 +318,34 @@ function InRoom({ room }: { room: Room }) {
           >
             {t(`rooms.status.${room.status}`)}
           </Badge>
+          <InviteChip code={room.joinCode} />
+          {room.status === "open" ? (
+            <Button
+              size="sm"
+              onClick={() => setPhase(id, "in-progress")}
+              leadingIcon={<Play weight="bold" className="h-4 w-4" />}
+            >
+              {t("rooms.phase.startSession")}
+            </Button>
+          ) : room.status === "in-progress" ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleEndSession}
+              leadingIcon={<Flag weight="bold" className="h-4 w-4" />}
+            >
+              {t("rooms.phase.endSession")}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setPhase(id, "open")}
+              leadingIcon={<ArrowCounterClockwise weight="bold" className="h-4 w-4" />}
+            >
+              {t("rooms.phase.reopen")}
+            </Button>
+          )}
         </div>
       </motion.div>
 
@@ -228,9 +360,22 @@ function InRoom({ room }: { room: Room }) {
         <motion.div {...body} className="flex min-w-0 flex-col gap-4">
           <CompactVitals caseInstance={caseInstance} />
 
-          <RoleScopeBar role={myRole} lang={lang} teamLead={teamLead} />
+          <RoleScopeBar
+            role={effectiveRole}
+            lang={lang}
+            teamLead={teamLead}
+            observer={observer}
+            handRaised={runtime.hands.includes(effectiveRole)}
+            hasFloor={runtime.floorHolder === effectiveRole}
+            onRequestFloor={handleRequestFloor}
+            onLowerHand={handleLowerHand}
+            onPassFloor={handlePassFloor}
+            onEscalate={handleEscalate}
+            onDelegate={handleDelegate}
+            onPromptDoctor={handlePromptDoctor}
+          />
 
-          <Tabs defaultValue={canOrder ? "interview" : "floor"}>
+          <Tabs value={tab} onValueChange={setTab}>
             <TabsList>
               {canOrder ? (
                 <TabsTrigger value="interview">{t("rooms.inroom.tabInterview")}</TabsTrigger>
@@ -254,22 +399,40 @@ function InRoom({ room }: { room: Room }) {
             <TabsContent value="floor">
               <FloorPanel
                 room={room}
-                events={events}
+                events={runtime.floor}
                 lang={lang}
-                openLoopId={openLoopEvent?.id ?? null}
+                openLoopId={openLoop?.id ?? null}
                 onCloseLoop={handleCloseLoop}
               />
             </TabsContent>
 
             <TabsContent value="debrief">
-              <DebriefPanel lang={lang} />
+              <DebriefPanel
+                lang={lang}
+                woreHat={iAmLead}
+                loopsClosed={{ closed: runtime.loopsClosedByMe, total: loopStats.total }}
+                live={room.status === "debrief"}
+              />
             </TabsContent>
           </Tabs>
         </motion.div>
 
-        {/* Room rail — participants + shared team clock */}
+        {/* Room rail — participants + shared team clock + seat control */}
         <motion.div {...body} className="flex flex-col gap-4">
-          <ParticipantsPanel room={room} speakingRole={speakingRole} myRole={myRole} />
+          <ParticipantsPanel
+            room={room}
+            speakingRole={speakingRole}
+            mine={mine}
+            raisedHands={runtime.hands}
+            floorHolder={runtime.floorHolder}
+            iAmLead={iAmLead}
+            onTakeSeat={handleTakeSeat}
+            onLeaveSeat={handleLeaveSeat}
+            onToggleReady={handleToggleReady}
+            onClaimLead={handleClaimLead}
+            onGrantFloor={handleGrantFloor}
+            onToggleBackfill={handleToggleBackfill}
+          />
         </motion.div>
       </div>
 
@@ -283,15 +446,19 @@ function InRoom({ room }: { room: Room }) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * RoomPage — the multiplayer moat (Journey 6). Renders the lobby at /rooms and
- * a role-scoped in-room encounter at /rooms/:id. A believable realtime UI over
- * mock presence and mock floor control; production rides a self-hosted LiveKit
- * WebRTC room (voice/3D premium-gated, text-team-rooms the accessible floor).
+ * RoomPage — the multiplayer moat (Journey 6). Renders the lobby at /rooms and a
+ * role-scoped, genuinely interactive in-room encounter at /rooms/:id: create and
+ * join rooms, take and leave seats, toggle AI backfill, request and pass the
+ * floor, post SBAR turns, close communication loops, and drive the room through
+ * its lifecycle into a debrief that separates individual leadership from team
+ * clinical marks. Believable realtime over a mock store; production rides a
+ * self-hosted LiveKit WebRTC room (voice/3D premium-gated, text the accessible
+ * floor).
  */
 export function RoomPage() {
   const { id } = useParams();
-  const room = id ? getRoom(id) : undefined;
+  const runtime = useRoomRuntime(id);
 
-  if (id && room) return <InRoom room={room} />;
+  if (id && runtime) return <InRoom id={id} runtime={runtime} />;
   return <Lobby />;
 }

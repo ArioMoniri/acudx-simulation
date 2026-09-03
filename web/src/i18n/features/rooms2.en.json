@@ -1,0 +1,69 @@
+{
+  "rooms": {
+    "join": {
+      "title": "Join with a code",
+      "subtitle": "Have a room code from a teammate? Enter it to take an open seat.",
+      "label": "Room code",
+      "placeholder": "Room code, e.g. ACS-7K2",
+      "action": "Join",
+      "notFound": "No open room matches that code. Check it and try again.",
+      "or": "or"
+    },
+    "card": {
+      "code": "Code",
+      "copyCode": "Copy room code",
+      "copied": "Copied"
+    },
+    "create": {
+      "localeLabel": "Encounter language",
+      "localeHint": "The shared roleplay language for the whole room."
+    },
+    "phase": {
+      "startSession": "Start session",
+      "endSession": "End and debrief",
+      "reopen": "Reopen room",
+      "startedNote": "The team clock is running. Roles are locked to their scopes."
+    },
+    "invite": {
+      "label": "Invite code",
+      "copy": "Copy invite code",
+      "copied": "Copied",
+      "hint": "Share this code so a teammate can take an open seat."
+    },
+    "inroom": {
+      "takeThisSeat": "Take seat",
+      "takeSeatAria": "Take the {{role}} seat",
+      "leaveSeat": "Leave seat",
+      "leaveSeatAria": "Leave the {{role}} seat",
+      "ready": "Ready",
+      "notReady": "Not ready",
+      "toggleReadyAria": "Toggle ready for the {{role}} seat",
+      "makeLead": "Make team lead",
+      "makeLeadAria": "Give the team-lead hat to the {{role}}",
+      "giveFloor": "Give floor",
+      "giveFloorAria": "Give the floor to the {{role}}",
+      "handRaised": "Hand raised",
+      "hasFloor": "Has the floor",
+      "seatControlsLabel": "Seat controls",
+      "backfillInline": "AI backfill",
+      "backfillInlineAria": "Backfill empty seats with AI",
+      "requestFloorAgain": "Requesting the floor",
+      "lowerHand": "Lower hand",
+      "youRaised": "Your hand is raised. The team lead will bring you in.",
+      "youHaveFloor": "You have the floor",
+      "passFloor": "Pass the floor",
+      "floorControlsLabel": "Floor and turn control",
+      "observer": "Observer",
+      "observerScope": "You are observing this room. Take a seat to act in it.",
+      "delegatedNote": "Delegation and prompts are posted to the team floor and logged as evidence.",
+      "sbarPosted": "Escalation posted to the floor",
+      "youClosedLoop": "You confirmed this loop"
+    },
+    "debrief": {
+      "live": "Live from this session",
+      "loopsClosed": "Closed-loop confirmations you completed",
+      "loopsValue": "{{closed}} of {{total}}",
+      "pending": "Marks below are illustrative until the session ends."
+    }
+  }
+}
