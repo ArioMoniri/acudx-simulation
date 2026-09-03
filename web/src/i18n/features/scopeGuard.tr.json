@@ -1,0 +1,37 @@
+{
+  "scopeGuard": {
+    "composer": {
+      "label": "Hastaya kendi cümlelerinizle sorun",
+      "placeholder": "Hastaya bir soru yazın, ardından Enter'a basın",
+      "send": "Gönder",
+      "hint": "Mesajınız, hastaya iletilmeden önce konu ve güvenlik açısından denetlenir."
+    },
+    "focus": {
+      "onTask": "Konuya odaklı",
+      "offTaskCount_one": "{{count}} konu dışı",
+      "offTaskCount_other": "{{count}} konu dışı",
+      "tooltip": "Vakadan kaç sorunun uzaklaştığı. Konu dışı ve yanıt arayan sorular klinik tabloyu ilerletmez."
+    },
+    "youAsked": "Sorduğunuz",
+    "dismiss": "Bu bildirimi kapat",
+    "offTopic": {
+      "chip": "Konu dışı · ilerlemiyor",
+      "reply": "Açıkçası bugün neden geldiğimi konuşmayı tercih ederim, doktor.",
+      "note": "Bu, klinik tabloyu ilerletmedi."
+    },
+    "answerSeeking": {
+      "chip": "Rol içinde · yanıt verilmedi",
+      "reply": "Neyim olduğunu gerçekten bilmiyorum. Zaten bunu sizin bulmanızı umuyorum.",
+      "note": "Simülasyon tanıyı size doğrudan vermez. Tetkik ederek ilerleyin."
+    },
+    "injection": {
+      "chip": "Mesaj engellendi",
+      "note": "Bu, asistanın talimatlarını değiştirme girişimi gibi göründü; bu nedenle hastaya iletilmedi."
+    },
+    "unsafe": {
+      "title": "Kısa bir ara verelim",
+      "chip": "Destek",
+      "note": "Zorlanıyorsanız lütfen güvendiğiniz birine ya da yerel bir destek hattına ulaşın. İhtiyaç duyduğunuzda vakaya ara verebiliriz."
+    }
+  }
+}

@@ -55,6 +55,34 @@ export interface EncounterEvent {
   meta?: Record<string, unknown>;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Scope & Injection Guard outcomes (docs/architecture/13 §3, §6)              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Guard-outcome event types. Kept in a SEPARATE log (`guardEvents`) from the
+ * clinical `EncounterEventType` union on purpose: widening that union would
+ * break exhaustive consumers such as ChartReviewTab's
+ * `Record<EncounterEventType, ...>`. Guard outcomes are still event-sourced
+ * (shared seq + sim clock) so process metrics and audit can inherit them
+ * (docs/architecture/13 §6), without polluting the clinical chart timeline.
+ */
+export type GuardEventType = "offtopic" | "answer-seeking" | "injection" | "unsafe";
+
+export interface GuardEvent {
+  /** Shares the encounter's monotonic seq so it interleaves with EncounterEvents. */
+  seq: number;
+  type: GuardEventType;
+  /** Encounter-clock offset in ms (now - startTs). */
+  at: number;
+  /** Bounded snippet of the learner utterance, for audit / feedback citation. */
+  utterance: string;
+  /** Classifier confidence 0..1. */
+  score: number;
+  /** Short audit reason (not a chain-of-thought). */
+  rationale: string;
+}
+
 export type EncounterStage =
   | "chart-review"
   | "interview"
@@ -105,6 +133,8 @@ export interface EncounterState {
   results: ResolvedResult[];
   problemList: ProblemListEntry[];
   events: EncounterEvent[];
+  /** Scope & Injection Guard outcomes (separate from the clinical event log). */
+  guardEvents: GuardEvent[];
   /** Committed diagnosis code, if any. */
   committedDiagnosis: string | null;
 }
@@ -142,6 +172,7 @@ function initialState(): EncounterState {
     results: [],
     problemList: [],
     events: [],
+    guardEvents: [],
     committedDiagnosis: null,
   };
 }
@@ -337,6 +368,30 @@ export function addProblem(entry: Omit<ProblemListEntry, "at">): void {
   });
 }
 
+/**
+ * Log a Scope & Injection Guard outcome (docs/architecture/13 §3). Called for
+ * the non-in-scope classes only — an in-scope utterance advances state through
+ * askQuestion and needs no guard event. Injection payloads are logged here but
+ * are NEVER routed to the dialogue engine. Does not advance the clinical stage.
+ */
+export function logGuardOutcome(input: {
+  type: GuardEventType;
+  utterance: string;
+  score: number;
+  rationale: string;
+}): void {
+  if (!state.caseInstance) return;
+  const ev: GuardEvent = {
+    seq: seqCounter++,
+    type: input.type,
+    at: nowOffset(),
+    utterance: input.utterance.slice(0, 200),
+    score: input.score,
+    rationale: input.rationale.slice(0, 400),
+  };
+  setState({ ...state, guardEvents: [...state.guardEvents, ev] });
+}
+
 /** Advance / set the encounter stage. */
 export function setStage(stage: EncounterStage): void {
   if (!state.caseInstance && stage !== "chart-review") return;
@@ -425,4 +480,29 @@ export function getProblemList(s: EncounterState): ProblemListEntry[] {
 /** Current encounter-clock reading in ms (0 before start). */
 export function getEncounterClockMs(s: EncounterState): number {
   return s.startTs == null ? 0 : Math.max(0, clock() - s.startTs);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Guard-outcome selectors (focus / on-task signal, docs/architecture/13 §6)   */
+/* -------------------------------------------------------------------------- */
+
+/** All Scope & Injection Guard outcomes for this encounter. */
+export function getGuardEvents(s: EncounterState): GuardEvent[] {
+  return s.guardEvents;
+}
+
+/** Count guard events, optionally of one type. */
+export function getGuardEventCount(s: EncounterState, type?: GuardEventType): number {
+  return type ? s.guardEvents.filter((g) => g.type === type).length : s.guardEvents.length;
+}
+
+/**
+ * Off-task move count — the focus / staying-on-task signal (docs §6). Counts
+ * off-topic + answer-seeking turns; injection/unsafe are security/safety, not a
+ * focus lapse, so they are excluded from this indicator.
+ */
+export function getOffTaskCount(s: EncounterState): number {
+  return s.guardEvents.filter(
+    (g) => g.type === "offtopic" || g.type === "answer-seeking",
+  ).length;
 }
