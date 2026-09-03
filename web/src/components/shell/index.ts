@@ -6,3 +6,4 @@ export { LanguageSwitcher } from "./LanguageSwitcher";
 export { ThemeToggle } from "./ThemeToggle";
 export { RoleSwitcher } from "./RoleSwitcher";
 export { GuidedTour } from "./GuidedTour";
+export { BackendStatus } from "./BackendStatus";
