@@ -1,0 +1,9 @@
+{
+  "patient": {
+    "avatar": {
+      "alt": "Illustrated portrait of {{name}}. Presentation: {{state}}.",
+      "synthetic": "Synthetic patient",
+      "decorative": "Illustrated patient portrait"
+    }
+  }
+}

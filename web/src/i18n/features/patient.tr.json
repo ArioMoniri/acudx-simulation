@@ -1,0 +1,9 @@
+{
+  "patient": {
+    "avatar": {
+      "alt": "{{name}} adlı hastanın çizimi. Görünüm: {{state}}.",
+      "synthetic": "Sentetik hasta",
+      "decorative": "Hasta çizimi"
+    }
+  }
+}
