@@ -571,3 +571,248 @@ export const publishedCases: PublishedCase[] = [
     encounters: 42,
   },
 ];
+
+/* -------------------------------------------------------------------------- */
+/* Interactive authoring model (Issue #9)                                      */
+/*                                                                             */
+/* Pure state + transitions for the steppable pipeline, the lock-driven case   */
+/* editor, and the credentialed sign-off gate. No React here: the page owns    */
+/* the reducer, this module owns the rules so they stay testable and the gate  */
+/* is enforced in logic, not in the view. State transitions are modelled as    */
+/* explicit events (blueprint -> monitor mirrors the production contract).     */
+/* -------------------------------------------------------------------------- */
+
+/** Live edit state for a single fact as the reviewer works through it. */
+export interface FactEditState {
+  status: FactStatus;
+  /** True once a clinician edited the AI draft before locking. */
+  humanEdited: boolean;
+}
+
+/** id -> live edit state, seeded from the AI-drafted {@link lockedFacts}. */
+export type FactEditMap = Record<string, FactEditState>;
+
+/** A fresh edit map seeded from the drafted facts (new objects, safe to reset). */
+export function makeInitialFactMap(): FactEditMap {
+  const map: FactEditMap = {};
+  for (const f of lockedFacts) {
+    map[f.id] = { status: f.status, humanEdited: f.humanEdited };
+  }
+  return map;
+}
+
+/** A fact is "locked" for publish once it is locked or edited-and-locked. */
+export function isFactLocked(status: FactStatus): boolean {
+  return status === "locked" || status === "edited-locked";
+}
+
+/**
+ * Facts that still block publish: flagged (ungrounded) or open (cited but not
+ * yet locked). Publish stays disabled while this list is non-empty
+ * (citation-or-refuse, extended into authoring).
+ */
+export function publishBlockers(facts: FactEditMap): string[] {
+  return lockedFacts
+    .filter((f) => {
+      const s = facts[f.id]?.status ?? f.status;
+      return s === "flagged" || s === "open";
+    })
+    .map((f) => f.id);
+}
+
+export function factsClear(facts: FactEditMap): boolean {
+  return publishBlockers(facts).length === 0;
+}
+
+/** How many facts are currently locked (for the review-progress read-out). */
+export function lockedCount(facts: FactEditMap): number {
+  return lockedFacts.filter((f) => isFactLocked(facts[f.id]?.status ?? f.status))
+    .length;
+}
+
+/**
+ * FNV-1a 32-bit short hash — a deterministic 8-hex content fingerprint. Not a
+ * cryptographic hash; it exists so the version identity visibly changes as the
+ * reviewed content changes, then freezes at sign-off.
+ */
+export function shortHash(input: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+/** Live case fingerprint recomputed from the current fact lock states. */
+export function caseFingerprint(facts: FactEditMap): string {
+  const parts = lockedFacts.map((f) => {
+    const s = facts[f.id] ?? { status: f.status, humanEdited: f.humanEdited };
+    return `${f.id}:${s.status}:${s.humanEdited ? 1 : 0}`;
+  });
+  return shortHash(parts.join("|"));
+}
+
+/** Rubric fingerprint — stable while the rubric enum + weights are fixed. */
+export function rubricFingerprint(): string {
+  return shortHash(
+    rubricItems
+      .map((r) => `${r.id}:${r.weight}:${r.safetyCritical ? 1 : 0}`)
+      .join("|"),
+  );
+}
+
+/** Frozen version provenance recorded at sign-off. */
+export interface FrozenVersion {
+  caseHash: string;
+  rubricHash: string;
+}
+
+/** The whole interactive authoring surface, as one serialisable state. */
+export interface AuthoringUIState {
+  /** Index into {@link pipelineStages} for the focused stage. */
+  stageIndex: number;
+  facts: FactEditMap;
+  /** Credentialed clinician has ticked the co-sign box. */
+  cosigned: boolean;
+  published: boolean;
+  /** Version hashes frozen on publish; null until then. */
+  frozen: FrozenVersion | null;
+}
+
+/** Index of the stage that is "active" in the seed data (expert review). */
+export const INITIAL_STAGE_INDEX = pipelineStages.findIndex(
+  (s) => s.state === "active",
+);
+
+export function makeInitialAuthoringState(): AuthoringUIState {
+  return {
+    stageIndex: INITIAL_STAGE_INDEX < 0 ? 0 : INITIAL_STAGE_INDEX,
+    facts: makeInitialFactMap(),
+    cosigned: false,
+    published: false,
+    frozen: null,
+  };
+}
+
+export type AuthoringAction =
+  | { type: "setStage"; index: number }
+  | { type: "next" }
+  | { type: "prev" }
+  | { type: "lock"; id: string }
+  | { type: "editLock"; id: string }
+  | { type: "ground"; id: string }
+  | { type: "unlock"; id: string }
+  | { type: "cosign"; value: boolean }
+  | { type: "publish" }
+  | { type: "unpublish" }
+  | { type: "reset" };
+
+const LAST_STAGE = pipelineStages.length - 1;
+/** Index of the "monitor" stage the flow lands on after a successful publish. */
+const MONITOR_STAGE = pipelineStages.findIndex((s) => s.key === "monitor");
+
+function clampStage(i: number): number {
+  return Math.max(0, Math.min(LAST_STAGE, i));
+}
+
+function setFact(
+  facts: FactEditMap,
+  id: string,
+  next: FactEditState,
+): FactEditMap {
+  if (!facts[id]) return facts;
+  return { ...facts, [id]: next };
+}
+
+/**
+ * The single source of truth for the authoring gate. Publish only takes effect
+ * when the co-sign box is ticked AND every fact is grounded and locked; the
+ * guard lives here so the view cannot bypass it.
+ */
+export function authoringReducer(
+  state: AuthoringUIState,
+  action: AuthoringAction,
+): AuthoringUIState {
+  switch (action.type) {
+    case "setStage":
+      return { ...state, stageIndex: clampStage(action.index) };
+    case "next":
+      return { ...state, stageIndex: clampStage(state.stageIndex + 1) };
+    case "prev":
+      return { ...state, stageIndex: clampStage(state.stageIndex - 1) };
+    case "lock": {
+      const cur = state.facts[action.id];
+      if (!cur || cur.status !== "open") return state;
+      return {
+        ...state,
+        facts: setFact(state.facts, action.id, { ...cur, status: "locked" }),
+      };
+    }
+    case "editLock": {
+      const cur = state.facts[action.id];
+      if (!cur || cur.status !== "open") return state;
+      return {
+        ...state,
+        facts: setFact(state.facts, action.id, {
+          status: "edited-locked",
+          humanEdited: true,
+        }),
+      };
+    }
+    case "ground": {
+      const cur = state.facts[action.id];
+      if (!cur || cur.status !== "flagged") return state;
+      return {
+        ...state,
+        facts: setFact(state.facts, action.id, {
+          status: "edited-locked",
+          humanEdited: true,
+        }),
+      };
+    }
+    case "unlock": {
+      const cur = state.facts[action.id];
+      if (!cur || !isFactLocked(cur.status)) return state;
+      // Unlocking re-opens the fact, which re-blocks publish (the gate is live).
+      return {
+        ...state,
+        cosigned: false,
+        facts: setFact(state.facts, action.id, { ...cur, status: "open" }),
+      };
+    }
+    case "cosign":
+      return { ...state, cosigned: action.value };
+    case "publish": {
+      // Hard gate: co-signed AND no ungrounded/unlocked facts.
+      if (!state.cosigned || !factsClear(state.facts)) return state;
+      return {
+        ...state,
+        published: true,
+        frozen: {
+          caseHash: caseFingerprint(state.facts),
+          rubricHash: rubricFingerprint(),
+        },
+        stageIndex: MONITOR_STAGE < 0 ? state.stageIndex : MONITOR_STAGE,
+      };
+    }
+    case "unpublish":
+      return { ...state, published: false, frozen: null };
+    case "reset":
+      return makeInitialAuthoringState();
+    default:
+      return state;
+  }
+}
+
+/** Derived display state for a pipeline node, given the focused stage. */
+export function stageDisplayState(
+  index: number,
+  current: number,
+  published: boolean,
+): StageState {
+  if (published && index <= current) return "done";
+  if (index < current) return "done";
+  if (index === current) return "active";
+  return "pending";
+}

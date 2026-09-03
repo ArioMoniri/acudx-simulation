@@ -1,0 +1,60 @@
+{
+  "authoring2": {
+    "intro": "Vakayı yapay zeka taslağından imzalı, sürümlü bir yayına kadar adım adım ilerletin. Süreç boyunca ilerleyin, dayanaklandırılmış her olguyu kilitleyin, ardından yayımlamak için ortak imza atın.",
+    "reset": "Yol haritasını sıfırla",
+    "stepper": {
+      "aria": "Vaka yazım süreci, adım adım ilerlenebilir altı aşama",
+      "stepOf": "Aşama {{current}} / {{total}}",
+      "goTo": "{{title}} aşamasına git",
+      "prev": "Önceki aşama",
+      "next": "Sonraki aşama",
+      "blocked": "Engellendi"
+    },
+    "nav": {
+      "back": "Geri",
+      "continue": "Devam"
+    },
+    "draft": {
+      "heading": "Yapay zeka taslağının devri",
+      "sub": "Model; personayı, vaka durumunu, vital sürücülerini ve rubriği önerdi. Bir hekim bir sonraki aşamada dayanaklandırıp kilitlemeden hiçbiri otoriter değildir.",
+      "factsDrafted": "{{count}} klinik olgu taslağı hazırlandı",
+      "factsDrafted_other": "{{count}} klinik olgu taslağı hazırlandı",
+      "needsReview": "{{count}} tanesi hâlâ hekim bekliyor",
+      "needsReview_other": "{{count}} tanesi hâlâ hekim bekliyor",
+      "allLocked": "Taslak olguların tümü zaten dayanaklandırıldı ve kilitlendi.",
+      "tierNote": "Kendi sunucusunda barındırılan, aileler arası çapraz doğrulanmış büyük açık bir model tarafından hazırlandı. Ticari bir sağlayıcı adı verilmez.",
+      "toReview": "Uzman incelemesine devam et"
+    },
+    "editor": {
+      "lock": "Taslak hâliyle kilitle",
+      "editLock": "Düzenle ve kilitle",
+      "ground": "Dayanaklandır ve kilitle",
+      "unlock": "Kilidi aç",
+      "lockAria": "{{kind}} olgusunu taslak hâliyle kilitle",
+      "editLockAria": "{{kind}} olgusunu düzenle ve kilitle",
+      "groundAria": "İşaretli {{kind}} olgusunu dayanaklandır ve kilitle",
+      "unlockAria": "{{kind}} olgusunun kilidini aç",
+      "openHint": "Yapay zeka taslağını kilitli olarak kabul edin veya önce düzenleyin. Kilitli bir olgu, hekim kökenini öğrenciye taşır.",
+      "groundHint": "Bu iddia, atıflı bir kaynağa dayandırılamadı. Dayanaklandırmak, bir hekim düzenlemesi kaydeder ve yayın engelini kaldırır.",
+      "progress": "{{total}} olgunun {{locked}} tanesi kilitli",
+      "ready": "Tüm klinik olgular dayanaklandırıldı ve kilitlendi. İmzaya hazır.",
+      "stillBlocking": "{{count}} olgu hâlâ yayımı engelliyor.",
+      "stillBlocking_other": "{{count}} olgu hâlâ yayımı engelliyor.",
+      "liveHash": "Canlı vaka parmak izi",
+      "liveHashNote": "Olgular değiştikçe yeniden hesaplanır, imzada dondurulur.",
+      "toPsychometric": "Akran ve psikometriye devam et"
+    },
+    "psychometric": {
+      "toSignoff": "İmzaya devam et"
+    },
+    "signoff": {
+      "liveHashNote": "Canlı parmak izi, henüz dondurulmadı. İmza, bunu yayımlanan sürüm olarak dondurur.",
+      "frozenNote": "İmzada donduruldu. Bir öğrenci karşılaşması ve geri bildirimi bu özetlere sabitlenir.",
+      "toMonitor": "Yayımlanan vakaları gör"
+    },
+    "monitor": {
+      "justPublished": "Bu oturumda yeni yayımlandı",
+      "newBadge": "Yeni"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "authoring2": {
+    "intro": "Walk the case from AI draft to a signed, versioned publish. Step through the pipeline, lock each grounded fact, then co-sign to publish.",
+    "reset": "Reset walkthrough",
+    "stepper": {
+      "aria": "Case authoring pipeline, six steppable stages",
+      "stepOf": "Stage {{current}} of {{total}}",
+      "goTo": "Go to the {{title}} stage",
+      "prev": "Previous stage",
+      "next": "Next stage",
+      "blocked": "Blocked"
+    },
+    "nav": {
+      "back": "Back",
+      "continue": "Continue"
+    },
+    "draft": {
+      "heading": "AI draft handoff",
+      "sub": "The model proposed the persona, case state, vitals drivers, and rubric. None of it is authoritative until a clinician grounds and locks it in the next stage.",
+      "factsDrafted": "{{count}} clinical fact drafted",
+      "factsDrafted_other": "{{count}} clinical facts drafted",
+      "needsReview": "{{count}} still awaits a clinician",
+      "needsReview_other": "{{count}} still await a clinician",
+      "allLocked": "Every drafted fact is already grounded and locked.",
+      "tierNote": "Drafted by a large open model, self-hosted and cross-family verified. No commercial vendor is named.",
+      "toReview": "Continue to expert review"
+    },
+    "editor": {
+      "lock": "Lock as drafted",
+      "editLock": "Edit and lock",
+      "ground": "Ground and lock",
+      "unlock": "Unlock",
+      "lockAria": "Lock the {{kind}} fact as drafted",
+      "editLockAria": "Edit and lock the {{kind}} fact",
+      "groundAria": "Ground and lock the flagged {{kind}} fact",
+      "unlockAria": "Unlock the {{kind}} fact",
+      "openHint": "Accept the AI draft as locked, or edit it first. A locked fact carries its clinician provenance to the learner.",
+      "groundHint": "This claim could not be grounded to a cited source. Grounding it records a clinician edit and clears the publish block.",
+      "progress": "{{locked}} of {{total}} facts locked",
+      "ready": "Every clinical fact is grounded and locked. Ready for sign-off.",
+      "stillBlocking": "{{count}} fact still blocks publish.",
+      "stillBlocking_other": "{{count}} facts still block publish.",
+      "liveHash": "Live case fingerprint",
+      "liveHashNote": "Recomputed as facts change, frozen at sign-off.",
+      "toPsychometric": "Continue to peer and psychometric"
+    },
+    "psychometric": {
+      "toSignoff": "Continue to sign-off"
+    },
+    "signoff": {
+      "liveHashNote": "Live fingerprint, not yet frozen. Sign-off freezes it as the published version.",
+      "frozenNote": "Frozen at sign-off. A learner encounter and its feedback pin to these hashes.",
+      "toMonitor": "View published cases"
+    },
+    "monitor": {
+      "justPublished": "Just published in this session",
+      "newBadge": "New"
+    }
+  }
+}
