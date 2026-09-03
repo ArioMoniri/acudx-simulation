@@ -1,0 +1,14 @@
+{
+  "ehr": {
+    "storyboard": {
+      "populateHint": "Fills in as you work the chart.",
+      "examFindings": "Exam findings",
+      "examEmpty": "Request an exam maneuver and findings appear here.",
+      "abnormalFlag": "Abnormal",
+      "normalFlag": "Within normal limits"
+    },
+    "tabs": {
+      "navLabel": "Chart sections"
+    }
+  }
+}

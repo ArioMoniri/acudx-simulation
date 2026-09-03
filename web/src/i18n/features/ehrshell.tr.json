@@ -1,0 +1,14 @@
+{
+  "ehr": {
+    "storyboard": {
+      "populateHint": "Görüşme ilerledikçe dolar.",
+      "examFindings": "Muayene bulguları",
+      "examEmpty": "Bir muayene manevrası isteyin; bulgular burada görünür.",
+      "abnormalFlag": "Anormal",
+      "normalFlag": "Normal sınırlarda"
+    },
+    "tabs": {
+      "navLabel": "Kart bölümleri"
+    }
+  }
+}

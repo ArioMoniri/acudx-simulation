@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ClipboardText,
@@ -11,6 +11,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui";
+import { cn } from "@/lib/cn";
 import { ChartReviewTab } from "./tabs/ChartReviewTab";
 import { InterviewTab } from "./tabs/InterviewTab";
 import { FlowsheetTab } from "./tabs/FlowsheetTab";
@@ -110,6 +111,34 @@ export function ActivityTabs({
     [state.results.length, state.orders.length, state.problemList.length],
   );
 
+  // Scroll shadows: the six-tab strip overflows on narrow viewports, so a soft
+  // fade at each end signals there is more to reach. Opacity only (no layout),
+  // and reduced-motion collapses the fade transition at the CSS level.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ start: false, end: false });
+  const syncEdges = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    const start = el.scrollLeft > 1;
+    const end = el.scrollLeft < max - 1;
+    setEdges((prev) =>
+      prev.start === start && prev.end === end ? prev : { start, end },
+    );
+  }, []);
+  useEffect(() => {
+    syncEdges();
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(syncEdges);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [syncEdges]);
+  // Re-measure when tab widths change (a new count badge appears / active tab).
+  useEffect(() => {
+    syncEdges();
+  }, [syncEdges, activeTab, counts]);
+
   function handleValueChange(value: string) {
     const tab = TABS.find((x) => x.key === value);
     if (!tab) return;
@@ -126,29 +155,53 @@ export function ActivityTabs({
       onValueChange={handleValueChange}
       className="flex flex-col gap-4"
     >
-      <div className="overflow-x-auto">
-        <TabsList className="w-max min-w-full">
-          {TABS.map(({ key, icon: TabIcon }) => {
-            const count = (counts as Record<string, number>)[key];
-            const isActive = key === activeTab;
-            return (
-              <TabsTrigger
-                key={key}
-                value={key}
-                aria-current={isActive ? "page" : undefined}
-                className="gap-1.5 whitespace-nowrap"
-              >
-                <TabIcon weight="bold" className="h-4 w-4" aria-hidden />
-                {t(`ehr.tabs.${camel(key)}`)}
-                {typeof count === "number" && count > 0 ? (
-                  <span className="ml-0.5 rounded-full bg-brand-tint px-1.5 text-[10px] font-semibold text-brand">
-                    {count}
-                  </span>
-                ) : null}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
+      <div className="relative">
+        <div
+          ref={scrollRef}
+          onScroll={syncEdges}
+          className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <TabsList aria-label={t("ehr.tabs.navLabel")} className="w-max min-w-full">
+            {TABS.map(({ key, icon: TabIcon }) => {
+              const count = (counts as Record<string, number>)[key];
+              const isActive = key === activeTab;
+              return (
+                <TabsTrigger
+                  key={key}
+                  value={key}
+                  aria-current={isActive ? "page" : undefined}
+                  className="group gap-1.5 whitespace-nowrap"
+                >
+                  <TabIcon
+                    weight="bold"
+                    className="h-4 w-4 text-muted transition-colors duration-200 ease-out group-data-[state=active]:text-brand"
+                    aria-hidden
+                  />
+                  {t(`ehr.tabs.${camel(key)}`)}
+                  {typeof count === "number" && count > 0 ? (
+                    <span className="ml-0.5 rounded-full bg-brand-tint px-1.5 text-[10px] font-semibold tabular-nums text-brand">
+                      {count}
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </div>
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-control bg-gradient-to-r from-bg-subtle to-transparent transition-opacity duration-200",
+            edges.start ? "opacity-100" : "opacity-0",
+          )}
+        />
+        <span
+          aria-hidden
+          className={cn(
+            "pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-control bg-gradient-to-l from-bg-subtle to-transparent transition-opacity duration-200",
+            edges.end ? "opacity-100" : "opacity-0",
+          )}
+        />
       </div>
 
       <TabsContent value="chart-review">

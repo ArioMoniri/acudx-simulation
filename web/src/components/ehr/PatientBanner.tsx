@@ -134,7 +134,11 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
             </Badge>
           </div>
 
-          {toolbar ? <div className="flex items-center gap-2">{toolbar}</div> : null}
+          {toolbar ? (
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              {toolbar}
+            </div>
+          ) : null}
         </div>
       </div>
     </header>
