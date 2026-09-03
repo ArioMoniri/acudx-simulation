@@ -1,10 +1,12 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   ArrowRight,
   ArrowUpRight,
+  ArrowClockwise,
+  CaretDown,
   Fire,
   Snowflake,
   Trophy,
@@ -24,12 +26,14 @@ import {
   Eye,
   CheckCircle,
   ClockCounterClockwise,
+  X,
 } from "@phosphor-icons/react";
 
 import { PageContainer } from "@/components/shell";
-import { Card, Badge, Button, Switch } from "@/components/ui";
+import { Card, Badge, Button, Switch, Tooltip } from "@/components/ui";
 import { CalibrationPlot, CitationPill, Sparkline } from "@/components";
 import { useEntry, useLang } from "@/lib/useLang";
+import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 import {
   calibrationPoints,
@@ -41,21 +45,25 @@ import {
   recentXp,
   streakState,
   masteryDomains,
+  masteryDetail,
   MASTERY_BANDS,
   epaProgress,
   badges,
   calibrationSessions,
   domainTrends,
   reviewQueue,
-  dueNowCount,
+  scheduleReview,
+  REVIEW_GRADE_ORDER,
   cohortComparison,
   type XpAward,
   type StreakDay,
   type MasteryDomain,
+  type MasteryEvidence,
   type EpaProgress,
   type Badge as BadgeData,
   type BadgeIcon,
   type ReviewCard,
+  type ReviewGrade,
 } from "@/data/progress";
 
 /* -------------------------------------------------------------------------- */
@@ -70,6 +78,90 @@ function axisAccent(axis: "clinical" | "communication"): string {
 }
 
 const trendIcon = { up: TrendUp, down: TrendDown, steady: Minus } as const;
+
+/**
+ * Disclosure — a lightweight reveal for accordion detail. Animates opacity and
+ * a small transform only (never height), and collapses to no motion under
+ * prefers-reduced-motion, so it never triggers a layout animation.
+ */
+function Disclosure({
+  id,
+  labelledBy,
+  className,
+  children,
+}: {
+  id?: string;
+  labelledBy?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      id={id}
+      role={labelledBy ? "region" : undefined}
+      aria-labelledby={labelledBy}
+      initial={reduce ? false : { opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: EASE }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * Segmented — a small single-select control (medkit pill group). Each option is
+ * an individually focusable button with `aria-pressed`, so meaning never rests
+ * on color alone and keyboard users reach every choice.
+ */
+function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+  ariaLabel,
+  size = "md",
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  ariaLabel: string;
+  size?: "sm" | "md";
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className="inline-flex items-center gap-1 rounded-control border border-border bg-bg-subtle p-1"
+    >
+      {options.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(opt.value)}
+            className={cn(
+              "inline-flex items-center justify-center rounded-[7px] font-medium",
+              "transition-colors duration-200 ease-out focus-visible:outline-none",
+              "focus-visible:ring-2 focus-visible:ring-brand",
+              size === "sm"
+                ? "min-h-8 px-2.5 text-xs"
+                : "min-h-9 px-3 text-sm",
+              active
+                ? "bg-surface text-fg shadow-soft"
+                : "text-muted hover:text-fg",
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /* -------------------------------------------------------------------------- */
 /* Section: Level + XP                                                          */
@@ -195,8 +287,46 @@ const streakDayStyle: Record<StreakDay["state"], string> = {
   upcoming: "border border-dashed border-border bg-surface text-muted",
 };
 
+function StreakDayCell({ day, logged }: { day: StreakDay; logged: boolean }) {
+  const { t } = useTranslation();
+  // When today's rep is logged, today reads as practised.
+  const state: StreakDay["state"] =
+    day.state === "today" && logged ? "practised" : day.state;
+  const label = t(`progress.streak.dayState.${state}`);
+
+  return (
+    <li className="flex flex-1 flex-col items-center gap-1.5">
+      <Tooltip content={label}>
+        <span
+          tabIndex={0}
+          role="img"
+          aria-label={`${t(`progress.streak.weekday.${day.key}`)}: ${label}`}
+          className={cn(
+            "grid h-9 w-full place-items-center rounded-control",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+            streakDayStyle[state],
+          )}
+        >
+          {state === "freeze" ? (
+            <Snowflake weight="fill" className="h-4 w-4" aria-hidden />
+          ) : state === "practised" ? (
+            <CheckCircle weight="fill" className="h-4 w-4" aria-hidden />
+          ) : state === "today" ? (
+            <Fire weight="bold" className="h-4 w-4" aria-hidden />
+          ) : null}
+        </span>
+      </Tooltip>
+      <span className="text-[10px] font-medium text-muted" aria-hidden>
+        {t(`progress.streak.weekday.${day.key}`)}
+      </span>
+    </li>
+  );
+}
+
 function StreakCard() {
   const { t } = useTranslation();
+  const [logged, setLogged] = useState(streakState.todayDone);
+  const current = streakState.currentDays + (logged && !streakState.todayDone ? 1 : 0);
 
   return (
     <Card padding="lg" className="flex h-full flex-col gap-5">
@@ -217,7 +347,7 @@ function StreakCard() {
               {t("progress.streak.eyebrow")}
             </p>
             <p className="text-2xl font-semibold leading-tight text-fg">
-              <span className="font-mono">{streakState.currentDays}</span>{" "}
+              <span className="font-mono">{current}</span>{" "}
               <span className="text-base font-medium text-muted">
                 {t("progress.streak.days")}
               </span>
@@ -240,31 +370,43 @@ function StreakCard() {
         aria-label={t("progress.streak.weekLabel")}
       >
         {streakState.week.map((d) => (
-          <li key={d.key} className="flex flex-1 flex-col items-center gap-1.5">
-            <span
-              className={cn(
-                "grid h-9 w-full place-items-center rounded-control",
-                streakDayStyle[d.state],
-              )}
-              aria-hidden
-            >
-              {d.state === "freeze" ? (
-                <Snowflake weight="fill" className="h-4 w-4" />
-              ) : d.state === "practised" ? (
-                <CheckCircle weight="fill" className="h-4 w-4" />
-              ) : d.state === "today" ? (
-                <Fire weight="bold" className="h-4 w-4" />
-              ) : null}
-            </span>
-            <span className="text-[10px] font-medium text-muted">
-              {t(`progress.streak.weekday.${d.key}`)}
-            </span>
-            <span className="sr-only">
-              {t(`progress.streak.dayState.${d.state}`)}
-            </span>
-          </li>
+          <StreakDayCell key={d.key} day={d} logged={logged} />
         ))}
       </ul>
+
+      {/* Log today's single rep — a satisfying, low-pressure daily action */}
+      {logged ? (
+        <div className="flex items-start gap-2.5 rounded-control bg-[color-mix(in_srgb,var(--state-normal)_12%,transparent)] p-3">
+          <CheckCircle
+            weight="fill"
+            className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--state-normal)]"
+            aria-hidden
+          />
+          <div>
+            <p className="text-sm font-medium text-fg">
+              {t("progress2.streak.logged")}
+            </p>
+            <p className="text-xs text-muted">
+              {t("progress2.streak.protectedToday")}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted">{t("progress2.streak.logHint")}</p>
+          <Button
+            size="sm"
+            variant="secondary"
+            leadingIcon={<CheckCircle weight="bold" className="h-4 w-4" />}
+            onClick={() => setLogged(true)}
+          >
+            {t("progress2.streak.logRep")}
+          </Button>
+        </div>
+      )}
+      <span aria-live="polite" className="sr-only">
+        {logged ? t("progress2.streak.logAnnounce", { days: current }) : ""}
+      </span>
 
       {/* Freeze / grace — a rough week never breaks the streak */}
       <div className="flex flex-col gap-2.5">
@@ -295,35 +437,77 @@ function StreakCard() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Section: Mastery map (competency x level grid)                              */
+/* Section: Mastery map (competency x level grid) — expandable detail          */
 /* -------------------------------------------------------------------------- */
+
+/** A compact bars view of a domain's recent band trajectory. */
+function BandHistoryMeter({
+  history,
+  accent,
+}: {
+  history: Exclude<Band, "withheld">[];
+  accent: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <ul className="flex items-end gap-1.5" aria-hidden>
+      {history.map((band, i) => {
+        const step = MASTERY_BANDS.indexOf(band);
+        const h = 8 + step * 5; // taller bar = higher band
+        return (
+          <li key={i} className="flex flex-col items-center gap-1">
+            <span
+              className="w-6 rounded-full"
+              style={{
+                height: `${h}px`,
+                backgroundColor: accent,
+                opacity: i === history.length - 1 ? 1 : 0.4,
+              }}
+            />
+            <span className="text-[9px] font-medium text-muted">
+              {t(`bands.${band}`)}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function EvidenceItem({ ev }: { ev: MasteryEvidence }) {
+  const { t } = useTranslation();
+  const lang = useLang();
+  const ago =
+    ev.daysAgo <= 0
+      ? t("progress2.mastery.evidenceToday")
+      : t("progress2.mastery.evidenceAgo", { count: ev.daysAgo });
+  return (
+    <li className="flex flex-col gap-0.5 border-l-2 border-border pl-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm font-medium text-fg">{ev.case[lang]}</span>
+        <span className="shrink-0 text-[11px] text-muted">{ago}</span>
+      </div>
+      <span className="text-xs text-muted">{ev.note[lang]}</span>
+    </li>
+  );
+}
 
 function MasteryRow({ domain }: { domain: MasteryDomain }) {
   const { t } = useTranslation();
+  const lang = useLang();
   const accent = axisAccent(domain.axis);
   const name = t(`feedback.domains.${domain.key}`);
   const rowLabelId = useId();
+  const panelId = useId();
+  const [open, setOpen] = useState(false);
+  const detail = masteryDetail[domain.key];
+  const withheld = domain.band === "withheld";
 
-  if (domain.band === "withheld") {
-    return (
-      <div className="rounded-control border border-dashed border-border bg-bg-subtle p-3.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm font-medium text-fg">{name}</span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2 py-0.5 text-xs font-medium text-muted">
-            <Lock weight="bold" className="h-3 w-3" aria-hidden />
-            {t("bands.withheld")}
-          </span>
-        </div>
-        <p className="mt-1.5 text-xs text-muted">
-          {t("progress.mastery.notEnough", { count: domain.evidenceCount })}
-        </p>
-      </div>
-    );
-  }
+  const achievedIndex = withheld
+    ? -1
+    : MASTERY_BANDS.indexOf(domain.band as Exclude<Band, "withheld">);
+  const nextBand = withheld ? undefined : MASTERY_BANDS[achievedIndex + 1];
 
-  const achievedIndex = MASTERY_BANDS.indexOf(
-    domain.band as Exclude<Band, "withheld">,
-  );
   const TrendIcon =
     domain.deltaBand > 0
       ? trendIcon.up
@@ -334,12 +518,27 @@ function MasteryRow({ domain }: { domain: MasteryDomain }) {
     domain.deltaBand > 0 ? "up" : domain.deltaBand < 0 ? "down" : "steady";
 
   return (
-    <div className="rounded-control border border-border bg-surface p-3.5">
-      <div className="flex items-center justify-between gap-2">
-        <span
-          id={rowLabelId}
-          className="inline-flex items-center gap-2 text-sm font-medium text-fg"
-        >
+    <div
+      className={cn(
+        "rounded-control border p-3.5",
+        withheld
+          ? "border-dashed border-border bg-bg-subtle"
+          : "border-border bg-surface",
+      )}
+    >
+      {/* Header — a real toggle button revealing evidence and next steps */}
+      <button
+        type="button"
+        id={rowLabelId}
+        aria-expanded={open}
+        aria-controls={detail ? panelId : undefined}
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex w-full items-center justify-between gap-2 rounded-[6px] text-left",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        )}
+      >
+        <span className="inline-flex items-center gap-2 text-sm font-medium text-fg">
           <span
             aria-hidden
             className={cn(
@@ -351,78 +550,173 @@ function MasteryRow({ domain }: { domain: MasteryDomain }) {
           {name}
         </span>
         <span className="inline-flex items-center gap-2">
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold"
-            style={{
-              color: accent,
-              backgroundColor: `color-mix(in srgb, ${accent} 14%, transparent)`,
-            }}
-          >
-            <SealCheck weight="fill" className="h-3 w-3" aria-hidden />
-            {t(`bands.${domain.band}`)}
-          </span>
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 text-[11px] font-medium",
-              domain.deltaBand > 0
-                ? "text-[color:var(--state-normal)]"
-                : "text-muted",
-            )}
-          >
-            <TrendIcon weight="bold" className="h-3 w-3" aria-hidden />
-            <span className="sr-only">
-              {t(`progress.mastery.delta.${trendKey}`)}
+          {withheld ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2 py-0.5 text-xs font-medium text-muted">
+              <Lock weight="bold" className="h-3 w-3" aria-hidden />
+              {t("bands.withheld")}
             </span>
-            <span aria-hidden>{t(`progress.mastery.deltaShort.${trendKey}`)}</span>
-          </span>
-        </span>
-      </div>
-
-      {/* Five-step band meter (achieved step carries fill + position) */}
-      <div
-        className="mt-3 grid grid-cols-5 items-end gap-1"
-        role="img"
-        aria-labelledby={rowLabelId}
-        aria-label={t("progress.mastery.rowAria", {
-          domain: name,
-          band: t(`bands.${domain.band}`),
-        })}
-      >
-        {MASTERY_BANDS.map((step, i) => {
-          const reached = i <= achievedIndex;
-          const isAchieved = i === achievedIndex;
-          return (
-            <div key={step} className="flex flex-col items-center gap-1">
+          ) : (
+            <>
               <span
-                className={cn(
-                  "w-full rounded-full transition-all duration-300 ease-out",
-                  isAchieved ? "h-3" : "h-1.5",
-                )}
+                className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold"
                 style={{
-                  backgroundColor: reached ? accent : "var(--border)",
-                  opacity: reached && !isAchieved ? 0.45 : 1,
+                  color: accent,
+                  backgroundColor: `color-mix(in srgb, ${accent} 14%, transparent)`,
                 }}
-              />
+              >
+                <SealCheck weight="fill" className="h-3 w-3" aria-hidden />
+                {t(`bands.${domain.band}`)}
+              </span>
               <span
                 className={cn(
-                  "text-[9px] font-medium leading-tight",
-                  isAchieved ? "text-fg" : "text-muted",
+                  "inline-flex items-center gap-1 text-[11px] font-medium",
+                  domain.deltaBand > 0
+                    ? "text-[color:var(--state-normal)]"
+                    : "text-muted",
                 )}
               >
-                {t(`bands.${step}`)}
+                <TrendIcon weight="bold" className="h-3 w-3" aria-hidden />
+                <span className="sr-only">
+                  {t(`progress.mastery.delta.${trendKey}`)}
+                </span>
+                <span aria-hidden>
+                  {t(`progress.mastery.deltaShort.${trendKey}`)}
+                </span>
               </span>
+            </>
+          )}
+          <CaretDown
+            weight="bold"
+            aria-hidden
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted transition-transform duration-200",
+              open && "rotate-180",
+            )}
+          />
+        </span>
+      </button>
+
+      {/* At-a-glance band meter (kept visible), or reliability note when withheld */}
+      {withheld ? (
+        <p className="mt-2 text-xs text-muted">
+          {t("progress.mastery.notEnough", { count: domain.evidenceCount })}
+        </p>
+      ) : (
+        <div
+          className="mt-3 grid grid-cols-5 items-end gap-1"
+          role="img"
+          aria-label={t("progress.mastery.rowAria", {
+            domain: name,
+            band: t(`bands.${domain.band}`),
+          })}
+        >
+          {MASTERY_BANDS.map((step, i) => {
+            const reached = i <= achievedIndex;
+            const isAchieved = i === achievedIndex;
+            return (
+              <div key={step} className="flex flex-col items-center gap-1">
+                <span
+                  className={cn(
+                    "w-full rounded-full transition-all duration-300 ease-out",
+                    isAchieved ? "h-3" : "h-1.5",
+                  )}
+                  style={{
+                    backgroundColor: reached ? accent : "var(--border)",
+                    opacity: reached && !isAchieved ? 0.45 : 1,
+                  }}
+                />
+                <span
+                  className={cn(
+                    "text-[9px] font-medium leading-tight",
+                    isAchieved ? "text-fg" : "text-muted",
+                  )}
+                >
+                  {t(`bands.${step}`)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Expandable detail: what moved it, next step, evidence */}
+      {open && detail ? (
+        <Disclosure
+          id={panelId}
+          labelledBy={rowLabelId}
+          className="mt-3.5 flex flex-col gap-3.5 border-t border-border pt-3.5"
+        >
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              {t("progress2.mastery.movedByHeading")}
+            </p>
+            <p className="mt-1 text-sm text-fg">{detail.movedBy[lang]}</p>
+          </div>
+
+          <div className="rounded-control bg-bg-subtle p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              {nextBand
+                ? t("progress2.mastery.nextHeading", {
+                    band: t(`bands.${nextBand}`),
+                  })
+                : t("progress2.mastery.unlockHeading")}
+            </p>
+            <p className="mt-1 text-sm text-fg">
+              {nextBand || withheld
+                ? detail.nextStep[lang]
+                : t("progress2.mastery.topBand")}
+            </p>
+          </div>
+
+          {detail.bandHistory.length > 0 ? (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                {t("progress2.mastery.historyHeading")}
+              </p>
+              <div className="mt-2">
+                <BandHistoryMeter history={detail.bandHistory} accent={accent} />
+              </div>
             </div>
-          );
-        })}
-      </div>
+          ) : null}
+
+          {detail.evidence.length > 0 ? (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                {t("progress2.mastery.evidenceHeading")}
+              </p>
+              <ul className="mt-2 flex flex-col gap-2.5">
+                {detail.evidence.map((ev) => (
+                  <EvidenceItem key={ev.id} ev={ev} />
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {detail.reviewCardId ? (
+            <a
+              href="#spaced-review"
+              className="inline-flex w-fit items-center gap-1 text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-[4px]"
+            >
+              {t("progress2.mastery.practise")}
+              <ArrowRight weight="bold" className="h-3.5 w-3.5" aria-hidden />
+            </a>
+          ) : null}
+        </Disclosure>
+      ) : null}
     </div>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/* Section: EPAs — expandable entrustment ladder                               */
+/* -------------------------------------------------------------------------- */
 
 function EpaRow({ epa }: { epa: EpaProgress }) {
   const { t } = useTranslation();
   const lang = useLang();
   const entrusted = epa.level >= 4;
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
 
   return (
     <li className="flex flex-col gap-2 rounded-control border border-border bg-surface p-3.5">
@@ -472,18 +766,94 @@ function EpaRow({ epa }: { epa: EpaProgress }) {
           );
         })}
       </div>
+
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-muted">
-          {t("progress.epa.demonstrations", { count: epa.demonstrations })}
-        </span>
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((o) => !o)}
+          className="inline-flex items-center gap-1 rounded-[4px] text-xs font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {open ? t("progress2.epa.collapse") : t("progress2.epa.expand")}
+          <CaretDown
+            weight="bold"
+            aria-hidden
+            className={cn(
+              "h-3.5 w-3.5 transition-transform duration-200",
+              open && "rotate-180",
+            )}
+          />
+        </button>
         <CitationPill citationId={epa.citationId} lang={lang} />
       </div>
+
+      {open ? (
+        <Disclosure
+          id={panelId}
+          className="mt-1 flex flex-col gap-1.5 border-t border-border pt-2.5"
+        >
+          <p className="sr-only">
+            {t("progress2.epa.ladderAria", { code: epa.code, level: epa.level })}
+          </p>
+          <ol className="flex flex-col gap-1.5">
+            {[1, 2, 3, 4, 5].map((lvl) => {
+              const isCurrent = lvl === epa.level;
+              const isNext = lvl === epa.level + 1;
+              const reached = lvl <= epa.level;
+              return (
+                <li
+                  key={lvl}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-control px-2.5 py-1.5",
+                    isCurrent ? "bg-brand-tint" : "bg-transparent",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid h-5 w-5 shrink-0 place-items-center rounded-full font-mono text-[10px] font-semibold",
+                      reached
+                        ? "bg-brand text-white"
+                        : "border border-border bg-surface text-muted",
+                    )}
+                    aria-hidden
+                  >
+                    {lvl}
+                  </span>
+                  <span
+                    className={cn(
+                      "flex-1 text-xs",
+                      isCurrent ? "font-medium text-fg" : "text-muted",
+                    )}
+                  >
+                    {t(`progress.epa.level.${lvl}`)}
+                  </span>
+                  {isCurrent ? (
+                    <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-brand">
+                      {t("progress2.epa.current")}
+                    </span>
+                  ) : isNext ? (
+                    <span className="shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted">
+                      {t("progress2.epa.next")}
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+          {epa.level >= 5 ? (
+            <p className="text-[11px] text-muted">
+              {t("progress2.epa.atCeiling")}
+            </p>
+          ) : null}
+        </Disclosure>
+      ) : null}
     </li>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* Section: Badges                                                              */
+/* Section: Badges — filterable                                                */
 /* -------------------------------------------------------------------------- */
 
 const badgeIconMap: Record<BadgeIcon, typeof Heartbeat> = {
@@ -562,81 +932,329 @@ function BadgeTile({ badge }: { badge: BadgeData }) {
   );
 }
 
+type BadgeFilter = "all" | "earned" | "inProgress";
+
+function BadgesSection() {
+  const { t } = useTranslation();
+  const [filter, setFilter] = useState<BadgeFilter>("all");
+  const earnedCount = badges.filter((b) => b.earned).length;
+
+  const shown = useMemo(() => {
+    if (filter === "earned") return badges.filter((b) => b.earned);
+    if (filter === "inProgress") return badges.filter((b) => !b.earned);
+    return badges;
+  }, [filter]);
+
+  return (
+    <>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Trophy weight="bold" className="h-5 w-5 text-brand" aria-hidden />
+          <h2 className="text-lg font-semibold tracking-tight text-fg">
+            {t("progress.badges.heading")}
+          </h2>
+        </div>
+        <span className="text-sm text-muted">
+          {t("progress.badges.count", {
+            earned: earnedCount,
+            total: badges.length,
+          })}
+        </span>
+      </div>
+      <p className="mt-1 max-w-2xl text-sm text-muted">
+        {t("progress.badges.subtitle")}
+      </p>
+
+      <div className="mt-4">
+        <Segmented<BadgeFilter>
+          ariaLabel={t("progress2.badges.filterAria")}
+          value={filter}
+          onChange={setFilter}
+          size="sm"
+          options={[
+            { value: "all", label: t("progress2.badges.all") },
+            { value: "earned", label: t("progress2.badges.earned") },
+            { value: "inProgress", label: t("progress2.badges.inProgress") },
+          ]}
+        />
+      </div>
+
+      {shown.length > 0 ? (
+        <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {shown.map((b) => (
+            <BadgeTile key={b.id} badge={b} />
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 rounded-control border border-dashed border-border bg-bg-subtle p-4 text-sm text-muted">
+          {filter === "earned"
+            ? t("progress2.badges.emptyEarned")
+            : t("progress2.badges.emptyInProgress")}
+        </p>
+      )}
+    </>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
-/* Section: Calibration trajectory (small multiples + trend)                   */
+/* Section: Calibration trajectory — interactive session scrubber              */
 /* -------------------------------------------------------------------------- */
 
-function domainGap(gaps: number[]): { first: number; last: number } {
-  return { first: gaps[0], last: gaps[gaps.length - 1] };
+type TrajectoryMetric = "gap" | "brier";
+
+function FocusChart({
+  series,
+  selected,
+  color,
+}: {
+  series: number[];
+  selected: number;
+  color: string;
+}) {
+  const gradId = useId();
+  const w = 300;
+  const h = 96;
+  const pad = 8;
+  const n = series.length;
+  const min = Math.min(...series);
+  const max = Math.max(...series);
+  const span = max - min || 1;
+  const pts = series.map((v, i) => {
+    const x = pad + (i / (n - 1)) * (w - 2 * pad);
+    const y = pad + (h - 2 * pad) - ((v - min) / span) * (h - 2 * pad);
+    return [x, y] as const;
+  });
+  const line = pts
+    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`)
+    .join(" ");
+  const area =
+    `${line} L${pts[n - 1][0].toFixed(1)} ${h - pad} ` +
+    `L${pts[0][0].toFixed(1)} ${h - pad} Z`;
+  const [selX] = pts[selected];
+
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className="h-24 w-full"
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.16" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${gradId})`} stroke="none" />
+      <path
+        d={line}
+        fill="none"
+        stroke={color}
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      {/* Selected-session guide + marker */}
+      <line
+        x1={selX}
+        y1={pad}
+        x2={selX}
+        y2={h - pad}
+        stroke="var(--border)"
+        strokeWidth={1}
+        strokeDasharray="3 3"
+        vectorEffect="non-scaling-stroke"
+      />
+      {pts.map(([x, y], i) => (
+        <circle
+          key={i}
+          cx={x}
+          cy={y}
+          r={i === selected ? 4 : 2}
+          fill={i === selected ? color : "var(--surface)"}
+          stroke={color}
+          strokeWidth={i === selected ? 2 : 1.25}
+        />
+      ))}
+    </svg>
+  );
+}
+
+function TrajectoryFocus() {
+  const { t } = useTranslation();
+  const [metric, setMetric] = useState<TrajectoryMetric>("gap");
+  const [selected, setSelected] = useState(calibrationSessions.length - 1);
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const isGap = metric === "gap";
+  const color = isGap ? "var(--brand-600)" : "var(--axis-communication)";
+  const series = calibrationSessions.map((s) => (isGap ? s.gap : s.brier));
+  const session = calibrationSessions[selected];
+  const value = isGap ? session.gap : session.brier;
+
+  const metricLabel = isGap
+    ? t("progress2.trajectory.metricGap")
+    : t("progress2.trajectory.metricBrier");
+
+  // Change since the first session (improvement is a smaller number here).
+  const first = series[0];
+  const deltaBetter = first - value; // positive = improved
+  let changeText: string;
+  let changeGood = false;
+  if (Math.abs(deltaBetter) < 1e-9) {
+    changeText = t("progress2.trajectory.flat");
+  } else if (deltaBetter > 0) {
+    changeGood = true;
+    changeText = isGap
+      ? t("progress2.trajectory.betterGap", {
+          points: Math.round(deltaBetter * 100),
+        })
+      : t("progress2.trajectory.betterBrier", {
+          value: deltaBetter.toFixed(2),
+        });
+  } else {
+    changeText = t("progress2.trajectory.worse", {
+      value: isGap
+        ? `${Math.round(-deltaBetter * 100)}`
+        : (-deltaBetter).toFixed(2),
+    });
+  }
+
+  function onScrubKey(e: React.KeyboardEvent) {
+    const n = calibrationSessions.length;
+    let next = selected;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown")
+      next = Math.min(n - 1, selected + 1);
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp")
+      next = Math.max(0, selected - 1);
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = n - 1;
+    else return;
+    e.preventDefault();
+    setSelected(next);
+    refs.current[next]?.focus();
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          {t("progress2.trajectory.focusHeading")}
+        </p>
+        <Segmented<TrajectoryMetric>
+          ariaLabel={t("progress2.trajectory.metricAria")}
+          value={metric}
+          onChange={setMetric}
+          size="sm"
+          options={[
+            { value: "gap", label: t("progress2.trajectory.metricGap") },
+            { value: "brier", label: t("progress2.trajectory.metricBrier") },
+          ]}
+        />
+      </div>
+
+      {/* Readout for the selected session */}
+      <div className="rounded-control bg-bg-subtle p-3.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted">
+            {t("progress2.trajectory.selected", { label: session.label })}
+          </span>
+          <span className="font-mono text-2xl font-semibold leading-none text-fg">
+            {isGap ? Math.round(value * 100) : value.toFixed(2)}
+            {isGap ? <span className="text-base text-muted">%</span> : null}
+          </span>
+        </div>
+        <div className="mt-3">
+          <FocusChart series={series} selected={selected} color={color} />
+        </div>
+        <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium">
+          <TrendDown
+            weight="bold"
+            aria-hidden
+            className={cn(
+              "h-3 w-3",
+              changeGood
+                ? "text-[color:var(--state-normal)]"
+                : "text-muted",
+            )}
+          />
+          <span
+            className={
+              changeGood ? "text-[color:var(--state-normal)]" : "text-muted"
+            }
+          >
+            {t("progress2.trajectory.sinceFirst")}: {changeText}
+          </span>
+        </p>
+      </div>
+
+      {/* Accessible scrubber: one radio per session, arrow-key navigable */}
+      <div
+        role="radiogroup"
+        aria-label={t("progress2.trajectory.sessionsAria")}
+        onKeyDown={onScrubKey}
+        className="flex items-center gap-1"
+      >
+        {calibrationSessions.map((s, i) => {
+          const active = i === selected;
+          const sVal = isGap ? s.gap : s.brier;
+          const readout = isGap
+            ? `${Math.round(sVal * 100)}%`
+            : sVal.toFixed(2);
+          return (
+            <button
+              key={s.label}
+              ref={(el) => {
+                refs.current[i] = el;
+              }}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              tabIndex={active ? 0 : -1}
+              onClick={() => setSelected(i)}
+              aria-label={t("progress2.trajectory.sessionAria", {
+                label: s.label,
+                metric: metricLabel,
+                value: readout,
+              })}
+              className={cn(
+                "flex-1 rounded-control py-2 text-center text-[11px] font-medium",
+                "transition-colors duration-150 focus-visible:outline-none",
+                "focus-visible:ring-2 focus-visible:ring-brand",
+                active
+                  ? "bg-brand-tint text-brand"
+                  : "bg-bg-subtle text-muted hover:text-fg",
+              )}
+            >
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function TrajectoryCard() {
   const { t } = useTranslation();
   const lang = useLang();
 
-  const gapSeries = calibrationSessions.map((s) => s.gap);
-  const brierSeries = calibrationSessions.map((s) => s.brier);
-  const gapNow = Math.round(gapSeries[gapSeries.length - 1] * 100);
-  const gapStart = Math.round(gapSeries[0] * 100);
-  const gapDrop = gapStart - gapNow;
-
   return (
     <Card padding="lg" className="flex flex-col gap-5">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
-        {/* Headline gap + Brier sparklines */}
+        {/* Interactive session-by-session focus + per-domain small multiples */}
         <div className="flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-control bg-bg-subtle p-3.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                {t("progress.trajectory.gapLabel")}
-              </p>
-              <p className="mt-1 font-mono text-2xl font-semibold leading-none text-fg">
-                {gapNow}
-                <span className="text-base text-muted">%</span>
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                <Sparkline
-                  data={gapSeries}
-                  color="var(--brand-600)"
-                  filled
-                  className="h-7 w-24"
-                />
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[color:var(--state-normal)]">
-                  <TrendDown weight="bold" className="h-3 w-3" aria-hidden />
-                  {t("progress.trajectory.gapDrop", { points: gapDrop })}
-                </span>
-              </div>
-            </div>
-            <div className="rounded-control bg-bg-subtle p-3.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                {t("progress.trajectory.brierLabel")}
-              </p>
-              <p className="mt-1 font-mono text-2xl font-semibold leading-none text-fg">
-                {brierSeries[brierSeries.length - 1].toFixed(2)}
-              </p>
-              <div className="mt-2 flex items-center gap-2">
-                <Sparkline
-                  data={brierSeries}
-                  color="var(--axis-communication)"
-                  filled
-                  className="h-7 w-24"
-                />
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted">
-                  <TrendDown weight="bold" className="h-3 w-3" aria-hidden />
-                  {t("progress.trajectory.lowerBetter")}
-                </span>
-              </div>
-            </div>
-          </div>
+          <TrajectoryFocus />
 
-          {/* Per-domain small multiples */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">
               {t("progress.trajectory.perDomain")}
             </p>
             <ul className="mt-2.5 grid gap-2 sm:grid-cols-2">
               {domainTrends.map((d) => {
-                const { first, last } = domainGap(d.gaps);
+                const first = d.gaps[0];
+                const last = d.gaps[d.gaps.length - 1];
                 const improved = last < first;
                 const dropPts = Math.round((first - last) * 100);
                 const name = t(`feedback.domains.${d.domain}`);
@@ -658,9 +1276,7 @@ function TrajectoryCard() {
                     <Sparkline
                       data={d.gaps}
                       color={
-                        improved
-                          ? "var(--state-normal)"
-                          : "var(--fg-muted)"
+                        improved ? "var(--state-normal)" : "var(--fg-muted)"
                       }
                       className="h-6 w-16 shrink-0"
                       ariaLabel={t("progress.trajectory.domainSpark", {
@@ -704,7 +1320,7 @@ function TrajectoryCard() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Section: Spaced-repetition queue (FSRS)                                      */
+/* Section: Spaced-repetition queue (FSRS) — interactive review session        */
 /* -------------------------------------------------------------------------- */
 
 const reviewStateTone: Record<
@@ -716,7 +1332,35 @@ const reviewStateTone: Record<
   scheduled: "neutral",
 };
 
-function ReviewRow({ card }: { card: ReviewCard }) {
+/** Per-grade accent token; label + hint always carry the meaning in text too. */
+const gradeAccent: Record<ReviewGrade, string> = {
+  again: "var(--state-critical)",
+  hard: "var(--state-caution)",
+  good: "var(--state-normal)",
+  easy: "var(--brand-600)",
+};
+
+const gradeLabelKey: Record<ReviewGrade, string> = {
+  again: "progress2.review.gradeAgain",
+  hard: "progress2.review.gradeHard",
+  good: "progress2.review.gradeGood",
+  easy: "progress2.review.gradeEasy",
+};
+
+const gradeHintKey: Record<ReviewGrade, string> = {
+  again: "progress2.review.hintAgain",
+  hard: "progress2.review.hintHard",
+  good: "progress2.review.hintGood",
+  easy: "progress2.review.hintEasy",
+};
+
+function ReviewRow({
+  card,
+  justGraded,
+}: {
+  card: ReviewCard;
+  justGraded: boolean;
+}) {
   const { t } = useTranslation();
   const lang = useLang();
   const recallPct = Math.round(card.retrievability * 100);
@@ -731,16 +1375,24 @@ function ReviewRow({ card }: { card: ReviewCard }) {
         <p className="min-w-0 flex-1 text-sm font-medium text-fg">
           {card.prompt[lang]}
         </p>
-        <Badge tone={reviewStateTone[card.state]}>
-          {card.state === "due" ? (
-            <Fire weight="fill" className="h-3 w-3" aria-hidden />
-          ) : card.state === "learning" ? (
-            <Sparkle weight="fill" className="h-3 w-3" aria-hidden />
-          ) : (
-            <CalendarCheck weight="bold" className="h-3 w-3" aria-hidden />
-          )}
-          {t(`progress.review.state.${card.state}`)}
-        </Badge>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {justGraded ? (
+            <Badge tone="normal">
+              <CheckCircle weight="fill" className="h-3 w-3" aria-hidden />
+              {t("progress2.review.justGraded")}
+            </Badge>
+          ) : null}
+          <Badge tone={reviewStateTone[card.state]}>
+            {card.state === "due" ? (
+              <Fire weight="fill" className="h-3 w-3" aria-hidden />
+            ) : card.state === "learning" ? (
+              <Sparkle weight="fill" className="h-3 w-3" aria-hidden />
+            ) : (
+              <CalendarCheck weight="bold" className="h-3 w-3" aria-hidden />
+            )}
+            {t(`progress.review.state.${card.state}`)}
+          </Badge>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -767,6 +1419,375 @@ function ReviewRow({ card }: { card: ReviewCard }) {
         </span>
       </div>
     </li>
+  );
+}
+
+interface ReviewSessionState {
+  remaining: ReviewCard[];
+  completed: string[];
+  size: number;
+  announce: string;
+}
+
+type ReviewFilter = "all" | ReviewCard["state"];
+
+function ReviewSection() {
+  const { t } = useTranslation();
+
+  const [queue, setQueue] = useState<ReviewCard[]>(() =>
+    reviewQueue.map((c) => ({ ...c })),
+  );
+  const [reviewedIds, setReviewedIds] = useState<string[]>([]);
+  const [session, setSession] = useState<ReviewSessionState | null>(null);
+  const [filter, setFilter] = useState<ReviewFilter>("all");
+
+  const dueCount = queue.filter((c) => c.state === "due").length;
+
+  function startSession(from: ReviewCard[]) {
+    const due = from.filter((c) => c.state === "due").map((c) => ({ ...c }));
+    if (due.length === 0) return;
+    setSession({ remaining: due, completed: [], size: due.length, announce: "" });
+  }
+
+  function reviewAgain() {
+    const fresh = reviewQueue.map((c) => ({ ...c }));
+    setQueue(fresh);
+    setReviewedIds([]);
+    startSession(fresh);
+  }
+
+  function grade(g: ReviewGrade) {
+    if (!session || session.remaining.length === 0) return;
+    const current = session.remaining[0];
+    const sched = scheduleReview(current, g);
+    const updated: ReviewCard = {
+      ...current,
+      stabilityDays: sched.stabilityDays,
+      retrievability: sched.retrievability,
+      dueInDays: sched.intervalDays,
+      state: sched.state,
+    };
+
+    // Reflect the new schedule in the persistent queue + list.
+    setQueue((q) => q.map((c) => (c.id === current.id ? updated : c)));
+
+    const gradeLabel = t(gradeLabelKey[g]);
+    const scheduleText =
+      g === "again"
+        ? t("progress2.review.scheduleAgain")
+        : t("progress2.review.scheduleNext", {
+            count: sched.intervalDays,
+            stability: sched.stabilityDays,
+          });
+    const announce = t("progress2.review.announce", {
+      grade: gradeLabel,
+      schedule: scheduleText,
+    });
+
+    const rest = session.remaining.slice(1);
+    if (g === "again") {
+      // A lapse returns the card later in the same session.
+      setSession({
+        ...session,
+        remaining: [...rest, updated],
+        announce,
+      });
+    } else {
+      setReviewedIds((ids) =>
+        ids.includes(current.id) ? ids : [...ids, current.id],
+      );
+      setSession({
+        ...session,
+        remaining: rest,
+        completed: [...session.completed, current.id],
+        announce,
+      });
+    }
+  }
+
+  const filteredQueue =
+    filter === "all" ? queue : queue.filter((c) => c.state === filter);
+
+  const current = session?.remaining[0];
+  const done = session !== null && session.remaining.length === 0;
+
+  // Next due day for the summary (smallest positive interval left in the queue).
+  const upcoming = queue.map((c) => c.dueInDays).filter((d) => d > 0);
+  const nextDue = upcoming.length > 0 ? Math.min(...upcoming) : null;
+
+  return (
+    <div id="spaced-review" className="scroll-mt-24">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <ClockCounterClockwise
+            weight="bold"
+            className="h-5 w-5 text-brand"
+            aria-hidden
+          />
+          <h2 className="text-lg font-semibold tracking-tight text-fg">
+            {t("progress.review.heading")}
+          </h2>
+          {dueCount > 0 ? (
+            <Badge tone="caution">
+              <Fire weight="fill" className="h-3 w-3" aria-hidden />
+              {t("progress.review.dueBadge", { count: dueCount })}
+            </Badge>
+          ) : null}
+        </div>
+        {!session && dueCount > 0 ? (
+          <Button
+            size="sm"
+            leadingIcon={<Sparkle weight="bold" className="h-4 w-4" />}
+            onClick={() => startSession(queue)}
+          >
+            {t("progress2.review.start")}
+          </Button>
+        ) : null}
+      </div>
+      <p className="mt-1 max-w-2xl text-sm text-muted">
+        {t("progress.review.subtitle")}
+      </p>
+
+      {/* Active review session */}
+      {session ? (
+        <Card
+          padding="lg"
+          className="mt-4 flex flex-col gap-4"
+          aria-label={t("progress2.review.sessionAria")}
+        >
+          {done ? (
+            <ReviewSummary
+              reviewedCount={session.completed.length || reviewedIds.length}
+              nextDue={nextDue}
+              onAgain={reviewAgain}
+              onClose={() => setSession(null)}
+            />
+          ) : current ? (
+            <ReviewSessionCard
+              card={current}
+              index={Math.min(session.completed.length + 1, session.size)}
+              total={session.size}
+              onGrade={grade}
+              onClose={() => setSession(null)}
+            />
+          ) : null}
+          <span aria-live="polite" className="sr-only">
+            {session.announce}
+          </span>
+        </Card>
+      ) : null}
+
+      {/* Queue list with a state filter */}
+      <div className="mt-4">
+        <Segmented<ReviewFilter>
+          ariaLabel={t("progress2.review.filterAria")}
+          value={filter}
+          onChange={setFilter}
+          size="sm"
+          options={[
+            { value: "all", label: t("progress2.review.all") },
+            { value: "due", label: t("progress2.review.due") },
+            { value: "learning", label: t("progress2.review.learning") },
+            { value: "scheduled", label: t("progress2.review.scheduled") },
+          ]}
+        />
+      </div>
+
+      {dueCount === 0 && !session ? (
+        <p className="mt-3 rounded-control border border-dashed border-border bg-bg-subtle p-4 text-sm text-muted">
+          {t("progress2.review.allClear")}
+        </p>
+      ) : null}
+
+      {filteredQueue.length > 0 ? (
+        <ul className="mt-3 flex flex-col gap-2.5">
+          {filteredQueue.map((c) => (
+            <ReviewRow
+              key={c.id}
+              card={c}
+              justGraded={reviewedIds.includes(c.id)}
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 rounded-control border border-dashed border-border bg-bg-subtle p-4 text-sm text-muted">
+          {t("progress2.review.empty")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ReviewSessionCard({
+  card,
+  index,
+  total,
+  onGrade,
+  onClose,
+}: {
+  card: ReviewCard;
+  index: number;
+  total: number;
+  onGrade: (g: ReviewGrade) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const lang = useLang();
+
+  function onKeyDown(e: React.KeyboardEvent) {
+    const map: Record<string, ReviewGrade> = {
+      "1": "again",
+      "2": "hard",
+      "3": "good",
+      "4": "easy",
+    };
+    const g = map[e.key];
+    if (g) {
+      e.preventDefault();
+      onGrade(g);
+    }
+  }
+
+  return (
+    <div onKeyDown={onKeyDown}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted">
+          {t("progress2.review.progress", { current: index, total })}
+        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t("progress2.review.close")}
+          className="grid h-7 w-7 place-items-center rounded-full text-muted hover:bg-bg-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          <X weight="bold" className="h-4 w-4" aria-hidden />
+        </button>
+      </div>
+
+      <div className="mt-3 rounded-control bg-bg-subtle p-4">
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className="inline-block rounded-full px-1.5 py-0.5 font-mono text-[11px] font-medium text-fg"
+            style={{
+              backgroundColor:
+                "color-mix(in srgb, var(--fg-muted) 12%, transparent)",
+            }}
+          >
+            {t(`feedback.domains.${card.domain}` as const)}
+          </span>
+          <CitationPill citationId={card.citationId} lang={lang} />
+        </div>
+        <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+          {t("progress2.review.promptLabel")}
+        </p>
+        <p className="mt-1 text-base font-medium text-fg">
+          {card.prompt[lang]}
+        </p>
+      </div>
+
+      <p className="mt-4 text-sm font-medium text-fg">
+        {t("progress2.review.gradePrompt")}
+      </p>
+      <div
+        className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4"
+        role="group"
+        aria-label={t("progress2.review.gradeAria")}
+      >
+        {REVIEW_GRADE_ORDER.map((g, i) => {
+          const preview = scheduleReview(card, g);
+          const previewText =
+            g === "again"
+              ? t("progress2.review.previewLater")
+              : t("progress2.review.previewDays", {
+                  count: preview.intervalDays,
+                });
+          return (
+            <button
+              key={g}
+              type="button"
+              onClick={() => onGrade(g)}
+              className="flex flex-col items-start gap-1 rounded-control border border-border bg-surface p-3 text-left transition-colors hover:bg-bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: gradeAccent[g] }}
+                  aria-hidden
+                />
+                <span className="text-sm font-semibold text-fg">
+                  {t(gradeLabelKey[g])}
+                </span>
+                <span
+                  className="font-mono text-[10px] text-muted"
+                  aria-hidden
+                >
+                  {i + 1}
+                </span>
+              </span>
+              <span className="text-[11px] text-muted">
+                {t(gradeHintKey[g])}
+              </span>
+              <span className="font-mono text-[11px] font-medium text-fg">
+                {previewText}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-[11px] text-muted">
+        {t("progress2.review.keyboardHint")}
+      </p>
+    </div>
+  );
+}
+
+function ReviewSummary({
+  reviewedCount,
+  nextDue,
+  onAgain,
+  onClose,
+}: {
+  reviewedCount: number;
+  nextDue: number | null;
+  onAgain: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center gap-3 py-2 text-center">
+      <span
+        className="grid h-12 w-12 place-items-center rounded-full bg-[color-mix(in_srgb,var(--state-normal)_16%,transparent)] text-[color:var(--state-normal)]"
+        aria-hidden
+      >
+        <CheckCircle weight="fill" className="h-6 w-6" />
+      </span>
+      <div>
+        <p className="text-base font-semibold text-fg">
+          {t("progress2.review.doneHeading")}
+        </p>
+        <p className="mt-1 max-w-md text-sm text-muted">
+          {t("progress2.review.doneBody", { count: reviewedCount })}
+        </p>
+        <p className="mt-1 text-sm font-medium text-fg">
+          {nextDue !== null
+            ? t("progress2.review.doneNextDue", { count: nextDue })
+            : t("progress2.review.doneNoneDue")}
+        </p>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          leadingIcon={<ArrowClockwise weight="bold" className="h-4 w-4" />}
+          onClick={onAgain}
+        >
+          {t("progress2.review.again")}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onClose}>
+          {t("progress2.review.close")}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -799,10 +1820,7 @@ function CohortCard() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <label
-            htmlFor={switchId}
-            className="text-xs font-medium text-muted"
-          >
+          <label htmlFor={switchId} className="text-xs font-medium text-muted">
             {optedIn ? t("progress.cohort.on") : t("progress.cohort.off")}
           </label>
           <Switch
@@ -882,8 +1900,6 @@ export function ProgressPage() {
     () => masteryDomains.filter((d) => d.axis === "communication"),
     [],
   );
-
-  const earnedBadges = badges.filter((b) => b.earned).length;
 
   return (
     <PageContainer className="flex flex-col gap-10">
@@ -991,11 +2007,7 @@ export function ProgressPage() {
       {/* Calibration trajectory */}
       <motion.section {...trajectory}>
         <div className="flex items-center gap-2">
-          <TrendDown
-            weight="bold"
-            className="h-5 w-5 text-brand"
-            aria-hidden
-          />
+          <TrendDown weight="bold" className="h-5 w-5 text-brand" aria-hidden />
           <h2 className="text-lg font-semibold tracking-tight text-fg">
             {t("progress.trajectory.heading")}
           </h2>
@@ -1010,65 +2022,12 @@ export function ProgressPage() {
 
       {/* Badges */}
       <motion.section {...badgesEntry} aria-label={t("progress.badges.heading")}>
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Trophy weight="bold" className="h-5 w-5 text-brand" aria-hidden />
-            <h2 className="text-lg font-semibold tracking-tight text-fg">
-              {t("progress.badges.heading")}
-            </h2>
-          </div>
-          <span className="text-sm text-muted">
-            {t("progress.badges.count", {
-              earned: earnedBadges,
-              total: badges.length,
-            })}
-          </span>
-        </div>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          {t("progress.badges.subtitle")}
-        </p>
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {badges.map((b) => (
-            <BadgeTile key={b.id} badge={b} />
-          ))}
-        </ul>
+        <BadgesSection />
       </motion.section>
 
       {/* Spaced-repetition queue */}
       <motion.section {...review} aria-label={t("progress.review.heading")}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <ClockCounterClockwise
-              weight="bold"
-              className="h-5 w-5 text-brand"
-              aria-hidden
-            />
-            <h2 className="text-lg font-semibold tracking-tight text-fg">
-              {t("progress.review.heading")}
-            </h2>
-            {dueNowCount > 0 ? (
-              <Badge tone="caution">
-                <Fire weight="fill" className="h-3 w-3" aria-hidden />
-                {t("progress.review.dueBadge", { count: dueNowCount })}
-              </Badge>
-            ) : null}
-          </div>
-          <Button
-            size="sm"
-            asChild
-            trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
-          >
-            <Link to="/cases">{t("progress.review.startReview")}</Link>
-          </Button>
-        </div>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          {t("progress.review.subtitle")}
-        </p>
-        <ul className="mt-4 flex flex-col gap-2.5">
-          {reviewQueue.map((c) => (
-            <ReviewRow key={c.id} card={c} />
-          ))}
-        </ul>
+        <ReviewSection />
       </motion.section>
 
       {/* Opt-in cohort comparison */}
