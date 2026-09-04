@@ -59,8 +59,11 @@ export function BackendStatus({ className }: { className?: string }) {
   const { available, checking } = useLiveBackend();
   const preferred = usePreferredLive();
 
-  // Nothing to surface until the learner has opted into Live mode.
-  if (!preferred) return null;
+  // Surface the pill when there is something to report: the backend is reachable
+  // (Live is auto-on → show "online"), or the learner explicitly opted in (so an
+  // offline gateway still shows "offline"). Stays hidden only when the backend is
+  // unreachable AND the learner never opted in.
+  if (!available && !preferred) return null;
 
   const shared = {
     className,
