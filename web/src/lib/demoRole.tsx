@@ -4,20 +4,28 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { useProfile, type ProfileRole } from "@/state/profileStore";
 
 /**
- * Demo "View as" role — a lightweight presentation switch that reveals the
- * three product surfaces the specs describe (docs/design/01 journeys 5/7/8):
+ * "View as" nav vantage — which of the three product surfaces the header shows
+ * (docs/design/01 journeys 5/7/8):
  *   - learner:  Home, Start, Cases, Rooms, Progress   (Journey 1-5)
  *   - educator: adds Authoring + Review               (Journey 7)
  *   - dean:     Institution dashboard                 (Journey 8)
  *
- * This is a DEMO affordance, not auth. It only changes which nav surfaces are
- * shown so a reviewer can walk the whole product; no data is gated by it.
- * The choice is persisted so a reload keeps the same vantage point.
+ * The vantage is now SEEDED FROM THE REAL PROFILE (src/state/profileStore.ts):
+ * once the person is onboarded, their real role maps onto a nav surface so
+ * TopNav reflects who they actually are — no placeholder learner default. The
+ * "View as" switcher remains a convenience (chiefly for educators/deans) that
+ * can preview another surface for the current session; it is cleared whenever
+ * the real role changes so nav never sticks on a stale vantage.
+ *
+ * The public API (`DemoRole`, `DEMO_ROLES`, `useDemoRole` → `{ role, setRole }`)
+ * is unchanged, so TopNav and RoleSwitcher consume it exactly as before.
  */
 
 export type DemoRole = "learner" | "educator" | "dean";
@@ -29,6 +37,23 @@ export const DEMO_ROLES: readonly DemoRole[] = [
 ] as const;
 
 const STORAGE_KEY = "acudx-demo-role";
+
+/**
+ * Map a real profile role onto a nav vantage. Students and residents both use
+ * the solo learner surfaces; educators and deans get their own.
+ */
+export function profileRoleToDemoRole(role: ProfileRole): DemoRole {
+  switch (role) {
+    case "educator":
+      return "educator";
+    case "dean":
+      return "dean";
+    case "student":
+    case "resident":
+    default:
+      return "learner";
+  }
+}
 
 interface DemoRoleContextValue {
   role: DemoRole;
@@ -49,19 +74,29 @@ function readStored(): DemoRole {
 
 /** DemoRoleProvider — holds the current "View as" vantage point. */
 export function DemoRoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<DemoRole>(() => readStored());
+  const profile = useProfile();
 
-  // Keep other tabs / late reads in sync with the persisted choice.
+  // Base vantage: the REAL role when onboarded, else the persisted demo choice.
+  const baseRole: DemoRole = profile?.onboarded
+    ? profileRoleToDemoRole(profile.role)
+    : readStored();
+
+  // Session-only "View as" override. Cleared whenever the real base changes
+  // (onboarding completes, or the account role is edited) so the nav reflects
+  // the real profile by default rather than a stale vantage.
+  const [override, setOverride] = useState<DemoRole | null>(null);
+  const prevBase = useRef<DemoRole>(baseRole);
   useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key === STORAGE_KEY) setRoleState(readStored());
+    if (prevBase.current !== baseRole) {
+      prevBase.current = baseRole;
+      setOverride(null);
     }
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [baseRole]);
+
+  const role = override ?? baseRole;
 
   const setRole = useCallback((r: DemoRole) => {
-    setRoleState(r);
+    setOverride(r);
     try {
       localStorage.setItem(STORAGE_KEY, r);
     } catch {

@@ -1,0 +1,71 @@
+{
+  "profile": {
+    "signIn": {
+      "eyebrow": "Giriş",
+      "title": "AcuDx'e giriş yapın",
+      "lede": "AcuDx yalnızca eğitim amaçlı bir klinik muhakeme simülatörüdür. Kurumunuz üzerinden giriş yapın veya pratiğe başlamak için yerel bir profil oluşturun.",
+      "ssoHeading": "Kurumsal giriş",
+      "ssoNote": "Üretim yolu — tıp fakülteniz veya eğitim programınız tarafından etkinleştirilir.",
+      "sso": "Kurumsal SSO ile devam et",
+      "ssoHint": "SAML / OpenID Connect tekli oturum açma",
+      "lti": "ÖYS'nizden başlatın (LTI 1.3)",
+      "ltiHint": "Moodle, Canvas veya kullandığınız öğrenme yönetim sistemi",
+      "productionBadge": "Üretim",
+      "unavailableNote": "Kurumunuz AcuDx'i bağladığında kullanılabilir.",
+      "or": "veya",
+      "localHeading": "Bu cihazda devam et",
+      "createCta": "Profilinizi oluşturun",
+      "createHint": "Yalnızca bu tarayıcıda saklanan yerel bir profil oluşturun.",
+      "continueAs": "{{name}} olarak devam et",
+      "continueAsHint": "Bu cihazda kayıtlı profilinize devam edin.",
+      "switchProfile": "Farklı bir profil kullan",
+      "eduNote": "Yalnızca klinik eğitim ve değerlendirme içindir. Gerçek hasta bakımı için değildir ve tıbbi cihaz değildir.",
+      "privacyNote": "Yerel profiliniz bu tarayıcıda kalır. Parola toplanmaz."
+    },
+    "onboarding": {
+      "eyebrow": "Profilinizi oluşturun",
+      "title": "Kendinizi tanıtın",
+      "lede": "Bu; adınızı, rolünüzü ve dilinizi AcuDx genelinde ayarlar. İstediğiniz zaman hesabınızdan değiştirebilirsiniz."
+    },
+    "account": {
+      "eyebrow": "Hesap",
+      "title": "Profiliniz",
+      "lede": "AcuDx'in sizi nasıl tanıdığını güncelleyin veya bu cihazdan çıkış yapın.",
+      "memberSince": "Profil oluşturuldu: {{date}}",
+      "signOut": "Çıkış yap"
+    },
+    "form": {
+      "fullName": "Ad soyad",
+      "fullNamePlaceholder": "ör. Dr. Elif Demir",
+      "fullNameError": "Ad soyadınızı girin.",
+      "role": "Rol",
+      "roleHint": "AcuDx'in size hangi ekranları göstereceğini belirler.",
+      "roleError": "Rolünüzü seçin.",
+      "institution": "Kurum",
+      "institutionPlaceholder": "ör. Hacettepe Üniversitesi Tıp Fakültesi",
+      "institutionError": "Kurumunuzu girin.",
+      "specialty": "Uzmanlık veya bölüm",
+      "specialtyPlaceholder": "ör. Acil tıp",
+      "specialtyHint": "İsteğe bağlı — vaka önerilerini kişiselleştirmeye yardımcı olur.",
+      "language": "Tercih edilen dil",
+      "languageHint": "AcuDx arayüz dilini değiştirir.",
+      "avatar": "Avatar",
+      "avatarHint": "Bir identicon seçin — fotoğraf gerekmez.",
+      "avatarChoose": "{{name}} avatarını seç",
+      "create": "Profil oluştur",
+      "save": "Değişiklikleri kaydet",
+      "cancel": "İptal",
+      "saved": "Değişiklikler kaydedildi."
+    },
+    "roles": {
+      "student": "Tıp öğrencisi",
+      "resident": "Asistan hekim",
+      "educator": "Eğitmen",
+      "dean": "Dekan / yönetici"
+    },
+    "languages": {
+      "en": "İngilizce",
+      "tr": "Türkçe"
+    }
+  }
+}
