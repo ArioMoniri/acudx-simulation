@@ -1,0 +1,1468 @@
+{
+  "authoring2": {
+    "intro": "从 AI 草稿走到已签署、带版本的发布。逐步走完流程，锁定每一条有据可依的事实，然后会签发布。",
+    "reset": "重置演练",
+    "stepper": {
+      "aria": "病例编写流程，六个可逐步推进的阶段",
+      "stepOf": "第 {{current}} 阶段，共 {{total}} 阶段",
+      "goTo": "前往「{{title}}」阶段",
+      "prev": "上一阶段",
+      "next": "下一阶段",
+      "blocked": "受阻"
+    },
+    "nav": {
+      "back": "返回",
+      "continue": "继续"
+    },
+    "draft": {
+      "heading": "AI 草稿交接",
+      "sub": "模型提出了人物设定、病例状态、生命体征驱动因素和评分量表。在下一阶段由临床医生落地并锁定之前，这些内容都不具权威性。",
+      "factsDrafted": "已起草 {{count}} 条临床事实",
+      "factsDrafted_other": "已起草 {{count}} 条临床事实",
+      "needsReview": "仍有 {{count}} 条等待临床医生审核",
+      "needsReview_other": "仍有 {{count}} 条等待临床医生审核",
+      "allLocked": "每一条起草的事实都已落地并锁定。",
+      "tierNote": "由大型开放模型起草，自托管并经跨模型族验证。未指明任何商业供应商。",
+      "toReview": "继续进行专家审核"
+    },
+    "editor": {
+      "lock": "按草稿锁定",
+      "editLock": "编辑并锁定",
+      "ground": "落地并锁定",
+      "unlock": "解锁",
+      "lockAria": "按草稿锁定「{{kind}}」事实",
+      "editLockAria": "编辑并锁定「{{kind}}」事实",
+      "groundAria": "为被标记的「{{kind}}」事实落地并锁定",
+      "unlockAria": "解锁「{{kind}}」事实",
+      "openHint": "将 AI 草稿按现状锁定，或先编辑再锁定。已锁定的事实会将其临床医生来源信息传递给学员。",
+      "groundHint": "该断言无法落地到已引用的来源。落地会记录一次临床医生编辑，并解除发布受阻。",
+      "progress": "已锁定 {{locked}} / {{total}} 条事实",
+      "ready": "每一条临床事实都已落地并锁定。可供签署。",
+      "stillBlocking": "仍有 {{count}} 条事实阻碍发布。",
+      "stillBlocking_other": "仍有 {{count}} 条事实阻碍发布。",
+      "liveHash": "实时病例指纹",
+      "liveHashNote": "随事实变化重新计算，签署时冻结。",
+      "toPsychometric": "继续进行同行与心理测量"
+    },
+    "psychometric": {
+      "toSignoff": "继续进行签署"
+    },
+    "signoff": {
+      "liveHashNote": "实时指纹，尚未冻结。签署会将其冻结为已发布版本。",
+      "frozenNote": "已在签署时冻结。学员的一次接诊及其反馈会锁定到这些哈希值。",
+      "toMonitor": "查看已发布病例"
+    },
+    "monitor": {
+      "justPublished": "本次会话中刚刚发布",
+      "newBadge": "新"
+    }
+  },
+  "avatar3d": {
+    "region": "3D 患者化身",
+    "synthetic": "合成患者",
+    "unavailable": "3D 不可用 — 正在显示 2D",
+    "speaking": "正在说话",
+    "muted": "已静音（无声对口型）",
+    "signsLabel": "可观察的临床体征",
+    "signs": {
+      "none": "无急性临床体征",
+      "pallor": "苍白",
+      "cyanosis": "发绀",
+      "diaphoresis": "大汗",
+      "distress": "呼吸窘迫",
+      "reducedLoc": "反应性下降"
+    },
+    "intensity": {
+      "mild": "轻度",
+      "moderate": "中度",
+      "marked": "显著"
+    },
+    "signItem": "{{sign}} — {{level}}",
+    "alt": "{{name}} 的风格化 3D 面部。表现：{{state}}。"
+  },
+  "commandPalette": {
+    "title": "命令面板",
+    "placeholder": "搜索命令…",
+    "sectionNav": "导航",
+    "sectionActions": "操作",
+    "enlarge": "放大患者视图",
+    "newCase": "新建随机病例",
+    "empty": "未找到命令。"
+  },
+  "debrief": {
+    "eyebrow": "事后",
+    "title": "主治医生复盘",
+    "subtitle": "你如何处理这个病例 — 诊断背后的思路过程。",
+    "forPatient": "患者：{{name}}",
+    "open": "查看主治医生复盘",
+    "close": "关闭",
+    "print": "打印 / 导出",
+    "minUnit": "分钟",
+    "committedLabel": "你的初步诊断",
+    "timeToDecision": "决策用时",
+    "historyCoverage": "病史覆盖度",
+    "workupAppropriate": "适应证内的检查",
+    "verdict": {
+      "correct": "诊断正确",
+      "nearMiss": "接近正确",
+      "incorrect": "不正确",
+      "correctBody": "你确定了正确的诊断。现在检查一下你得出结论的过程。",
+      "nearMissBody": "这是一个合理的诊断，但并非此表现下的首选诊断 — 复盘一下你所权衡的证据。",
+      "incorrectBody": "该诊断与所收集的证据不符。请沿着下方的过程重新推理。"
+    },
+    "redFlags": {
+      "heading": "危险信号（红旗征）",
+      "caught": "已引出",
+      "caughtNone": "未引出任何",
+      "missed": "遗漏",
+      "allCaught": "所有危险信号均已引出",
+      "none": "本病例未定义危险信号（红旗征）。",
+      "reference": "此表现下的危险信号"
+    },
+    "workup": {
+      "heading": "检查适当性",
+      "clean": "检查适当 — 未遗漏关键检查，也未过度开单。",
+      "under": "开单不足（缺口）",
+      "underNone": "无缺口",
+      "over": "过度开单",
+      "overNone": "无过度开单"
+    },
+    "teaching": {
+      "heading": "教学要点",
+      "safety": "填补安全关键缺口 — 在处置前核查过敏史并开具必做的检查。",
+      "redFlags": "你遗漏了 {{count}} 个危险信号（红旗征）。在缩小鉴别诊断前先筛查危险信号。",
+      "workupGap": "一项关键检查未开具（{{label}}）。此表现下应尽早开具。",
+      "dxIncorrect": "扩大鉴别诊断范围，并在确定前开具关键的排除性检查。",
+      "dxNear": "你已经很接近了 — 结合你收集的证据重新权衡首选鉴别诊断。",
+      "overOrder": "避免不改变处置的低价值检查；带着问题开单，而非条件反射式开单。",
+      "coverage": "拓宽病史采集 — 有几条预期的问诊线索未覆盖。",
+      "clean": "处理得当的接诊：安全、聚焦，并基于证据做出了决断。"
+    }
+  },
+  "diagnosis2": {
+    "assessmentHeading": "评估与计划",
+    "catalogHint": "搜索 ICD-10 / ICD-11 诊断目录",
+    "resultsCount": "{{count}} 条结果",
+    "searchEmptyHint": "输入诊断名称或 ICD / DSM 代码以搜索目录。",
+    "suggestedHeading": "针对此表现的建议",
+    "suggestedHint": "本病例可能的候选诊断 — 添加你正在权衡的项。",
+    "codeIcd10": "ICD-10",
+    "codeIcd11": "ICD-11",
+    "codeDsm": "DSM-5-TR",
+    "addAria": "将 {{name}} 加入鉴别诊断",
+    "retract": "撤回",
+    "retractAria": "将 {{name}} 从鉴别诊断中撤回",
+    "moveUpAria": "上移 {{name}}",
+    "moveDownAria": "下移 {{name}}",
+    "likelihoodAria": "设置 {{name}} 的可能性",
+    "likelihood": {
+      "leading": "首选",
+      "possible": "可能",
+      "unlikely": "不太可能"
+    },
+    "addNote": "添加推理",
+    "notePlaceholder": "鉴别特征或推理依据……",
+    "noteLabel": "推理依据",
+    "workingHeading": "初步诊断",
+    "workingEmpty": "从你的鉴别诊断中选择一个初步诊断以确定它并获取反馈。",
+    "commitAria": "将 {{name}} 确定为初步诊断",
+    "changeWorking": "更改初步诊断",
+    "committedAtLabel": "确定于",
+    "verdict": {
+      "correctTag": "命中",
+      "correctTitle": "与首选诊断相符",
+      "correctBody": "这是此表现下的首选诊断。请确认你的处置方案与去向安排。",
+      "nearTag": "接近正确",
+      "nearTitle": "合理，但请再斟酌",
+      "nearBody": "这是此表现下一个可能的替代诊断，但并非首选诊断。重新审视你的鉴别要点。",
+      "incorrectTag": "偏离",
+      "incorrectTitle": "重新考虑诊断",
+      "incorrectBody": "这与当前情况不符。重温关键发现并重建你的鉴别诊断。"
+    },
+    "dispositionHeading": "去向安排",
+    "dispositionHint": "该患者接下来去哪里？",
+    "dispo": {
+      "admit-ccu": "收入院 — 冠心病监护病房",
+      "admit-ward": "收入院 — 普通病房",
+      "admit-icu": "收入院 — 重症监护",
+      "operating-room": "送往手术室",
+      "observation": "留观病房",
+      "discharge": "出院并做好安全防护指导",
+      "refer-specialty": "转诊至专科"
+    },
+    "summaryHeading": "问题列表",
+    "summaryHint": "根据你的录入实时生成的评估与计划摘要。",
+    "summaryEmpty": "你的鉴别诊断、初步诊断和计划会随着你的构建在此显示。",
+    "summaryWorkingLabel": "初步诊断",
+    "summaryDifferentialLabel": "鉴别诊断",
+    "summaryPlanLabel": "计划",
+    "summaryDispositionLabel": "去向安排",
+    "verification": {
+      "confirmed": "已确诊",
+      "provisional": "临时",
+      "differential": "鉴别"
+    }
+  },
+  "ehr2": {
+    "orders": {
+      "searchLabel": "搜索医嘱",
+      "searchPlaceholder": "搜索化验、影像、药物……",
+      "clearSearch": "清除搜索",
+      "noMatches": "没有医嘱与你的搜索匹配。",
+      "itemsCount": "有 {{count}} 项可选",
+      "summary": "{{placed}} 项已开具、{{pending}} 项待处理、{{resulted}} 项已出结果",
+      "inProgressHeading": "进行中",
+      "resultedHeading": "已出结果",
+      "readyIn": "约 {{sec}} 秒后就绪",
+      "readyNow": "正在出具最终结果……",
+      "progressLabel": "{{name}} 结果进度",
+      "resultsHint": "结果会在完成后显示在「结果」标签页。"
+    },
+    "results": {
+      "summaryHeading": "结果摘要",
+      "resultedOf": "{{total}} 项医嘱中已出 {{done}} 项结果",
+      "pendingCount": "{{count}} 项待处理",
+      "abnormalCount": "{{count}} 项异常",
+      "criticalCount": "{{count}} 项危急",
+      "criticalHeading": "危急值",
+      "criticalNote": "立即审阅并处理危急结果，不得延误。",
+      "filterAbnormal": "仅异常",
+      "noAbnormal": "无异常结果可显示。",
+      "readyIn": "约 {{sec}} 秒后就绪",
+      "finalReport": "最终报告"
+    },
+    "flowsheet": {
+      "summaryHeading": "最新生命体征",
+      "baselineTrend": "对比基线",
+      "legendHeading": "状态图例",
+      "latest": "最新"
+    },
+    "chartReview": {
+      "summaryHeading": "目前的活动",
+      "questions": "问诊",
+      "exams": "查体",
+      "orders": "医嘱",
+      "results": "结果",
+      "offTask": "偏离任务的操作",
+      "offTaskHint": "接诊偏离临床任务的时刻",
+      "filterLabel": "按活动类型筛选时间线",
+      "filterAll": "全部",
+      "filterQuestions": "病史",
+      "filterExam": "查体",
+      "filterOrders": "医嘱",
+      "filterResults": "结果",
+      "emptyFiltered": "暂无此类活动。",
+      "noNewInfo": "无新信息",
+      "repeated": "重复"
+    },
+    "ap": {
+      "optionsCount": "{{count}} 个选项",
+      "differentialCount": "鉴别诊断中有 {{count}} 项",
+      "rankLabel": "优先级 {{n}}",
+      "quickPlanHeading": "快速加入计划",
+      "dispositionHeading": "去向安排",
+      "insertHint": "添加一个起点，保存前先编辑。",
+      "planCharCount": "{{count}} 个字符",
+      "planCount": "{{count}} 条计划",
+      "quick": {
+        "access": "建立静脉通路并送检血样",
+        "monitor": "持续心电与 SpO2 监测",
+        "analgesia": "滴定镇痛并给予止吐药",
+        "reassess": "初步处置后重新评估",
+        "seniorReview": "上报上级医师复核"
+      },
+      "dispo": {
+        "admitWard": "收入普通病房",
+        "admitIcu": "收入重症监护",
+        "observation": "留观病房",
+        "discharge": "出院并做好安全防护指导",
+        "refer": "转诊至专科"
+      }
+    }
+  },
+  "ehrPolish": {
+    "age": "年龄",
+    "sex": "性别",
+    "acuity": "危重程度"
+  },
+  "ehr": {
+    "storyboard": {
+      "populateHint": "随着你处理病历会逐步填充。",
+      "examFindings": "查体发现",
+      "examEmpty": "请求一项查体手法，发现会显示在此处。",
+      "abnormalFlag": "异常",
+      "normalFlag": "在正常范围内"
+    },
+    "tabs": {
+      "navLabel": "病历分区",
+      "monitor": "监护",
+      "guidance": "指导"
+    },
+    "interview": {
+      "patient": {
+        "heading": "患者",
+        "voiceOn": "语音开",
+        "voiceOff": "语音关",
+        "voiceToggle": "切换患者回复的语音朗读"
+      },
+      "voiceInput": {
+        "mic": "口述",
+        "listening": "正在聆听…",
+        "stop": "停止口述",
+        "unsupported": "此浏览器不支持语音口述。",
+        "hint": "说出你的问题；系统会将其录入文本框，发送前你可以编辑。"
+      }
+    }
+  },
+  "nav": {
+    "exam": "考核"
+  },
+  "exam": {
+    "header": {
+      "eyebrow": "评估",
+      "introTitle": "终结性考核",
+      "introDesc": "在监考、计时下运行一组生成病例，指导功能关闭，最终给出评分能力报告。",
+      "runningTitle": "考核进行中",
+      "runningDesc": "在计时下处理每个病例。指导功能已禁用。",
+      "reportTitle": "能力报告",
+      "reportDesc": "本次尝试的评分结果，已保存至此设备。"
+    },
+    "intro": {
+      "howItWorks": "考核如何进行",
+      "rule": {
+        "proctored": {
+          "title": "监考，仅一次机会",
+          "body": "每个病例只处理一次。病例内不可重试。"
+        },
+        "timed": {
+          "title": "每个病例计时",
+          "body": "每个病例都有倒计时；归零时自动提交。"
+        },
+        "noGuidance": {
+          "title": "指导已关闭",
+          "body": "全程禁用实时提示和主治医生建议。"
+        },
+        "scored": {
+          "title": "评分报告",
+          "body": "结束时你会获得一份能力报告，已保存至此设备。"
+        }
+      },
+      "lengthLabel": "病例数量",
+      "caseCount": "{{n}} 个病例",
+      "timeLabel": "每个病例时长",
+      "minutes": "{{n}} 分钟",
+      "mixLabel": "病例组合",
+      "mixHint": "全部系统不选则从所有系统中抽取，或选择特定系统。",
+      "allSystems": "所有系统",
+      "begin": "开始考核",
+      "sourceLive": "本次考核的病例为实时生成。",
+      "sourceLocal": "本次考核的病例在设备端生成。",
+      "priorAttempts": "已保存 {{n}} 次尝试。"
+    },
+    "family": {
+      "chest-pain": "胸痛",
+      "headache": "头痛",
+      "abdominal-pain": "腹痛",
+      "dyspnea": "呼吸困难"
+    },
+    "runner": {
+      "preparing": "正在准备第 {{n}} / {{total}} 个病例…",
+      "preparingHint": "正在生成一个全新、未见过的病例。",
+      "caseProgress": "第 {{n}} / {{total}} 个病例",
+      "guidanceOff": "指导已关闭",
+      "submitNext": "提交并下一个",
+      "finish": "提交并完成"
+    },
+    "verdict": {
+      "correct": "正确",
+      "nearMiss": "接近正确",
+      "incorrect": "不正确"
+    },
+    "report": {
+      "totalScore": "总分",
+      "acrossCases": "共 {{n}} 个病例",
+      "completed": "考核完成",
+      "accuracy": "诊断准确度",
+      "accuracyHint": "{{cases}} 例中 {{correct}} 例正确",
+      "redFlags": "危险信号捕获",
+      "redFlagsHint": "已筛查 vs 实际存在",
+      "workup": "检查适当性",
+      "workupHint": "适应证内 vs 过度 / 不足",
+      "ttd": "平均诊断用时",
+      "ttdHint": "已确定诊断的病例",
+      "perCase": "逐例",
+      "col": {
+        "case": "病例",
+        "diagnosis": "诊断",
+        "redFlags": "危险信号",
+        "workup": "检查",
+        "time": "用时",
+        "points": "得分"
+      },
+      "timedOut": "已超时",
+      "savedNote": "已保存至此设备。已记录 {{n}} 次尝试。",
+      "retake": "重新考核",
+      "home": "返回首页"
+    }
+  },
+  "calibration": {
+    "readoutDefault": "指向某个点，或用 Tab 键定位到它，以读取该领域。",
+    "readoutConfidence": "自信度",
+    "readoutPerformance": "表现",
+    "readoutGap": "差距",
+    "gap": {
+      "over": "过度自信 {{points}} 分",
+      "under": "自信不足 {{points}} 分",
+      "well": "误差在 {{points}} 分以内"
+    },
+    "pointAria": "{{domain}}。自信度 {{confidence}} 分，表现 {{performance}} 分。{{direction}}。",
+    "quadrantLegend": {
+      "heading": "如何解读象限",
+      "hint": "点所处的位置显示接下来应训练什么。",
+      "calibratedStrong": "高自信、强表现",
+      "calibratedGrowing": "低自信、仍在积累",
+      "blindSpot": "自信，但表现滞后",
+      "hiddenStrength": "表现优于你的自我判断"
+    }
+  },
+  "feedback": {
+    "process": {
+      "onTimeSummary": "{{total}} 项中 {{onTime}} 项按时",
+      "stewardship": {
+        "heading": "检查合理管理",
+        "subtitle": "每项医嘱是否由表现所指征，对照预期检查项并附引用来衡量。",
+        "indicated": "有适应证的医嘱",
+        "indicatedHint": "与预期检查相符",
+        "lowValue": "低价值医嘱",
+        "lowValueHint": "此表现下无适应证",
+        "flagged": "已标记：{{codes}}",
+        "cleanNote": "无低价值医嘱。每项检查都有适应证。",
+        "note": "按表现所指征的项目开单。低价值检查会增加成本、延误和偶然发现。"
+      }
+    },
+    "empty": {
+      "title": "尚无可报告的接诊",
+      "body": "完成一次接诊，你的形成性报告 — 校准度、能力等级和流程用时 — 会根据你的实际操作生成。"
+    },
+    "recorded": "来自你上次完成的接诊",
+    "live": "来自进行中的接诊"
+  },
+  "feedback3": {
+    "verdict": {
+      "eyebrow": "表现摘要",
+      "bandsProficient": "达到熟练及以上的等级",
+      "overall": "共 {{total}} 个已评分的能力等级",
+      "byAxis": "按维度",
+      "calibrationGap": "校准差距",
+      "gapTrend": "收窄 {{points}} 个百分点",
+      "gapHint": "自评 vs 实测，最近一次会话",
+      "withheldNote": "{{count}} 个领域因证据不足而暂缓给出"
+    },
+    "section": {
+      "bands": "能力等级",
+      "process": "流程与用时",
+      "gaps": "有证据支撑的差距",
+      "steps": "后续步骤"
+    }
+  },
+  "encounter": {
+    "guidance": {
+      "provenance": {
+        "aria": "{{source}} 的出处：发布机构、版次、证据等级和审核日期。",
+        "reviewed": "审核于 {{date}}",
+        "issuer": "{{organization}} · {{edition}}",
+        "evidence": "证据：{{grade}}",
+        "nextReview": "下次审核 {{date}}"
+      },
+      "abstain": {
+        "title": "超出范围则不予作答",
+        "note": "基于 {{scope}} 落地。超出此范围时，指导会保留意见而非猜测。",
+        "noteGeneric": "基于特定指南落地。超出其已验证范围时，指导会保留意见而非猜测。",
+        "emptyBody": "此步骤不在所覆盖的指南范围内，因此不提供提示。请依据你自己的临床推理继续。"
+      }
+    }
+  },
+  "guidance3": {
+    "panel": {
+      "title": "临床指导",
+      "subtitle": "为你的检查提供实时、附引用的辅导",
+      "education": "仅供教学",
+      "empty": "开始一次接诊即可看到针对当前关注点的实时、附引用指导。"
+    },
+    "focus": "当前关注点",
+    "reference": {
+      "live": "实时指南落地",
+      "offline": "离线参考",
+      "loading": "正在落地…"
+    },
+    "guideline": {
+      "more": "更多指南细节（{{count}}）",
+      "hide": "隐藏指南细节"
+    },
+    "sources": {
+      "title": "来源",
+      "open": "来源"
+    },
+    "coverage": {
+      "title": "覆盖度",
+      "history": "病史",
+      "exam": "查体",
+      "workup": "检查",
+      "complete": "完成",
+      "aria": "{{label}}：{{expected}} 项中已覆盖 {{done}} 项"
+    },
+    "redflags": {
+      "title": "危险信号",
+      "count": "已筛查 {{screened}}/{{total}}",
+      "screened": "已筛查",
+      "notScreened": "尚未筛查"
+    },
+    "nba": {
+      "title": "下一步最佳操作",
+      "askAbout": "询问 {{topic}}",
+      "examine": "查体：{{system}}",
+      "order": "开具 {{label}}",
+      "screenRedFlags": "筛查其余的危险信号",
+      "complete": "核心检查已覆盖 — 整合你的评估",
+      "urgent": "时间紧迫"
+    },
+    "workup": {
+      "title": "一份充分的检查应涵盖的内容",
+      "do": "应做",
+      "consider": "可考虑",
+      "within": "{{label}}，在 {{minutes}} 分钟内",
+      "ordered": "已开具",
+      "overdue": "已逾期",
+      "pending": "待办",
+      "onTime": "按时",
+      "late": "延迟"
+    },
+    "guide": {
+      "title": "主治医生提示",
+      "subtitle": "一位资深临床医生，在观察你的流程",
+      "mode": "指导模式",
+      "processOnly": "只指导你的流程，绝不指导诊断。",
+      "offBody": "指导模式已关闭。开启后可获得关于下一步最佳操作和用时的实时辅导。",
+      "dismiss": "关闭主治医生提示",
+      "reopen": "主治医生提示"
+    },
+    "intent": {
+      "onset": "起病",
+      "location": "部位",
+      "character": "性质",
+      "radiation": "放射",
+      "severity": "严重程度",
+      "timing": "时间与规律",
+      "aggravating": "加重因素",
+      "relieving": "缓解因素",
+      "associated-symptoms": "伴随症状",
+      "red-flags": "危险信号",
+      "past-medical-history": "既往病史",
+      "medications": "用药",
+      "allergies": "过敏史",
+      "family-history": "家族史",
+      "social-history": "社会史",
+      "risk-factors": "危险因素",
+      "ice": "想法、担忧与期望"
+    },
+    "maneuver": {
+      "general-inspection": "全身视诊",
+      "vitals-recheck": "复测生命体征",
+      "cardiovascular": "心血管",
+      "respiratory": "呼吸",
+      "abdominal": "腹部",
+      "neurological": "神经",
+      "musculoskeletal": "肌肉骨骼",
+      "skin": "皮肤",
+      "ent": "耳鼻喉",
+      "focused-special": "针对性特殊检查"
+    }
+  },
+  "home2": {
+    "caseCode": "病例编号",
+    "startCase": "开始病例"
+  },
+  "imaging2": {
+    "disclaimer": "示意图 — 非该患者本人",
+    "disclaimerShort": "示意图",
+    "source": "来源",
+    "viewSource": "在 Wikimedia Commons 上查看",
+    "license": "许可协议",
+    "attribution": "署名",
+    "noImage": "无可用示意图",
+    "noImageHint": "我们无法为该发现加载开放许可的图像。",
+    "loading": "正在加载示意图…",
+    "alt": "{{modality}} — {{query}} 的示意图",
+    "altNoModality": "{{query}} 的示意图"
+  },
+  "institution": {
+    "compliance": {
+      "sectionLabel": "合规与审计"
+    },
+    "remediation": {
+      "priorityEyebrow": "优先工作流",
+      "queue": {
+        "caption": "补救队列",
+        "tableCaption": "所有开放与已关闭补救闭环的一览式状态。",
+        "openedCol": "开启于",
+        "stageCol": "阶段",
+        "statusCol": "状态",
+        "days": "{{count}} 天"
+      },
+      "step": {
+        "summary": "{{total}} 个闭环中已关闭 {{closed}} 个",
+        "progress": "第 {{current}} 步，共 {{total}} 步：{{stage}}",
+        "closedLabel": "闭环已关闭",
+        "back": "返回",
+        "backAria": "将 {{learner}} 退回上一个闭环阶段",
+        "advanceAria": "为 {{learner}} 标记「{{stage}}」完成",
+        "markComplete": "完成「{{stage}}」",
+        "close": "关闭闭环",
+        "reset": "重置",
+        "reassessLogged": "已记录重新评估。详细结果保留在学员的私密动态中。",
+        "live": "{{learner}}：「{{stage}}」进行中。",
+        "liveClosed": "{{learner}}：补救闭环已关闭。"
+      }
+    },
+    "heatmap": {
+      "drill": {
+        "regionLabel": "{{learner}} 的下钻详情",
+        "closeAria": "关闭 {{learner}} 的下钻",
+        "path": "路径：队列、{{section}}、{{learner}}、{{domain}}",
+        "domainSwitchLabel": "查看某个领域",
+        "bandLabel": "等级",
+        "encountersLabel": "{{count}} 次已评分接诊",
+        "evidenceLangNote": "以学员自己的语言显示（{{lang}}）。",
+        "takeHeading": "评分者解读",
+        "withheldHeading": "等级暂缓",
+        "withheldBody": "可靠证据尚不足（{{count}} 次接诊）。可靠性达到阈值后即会给出等级。",
+        "crosswalkChip": "ACGME {{tag}}",
+        "crosswalkTip": "对应 ACGME Milestones 要素 {{tag}}。这是同一证据的对照映射，绝非重新评分。",
+        "openHint": "选择任一单元格以查看其等级背后的证据。"
+      }
+    },
+    "calibration": {
+      "filter": {
+        "heading": "筛选",
+        "directionLabel": "方向",
+        "axisLabel": "维度",
+        "all": "全部",
+        "clinical": "临床",
+        "communication": "沟通",
+        "showing": "显示 {{total}} 个主题中的 {{count}} 个",
+        "empty": "没有主题符合此筛选。",
+        "reset": "重置筛选"
+      }
+    },
+    "export": {
+      "preview": {
+        "regionLabel": "去标识化导出预览",
+        "heading": "导出预览",
+        "generatedNote": "对照映射 {{version}}",
+        "open": "预览导出",
+        "close": "关闭预览",
+        "deidStamp": "已去标识化",
+        "reidWarn": "可重新识别，发布前请审阅",
+        "fairnessAppended": "已附公平性审计",
+        "frameworksHeading": "已标记的框架",
+        "scopeHeading": "范围",
+        "sampleHeading": "去标识化样本",
+        "sampleCaption": "队列行在导出中呈现的样例。标识符为经掩码处理的名册代码。",
+        "andMore": "另有 {{count}} 名学员。",
+        "crosswalkHeading": "领域对照映射（{{framework}}）",
+        "download": "下载导出",
+        "downloadNote": "仅供演示。没有文件离开此设备。",
+        "selectFrameworks": "请至少选择一个框架以进行预览。"
+      }
+    }
+  },
+  "labs2": {
+    "results": {
+      "microHeading": "微生物学、血清学及报告",
+      "analytes": "{{count}} 项检测物"
+    }
+  },
+  "landing2": {
+    "hero": {
+      "eyebrow": "临床推理模拟器"
+    },
+    "monitor": {
+      "aria": "合成患者的演示生命体征监护仪：心率 84，血压 128/76，血氧饱和度 98%，呼吸频率 16。",
+      "unit": "2 号床位",
+      "status": "监护中",
+      "trace": "窦性心律",
+      "hr": "心率",
+      "bp": "血压",
+      "spo2": "血氧饱和度",
+      "rr": "呼吸频率"
+    },
+    "loop": {
+      "eyebrow": "核心循环",
+      "heading": "四步操作，一次接诊",
+      "sub": "每个病例都走同一条临床弧线，然后经校准后交还给你。",
+      "cycle": "每次循环都会为下一个病例校准你的判断。",
+      "steps": {
+        "interview": {
+          "title": "问诊",
+          "body": "用通俗语言（土耳其语或英语）向合成患者采集病史。"
+        },
+        "chart": {
+          "title": "在 EHR 中记录",
+          "body": "开具检查、读取实时生命体征监护仪，并在真实的病历外壳中书写记录。"
+        },
+        "decision": {
+          "title": "决策",
+          "body": "确定鉴别诊断和计划，并说明你的自信程度。"
+        },
+        "feedback": {
+          "title": "校准反馈",
+          "body": "查看能力与自信的对比，每一处安全关键遗漏都会被呈现并附引用。"
+        }
+      }
+    },
+    "platform": {
+      "eyebrow": "接诊之外",
+      "heading": "围绕核心循环的完整培训项目",
+      "sub": "学员循环嵌入在一个完整的临床教育平台之中。",
+      "items": {
+        "cases": {
+          "title": "动态病例",
+          "body": "按需从 ICD 和 DSM 生成，因此一届学员永远无法背下题库。"
+        },
+        "rooms": {
+          "title": "多人房间",
+          "body": "在共享的患者状态上，让医生、护士和急救员共同处理同一个病例。"
+        },
+        "progress": {
+          "title": "随时间的进步",
+          "body": "以可训练、分等级的技能来追踪能力。没有数值分数，没有排行榜。"
+        },
+        "institution": {
+          "title": "机构分析",
+          "body": "队列能力、补救和公平性审计，均为聚合并按角色分级授权。"
+        },
+        "sovereign": {
+          "title": "开放且自主可控",
+          "body": "开放权重模型、自托管，病例编写以人为最终权威。"
+        }
+      }
+    },
+    "credibility": {
+      "label": "以已发布的指南为依据",
+      "note": "每一条提示、每一处遗漏都锚定到来源，绝不臆造。",
+      "sources": "NICE · WHO · ATLS · DSM-5-TR · ICD-11"
+    }
+  },
+  "liveBackend": {
+    "toggle": "实时",
+    "tooltip": "使用运行在计算节点上的实时开放模型后端。你的消息会先经过防护，再由本地模型作答。",
+    "offline": "后端离线",
+    "badge": "实时 · 节点",
+    "fallback": "无法连接到实时后端，因此本轮由离线模拟作答。"
+  },
+  "livegen": {
+    "modeLegend": "生成",
+    "endless": "生成一个全新病例",
+    "endlessHint": "每次都是全新的合成患者 — 无穷无尽，绝不重复。",
+    "endlessSub": "从各个专科抽取，并对每个病例自检一致性。",
+    "engineAi": "AI · 实时",
+    "engineLocal": "即时 · 离线",
+    "engineChecking": "正在检查节点…",
+    "refine": "细化（可选）",
+    "pickEngine": "或选择特定引擎",
+    "orCurated": "或从精选病例开始",
+    "curatedHint": "带指南锚点、完整编写的教学病例。",
+    "quick": "快速生成",
+    "quickHint": "即时、离线。由种子模板引擎在设备端构建病例。",
+    "ai": "AI 生成",
+    "aiHint": "在节点上运行：按 ICD/DSM 抽样并落地，细节更丰富。",
+    "note": "AI 生成会在节点上运行开放模型，可能需要片刻。",
+    "generating": "正在生成…",
+    "generatingHint": "正在节点上抽样、落地并验证。你可以取消。",
+    "cancel": "取消",
+    "unavailable": "AI 后端不可用 — 已在本地生成",
+    "degraded": "落地降级 — 请核实指南锚点",
+    "ready": "病例已就绪",
+    "sourceLabel": "来源",
+    "source": {
+      "ai": "AI",
+      "template": "模板",
+      "local": "本地"
+    }
+  },
+  "monitor2": {
+    "title": "床旁监护仪",
+    "trendTitle": "趋势",
+    "online": "实时",
+    "offline": "待机",
+    "elapsed": "已用时",
+    "bed": "床位",
+    "awaiting": "无信号",
+    "awaitingHint": "等待接诊 — 病例开始时生命体征即开始。",
+    "trendAwaiting": "暂无趋势数据 — 随接诊进行读数会逐步积累。",
+    "alarm": "报警",
+    "alarmClear": "无活动报警",
+    "leads": "II 导联",
+    "limitHi": "上限",
+    "limitLo": "下限",
+    "now": "当前",
+    "min": "最小",
+    "max": "最大",
+    "treatment": "治疗",
+    "treatmentGiven": "已给予治疗",
+    "status": {
+      "improving": "好转中",
+      "stable": "稳定",
+      "deteriorating": "恶化中",
+      "critical": "危急"
+    },
+    "params": {
+      "hr": {
+        "label": "心率",
+        "short": "HR",
+        "unit": "bpm"
+      },
+      "spo2": {
+        "label": "血氧饱和度",
+        "short": "SpO₂",
+        "unit": "%"
+      },
+      "bp": {
+        "label": "血压",
+        "short": "ABP",
+        "unit": "mmHg"
+      },
+      "map": {
+        "label": "平均动脉压",
+        "short": "MAP",
+        "unit": "mmHg"
+      },
+      "rr": {
+        "label": "呼吸频率",
+        "short": "RR",
+        "unit": "/min"
+      },
+      "temp": {
+        "label": "体温",
+        "short": "Temp",
+        "unit": "°C"
+      }
+    },
+    "a11y": {
+      "region": "实时生命体征监护仪",
+      "trendRegion": "生命体征趋势",
+      "tableCaption": "当前生命体征",
+      "colParam": "参数",
+      "colValue": "数值",
+      "alarmAnnounce": "{{status}}报警：{{params}}"
+    }
+  },
+  "orders2": {
+    "tab": {
+      "diagnostics": "开具检查",
+      "treatments": "治疗"
+    },
+    "group": {
+      "labs": "化验",
+      "bloodgas": "血气",
+      "micro": "微生物学",
+      "imaging": "影像",
+      "poc": "床旁即时检测"
+    },
+    "search": {
+      "label": "搜索可开具的检查",
+      "placeholder": "搜索检查 — 血常规、肌钙蛋白、CT、培养…",
+      "clear": "清除搜索",
+      "noMatches": "没有可开具的检查与你的搜索匹配。"
+    },
+    "turnaround": {
+      "aria": "周转时间 {{eta}}"
+    },
+    "order": {
+      "place": "开具",
+      "ordered": "已开具",
+      "placeAria": "开具 {{name}}",
+      "orderedAria": "{{name}} 已开具",
+      "itemsCount": "{{count}} 项检查"
+    },
+    "flag": {
+      "indicated": "有适应证",
+      "indicatedAria": "此表现下有适应证",
+      "lowValue": "低价值",
+      "lowValueAria": "此表现下为低价值或无适应证"
+    },
+    "tracker": {
+      "heading": "医嘱追踪",
+      "empty": "暂无医嘱。选择一项检查以观察其结果到来。",
+      "summary": "{{placed}} 项已开具 · {{pending}} 项待处理 · {{resulted}} 项已出结果",
+      "inProgress": "进行中",
+      "resultedGroup": "已出结果",
+      "pending": "待处理",
+      "resultedTag": "已出结果",
+      "eta": "预计 {{eta}}",
+      "readyIn": "约 {{sec}} 秒后就绪",
+      "readyNow": "正在出具最终结果…",
+      "orderedAt": "开具于 {{min}} 分钟",
+      "resultedAt": "出结果于 {{min}} 分钟",
+      "progressAria": "{{name}} 结果进度",
+      "hint": "每项检查完成后，结果会在「结果」标签页打开。"
+    },
+    "treatments": {
+      "heading": "治疗",
+      "subtitle": "给予治疗以改变患者状况 — 监护仪会实时响应。",
+      "administer": "给予",
+      "administered": "已给予",
+      "administerAria": "给予 {{name}}",
+      "administeredAria": "{{name}} 已给予",
+      "route": "途径",
+      "givenAt": "给予于 {{min}} 分钟",
+      "givenCount": "已给予 {{count}} 项",
+      "empty": "尚未给予任何治疗。"
+    },
+    "results": {
+      "wnl": "在正常范围内",
+      "representativeImage": "示意图",
+      "syntheticNote": "无病例特异性异常 — 报告为正常范围内。",
+      "timeline": "开具于 {{ordered}} 分钟 → 出结果于 {{resulted}} 分钟",
+      "etaLabel": "预计周转时间 {{eta}}",
+      "inProgress": "进行中",
+      "eta": "预计 {{eta}}",
+      "finalReport": "最终报告",
+      "normalHeading": "其他结果（正常）",
+      "normalNote": "无病例特异性发现的已开具检查在此报告，均在正常范围内。"
+    }
+  },
+  "patient": {
+    "avatar": {
+      "alt": "{{name}} 的插画肖像。表现：{{state}}。",
+      "synthetic": "合成患者",
+      "decorative": "插画患者肖像"
+    }
+  },
+  "patientviewer": {
+    "expand": "放大患者视图",
+    "title": "患者 — {{name}}",
+    "close": "关闭",
+    "syntheticNote": "合成患者 — 并非真实个体",
+    "photoLabel": "患者照片",
+    "signsLabel": "实时临床体征",
+    "summaryLabel": "临床体征",
+    "reflectsLive": "反映实时生命体征进程",
+    "vitalsLabel": "当前生命体征",
+    "signs": {
+      "stable": "无急性窘迫",
+      "distress": "处于窘迫",
+      "cyanotic": "发绀",
+      "hypoxic": "缺氧",
+      "hypotensive": "低血压",
+      "hypertensive": "高血压",
+      "tachycardic": "心动过速",
+      "bradycardic": "心动过缓",
+      "diaphoretic": "大汗",
+      "pale": "苍白",
+      "febrile": "发热",
+      "hypothermic": "低体温"
+    }
+  },
+  "profile": {
+    "signIn": {
+      "eyebrow": "登录",
+      "title": "登录 AcuDx",
+      "lede": "AcuDx 是一个仅供教育用途的临床推理模拟器。通过你所在的机构登录，或创建本地档案开始练习。",
+      "ssoHeading": "机构登录",
+      "ssoNote": "正式路径 — 由你的医学院或培训项目启用。",
+      "sso": "使用机构 SSO 继续",
+      "ssoHint": "SAML / OpenID Connect 单点登录",
+      "lti": "从你的 LMS 启动（LTI 1.3）",
+      "ltiHint": "Moodle、Canvas 或你的虚拟学习环境",
+      "productionBadge": "正式环境",
+      "unavailableNote": "在你所在机构接入 AcuDx 后即可使用。",
+      "or": "或",
+      "localHeading": "在此设备上继续",
+      "createCta": "创建你的档案",
+      "createHint": "创建一个仅存储在此浏览器中的本地档案。",
+      "continueAs": "以 {{name}} 身份继续",
+      "continueAsHint": "在此设备上恢复你已保存的档案。",
+      "switchProfile": "使用其他档案",
+      "eduNote": "仅供临床教育与评估。不用于真实患者诊疗，也非医疗器械。",
+      "privacyNote": "你的本地档案仅保留在此浏览器中。不收集任何密码。"
+    },
+    "onboarding": {
+      "eyebrow": "创建你的档案",
+      "title": "告诉我们你是谁",
+      "lede": "这会在整个 AcuDx 中设定你的姓名、角色和语言。你随时可以从账户中更改。"
+    },
+    "account": {
+      "eyebrow": "账户",
+      "title": "你的档案",
+      "lede": "更新 AcuDx 识别你的方式，或从此设备登出。",
+      "memberSince": "档案创建于 {{date}}",
+      "signOut": "登出"
+    },
+    "form": {
+      "fullName": "全名",
+      "fullNamePlaceholder": "例如：Dr. Elif Demir",
+      "fullNameError": "请输入你的全名。",
+      "role": "角色",
+      "roleHint": "决定 AcuDx 向你展示哪些界面。",
+      "roleError": "请选择你的角色。",
+      "institution": "机构",
+      "institutionPlaceholder": "例如：哈杰特佩大学医学院",
+      "institutionError": "请输入你所在的机构。",
+      "specialty": "专科或科室",
+      "specialtyPlaceholder": "例如：急诊医学",
+      "specialtyHint": "可选 — 有助于定制病例推荐。",
+      "language": "首选语言",
+      "languageHint": "更改 AcuDx 的界面语言。",
+      "avatar": "头像",
+      "avatarHint": "选择一个标识图案 — 无需照片。",
+      "avatarChoose": "选择「{{name}}」头像",
+      "create": "创建档案",
+      "save": "保存更改",
+      "cancel": "取消",
+      "saved": "更改已保存。"
+    },
+    "roles": {
+      "student": "医学生",
+      "resident": "住院医师",
+      "educator": "教育者",
+      "dean": "院长 / 管理员"
+    },
+    "languages": {
+      "en": "English",
+      "tr": "Türkçe"
+    }
+  },
+  "progress2": {
+    "streak": {
+      "logRep": "记录今日一练",
+      "logged": "今日已记录",
+      "logHint": "一个简短病例即可延续你的连续记录。",
+      "logAnnounce": "已记录今日一练。连续记录现为 {{days}} 天。",
+      "protectedToday": "今日已完成。明天见。"
+    },
+    "mastery": {
+      "expand": "查看是什么推动了这一等级",
+      "collapse": "隐藏详情",
+      "toggleAria": "{{domain}} 的详情",
+      "movedByHeading": "推动因素",
+      "nextHeading": "要达到「{{band}}」",
+      "unlockHeading": "要解锁一个等级",
+      "historyHeading": "近期等级",
+      "evidenceHeading": "该等级背后的证据",
+      "evidenceToday": "今天",
+      "evidenceAgo_one": "{{count}} 天前",
+      "evidenceAgo_other": "{{count}} 天前",
+      "practise": "练习这一差距",
+      "topBand": "你已处于最高等级。保持稳定以维持其可靠性。"
+    },
+    "epa": {
+      "expand": "查看信任度阶梯",
+      "collapse": "隐藏阶梯",
+      "ladderAria": "{{code}} 的信任度阶梯，第 {{level}} 级，共 5 级",
+      "current": "你在这里",
+      "next": "下一步",
+      "atCeiling": "已达最高级别。你可以协助督导他人。"
+    },
+    "badges": {
+      "filterAria": "筛选里程碑",
+      "all": "全部",
+      "earned": "已获得",
+      "inProgress": "进行中",
+      "emptyEarned": "此视图中尚未获得里程碑。",
+      "emptyInProgress": "目前没有进行中的项。"
+    },
+    "trajectory": {
+      "metricAria": "选择要聚焦的指标",
+      "metricGap": "自信度差距",
+      "metricBrier": "Brier 分数",
+      "focusHeading": "逐次会话",
+      "sessionsAria": "会话，从最早到最新。使用左右方向键查看某次会话。",
+      "sessionAria": "会话 {{label}}，{{metric}} {{value}}",
+      "selected": "会话 {{label}}",
+      "readoutGap": "自信度差距 {{value}}%",
+      "readoutBrier": "Brier {{value}}",
+      "sinceFirst": "自你的首次会话以来",
+      "betterGap": "收窄 {{points}} 分",
+      "betterBrier": "降低 {{value}}",
+      "worse": "升高 {{value}}",
+      "flat": "尚无变化"
+    },
+    "review": {
+      "start": "开始间隔复习",
+      "resume": "继续复习",
+      "sessionAria": "间隔复习会话",
+      "progress": "第 {{current}} / {{total}} 张卡片",
+      "promptLabel": "回忆提示",
+      "gradePrompt": "刚才的回忆感觉如何？",
+      "gradeAria": "为你的回忆评分",
+      "gradeAgain": "重来",
+      "gradeHard": "困难",
+      "gradeGood": "良好",
+      "gradeEasy": "轻松",
+      "hintAgain": "一片空白",
+      "hintHard": "费力",
+      "hintGood": "想起来了",
+      "hintEasy": "瞬间想起",
+      "previewLater": "今天晚些时候",
+      "previewDays_one": "{{count}} 天",
+      "previewDays_other": "{{count}} 天",
+      "keyboardHint": "按 1 到 4 即可不用鼠标评分。",
+      "announce": "已评为「{{grade}}」。{{schedule}}",
+      "scheduleAgain": "此卡片将在本次会话中稍后再次出现。",
+      "scheduleNext_one": "{{count}} 天后再次复习，稳定度现为 {{stability}} 天。",
+      "scheduleNext_other": "{{count}} 天后再次复习，稳定度现为 {{stability}} 天。",
+      "doneHeading": "会话完成",
+      "doneBody_one": "你复习了 {{count}} 张卡片。每一张都会在你即将遗忘前重新安排复习。",
+      "doneBody_other": "你复习了 {{count}} 张卡片。每一张都会在你即将遗忘前重新安排复习。",
+      "doneNextDue_one": "下一张卡片将在 {{count}} 天后到期。",
+      "doneNextDue_other": "下一张卡片将在 {{count}} 天后到期。",
+      "doneNoneDue": "没有其他到期的了。明天再来吧。",
+      "again": "再次复习",
+      "close": "关闭复习",
+      "filterAria": "筛选复习卡片",
+      "all": "全部",
+      "due": "到期",
+      "learning": "学习中",
+      "scheduled": "已排期",
+      "empty": "没有卡片符合此筛选。",
+      "allClear": "全部完成。目前没有到期的卡片。",
+      "justGraded": "刚刚复习"
+    }
+  },
+  "progress3": {
+    "snapshot": {
+      "level": "级别",
+      "streak": "连续记录",
+      "calibrationGap": "校准差距",
+      "reviewsDue": "待复习",
+      "gapTrend": "收窄 {{points}} 个百分点",
+      "streakUnit": "天",
+      "reviewsUnit": "张卡片"
+    },
+    "review": {
+      "tableLabel": "复习队列",
+      "tableCaption": "间隔重复复习队列，含每张卡片的回忆、稳定度和到期日。",
+      "col": {
+        "prompt": "提示",
+        "domain": "领域",
+        "recall": "回忆",
+        "stability": "稳定度",
+        "due": "到期",
+        "state": "状态"
+      }
+    }
+  },
+  "home": {
+    "snapshotEmpty": "完成一次接诊以生成你的校准快照。"
+  },
+  "progress": {
+    "mastery": {
+      "empty": "完成一次接诊以开始绘制你在各能力领域的掌握情况。"
+    },
+    "trajectoryEmptyHint": "完成一次接诊后，你的校准趋势会显示在此处。"
+  },
+  "rooms": {
+    "join": {
+      "title": "用代码加入",
+      "subtitle": "有队友给的房间代码吗？输入它以占用一个空座位。",
+      "label": "房间代码",
+      "placeholder": "房间代码，例如 ACS-7K2",
+      "action": "加入",
+      "notFound": "没有开放房间与该代码匹配。请核对后重试。",
+      "or": "或"
+    },
+    "card": {
+      "code": "代码",
+      "copyCode": "复制房间代码",
+      "copied": "已复制"
+    },
+    "create": {
+      "localeLabel": "接诊语言",
+      "localeHint": "整个房间共用的角色扮演语言。"
+    },
+    "phase": {
+      "startSession": "开始会话",
+      "endSession": "结束并复盘",
+      "reopen": "重新开启房间",
+      "startedNote": "团队计时已开始。各角色被锁定在各自的职责范围内。"
+    },
+    "invite": {
+      "label": "邀请码",
+      "copy": "复制邀请码",
+      "copied": "已复制",
+      "hint": "分享此代码，让队友可以占用一个空座位。"
+    },
+    "inroom": {
+      "takeThisSeat": "占座",
+      "takeSeatAria": "占用「{{role}}」座位",
+      "leaveSeat": "离座",
+      "leaveSeatAria": "离开「{{role}}」座位",
+      "ready": "已准备",
+      "notReady": "未准备",
+      "toggleReadyAria": "切换「{{role}}」座位的准备状态",
+      "makeLead": "设为团队组长",
+      "makeLeadAria": "将团队组长头衔交给「{{role}}」",
+      "giveFloor": "交予发言权",
+      "giveFloorAria": "将发言权交给「{{role}}」",
+      "handRaised": "已举手",
+      "hasFloor": "拥有发言权",
+      "seatControlsLabel": "座位控制",
+      "backfillInline": "AI 补位",
+      "backfillInlineAria": "用 AI 补齐空座位",
+      "requestFloorAgain": "正在请求发言权",
+      "lowerHand": "放下手",
+      "youRaised": "你已举手。团队组长会请你发言。",
+      "youHaveFloor": "你拥有发言权",
+      "passFloor": "移交发言权",
+      "floorControlsLabel": "发言权与轮次控制",
+      "observer": "观察者",
+      "observerScope": "你正在观察此房间。占一个座位以在其中行动。",
+      "delegatedNote": "委派与提示会发布到团队公共区，并作为证据记录。",
+      "sbarPosted": "上报已发布到公共区",
+      "youClosedLoop": "你已确认此闭环"
+    },
+    "debrief": {
+      "live": "本次会话实时",
+      "loopsClosed": "你完成的闭环确认",
+      "loopsValue": "{{total}} 个中的 {{closed}} 个",
+      "pending": "在会话结束前，下方的评分仅供示意。"
+    }
+  },
+  "rooms3": {
+    "eyebrow": "多人",
+    "card": {
+      "seats": "座位",
+      "live": "实时"
+    }
+  },
+  "authoring3": {
+    "eyebrow": "病例流程",
+    "draft": {
+      "factsLabel": "已起草事实",
+      "reviewLabel": "待审核"
+    },
+    "monitor": {
+      "tableLabel": "已发布并监测的病例",
+      "colCase": "病例",
+      "colLocales": "语言",
+      "colEncounters": "接诊数",
+      "colStatus": "状态",
+      "colAction": "操作"
+    }
+  },
+  "roomscollab": {
+    "roles": {
+      "doctor": "医生",
+      "nurse": "护士",
+      "paramedic": "急救员"
+    },
+    "acting": {
+      "as": "正扮演{{role}}",
+      "switch": "切换角色",
+      "actAs": "扮演{{role}}",
+      "hint": "一个浏览器，整个团队 — 切换座位，在同一位患者上扮演每个角色。",
+      "youAreAi": "此角色由 AI 担任。切换进入以亲自扮演。",
+      "label": "扮演角色"
+    },
+    "scope": {
+      "doctor": "主导诊治：采集病史、开具检查与治疗、确定诊断和计划。",
+      "nurse": "负责床旁：处理任务队列、给药、监测实时反应、上报。",
+      "paramedic": "交代现场：给出院前情况和结构化的 ATMIST/SBAR 交接。"
+    },
+    "tabs": {
+      "workspace": "工作区",
+      "interview": "问诊",
+      "prehospital": "院前",
+      "orders": "医嘱与任务",
+      "floor": "团队公共区",
+      "debrief": "复盘"
+    },
+    "orders": {
+      "title": "医嘱与交接",
+      "subtitle": "医生开具医嘱；医嘱会成为执行角色队列中的一项任务。",
+      "compose": "下达医嘱",
+      "medications": "药物与治疗",
+      "diagnostics": "诊断检查",
+      "place": "开具",
+      "placeAria": "开具 {{name}}",
+      "doctorOnly": "只有医生可以下达医嘱。切换到医生座位以为团队开具。",
+      "handsTo": "交给{{role}}",
+      "reason": "原因（可选）"
+    },
+    "task": {
+      "queueTitle": "任务队列",
+      "queueSubtitle": "交给团队的医嘱，附状态和真实的周转时间。",
+      "empty": "暂无任务。医生下达的医嘱会作为团队工作出现在这里。",
+      "mineEmpty": "你的队列已清空。分配给你的新医嘱会显示在此处。",
+      "orderedBy": "由{{role}}开具",
+      "for": "分配给{{role}}",
+      "eta": "预计 {{eta}}",
+      "claim": "认领",
+      "claimAria": "认领 {{name}}",
+      "claimedBy": "由{{role}}认领",
+      "administer": "给予",
+      "administerAria": "给予 {{name}}",
+      "collect": "采集并送检",
+      "collectAria": "采集并送检 {{name}}",
+      "doneBy": "由{{role}}执行",
+      "resultPending": "在化验室 — 结果处理中",
+      "resultReady": "结果可用",
+      "notYours": "切换到「{{role}}」座位以执行此任务。",
+      "status": {
+        "pending": "待处理",
+        "claimed": "已认领",
+        "done": "已完成"
+      },
+      "kind": {
+        "medication": "药物",
+        "diagnostic": "诊断检查",
+        "intervention": "处置"
+      }
+    },
+    "vitals": {
+      "live": "实时",
+      "responding": "对治疗有反应",
+      "triage": "分诊",
+      "sharedNote": "一位共享患者 — 每个角色读取同一个实时监护仪。"
+    },
+    "status": {
+      "improving": "好转中",
+      "stable": "稳定",
+      "deteriorating": "恶化中",
+      "critical": "危急"
+    },
+    "handoff": {
+      "title": "交接",
+      "pass": "交接给{{role}}",
+      "passAria": "将控制权交给{{role}}",
+      "timeline": "交接时间线",
+      "empty": "暂无交接。移交控制权即可在此记录一次。",
+      "arrow": "{{from}} 交至 {{role}}",
+      "holds": "{{role}}掌握控制权"
+    },
+    "paramedic": {
+      "title": "院前交接",
+      "desc": "是你把患者送来的。向团队交代现场情况和时间线，然后交接给医生。",
+      "give": "进行 ATMIST 交接",
+      "given": "已向团队完成交接。"
+    },
+    "nurse": {
+      "title": "床旁与任务队列",
+      "desc": "执行医生的医嘱、给药，并观察共享监护仪的响应。"
+    },
+    "doctor": {
+      "title": "诊治与医嘱",
+      "desc": "采集病史、为团队开具检查与治疗，并确定计划。"
+    },
+    "debrief": {
+      "loopTitle": "从医嘱到执行的闭环",
+      "ordersPlaced": "已下达医嘱",
+      "tasksExecuted": "已执行任务",
+      "medsGiven": "已给药",
+      "handoffs": "已记录交接",
+      "byHuman": "由你完成",
+      "byAi": "由 AI 完成",
+      "note": "上方的团队闭环源自本次会话的实际发生：医生开医嘱、护士执行，以及患者的实时反应。"
+    }
+  },
+  "routeFallback": {
+    "loading": "正在加载页面"
+  },
+  "scopeGuard": {
+    "composer": {
+      "label": "用你自己的话询问患者",
+      "placeholder": "输入向患者提出的问题，然后按 Enter",
+      "send": "发送",
+      "hint": "在患者听到之前，你的消息会先经过范围和安全筛查。"
+    },
+    "focus": {
+      "onTask": "切题",
+      "offTaskCount_one": "{{count}} 次离题",
+      "offTaskCount_other": "{{count}} 次离题",
+      "tooltip": "有多少问题偏离了病例。离题和求答式的问话不会推进临床图景。"
+    },
+    "youAsked": "你问道",
+    "dismiss": "关闭此提示",
+    "offTopic": {
+      "chip": "离题 · 未推进",
+      "reply": "医生，我更想谈谈我今天为什么来就诊。",
+      "note": "这没有推进临床图景。"
+    },
+    "answerSeeking": {
+      "chip": "在角色中 · 未给出答案",
+      "reply": "我真的不知道哪里出了问题。那正是我希望你能查明的。",
+      "note": "模拟不会直接把诊断给你。请自己去检查诊断。"
+    },
+    "injection": {
+      "chip": "消息已拦截",
+      "note": "这看起来像是试图更改助手指令，因此未发送给患者。"
+    },
+    "unsafe": {
+      "title": "我们先停一下",
+      "chip": "支持",
+      "note": "如果你正在挣扎，请向你信任的人或当地的支持热线求助。我们随时可以在你需要时暂停病例。"
+    }
+  },
+  "select2": {
+    "cases": {
+      "generator": {
+        "eyebrow": "病例生成器"
+      },
+      "table": {
+        "case": "病例",
+        "code": "代码",
+        "acuity": "危重程度",
+        "time": "预计时长",
+        "action": "开始"
+      }
+    },
+    "start": {
+      "mode": {
+        "eyebrow": "会话"
+      },
+      "role": {
+        "eyebrow": "你的座位"
+      },
+      "complaint": {
+        "eyebrow": "表现"
+      },
+      "tune": {
+        "eyebrow": "校准"
+      },
+      "review": {
+        "eyebrow": "会话摘要",
+        "mode": "模式",
+        "role": "角色",
+        "presentation": "表现",
+        "on": "开",
+        "off": "关"
+      },
+      "lang": {
+        "en": "英语",
+        "tr": "土耳其语"
+      }
+    }
+  },
+  "status": {
+    "pill": {
+      "online": "实时后端在线",
+      "offline": "实时后端离线",
+      "checking": "正在检查后端"
+    },
+    "boundary": {
+      "title": "此页面遇到了问题",
+      "body": "一个意外错误中断了页面。你的进度和对话记录是安全的。重新加载即可从中断处继续。",
+      "reload": "重新加载页面"
+    }
+  },
+  "treatments": {
+    "timeline": "已给予 {{name}}",
+    "eventLabel": "治疗",
+    "appropriateness": {
+      "indicated": "有适应证",
+      "contraindicated": "有禁忌证",
+      "neutral": "中性"
+    }
+  }
+}
