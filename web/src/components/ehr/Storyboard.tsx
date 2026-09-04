@@ -18,10 +18,10 @@ import {
   type StatusTone,
 } from "@/components/ui";
 import {
-  PatientAvatar,
   signsFromVitals,
   type ClinicalSignIntensity,
 } from "./PatientAvatar";
+import { PatientPhoto } from "@/components/PatientPhoto";
 import { EncounterClock } from "./EncounterClock";
 import { conceptText, pick } from "./labels";
 import {
@@ -148,14 +148,28 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
       aria-label={t("ehr.storyboard.label")}
       className="overflow-hidden rounded-card border border-border bg-surface"
     >
-      {/* Avatar (given at start) — the portrait on the monitor-dark accent. */}
-      <div className="border-b border-border bg-monitor-bg px-3 py-3">
-        <PatientAvatar
-          name={patient.name}
-          affect={{ label: affectLabel, intensity: 0.5 }}
-          clinicalSigns={clinicalSigns}
-          tier="2d"
+      {/* Patient identity — realistic synthetic portrait on the monitor-dark
+          accent, matched to the demographic; physiology tints the face. */}
+      <div className="flex items-center gap-3 border-b border-border bg-monitor-bg px-3 py-3">
+        <PatientPhoto
+          sex={patient.gender === "female" ? "female" : "male"}
+          age={patient.ageYears}
+          seed={caseInstance.seed}
+          signs={clinicalSigns}
+          alt={t("ehr.storyboard.avatarAlt", {
+            defaultValue: "Synthetic patient portrait — not a real individual",
+          })}
+          className="h-16 w-16 shrink-0 ring-1 ring-white/10"
         />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-monitor-fg">
+            {patient.name}
+          </p>
+          <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-monitor-dim">
+            <Heartbeat weight="fill" className="h-3 w-3 shrink-0 text-monitor-online" aria-hidden />
+            <span className="italic">{affectLabel}</span>
+          </p>
+        </div>
       </div>
 
       {/* Demographics — identifiers as a dense key/value record (Attio/Heidi). */}
