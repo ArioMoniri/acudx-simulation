@@ -1,0 +1,18 @@
+{
+  "institution": {
+    "compliance": {
+      "sectionLabel": "Compliance and audit"
+    },
+    "remediation": {
+      "priorityEyebrow": "Priority workflow",
+      "queue": {
+        "caption": "Remediation queue",
+        "tableCaption": "At-a-glance status of every open and closed remediation loop.",
+        "openedCol": "Opened",
+        "stageCol": "Stage",
+        "statusCol": "Status",
+        "days": "{{count}}d"
+      }
+    }
+  }
+}

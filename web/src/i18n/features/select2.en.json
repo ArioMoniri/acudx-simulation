@@ -1,0 +1,42 @@
+{
+  "select2": {
+    "cases": {
+      "generator": {
+        "eyebrow": "Case generator"
+      },
+      "table": {
+        "case": "Case",
+        "code": "Code",
+        "acuity": "Acuity",
+        "time": "Est. time",
+        "action": "Start"
+      }
+    },
+    "start": {
+      "mode": {
+        "eyebrow": "Session"
+      },
+      "role": {
+        "eyebrow": "Your seat"
+      },
+      "complaint": {
+        "eyebrow": "Presentation"
+      },
+      "tune": {
+        "eyebrow": "Calibration"
+      },
+      "review": {
+        "eyebrow": "Session summary",
+        "mode": "Mode",
+        "role": "Role",
+        "presentation": "Presentation",
+        "on": "On",
+        "off": "Off"
+      },
+      "lang": {
+        "en": "English",
+        "tr": "Turkish"
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "institution": {
+    "compliance": {
+      "sectionLabel": "Uyum ve denetim"
+    },
+    "remediation": {
+      "priorityEyebrow": "Öncelikli akış",
+      "queue": {
+        "caption": "İyileştirme kuyruğu",
+        "tableCaption": "Açık ve kapalı tüm iyileştirme döngülerinin özet durumu.",
+        "openedCol": "Açıldı",
+        "stageCol": "Aşama",
+        "statusCol": "Durum",
+        "days": "{{count}} gün"
+      }
+    }
+  }
+}

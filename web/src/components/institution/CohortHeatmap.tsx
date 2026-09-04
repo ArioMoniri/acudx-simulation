@@ -9,7 +9,19 @@ import {
   Info,
   X,
 } from "@phosphor-icons/react";
-import { Card, Button, Tooltip } from "@/components/ui";
+import {
+  Card,
+  Button,
+  Tooltip,
+  Badge,
+  TableWrap,
+  Table,
+  THead,
+  TBody,
+  Tr,
+  Th,
+  Td,
+} from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useLang } from "@/lib/useLang";
 import { useReveal } from "@/lib/motion";
@@ -283,65 +295,89 @@ function MatrixView({
 /* Table equivalent (the non-graphical alternative, always available)         */
 /* -------------------------------------------------------------------------- */
 
+/** A band rendered as a compact swatch + word, so meaning is never colour-only. */
+function BandTag({ band, label }: { band: Band; label: string }) {
+  if (band === "withheld") {
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted">
+        <span
+          className="grid h-4 w-4 shrink-0 place-items-center rounded-[5px] border border-dashed border-border"
+          aria-hidden
+        >
+          <Lock weight="bold" className="h-2.5 w-2.5 text-muted" />
+        </span>
+        {label}
+      </span>
+    );
+  }
+  const b = band as Exclude<Band, "withheld">;
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-fg">
+      <span
+        className="grid h-4 w-4 shrink-0 place-items-center rounded-[5px] border border-border/70 font-mono text-[9px] font-semibold"
+        style={{ backgroundColor: BAND_CELL_TINT[b], color: BAND_CELL_TEXT[b] }}
+        aria-hidden
+      >
+        {bandCode(b)}
+      </span>
+      {label}
+    </span>
+  );
+}
+
 function TableView() {
   const { t } = useTranslation();
   return (
-    <div className="overflow-x-auto" tabIndex={0}>
-      <table className="w-full text-left text-sm">
+    <TableWrap>
+      <Table>
         <caption className="sr-only">
           {t("institution.heatmap.tableEquivCaption")}
         </caption>
-        <thead>
-          <tr className="border-b border-border">
-            <th scope="col" className="py-2 pr-3 font-semibold text-fg">
-              {t("institution.heatmap.learnerCol")}
-            </th>
-            <th scope="col" className="py-2 pr-3 font-semibold text-fg">
-              {t("institution.heatmap.sectionCol")}
-            </th>
+        <THead>
+          <Tr>
+            <Th>{t("institution.heatmap.learnerCol")}</Th>
+            <Th>{t("institution.heatmap.sectionCol")}</Th>
             {HEATMAP_DOMAINS.map((d) => (
-              <th
-                key={d.key}
-                scope="col"
-                className="py-2 pr-3 font-semibold text-fg"
-              >
-                {t(`feedback.domains.${d.key}`)}
-              </th>
+              <Th key={d.key}>{t(`feedback.domains.${d.key}`)}</Th>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </Tr>
+        </THead>
+        <TBody>
           {cohortLearners.map((learner) => (
-            <tr key={learner.id} className="border-b border-border/60">
-              <th
-                scope="row"
-                className="py-2 pr-3 font-mono text-xs font-medium text-fg"
-              >
-                {learner.handle}
-                {learner.atRisk ? (
-                  <span className="ml-1.5 text-[color:var(--state-warning)]">
-                    ({t("institution.heatmap.atRiskTag")})
+            <Tr key={learner.id}>
+              <Td>
+                <span className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-semibold text-fg">
+                    {learner.handle}
                   </span>
-                ) : null}
-              </th>
-              <td className="py-2 pr-3 text-xs text-muted">
+                  {learner.atRisk ? (
+                    <Badge tone="warning" dot>
+                      {t("institution.heatmap.atRiskTag")}
+                    </Badge>
+                  ) : null}
+                </span>
+              </Td>
+              <Td className="whitespace-nowrap text-xs text-muted">
                 {t(`institution.section.${learner.sectionKey}`)}
                 {" · "}
                 {learner.locale.toUpperCase()}
-              </td>
+              </Td>
               {HEATMAP_DOMAINS.map((d) => {
                 const cell = learner.cells[d.key];
                 return (
-                  <td key={d.key} className="py-2 pr-3 text-xs text-fg">
-                    {t(`bands.${cell.band}`)}
-                  </td>
+                  <Td key={d.key}>
+                    <BandTag
+                      band={cell.band}
+                      label={t(`bands.${cell.band}`)}
+                    />
+                  </Td>
                 );
               })}
-            </tr>
+            </Tr>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TBody>
+      </Table>
+    </TableWrap>
   );
 }
 

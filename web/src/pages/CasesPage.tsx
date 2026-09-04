@@ -5,29 +5,51 @@ import { motion } from "motion/react";
 import {
   Sparkle,
   FunnelSimple,
-  Shuffle,
   Heartbeat,
   Brain,
   Flask,
   Wind,
   Stethoscope,
+  ArrowRight,
   X,
   type Icon,
 } from "@phosphor-icons/react";
 
-import { PageContainer } from "@/components/shell";
-import { Button, Card, Badge } from "@/components/ui";
+import { PageContainer, PageHeader } from "@/components/shell";
+import {
+  Button,
+  Badge,
+  Card,
+  Field,
+  Select,
+  SectionLabel,
+  StatusDot,
+  TableWrap,
+  Table,
+  THead,
+  TBody,
+  Tr,
+  Th,
+  Td,
+} from "@/components/ui";
+import type { StatusTone } from "@/components/ui";
 import { CaseInstanceCard } from "@/components";
 import { SimBadge } from "@/components/ehr";
 import { useLang } from "@/lib/useLang";
-import { useReveal, useHoverLift } from "@/lib/motion";
+import { useReveal } from "@/lib/motion";
 import { cn } from "@/lib/cn";
+import { pick, esiToState } from "@/components/ehr/labels";
+import { stateMap } from "@/components/clinicalState";
 import { seedCases } from "@/data/seedCases";
 import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
 import type { CaseInstance } from "@/domain/case";
 import {
   specialtyOf,
   complaintFamilyOf,
+  codeChipOf,
+  guidelineTagOf,
+  languagesOf,
+  estMinutesOf,
   COMPLAINT_LABELS,
   SPECIALTY_LABELS,
   DIFFICULTY_BAND,
@@ -64,7 +86,7 @@ const COMPLAINT_ICON: Record<ChiefComplaintFamily, Icon> = {
 const DIFFICULTIES: (1 | 2 | 3 | 4 | 5)[] = [1, 2, 3, 4, 5];
 
 /* -------------------------------------------------------------------------- */
-/* Filter chip                                                                 */
+/* Filter toolbar primitives                                                   */
 /* -------------------------------------------------------------------------- */
 
 function FilterChip({
@@ -85,11 +107,11 @@ function FilterChip({
       aria-checked={selected}
       onClick={onSelect}
       className={cn(
-        "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-medium",
-        "transition-colors duration-200 ease-out focus-visible:outline-none",
+        "inline-flex min-h-8 items-center gap-1.5 rounded-pill border px-2.5 text-[0.8125rem] font-medium",
+        "transition-colors duration-150 ease-out",
         selected
           ? "border-brand bg-brand-tint text-brand"
-          : "border-border bg-surface text-muted hover:bg-bg-subtle hover:text-fg",
+          : "border-border bg-surface text-muted hover:border-border-strong hover:text-fg",
       )}
     >
       {IconCmp ? (
@@ -108,19 +130,21 @@ function FilterRow({
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="text-xs font-medium uppercase tracking-wide text-muted">
-        {legend}
-      </legend>
-      <div role="radiogroup" aria-label={legend} className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+      <span className="eyebrow sm:w-24 sm:shrink-0">{legend}</span>
+      <div
+        role="radiogroup"
+        aria-label={legend}
+        className="flex flex-wrap gap-1.5"
+      >
         {children}
       </div>
-    </fieldset>
+    </div>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* Generate panel                                                              */
+/* Generator control surface                                                   */
 /* -------------------------------------------------------------------------- */
 
 function GeneratePanel({
@@ -144,93 +168,219 @@ function GeneratePanel({
 
   return (
     <Card padding="lg" className="flex flex-col gap-5">
-      <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-brand-tint text-brand">
-          <Sparkle weight="fill" className="h-5 w-5" aria-hidden />
-        </span>
-        <div>
-          <h2 className="text-base font-semibold tracking-tight text-fg">
-            {t("cases.generate.heading")}
-          </h2>
-          <p className="mt-1 text-sm text-muted">{t("cases.generate.hint")}</p>
-        </div>
+      <div className="flex flex-col gap-1.5">
+        <SectionLabel icon={<Sparkle weight="fill" className="h-3.5 w-3.5" />}>
+          {t("select2.cases.generator.eyebrow")}
+        </SectionLabel>
+        <h2
+          id="cases-generate-heading"
+          className="text-lg font-semibold tracking-tight text-fg"
+        >
+          {t("cases.generate.heading")}
+        </h2>
+        <p className="max-w-2xl text-sm text-muted">{t("cases.generate.hint")}</p>
       </div>
 
-      {/* Chief complaint (null = surprise me) */}
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-xs font-medium uppercase tracking-wide text-muted">
-          {t("cases.generate.complaintLegend")}
-        </legend>
-        <div
-          role="radiogroup"
-          aria-label={t("cases.generate.complaintLegend")}
-          className="flex flex-wrap gap-2"
-        >
-          <FilterChip
-            label={t("cases.generate.surprise")}
-            selected={complaint === null}
-            onSelect={() => setComplaint(null)}
-            icon={Shuffle}
-          />
-          {COMPLAINT_ORDER.map((c) => (
-            <FilterChip
-              key={c}
-              label={COMPLAINT_LABELS[c][lang]}
-              selected={complaint === c}
-              onSelect={() => setComplaint(c)}
-              icon={COMPLAINT_ICON[c]}
-            />
-          ))}
-        </div>
-      </fieldset>
+      {/* Constraint controls read as a real generator bar */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+        <Field label={t("cases.generate.complaintLegend")}>
+          {(aria) => (
+            <Select
+              {...aria}
+              value={complaint ?? "surprise"}
+              onChange={(e) =>
+                setComplaint(
+                  e.target.value === "surprise"
+                    ? null
+                    : (e.target.value as ChiefComplaintFamily),
+                )
+              }
+            >
+              <option value="surprise">{t("cases.generate.surprise")}</option>
+              {COMPLAINT_ORDER.map((c) => (
+                <option key={c} value={c}>
+                  {COMPLAINT_LABELS[c][lang]}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
 
-      {/* Difficulty */}
-      <div className="flex flex-col gap-2">
-        <label
-          htmlFor="cases-gen-difficulty"
-          className="flex items-center justify-between gap-3"
-        >
-          <span className="text-xs font-medium uppercase tracking-wide text-muted">
-            {t("cases.generate.difficultyLegend")}
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="font-mono text-sm font-semibold text-fg">
-              {difficulty}
-            </span>
-            <Badge tone="brand">{DIFFICULTY_BAND[difficulty][lang]}</Badge>
-          </span>
-        </label>
-        <input
-          id="cases-gen-difficulty"
-          type="range"
-          min={1}
-          max={5}
-          step={1}
-          value={difficulty}
-          onChange={(e) =>
-            setDifficulty(Number(e.target.value) as 1 | 2 | 3 | 4 | 5)
-          }
-          aria-valuetext={t("cases.generate.difficultyValueText", {
-            level: difficulty,
-            label: DIFFICULTY_BAND[difficulty][lang],
-          })}
-          className="w-full accent-[color:var(--brand-600)]"
-        />
-      </div>
+        <Field label={t("cases.generate.difficultyLegend")}>
+          {(aria) => (
+            <Select
+              {...aria}
+              value={String(difficulty)}
+              onChange={(e) =>
+                setDifficulty(Number(e.target.value) as 1 | 2 | 3 | 4 | 5)
+              }
+            >
+              {DIFFICULTIES.map((d) => (
+                <option key={d} value={d}>
+                  {d} · {DIFFICULTY_BAND[d][lang]}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="max-w-md text-xs text-muted">
-          {t("cases.generate.unlimited")}
-        </p>
         <Button
           size="md"
           onClick={run}
+          fullWidth
+          className="sm:col-span-2 lg:col-span-1 lg:w-auto"
           leadingIcon={<Sparkle weight="fill" className="h-4 w-4" />}
         >
           {t("cases.generate.action")}
         </Button>
       </div>
+
+      <p className="flex items-start gap-2 border-t border-border pt-4 text-xs text-muted">
+        <Sparkle weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle" aria-hidden />
+        {t("cases.generate.unlimited")}
+      </p>
     </Card>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Catalogue table row (desktop)                                               */
+/* -------------------------------------------------------------------------- */
+
+function CaseRow({
+  data,
+  lang,
+  onStart,
+}: {
+  data: CaseInstance;
+  lang: "en" | "tr";
+  onStart: (c: CaseInstance) => void;
+}) {
+  const { t } = useTranslation();
+
+  const specialty = SPECIALTY_LABELS[specialtyOf(data)][lang];
+  const chip = codeChipOf(data);
+  const guideline = guidelineTagOf(data);
+  const languages = languagesOf(data);
+  const estMinutes = estMinutesOf(data);
+  const band = DIFFICULTY_BAND[data.difficulty][lang];
+  const acuityState = stateMap[esiToState(data.acuityESI)];
+  const acuityTone = `esi-${data.acuityESI}` as StatusTone;
+  const isGenerated = data.provenance === "generated";
+
+  const sexLabel = t(
+    `common.${data.patient.gender === "female" ? "female" : "male"}`,
+  );
+  const ageSex = t("cases.card.ageSex", {
+    age: data.patient.ageYears,
+    sex: sexLabel,
+  });
+
+  return (
+    <Tr interactive onClick={() => onStart(data)}>
+      {/* Case — presentation, demographic + guideline, provenance, languages */}
+      <Td>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-semibold text-fg">
+              {pick(data.chiefComplaint, lang)}
+            </span>
+            {isGenerated ? (
+              <Badge
+                tone="brand"
+                variant="outline"
+                icon={<Sparkle weight="fill" className="h-3 w-3" />}
+              >
+                {t("cases.card.generated")}
+              </Badge>
+            ) : null}
+          </span>
+          <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
+            <span>{ageSex}</span>
+            <span aria-hidden className="text-border-strong">
+              ·
+            </span>
+            <span>{guideline}</span>
+            <span
+              className="inline-flex items-center gap-1"
+              aria-label={`${t("caseCard.languages")}: ${languages
+                .map((l) => l.toUpperCase())
+                .join(", ")}`}
+            >
+              {languages.map((l) => (
+                <span
+                  key={l}
+                  aria-hidden
+                  className="rounded border border-border px-1 text-[10px] font-semibold uppercase tracking-wide text-subtle"
+                >
+                  {l}
+                </span>
+              ))}
+            </span>
+          </span>
+        </div>
+      </Td>
+
+      {/* Specialty */}
+      <Td className="hidden text-muted xl:table-cell">{specialty}</Td>
+
+      {/* Code */}
+      <Td>
+        <span
+          className="inline-flex items-baseline gap-1.5 font-mono"
+          aria-label={t("cases.card.codeLabel", {
+            system: chip.system,
+            code: chip.code,
+          })}
+        >
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-subtle">
+            {chip.system}
+          </span>
+          <span className="text-fg">{chip.code}</span>
+        </span>
+      </Td>
+
+      {/* Difficulty */}
+      <Td>
+        <Badge tone="brand">
+          <span className="tnum">{data.difficulty}</span>
+          <span aria-hidden className="opacity-50">
+            ·
+          </span>
+          {band}
+        </Badge>
+      </Td>
+
+      {/* Acuity */}
+      <Td className="hidden lg:table-cell">
+        <StatusDot
+          tone={acuityTone}
+          label={`${t("ehr.banner.esi", { level: data.acuityESI })} · ${t(
+            acuityState.labelKey,
+          )}`}
+        />
+      </Td>
+
+      {/* Est. time */}
+      <Td numeric className="hidden lg:table-cell text-muted">
+        {t("caseCard.estimate", { minutes: estMinutes })}
+      </Td>
+
+      {/* Start */}
+      <Td className="text-right">
+        <Button
+          size="sm"
+          variant="secondary"
+          trailingIcon={<ArrowRight weight="bold" className="h-3.5 w-3.5" />}
+          onClick={(e) => {
+            e.stopPropagation();
+            onStart(data);
+          }}
+        >
+          {t("select2.cases.table.action")}
+        </Button>
+      </Td>
+    </Tr>
   );
 }
 
@@ -241,13 +391,14 @@ function GeneratePanel({
 /**
  * CasesPage — the clinical case library (docs/design/01, docs/00-overview/04 §3).
  *
- * Lists the five curated seed CaseInstances plus a "Generate case" panel that
- * calls caseGen.generateCase to append unlimited, non-repeating synthetic cases
- * to the library. Each card exposes the browsing facets (specialty, difficulty,
- * guideline, ICD/DSM code, acuity, EN/TR) and a "Start this case" action that
- * hands the exact instance to the encounter workspace. Filters narrow by
- * specialty, difficulty, and chief complaint. Everything is SIM / synthetic and
- * education only.
+ * A generator control surface builds unlimited, non-repeating synthetic cases;
+ * a compact filter toolbar narrows by specialty, chief complaint, and
+ * difficulty; and the results read as a real catalogue — a dense, hairline
+ * table on wide screens and a stack of catalogue rows on narrow ones. Each
+ * case carries its browsing facets (specialty, ICD/DSM code, difficulty band,
+ * acuity, est. time, EN/TR) and a "Start this case" action that hands the exact
+ * instance to the encounter workspace. Everything is SIM / synthetic, education
+ * only.
  */
 export function CasesPage() {
   const { t } = useTranslation();
@@ -258,7 +409,6 @@ export function CasesPage() {
   const genEntry = useReveal(0.05);
   const filterEntry = useReveal(0.09);
   const gridEntry = useReveal(0.13);
-  const cardLift = useHoverLift();
 
   // Generated cases live in page state so the library grows without a reload,
   // demonstrating the unlimited non-repeating generation claim. Newest first.
@@ -269,10 +419,7 @@ export function CasesPage() {
   const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
   const [complaint, setComplaint] = useState<ChiefComplaintFamily | null>(null);
 
-  const allCases = useMemo(
-    () => [...generated, ...seedCases],
-    [generated],
-  );
+  const allCases = useMemo(() => [...generated, ...seedCases], [generated]);
 
   const visible = useMemo(() => {
     return allCases.filter((c) => {
@@ -283,7 +430,8 @@ export function CasesPage() {
     });
   }, [allCases, specialty, difficulty, complaint]);
 
-  const anyFilter = specialty !== null || difficulty !== null || complaint !== null;
+  const anyFilter =
+    specialty !== null || difficulty !== null || complaint !== null;
 
   const clearFilters = useCallback(() => {
     setSpecialty(null);
@@ -315,43 +463,39 @@ export function CasesPage() {
   );
 
   return (
-    <PageContainer className="flex flex-col gap-9">
+    <PageContainer className="flex flex-col gap-8">
       {/* Header */}
-      <motion.header {...header} className="max-w-3xl">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted">
-            <span className="gradient-mark h-1.5 w-1.5 rounded-full" aria-hidden />
-            {t("cases.eyebrow")}
-          </span>
-          <SimBadge variant="chip" />
-        </div>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
-          {t("cases.title")}
-        </h1>
-        <p className="mt-3 max-w-2xl text-lg text-muted">{t("cases.subtitle")}</p>
-      </motion.header>
+      <motion.div {...header}>
+        <PageHeader
+          eyebrow={t("cases.eyebrow")}
+          title={t("cases.title")}
+          description={t("cases.subtitle")}
+          meta={<SimBadge variant="chip" />}
+        />
+      </motion.div>
 
-      {/* Generate panel */}
+      {/* Generator */}
       <motion.section {...genEntry} aria-labelledby="cases-generate-heading">
         <GeneratePanel onGenerate={handleGenerate} lang={lang} />
       </motion.section>
 
-      {/* Filters */}
+      {/* Filter toolbar */}
       <motion.section
         {...filterEntry}
         aria-label={t("cases.filters.label")}
-        className="flex flex-col gap-4 rounded-card border border-border bg-bg-subtle p-4 sm:p-5"
+        className="flex flex-col gap-3 rounded-card border border-border bg-bg-subtle px-4 py-3.5"
       >
         <div className="flex items-center justify-between gap-3">
-          <span className="inline-flex items-center gap-2 text-sm font-semibold text-fg">
-            <FunnelSimple weight="bold" className="h-4 w-4 text-muted" aria-hidden />
+          <SectionLabel
+            icon={<FunnelSimple weight="bold" className="h-3.5 w-3.5" />}
+          >
             {t("cases.filters.label")}
-          </span>
+          </SectionLabel>
           {anyFilter ? (
             <button
               type="button"
               onClick={clearFilters}
-              className="inline-flex min-h-9 items-center gap-1 rounded-control px-2 text-sm font-medium text-brand hover:bg-brand-tint focus-visible:outline-none"
+              className="inline-flex min-h-7 items-center gap-1 rounded-control px-2 text-xs font-medium text-brand hover:bg-brand-tint"
             >
               <X weight="bold" className="h-3.5 w-3.5" aria-hidden />
               {t("cases.filters.clear")}
@@ -359,82 +503,133 @@ export function CasesPage() {
           ) : null}
         </div>
 
-        <FilterRow legend={t("cases.filters.specialty")}>
-          <FilterChip
-            label={t("cases.filters.all")}
-            selected={specialty === null}
-            onSelect={() => setSpecialty(null)}
-          />
-          {SPECIALTY_ORDER.map((s) => (
+        <div className="flex flex-col gap-2.5">
+          <FilterRow legend={t("cases.filters.specialty")}>
             <FilterChip
-              key={s}
-              label={SPECIALTY_LABELS[s][lang]}
-              selected={specialty === s}
-              onSelect={() => setSpecialty(s)}
-              icon={s === "emergency" ? Stethoscope : undefined}
+              label={t("cases.filters.all")}
+              selected={specialty === null}
+              onSelect={() => setSpecialty(null)}
             />
-          ))}
-        </FilterRow>
+            {SPECIALTY_ORDER.map((s) => (
+              <FilterChip
+                key={s}
+                label={SPECIALTY_LABELS[s][lang]}
+                selected={specialty === s}
+                onSelect={() => setSpecialty(s)}
+                icon={s === "emergency" ? Stethoscope : undefined}
+              />
+            ))}
+          </FilterRow>
 
-        <FilterRow legend={t("cases.filters.complaint")}>
-          <FilterChip
-            label={t("cases.filters.all")}
-            selected={complaint === null}
-            onSelect={() => setComplaint(null)}
-          />
-          {COMPLAINT_ORDER.map((c) => (
+          <FilterRow legend={t("cases.filters.complaint")}>
             <FilterChip
-              key={c}
-              label={COMPLAINT_LABELS[c][lang]}
-              selected={complaint === c}
-              onSelect={() => setComplaint(c)}
-              icon={COMPLAINT_ICON[c]}
+              label={t("cases.filters.all")}
+              selected={complaint === null}
+              onSelect={() => setComplaint(null)}
             />
-          ))}
-        </FilterRow>
+            {COMPLAINT_ORDER.map((c) => (
+              <FilterChip
+                key={c}
+                label={COMPLAINT_LABELS[c][lang]}
+                selected={complaint === c}
+                onSelect={() => setComplaint(c)}
+                icon={COMPLAINT_ICON[c]}
+              />
+            ))}
+          </FilterRow>
 
-        <FilterRow legend={t("cases.filters.difficulty")}>
-          <FilterChip
-            label={t("cases.filters.all")}
-            selected={difficulty === null}
-            onSelect={() => setDifficulty(null)}
-          />
-          {DIFFICULTIES.map((d) => (
+          <FilterRow legend={t("cases.filters.difficulty")}>
             <FilterChip
-              key={d}
-              label={`${d} · ${DIFFICULTY_BAND[d][lang]}`}
-              selected={difficulty === d}
-              onSelect={() => setDifficulty(d)}
+              label={t("cases.filters.all")}
+              selected={difficulty === null}
+              onSelect={() => setDifficulty(null)}
             />
-          ))}
-        </FilterRow>
+            {DIFFICULTIES.map((d) => (
+              <FilterChip
+                key={d}
+                label={`${d} · ${DIFFICULTY_BAND[d][lang]}`}
+                selected={difficulty === d}
+                onSelect={() => setDifficulty(d)}
+              />
+            ))}
+          </FilterRow>
+        </div>
       </motion.section>
 
       {/* Results */}
       <motion.section
         {...gridEntry}
         aria-label={t("cases.results.label")}
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-3"
       >
-        <p className="text-sm text-muted" role="status" aria-live="polite">
-          {t("cases.results.count", { count: visible.length })}
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <SectionLabel>{t("cases.results.label")}</SectionLabel>
+          <p
+            className="tnum text-xs font-medium text-muted"
+            role="status"
+            aria-live="polite"
+          >
+            {t("cases.results.count", { count: visible.length })}
+          </p>
+        </div>
 
         {visible.length === 0 ? (
-          <Card padding="lg" className="flex flex-col items-start gap-3">
+          <Card
+            variant="inset"
+            padding="lg"
+            className="flex flex-col items-start gap-3"
+          >
             <p className="text-sm text-muted">{t("cases.results.empty")}</p>
             <Button variant="secondary" size="sm" onClick={clearFilters}>
               {t("cases.filters.clear")}
             </Button>
           </Card>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {visible.map((c) => (
-              <motion.li key={c.id} {...cardLift} className="flex">
-                <CaseInstanceCard data={c} lang={lang} onStart={startCase} />
-              </motion.li>
-            ))}
-          </ul>
+          <>
+            {/* Narrow screens: catalogue rows */}
+            <ul className="flex flex-col gap-3 md:hidden">
+              {visible.map((c) => (
+                <li key={c.id}>
+                  <CaseInstanceCard data={c} lang={lang} onStart={startCase} />
+                </li>
+              ))}
+            </ul>
+
+            {/* Wide screens: dense catalogue table */}
+            <TableWrap className="hidden md:block">
+              <Table>
+                <THead>
+                  <Tr>
+                    <Th>{t("select2.cases.table.case")}</Th>
+                    <Th className="hidden xl:table-cell">
+                      {t("cases.filters.specialty")}
+                    </Th>
+                    <Th>{t("select2.cases.table.code")}</Th>
+                    <Th>{t("caseCard.difficulty")}</Th>
+                    <Th className="hidden lg:table-cell">
+                      {t("select2.cases.table.acuity")}
+                    </Th>
+                    <Th numeric className="hidden lg:table-cell">
+                      {t("select2.cases.table.time")}
+                    </Th>
+                    <Th className="text-right">
+                      {t("select2.cases.table.action")}
+                    </Th>
+                  </Tr>
+                </THead>
+                <TBody>
+                  {visible.map((c) => (
+                    <CaseRow
+                      key={c.id}
+                      data={c}
+                      lang={lang}
+                      onStart={startCase}
+                    />
+                  ))}
+                </TBody>
+              </Table>
+            </TableWrap>
+          </>
         )}
       </motion.section>
 

@@ -161,7 +161,11 @@ export function ActivityTabs({
           onScroll={syncEdges}
           className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          <TabsList aria-label={t("ehr.tabs.navLabel")} className="w-max min-w-full">
+          <TabsList
+            aria-label={t("ehr.tabs.navLabel")}
+            variant="underline"
+            className="w-max min-w-full"
+          >
             {TABS.map(({ key, icon: TabIcon }) => {
               const count = (counts as Record<string, number>)[key];
               const isActive = key === activeTab;
@@ -170,7 +174,7 @@ export function ActivityTabs({
                   key={key}
                   value={key}
                   aria-current={isActive ? "page" : undefined}
-                  className="group gap-1.5 whitespace-nowrap"
+                  className="group whitespace-nowrap"
                 >
                   <TabIcon
                     weight="bold"
@@ -191,14 +195,14 @@ export function ActivityTabs({
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-0 left-0 w-8 rounded-l-control bg-gradient-to-r from-bg-subtle to-transparent transition-opacity duration-200",
+            "pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-bg to-transparent transition-opacity duration-200",
             edges.start ? "opacity-100" : "opacity-0",
           )}
         />
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-0 right-0 w-8 rounded-r-control bg-gradient-to-l from-bg-subtle to-transparent transition-opacity duration-200",
+            "pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-bg to-transparent transition-opacity duration-200",
             edges.end ? "opacity-100" : "opacity-0",
           )}
         />

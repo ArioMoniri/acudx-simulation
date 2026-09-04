@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Keyhole, ArrowRight, Warning } from "@phosphor-icons/react";
 
-import { Button, Card } from "@/components/ui";
+import { Button, Card, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 export interface JoinByCodeProps {
@@ -48,7 +48,7 @@ export function JoinByCode({ onJoin }: JoinByCodeProps) {
           <label htmlFor={inputId} className="sr-only">
             {t("rooms.join.label")}
           </label>
-          <input
+          <TextInput
             id={inputId}
             value={code}
             onChange={(e) => {
@@ -59,15 +59,11 @@ export function JoinByCode({ onJoin }: JoinByCodeProps) {
             autoComplete="off"
             autoCapitalize="characters"
             spellCheck={false}
-            aria-invalid={error}
+            aria-invalid={error || undefined}
             aria-describedby={error ? errorId : undefined}
             className={cn(
-              "h-11 w-full rounded-control border bg-bg px-3 font-mono text-sm uppercase tracking-wide text-fg",
-              "placeholder:font-sans placeholder:normal-case placeholder:tracking-normal placeholder:text-muted",
-              "transition-colors duration-200 ease-out focus-visible:outline-none",
-              error
-                ? "border-[color:var(--state-warning)] focus-visible:border-[color:var(--state-warning)]"
-                : "border-border focus-visible:border-brand",
+              "h-11 font-mono uppercase tracking-wide",
+              "placeholder:font-sans placeholder:normal-case placeholder:tracking-normal",
             )}
           />
         </div>

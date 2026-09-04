@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Crown, UsersThree, Info, ArrowsClockwise } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/cn";
+import { Card, SectionLabel } from "@/components/ui";
 import { acsDebrief, type DebriefData, type DebriefMark } from "@/data/rooms";
 import type { Lang } from "@/data/mock";
 
@@ -48,12 +49,12 @@ export function DebriefPanel({
 
       {/* Live closed-loop signal earned this session */}
       {loopsClosed ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-border bg-bg-subtle px-3 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-inset px-3 py-2.5">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-fg">
             <ArrowsClockwise weight="bold" className="h-3.5 w-3.5 text-brand" aria-hidden />
             {t("rooms.debrief.loopsClosed")}
           </span>
-          <span className="font-mono text-sm font-semibold tabular-nums text-fg">
+          <span className="tnum text-sm font-semibold text-fg">
             {t("rooms.debrief.loopsValue", { closed: loopsClosed.closed, total: loopsClosed.total })}
           </span>
         </div>
@@ -68,11 +69,12 @@ export function DebriefPanel({
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Individual leadership marks */}
-        <div className="rounded-control border border-border bg-bg-subtle p-3.5">
-          <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-            <Crown weight="fill" className="h-3.5 w-3.5 text-brand" aria-hidden />
+        <Card variant="inset" padding="sm">
+          <SectionLabel
+            icon={<Crown weight="fill" className="h-3.5 w-3.5 text-brand" aria-hidden />}
+          >
             {t("rooms.debrief.individual")}
-          </h3>
+          </SectionLabel>
           {showLeadership ? (
             <ul className="mt-3 flex flex-col gap-3">
               {data.leadership.map((m, i) => (
@@ -82,20 +84,21 @@ export function DebriefPanel({
           ) : (
             <p className="mt-3 text-xs text-muted">{t("rooms.debrief.noHat")}</p>
           )}
-        </div>
+        </Card>
 
         {/* Team clinical marks */}
-        <div className="rounded-control border border-border bg-bg-subtle p-3.5">
-          <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-            <UsersThree weight="fill" className="h-3.5 w-3.5" aria-hidden />
+        <Card variant="inset" padding="sm">
+          <SectionLabel
+            icon={<UsersThree weight="fill" className="h-3.5 w-3.5" aria-hidden />}
+          >
             {t("rooms.debrief.team")}
-          </h3>
+          </SectionLabel>
           <ul className="mt-3 flex flex-col gap-3">
             {data.teamClinical.map((m, i) => (
               <MarkRow key={i} mark={m} lang={lang} axis="clinical" />
             ))}
           </ul>
-        </div>
+        </Card>
       </div>
 
       <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted">
