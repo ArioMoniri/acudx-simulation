@@ -1,0 +1,117 @@
+{
+  "roomscollab": {
+    "roles": {
+      "doctor": "Doctor",
+      "nurse": "Nurse",
+      "paramedic": "Paramedic"
+    },
+    "acting": {
+      "as": "Acting as {{role}}",
+      "switch": "Switch role",
+      "actAs": "Act as {{role}}",
+      "hint": "One browser, the whole team — switch seats to play each role on the same patient.",
+      "youAreAi": "This role is AI-held. Switch into it to act it yourself.",
+      "label": "Acting role"
+    },
+    "scope": {
+      "doctor": "Lead the workup: take the history, order tests and treatments, commit the diagnosis and plan.",
+      "nurse": "Run the bedside: work the task queue, administer medications, monitor the live response, escalate.",
+      "paramedic": "Set the scene: give the prehospital picture and a structured ATMIST/SBAR handover."
+    },
+    "tabs": {
+      "workspace": "Workspace",
+      "interview": "Interview",
+      "prehospital": "Prehospital",
+      "orders": "Orders & tasks",
+      "floor": "Team floor",
+      "debrief": "Debrief"
+    },
+    "orders": {
+      "title": "Orders & handoff",
+      "subtitle": "The doctor orders; the order becomes a task in the executing role's queue.",
+      "compose": "Place an order",
+      "medications": "Medications & treatments",
+      "diagnostics": "Diagnostics",
+      "place": "Order",
+      "placeAria": "Order {{name}}",
+      "doctorOnly": "Only the doctor can place orders. Switch to the doctor seat to order for the team.",
+      "handsTo": "Hands to {{role}}",
+      "reason": "Reason (optional)"
+    },
+    "task": {
+      "queueTitle": "Task queue",
+      "queueSubtitle": "Orders handed to the team, with status and a realistic turnaround.",
+      "empty": "No tasks yet. Orders the doctor places will land here as work for the team.",
+      "mineEmpty": "Your queue is clear. New orders assigned to you will appear here.",
+      "orderedBy": "Ordered by {{role}}",
+      "for": "For {{role}}",
+      "eta": "ETA {{eta}}",
+      "claim": "Claim",
+      "claimAria": "Claim {{name}}",
+      "claimedBy": "Claimed by {{role}}",
+      "administer": "Administer",
+      "administerAria": "Administer {{name}}",
+      "collect": "Collect & send",
+      "collectAria": "Collect and send {{name}}",
+      "doneBy": "Executed by {{role}}",
+      "resultPending": "In the lab — result processing",
+      "resultReady": "Result available",
+      "notYours": "Switch to the {{role}} seat to execute this task.",
+      "status": {
+        "pending": "Pending",
+        "claimed": "Claimed",
+        "done": "Done"
+      },
+      "kind": {
+        "medication": "Medication",
+        "diagnostic": "Diagnostic",
+        "intervention": "Intervention"
+      }
+    },
+    "vitals": {
+      "live": "Live",
+      "responding": "Responding to treatment",
+      "triage": "Triage",
+      "sharedNote": "One shared patient — every role reads the same live monitor."
+    },
+    "status": {
+      "improving": "Improving",
+      "stable": "Stable",
+      "deteriorating": "Deteriorating",
+      "critical": "Critical"
+    },
+    "handoff": {
+      "title": "Handoff",
+      "pass": "Hand off to {{role}}",
+      "passAria": "Hand control to the {{role}}",
+      "timeline": "Handoff timeline",
+      "empty": "No handoffs yet. Pass control to record one here.",
+      "arrow": "{{from}} to {{role}}",
+      "holds": "{{role}} holds control"
+    },
+    "paramedic": {
+      "title": "Prehospital handover",
+      "desc": "You brought the patient in. Give the team the scene picture and the timeline, then hand over to the doctor.",
+      "give": "Give ATMIST handover",
+      "given": "Handover delivered to the team."
+    },
+    "nurse": {
+      "title": "Bedside & task queue",
+      "desc": "Work the doctor's orders, administer medications, and watch the shared monitor respond."
+    },
+    "doctor": {
+      "title": "Workup & orders",
+      "desc": "Take the history, order tests and treatments for the team, and commit the plan."
+    },
+    "debrief": {
+      "loopTitle": "Order-to-execution loop",
+      "ordersPlaced": "Orders placed",
+      "tasksExecuted": "Tasks executed",
+      "medsGiven": "Medications administered",
+      "handoffs": "Handoffs recorded",
+      "byHuman": "by you",
+      "byAi": "by AI",
+      "note": "The team loop above is earned from what actually happened this session: doctor orders, nurse executions, and the patient's live response."
+    }
+  }
+}

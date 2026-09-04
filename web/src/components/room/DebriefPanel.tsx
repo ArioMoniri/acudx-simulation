@@ -1,10 +1,29 @@
+import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Crown, UsersThree, Info, ArrowsClockwise } from "@phosphor-icons/react";
+import {
+  Crown,
+  UsersThree,
+  Info,
+  ArrowsClockwise,
+  Prescription,
+  Syringe,
+  CheckCircle,
+  ArrowsLeftRight,
+} from "@phosphor-icons/react";
 
 import { cn } from "@/lib/cn";
 import { Card, SectionLabel } from "@/components/ui";
 import { acsDebrief, type DebriefData, type DebriefMark } from "@/data/rooms";
 import type { Lang } from "@/data/mock";
+
+/** The collaborative order→execution loop, earned from the live session. */
+export interface DebriefLoopStats {
+  ordersPlaced: number;
+  tasksDone: number;
+  tasksTotal: number;
+  medsGiven: number;
+  handoffs: number;
+}
 
 export interface DebriefPanelProps {
   lang: Lang;
@@ -14,6 +33,8 @@ export interface DebriefPanelProps {
   woreHat?: boolean;
   /** Live closed-loop tally from THIS session (shown as a real signal). */
   loopsClosed?: { closed: number; total: number };
+  /** Live collaborative order→execution loop from the shared room case. */
+  loop?: DebriefLoopStats;
   /** True once the session has ended; otherwise the marks are illustrative. */
   live?: boolean;
 }
@@ -32,6 +53,7 @@ export function DebriefPanel({
   data = acsDebrief,
   woreHat,
   loopsClosed,
+  loop,
   live = false,
 }: DebriefPanelProps) {
   const { t } = useTranslation();
@@ -57,6 +79,40 @@ export function DebriefPanel({
           <span className="tnum text-sm font-semibold text-fg">
             {t("rooms.debrief.loopsValue", { closed: loopsClosed.closed, total: loopsClosed.total })}
           </span>
+        </div>
+      ) : null}
+
+      {/* Live collaborative order→execution loop */}
+      {loop ? (
+        <div className="rounded-control border border-border bg-inset p-3">
+          <SectionLabel icon={<ArrowsLeftRight weight="bold" className="h-3.5 w-3.5 text-brand" aria-hidden />}>
+            {t("roomscollab.debrief.loopTitle")}
+          </SectionLabel>
+          <dl className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            <LoopStat
+              icon={<Prescription weight="bold" className="h-4 w-4" aria-hidden />}
+              label={t("roomscollab.debrief.ordersPlaced")}
+              value={String(loop.ordersPlaced)}
+            />
+            <LoopStat
+              icon={<CheckCircle weight="bold" className="h-4 w-4" aria-hidden />}
+              label={t("roomscollab.debrief.tasksExecuted")}
+              value={`${loop.tasksDone}/${loop.tasksTotal}`}
+            />
+            <LoopStat
+              icon={<Syringe weight="bold" className="h-4 w-4" aria-hidden />}
+              label={t("roomscollab.debrief.medsGiven")}
+              value={String(loop.medsGiven)}
+            />
+            <LoopStat
+              icon={<ArrowsLeftRight weight="bold" className="h-4 w-4" aria-hidden />}
+              label={t("roomscollab.debrief.handoffs")}
+              value={String(loop.handoffs)}
+            />
+          </dl>
+          <p className="mt-2.5 text-[11px] leading-relaxed text-muted">
+            {t("roomscollab.debrief.note")}
+          </p>
         </div>
       ) : null}
 
@@ -106,6 +162,24 @@ export function DebriefPanel({
         {t("rooms.debrief.note")}
       </p>
     </section>
+  );
+}
+
+function LoopStat({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1 rounded-control bg-surface px-2.5 py-2">
+      <span className="inline-flex items-center gap-1 text-muted">{icon}</span>
+      <span className="font-mono text-lg font-semibold leading-none tabular-nums text-fg">{value}</span>
+      <span className="text-[11px] leading-tight text-muted">{label}</span>
+    </div>
   );
 }
 
