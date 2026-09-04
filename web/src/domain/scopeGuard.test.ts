@@ -126,6 +126,41 @@ describe("classifyUtterance — off-topic (social, EN + TR)", () => {
   });
 });
 
+describe("classifyUtterance — the opening / reason-for-visit question (regression)", () => {
+  it("treats 'why did you come in today?' as in-scope, not off-topic", () => {
+    const r = classifyUtterance("Why did you come in today?", chestCase);
+    expect(r.class).toBe("in-scope");
+  });
+
+  it("does NOT freeze a greeting followed by the opening question", () => {
+    // Regression: "hi ... why did you come in today" was wrongly frozen off-topic.
+    expect(classifyUtterance("Hi, why did you come in today?", chestCase).class).toBe(
+      "in-scope",
+    );
+    expect(classifyUtterance("Hello doctor, what brings you in?", chestCase).class).toBe(
+      "in-scope",
+    );
+  });
+
+  it("recognises common opening phrasings (EN + TR)", () => {
+    expect(classifyUtterance("What brings you in?", chestCase).class).toBe("in-scope");
+    expect(classifyUtterance("What's going on?", chestCase).class).toBe("in-scope");
+    expect(classifyUtterance("Neden geldiniz?", chestCase).class).toBe("in-scope");
+    expect(classifyUtterance("Şikayetiniz ne?", chestCase).class).toBe("in-scope");
+  });
+
+  it("a bare greeting with no question is still off-topic", () => {
+    expect(classifyUtterance("Hi there, good morning", chestCase).class).toBe("off-topic");
+  });
+
+  it("maps the opening question to a real intent so the patient answers", () => {
+    const intent = inferQuestionIntent("Why did you come in today?", chestCase);
+    expect(intent).not.toBeNull();
+    // chest-pain cases cover onset first, so the presenting story is elicited.
+    expect(intent).toBe("onset");
+  });
+});
+
 describe("classifyUtterance — hard classes dominate soft ones", () => {
   it("an injection wrapped in a clinical question is still blocked", () => {
     const r = classifyUtterance(
