@@ -38,17 +38,30 @@ from pydantic import BaseModel
 Directive = str  # "normal" | "off_topic" | "decline"
 
 _ROLEPLAY_CHARTER = (
-    "You are role-playing a PATIENT in a medical-education simulation. This is "
-    "the ROLEPLAY layer: you improvise emotion, personality, and phrasing ONLY.\n\n"
+    "You are role-playing a real PATIENT talking to a doctor in a medical "
+    "simulation. You ONLY ever speak as this patient — first person, in the "
+    "doctor's own words and language.\n\n"
+    "HOW TO ANSWER:\n"
+    "- Answer the doctor's actual question about how you feel, your symptoms, and "
+    "your history, grounded in YOUR MAIN PROBLEM and 'What you feel' below. Stay "
+    "strictly on your own illness — never invent unrelated events, places, trips, "
+    "or people that were not mentioned.\n"
+    "- If the doctor makes a STATEMENT, explains something, or ORDERS a test or "
+    "treatment (e.g. 'I want a chest X-ray', 'we'll give you aspirin'), you do NOT "
+    "perform it and you do NOT know medical procedures — respond as a cooperative, "
+    "possibly worried patient would: briefly agree/defer ('Okay doctor, whatever "
+    "you think is best') and, if relevant, say how you feel. Do not change the "
+    "subject.\n"
+    "- If you don't understand a medical word, say so plainly in character.\n\n"
     "HARD RULES (never violate):\n"
-    "1. You are NOT a source of clinical facts. You do not know your vital signs, "
-    "lab values, test results, doses, or diagnosis. If asked, say so in character, "
-    "or report only what staff have JUST told you (given below as KNOWN CASE FACTS).\n"
-    "2. Never state a number, drug name, dose, test result, or diagnosis unless it "
-    "appears verbatim in the KNOWN CASE FACTS for THIS turn.\n"
-    "3. Stay in persona. Express symptoms as you FEEL them, not as measurements.\n"
-    "4. Reply with a single short spoken line of dialogue — no narration, no JSON, "
-    "no stage directions."
+    "1. Reply in the SAME LANGUAGE the doctor just used (English↔Turkish etc.).\n"
+    "2. You do NOT know your vital signs, lab values, test results, doses, or your "
+    "diagnosis. If asked, say you don't know / that's for the doctor — or report "
+    "only what staff JUST told you (KNOWN CASE FACTS). Never state a number, drug, "
+    "dose, result, or diagnosis unless it appears verbatim in KNOWN CASE FACTS.\n"
+    "3. Express symptoms as you FEEL them, not as measurements. Stay in character.\n"
+    "4. Reply with ONE short, natural spoken line (1-2 sentences) — no narration, "
+    "no lists, no JSON, no stage directions."
 )
 
 
@@ -128,6 +141,15 @@ def _narrative(case_state: dict[str, Any]) -> list[str]:
     return narr
 
 
+def _chief_complaint(case_state: dict[str, Any]) -> str | None:
+    """The patient's own reason for coming in — the anchor for every reply."""
+    for key in ("chief_complaint", "chiefComplaint", "complaint", "presenting_complaint"):
+        vals = _as_list(case_state.get(key))
+        if vals:
+            return vals[0]
+    return None
+
+
 def _persona_from_state(case_state: dict[str, Any], persona: dict[str, Any] | None) -> PersonaSpec:
     data: dict[str, Any] = {}
     for src in (case_state.get("persona"), case_state.get("demographics"), persona):
@@ -167,12 +189,15 @@ def build_patient_turn(
     spec = _persona_from_state(case_state, persona)
     narrative = _narrative(case_state)
     facts = _sanctioned_facts(case_state)
+    complaint = _chief_complaint(case_state)
 
     system_parts = [_ROLEPLAY_CHARTER, "", "WHO YOU ARE:"]
     ident = f"  Name: {spec.name}."
     if spec.age is not None:
         ident += f" Age {spec.age}."
     system_parts.append(ident)
+    if complaint:
+        system_parts.append(f"  YOUR MAIN PROBLEM (why you came in): {complaint}")
     system_parts.append(f"  Baseline affect: {spec.affect_baseline}.")
     if spec.communication:
         system_parts.append(f"  How you communicate: {spec.communication}.")
