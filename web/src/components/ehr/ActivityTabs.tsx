@@ -7,6 +7,8 @@ import {
   Flask,
   FileText,
   ListChecks,
+  Monitor as MonitorIcon,
+  Lightbulb,
   type Icon,
 } from "@phosphor-icons/react";
 
@@ -18,6 +20,8 @@ import { FlowsheetTab } from "./tabs/FlowsheetTab";
 import { OrdersTab } from "./tabs/OrdersTab";
 import { ResultsTab } from "./tabs/ResultsTab";
 import { ProblemListTab } from "./tabs/ProblemListTab";
+import { LiveVitalsMonitor, TrendMonitor } from "@/components/monitor";
+import { RealtimeGuidance, AttendingTips } from "@/components/guidance";
 import { setStage, useEncounterState } from "@/state/encounterStore";
 import type { EncounterStage } from "@/state/encounterStore";
 import type { Lang } from "@/data/mock";
@@ -35,16 +39,23 @@ type TabKey =
   | "chart-review"
   | "interview"
   | "flowsheets"
+  | "monitor"
   | "orders"
   | "results"
+  | "guidance"
   | "problem-list";
 
-const TABS: { key: TabKey; icon: Icon; stage: EncounterStage }[] = [
+// `stage` is optional: the Monitor and Guidance tabs are always-available views
+// that must NOT advance the clinical stage when opened (they are reference
+// surfaces, not steps in the workup).
+const TABS: { key: TabKey; icon: Icon; stage?: EncounterStage }[] = [
   { key: "chart-review", icon: ClipboardText, stage: "chart-review" },
   { key: "interview", icon: ChatCircleText, stage: "interview" },
   { key: "flowsheets", icon: ChartLine, stage: "results" },
+  { key: "monitor", icon: MonitorIcon },
   { key: "orders", icon: Flask, stage: "orders" },
   { key: "results", icon: FileText, stage: "results" },
+  { key: "guidance", icon: Lightbulb },
   { key: "problem-list", icon: ListChecks, stage: "assessment" },
 ];
 
@@ -145,8 +156,11 @@ export function ActivityTabs({
     setActiveTab(tab.key);
     // Reflect the navigation in the store stage (drives ProgressStages), but do
     // not let the follow-effect above bounce us off the tab we just chose.
-    prevStageRef.current = tab.stage;
-    setStage(tab.stage);
+    // Reference tabs (Monitor / Guidance) carry no stage and never advance it.
+    if (tab.stage) {
+      prevStageRef.current = tab.stage;
+      setStage(tab.stage);
+    }
   }
 
   return (
@@ -223,11 +237,23 @@ export function ActivityTabs({
       <TabsContent value="flowsheets">
         <FlowsheetTab caseInstance={caseInstance} lang={lang} affectLabel={affectLabel} />
       </TabsContent>
+      <TabsContent value="monitor">
+        <div className="flex flex-col gap-4">
+          <LiveVitalsMonitor />
+          <TrendMonitor />
+        </div>
+      </TabsContent>
       <TabsContent value="orders">
         <OrdersTab caseInstance={caseInstance} lang={lang} />
       </TabsContent>
       <TabsContent value="results">
         <ResultsTab lang={lang} />
+      </TabsContent>
+      <TabsContent value="guidance">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <RealtimeGuidance />
+          <AttendingTips defaultOpen />
+        </div>
       </TabsContent>
       <TabsContent value="problem-list">
         <ProblemListTab caseInstance={caseInstance} lang={lang} />
