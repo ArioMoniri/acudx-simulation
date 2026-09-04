@@ -37,6 +37,17 @@ import {
   DebriefPanel,
   RoleScopeBar,
   JoinByCode,
+  OrderHandoffPanel,
+  RoleSwitcher,
+  HandoffTimeline,
+  PrehospitalPanel,
+  bindRoomCase,
+  setActingRole,
+  setRoomAiBackfill,
+  handoff,
+  taskTally,
+  useRoomCaseState,
+  useRoomVitals,
 } from "@/components/room";
 import {
   useRoomList,
@@ -55,6 +66,7 @@ import {
   escalateFloor,
   delegateFloor,
   promptDoctorFloor,
+  postFloorEvent,
   closeLoop,
   setPhase,
   closedLoopStats,
@@ -62,7 +74,7 @@ import {
   type RoomRuntime,
 } from "@/components/room/roomStore";
 import { useEntry, useLang } from "@/lib/useLang";
-import { roomCase, type ClinicalRole, type Room } from "@/data/rooms";
+import { roomCase, effectiveHolder, type ClinicalRole, type Room } from "@/data/rooms";
 import { getSeedCase } from "@/data/seedCases";
 import { resetEncounter, startEncounter, useEncounterState } from "@/state/encounterStore";
 
@@ -244,16 +256,51 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
   const mySeat = room.seats.find((s) => s.role === effectiveRole);
   const teamLead = mySeat?.teamLead ?? false;
   const iAmLead = !observer && teamLead;
-  const canOrder = !observer && effectiveRole === "doctor";
 
-  // Seed the encounter store with the room's case so we reuse the real
-  // PatientBanner + Interview interaction over one authoritative Case State.
+  // Seed the SOLO encounter store with the case so we reuse the real interview
+  // interaction for the doctor's history-taking. The shared collaborative state
+  // (vitals + task loop) lives in the SEPARATE room-case store, below, so the
+  // two never fight over the single-encounter singleton.
   const state = useEncounterState();
   useEffect(() => {
     if (caseInstance) startEncounter(caseInstance);
     return () => resetEncounter();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.id]);
+
+  // Shared room-case state: bind the room to ONE case and drive the multi-role
+  // order → task → execute loop on top of the clinical-course engine.
+  const roomCaseState = useRoomCaseState(id);
+  useEffect(() => {
+    if (caseInstance) {
+      bindRoomCase(id, caseInstance, { actingRole: effectiveRole, aiBackfill: room.aiBackfill });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, caseInstance]);
+
+  // The role this device acts as in the shared case, kept in lockstep with the
+  // seat it holds; AI backfill mirrors the room toggle.
+  const actingRole: ClinicalRole = roomCaseState?.actingRole ?? effectiveRole;
+  useEffect(() => {
+    setActingRole(id, effectiveRole);
+  }, [id, effectiveRole]);
+  useEffect(() => {
+    setRoomAiBackfill(id, room.aiBackfill);
+  }, [id, room.aiBackfill]);
+
+  // Live shared vitals — respond when the nurse administers a medication task.
+  const { vitals: liveVitals, status: courseStatus } = useRoomVitals(id);
+
+  // Roles currently driven by scripted AI (for the role-switcher hint).
+  const aiRoles = useMemo(
+    () =>
+      room.seats
+        .filter((s) => s.role !== actingRole)
+        .map((s) => ({ role: s.role, holder: effectiveHolder(s, room.aiBackfill) }))
+        .filter((x) => x.holder?.kind === "ai")
+        .map((x) => x.role),
+    [room.seats, room.aiBackfill, actingRole],
+  );
 
   // Ambient "who is speaking" rotation — paused while a seat explicitly holds
   // the floor, so the granted floor is authoritative. Reduced-motion users still
@@ -271,13 +318,24 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
 
   const openLoop = openLoopEvent(runtime.floor);
 
-  // Controlled tabs: an ended session lands on the debrief; a seat switch that
-  // removes the interview tab falls back to the floor.
-  const initialTab = room.status === "debrief" ? "debrief" : canOrder ? "interview" : "floor";
-  const [tab, setTab] = useState<string>(initialTab);
+  // Role-scoped tabs: the doctor gets the interview, the paramedic the
+  // prehospital handover; everyone shares the order/task loop, floor + debrief.
+  const roleTab: string =
+    actingRole === "doctor" ? "interview" : actingRole === "paramedic" ? "prehospital" : "orders";
+  const availableTabs = useMemo(() => {
+    const tabs: string[] = [];
+    if (actingRole === "doctor") tabs.push("interview");
+    if (actingRole === "paramedic") tabs.push("prehospital");
+    tabs.push("orders", "floor", "debrief");
+    return tabs;
+  }, [actingRole]);
+
+  const [tab, setTab] = useState<string>(room.status === "debrief" ? "debrief" : roleTab);
+  // Keep the active tab valid after a role switch or when the session ends.
   useEffect(() => {
-    if (tab === "interview" && !canOrder) setTab("floor");
-  }, [tab, canOrder]);
+    if (!availableTabs.includes(tab)) setTab(roleTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableTabs]);
 
   const [guidanceOn, setGuidanceOn] = useState(true);
 
@@ -303,7 +361,30 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
     setTab("debrief");
   }, [id]);
 
-  if (!caseInstance || !state.caseInstance) {
+  // Switch the acting seat (takes the seat + sets the shared acting role).
+  const handleSwitchRole = useCallback((role: ClinicalRole) => {
+    takeSeat(id, role);
+    setActingRole(id, role);
+  }, [id]);
+
+  // Paramedic delivers the structured scene handover: posts it to the team floor
+  // and records the paramedic → doctor pass on the shared handoff timeline.
+  const handoverGiven = (roomCaseState?.handoffs ?? []).some((h) => h.from === "paramedic");
+  const handleGiveHandover = useCallback(() => {
+    if (!caseInstance) return;
+    postFloorEvent(id, {
+      role: "paramedic",
+      ai: actingRole !== "paramedic",
+      kind: "handover",
+      text: {
+        en: `ATMIST handover: ${caseInstance.chiefComplaint.en}. Arrival vitals and timeline passed to the team, access in place.`,
+        tr: `ATMIST devri: ${caseInstance.chiefComplaint.tr}. Varış vitalleri ve zaman çizelgesi ekibe aktarıldı, damar yolu açık.`,
+      },
+    });
+    handoff(id, "paramedic", "doctor");
+  }, [id, actingRole, caseInstance]);
+
+  if (!caseInstance || !state.caseInstance || !roomCaseState) {
     return (
       <PageContainer width="wide">
         <p className="text-sm text-muted">{t("common.loading")}</p>
@@ -313,6 +394,14 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
 
   const affectLabel = t("encounter.affect.distress");
   const loopStats = closedLoopStats(runtime.floor);
+  const tally = taskTally(roomCaseState);
+  const debriefLoop = {
+    ordersPlaced: roomCaseState.tasks.length,
+    tasksDone: tally.done,
+    tasksTotal: tally.total,
+    medsGiven: roomCaseState.treatments.length,
+    handoffs: roomCaseState.handoffs.length,
+  };
 
   return (
     <PageContainer width="wide" className="flex flex-col gap-4">
@@ -378,7 +467,15 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
       <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,340px)]">
         {/* Main column — role-scoped EHR + interaction */}
         <motion.div {...body} className="flex min-w-0 flex-col gap-4">
-          <CompactVitals caseInstance={caseInstance} />
+          <RoleSwitcher
+            actingRole={actingRole}
+            lang={lang}
+            aiRoles={aiRoles}
+            onSwitch={handleSwitchRole}
+          />
+
+          {/* Shared live monitor — one patient, responds to the nurse's meds */}
+          <CompactVitals caseInstance={caseInstance} live={liveVitals} status={courseStatus} />
 
           <RoleScopeBar
             role={effectiveRole}
@@ -397,14 +494,14 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
 
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList>
-              {canOrder ? (
-                <TabsTrigger value="interview">{t("rooms.inroom.tabInterview")}</TabsTrigger>
-              ) : null}
-              <TabsTrigger value="floor">{t("rooms.inroom.tabFloor")}</TabsTrigger>
-              <TabsTrigger value="debrief">{t("rooms.inroom.tabDebrief")}</TabsTrigger>
+              {availableTabs.map((key) => (
+                <TabsTrigger key={key} value={key}>
+                  {t(`roomscollab.tabs.${key}`)}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
-            {canOrder ? (
+            {actingRole === "doctor" ? (
               <TabsContent value="interview">
                 <InterviewTab
                   caseInstance={caseInstance}
@@ -415,6 +512,26 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
                 />
               </TabsContent>
             ) : null}
+
+            {actingRole === "paramedic" ? (
+              <TabsContent value="prehospital">
+                <PrehospitalPanel
+                  caseInstance={caseInstance}
+                  lang={lang}
+                  given={handoverGiven}
+                  onGiveHandover={handleGiveHandover}
+                />
+              </TabsContent>
+            ) : null}
+
+            <TabsContent value="orders">
+              <OrderHandoffPanel
+                roomId={id}
+                state={roomCaseState}
+                lang={lang}
+                actingRole={actingRole}
+              />
+            </TabsContent>
 
             <TabsContent value="floor">
               <FloorPanel
@@ -431,13 +548,14 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
                 lang={lang}
                 woreHat={iAmLead}
                 loopsClosed={{ closed: runtime.loopsClosedByMe, total: loopStats.total }}
+                loop={debriefLoop}
                 live={room.status === "debrief"}
               />
             </TabsContent>
           </Tabs>
         </motion.div>
 
-        {/* Room rail — participants + shared team clock + seat control */}
+        {/* Room rail — participants + shared team clock + handoff timeline */}
         <motion.div {...body} className="flex flex-col gap-4">
           <ParticipantsPanel
             room={room}
@@ -452,6 +570,13 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
             onClaimLead={handleClaimLead}
             onGrantFloor={handleGrantFloor}
             onToggleBackfill={handleToggleBackfill}
+          />
+
+          <HandoffTimeline
+            roomId={id}
+            state={roomCaseState}
+            actingRole={actingRole}
+            lang={lang}
           />
         </motion.div>
       </div>

@@ -1,0 +1,117 @@
+{
+  "roomscollab": {
+    "roles": {
+      "doctor": "Doktor",
+      "nurse": "Hemşire",
+      "paramedic": "Paramedik"
+    },
+    "acting": {
+      "as": "{{role}} olarak",
+      "switch": "Rol değiştir",
+      "actAs": "{{role}} ol",
+      "hint": "Tek tarayıcı, tüm ekip — aynı hasta üzerinde her rolü oynamak için koltuk değiştir.",
+      "youAreAi": "Bu rolü yapay zekâ tutuyor. Kendin yürütmek için bu koltuğa geç.",
+      "label": "Etkin rol"
+    },
+    "scope": {
+      "doctor": "Tetkik sürecini yönet: öykü al, tetkik ve tedavi iste, tanı ve planı onayla.",
+      "nurse": "Başucunu yönet: görev kuyruğunu işle, ilaç uygula, canlı yanıtı izle, kaygıları yükselt.",
+      "paramedic": "Olay yerini aktar: hastane öncesi tabloyu ve yapılandırılmış ATMIST/SBAR devrini sun."
+    },
+    "tabs": {
+      "workspace": "Çalışma alanı",
+      "interview": "Görüşme",
+      "prehospital": "Hastane öncesi",
+      "orders": "İstemler ve görevler",
+      "floor": "Ekip zemini",
+      "debrief": "Değerlendirme"
+    },
+    "orders": {
+      "title": "İstemler ve devir",
+      "subtitle": "Doktor istem girer; istem, uygulayan rolün kuyruğunda bir göreve dönüşür.",
+      "compose": "İstem gir",
+      "medications": "İlaçlar ve tedaviler",
+      "diagnostics": "Tetkikler",
+      "place": "İste",
+      "placeAria": "{{name}} iste",
+      "doctorOnly": "Yalnızca doktor istem girebilir. Ekip için istem girmek üzere doktor koltuğuna geç.",
+      "handsTo": "{{role}} rolüne geçer",
+      "reason": "Gerekçe (isteğe bağlı)"
+    },
+    "task": {
+      "queueTitle": "Görev kuyruğu",
+      "queueSubtitle": "Ekibe devredilen istemler; durum ve gerçekçi geri dönüş süresiyle.",
+      "empty": "Henüz görev yok. Doktorun girdiği istemler ekip için görev olarak burada belirir.",
+      "mineEmpty": "Kuyruğun boş. Sana atanan yeni istemler burada görünecek.",
+      "orderedBy": "İsteyen: {{role}}",
+      "for": "Uygulayan: {{role}}",
+      "eta": "Süre {{eta}}",
+      "claim": "Üstlen",
+      "claimAria": "{{name}} görevini üstlen",
+      "claimedBy": "Üstlenen: {{role}}",
+      "administer": "Uygula",
+      "administerAria": "{{name}} uygula",
+      "collect": "Al ve gönder",
+      "collectAria": "{{name}} örneğini al ve gönder",
+      "doneBy": "Uygulayan: {{role}}",
+      "resultPending": "Laboratuvarda — sonuç işleniyor",
+      "resultReady": "Sonuç hazır",
+      "notYours": "Bu görevi yürütmek için {{role}} koltuğuna geç.",
+      "status": {
+        "pending": "Bekliyor",
+        "claimed": "Üstlenildi",
+        "done": "Tamam"
+      },
+      "kind": {
+        "medication": "İlaç",
+        "diagnostic": "Tetkik",
+        "intervention": "Girişim"
+      }
+    },
+    "vitals": {
+      "live": "Canlı",
+      "responding": "Tedaviye yanıt veriyor",
+      "triage": "Triyaj",
+      "sharedNote": "Tek ortak hasta — her rol aynı canlı monitörü okur."
+    },
+    "status": {
+      "improving": "Düzeliyor",
+      "stable": "Stabil",
+      "deteriorating": "Kötüleşiyor",
+      "critical": "Kritik"
+    },
+    "handoff": {
+      "title": "Devir",
+      "pass": "{{role}} rolüne devret",
+      "passAria": "Kontrolü {{role}} rolüne devret",
+      "timeline": "Devir zaman çizelgesi",
+      "empty": "Henüz devir yok. Kaydetmek için kontrolü devret.",
+      "arrow": "{{from}} → {{role}}",
+      "holds": "Kontrol {{role}} rolünde"
+    },
+    "paramedic": {
+      "title": "Hastane öncesi devir",
+      "desc": "Hastayı sen getirdin. Ekibe olay yeri tablosunu ve zaman çizelgesini sun, sonra doktora devret.",
+      "give": "ATMIST devrini sun",
+      "given": "Devir ekibe iletildi."
+    },
+    "nurse": {
+      "title": "Başucu ve görev kuyruğu",
+      "desc": "Doktorun istemlerini işle, ilaçları uygula ve ortak monitörün yanıtını izle."
+    },
+    "doctor": {
+      "title": "Tetkik ve istemler",
+      "desc": "Öykü al, ekip için tetkik ve tedavi iste, planı onayla."
+    },
+    "debrief": {
+      "loopTitle": "İstemden uygulamaya döngü",
+      "ordersPlaced": "Girilen istem",
+      "tasksExecuted": "Uygulanan görev",
+      "medsGiven": "Uygulanan ilaç",
+      "handoffs": "Kaydedilen devir",
+      "byHuman": "senin",
+      "byAi": "yapay zekâ",
+      "note": "Yukarıdaki ekip döngüsü bu oturumda gerçekten olanlardan gelir: doktor istemleri, hemşire uygulamaları ve hastanın canlı yanıtı."
+    }
+  }
+}
