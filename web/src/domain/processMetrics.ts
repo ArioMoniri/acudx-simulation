@@ -60,13 +60,27 @@ export interface OrderAppropriateness {
   lowValueCodes: string[];
 }
 
+/**
+ * Communication signals that are DIRECTLY OBSERVABLE in the encounter's dialogue
+ * event log — each maps to a specific history-question intent the learner did or
+ * did not ask (docs/00-overview/04 §4.1; the assessment never infers the
+ * learner's emotion or intent, arch/09). These are real measured signals, not
+ * placeholders: a flag is `true` only when the corresponding question is present
+ * in the transcript, and `false` means the behaviour was NOT OBSERVED in this
+ * encounter — never a fabricated positive. Behaviours the encounter has no
+ * instrument for (e.g. teach-back, handover) are deliberately absent here rather
+ * than assumed. `observed` counts how many of these signals were seen at all, so
+ * consumers can distinguish "measured and absent" from "nothing to measure yet".
+ */
 export interface CommunicationFlags {
-  /** Whether the student explored ideas/concerns/expectations (from event meta). */
+  /** Learner asked an ideas/concerns/expectations question that landed (ref "ice"). */
   exploredIce: boolean;
-  /** Whether a red-flag screening question was asked. */
+  /** Learner asked a red-flag / risk-factor screening question that landed. */
   screenedRedFlags: boolean;
-  /** Whether allergies were checked (asked or via banner interaction). */
+  /** Learner asked about allergies at any point (ref "allergies"). */
   checkedAllergies: boolean;
+  /** How many of the above signals were observed in the transcript (0..3). */
+  observed: number;
 }
 
 export interface ProcessMetrics {
@@ -204,14 +218,21 @@ export function computeProcessMetrics(
       ? dxEvents[dxEvents.length - 1].at
       : null;
 
-  // Communication flags (placeholder, derived from event meta only; assessment
-  // never infers the learner's emotion, docs §4.1 / arch/09).
+  // Communication signals — each read straight from the dialogue event log
+  // (a specific history-question the learner asked), never inferred and never
+  // assumed. `false` means "not observed in this transcript", not a fabricated
+  // positive (docs §4.1 / arch/09).
+  const exploredIce = questionEvents.some((e) => e.ref === "ice" && metaBool(e, "hit"));
+  const screenedRedFlags = questionEvents.some(
+    (e) => (e.ref === "red-flags" || e.ref === "risk-factors") && metaBool(e, "hit"),
+  );
+  const checkedAllergies = questionEvents.some((e) => e.ref === "allergies");
   const communicationFlags: CommunicationFlags = {
-    exploredIce: questionEvents.some((e) => e.ref === "ice" && metaBool(e, "hit")),
-    screenedRedFlags: questionEvents.some(
-      (e) => (e.ref === "red-flags" || e.ref === "risk-factors") && metaBool(e, "hit"),
-    ),
-    checkedAllergies: questionEvents.some((e) => e.ref === "allergies"),
+    exploredIce,
+    screenedRedFlags,
+    checkedAllergies,
+    observed:
+      (exploredIce ? 1 : 0) + (screenedRedFlags ? 1 : 0) + (checkedAllergies ? 1 : 0),
   };
 
   return {

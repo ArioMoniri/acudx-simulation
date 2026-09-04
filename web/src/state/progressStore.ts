@@ -39,16 +39,29 @@ import type {
   RecentFeedbackItem,
   TreatmentBehavior,
 } from "@/data/mock";
-import type {
-  CalibrationSession,
-  DomainTrend,
-  LevelState,
-  MasteryDomain,
-  StreakDay,
-  StreakDayState,
-  StreakState,
-  XpAward,
-  XpReason,
+import {
+  badgeCatalog,
+  epaCatalog,
+  retrievabilityAfter,
+  scheduleReview,
+  type Badge,
+  type CalibrationSession,
+  type DomainTrend,
+  type EntrustmentLevel,
+  type EpaProgress,
+  type LevelState,
+  type MasteryDetail,
+  type MasteryDomain,
+  type MasteryEvidence,
+  type ReviewCard,
+  type ReviewGrade,
+  type ReviewState,
+  type SelfComparison,
+  type StreakDay,
+  type StreakDayState,
+  type StreakState,
+  type XpAward,
+  type XpReason,
 } from "@/data/progress";
 import {
   computeProcessMetrics,
@@ -301,9 +314,34 @@ export function buildEncounterRecord(
 /* -------------------------------------------------------------------------- */
 
 const STORAGE_KEY = "acudx-progress:v1";
+const REVIEW_STORAGE_KEY = "acudx-review:v1";
+
+/**
+ * One persisted spaced-repetition card: the retrieval prompt (denormalised from
+ * the gap that seeded it, so it renders even if the source encounter is pruned)
+ * plus its live FSRS schedule. Keyed by a stable id derived from the gap.
+ */
+export interface ReviewEntry {
+  id: string;
+  domain: FeedbackDomainKey;
+  prompt: Bilingual;
+  citationId: string;
+  /** FSRS stability, in days. */
+  stabilityDays: number;
+  /** Epoch ms this card is next due (≤ now ⇒ due). */
+  dueAt: number;
+  /** Epoch ms it was last graded, or null if never graded. */
+  lastGradedAt: number | null;
+  /** Epoch ms the card entered the queue. */
+  createdAt: number;
+}
+
+type ReviewScheduleMap = Record<string, ReviewEntry>;
 
 interface ProgressState {
   records: EncounterRecord[];
+  /** Persisted FSRS schedule overlay for review cards, keyed by card id. */
+  reviewSchedule: ReviewScheduleMap;
 }
 
 function isRecord(v: unknown): v is EncounterRecord {
@@ -321,22 +359,57 @@ function isRecord(v: unknown): v is EncounterRecord {
   );
 }
 
+function isReviewEntry(v: unknown): v is ReviewEntry {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.id === "string" &&
+    typeof o.domain === "string" &&
+    typeof o.prompt === "object" &&
+    o.prompt !== null &&
+    typeof o.citationId === "string" &&
+    typeof o.stabilityDays === "number" &&
+    typeof o.dueAt === "number" &&
+    (o.lastGradedAt === null || typeof o.lastGradedAt === "number") &&
+    typeof o.createdAt === "number"
+  );
+}
+
+function loadReviewSchedule(): ReviewScheduleMap {
+  try {
+    const raw = localStorage.getItem(REVIEW_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: ReviewScheduleMap = {};
+    for (const [id, entry] of Object.entries(parsed as Record<string, unknown>)) {
+      if (isReviewEntry(entry)) out[id] = entry;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 function loadState(): ProgressState {
+  let records: EncounterRecord[] = [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { records: [] };
-    const parsed = JSON.parse(raw) as unknown;
-    const records = Array.isArray(parsed) ? parsed.filter(isRecord) : [];
-    records.sort((a, b) => a.at - b.at);
-    return { records };
+    if (raw) {
+      const parsed = JSON.parse(raw) as unknown;
+      records = Array.isArray(parsed) ? parsed.filter(isRecord) : [];
+      records.sort((a, b) => a.at - b.at);
+    }
   } catch {
-    return { records: [] };
+    records = [];
   }
+  return { records, reviewSchedule: loadReviewSchedule() };
 }
 
 function persist(next: ProgressState): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next.records));
+    localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(next.reviewSchedule));
   } catch {
     /* storage unavailable — keep in-memory only */
   }
@@ -372,11 +445,11 @@ export function recordEncounter(record: EncounterRecord): void {
     const records = state.records.map((r) =>
       r.sourceKey === record.sourceKey ? record : r,
     );
-    setState({ records });
+    setState({ ...state, records });
     return;
   }
   const records = [...state.records, record].sort((a, b) => a.at - b.at);
-  setState({ records });
+  setState({ ...state, records });
 }
 
 /**
@@ -397,9 +470,9 @@ export function recordFromEncounter(
   return record;
 }
 
-/** Clear all recorded progress (dev / tests / account reset). */
+/** Clear all recorded progress + review schedule (dev / tests / account reset). */
 export function resetProgress(): void {
-  setState({ records: [] });
+  setState({ records: [], reviewSchedule: {} });
 }
 
 /** Read records without subscribing (module consumers, tests). */
@@ -724,6 +797,287 @@ function deriveDashboardStats(
   ];
 }
 
+/* -------------------------------------------------------------------------- */
+/* EPA entrustment — derived from real recorded encounters                     */
+/* -------------------------------------------------------------------------- */
+
+const COMPETENCE_PROFICIENT = 0.52;
+const COMPETENCE_STRONG = 0.68;
+const COMPETENCE_EXEMPLARY = 0.85;
+/** A reasoning calibration gap at or under this counts as well-calibrated. */
+const CALIBRATED_GAP = 0.12;
+
+/** Mean measured competence over a record's mapped domains (all must be scored). */
+function meanCompetenceOver(
+  rec: EncounterRecord,
+  domains: FeedbackDomainKey[],
+): number | null {
+  const comps: number[] = [];
+  for (const key of domains) {
+    const d = rec.domainScores.find((x) => x.key === key);
+    if (!d || !d.scored) return null; // needs every mapped domain scored
+    comps.push(d.competence);
+  }
+  if (comps.length === 0) return null;
+  return comps.reduce((a, b) => a + b, 0) / comps.length;
+}
+
+/**
+ * EPA entrustment per activity, derived from earned evidence. An activity with
+ * no mapped instrument (empty `domains`) — or with no qualifying record — is
+ * honestly `assessed: false` at level 1, never a fabricated "entrusted" level.
+ */
+function deriveEpaProgress(records: EncounterRecord[]): EpaProgress[] {
+  return epaCatalog.map((epa) => {
+    const base = {
+      id: epa.id,
+      code: epa.code,
+      title: epa.title,
+      citationId: epa.citationId,
+    };
+    if (epa.domains.length === 0) {
+      return { ...base, level: 1 as EntrustmentLevel, demonstrations: 0, assessed: false };
+    }
+    const perRecord = records
+      .map((r) => meanCompetenceOver(r, epa.domains))
+      .filter((c): c is number => c != null);
+    if (perRecord.length === 0) {
+      return { ...base, level: 1 as EntrustmentLevel, demonstrations: 0, assessed: false };
+    }
+    const demonstrations = perRecord.filter((c) => c >= COMPETENCE_PROFICIENT).length;
+    const meanComp = perRecord.reduce((a, b) => a + b, 0) / perRecord.length;
+    let level: EntrustmentLevel = 1;
+    if (demonstrations >= 1) level = 2;
+    if (demonstrations >= 2 && meanComp >= COMPETENCE_PROFICIENT) level = 3;
+    if (demonstrations >= 3 && meanComp >= COMPETENCE_STRONG) level = 4;
+    if (demonstrations >= 5 && meanComp >= COMPETENCE_EXEMPLARY) level = 5;
+    return { ...base, level, demonstrations, assessed: true };
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Badges — earned-state derived from real records (none earned at zero)       */
+/* -------------------------------------------------------------------------- */
+
+function scoredBandAtLeast(
+  rec: EncounterRecord,
+  key: FeedbackDomainKey,
+  minBand: Exclude<Band, "withheld">,
+): boolean {
+  const d = rec.domainScores.find((x) => x.key === key);
+  return Boolean(d && d.scored && bandIndex(d.band) >= bandOrder.indexOf(minBand));
+}
+
+/** Longest run of consecutive records (in order) with no safety-critical miss. */
+function longestCleanRun(records: EncounterRecord[]): number {
+  let best = 0;
+  let run = 0;
+  for (const r of records) {
+    run = r.safetyMiss ? 0 : run + 1;
+    if (run > best) best = run;
+  }
+  return best;
+}
+
+/** How many qualifying encounters a badge has, by its earning rule. */
+function badgeProgressCount(id: string, records: EncounterRecord[]): number {
+  switch (id) {
+    case "badge-deterioration":
+      // Strong, on-time management with no safety-critical miss.
+      return records.filter(
+        (r) => scoredBandAtLeast(r, "management", "strong") && !r.safetyMiss,
+      ).length;
+    case "badge-difficult-conversation":
+      // A strong communication band (concerns explored, red flags screened).
+      return records.filter((r) => scoredBandAtLeast(r, "communication", "strong"))
+        .length;
+    case "badge-safety-netting":
+      // Consecutive encounters closed with no safety-critical miss.
+      return longestCleanRun(records);
+    case "badge-calibrated": {
+      // Reasoning confidence within one band of measured reasoning.
+      return records.filter((r) => {
+        const d = r.domainScores.find((x) => x.key === "reasoning");
+        return Boolean(
+          d && d.scored && Math.abs(d.confidence - d.competence) <= CALIBRATED_GAP,
+        );
+      }).length;
+    }
+    default:
+      // No instrument (e.g. handover) — never falsely progresses.
+      return 0;
+  }
+}
+
+/** All badges with real earned-state + progress; none earned at zero history. */
+function deriveBadges(records: EncounterRecord[]): Badge[] {
+  return badgeCatalog.map((def) => {
+    const base = {
+      id: def.id,
+      icon: def.icon,
+      title: def.title,
+      description: def.description,
+    };
+    if (def.threshold == null) {
+      // Not measurable yet — honestly unearned, with its unlock note.
+      return { ...base, earned: false, progress: 0, nextStep: def.nextStep };
+    }
+    const count = badgeProgressCount(def.id, records);
+    const earned = count >= def.threshold;
+    if (earned) return { ...base, earned: true };
+    return {
+      ...base,
+      earned: false,
+      progress: clamp01(count / def.threshold),
+      nextStep: def.nextStep,
+    };
+  });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Self-comparison — your own trend, never a fabricated cohort percentile      */
+/* -------------------------------------------------------------------------- */
+
+function deriveSelfComparison(records: EncounterRecord[]): SelfComparison {
+  const n = records.length;
+  const first = records[0];
+  const last = records[n - 1];
+  const baselineGapPct = first ? Math.round(first.overallGap * 100) : 0;
+  const latestGapPct = last ? Math.round(last.overallGap * 100) : 0;
+  return {
+    hasBaseline: n >= 2,
+    sessionCount: n,
+    baselineGapPct,
+    latestGapPct,
+    improvementPct: n >= 2 ? baselineGapPct - latestGapPct : 0,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Review seeds — one card per real encounter gap (schedule applied later)     */
+/* -------------------------------------------------------------------------- */
+
+interface ReviewSeed {
+  id: string;
+  domain: FeedbackDomainKey;
+  prompt: Bilingual;
+  citationId: string;
+}
+
+/** Stable card id for a gap, so the same gap across encounters collapses to one. */
+function reviewCardId(gapId: string): string {
+  return `rev-${gapId}`;
+}
+
+/**
+ * De-duplicated review seeds from every recorded encounter's real gaps
+ * (`deriveFeedbackGaps`). Each retrieval prompt is the gap's own remediation,
+ * carrying its guideline citation, so a review always traces back to what the
+ * learner actually did. Empty when there is no history / no gaps.
+ */
+function deriveReviewSeeds(records: EncounterRecord[]): ReviewSeed[] {
+  const seen = new Set<string>();
+  const seeds: ReviewSeed[] = [];
+  for (const rec of records) {
+    for (const gap of deriveFeedbackGaps(rec)) {
+      const id = reviewCardId(gap.id);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      seeds.push({ id, domain: gap.domain, prompt: gap.remediation, citationId: gap.citationId });
+    }
+  }
+  return seeds;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mastery drill-down — evidence keyed to REAL encounters the learner did      */
+/* -------------------------------------------------------------------------- */
+
+const MASTERY_MOVED_UP: Bilingual = {
+  en: "Your most recent encounter moved this band up.",
+  tr: "En son karşılaşmanız bu bandı yükseltti.",
+};
+const MASTERY_MOVED_DOWN: Bilingual = {
+  en: "Your most recent encounter moved this band down — worth revisiting.",
+  tr: "En son karşılaşmanız bu bandı düşürdü — tekrar gözden geçirmeye değer.",
+};
+const MASTERY_STEADY: Bilingual = {
+  en: "This band has held steady across your recent graded encounters.",
+  tr: "Bu bant son değerlendirilmiş karşılaşmalarınızda sabit kaldı.",
+};
+const MASTERY_NEXT_STEP: Bilingual = {
+  en: "Complete more encounters that exercise this domain to gather evidence and move the band.",
+  tr: "Bu alanı çalıştıran daha fazla karşılaşma tamamlayarak kanıt toplayın ve bandı yükseltin.",
+};
+
+/** An honest, band-based note for one encounter's contribution to a domain. */
+function evidenceNoteFor(band: Band): Bilingual {
+  const idx = bandIndex(band);
+  if (idx >= bandOrder.indexOf("strong")) {
+    return { en: "Performed strongly in this domain.", tr: "Bu alanda güçlü performans gösterildi." };
+  }
+  if (idx >= bandOrder.indexOf("proficient")) {
+    return { en: "Solid, proficient performance in this domain.", tr: "Bu alanda sağlam, yeterli performans." };
+  }
+  return { en: "Room to grow in this domain here.", tr: "Bu alanda burada gelişim alanı var." };
+}
+
+const MASTERY_EVIDENCE_LIMIT = 4;
+
+/**
+ * Per-domain mastery detail built from REAL records only: the band trajectory,
+ * and evidence rows that each key to an encounter the learner actually did
+ * (id, title, date). A domain with no scored evidence is absent from the map, so
+ * the UI shows an honest empty state rather than invented cases.
+ */
+function deriveMasteryDetail(
+  records: EncounterRecord[],
+): Partial<Record<FeedbackDomainKey, MasteryDetail>> {
+  const now = Date.now();
+  const seeds = deriveReviewSeeds(records);
+  const out: Partial<Record<FeedbackDomainKey, MasteryDetail>> = {};
+
+  for (const { key } of DOMAIN_META) {
+    const scoredFor = records.filter(
+      (r) => r.domainScores.find((d) => d.key === key)?.scored,
+    );
+    if (scoredFor.length === 0) continue; // honest empty state (no invented detail)
+
+    const bandHistory = scoredFor
+      .map((r) => r.domainScores.find((d) => d.key === key)!.band)
+      .filter((b): b is Exclude<Band, "withheld"> => b !== "withheld");
+
+    const latestBand = bandHistory[bandHistory.length - 1];
+    const priorBand = bandHistory.length > 1 ? bandHistory[bandHistory.length - 2] : undefined;
+    const delta = priorBand ? bandIndex(latestBand) - bandIndex(priorBand) : 0;
+    const movedBy = delta > 0 ? MASTERY_MOVED_UP : delta < 0 ? MASTERY_MOVED_DOWN : MASTERY_STEADY;
+
+    const evidence: MasteryEvidence[] = [...scoredFor]
+      .reverse()
+      .slice(0, MASTERY_EVIDENCE_LIMIT)
+      .map((r) => {
+        const d = r.domainScores.find((x) => x.key === key)!;
+        return {
+          id: `ev-${r.sourceKey}-${key}`,
+          case: r.title,
+          note: evidenceNoteFor(d.band),
+          daysAgo: Math.max(0, Math.floor((now - r.at) / DAY_MS)),
+        };
+      });
+
+    const reviewCard = seeds.find((s) => s.domain === key);
+
+    out[key] = {
+      movedBy,
+      nextStep: MASTERY_NEXT_STEP,
+      bandHistory,
+      evidence,
+      ...(reviewCard ? { reviewCardId: reviewCard.id } : {}),
+    };
+  }
+  return out;
+}
+
 interface Derived {
   records: EncounterRecord[];
   latest: EncounterRecord | null;
@@ -732,6 +1086,10 @@ interface Derived {
   calibrationSessions: CalibrationSession[];
   domainTrends: DomainTrend[];
   mastery: MasteryDomain[];
+  masteryDetail: Partial<Record<FeedbackDomainKey, MasteryDetail>>;
+  epaProgress: EpaProgress[];
+  badges: Badge[];
+  selfComparison: SelfComparison;
   level: LevelState;
   recentXp: XpAward[];
   streak: StreakState;
@@ -750,6 +1108,10 @@ function computeDerived(records: EncounterRecord[]): Derived {
     calibrationSessions: deriveCalibrationSessions(records),
     domainTrends: deriveDomainTrends(records),
     mastery: deriveMastery(records),
+    masteryDetail: deriveMasteryDetail(records),
+    epaProgress: deriveEpaProgress(records),
+    badges: deriveBadges(records),
+    selfComparison: deriveSelfComparison(records),
     level: deriveLevel(records),
     recentXp: deriveRecentXp(records),
     streak,
@@ -765,6 +1127,177 @@ function derived(): Derived {
   const value = computeDerived(state.records);
   derivedCache = { key: state.records, value };
   return value;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Spaced-repetition review queue (real + persisted FSRS schedule)             */
+/* -------------------------------------------------------------------------- */
+
+/** Initial FSRS stability for a freshly identified (never-graded) gap, in days. */
+const DEFAULT_REVIEW_STABILITY = 1;
+/** Display retrievability for a gap that has never been graded. */
+const UNGRADED_RETRIEVABILITY = 0.5;
+const round1 = (x: number): number => Math.round(x * 10) / 10;
+
+const REVIEW_STATE_ORDER: Record<ReviewState, number> = {
+  due: 0,
+  learning: 1,
+  scheduled: 2,
+};
+
+/** Project a persisted review entry to the {@link ReviewCard} view at `now`. */
+function reviewEntryView(entry: ReviewEntry, now: number): ReviewCard {
+  const dueInDays = Math.ceil((entry.dueAt - now) / DAY_MS);
+  const isDue = entry.dueAt <= now;
+  const state: ReviewState = isDue
+    ? "due"
+    : entry.stabilityDays >= 14
+      ? "scheduled"
+      : "learning";
+  const retrievability =
+    entry.lastGradedAt == null
+      ? UNGRADED_RETRIEVABILITY
+      : clamp01(
+          retrievabilityAfter(
+            Math.max(0, (now - entry.lastGradedAt) / DAY_MS),
+            entry.stabilityDays,
+          ),
+        );
+  return {
+    id: entry.id,
+    domain: entry.domain,
+    prompt: entry.prompt,
+    citationId: entry.citationId,
+    retrievability,
+    stabilityDays: round1(entry.stabilityDays),
+    dueInDays,
+    state,
+  };
+}
+
+/**
+ * The live queue = the union of (a) base cards derived from every recorded
+ * encounter's real gaps and (b) any explicitly persisted/graded cards, each
+ * merged with its persisted FSRS schedule. A never-graded gap reads as "due".
+ * Empty at zero history.
+ */
+function computeReviewQueue(
+  records: EncounterRecord[],
+  schedule: ReviewScheduleMap,
+): ReviewCard[] {
+  const now = Date.now();
+  const map = new Map<string, ReviewEntry>();
+  // Base cards from real gaps (default schedule: due now, never graded).
+  for (const seed of deriveReviewSeeds(records)) {
+    map.set(seed.id, {
+      ...seed,
+      stabilityDays: DEFAULT_REVIEW_STABILITY,
+      dueAt: 0, // epoch 0 ⇒ due now
+      lastGradedAt: null,
+      createdAt: 0,
+    });
+  }
+  // Persisted entries win (they carry the real graded schedule) and may add
+  // cards whose source encounter is no longer present.
+  for (const [id, entry] of Object.entries(schedule)) {
+    map.set(id, entry);
+  }
+  return [...map.values()]
+    .map((e) => reviewEntryView(e, now))
+    .sort(
+      (a, b) =>
+        REVIEW_STATE_ORDER[a.state] - REVIEW_STATE_ORDER[b.state] ||
+        a.dueInDays - b.dueInDays ||
+        a.id.localeCompare(b.id),
+    );
+}
+
+let reviewCache:
+  | { records: EncounterRecord[]; schedule: ReviewScheduleMap; value: ReviewCard[] }
+  | null = null;
+
+function reviewQueueSnapshot(): ReviewCard[] {
+  if (
+    reviewCache &&
+    reviewCache.records === state.records &&
+    reviewCache.schedule === state.reviewSchedule
+  ) {
+    return reviewCache.value;
+  }
+  const value = computeReviewQueue(state.records, state.reviewSchedule);
+  reviewCache = {
+    records: state.records,
+    schedule: state.reviewSchedule,
+    value,
+  };
+  return value;
+}
+
+/**
+ * enqueueReview — register real encounter gaps as spaced-repetition cards.
+ *
+ * The Feedback page's "Schedule spaced repetition" CTA calls this with the
+ * current encounter's gaps (`enqueueReview(deriveFeedbackGaps(rec))`). It is
+ * idempotent: a card already in the schedule keeps its FSRS state (never reset),
+ * and cards are also derived from records automatically, so calling it only
+ * persists the gap and guarantees it is queued. No-op for an empty gap list.
+ */
+export function enqueueReview(gaps: FeedbackGap[], at: number = Date.now()): void {
+  if (gaps.length === 0) return;
+  let schedule = state.reviewSchedule;
+  let changed = false;
+  for (const gap of gaps) {
+    const id = reviewCardId(gap.id);
+    if (schedule[id]) continue; // preserve an existing schedule (idempotent)
+    if (!changed) {
+      schedule = { ...schedule };
+      changed = true;
+    }
+    schedule[id] = {
+      id,
+      domain: gap.domain,
+      prompt: gap.remediation,
+      citationId: gap.citationId,
+      stabilityDays: DEFAULT_REVIEW_STABILITY,
+      dueAt: at, // due now
+      lastGradedAt: null,
+      createdAt: at,
+    };
+  }
+  if (changed) setState({ ...state, reviewSchedule: schedule });
+}
+
+/**
+ * gradeReview — apply an FSRS recall grade to one card and persist the next
+ * schedule. Works on a persisted card or on a base card derived from records
+ * (which it promotes into the persisted schedule on first grade).
+ */
+export function gradeReview(id: string, grade: ReviewGrade, at: number = Date.now()): void {
+  let base = state.reviewSchedule[id];
+  if (!base) {
+    const seed = deriveReviewSeeds(state.records).find((s) => s.id === id);
+    if (!seed) return; // unknown card
+    base = {
+      ...seed,
+      stabilityDays: DEFAULT_REVIEW_STABILITY,
+      dueAt: at,
+      lastGradedAt: null,
+      createdAt: at,
+    };
+  }
+  const sched = scheduleReview({ stabilityDays: base.stabilityDays }, grade);
+  const next: ReviewEntry = {
+    ...base,
+    stabilityDays: sched.stabilityDays,
+    dueAt: at + sched.intervalDays * DAY_MS,
+    lastGradedAt: at,
+  };
+  setState({ ...state, reviewSchedule: { ...state.reviewSchedule, [id]: next } });
+}
+
+/** Read the current review queue without subscribing (module consumers, tests). */
+export function getReviewQueue(): ReviewCard[] {
+  return reviewQueueSnapshot();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -950,6 +1483,39 @@ export function useDomainTrends(): DomainTrend[] {
 /** Mastery band per competency domain, derived from real records. */
 export function useMasteryDomains(): MasteryDomain[] {
   return useDerived((d) => d.mastery);
+}
+
+/**
+ * Mastery drill-down detail for one domain (trajectory + real encounter
+ * evidence), or null when the domain has no scored evidence yet.
+ */
+export function useMasteryDetail(
+  key: FeedbackDomainKey,
+): MasteryDetail | null {
+  return useDerived((d) => d.masteryDetail[key] ?? null);
+}
+
+/** EPA entrustment derived from real records (not-yet-assessed at zero history). */
+export function useEpaProgress(): EpaProgress[] {
+  return useDerived((d) => d.epaProgress);
+}
+
+/** Badges with real earned-state; none earned at zero history. */
+export function useBadges(): Badge[] {
+  return useDerived((d) => d.badges);
+}
+
+/** Self-comparison over the learner's own trend (no fabricated cohort). */
+export function useSelfComparison(): SelfComparison {
+  return useDerived((d) => d.selfComparison);
+}
+
+/**
+ * The live spaced-repetition queue: real cards from the learner's encounter
+ * gaps, each with its persisted FSRS schedule. Empty at zero history.
+ */
+export function useReviewQueue(): ReviewCard[] {
+  return useSyncExternalStore(subscribe, reviewQueueSnapshot, reviewQueueSnapshot);
 }
 
 /** Level + XP derived from real records. */

@@ -34,7 +34,6 @@ import {
   Card,
   Badge,
   Button,
-  Switch,
   Tooltip,
   SectionLabel,
   Stat,
@@ -53,14 +52,9 @@ import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 import { type Band } from "@/data/mock";
 import {
-  masteryDetail,
   MASTERY_BANDS,
-  epaProgress,
-  badges,
-  reviewQueue,
   scheduleReview,
   REVIEW_GRADE_ORDER,
-  cohortComparison,
   type XpAward,
   type StreakDay,
   type MasteryDomain,
@@ -77,6 +71,12 @@ import {
   useCalibrationSessions,
   useDomainTrends,
   useMasteryDomains,
+  useMasteryDetail,
+  useEpaProgress,
+  useBadges,
+  useSelfComparison,
+  useReviewQueue,
+  gradeReview,
   useLevelState,
   useRecentXp,
   useStreakState,
@@ -498,7 +498,7 @@ function MasteryRow({ domain }: { domain: MasteryDomain }) {
   const rowLabelId = useId();
   const panelId = useId();
   const [open, setOpen] = useState(false);
-  const detail = masteryDetail[domain.key];
+  const detail = useMasteryDetail(domain.key);
   const withheld = domain.band === "withheld";
 
   const achievedIndex = withheld
@@ -712,7 +712,8 @@ function MasteryRow({ domain }: { domain: MasteryDomain }) {
 function EpaRow({ epa }: { epa: EpaProgress }) {
   const { t } = useTranslation();
   const lang = useLang();
-  const entrusted = epa.level >= 4;
+  const assessed = epa.assessed;
+  const entrusted = assessed && epa.level >= 4;
   const [open, setOpen] = useState(false);
   const panelId = useId();
 
@@ -725,7 +726,12 @@ function EpaRow({ epa }: { epa: EpaProgress }) {
           </span>
           <span className="min-w-0 text-sm text-fg">{epa.title[lang]}</span>
         </div>
-        {entrusted ? (
+        {!assessed ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-dashed border-border bg-bg-subtle px-2 py-0.5 text-xs font-medium text-muted">
+            <Lock weight="bold" className="h-3 w-3" aria-hidden />
+            {t("progress4.epa.notAssessed", { defaultValue: "Not yet assessed" })}
+          </span>
+        ) : entrusted ? (
           <Badge tone="normal">
             <SealCheck weight="fill" className="h-3 w-3" aria-hidden />
             {t("progress.epa.entrusted")}
@@ -743,11 +749,11 @@ function EpaRow({ epa }: { epa: EpaProgress }) {
         role="img"
         aria-label={t("progress.epa.scaleAria", {
           code: epa.code,
-          level: epa.level,
+          level: assessed ? epa.level : 0,
         })}
       >
         {[1, 2, 3, 4, 5].map((lvl) => {
-          const reached = lvl <= epa.level;
+          const reached = assessed && lvl <= epa.level;
           return (
             <span
               key={lvl}
@@ -935,13 +941,14 @@ type BadgeFilter = "all" | "earned" | "inProgress";
 function BadgesSection() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<BadgeFilter>("all");
+  const badges = useBadges();
   const earnedCount = badges.filter((b) => b.earned).length;
 
   const shown = useMemo(() => {
     if (filter === "earned") return badges.filter((b) => b.earned);
     if (filter === "inProgress") return badges.filter((b) => !b.earned);
     return badges;
-  }, [filter]);
+  }, [filter, badges]);
 
   return (
     <>
@@ -1457,9 +1464,9 @@ type ReviewFilter = "all" | ReviewCard["state"];
 function ReviewSection() {
   const { t } = useTranslation();
 
-  const [queue, setQueue] = useState<ReviewCard[]>(() =>
-    reviewQueue.map((c) => ({ ...c })),
-  );
+  // The queue is the REAL, persisted review store (derived from encounter gaps
+  // with an FSRS schedule). Grading writes back to it via `gradeReview`.
+  const queue = useReviewQueue();
   const [reviewedIds, setReviewedIds] = useState<string[]>([]);
   const [session, setSession] = useState<ReviewSessionState | null>(null);
   const [filter, setFilter] = useState<ReviewFilter>("all");
@@ -1473,10 +1480,8 @@ function ReviewSection() {
   }
 
   function reviewAgain() {
-    const fresh = reviewQueue.map((c) => ({ ...c }));
-    setQueue(fresh);
     setReviewedIds([]);
-    startSession(fresh);
+    startSession(queue);
   }
 
   function grade(g: ReviewGrade) {
@@ -1491,8 +1496,9 @@ function ReviewSection() {
       state: sched.state,
     };
 
-    // Reflect the new schedule in the persistent queue + list.
-    setQueue((q) => q.map((c) => (c.id === current.id ? updated : c)));
+    // Persist the grade to the real review store (survives reload, shared with
+    // the Feedback page's spaced-repetition CTA).
+    gradeReview(current.id, g);
 
     const gradeLabel = t(gradeLabelKey[g]);
     const scheduleText =
@@ -1832,87 +1838,115 @@ function ReviewSummary({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Section: Opt-in cohort comparison (improvement only, never a leaderboard)   */
+/* Section: Self-comparison (your own trend — never a fabricated cohort rank)   */
 /* -------------------------------------------------------------------------- */
 
-function CohortCard() {
+function SelfComparisonCard() {
   const { t } = useTranslation();
-  const [optedIn, setOptedIn] = useState(cohortComparison.optedIn);
-  const switchId = useId();
+  const self = useSelfComparison();
+  const improved = self.improvementPct > 0;
+  const worse = self.improvementPct < 0;
 
   return (
     <Card padding="lg" className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <span
-            className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-control bg-bg-subtle text-muted"
-            aria-hidden
-          >
-            <Eye weight="bold" className="h-4.5 w-4.5" />
-          </span>
-          <div>
-            <h3 className="text-base font-semibold tracking-tight text-fg">
-              {t("progress.cohort.heading")}
-            </h3>
-            <p className="mt-1 max-w-md text-sm text-muted">
-              {t("progress.cohort.explainer")}
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <label htmlFor={switchId} className="text-xs font-medium text-muted">
-            {optedIn ? t("progress.cohort.on") : t("progress.cohort.off")}
-          </label>
-          <Switch
-            id={switchId}
-            checked={optedIn}
-            onCheckedChange={setOptedIn}
-            aria-label={t("progress.cohort.toggleAria")}
-          />
+      <div className="flex items-start gap-3">
+        <span
+          className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-control bg-bg-subtle text-muted"
+          aria-hidden
+        >
+          <Eye weight="bold" className="h-4.5 w-4.5" />
+        </span>
+        <div>
+          <h3 className="text-base font-semibold tracking-tight text-fg">
+            {t("progress4.self.heading", {
+              defaultValue: "Your progress, measured against you",
+            })}
+          </h3>
+          <p className="mt-1 max-w-md text-sm text-muted">
+            {t("progress4.self.explainer", {
+              defaultValue:
+                "Private by design: you are compared only to your own earlier sessions, never ranked against other learners.",
+            })}
+          </p>
         </div>
       </div>
 
-      {optedIn ? (
-        <div className="grid gap-4 sm:grid-cols-2">
+      {self.hasBaseline ? (
+        <div className="grid gap-4 sm:grid-cols-3">
           <div className="rounded-control bg-bg-subtle p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              {t("progress.cohort.yourImprovement")}
+              {t("progress4.self.baseline", { defaultValue: "First session gap" })}
             </p>
-            <p className="mt-1 font-mono text-2xl font-semibold leading-none text-[color:var(--state-normal)]">
-              +{cohortComparison.yourImprovementPct}
-              <span className="text-base text-muted"> pp</span>
-            </p>
-            <p className="mt-2 text-xs text-muted">
-              {t("progress.cohort.vsMedian", {
-                median: cohortComparison.cohortMedianImprovementPct,
-              })}
+            <p className="mt-1 font-mono text-2xl font-semibold leading-none text-fg">
+              {self.baselineGapPct}
+              <span className="text-base text-muted">%</span>
             </p>
           </div>
           <div className="rounded-control bg-bg-subtle p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              {t("progress.cohort.percentileLabel")}
+              {t("progress4.self.latest", { defaultValue: "Latest session gap" })}
             </p>
             <p className="mt-1 font-mono text-2xl font-semibold leading-none text-fg">
-              {cohortComparison.improvementPercentile}
-              <span className="text-base text-muted">th</span>
+              {self.latestGapPct}
+              <span className="text-base text-muted">%</span>
+            </p>
+          </div>
+          <div className="rounded-control bg-bg-subtle p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              {t("progress4.self.change", { defaultValue: "Change vs. baseline" })}
+            </p>
+            <p
+              className={cn(
+                "mt-1 font-mono text-2xl font-semibold leading-none",
+                improved ? "text-[color:var(--state-normal)]" : "text-fg",
+              )}
+            >
+              {improved ? "−" : worse ? "+" : "±"}
+              {Math.abs(self.improvementPct)}
+              <span className="text-base text-muted"> pp</span>
             </p>
             <p className="mt-2 text-xs text-muted">
-              {t("progress.cohort.percentileNote", {
-                size: cohortComparison.cohortSize,
-              })}
+              {improved
+                ? t("progress4.self.tighter", {
+                    defaultValue:
+                      "Your calibration gap has tightened since your first session.",
+                  })
+                : worse
+                  ? t("progress4.self.wider", {
+                      defaultValue:
+                        "Your calibration gap is wider than your first session.",
+                    })
+                  : t("progress4.self.flat", {
+                      defaultValue: "No change since your first session yet.",
+                    })}
             </p>
           </div>
         </div>
       ) : (
-        <div className="flex items-start gap-2.5 rounded-control border border-dashed border-border bg-bg-subtle p-4">
-          <ShieldCheck
-            weight="bold"
-            className="mt-0.5 h-4 w-4 shrink-0 text-muted"
-            aria-hidden
-          />
-          <p className="text-sm text-muted">{t("progress.cohort.offNote")}</p>
+        <div className="rounded-control border border-dashed border-border bg-bg-subtle p-4 text-sm text-muted">
+          {t("progress4.self.needMore", {
+            defaultValue:
+              "Complete at least two encounters to compare your latest calibration against your own baseline.",
+          })}
         </div>
       )}
+
+      {/* Honest note: a real de-identified cohort comparison needs a backend
+          that does not exist in this offline build — so no cohort rank or
+          percentile is shown. */}
+      <div className="flex items-start gap-2.5 rounded-control border border-dashed border-border bg-bg-subtle p-4">
+        <ShieldCheck
+          weight="bold"
+          className="mt-0.5 h-4 w-4 shrink-0 text-muted"
+          aria-hidden
+        />
+        <p className="text-sm text-muted">
+          {t("progress4.self.cohortUnavailable", {
+            defaultValue:
+              "Comparison against a de-identified cohort is not available in this offline build — no cohort ranking or percentile is shown.",
+          })}
+        </p>
+      </div>
     </Card>
   );
 }
@@ -1937,6 +1971,8 @@ export function ProgressPage() {
   // Real, earned progress (empty for a new user → honest empty states).
   const records = useProgressRecords();
   const masteryDomains = useMasteryDomains();
+  const epaProgress = useEpaProgress();
+  const reviewCards = useReviewQueue();
   const levelState = useLevelState();
   const streakState = useStreakState();
   const calibrationTrajectory = useCalibrationTrajectory();
@@ -1972,7 +2008,7 @@ export function ProgressPage() {
           goodUp: false,
         }
       : undefined;
-  const dueReviews = reviewQueue.filter((c) => c.state === "due").length;
+  const dueReviews = reviewCards.filter((c) => c.state === "due").length;
 
   return (
     <PageContainer className="flex flex-col gap-10">
@@ -2166,9 +2202,14 @@ export function ProgressPage() {
         <ReviewSection />
       </motion.section>
 
-      {/* Opt-in cohort comparison */}
-      <motion.section {...cohort} aria-label={t("progress.cohort.heading")}>
-        <CohortCard />
+      {/* Self-comparison (your own trend; no fabricated cohort) */}
+      <motion.section
+        {...cohort}
+        aria-label={t("progress4.self.heading", {
+          defaultValue: "Your progress, measured against you",
+        })}
+      >
+        <SelfComparisonCard />
       </motion.section>
     </PageContainer>
   );

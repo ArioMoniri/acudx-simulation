@@ -1,24 +1,25 @@
 import { useTranslation } from "react-i18next";
 import {
-  UsersThree,
   Pulse,
-  ChartLineUp,
   Target,
   ShieldCheck,
-  ArrowsClockwise,
+  ChartLineUp,
+  Gauge,
+  GridNine,
 } from "@phosphor-icons/react";
 import { Card, Stat, type StatTrend } from "@/components/ui";
 import { useLang } from "@/lib/useLang";
-import { institutionKpis, type InstitutionKpi } from "@/data/institution";
+import { useProgressRecords } from "@/state/progressStore";
+import { deriveInstitutionKpis, type InstitutionKpi } from "@/data/institution";
 
 /** One glyph per headline metric so the band reads as six distinct instruments. */
-const kpiIcon: Record<string, typeof UsersThree> = {
-  "kpi-active": UsersThree,
-  "kpi-encounters": Pulse,
-  "kpi-competence": ChartLineUp,
-  "kpi-calibration": Target,
+const kpiIcon: Record<string, typeof Pulse> = {
+  "kpi-recorded": Pulse,
+  "kpi-accuracy": ChartLineUp,
   "kpi-safety": ShieldCheck,
-  "kpi-remediation": ArrowsClockwise,
+  "kpi-calibration": Target,
+  "kpi-competence": Gauge,
+  "kpi-coverage": GridNine,
 };
 
 /** Map the KPI polarity + trend onto the Stat trend slot (colour is never the only signal). */
@@ -28,44 +29,53 @@ function trendDir(kpi: InstitutionKpi): "up" | "down" | "flat" {
 }
 
 /** Worded direction for screen readers, so movement is legible without colour (INV-5). */
-function directionKey(kpi: InstitutionKpi): string {
+function directionKey(kpi: InstitutionKpi): { key: string; def: string } {
   if (kpi.trend === "steady" || kpi.polarity === "neutral")
-    return "institution.kpi.steady";
+    return { key: "institution.kpi.steady", def: "steady" };
   const good =
     kpi.polarity === "higherBetter" ? kpi.trend === "up" : kpi.trend === "down";
-  return good ? "institution.kpi.improving" : "institution.kpi.worsening";
+  return good
+    ? { key: "institution.kpi.improving", def: "improving" }
+    : { key: "institution.kpi.worsening", def: "needs attention" };
 }
 
-/** KpiRow — the six headline institutional metrics, on the canonical Stat tile. */
+/** KpiRow — six honest headline metrics derived from the learner's OWN records. */
 export function KpiRow() {
   const { t } = useTranslation();
   const lang = useLang();
+  const records = useProgressRecords();
+  const kpis = deriveInstitutionKpis(records);
 
   return (
     <ul
-      aria-label={t("institution.kpi.sectionLabel")}
+      aria-label={t("institution.kpi.ownSectionLabel", {
+        defaultValue: "Your headline metrics",
+      })}
       className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
     >
-      {institutionKpis.map((kpi) => {
+      {kpis.map((kpi) => {
         const Icon = kpiIcon[kpi.id];
-        const trend: StatTrend = {
-          value: (
-            <>
-              {kpi.delta}
-              <span className="sr-only"> {t(directionKey(kpi))}</span>
-            </>
-          ),
-          dir: trendDir(kpi),
-          goodUp: kpi.polarity !== "lowerBetter",
-        };
+        const dir = directionKey(kpi);
+        const trend: StatTrend | undefined = kpi.delta
+          ? {
+              value: (
+                <>
+                  {kpi.delta}
+                  <span className="sr-only"> {t(dir.key, { defaultValue: dir.def })}</span>
+                </>
+              ),
+              dir: trendDir(kpi),
+              goodUp: kpi.polarity !== "lowerBetter",
+            }
+          : undefined;
         return (
           <li key={kpi.id} className="h-full">
             <Card variant="surface" padding="md" className="h-full">
               <Stat
-                label={t(kpi.labelKey)}
+                label={t(kpi.labelKey, { defaultValue: kpi.labelDefault })}
                 value={kpi.value}
                 unit={kpi.unit ? kpi.unit[lang] : undefined}
-                hint={t(kpi.hintKey)}
+                hint={t(kpi.hintKey, { defaultValue: kpi.hintDefault })}
                 icon={
                   Icon ? (
                     <Icon weight="bold" className="h-3.5 w-3.5" aria-hidden />
