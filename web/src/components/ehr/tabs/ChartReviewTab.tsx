@@ -11,6 +11,7 @@ import {
   Compass,
   ArrowsClockwise,
   Circle,
+  Pill,
 } from "@phosphor-icons/react";
 
 import { Card } from "@/components/ui";
@@ -32,6 +33,7 @@ const EVENT_ICON: Record<EncounterEventType, React.ReactNode> = {
   exam: <Stethoscope weight="bold" className="h-3.5 w-3.5" />,
   order: <Flask weight="bold" className="h-3.5 w-3.5" />,
   result: <FileText weight="bold" className="h-3.5 w-3.5" />,
+  treatment: <Pill weight="bold" className="h-3.5 w-3.5" />,
   diagnosis: <ListChecks weight="bold" className="h-3.5 w-3.5" />,
   note: <ClipboardText weight="bold" className="h-3.5 w-3.5" />,
   stage: <ClipboardText weight="bold" className="h-3.5 w-3.5" />,
@@ -278,6 +280,10 @@ function describeEvent(
       return t("ehr.timeline.order", { code: ref });
     case "result":
       return t("ehr.timeline.result", { code: ref });
+    case "treatment":
+      return t("treatments.timeline", {
+        name: (ev.meta?.display as string) ?? ref,
+      });
     case "diagnosis":
       return t("ehr.timeline.diagnosis", {
         dx: (ev.meta?.display as string) ?? ref,

@@ -1,0 +1,11 @@
+{
+  "treatments": {
+    "timeline": "{{name}} uygulandı",
+    "eventLabel": "Tedavi",
+    "appropriateness": {
+      "indicated": "Endike",
+      "contraindicated": "Kontrendike",
+      "neutral": "Nötr"
+    }
+  }
+}

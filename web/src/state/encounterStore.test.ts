@@ -8,6 +8,7 @@ import {
   askQuestion,
   requestExam,
   placeOrder,
+  administerTreatment,
   commitDiagnosis,
   logGuardOutcome,
   resetEncounter,
@@ -17,6 +18,8 @@ import {
   getDiscoveredLabs,
   getProblemList,
   getEncounterClockMs,
+  getCurrentVitals,
+  getTreatments,
   getGuardEventCount,
   getOffTaskCount,
   type EncounterState,
@@ -166,15 +169,57 @@ describe("encounterStore — orders reveal results after turnaround", () => {
     expect(snapshot.orders.some((o) => o.code === orderCode && !o.resolved)).toBe(true);
     expect(snapshot.events.some((e) => e.type === "order" && e.ref === orderCode)).toBe(true);
 
+    // Turnaround is now per-test (orderCatalog): advance to this order's own ETA.
+    const readyAt = snapshot.orders.find((o) => o.code === orderCode)!.resultsReadyAt;
     run(() => {
-      now = 20_000;
-      vi.advanceTimersByTime(20_000);
+      now = readyAt;
+      vi.advanceTimersByTime(readyAt);
     });
 
     expect(getDiscoveredLabs(snapshot).length).toBeGreaterThan(0);
     expect(snapshot.orders.find((o) => o.code === orderCode)?.resolved).toBe(true);
     expect(snapshot.results.some((r) => r.code === orderCode)).toBe(true);
     expect(snapshot.events.some((e) => e.type === "result" && e.ref === orderCode)).toBe(true);
+  });
+});
+
+describe("encounterStore — per-test turnaround (sense of time)", () => {
+  it("schedules a culture much later than a CBC", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const c = makeCase(120);
+    run(() => startEncounter(c));
+    // Both placed at t=0, so resultsReadyAt reflects the per-test playback only.
+    run(() => placeOrder("blood-culture", { en: "Blood culture", tr: "Kan kültürü" }));
+    run(() => placeOrder("cbc", { en: "CBC", tr: "Hemogram" }));
+
+    const culture = snapshot.orders.find((o) => o.code === "blood-culture")!;
+    const cbc = snapshot.orders.find((o) => o.code === "cbc")!;
+    expect(culture.category).toBe("micro-culture");
+    expect(cbc.category).toBe("lab");
+    expect(culture.resultsReadyAt).toBeGreaterThan(cbc.resultsReadyAt);
+    // A realistic clinical ETA is captured for the UI (not the compressed time).
+    expect(culture.clinicalLabelEn).toMatch(/h$/);
+  });
+});
+
+describe("encounterStore — administerTreatment", () => {
+  it("logs a treatment event and shifts the live vitals", () => {
+    const c = makeCase(121);
+    run(() => startEncounter(c));
+    const base = getCurrentVitals(snapshot)!;
+
+    // Nitroglycerin (RxNorm 4917): generic effect lowers systolic over ~90s.
+    run(() => administerTreatment("4917", { en: "Nitroglycerin", tr: "Nitrogliserin" }));
+
+    const ev = snapshot.events.find((e) => e.type === "treatment" && e.ref === "4917");
+    expect(ev).toBeDefined();
+    expect(ev?.meta?.appropriateness).toBe("neutral"); // no case-specific response
+    expect(getTreatments(snapshot).some((t) => t.code === "4917")).toBe(true);
+
+    // Past the effect onset, the systolic pressure has fallen from baseline.
+    now = 120_000;
+    const after = getCurrentVitals(snapshot)!;
+    expect(after.systolic).toBeLessThan(base.systolic);
   });
 });
 

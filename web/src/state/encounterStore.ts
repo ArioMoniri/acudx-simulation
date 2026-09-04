@@ -29,6 +29,16 @@ import type {
   ImagingResult,
   LabResult,
 } from "@/domain/case";
+import type { ServiceRequestKind } from "@/domain/fhir";
+import { orderTiming, type OrderCategory } from "@/domain/orderCatalog";
+import {
+  courseStatus,
+  currentVitals,
+  vitalsSeries,
+  type AdministeredTreatment,
+  type CourseStatus,
+  type CurrentVitals,
+} from "@/domain/clinicalCourse";
 
 /* -------------------------------------------------------------------------- */
 /* Event log + state shapes                                                    */
@@ -39,6 +49,7 @@ export type EncounterEventType =
   | "exam"
   | "order"
   | "result"
+  | "treatment"
   | "diagnosis"
   | "note"
   | "stage";
@@ -99,8 +110,13 @@ export interface PlacedOrder {
   labelEn: string;
   labelTr: string;
   placedAt: number;
-  /** When the result becomes available (placedAt + turnaround). */
+  /** When the result becomes available (placedAt + playback turnaround). */
   resultsReadyAt: number;
+  /** Realistic clinical turnaround to display (bilingual; NOT the playback time). */
+  clinicalLabelEn: string;
+  clinicalLabelTr: string;
+  /** Turnaround category the timing was derived from (orderCatalog). */
+  category: OrderCategory;
   resolved: boolean;
 }
 
@@ -131,6 +147,8 @@ export interface EncounterState {
   discovered: ReadonlySet<string>;
   orders: PlacedOrder[];
   results: ResolvedResult[];
+  /** Treatments the learner has administered (drives the live vitals course). */
+  treatments: AdministeredTreatment[];
   problemList: ProblemListEntry[];
   events: EncounterEvent[];
   /** Scope & Injection Guard outcomes (separate from the clinical event log). */
@@ -159,9 +177,6 @@ export function __setClock(c: Clock): () => void {
 /* Store internals                                                             */
 /* -------------------------------------------------------------------------- */
 
-const LAB_SIM_MS = 20_000; // labs return in ~20s of sim time
-const IMAGING_SIM_MS = 45_000; // imaging returns in ~45s
-
 function initialState(): EncounterState {
   return {
     caseInstance: null,
@@ -170,6 +185,7 @@ function initialState(): EncounterState {
     discovered: new Set(),
     orders: [],
     results: [],
+    treatments: [],
     problemList: [],
     events: [],
     guardEvents: [],
@@ -273,8 +289,9 @@ export function requestExam(maneuver: ExamManeuver): void {
 
 /**
  * Place an order by code. Logs immediately and schedules the result after a
- * simulated turnaround (labs ~20s, imaging ~45s). When the timer fires, the
- * result is resolved (data revealed) and a `result` event is appended.
+ * PER-TEST simulated turnaround (orderCatalog: POC fast, cultures much later).
+ * When the timer fires, the result is resolved (data revealed) and a `result`
+ * event is appended.
  */
 export function placeOrder(
   code: string,
@@ -283,14 +300,17 @@ export function placeOrder(
   const c = state.caseInstance;
   if (!c) return;
 
-  // Determine turnaround + whether this order maps to a lab or imaging datum.
+  // Derive the FHIR kind from whether the code resolves to an imaging datum.
   const resolvesToImaging = c.groundTruth.imaging.some((im) => im.orderCode === code);
-  const turnaround = resolvesToImaging ? IMAGING_SIM_MS : LAB_SIM_MS;
+  const kind: ServiceRequestKind = resolvesToImaging ? "imaging" : "laboratory";
 
   // Resolve the label from expected workup if not supplied.
   const expectation = c.expectedWorkup.find((w) => w.code.coding[0]?.code === code);
   const labelEn = label?.en ?? expectation?.label.en ?? code;
   const labelTr = label?.tr ?? expectation?.label.tr ?? code;
+
+  // Per-test turnaround: playback drives the timer, clinicalLabel is displayed.
+  const timing = orderTiming(code, kind, { en: labelEn, tr: labelTr });
 
   const placedAt = nowOffset();
   const order: PlacedOrder = {
@@ -298,18 +318,21 @@ export function placeOrder(
     labelEn,
     labelTr,
     placedAt,
-    resultsReadyAt: placedAt + turnaround,
+    resultsReadyAt: placedAt + timing.playbackMs,
+    clinicalLabelEn: timing.clinicalLabel.en,
+    clinicalLabelTr: timing.clinicalLabel.tr,
+    category: timing.category,
     resolved: false,
   };
   const indicated = c.expectedWorkup.some((w) => w.code.coding[0]?.code === code);
   const lowValue = c.expectedWorkup.some((w) => w.code.coding[0]?.code === code && w.lowValue);
-  const ev = appendEvent("order", code, { indicated, lowValue });
+  const ev = appendEvent("order", code, { indicated, lowValue, category: timing.category });
   setState({ ...state, orders: [...state.orders, order], stage: "orders", events: [...state.events, ev] });
 
   const timer = setTimeout(() => {
     pendingTimers.delete(timer);
     resolveOrder(code);
-  }, turnaround);
+  }, timing.playbackMs);
   pendingTimers.add(timer);
 }
 
@@ -335,6 +358,35 @@ function resolveOrder(code: string): void {
     orders: state.orders.map((o) => (o.code === code ? { ...o, resolved: true } : o)),
     results: [...state.results, result],
     stage: "results",
+    events: [...state.events, ev],
+  });
+}
+
+/**
+ * Administer a treatment by code. Appends a `treatment` event (with the
+ * case-derived appropriateness) and records it so the live vitals course
+ * (src/domain/clinicalCourse.ts) applies its effect from now on. Advances the
+ * stage to "orders" if still pre-orders, otherwise keeps the current stage.
+ */
+export function administerTreatment(
+  code: string,
+  label?: { en: string; tr: string },
+): void {
+  const c = state.caseInstance;
+  if (!c) return;
+  const resp = c.treatmentResponses?.find((r) => r.treatmentCode === code);
+  const appropriateness = resp?.appropriateness ?? "neutral";
+  const at = nowOffset();
+  const ev = appendEvent("treatment", code, {
+    appropriateness,
+    ...(label ? { display: label.en } : {}),
+  });
+  const prePlan =
+    state.stage === "chart-review" || state.stage === "interview" || state.stage === "exam";
+  setState({
+    ...state,
+    treatments: [...state.treatments, { code, at }],
+    stage: prePlan ? "orders" : state.stage,
     events: [...state.events, ev],
   });
 }
@@ -480,6 +532,35 @@ export function getProblemList(s: EncounterState): ProblemListEntry[] {
 /** Current encounter-clock reading in ms (0 before start). */
 export function getEncounterClockMs(s: EncounterState): number {
   return s.startTs == null ? 0 : Math.max(0, clock() - s.startTs);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Live clinical-course selectors (vitals from trajectory + treatments)        */
+/* -------------------------------------------------------------------------- */
+
+/** Treatments the learner has administered so far. */
+export function getTreatments(s: EncounterState): AdministeredTreatment[] {
+  return s.treatments;
+}
+
+/** The patient's effective vitals right now (baseline + treatment ramps). */
+export function getCurrentVitals(s: EncounterState): CurrentVitals | null {
+  if (!s.caseInstance) return null;
+  return currentVitals(s.caseInstance, getEncounterClockMs(s), s.treatments);
+}
+
+/** Coarse trend classification of the current course. */
+export function getCourseStatus(s: EncounterState): CourseStatus | null {
+  if (!s.caseInstance) return null;
+  return courseStatus(s.caseInstance, getEncounterClockMs(s), s.treatments);
+}
+
+/** Sampled effective-vitals series from 0..now for the trend monitor. */
+export function getVitalsSeries(
+  s: EncounterState,
+): Array<{ atMs: number } & CurrentVitals> {
+  if (!s.caseInstance) return [];
+  return vitalsSeries(s.caseInstance, getEncounterClockMs(s), s.treatments);
 }
 
 /* -------------------------------------------------------------------------- */
