@@ -1,0 +1,15 @@
+{
+  "imaging2": {
+    "disclaimer": "Temsili görsel — bu hasta değil",
+    "disclaimerShort": "Temsili görsel",
+    "source": "Kaynak",
+    "viewSource": "Wikimedia Commons'ta görüntüle",
+    "license": "Lisans",
+    "attribution": "Atıf",
+    "noImage": "Temsili görsel bulunamadı",
+    "noImageHint": "Bu bulgu için açık lisanslı bir görsel yüklenemedi.",
+    "loading": "Temsili görsel yükleniyor…",
+    "alt": "{{modality}} — {{query}} için temsili görsel",
+    "altNoModality": "{{query}} için temsili görsel"
+  }
+}
