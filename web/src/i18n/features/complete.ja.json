@@ -1,0 +1,1468 @@
+{
+  "authoring2": {
+    "intro": "AIのドラフトから、署名済み・バージョン管理された公開まで症例を進めます。パイプラインを順に進め、根拠づけされた各事実をロックしてから、共同署名で公開します。",
+    "reset": "ウォークスルーをリセット",
+    "stepper": {
+      "aria": "症例オーサリングのパイプライン、6つの進行可能なステージ",
+      "stepOf": "ステージ {{current}} / {{total}}",
+      "goTo": "{{title}} ステージへ移動",
+      "prev": "前のステージ",
+      "next": "次のステージ",
+      "blocked": "ブロック中"
+    },
+    "nav": {
+      "back": "戻る",
+      "continue": "続ける"
+    },
+    "draft": {
+      "heading": "AIドラフトの引き継ぎ",
+      "sub": "モデルがペルソナ、症例の状態、バイタルのドライバー、ルーブリックを提案しました。次のステージで臨床医が根拠づけしてロックするまで、いずれも正式なものではありません。",
+      "factsDrafted": "臨床的事実 {{count}} 件をドラフト",
+      "factsDrafted_other": "臨床的事実 {{count}} 件をドラフト",
+      "needsReview": "{{count}} 件が臨床医の確認待ちです",
+      "needsReview_other": "{{count}} 件が臨床医の確認待ちです",
+      "allLocked": "ドラフトされた事実はすべて根拠づけされ、ロック済みです。",
+      "tierNote": "セルフホストの大規模オープンモデルでドラフトし、モデルファミリー横断で検証済み。商用ベンダーは記載しません。",
+      "toReview": "専門家レビューへ進む"
+    },
+    "editor": {
+      "lock": "ドラフトのままロック",
+      "editLock": "編集してロック",
+      "ground": "根拠づけしてロック",
+      "unlock": "ロック解除",
+      "lockAria": "{{kind}} の事実をドラフトのままロック",
+      "editLockAria": "{{kind}} の事実を編集してロック",
+      "groundAria": "フラグ付きの {{kind}} の事実を根拠づけしてロック",
+      "unlockAria": "{{kind}} の事実のロックを解除",
+      "openHint": "AIドラフトをそのままロックとして受け入れるか、先に編集します。ロックされた事実は、臨床医による出所情報を学習者に引き継ぎます。",
+      "groundHint": "この主張は引用元に根拠づけできませんでした。根拠づけすると臨床医による編集が記録され、公開ブロックが解除されます。",
+      "progress": "事実 {{total}} 件中 {{locked}} 件をロック",
+      "ready": "すべての臨床的事実が根拠づけされ、ロックされました。サインオフの準備が整いました。",
+      "stillBlocking": "{{count}} 件の事実がまだ公開をブロックしています。",
+      "stillBlocking_other": "{{count}} 件の事実がまだ公開をブロックしています。",
+      "liveHash": "ライブ症例フィンガープリント",
+      "liveHashNote": "事実の変更に応じて再計算され、サインオフ時に凍結されます。",
+      "toPsychometric": "ピアレビューと計量心理へ進む"
+    },
+    "psychometric": {
+      "toSignoff": "サインオフへ進む"
+    },
+    "signoff": {
+      "liveHashNote": "ライブのフィンガープリントで、まだ凍結されていません。サインオフにより公開バージョンとして凍結されます。",
+      "frozenNote": "サインオフ時に凍結。学習者の症例遭遇とそのフィードバックがこれらのハッシュに固定されます。",
+      "toMonitor": "公開済みの症例を表示"
+    },
+    "monitor": {
+      "justPublished": "このセッションで公開したばかり",
+      "newBadge": "新規"
+    }
+  },
+  "avatar3d": {
+    "region": "3D患者アバター",
+    "synthetic": "合成患者",
+    "unavailable": "3Dは利用不可 — 2Dを表示中",
+    "speaking": "発話中",
+    "muted": "ミュート（無音のリップシンク）",
+    "signsLabel": "観察可能な臨床所見",
+    "signs": {
+      "none": "急性の臨床所見なし",
+      "pallor": "蒼白",
+      "cyanosis": "チアノーゼ",
+      "diaphoresis": "発汗",
+      "distress": "呼吸窮迫",
+      "reducedLoc": "反応性の低下"
+    },
+    "intensity": {
+      "mild": "軽度",
+      "moderate": "中等度",
+      "marked": "顕著"
+    },
+    "signItem": "{{sign}} — {{level}}",
+    "alt": "{{name}} の様式化された3D顔面。所見：{{state}}。"
+  },
+  "commandPalette": {
+    "title": "コマンドパレット",
+    "placeholder": "コマンドを検索…",
+    "sectionNav": "ナビゲート",
+    "sectionActions": "アクション",
+    "enlarge": "患者ビューを拡大",
+    "newCase": "新しいランダム症例",
+    "empty": "コマンドが見つかりません。"
+  },
+  "debrief": {
+    "eyebrow": "事後",
+    "title": "指導医デブリーフィング",
+    "subtitle": "症例をどう進めたか — 診断に至るまでのプロセス。",
+    "forPatient": "患者：{{name}}",
+    "open": "指導医デブリーフィングを表示",
+    "close": "閉じる",
+    "print": "印刷 / エクスポート",
+    "minUnit": "分",
+    "committedLabel": "あなたの作業診断",
+    "timeToDecision": "決定までの時間",
+    "historyCoverage": "病歴の網羅度",
+    "workupAppropriate": "適応のある精査",
+    "verdict": {
+      "correct": "正しい診断",
+      "nearMiss": "惜しい",
+      "incorrect": "不正解",
+      "correctBody": "正しい診断を確定しました。次は、そこに至ったプロセスを確認しましょう。",
+      "nearMissBody": "妥当な診断ですが、この所見に対する第一候補ではありません — 検討した根拠を見直しましょう。",
+      "incorrectBody": "この診断は収集した根拠に合致しません。以下のプロセスを順にたどり直しましょう。"
+    },
+    "redFlags": {
+      "heading": "レッドフラッグ（危険徴候）",
+      "caught": "聴取済み",
+      "caughtNone": "聴取なし",
+      "missed": "見落とし",
+      "allCaught": "すべてのレッドフラッグを聴取",
+      "none": "この症例にはレッドフラッグ（危険徴候）が定義されていません。",
+      "reference": "この所見に対するレッドフラッグ"
+    },
+    "workup": {
+      "heading": "精査の妥当性",
+      "clean": "適切な精査 — 重要な検査の見落としも過剰オーダーもありません。",
+      "under": "オーダー不足（欠落）",
+      "underNone": "欠落なし",
+      "over": "過剰オーダー",
+      "overNone": "過剰オーダーなし"
+    },
+    "teaching": {
+      "heading": "ティーチングポイント",
+      "safety": "安全上重大な欠落を埋めましょう — 管理前にアレルギーを確認し、必須検査をオーダーします。",
+      "redFlags": "レッドフラッグ（危険徴候）を {{count}} 件見落としました。鑑別を絞る前に危険徴候をスクリーニングしましょう。",
+      "workupGap": "重要な検査がオーダーされていません（{{label}}）。この所見では早期にオーダーしましょう。",
+      "dxIncorrect": "確定する前に鑑別を広げ、重要な除外検査をオーダーしましょう。",
+      "dxNear": "惜しいところでした — 収集した根拠に照らして第一鑑別を再評価しましょう。",
+      "overOrder": "管理を変えない低価値の検査は避け、反射的にではなく問いに応じてオーダーしましょう。",
+      "coverage": "病歴を広げましょう — いくつかの想定される問診項目が網羅されていません。",
+      "clean": "うまく運営された症例遭遇でした：安全で、焦点が定まり、根拠に基づいて確定できています。"
+    }
+  },
+  "diagnosis2": {
+    "assessmentHeading": "アセスメントとプラン",
+    "catalogHint": "ICD-10 / ICD-11 診断カタログを検索",
+    "resultsCount": "{{count}} 件の結果",
+    "searchEmptyHint": "診断名、または ICD / DSM コードを入力してカタログを検索します。",
+    "suggestedHeading": "この所見に対する提案",
+    "suggestedHint": "この症例で考えられる候補 — 検討中のものを追加します。",
+    "codeIcd10": "ICD-10",
+    "codeIcd11": "ICD-11",
+    "codeDsm": "DSM-5-TR",
+    "addAria": "{{name}} を鑑別に追加",
+    "retract": "取り下げ",
+    "retractAria": "{{name}} を鑑別から取り下げ",
+    "moveUpAria": "{{name}} を上へ移動",
+    "moveDownAria": "{{name}} を下へ移動",
+    "likelihoodAria": "{{name}} の可能性を設定",
+    "likelihood": {
+      "leading": "第一候補",
+      "possible": "可能性あり",
+      "unlikely": "可能性低い"
+    },
+    "addNote": "根拠を追加",
+    "notePlaceholder": "鑑別に有用な所見または根拠...",
+    "noteLabel": "根拠",
+    "workingHeading": "作業診断",
+    "workingEmpty": "鑑別から作業診断を選んで確定し、フィードバックを受け取ります。",
+    "commitAria": "{{name}} を作業診断として確定",
+    "changeWorking": "作業診断を変更",
+    "committedAtLabel": "確定",
+    "verdict": {
+      "correctTag": "的確",
+      "correctTitle": "第一診断に合致",
+      "correctBody": "これはこの所見に対する第一診断です。管理と転帰方針を確認しましょう。",
+      "nearTag": "惜しい",
+      "nearTitle": "妥当だが再検討を",
+      "nearBody": "この所見に対する妥当な代替案ですが、第一診断ではありません。鑑別のポイントを再検討しましょう。",
+      "incorrectTag": "的外れ",
+      "incorrectTitle": "診断を再検討",
+      "incorrectBody": "これは現在の病像に合致しません。重要所見を見直し、鑑別を組み立て直しましょう。"
+    },
+    "dispositionHeading": "転帰方針",
+    "dispositionHint": "この患者は次にどこへ行きますか？",
+    "dispo": {
+      "admit-ccu": "入院 — 冠疾患集中治療室",
+      "admit-ward": "入院 — 一般病棟",
+      "admit-icu": "入院 — 集中治療室",
+      "operating-room": "手術室へ",
+      "observation": "経過観察ユニット",
+      "discharge": "セーフティネットを設けて退院",
+      "refer-specialty": "専門科へ紹介"
+    },
+    "summaryHeading": "問題リスト",
+    "summaryHint": "入力内容から作成されるライブなA&Pサマリー。",
+    "summaryEmpty": "作成に応じて、鑑別・作業診断・プランがここに表示されます。",
+    "summaryWorkingLabel": "作業診断",
+    "summaryDifferentialLabel": "鑑別",
+    "summaryPlanLabel": "プラン",
+    "summaryDispositionLabel": "転帰方針",
+    "verification": {
+      "confirmed": "確定",
+      "provisional": "暫定",
+      "differential": "鑑別"
+    }
+  },
+  "ehr2": {
+    "orders": {
+      "searchLabel": "オーダーを検索",
+      "searchPlaceholder": "検査、画像、薬剤を検索...",
+      "clearSearch": "検索をクリア",
+      "noMatches": "検索に一致するオーダーはありません。",
+      "itemsCount": "{{count}} 件利用可能",
+      "summary": "{{placed}} 件オーダー済、{{pending}} 件保留中、{{resulted}} 件結果あり",
+      "inProgressHeading": "進行中",
+      "resultedHeading": "結果あり",
+      "readyIn": "約 {{sec}} 秒で完了",
+      "readyNow": "確定処理中...",
+      "progressLabel": "{{name}} の結果の進捗",
+      "resultsHint": "結果は確定次第、結果タブに表示されます。"
+    },
+    "results": {
+      "summaryHeading": "結果サマリー",
+      "resultedOf": "{{total}} 件中 {{done}} 件のオーダーに結果あり",
+      "pendingCount": "{{count}} 件保留中",
+      "abnormalCount": "{{count}} 件異常",
+      "criticalCount": "{{count}} 件クリティカル",
+      "criticalHeading": "クリティカル値",
+      "criticalNote": "クリティカルな結果は遅滞なく確認し、対応してください。",
+      "filterAbnormal": "異常のみ",
+      "noAbnormal": "表示する異常結果はありません。",
+      "readyIn": "約 {{sec}} 秒で完了",
+      "finalReport": "最終レポート"
+    },
+    "flowsheet": {
+      "summaryHeading": "最新バイタル",
+      "baselineTrend": "ベースライン比",
+      "legendHeading": "状態の凡例",
+      "latest": "最新"
+    },
+    "chartReview": {
+      "summaryHeading": "これまでの活動",
+      "questions": "問診",
+      "exams": "診察",
+      "orders": "オーダー",
+      "results": "結果",
+      "offTask": "課題外の操作",
+      "offTaskHint": "症例遭遇が臨床課題から逸れた瞬間",
+      "filterLabel": "活動でタイムラインを絞り込み",
+      "filterAll": "すべて",
+      "filterQuestions": "病歴",
+      "filterExam": "診察",
+      "filterOrders": "オーダー",
+      "filterResults": "結果",
+      "emptyFiltered": "この種類の活動はまだありません。",
+      "noNewInfo": "新しい情報なし",
+      "repeated": "重複"
+    },
+    "ap": {
+      "optionsCount": "{{count}} 件の選択肢",
+      "differentialCount": "鑑別に {{count}} 件",
+      "rankLabel": "優先度 {{n}}",
+      "quickPlanHeading": "プランへのクイック追加",
+      "dispositionHeading": "転帰方針",
+      "insertHint": "起点を追加し、保存前に編集します。",
+      "planCharCount": "{{count}} 文字",
+      "planCount": "{{count}} 件のプラン項目",
+      "quick": {
+        "access": "静脈路を確保し、採血を提出",
+        "monitor": "心電図とSpO2を継続モニタリング",
+        "analgesia": "用量調整した鎮痛と制吐",
+        "reassess": "初期管理後に再評価",
+        "seniorReview": "上級医の診察へエスカレーション"
+      },
+      "dispo": {
+        "admitWard": "一般病棟へ入院",
+        "admitIcu": "集中治療室へ入院",
+        "observation": "経過観察ユニット",
+        "discharge": "セーフティネットを設けて退院",
+        "refer": "専門科へ紹介"
+      }
+    }
+  },
+  "ehrPolish": {
+    "age": "年齢",
+    "sex": "性別",
+    "acuity": "重症度"
+  },
+  "ehr": {
+    "storyboard": {
+      "populateHint": "カルテを進めるにつれて記入されます。",
+      "examFindings": "診察所見",
+      "examEmpty": "診察手技を依頼すると、所見がここに表示されます。",
+      "abnormalFlag": "異常",
+      "normalFlag": "正常範囲内"
+    },
+    "tabs": {
+      "navLabel": "カルテのセクション",
+      "monitor": "モニター",
+      "guidance": "ガイダンス"
+    },
+    "interview": {
+      "patient": {
+        "heading": "患者",
+        "voiceOn": "音声オン",
+        "voiceOff": "音声オフ",
+        "voiceToggle": "患者の返答の音声読み上げを切り替え"
+      },
+      "voiceInput": {
+        "mic": "音声入力",
+        "listening": "聞き取り中…",
+        "stop": "音声入力を停止",
+        "unsupported": "このブラウザでは音声入力を利用できません。",
+        "hint": "質問を話すと、テキストボックスに入力されるので、送信前に編集できます。"
+      }
+    }
+  },
+  "nav": {
+    "exam": "試験"
+  },
+  "exam": {
+    "header": {
+      "eyebrow": "評価",
+      "introTitle": "総括的試験",
+      "introDesc": "ガイダンスをオフにして、生成された症例を監督下で時間制限付きに進め、採点済みのコンピテンシーレポートで終了します。",
+      "runningTitle": "試験進行中",
+      "runningDesc": "各症例を制限時間内で進めます。ガイダンスは無効です。",
+      "reportTitle": "コンピテンシーレポート",
+      "reportDesc": "この受験の採点結果で、このデバイスに保存されます。"
+    },
+    "intro": {
+      "howItWorks": "試験の進め方",
+      "rule": {
+        "proctored": {
+          "title": "監督下、一発勝負",
+          "body": "各症例は一度だけ進めます。症例内での再挑戦はありません。"
+        },
+        "timed": {
+          "title": "症例ごとの時間制限",
+          "body": "各症例でカウントダウンが進み、ゼロで自動提出されます。"
+        },
+        "noGuidance": {
+          "title": "ガイダンスはオフ",
+          "body": "リアルタイムのヒントや指導医のアドバイスは終始無効です。"
+        },
+        "scored": {
+          "title": "採点レポート",
+          "body": "終了時にコンピテンシーレポートが得られ、このデバイスに保存されます。"
+        }
+      },
+      "lengthLabel": "症例数",
+      "caseCount": "{{n}} 症例",
+      "timeLabel": "症例あたりの時間",
+      "minutes": "{{n}} 分",
+      "mixLabel": "症例の構成",
+      "mixHint": "すべての分類をオフのままにすると全システムから出題され、特定のものを選ぶこともできます。",
+      "allSystems": "全システム",
+      "begin": "試験を開始",
+      "sourceLive": "この試験用に症例がリアルタイムで生成されます。",
+      "sourceLocal": "この試験用に症例がデバイス上で生成されます。",
+      "priorAttempts": "{{n}} 回の受験が既に保存されています。"
+    },
+    "family": {
+      "chest-pain": "胸痛",
+      "headache": "頭痛",
+      "abdominal-pain": "腹痛",
+      "dyspnea": "呼吸困難"
+    },
+    "runner": {
+      "preparing": "症例 {{n}} / {{total}} を準備中…",
+      "preparingHint": "新しい未見の症例を生成しています。",
+      "caseProgress": "症例 {{n}} / {{total}}",
+      "guidanceOff": "ガイダンスオフ",
+      "submitNext": "提出して次へ",
+      "finish": "提出して終了"
+    },
+    "verdict": {
+      "correct": "正解",
+      "nearMiss": "惜しい",
+      "incorrect": "不正解"
+    },
+    "report": {
+      "totalScore": "総合スコア",
+      "acrossCases": "{{n}} 症例全体",
+      "completed": "試験完了",
+      "accuracy": "診断精度",
+      "accuracyHint": "{{cases}} 件中 {{correct}} 件正解",
+      "redFlags": "レッドフラッグの捕捉",
+      "redFlagsHint": "スクリーニング済 対 該当あり",
+      "workup": "精査の妥当性",
+      "workupHint": "適応あり 対 過剰／不足",
+      "ttd": "平均診断時間",
+      "ttdHint": "確定した症例",
+      "perCase": "症例ごと",
+      "col": {
+        "case": "症例",
+        "diagnosis": "診断",
+        "redFlags": "レッドフラッグ",
+        "workup": "精査",
+        "time": "時間",
+        "points": "得点"
+      },
+      "timedOut": "時間切れ",
+      "savedNote": "このデバイスに保存されました。{{n}} 回の受験を記録。",
+      "retake": "試験を再受験",
+      "home": "ホームに戻る"
+    }
+  },
+  "calibration": {
+    "readoutDefault": "ドットにポインタを合わせるか、タブで移動して、その領域を読み取ります。",
+    "readoutConfidence": "自信度",
+    "readoutPerformance": "パフォーマンス",
+    "readoutGap": "ギャップ",
+    "gap": {
+      "over": "{{points}} pt 自信過剰",
+      "under": "{{points}} pt 自信不足",
+      "well": "{{points}} pt 以内"
+    },
+    "pointAria": "{{domain}}。自信度 {{confidence}} パーセント、パフォーマンス {{performance}} パーセント。{{direction}}。",
+    "quadrantLegend": {
+      "heading": "象限の読み方",
+      "hint": "ドットの位置が、次に何を鍛えるべきかを示します。",
+      "calibratedStrong": "高い自信度、高いパフォーマンス",
+      "calibratedGrowing": "低い自信度、まだ成長中",
+      "blindSpot": "自信はあるが、パフォーマンスが追いつかない",
+      "hiddenStrength": "思っているより良好なパフォーマンス"
+    }
+  },
+  "feedback": {
+    "process": {
+      "onTimeSummary": "{{total}} 件中 {{onTime}} 件が時間内",
+      "stewardship": {
+        "heading": "検査スチュワードシップ",
+        "subtitle": "各オーダーが所見から適応があったかを、想定される精査と引用に照らして評価します。",
+        "indicated": "適応のあるオーダー",
+        "indicatedHint": "想定される精査に合致",
+        "lowValue": "低価値のオーダー",
+        "lowValueHint": "この所見では適応なし",
+        "flagged": "フラグ付き：{{codes}}",
+        "cleanNote": "低価値のオーダーはありません。すべての検査に適応がありました。",
+        "note": "所見が示す検査をオーダーしましょう。低価値の検査はコスト、遅延、偶発所見を増やします。"
+      }
+    },
+    "empty": {
+      "title": "まだレポートする症例遭遇がありません",
+      "body": "症例遭遇を終えると、実際に行った内容から形成的レポート（キャリブレーション、コンピテンシーバンド、プロセスのタイミング）が作成されます。"
+    },
+    "recorded": "直近で完了した症例遭遇から",
+    "live": "進行中の症例遭遇から"
+  },
+  "feedback3": {
+    "verdict": {
+      "eyebrow": "パフォーマンスサマリー",
+      "bandsProficient": "習熟以上のバンド",
+      "overall": "採点済みコンピテンシーバンド {{total}} 件中",
+      "byAxis": "軸ごと",
+      "calibrationGap": "キャリブレーションギャップ",
+      "gapTrend": "{{points}} pp 縮小",
+      "gapHint": "自己評価 対 測定値、直近のセッション",
+      "withheldNote": "根拠が不足しているため {{count}} 領域を保留"
+    },
+    "section": {
+      "bands": "コンピテンシーバンド",
+      "process": "プロセスとタイミング",
+      "gaps": "根拠に基づくギャップ",
+      "steps": "次のステップ"
+    }
+  },
+  "encounter": {
+    "guidance": {
+      "provenance": {
+        "aria": "{{source}} の出所：発行機関、版、エビデンスグレード、レビュー日。",
+        "reviewed": "レビュー日 {{date}}",
+        "issuer": "{{organization}} · {{edition}}",
+        "evidence": "エビデンス：{{grade}}",
+        "nextReview": "次回レビュー {{date}}"
+      },
+      "abstain": {
+        "title": "対象範囲外では回答を控える",
+        "note": "{{scope}} に根拠づけされています。この範囲外では、ガイダンスは推測せず控えます。",
+        "noteGeneric": "特定のガイドラインに根拠づけされています。その検証済み範囲外では、ガイダンスは推測せず控えます。",
+        "emptyBody": "このステップは対象ガイドラインの範囲外のため、ヒントは提示されません。ご自身の臨床推論で進めてください。"
+      }
+    }
+  },
+  "guidance3": {
+    "panel": {
+      "title": "臨床ガイダンス",
+      "subtitle": "精査のための、引用付きのライブコーチング",
+      "education": "教育目的のみ",
+      "empty": "症例遭遇を開始すると、現在の焦点に応じた引用付きのライブガイダンスが表示されます。"
+    },
+    "focus": "現在の焦点",
+    "reference": {
+      "live": "ライブのガイドライン根拠づけ",
+      "offline": "オフライン参照",
+      "loading": "根拠づけ中…"
+    },
+    "guideline": {
+      "more": "ガイドラインの詳細をさらに表示（{{count}}）",
+      "hide": "ガイドラインの詳細を隠す"
+    },
+    "sources": {
+      "title": "出典",
+      "open": "出典"
+    },
+    "coverage": {
+      "title": "網羅度",
+      "history": "病歴",
+      "exam": "診察",
+      "workup": "精査",
+      "complete": "完了",
+      "aria": "{{label}}：{{expected}} 件中 {{done}} 件を網羅"
+    },
+    "redflags": {
+      "title": "レッドフラッグ",
+      "count": "{{total}} 件中 {{screened}} 件スクリーニング済",
+      "screened": "スクリーニング済",
+      "notScreened": "未スクリーニング"
+    },
+    "nba": {
+      "title": "次に取るべき最善のアクション",
+      "askAbout": "{{topic}} について尋ねる",
+      "examine": "診察：{{system}}",
+      "order": "{{label}} をオーダー",
+      "screenRedFlags": "残りのレッドフラッグをスクリーニング",
+      "complete": "中核となる精査は網羅済み — アセスメントをまとめましょう",
+      "urgent": "時間的に緊急"
+    },
+    "workup": {
+      "title": "しっかりした精査が網羅する内容",
+      "do": "実施",
+      "consider": "考慮",
+      "within": "{{minutes}} 分以内に {{label}}",
+      "ordered": "オーダー済",
+      "overdue": "期限超過",
+      "pending": "期限あり",
+      "onTime": "時間内",
+      "late": "遅延"
+    },
+    "guide": {
+      "title": "指導医のアドバイス",
+      "subtitle": "あなたのプロセスを見守る上級臨床医",
+      "mode": "ガイドモード",
+      "processOnly": "プロセスをコーチし、診断そのものは扱いません。",
+      "offBody": "ガイドモードはオフです。オンにすると、次の最善のアクションとタイミングについてライブでコーチングします。",
+      "dismiss": "指導医のアドバイスを閉じる",
+      "reopen": "指導医のアドバイス"
+    },
+    "intent": {
+      "onset": "発症",
+      "location": "部位",
+      "character": "性状",
+      "radiation": "放散",
+      "severity": "重症度",
+      "timing": "時間経過とパターン",
+      "aggravating": "増悪因子",
+      "relieving": "軽快因子",
+      "associated-symptoms": "随伴症状",
+      "red-flags": "レッドフラッグ",
+      "past-medical-history": "既往歴",
+      "medications": "内服薬",
+      "allergies": "アレルギー",
+      "family-history": "家族歴",
+      "social-history": "生活歴",
+      "risk-factors": "リスク因子",
+      "ice": "考え・懸念・期待"
+    },
+    "maneuver": {
+      "general-inspection": "全身の視診",
+      "vitals-recheck": "バイタル再測定",
+      "cardiovascular": "循環器",
+      "respiratory": "呼吸器",
+      "abdominal": "腹部",
+      "neurological": "神経学的",
+      "musculoskeletal": "筋骨格",
+      "skin": "皮膚",
+      "ent": "耳鼻咽喉",
+      "focused-special": "焦点を絞った特殊検査"
+    }
+  },
+  "home2": {
+    "caseCode": "症例リファレンス",
+    "startCase": "症例を開始"
+  },
+  "imaging2": {
+    "disclaimer": "代表的な画像 — この患者のものではありません",
+    "disclaimerShort": "代表的な画像",
+    "source": "出典",
+    "viewSource": "Wikimedia Commons で見る",
+    "license": "ライセンス",
+    "attribution": "帰属表示",
+    "noImage": "利用可能な代表的画像がありません",
+    "noImageHint": "この所見に対するオープンライセンスの画像を読み込めませんでした。",
+    "loading": "代表的画像を読み込み中…",
+    "alt": "{{modality}} — {{query}} の代表的画像",
+    "altNoModality": "{{query}} の代表的画像"
+  },
+  "institution": {
+    "compliance": {
+      "sectionLabel": "コンプライアンスと監査"
+    },
+    "remediation": {
+      "priorityEyebrow": "優先ワークフロー",
+      "queue": {
+        "caption": "リメディエーションキュー",
+        "tableCaption": "オープンおよびクローズしたすべてのリメディエーションループの状況を一覧表示。",
+        "openedCol": "開始",
+        "stageCol": "ステージ",
+        "statusCol": "ステータス",
+        "days": "{{count}}日"
+      },
+      "step": {
+        "summary": "{{total}} 件中 {{closed}} 件のループをクローズ",
+        "progress": "ステップ {{current}} / {{total}}：{{stage}}",
+        "closedLabel": "ループをクローズ",
+        "back": "戻る",
+        "backAria": "{{learner}} を1つ前のループステージに戻す",
+        "advanceAria": "{{learner}} の {{stage}} を完了としてマーク",
+        "markComplete": "{{stage}} を完了",
+        "close": "ループをクローズ",
+        "reset": "リセット",
+        "reassessLogged": "再評価を記録しました。詳細な結果は学習者の非公開フィードに残ります。",
+        "live": "{{learner}}：{{stage}} 進行中。",
+        "liveClosed": "{{learner}}：リメディエーションループをクローズ。"
+      }
+    },
+    "heatmap": {
+      "drill": {
+        "regionLabel": "{{learner}} のドリルダウン詳細",
+        "closeAria": "{{learner}} のドリルダウンを閉じる",
+        "path": "パス：コホート、{{section}}、{{learner}}、{{domain}}",
+        "domainSwitchLabel": "領域を確認",
+        "bandLabel": "バンド",
+        "encountersLabel": "採点済み症例遭遇 {{count}} 件",
+        "evidenceLangNote": "学習者自身の言語（{{lang}}）で表示。",
+        "takeHeading": "採点者の所見",
+        "withheldHeading": "バンド保留中",
+        "withheldBody": "信頼できる根拠がまだ不足しています（{{count}} 件の症例遭遇）。信頼性が閾値を超えるとバンドが表示されます。",
+        "crosswalkChip": "ACGME {{tag}}",
+        "crosswalkTip": "ACGME Milestones 要素 {{tag}} に対応。同じ根拠のクロスウォークであり、再採点ではありません。",
+        "openHint": "任意のセルを選択すると、そのバンドの根拠を確認できます。"
+      }
+    },
+    "calibration": {
+      "filter": {
+        "heading": "フィルター",
+        "directionLabel": "方向",
+        "axisLabel": "軸",
+        "all": "すべて",
+        "clinical": "臨床",
+        "communication": "コミュニケーション",
+        "showing": "{{total}} 件中 {{count}} 件のトピックを表示",
+        "empty": "このフィルターに一致するトピックはありません。",
+        "reset": "フィルターをリセット"
+      }
+    },
+    "export": {
+      "preview": {
+        "regionLabel": "匿名化エクスポートのプレビュー",
+        "heading": "エクスポートのプレビュー",
+        "generatedNote": "クロスウォーク {{version}}",
+        "open": "エクスポートをプレビュー",
+        "close": "プレビューを閉じる",
+        "deidStamp": "匿名化済み",
+        "reidWarn": "再識別可能、公開前に確認",
+        "fairnessAppended": "公平性監査を追記",
+        "frameworksHeading": "タグ付けされたフレームワーク",
+        "scopeHeading": "スコープ",
+        "sampleHeading": "匿名化サンプル",
+        "sampleCaption": "エクスポートに表示されるコホート行のサンプル。ハンドルはマスクされた名簿コードです。",
+        "andMore": "さらに {{count}} 名の学習者。",
+        "crosswalkHeading": "領域クロスウォーク（{{framework}}）",
+        "download": "エクスポートをダウンロード",
+        "downloadNote": "デモンストレーションのみ。ファイルはこのデバイスから送信されません。",
+        "selectFrameworks": "プレビューするには少なくとも1つのフレームワークを選択してください。"
+      }
+    }
+  },
+  "labs2": {
+    "results": {
+      "microHeading": "微生物学、血清学、レポート",
+      "analytes": "{{count}} 項目"
+    }
+  },
+  "landing2": {
+    "hero": {
+      "eyebrow": "臨床推論シミュレーター"
+    },
+    "monitor": {
+      "aria": "合成患者のデモンストレーション用バイタルモニター：心拍数84、血圧128/76、酸素飽和度98パーセント、呼吸数16。",
+      "unit": "ベイ 2",
+      "status": "モニタリング中",
+      "trace": "洞調律",
+      "hr": "心拍数",
+      "bp": "血圧",
+      "spo2": "酸素飽和度",
+      "rr": "呼吸数"
+    },
+    "loop": {
+      "eyebrow": "コアループ",
+      "heading": "4つの操作、1つの症例遭遇",
+      "sub": "どの症例も同じ臨床の流れをたどり、キャリブレーションされた状態であなたに返します。",
+      "cycle": "各ループが、次の症例に向けてあなたの判断を調整します。",
+      "steps": {
+        "interview": {
+          "title": "問診",
+          "body": "合成患者から、平易な言葉で、トルコ語または英語で病歴を聴取します。"
+        },
+        "chart": {
+          "title": "EHRで記録",
+          "body": "検査をオーダーし、ライブのバイタルモニターを読み、実際の記録シェル内で記録します。"
+        },
+        "decision": {
+          "title": "決定",
+          "body": "鑑別とプランを確定し、どの程度自信があるかを述べます。"
+        },
+        "feedback": {
+          "title": "キャリブレーションされたフィードバック",
+          "body": "自信度に対する能力を確認し、安全上重大な見落としをすべて引用付きで提示します。"
+        }
+      }
+    },
+    "platform": {
+      "eyebrow": "症例遭遇の先へ",
+      "heading": "ループを取り巻く、完全な研修プログラム",
+      "sub": "学習者ループは、本格的な臨床教育プラットフォームの中に位置づけられます。",
+      "items": {
+        "cases": {
+          "title": "ダイナミックな症例",
+          "body": "ICD と DSM からオンデマンドで生成されるため、コホートが問題バンクを暗記することはできません。"
+        },
+        "rooms": {
+          "title": "マルチプレイヤールーム",
+          "body": "1つの症例を、共有された患者状態のもとで医師・看護師・救急救命士にまたがって進めます。"
+        },
+        "progress": {
+          "title": "経時的な進捗",
+          "body": "能力を、鍛えられるバンド化されたスキルとして追跡。数値スコアもリーダーボードもありません。"
+        },
+        "institution": {
+          "title": "施設分析",
+          "body": "コホートのコンピテンシー、リメディエーション、公平性監査を、集計かつ役割に応じてアクセス制御。"
+        },
+        "sovereign": {
+          "title": "オープンで主権的",
+          "body": "オープンウェイトモデルをセルフホストし、症例オーサリングは人間が権威を持ちます。"
+        }
+      }
+    },
+    "credibility": {
+      "label": "公表されたガイダンスに根拠づけ",
+      "note": "すべてのヒントとすべての見落としは出典に紐づけられており、決してでっち上げではありません。",
+      "sources": "NICE · WHO · ATLS · DSM-5-TR · ICD-11"
+    }
+  },
+  "liveBackend": {
+    "toggle": "ライブ",
+    "tooltip": "ポッド上のライブなオープンモデルバックエンドを使用します。あなたのメッセージはまずガードされ、その後ローカルモデルが応答します。",
+    "offline": "バックエンドオフライン",
+    "badge": "ライブ · ポッド",
+    "fallback": "ライブバックエンドに接続できなかったため、このターンはオフラインシミュレーションが応答しました。"
+  },
+  "livegen": {
+    "modeLegend": "生成",
+    "endless": "新しい症例を生成",
+    "endlessHint": "毎回まったく新しい合成患者 — 無限で、繰り返しなし。",
+    "endlessSub": "あらゆる専門科から出題し、各症例の一貫性を自己チェックします。",
+    "engineAi": "AI · リアルタイム",
+    "engineLocal": "即時 · オフライン",
+    "engineChecking": "ポッドを確認中…",
+    "refine": "調整（任意）",
+    "pickEngine": "または特定のエンジンを選択",
+    "orCurated": "またはキュレーション済みの症例から開始",
+    "curatedHint": "ガイドライン根拠付きの、完全にオーサリングされたティーチング症例。",
+    "quick": "クイック生成",
+    "quickHint": "即時、オフライン。シードされたテンプレートエンジンからデバイス上で症例を構築します。",
+    "ai": "AI生成",
+    "aiHint": "ポッド上で実行：ICD/DSMからサンプリングして根拠づけし、より豊かな詳細。",
+    "note": "AI生成はポッド上でオープンモデルを実行するため、少し時間がかかる場合があります。",
+    "generating": "生成中…",
+    "generatingHint": "ポッド上でサンプリング、根拠づけ、検証中。キャンセルできます。",
+    "cancel": "キャンセル",
+    "unavailable": "AIバックエンド利用不可 — ローカルで生成しました",
+    "degraded": "根拠づけが劣化 — ガイドライン根拠を確認してください",
+    "ready": "症例の準備完了",
+    "sourceLabel": "出典",
+    "source": {
+      "ai": "AI",
+      "template": "テンプレート",
+      "local": "ローカル"
+    }
+  },
+  "monitor2": {
+    "title": "ベッドサイドモニター",
+    "trendTitle": "トレンド",
+    "online": "ライブ",
+    "offline": "スタンバイ",
+    "elapsed": "経過",
+    "bed": "ベッド",
+    "awaiting": "信号なし",
+    "awaitingHint": "症例遭遇を待機中 — 症例開始時にバイタルが始まります。",
+    "trendAwaiting": "トレンドデータはまだありません — 症例遭遇が進むにつれて測定値が蓄積されます。",
+    "alarm": "アラーム",
+    "alarmClear": "アクティブなアラームなし",
+    "leads": "II誘導",
+    "limitHi": "上限",
+    "limitLo": "下限",
+    "now": "現在",
+    "min": "最小",
+    "max": "最大",
+    "treatment": "治療",
+    "treatmentGiven": "治療を実施",
+    "status": {
+      "improving": "改善中",
+      "stable": "安定",
+      "deteriorating": "悪化中",
+      "critical": "クリティカル"
+    },
+    "params": {
+      "hr": {
+        "label": "心拍数",
+        "short": "HR",
+        "unit": "bpm"
+      },
+      "spo2": {
+        "label": "酸素飽和度",
+        "short": "SpO₂",
+        "unit": "%"
+      },
+      "bp": {
+        "label": "血圧",
+        "short": "ABP",
+        "unit": "mmHg"
+      },
+      "map": {
+        "label": "平均動脈圧",
+        "short": "MAP",
+        "unit": "mmHg"
+      },
+      "rr": {
+        "label": "呼吸数",
+        "short": "RR",
+        "unit": "/min"
+      },
+      "temp": {
+        "label": "体温",
+        "short": "体温",
+        "unit": "°C"
+      }
+    },
+    "a11y": {
+      "region": "ライブバイタルサインモニター",
+      "trendRegion": "バイタルサインのトレンド",
+      "tableCaption": "現在のバイタルサイン",
+      "colParam": "パラメーター",
+      "colValue": "値",
+      "alarmAnnounce": "{{status}} アラーム：{{params}}"
+    }
+  },
+  "orders2": {
+    "tab": {
+      "diagnostics": "検査をオーダー",
+      "treatments": "治療"
+    },
+    "group": {
+      "labs": "検査室",
+      "bloodgas": "血液ガス",
+      "micro": "微生物学",
+      "imaging": "画像",
+      "poc": "ポイントオブケア"
+    },
+    "search": {
+      "label": "オーダー可能な検査を検索",
+      "placeholder": "検査を検索 — CBC、トロポニン、CT、培養…",
+      "clear": "検索をクリア",
+      "noMatches": "検索に一致するオーダー可能な検査はありません。"
+    },
+    "turnaround": {
+      "aria": "所要時間 {{eta}}"
+    },
+    "order": {
+      "place": "オーダー",
+      "ordered": "オーダー済",
+      "placeAria": "{{name}} をオーダー",
+      "orderedAria": "{{name}} はオーダー済み",
+      "itemsCount": "{{count}} 件の検査"
+    },
+    "flag": {
+      "indicated": "適応あり",
+      "indicatedAria": "この所見に適応あり",
+      "lowValue": "低価値",
+      "lowValueAria": "この所見では低価値または適応なし"
+    },
+    "tracker": {
+      "heading": "オーダートラッカー",
+      "empty": "まだオーダーはありません。検査を選んで結果の到着を確認しましょう。",
+      "summary": "{{placed}} 件オーダー済 · {{pending}} 件保留中 · {{resulted}} 件結果あり",
+      "inProgress": "進行中",
+      "resultedGroup": "結果あり",
+      "pending": "保留中",
+      "resultedTag": "結果あり",
+      "eta": "予定 {{eta}}",
+      "readyIn": "約 {{sec}} 秒で完了",
+      "readyNow": "確定処理中…",
+      "orderedAt": "オーダー {{min}} 分",
+      "resultedAt": "結果 {{min}} 分",
+      "progressAria": "{{name}} の結果の進捗",
+      "hint": "各検査が確定すると、結果タブに結果が表示されます。"
+    },
+    "treatments": {
+      "heading": "治療",
+      "subtitle": "実施して患者を変化させます — モニターがライブで反応します。",
+      "administer": "実施",
+      "administered": "実施済",
+      "administerAria": "{{name}} を実施",
+      "administeredAria": "{{name}} を実施済み",
+      "route": "投与経路",
+      "givenAt": "実施 {{min}} 分",
+      "givenCount": "{{count}} 件実施",
+      "empty": "まだ実施した治療はありません。"
+    },
+    "results": {
+      "wnl": "正常範囲内",
+      "representativeImage": "代表的な画像",
+      "syntheticNote": "症例特有の異常なし — 正常範囲内と報告。",
+      "timeline": "オーダー {{ordered}} 分 → 結果 {{resulted}} 分",
+      "etaLabel": "予想所要時間 {{eta}}",
+      "inProgress": "進行中",
+      "eta": "予定 {{eta}}",
+      "finalReport": "最終レポート",
+      "normalHeading": "追加の結果（正常）",
+      "normalNote": "症例特有の所見のないオーダー済み検査は、正常範囲内としてここに報告されます。"
+    }
+  },
+  "patient": {
+    "avatar": {
+      "alt": "{{name}} のイラスト肖像。所見：{{state}}。",
+      "synthetic": "合成患者",
+      "decorative": "イラストの患者肖像"
+    }
+  },
+  "patientviewer": {
+    "expand": "患者ビューを拡大",
+    "title": "患者 — {{name}}",
+    "close": "閉じる",
+    "syntheticNote": "合成患者 — 実在の個人ではありません",
+    "photoLabel": "患者写真",
+    "signsLabel": "ライブの臨床所見",
+    "summaryLabel": "臨床所見",
+    "reflectsLive": "ライブのバイタル経過を反映",
+    "vitalsLabel": "現在のバイタル",
+    "signs": {
+      "stable": "急性の窮迫なし",
+      "distress": "窮迫状態",
+      "cyanotic": "チアノーゼあり",
+      "hypoxic": "低酸素",
+      "hypotensive": "低血圧",
+      "hypertensive": "高血圧",
+      "tachycardic": "頻脈",
+      "bradycardic": "徐脈",
+      "diaphoretic": "発汗あり",
+      "pale": "蒼白",
+      "febrile": "発熱",
+      "hypothermic": "低体温"
+    }
+  },
+  "profile": {
+    "signIn": {
+      "eyebrow": "サインイン",
+      "title": "AcuDx にサインイン",
+      "lede": "AcuDx は教育目的のみの臨床推論シミュレーターです。所属機関からサインインするか、ローカルプロファイルを作成して練習を始めましょう。",
+      "ssoHeading": "所属機関からのサインイン",
+      "ssoNote": "本番向けの経路 — 医学部または研修プログラムによって有効化されます。",
+      "sso": "所属機関のSSOで続行",
+      "ssoHint": "SAML / OpenID Connect シングルサインオン",
+      "lti": "LMSから起動（LTI 1.3）",
+      "ltiHint": "Moodle、Canvas、またはお使いの仮想学習環境",
+      "productionBadge": "本番",
+      "unavailableNote": "所属機関が AcuDx を接続すると利用可能になります。",
+      "or": "または",
+      "localHeading": "このデバイスで続行",
+      "createCta": "プロファイルを作成",
+      "createHint": "このブラウザにのみ保存されるローカルプロファイルを設定します。",
+      "continueAs": "{{name}} として続行",
+      "continueAsHint": "このデバイスに保存されたプロファイルを再開します。",
+      "switchProfile": "別のプロファイルを使用",
+      "eduNote": "臨床教育および評価のみを目的としています。実際の患者ケア向けではなく、医療機器でもありません。",
+      "privacyNote": "ローカルプロファイルはこのブラウザ内に留まります。パスワードは収集されません。"
+    },
+    "onboarding": {
+      "eyebrow": "プロファイルを作成",
+      "title": "あなたについて教えてください",
+      "lede": "これにより、AcuDx 全体での名前、役割、言語が設定されます。アカウントからいつでも変更できます。"
+    },
+    "account": {
+      "eyebrow": "アカウント",
+      "title": "あなたのプロファイル",
+      "lede": "AcuDx があなたを識別する方法を更新するか、このデバイスからサインアウトします。",
+      "memberSince": "プロファイル作成日 {{date}}",
+      "signOut": "サインアウト"
+    },
+    "form": {
+      "fullName": "氏名",
+      "fullNamePlaceholder": "例：Dr. Elif Demir",
+      "fullNameError": "氏名を入力してください。",
+      "role": "役割",
+      "roleHint": "AcuDx が表示する画面を設定します。",
+      "roleError": "役割を選択してください。",
+      "institution": "所属機関",
+      "institutionPlaceholder": "例：ハジェッテペ大学医学部",
+      "institutionError": "所属機関を入力してください。",
+      "specialty": "専門または診療科",
+      "specialtyPlaceholder": "例：救急医学",
+      "specialtyHint": "任意 — 症例のおすすめを最適化するのに役立ちます。",
+      "language": "使用言語",
+      "languageHint": "AcuDx のインターフェース言語を変更します。",
+      "avatar": "アバター",
+      "avatarHint": "アイデンティコンを選択 — 写真は不要です。",
+      "avatarChoose": "{{name}} のアバターを選択",
+      "create": "プロファイルを作成",
+      "save": "変更を保存",
+      "cancel": "キャンセル",
+      "saved": "変更を保存しました。"
+    },
+    "roles": {
+      "student": "医学生",
+      "resident": "研修医",
+      "educator": "指導者",
+      "dean": "学部長 / 管理者"
+    },
+    "languages": {
+      "en": "English",
+      "tr": "Türkçe"
+    }
+  },
+  "progress2": {
+    "streak": {
+      "logRep": "今日の1回を記録",
+      "logged": "今日の分を記録済み",
+      "logHint": "短い症例1つで、連続記録が途切れません。",
+      "logAnnounce": "今日の1回を記録しました。連続記録は現在 {{days}} 日です。",
+      "protectedToday": "今日の分は完了です。また明日。"
+    },
+    "mastery": {
+      "expand": "このバンドを動かした要因を表示",
+      "collapse": "詳細を隠す",
+      "toggleAria": "{{domain}} の詳細",
+      "movedByHeading": "これを動かした要因",
+      "nextHeading": "{{band}} に到達するには",
+      "unlockHeading": "バンドを解除するには",
+      "historyHeading": "最近のバンド",
+      "evidenceHeading": "このバンドの根拠",
+      "evidenceToday": "今日",
+      "evidenceAgo_one": "{{count}} 日前",
+      "evidenceAgo_other": "{{count}} 日前",
+      "practise": "このギャップを練習",
+      "topBand": "最上位バンドに到達しています。信頼性を保つため、これを維持しましょう。"
+    },
+    "epa": {
+      "expand": "委任のはしごを表示",
+      "collapse": "はしごを隠す",
+      "ladderAria": "{{code}} の委任のはしご、レベル {{level}} / 5",
+      "current": "現在地",
+      "next": "次のステップ",
+      "atCeiling": "最高レベルに到達。他者の指導を手伝えます。"
+    },
+    "badges": {
+      "filterAria": "マイルストーンを絞り込み",
+      "all": "すべて",
+      "earned": "獲得済み",
+      "inProgress": "進行中",
+      "emptyEarned": "このビューで獲得したマイルストーンはまだありません。",
+      "emptyInProgress": "現在進行中のものはありません。"
+    },
+    "trajectory": {
+      "metricAria": "焦点を当てる指標を選択",
+      "metricGap": "自信度ギャップ",
+      "metricBrier": "Brierスコア",
+      "focusHeading": "セッションごと",
+      "sessionsAria": "セッション、古い順から新しい順。左右の矢印キーでセッションを確認します。",
+      "sessionAria": "セッション {{label}}、{{metric}} {{value}}",
+      "selected": "セッション {{label}}",
+      "readoutGap": "自信度ギャップ {{value}}%",
+      "readoutBrier": "Brier {{value}}",
+      "sinceFirst": "最初のセッション以降",
+      "betterGap": "{{points}} ポイント縮小",
+      "betterBrier": "{{value}} 低下",
+      "worse": "{{value}} 上昇",
+      "flat": "まだ変化なし"
+    },
+    "review": {
+      "start": "間隔反復レビューを開始",
+      "resume": "レビューを続ける",
+      "sessionAria": "間隔反復レビューセッション",
+      "progress": "カード {{current}} / {{total}}",
+      "promptLabel": "想起プロンプト",
+      "gradePrompt": "その想起はどう感じましたか？",
+      "gradeAria": "想起を評価",
+      "gradeAgain": "もう一度",
+      "gradeHard": "難しい",
+      "gradeGood": "普通",
+      "gradeEasy": "簡単",
+      "hintAgain": "思い出せず",
+      "hintHard": "苦労した",
+      "hintGood": "想起できた",
+      "hintEasy": "即座に",
+      "previewLater": "今日の後ほど",
+      "previewDays_one": "{{count}} 日",
+      "previewDays_other": "{{count}} 日",
+      "keyboardHint": "1から4を押すと、マウスなしで評価できます。",
+      "announce": "{{grade}} と評価。{{schedule}}",
+      "scheduleAgain": "このカードはセッションの後半に再登場します。",
+      "scheduleNext_one": "次回レビューは {{count}} 日後、安定度は現在 {{stability}} 日。",
+      "scheduleNext_other": "次回レビューは {{count}} 日後、安定度は現在 {{stability}} 日。",
+      "doneHeading": "セッション完了",
+      "doneBody_one": "{{count}} 枚のカードをレビューしました。すべて、忘れる前に再スケジュールされています。",
+      "doneBody_other": "{{count}} 枚のカードをレビューしました。すべて、忘れる前に再スケジュールされています。",
+      "doneNextDue_one": "次のカードは {{count}} 日後が期限です。",
+      "doneNextDue_other": "次のカードは {{count}} 日後が期限です。",
+      "doneNoneDue": "他に期限のものはありません。また明日お越しください。",
+      "again": "もう一度レビュー",
+      "close": "レビューを閉じる",
+      "filterAria": "レビューカードを絞り込み",
+      "all": "すべて",
+      "due": "期限",
+      "learning": "学習中",
+      "scheduled": "スケジュール済み",
+      "empty": "このフィルターに一致するカードはありません。",
+      "allClear": "すべて完了。現在期限のカードはありません。",
+      "justGraded": "レビューしたばかり"
+    }
+  },
+  "progress3": {
+    "snapshot": {
+      "level": "レベル",
+      "streak": "連続記録",
+      "calibrationGap": "キャリブレーションギャップ",
+      "reviewsDue": "期限のレビュー",
+      "gapTrend": "{{points}} pp 縮小",
+      "streakUnit": "日",
+      "reviewsUnit": "枚"
+    },
+    "review": {
+      "tableLabel": "レビューキュー",
+      "tableCaption": "カードごとの想起、安定度、期限日を含む間隔反復レビューキュー。",
+      "col": {
+        "prompt": "プロンプト",
+        "domain": "領域",
+        "recall": "想起",
+        "stability": "安定度",
+        "due": "期限",
+        "state": "状態"
+      }
+    }
+  },
+  "home": {
+    "snapshotEmpty": "症例遭遇を完了すると、キャリブレーションのスナップショットが作成されます。"
+  },
+  "progress": {
+    "mastery": {
+      "empty": "症例遭遇を完了すると、コンピテンシー領域全体でのマスタリーのマッピングが始まります。"
+    },
+    "trajectoryEmptyHint": "症例遭遇を終えると、キャリブレーションの推移がここに表示されます。"
+  },
+  "rooms": {
+    "join": {
+      "title": "コードで参加",
+      "subtitle": "チームメイトからルームコードを受け取りましたか？入力して空席を取りましょう。",
+      "label": "ルームコード",
+      "placeholder": "ルームコード、例：ACS-7K2",
+      "action": "参加",
+      "notFound": "そのコードに一致する空きルームはありません。確認してもう一度お試しください。",
+      "or": "または"
+    },
+    "card": {
+      "code": "コード",
+      "copyCode": "ルームコードをコピー",
+      "copied": "コピーしました"
+    },
+    "create": {
+      "localeLabel": "症例遭遇の言語",
+      "localeHint": "ルーム全体で共有されるロールプレイの言語。"
+    },
+    "phase": {
+      "startSession": "セッションを開始",
+      "endSession": "終了してデブリーフ",
+      "reopen": "ルームを再開",
+      "startedNote": "チームの時計が動いています。役割はそれぞれのスコープに固定されています。"
+    },
+    "invite": {
+      "label": "招待コード",
+      "copy": "招待コードをコピー",
+      "copied": "コピーしました",
+      "hint": "このコードを共有すると、チームメイトが空席を取れます。"
+    },
+    "inroom": {
+      "takeThisSeat": "着席する",
+      "takeSeatAria": "{{role}} の席に着く",
+      "leaveSeat": "席を離れる",
+      "leaveSeatAria": "{{role}} の席を離れる",
+      "ready": "準備完了",
+      "notReady": "準備未完了",
+      "toggleReadyAria": "{{role}} の席の準備状態を切り替え",
+      "makeLead": "チームリーダーにする",
+      "makeLeadAria": "チームリーダーの役割を {{role}} に与える",
+      "giveFloor": "発言権を与える",
+      "giveFloorAria": "発言権を {{role}} に与える",
+      "handRaised": "挙手中",
+      "hasFloor": "発言権を持っています",
+      "seatControlsLabel": "席のコントロール",
+      "backfillInline": "AIで補充",
+      "backfillInlineAria": "空席をAIで補充",
+      "requestFloorAgain": "発言権を要求中",
+      "lowerHand": "手を下ろす",
+      "youRaised": "あなたは挙手しています。チームリーダーがあなたを参加させます。",
+      "youHaveFloor": "あなたに発言権があります",
+      "passFloor": "発言権を渡す",
+      "floorControlsLabel": "発言権とターンのコントロール",
+      "observer": "オブザーバー",
+      "observerScope": "あなたはこのルームを観察しています。行動するには着席してください。",
+      "delegatedNote": "委任と指示はチームフロアに投稿され、根拠として記録されます。",
+      "sbarPosted": "エスカレーションをフロアに投稿しました",
+      "youClosedLoop": "あなたがこのループを確認しました"
+    },
+    "debrief": {
+      "live": "このセッションからライブ",
+      "loopsClosed": "あなたが完了したクローズドループの確認",
+      "loopsValue": "{{total}} 件中 {{closed}} 件",
+      "pending": "以下の評価は、セッション終了まで参考値です。"
+    }
+  },
+  "rooms3": {
+    "eyebrow": "マルチプレイヤー",
+    "card": {
+      "seats": "席",
+      "live": "ライブ"
+    }
+  },
+  "authoring3": {
+    "eyebrow": "症例パイプライン",
+    "draft": {
+      "factsLabel": "ドラフトされた事実",
+      "reviewLabel": "レビュー待ち"
+    },
+    "monitor": {
+      "tableLabel": "公開・監視中の症例",
+      "colCase": "症例",
+      "colLocales": "ロケール",
+      "colEncounters": "症例遭遇",
+      "colStatus": "ステータス",
+      "colAction": "アクション"
+    }
+  },
+  "roomscollab": {
+    "roles": {
+      "doctor": "医師",
+      "nurse": "看護師",
+      "paramedic": "救急救命士"
+    },
+    "acting": {
+      "as": "{{role}} として担当中",
+      "switch": "役割を切り替え",
+      "actAs": "{{role}} として担当",
+      "hint": "1つのブラウザでチーム全体 — 席を切り替えて、同じ患者に対して各役割を演じます。",
+      "youAreAi": "この役割はAIが担当しています。切り替えて自分で演じましょう。",
+      "label": "担当する役割"
+    },
+    "scope": {
+      "doctor": "精査をリード：病歴を聴取し、検査と治療をオーダーし、診断とプランを確定します。",
+      "nurse": "ベッドサイドを担当：タスクキューを処理し、薬剤を投与し、ライブの反応をモニターし、エスカレーションします。",
+      "paramedic": "状況を設定：病院前の状況と、構造化された ATMIST/SBAR 引き継ぎを提供します。"
+    },
+    "tabs": {
+      "workspace": "ワークスペース",
+      "interview": "問診",
+      "prehospital": "病院前",
+      "orders": "オーダーとタスク",
+      "floor": "チームフロア",
+      "debrief": "デブリーフ"
+    },
+    "orders": {
+      "title": "オーダーと引き継ぎ",
+      "subtitle": "医師がオーダーし、そのオーダーは実行役の役割のキューでタスクになります。",
+      "compose": "オーダーを出す",
+      "medications": "薬剤と治療",
+      "diagnostics": "検査",
+      "place": "オーダー",
+      "placeAria": "{{name}} をオーダー",
+      "doctorOnly": "オーダーできるのは医師のみです。チームのためにオーダーするには医師の席に切り替えてください。",
+      "handsTo": "{{role}} に引き渡す",
+      "reason": "理由（任意）"
+    },
+    "task": {
+      "queueTitle": "タスクキュー",
+      "queueSubtitle": "チームに引き渡されたオーダーを、ステータスと現実的な所要時間とともに表示。",
+      "empty": "まだタスクはありません。医師が出したオーダーが、チームの作業としてここに届きます。",
+      "mineEmpty": "あなたのキューは空です。あなたに割り当てられた新しいオーダーがここに表示されます。",
+      "orderedBy": "{{role}} がオーダー",
+      "for": "対象：{{role}}",
+      "eta": "予定 {{eta}}",
+      "claim": "引き受ける",
+      "claimAria": "{{name}} を引き受ける",
+      "claimedBy": "{{role}} が引き受け済み",
+      "administer": "実施",
+      "administerAria": "{{name}} を実施",
+      "collect": "採取して提出",
+      "collectAria": "{{name}} を採取して提出",
+      "doneBy": "{{role}} が実行",
+      "resultPending": "検査室 — 結果処理中",
+      "resultReady": "結果あり",
+      "notYours": "このタスクを実行するには {{role}} の席に切り替えてください。",
+      "status": {
+        "pending": "保留中",
+        "claimed": "引き受け済み",
+        "done": "完了"
+      },
+      "kind": {
+        "medication": "薬剤",
+        "diagnostic": "検査",
+        "intervention": "処置"
+      }
+    },
+    "vitals": {
+      "live": "ライブ",
+      "responding": "治療に反応中",
+      "triage": "トリアージ",
+      "sharedNote": "共有された1人の患者 — すべての役割が同じライブモニターを読みます。"
+    },
+    "status": {
+      "improving": "改善中",
+      "stable": "安定",
+      "deteriorating": "悪化中",
+      "critical": "クリティカル"
+    },
+    "handoff": {
+      "title": "引き継ぎ",
+      "pass": "{{role}} に引き継ぐ",
+      "passAria": "コントロールを {{role}} に引き継ぐ",
+      "timeline": "引き継ぎのタイムライン",
+      "empty": "まだ引き継ぎはありません。コントロールを渡すとここに記録されます。",
+      "arrow": "{{from}} から {{role}} へ",
+      "holds": "{{role}} がコントロールを保持"
+    },
+    "paramedic": {
+      "title": "病院前の引き継ぎ",
+      "desc": "あなたが患者を搬送しました。チームに現場の状況とタイムラインを伝え、医師に引き継ぎましょう。",
+      "give": "ATMIST引き継ぎを行う",
+      "given": "チームに引き継ぎを行いました。"
+    },
+    "nurse": {
+      "title": "ベッドサイドとタスクキュー",
+      "desc": "医師のオーダーを処理し、薬剤を投与し、共有モニターの反応を見守ります。"
+    },
+    "doctor": {
+      "title": "精査とオーダー",
+      "desc": "病歴を聴取し、チームのために検査と治療をオーダーし、プランを確定します。"
+    },
+    "debrief": {
+      "loopTitle": "オーダーから実行までのループ",
+      "ordersPlaced": "出したオーダー",
+      "tasksExecuted": "実行したタスク",
+      "medsGiven": "投与した薬剤",
+      "handoffs": "記録した引き継ぎ",
+      "byHuman": "あなたによる",
+      "byAi": "AIによる",
+      "note": "上記のチームループは、このセッションで実際に起きたこと（医師のオーダー、看護師の実行、患者のライブな反応）から得られます。"
+    }
+  },
+  "routeFallback": {
+    "loading": "ページを読み込み中"
+  },
+  "scopeGuard": {
+    "composer": {
+      "label": "自分の言葉で患者に尋ねる",
+      "placeholder": "患者への質問を入力し、Enterを押します",
+      "send": "送信",
+      "hint": "あなたのメッセージは、患者が聞く前にスコープと安全性についてスクリーニングされます。"
+    },
+    "focus": {
+      "onTask": "課題に沿っている",
+      "offTaskCount_one": "{{count}} 件が本題外",
+      "offTaskCount_other": "{{count}} 件が本題外",
+      "tooltip": "症例からどれだけ質問が逸れたか。本題外や答えを求めるやり取りは、臨床の病像を進めません。"
+    },
+    "youAsked": "あなたの質問",
+    "dismiss": "この通知を閉じる",
+    "offTopic": {
+      "chip": "本題外 · 進展なし",
+      "reply": "今日ここに来た理由について話したいのですが、先生。",
+      "note": "これは臨床の病像を前進させませんでした。"
+    },
+    "answerSeeking": {
+      "chip": "役柄どおり · 答えは提示されず",
+      "reply": "正直、何が悪いのか分かりません。それを先生に突き止めてほしいのです。",
+      "note": "シミュレーションは診断を教えてはくれません。ご自身で精査しましょう。"
+    },
+    "injection": {
+      "chip": "メッセージをブロックしました",
+      "note": "アシスタントの指示を変更しようとする試みに見えたため、患者には送信されませんでした。"
+    },
+    "unsafe": {
+      "title": "少し立ち止まりましょう",
+      "chip": "サポート",
+      "note": "もしつらいときは、信頼できる人や地域の相談窓口に連絡してください。必要なときはいつでも症例を一時停止できます。"
+    }
+  },
+  "select2": {
+    "cases": {
+      "generator": {
+        "eyebrow": "症例ジェネレーター"
+      },
+      "table": {
+        "case": "症例",
+        "code": "コード",
+        "acuity": "重症度",
+        "time": "推定時間",
+        "action": "開始"
+      }
+    },
+    "start": {
+      "mode": {
+        "eyebrow": "セッション"
+      },
+      "role": {
+        "eyebrow": "あなたの席"
+      },
+      "complaint": {
+        "eyebrow": "主訴"
+      },
+      "tune": {
+        "eyebrow": "キャリブレーション"
+      },
+      "review": {
+        "eyebrow": "セッションサマリー",
+        "mode": "モード",
+        "role": "役割",
+        "presentation": "主訴",
+        "on": "オン",
+        "off": "オフ"
+      },
+      "lang": {
+        "en": "英語",
+        "tr": "トルコ語"
+      }
+    }
+  },
+  "status": {
+    "pill": {
+      "online": "ライブバックエンドオンライン",
+      "offline": "ライブバックエンドオフライン",
+      "checking": "バックエンドを確認中"
+    },
+    "boundary": {
+      "title": "この画面で問題が発生しました",
+      "body": "予期しないエラーによりページが中断されました。進捗とトランスクリプトは安全です。再読み込みして、続きから再開してください。",
+      "reload": "ページを再読み込み"
+    }
+  },
+  "treatments": {
+    "timeline": "{{name}} を実施",
+    "eventLabel": "治療",
+    "appropriateness": {
+      "indicated": "適応あり",
+      "contraindicated": "禁忌",
+      "neutral": "中立"
+    }
+  }
+}

@@ -1,0 +1,1468 @@
+{
+  "authoring2": {
+    "intro": "Percorra o caso desde o rascunho da IA até uma publicação assinada e versionada. Avance pelo fluxo, fixe cada facto fundamentado e depois co-assine para publicar.",
+    "reset": "Reiniciar tutorial",
+    "stepper": {
+      "aria": "Fluxo de criação de casos, seis etapas percorríveis",
+      "stepOf": "Etapa {{current}} de {{total}}",
+      "goTo": "Ir para a etapa {{title}}",
+      "prev": "Etapa anterior",
+      "next": "Etapa seguinte",
+      "blocked": "Bloqueada"
+    },
+    "nav": {
+      "back": "Voltar",
+      "continue": "Continuar"
+    },
+    "draft": {
+      "heading": "Entrega do rascunho da IA",
+      "sub": "O modelo propôs a persona, o estado do caso, os condutores dos sinais vitais e a grelha de avaliação. Nada disto é definitivo até que um clínico o fundamente e o fixe na etapa seguinte.",
+      "factsDrafted": "{{count}} facto clínico rascunhado",
+      "factsDrafted_other": "{{count}} factos clínicos rascunhados",
+      "needsReview": "{{count}} ainda aguarda revisão por um clínico",
+      "needsReview_other": "{{count}} ainda aguardam revisão por um clínico",
+      "allLocked": "Todos os factos rascunhados já estão fundamentados e fixados.",
+      "tierNote": "Rascunhado por um grande modelo aberto, com alojamento próprio e verificação entre famílias. Nenhum fornecedor comercial é nomeado.",
+      "toReview": "Continuar para a revisão por especialista"
+    },
+    "editor": {
+      "lock": "Fixar tal como rascunhado",
+      "editLock": "Editar e fixar",
+      "ground": "Fundamentar e fixar",
+      "unlock": "Desbloquear",
+      "lockAria": "Fixar o facto {{kind}} tal como rascunhado",
+      "editLockAria": "Editar e fixar o facto {{kind}}",
+      "groundAria": "Fundamentar e fixar o facto {{kind}} sinalizado",
+      "unlockAria": "Desbloquear o facto {{kind}}",
+      "openHint": "Aceite o rascunho da IA como fixado, ou edite-o primeiro. Um facto fixado transporta a sua proveniência clínica até ao formando.",
+      "groundHint": "Esta afirmação não pôde ser fundamentada numa fonte citada. Fundamentá-la regista uma edição do clínico e remove o bloqueio à publicação.",
+      "progress": "{{locked}} de {{total}} factos fixados",
+      "ready": "Todos os factos clínicos estão fundamentados e fixados. Pronto para a assinatura.",
+      "stillBlocking": "{{count}} facto ainda bloqueia a publicação.",
+      "stillBlocking_other": "{{count}} factos ainda bloqueiam a publicação.",
+      "liveHash": "Impressão digital do caso em tempo real",
+      "liveHashNote": "Recalculada à medida que os factos mudam, congelada na assinatura.",
+      "toPsychometric": "Continuar para revisão por pares e psicometria"
+    },
+    "psychometric": {
+      "toSignoff": "Continuar para a assinatura"
+    },
+    "signoff": {
+      "liveHashNote": "Impressão digital em tempo real, ainda não congelada. A assinatura congela-a como a versão publicada.",
+      "frozenNote": "Congelada na assinatura. Um encontro do formando e o respetivo feedback ficam vinculados a estes hashes.",
+      "toMonitor": "Ver casos publicados"
+    },
+    "monitor": {
+      "justPublished": "Publicado nesta sessão",
+      "newBadge": "Novo"
+    }
+  },
+  "avatar3d": {
+    "region": "Avatar 3D do doente",
+    "synthetic": "Doente sintético",
+    "unavailable": "3D indisponível — a mostrar 2D",
+    "speaking": "A falar",
+    "muted": "Sem som (sincronização labial silenciosa)",
+    "signsLabel": "Sinais clínicos observáveis",
+    "signs": {
+      "none": "Sem sinais clínicos agudos",
+      "pallor": "Palidez",
+      "cyanosis": "Cianose",
+      "diaphoresis": "Diaforese",
+      "distress": "Dificuldade respiratória",
+      "reducedLoc": "Resposta reduzida"
+    },
+    "intensity": {
+      "mild": "ligeiro",
+      "moderate": "moderado",
+      "marked": "marcado"
+    },
+    "signItem": "{{sign}} — {{level}}",
+    "alt": "Rosto 3D estilizado de {{name}}. Apresentação: {{state}}."
+  },
+  "commandPalette": {
+    "title": "Paleta de comandos",
+    "placeholder": "Pesquisar comandos…",
+    "sectionNav": "Navegar",
+    "sectionActions": "Ações",
+    "enlarge": "Ampliar a vista do doente",
+    "newCase": "Novo caso aleatório",
+    "empty": "Nenhum comando encontrado."
+  },
+  "debrief": {
+    "eyebrow": "Análise pós-ação",
+    "title": "Debriefing com o assistente",
+    "subtitle": "Como conduziu o caso — o processo por detrás do diagnóstico.",
+    "forPatient": "Doente: {{name}}",
+    "open": "Ver debriefing com o assistente",
+    "close": "Fechar",
+    "print": "Imprimir / exportar",
+    "minUnit": "min",
+    "committedLabel": "O seu diagnóstico de trabalho",
+    "timeToDecision": "Tempo até à decisão",
+    "historyCoverage": "Cobertura da anamnese",
+    "workupAppropriate": "Investigação indicada",
+    "verdict": {
+      "correct": "Diagnóstico correto",
+      "nearMiss": "Quase acertou",
+      "incorrect": "Incorreto",
+      "correctBody": "Comprometeu-se com o diagnóstico certo. Agora reveja o processo que o levou até lá.",
+      "nearMissBody": "Um diagnóstico razoável, mas não o principal para esta apresentação — reveja as evidências que ponderou.",
+      "incorrectBody": "Este diagnóstico não se enquadra nas evidências recolhidas. Refaça o processo abaixo."
+    },
+    "redFlags": {
+      "heading": "Sinais de alarme",
+      "caught": "Pesquisados",
+      "caughtNone": "Nenhum pesquisado",
+      "missed": "Omitidos",
+      "allCaught": "Todos os sinais de alarme pesquisados",
+      "none": "Não há sinais de alarme definidos para este caso.",
+      "reference": "Sinais de alarme para esta apresentação"
+    },
+    "workup": {
+      "heading": "Adequação da investigação",
+      "clean": "Investigação adequada — nenhum exame essencial omitido e nada pedido em excesso.",
+      "under": "Pedidos em falta (lacunas)",
+      "underNone": "Sem lacunas",
+      "over": "Pedidos em excesso",
+      "overNone": "Nada pedido em excesso"
+    },
+    "teaching": {
+      "heading": "Pontos de ensino",
+      "safety": "Feche a lacuna crítica de segurança — verifique as alergias e peça o exame obrigatório antes da abordagem.",
+      "redFlags": "Omitiu {{count}} sinal(is) de alarme. Rastreie os sinais de alarme antes de estreitar o diagnóstico diferencial.",
+      "workupGap": "Um exame essencial não foi pedido ({{label}}). Peça-o precocemente nesta apresentação.",
+      "dxIncorrect": "Alargue o diagnóstico diferencial e peça o exame-chave de exclusão antes de se comprometer.",
+      "dxNear": "Esteve perto — reavalie o principal diagnóstico diferencial face às evidências que recolheu.",
+      "overOrder": "Evite exames de baixo valor que não alteram a abordagem; peça para responder a uma questão, não por reflexo.",
+      "coverage": "Aprofunde a anamnese — várias linhas de questionamento esperadas não foram abordadas.",
+      "clean": "Encontro bem conduzido: seguro, focado e comprometido com as evidências."
+    }
+  },
+  "diagnosis2": {
+    "assessmentHeading": "Avaliação e plano",
+    "catalogHint": "Pesquisar no catálogo de diagnósticos ICD-10 / ICD-11",
+    "resultsCount": "{{count}} resultados",
+    "searchEmptyHint": "Escreva o nome de um diagnóstico ou um código ICD / DSM para pesquisar no catálogo.",
+    "suggestedHeading": "Sugeridos para esta apresentação",
+    "suggestedHint": "Candidatos plausíveis para este caso — adicione aqueles que está a ponderar.",
+    "codeIcd10": "ICD-10",
+    "codeIcd11": "ICD-11",
+    "codeDsm": "DSM-5-TR",
+    "addAria": "Adicionar {{name}} ao diagnóstico diferencial",
+    "retract": "Retirar",
+    "retractAria": "Retirar {{name}} do diagnóstico diferencial",
+    "moveUpAria": "Subir {{name}}",
+    "moveDownAria": "Descer {{name}}",
+    "likelihoodAria": "Definir a probabilidade de {{name}}",
+    "likelihood": {
+      "leading": "Principal",
+      "possible": "Possível",
+      "unlikely": "Improvável"
+    },
+    "addNote": "Adicionar raciocínio",
+    "notePlaceholder": "Característica distintiva ou raciocínio...",
+    "noteLabel": "Raciocínio",
+    "workingHeading": "Diagnóstico de trabalho",
+    "workingEmpty": "Escolha um diagnóstico de trabalho a partir do seu diferencial para o assumir e receber feedback.",
+    "commitAria": "Assumir {{name}} como diagnóstico de trabalho",
+    "changeWorking": "Alterar o diagnóstico de trabalho",
+    "committedAtLabel": "Assumido",
+    "verdict": {
+      "correctTag": "No alvo",
+      "correctTitle": "Corresponde ao diagnóstico principal",
+      "correctBody": "Este é o diagnóstico principal para esta apresentação. Confirme a sua abordagem e destino do doente.",
+      "nearTag": "Quase acertou",
+      "nearTitle": "Razoável, mas reconsidere",
+      "nearBody": "Uma alternativa plausível para esta apresentação, mas não o diagnóstico principal. Reexamine os seus fatores discriminadores.",
+      "incorrectTag": "Fora do alvo",
+      "incorrectTitle": "Reconsidere o diagnóstico",
+      "incorrectBody": "Isto não se enquadra no quadro atual. Reveja os achados-chave e reconstrua o seu diagnóstico diferencial."
+    },
+    "dispositionHeading": "Destino do doente",
+    "dispositionHint": "Para onde vai este doente a seguir?",
+    "dispo": {
+      "admit-ccu": "Internar — unidade de cuidados coronários",
+      "admit-ward": "Internar — enfermaria",
+      "admit-icu": "Internar — cuidados intensivos",
+      "operating-room": "Para o bloco operatório",
+      "observation": "Unidade de observação",
+      "discharge": "Alta com instruções de vigilância",
+      "refer-specialty": "Referenciar a uma especialidade"
+    },
+    "summaryHeading": "Lista de problemas",
+    "summaryHint": "Um resumo de avaliação e plano em tempo real construído a partir das suas entradas.",
+    "summaryEmpty": "O seu diagnóstico diferencial, diagnóstico de trabalho e plano aparecem aqui à medida que os constrói.",
+    "summaryWorkingLabel": "Diagnóstico de trabalho",
+    "summaryDifferentialLabel": "Diagnóstico diferencial",
+    "summaryPlanLabel": "Plano",
+    "summaryDispositionLabel": "Destino do doente",
+    "verification": {
+      "confirmed": "Confirmado",
+      "provisional": "Provisório",
+      "differential": "Diferencial"
+    }
+  },
+  "ehr2": {
+    "orders": {
+      "searchLabel": "Pesquisar pedidos",
+      "searchPlaceholder": "Pesquisar análises, imagiologia, medicação...",
+      "clearSearch": "Limpar pesquisa",
+      "noMatches": "Nenhum pedido corresponde à sua pesquisa.",
+      "itemsCount": "{{count}} disponíveis",
+      "summary": "{{placed}} efetuados, {{pending}} pendentes, {{resulted}} com resultado",
+      "inProgressHeading": "Em curso",
+      "resultedHeading": "Com resultado",
+      "readyIn": "pronto em ~{{sec}}s",
+      "readyNow": "a finalizar...",
+      "progressLabel": "Progresso do resultado de {{name}}",
+      "resultsHint": "Os resultados aparecem no separador Resultados à medida que são finalizados."
+    },
+    "results": {
+      "summaryHeading": "Resumo de resultados",
+      "resultedOf": "{{done}} de {{total}} pedidos com resultado",
+      "pendingCount": "{{count}} pendentes",
+      "abnormalCount": "{{count}} alterados",
+      "criticalCount": "{{count}} críticos",
+      "criticalHeading": "Valores críticos",
+      "criticalNote": "Reveja e atue sobre os resultados críticos sem demora.",
+      "filterAbnormal": "Apenas alterados",
+      "noAbnormal": "Nenhum resultado alterado a mostrar.",
+      "readyIn": "pronto em ~{{sec}}s",
+      "finalReport": "Relatório final"
+    },
+    "flowsheet": {
+      "summaryHeading": "Últimos sinais vitais",
+      "baselineTrend": "vs valor de base",
+      "legendHeading": "Legenda de estado",
+      "latest": "Mais recente"
+    },
+    "chartReview": {
+      "summaryHeading": "Atividade até ao momento",
+      "questions": "Perguntas",
+      "exams": "Exames",
+      "orders": "Pedidos",
+      "results": "Resultados",
+      "offTask": "ações fora da tarefa",
+      "offTaskHint": "momentos em que o encontro se desviou da tarefa clínica",
+      "filterLabel": "Filtrar a cronologia por atividade",
+      "filterAll": "Tudo",
+      "filterQuestions": "Anamnese",
+      "filterExam": "Exame",
+      "filterOrders": "Pedidos",
+      "filterResults": "Resultados",
+      "emptyFiltered": "Ainda não há atividade deste tipo.",
+      "noNewInfo": "Sem informação nova",
+      "repeated": "Repetido"
+    },
+    "ap": {
+      "optionsCount": "{{count}} opções",
+      "differentialCount": "{{count}} no diagnóstico diferencial",
+      "rankLabel": "Prioridade {{n}}",
+      "quickPlanHeading": "Adicionar rapidamente ao plano",
+      "dispositionHeading": "Destino do doente",
+      "insertHint": "Adicione um ponto de partida e depois edite antes de guardar.",
+      "planCharCount": "{{count}} caracteres",
+      "planCount": "{{count}} entradas no plano",
+      "quick": {
+        "access": "Estabelecer acesso IV e colher análises",
+        "monitor": "Monitorização cardíaca e de SpO2 contínua",
+        "analgesia": "Analgesia titulada e antiemético",
+        "reassess": "Reavaliar após a abordagem inicial",
+        "seniorReview": "Escalar para revisão por um sénior"
+      },
+      "dispo": {
+        "admitWard": "Internar na enfermaria",
+        "admitIcu": "Internar em cuidados intensivos",
+        "observation": "Unidade de observação",
+        "discharge": "Alta com instruções de vigilância",
+        "refer": "Referenciar a uma especialidade"
+      }
+    }
+  },
+  "ehrPolish": {
+    "age": "Idade",
+    "sex": "Sexo",
+    "acuity": "Gravidade"
+  },
+  "ehr": {
+    "storyboard": {
+      "populateHint": "Preenche-se à medida que trabalha o processo clínico.",
+      "examFindings": "Achados do exame",
+      "examEmpty": "Solicite uma manobra de exame e os achados aparecem aqui.",
+      "abnormalFlag": "Alterado",
+      "normalFlag": "Dentro dos limites normais"
+    },
+    "tabs": {
+      "navLabel": "Secções do processo clínico",
+      "monitor": "Monitor",
+      "guidance": "Orientação"
+    },
+    "interview": {
+      "patient": {
+        "heading": "Doente",
+        "voiceOn": "Voz ativada",
+        "voiceOff": "Voz desativada",
+        "voiceToggle": "Alternar o áudio das respostas do doente"
+      },
+      "voiceInput": {
+        "mic": "Ditar",
+        "listening": "A ouvir…",
+        "stop": "Parar o ditado",
+        "unsupported": "O ditado por voz não está disponível neste navegador.",
+        "hint": "Diga a sua pergunta; ela é escrita na caixa para que possa editá-la antes de enviar."
+      }
+    }
+  },
+  "nav": {
+    "exam": "Exame"
+  },
+  "exam": {
+    "header": {
+      "eyebrow": "Avaliação",
+      "introTitle": "Exame sumativo",
+      "introDesc": "Uma série cronometrada e supervisionada de casos gerados, com a orientação desligada, terminando num relatório de competências pontuado.",
+      "runningTitle": "Exame em curso",
+      "runningDesc": "Trabalhe cada caso contra o relógio. A orientação está desativada.",
+      "reportTitle": "Relatório de competências",
+      "reportDesc": "Os seus resultados pontuados desta tentativa, guardados neste dispositivo."
+    },
+    "intro": {
+      "howItWorks": "Como funciona o exame",
+      "rule": {
+        "proctored": {
+          "title": "Supervisionado, uma só passagem",
+          "body": "Trabalha cada caso uma vez. Não há repetição dentro de um caso."
+        },
+        "timed": {
+          "title": "Cronometrado por caso",
+          "body": "Corre uma contagem decrescente em cada caso; submete automaticamente ao chegar a zero."
+        },
+        "noGuidance": {
+          "title": "A orientação está desligada",
+          "body": "As dicas em tempo real e as sugestões do assistente estão desativadas durante todo o exame."
+        },
+        "scored": {
+          "title": "Relatório pontuado",
+          "body": "Recebe um relatório de competências no final, guardado neste dispositivo."
+        }
+      },
+      "lengthLabel": "Número de casos",
+      "caseCount": "{{n}} casos",
+      "timeLabel": "Tempo por caso",
+      "minutes": "{{n}} min",
+      "mixLabel": "Mistura de casos",
+      "mixHint": "Deixe todas as famílias desligadas para sortear de todos os sistemas, ou escolha algumas específicas.",
+      "allSystems": "Todos os sistemas",
+      "begin": "Iniciar exame",
+      "sourceLive": "Os casos são gerados em tempo real para este exame.",
+      "sourceLocal": "Os casos são gerados no dispositivo para este exame.",
+      "priorAttempts": "{{n}} tentativa(s) já guardada(s)."
+    },
+    "family": {
+      "chest-pain": "Dor torácica",
+      "headache": "Cefaleia",
+      "abdominal-pain": "Dor abdominal",
+      "dyspnea": "Dispneia"
+    },
+    "runner": {
+      "preparing": "A preparar o caso {{n}} de {{total}}…",
+      "preparingHint": "A gerar um caso novo, ainda não visto.",
+      "caseProgress": "Caso {{n}} de {{total}}",
+      "guidanceOff": "Orientação desligada",
+      "submitNext": "Submeter e seguinte",
+      "finish": "Submeter e terminar"
+    },
+    "verdict": {
+      "correct": "Correto",
+      "nearMiss": "Quase acertou",
+      "incorrect": "Incorreto"
+    },
+    "report": {
+      "totalScore": "Pontuação total",
+      "acrossCases": "ao longo de {{n}} casos",
+      "completed": "Exame concluído",
+      "accuracy": "Exatidão diagnóstica",
+      "accuracyHint": "{{correct}} de {{cases}} corretos",
+      "redFlags": "Deteção de sinais de alarme",
+      "redFlagsHint": "rastreados vs presentes",
+      "workup": "Adequação da investigação",
+      "workupHint": "indicados vs em excesso / em falta",
+      "ttd": "Tempo médio até ao Dx",
+      "ttdHint": "casos assumidos",
+      "perCase": "Caso a caso",
+      "col": {
+        "case": "Caso",
+        "diagnosis": "Diagnóstico",
+        "redFlags": "Sinais de alarme",
+        "workup": "Investigação",
+        "time": "Tempo",
+        "points": "Pontos"
+      },
+      "timedOut": "Tempo esgotado",
+      "savedNote": "Guardado neste dispositivo. {{n}} tentativa(s) registada(s).",
+      "retake": "Repetir exame",
+      "home": "Voltar ao início"
+    }
+  },
+  "calibration": {
+    "readoutDefault": "Aponte para um ponto, ou use o tabulador, para ler esse domínio.",
+    "readoutConfidence": "Confiança",
+    "readoutPerformance": "Desempenho",
+    "readoutGap": "Diferença",
+    "gap": {
+      "over": "{{points}} pts de excesso de confiança",
+      "under": "{{points}} pts de falta de confiança",
+      "well": "dentro de {{points}} pts"
+    },
+    "pointAria": "{{domain}}. Confiança {{confidence}} por cento, desempenho {{performance}} por cento. {{direction}}.",
+    "quadrantLegend": {
+      "heading": "Interpretar os quadrantes",
+      "hint": "A posição de um ponto mostra o que treinar a seguir.",
+      "calibratedStrong": "Confiança elevada, desempenho forte",
+      "calibratedGrowing": "Confiança baixa, ainda em construção",
+      "blindSpot": "Confiante, mas o desempenho fica aquém",
+      "hiddenStrength": "A desempenhar melhor do que pensa"
+    }
+  },
+  "feedback": {
+    "process": {
+      "onTimeSummary": "{{onTime}} de {{total}} no tempo devido",
+      "stewardship": {
+        "heading": "Gestão criteriosa da investigação",
+        "subtitle": "Se cada pedido foi indicado pela apresentação, medido face à investigação esperada e citado.",
+        "indicated": "Pedidos indicados",
+        "indicatedHint": "Corresponderam à investigação esperada",
+        "lowValue": "Pedidos de baixo valor",
+        "lowValueHint": "Não indicados para esta apresentação",
+        "flagged": "Sinalizados: {{codes}}",
+        "cleanNote": "Nenhum pedido de baixo valor. Todas as investigações foram indicadas.",
+        "note": "Peça o que a apresentação indica. Os exames de baixo valor acrescentam custo, demora e achados incidentais."
+      }
+    },
+    "empty": {
+      "title": "Ainda não há nenhum encontro para reportar",
+      "body": "Termine um encontro e o seu relatório formativo — calibração, faixas de competência e temporização do processo — é construído a partir do que realmente fez."
+    },
+    "recorded": "A partir do seu último encontro concluído",
+    "live": "A partir do encontro em curso"
+  },
+  "feedback3": {
+    "verdict": {
+      "eyebrow": "Resumo de desempenho",
+      "bandsProficient": "Faixas em proficiente ou superior",
+      "overall": "de {{total}} faixas de competência pontuadas",
+      "byAxis": "Por eixo",
+      "calibrationGap": "Diferença de calibração",
+      "gapTrend": "{{points}} pp mais estreita",
+      "gapHint": "Autoavaliação vs medida, sessão mais recente",
+      "withheldNote": "{{count}} domínio retido a aguardar mais evidências"
+    },
+    "section": {
+      "bands": "Faixas de competência",
+      "process": "Processo e temporização",
+      "gaps": "Lacunas ancoradas em evidências",
+      "steps": "Próximos passos"
+    }
+  },
+  "encounter": {
+    "guidance": {
+      "provenance": {
+        "aria": "Proveniência de {{source}}: entidade emissora, edição, grau de evidência e datas de revisão.",
+        "reviewed": "Revisto em {{date}}",
+        "issuer": "{{organization}} · {{edition}}",
+        "evidence": "Evidência: {{grade}}",
+        "nextReview": "Próxima revisão em {{date}}"
+      },
+      "abstain": {
+        "title": "Abstém-se fora do âmbito",
+        "note": "Fundamentado em {{scope}}. Fora deste âmbito, a orientação retrai-se em vez de adivinhar.",
+        "noteGeneric": "Fundamentado numa diretriz específica. Fora do seu âmbito validado, a orientação retrai-se em vez de adivinhar.",
+        "emptyBody": "Esta etapa fica fora das diretrizes cobertas, pelo que não é oferecida nenhuma dica. Continue com o seu próprio raciocínio clínico."
+      }
+    }
+  },
+  "guidance3": {
+    "panel": {
+      "title": "Orientação clínica",
+      "subtitle": "Aconselhamento citado e em tempo real para a sua investigação",
+      "education": "Apenas para fins educativos",
+      "empty": "Inicie um encontro para ver orientação citada e em tempo real para o foco atual."
+    },
+    "focus": "Foco atual",
+    "reference": {
+      "live": "Fundamentação em diretriz em tempo real",
+      "offline": "Referência offline",
+      "loading": "A fundamentar…"
+    },
+    "guideline": {
+      "more": "Mais detalhe da diretriz ({{count}})",
+      "hide": "Ocultar detalhe da diretriz"
+    },
+    "sources": {
+      "title": "Fontes",
+      "open": "Fonte"
+    },
+    "coverage": {
+      "title": "Cobertura",
+      "history": "Anamnese",
+      "exam": "Exame",
+      "workup": "Investigação",
+      "complete": "Completa",
+      "aria": "{{label}}: {{done}} de {{expected}} cobertos"
+    },
+    "redflags": {
+      "title": "Sinais de alarme",
+      "count": "{{screened}}/{{total}} rastreados",
+      "screened": "Rastreado",
+      "notScreened": "Ainda não rastreado"
+    },
+    "nba": {
+      "title": "Melhor ação seguinte",
+      "askAbout": "Perguntar sobre {{topic}}",
+      "examine": "Examinar: {{system}}",
+      "order": "Pedir {{label}}",
+      "screenRedFlags": "Rastrear os restantes sinais de alarme",
+      "complete": "Investigação essencial coberta — consolide a sua avaliação",
+      "urgent": "Crítico no tempo"
+    },
+    "workup": {
+      "title": "O que uma investigação robusta cobre",
+      "do": "Fazer",
+      "consider": "Considerar",
+      "within": "{{label}} em {{minutes}} min",
+      "ordered": "Pedido",
+      "overdue": "Em atraso",
+      "pending": "A vencer",
+      "onTime": "No tempo devido",
+      "late": "Atrasado"
+    },
+    "guide": {
+      "title": "Sugestões do assistente",
+      "subtitle": "Um clínico sénior, a observar o seu processo",
+      "mode": "Modo de orientação",
+      "processOnly": "Orienta o seu processo, nunca o diagnóstico.",
+      "offBody": "O modo de orientação está desligado. Ligue-o para aconselhamento em tempo real sobre a sua melhor ação seguinte e a temporização.",
+      "dismiss": "Dispensar as sugestões do assistente",
+      "reopen": "Sugestões do assistente"
+    },
+    "intent": {
+      "onset": "início",
+      "location": "localização",
+      "character": "caráter",
+      "radiation": "irradiação",
+      "severity": "intensidade",
+      "timing": "cronologia e padrão",
+      "aggravating": "fatores agravantes",
+      "relieving": "fatores de alívio",
+      "associated-symptoms": "sintomas associados",
+      "red-flags": "sinais de alarme",
+      "past-medical-history": "antecedentes médicos",
+      "medications": "medicação",
+      "allergies": "alergias",
+      "family-history": "antecedentes familiares",
+      "social-history": "história social",
+      "risk-factors": "fatores de risco",
+      "ice": "ideias, preocupações e expectativas"
+    },
+    "maneuver": {
+      "general-inspection": "Inspeção geral",
+      "vitals-recheck": "Reavaliação dos sinais vitais",
+      "cardiovascular": "Cardiovascular",
+      "respiratory": "Respiratório",
+      "abdominal": "Abdominal",
+      "neurological": "Neurológico",
+      "musculoskeletal": "Musculoesquelético",
+      "skin": "Pele",
+      "ent": "ORL",
+      "focused-special": "Teste especial dirigido"
+    }
+  },
+  "home2": {
+    "caseCode": "Referência do caso",
+    "startCase": "Iniciar caso"
+  },
+  "imaging2": {
+    "disclaimer": "Imagem representativa — não é deste doente",
+    "disclaimerShort": "Imagem representativa",
+    "source": "Fonte",
+    "viewSource": "Ver no Wikimedia Commons",
+    "license": "Licença",
+    "attribution": "Atribuição",
+    "noImage": "Nenhuma imagem representativa disponível",
+    "noImageHint": "Não foi possível carregar uma imagem de licença aberta para este achado.",
+    "loading": "A carregar imagem representativa…",
+    "alt": "{{modality}} — imagem representativa de {{query}}",
+    "altNoModality": "Imagem representativa de {{query}}"
+  },
+  "institution": {
+    "compliance": {
+      "sectionLabel": "Conformidade e auditoria"
+    },
+    "remediation": {
+      "priorityEyebrow": "Fluxo prioritário",
+      "queue": {
+        "caption": "Fila de recuperação",
+        "tableCaption": "Estado geral de cada ciclo de recuperação aberto e fechado.",
+        "openedCol": "Aberto em",
+        "stageCol": "Etapa",
+        "statusCol": "Estado",
+        "days": "{{count}}d"
+      },
+      "step": {
+        "summary": "{{closed}} de {{total}} ciclos fechados",
+        "progress": "Passo {{current}} de {{total}}: {{stage}}",
+        "closedLabel": "Ciclo fechado",
+        "back": "Voltar",
+        "backAria": "Recuar {{learner}} uma etapa do ciclo",
+        "advanceAria": "Marcar {{stage}} como concluída para {{learner}}",
+        "markComplete": "Concluir {{stage}}",
+        "close": "Fechar ciclo",
+        "reset": "Reiniciar",
+        "reassessLogged": "Reavaliação registada. O resultado detalhado permanece no feed privado do formando.",
+        "live": "{{learner}}: {{stage}} em curso.",
+        "liveClosed": "{{learner}}: ciclo de recuperação fechado."
+      }
+    },
+    "heatmap": {
+      "drill": {
+        "regionLabel": "Detalhe aprofundado de {{learner}}",
+        "closeAria": "Fechar o detalhe aprofundado de {{learner}}",
+        "path": "Percurso: coorte, {{section}}, {{learner}}, {{domain}}",
+        "domainSwitchLabel": "Inspecionar um domínio",
+        "bandLabel": "Faixa",
+        "encountersLabel": "{{count}} encontros avaliados",
+        "evidenceLangNote": "Apresentado na língua do próprio formando ({{lang}}).",
+        "takeHeading": "Leitura do avaliador",
+        "withheldHeading": "Faixa retida",
+        "withheldBody": "Ainda não há evidências fiáveis suficientes ({{count}} encontros). Uma faixa surge quando a fiabilidade ultrapassa o limiar.",
+        "crosswalkChip": "ACGME {{tag}}",
+        "crosswalkTip": "Corresponde ao elemento {{tag}} dos ACGME Milestones. Uma correspondência das mesmas evidências, nunca uma reavaliação.",
+        "openHint": "Selecione qualquer célula para inspecionar as evidências por detrás da sua faixa."
+      }
+    },
+    "calibration": {
+      "filter": {
+        "heading": "Filtrar",
+        "directionLabel": "Direção",
+        "axisLabel": "Eixo",
+        "all": "Todos",
+        "clinical": "Clínico",
+        "communication": "Comunicação",
+        "showing": "A mostrar {{count}} de {{total}} tópicos",
+        "empty": "Nenhum tópico corresponde a este filtro.",
+        "reset": "Repor filtros"
+      }
+    },
+    "export": {
+      "preview": {
+        "regionLabel": "Pré-visualização da exportação anonimizada",
+        "heading": "Pré-visualização da exportação",
+        "generatedNote": "Correspondência {{version}}",
+        "open": "Pré-visualizar exportação",
+        "close": "Fechar pré-visualização",
+        "deidStamp": "Anonimizado",
+        "reidWarn": "Reidentificável, rever antes da divulgação",
+        "fairnessAppended": "Auditoria de equidade anexada",
+        "frameworksHeading": "Referenciais etiquetados",
+        "scopeHeading": "Âmbito",
+        "sampleHeading": "Amostra anonimizada",
+        "sampleCaption": "Uma amostra das linhas da coorte tal como aparecem na exportação. Os identificadores são códigos de lista mascarados.",
+        "andMore": "Mais {{count}} formandos.",
+        "crosswalkHeading": "Correspondência de domínios ({{framework}})",
+        "download": "Transferir exportação",
+        "downloadNote": "Apenas para demonstração. Nenhum ficheiro sai deste dispositivo.",
+        "selectFrameworks": "Selecione pelo menos um referencial para pré-visualizar."
+      }
+    }
+  },
+  "labs2": {
+    "results": {
+      "microHeading": "Microbiologia, serologia e relatórios",
+      "analytes": "{{count}} analitos"
+    }
+  },
+  "landing2": {
+    "hero": {
+      "eyebrow": "Simulador de raciocínio clínico"
+    },
+    "monitor": {
+      "aria": "Monitor de sinais vitais de demonstração para um doente sintético: frequência cardíaca 84, pressão arterial 128 sobre 76, saturação de oxigénio 98 por cento, frequência respiratória 16.",
+      "unit": "Box 2",
+      "status": "Em monitorização",
+      "trace": "Ritmo sinusal",
+      "hr": "Frequência cardíaca",
+      "bp": "Pressão arterial",
+      "spo2": "Saturação de oxigénio",
+      "rr": "Frequência respiratória"
+    },
+    "loop": {
+      "eyebrow": "O ciclo central",
+      "heading": "Quatro movimentos, um encontro",
+      "sub": "Cada caso segue o mesmo arco clínico e depois devolve-o a si, calibrado.",
+      "cycle": "Cada ciclo afina o seu discernimento para o caso seguinte.",
+      "steps": {
+        "interview": {
+          "title": "Entrevistar",
+          "body": "Colha a anamnese de um doente sintético em linguagem simples, em turco ou inglês."
+        },
+        "chart": {
+          "title": "Registar no EHR",
+          "body": "Peça exames, leia um monitor de sinais vitais em tempo real e documente dentro de um verdadeiro processo clínico."
+        },
+        "decision": {
+          "title": "Decidir",
+          "body": "Comprometa-se com um diagnóstico diferencial e um plano, e indique o seu grau de confiança."
+        },
+        "feedback": {
+          "title": "Feedback calibrado",
+          "body": "Veja a competência face à confiança, com cada falha crítica para a segurança evidenciada e citada."
+        }
+      }
+    },
+    "platform": {
+      "eyebrow": "Para além do encontro",
+      "heading": "Todo um programa de formação em torno do ciclo",
+      "sub": "O ciclo do formando insere-se numa plataforma completa de educação clínica.",
+      "items": {
+        "cases": {
+          "title": "Casos dinâmicos",
+          "body": "Gerados a pedido a partir da ICD e do DSM, de modo que uma coorte nunca possa decorar o banco de casos."
+        },
+        "rooms": {
+          "title": "Salas multijogador",
+          "body": "Conduza um caso entre médico, enfermeiro e paramédico sobre um estado partilhado do doente."
+        },
+        "progress": {
+          "title": "Progresso ao longo do tempo",
+          "body": "Competência acompanhada como uma capacidade treinável e faseada. Sem pontuação numérica, sem tabela de classificações."
+        },
+        "institution": {
+          "title": "Análise institucional",
+          "body": "Competência da coorte, recuperação e uma auditoria de equidade, agregadas e restritas por papel."
+        },
+        "sovereign": {
+          "title": "Aberto e soberano",
+          "body": "Modelos de pesos abertos, com alojamento próprio e criação de casos com autoridade humana."
+        }
+      }
+    },
+    "credibility": {
+      "label": "Fundamentado em orientações publicadas",
+      "note": "Cada dica e cada falha é ancorada numa fonte, nunca inventada.",
+      "sources": "NICE · WHO · ATLS · DSM-5-TR · ICD-11"
+    }
+  },
+  "liveBackend": {
+    "toggle": "Em tempo real",
+    "tooltip": "Usa o backend do modelo aberto em tempo real no pod. A sua mensagem é primeiro protegida e depois respondida pelo modelo local.",
+    "offline": "backend offline",
+    "badge": "Em tempo real · pod",
+    "fallback": "Não foi possível contactar o backend em tempo real, pelo que a simulação offline respondeu a esta ronda."
+  },
+  "livegen": {
+    "modeLegend": "Geração",
+    "endless": "Gerar um novo caso",
+    "endlessHint": "Um doente sintético totalmente novo de cada vez — infinito e nunca repetido.",
+    "endlessSub": "Sorteia de todas as especialidades e verifica a consistência de cada caso.",
+    "engineAi": "IA · tempo real",
+    "engineLocal": "Instantâneo · offline",
+    "engineChecking": "A verificar o pod…",
+    "refine": "Refinar (opcional)",
+    "pickEngine": "Ou escolha um motor específico",
+    "orCurated": "Ou comece a partir de um caso curado",
+    "curatedHint": "Casos de ensino totalmente elaborados, com âncoras em diretrizes.",
+    "quick": "Geração rápida",
+    "quickHint": "Instantâneo e offline. Constrói um caso no dispositivo a partir do motor de modelos pré-semeados.",
+    "ai": "Geração por IA",
+    "aiHint": "Corre no pod: amostrado por ICD/DSM e fundamentado, com detalhe mais rico.",
+    "note": "A geração por IA corre o modelo aberto no pod e pode demorar um momento.",
+    "generating": "A gerar…",
+    "generatingHint": "A amostrar, fundamentar e verificar no pod. Pode cancelar.",
+    "cancel": "Cancelar",
+    "unavailable": "Backend de IA indisponível — gerado localmente",
+    "degraded": "Fundamentação degradada — verifique as âncoras das diretrizes",
+    "ready": "Caso pronto",
+    "sourceLabel": "Fonte",
+    "source": {
+      "ai": "IA",
+      "template": "Modelo",
+      "local": "Local"
+    }
+  },
+  "monitor2": {
+    "title": "Monitor de cabeceira",
+    "trendTitle": "Tendências",
+    "online": "Em tempo real",
+    "offline": "Em espera",
+    "elapsed": "Decorrido",
+    "bed": "Cama",
+    "awaiting": "Sem sinal",
+    "awaitingHint": "A aguardar o encontro — os sinais vitais começam quando o caso se inicia.",
+    "trendAwaiting": "Ainda não há dados de tendência — as leituras acumulam-se à medida que o encontro decorre.",
+    "alarm": "Alarme",
+    "alarmClear": "Sem alarmes ativos",
+    "leads": "Derivação II",
+    "limitHi": "Máx",
+    "limitLo": "Mín",
+    "now": "Agora",
+    "min": "Mín",
+    "max": "Máx",
+    "treatment": "Tratamento",
+    "treatmentGiven": "Tratamento administrado",
+    "status": {
+      "improving": "A melhorar",
+      "stable": "Estável",
+      "deteriorating": "A deteriorar",
+      "critical": "Crítico"
+    },
+    "params": {
+      "hr": {
+        "label": "Frequência cardíaca",
+        "short": "FC",
+        "unit": "bpm"
+      },
+      "spo2": {
+        "label": "Saturação de oxigénio",
+        "short": "SpO₂",
+        "unit": "%"
+      },
+      "bp": {
+        "label": "Pressão arterial",
+        "short": "PA",
+        "unit": "mmHg"
+      },
+      "map": {
+        "label": "Pressão arterial média",
+        "short": "PAM",
+        "unit": "mmHg"
+      },
+      "rr": {
+        "label": "Frequência respiratória",
+        "short": "FR",
+        "unit": "/min"
+      },
+      "temp": {
+        "label": "Temperatura",
+        "short": "Temp",
+        "unit": "°C"
+      }
+    },
+    "a11y": {
+      "region": "Monitor de sinais vitais em tempo real",
+      "trendRegion": "Tendências dos sinais vitais",
+      "tableCaption": "Sinais vitais atuais",
+      "colParam": "Parâmetro",
+      "colValue": "Valor",
+      "alarmAnnounce": "Alarme {{status}}: {{params}}"
+    }
+  },
+  "orders2": {
+    "tab": {
+      "diagnostics": "Pedir exames",
+      "treatments": "Tratamentos"
+    },
+    "group": {
+      "labs": "Laboratório",
+      "bloodgas": "Gasometria",
+      "micro": "Microbiologia",
+      "imaging": "Imagiologia",
+      "poc": "Junto ao doente"
+    },
+    "search": {
+      "label": "Pesquisar exames a solicitar",
+      "placeholder": "Pesquisar exames — hemograma, troponina, TC, cultura…",
+      "clear": "Limpar pesquisa",
+      "noMatches": "Nenhum exame solicitável corresponde à sua pesquisa."
+    },
+    "turnaround": {
+      "aria": "Tempo de resposta {{eta}}"
+    },
+    "order": {
+      "place": "Pedir",
+      "ordered": "Pedido",
+      "placeAria": "Pedir {{name}}",
+      "orderedAria": "{{name}} já pedido",
+      "itemsCount": "{{count}} exames"
+    },
+    "flag": {
+      "indicated": "Indicado",
+      "indicatedAria": "Indicado para esta apresentação",
+      "lowValue": "Baixo valor",
+      "lowValueAria": "De baixo valor ou não indicado para esta apresentação"
+    },
+    "tracker": {
+      "heading": "Acompanhamento de pedidos",
+      "empty": "Ainda não há pedidos. Escolha um exame para acompanhar a chegada do resultado.",
+      "summary": "{{placed}} efetuados · {{pending}} pendentes · {{resulted}} com resultado",
+      "inProgress": "Em curso",
+      "resultedGroup": "Com resultado",
+      "pending": "Pendente",
+      "resultedTag": "Com resultado",
+      "eta": "Previsão {{eta}}",
+      "readyIn": "pronto em ~{{sec}}s",
+      "readyNow": "a finalizar…",
+      "orderedAt": "pedido há {{min}} min",
+      "resultedAt": "resultado há {{min}} min",
+      "progressAria": "Progresso do resultado de {{name}}",
+      "hint": "Os resultados abrem no separador Resultados à medida que cada exame é finalizado."
+    },
+    "treatments": {
+      "heading": "Tratamentos",
+      "subtitle": "Administre para alterar o doente — o monitor responde em tempo real.",
+      "administer": "Administrar",
+      "administered": "Administrado",
+      "administerAria": "Administrar {{name}}",
+      "administeredAria": "{{name}} administrado",
+      "route": "Via",
+      "givenAt": "administrado há {{min}} min",
+      "givenCount": "{{count}} administrados",
+      "empty": "Ainda não foram administrados tratamentos."
+    },
+    "results": {
+      "wnl": "Dentro dos limites normais",
+      "representativeImage": "Imagem representativa",
+      "syntheticNote": "Sem alteração específica do caso — reportado dentro dos limites normais.",
+      "timeline": "Pedido há {{ordered}} min → resultado há {{resulted}} min",
+      "etaLabel": "Tempo de resposta previsto {{eta}}",
+      "inProgress": "Em curso",
+      "eta": "Previsão {{eta}}",
+      "finalReport": "Relatório final",
+      "normalHeading": "Resultados adicionais (normais)",
+      "normalNote": "Os exames pedidos sem achado específico do caso são reportados aqui, dentro dos limites normais."
+    }
+  },
+  "patient": {
+    "avatar": {
+      "alt": "Retrato ilustrado de {{name}}. Apresentação: {{state}}.",
+      "synthetic": "Doente sintético",
+      "decorative": "Retrato ilustrado do doente"
+    }
+  },
+  "patientviewer": {
+    "expand": "Ampliar a vista do doente",
+    "title": "Doente — {{name}}",
+    "close": "Fechar",
+    "syntheticNote": "Doente sintético — não é um indivíduo real",
+    "photoLabel": "Fotografia do doente",
+    "signsLabel": "Sinais clínicos em tempo real",
+    "summaryLabel": "Sinais clínicos",
+    "reflectsLive": "Reflete a evolução dos sinais vitais em tempo real",
+    "vitalsLabel": "Sinais vitais atuais",
+    "signs": {
+      "stable": "Sem sofrimento agudo",
+      "distress": "Em sofrimento",
+      "cyanotic": "Cianótico",
+      "hypoxic": "Hipóxico",
+      "hypotensive": "Hipotenso",
+      "hypertensive": "Hipertenso",
+      "tachycardic": "Taquicárdico",
+      "bradycardic": "Bradicárdico",
+      "diaphoretic": "Sudorético",
+      "pale": "Pálido",
+      "febrile": "Febril",
+      "hypothermic": "Hipotérmico"
+    }
+  },
+  "profile": {
+    "signIn": {
+      "eyebrow": "Iniciar sessão",
+      "title": "Iniciar sessão no AcuDx",
+      "lede": "O AcuDx é um simulador de raciocínio clínico exclusivamente educativo. Inicie sessão através da sua instituição ou crie um perfil local para começar a praticar.",
+      "ssoHeading": "Início de sessão institucional",
+      "ssoNote": "O caminho de produção — ativado pela sua faculdade de medicina ou programa de formação.",
+      "sso": "Continuar com o SSO da instituição",
+      "ssoHint": "Início de sessão único SAML / OpenID Connect",
+      "lti": "Iniciar a partir do seu LMS (LTI 1.3)",
+      "ltiHint": "Moodle, Canvas ou o seu ambiente virtual de aprendizagem",
+      "productionBadge": "Produção",
+      "unavailableNote": "Disponível assim que a sua instituição ligar o AcuDx.",
+      "or": "ou",
+      "localHeading": "Continuar neste dispositivo",
+      "createCta": "Crie o seu perfil",
+      "createHint": "Configure um perfil local guardado apenas neste navegador.",
+      "continueAs": "Continuar como {{name}}",
+      "continueAsHint": "Retome o seu perfil guardado neste dispositivo.",
+      "switchProfile": "Usar um perfil diferente",
+      "eduNote": "Apenas para educação e avaliação clínica. Não se destina a cuidados a doentes reais e não é um dispositivo médico.",
+      "privacyNote": "O seu perfil local permanece neste navegador. Não é recolhida qualquer palavra-passe."
+    },
+    "onboarding": {
+      "eyebrow": "Crie o seu perfil",
+      "title": "Diga-nos quem é",
+      "lede": "Isto define o seu nome, papel e língua em todo o AcuDx. Pode alterá-lo a qualquer momento a partir da sua conta."
+    },
+    "account": {
+      "eyebrow": "Conta",
+      "title": "O seu perfil",
+      "lede": "Atualize como o AcuDx o identifica ou termine sessão neste dispositivo.",
+      "memberSince": "Perfil criado em {{date}}",
+      "signOut": "Terminar sessão"
+    },
+    "form": {
+      "fullName": "Nome completo",
+      "fullNamePlaceholder": "ex.: Dra. Elif Demir",
+      "fullNameError": "Introduza o seu nome completo.",
+      "role": "Papel",
+      "roleHint": "Define que interfaces o AcuDx lhe mostra.",
+      "roleError": "Selecione o seu papel.",
+      "institution": "Instituição",
+      "institutionPlaceholder": "ex.: Faculdade de Medicina da Universidade de Hacettepe",
+      "institutionError": "Introduza a sua instituição.",
+      "specialty": "Especialidade ou serviço",
+      "specialtyPlaceholder": "ex.: Medicina de urgência",
+      "specialtyHint": "Opcional — ajuda a adaptar as recomendações de casos.",
+      "language": "Língua preferida",
+      "languageHint": "Altera a língua da interface do AcuDx.",
+      "avatar": "Avatar",
+      "avatarHint": "Escolha um identicon — não é necessária fotografia.",
+      "avatarChoose": "Escolher o avatar {{name}}",
+      "create": "Criar perfil",
+      "save": "Guardar alterações",
+      "cancel": "Cancelar",
+      "saved": "Alterações guardadas."
+    },
+    "roles": {
+      "student": "Estudante de medicina",
+      "resident": "Interno",
+      "educator": "Docente",
+      "dean": "Diretor / administrador"
+    },
+    "languages": {
+      "en": "English",
+      "tr": "Türkçe"
+    }
+  },
+  "progress2": {
+    "streak": {
+      "logRep": "Registar a repetição de hoje",
+      "logged": "Registado para hoje",
+      "logHint": "Um caso curto mantém a sua sequência viva.",
+      "logAnnounce": "Repetição de hoje registada. Sequência agora de {{days}} dias.",
+      "protectedToday": "O dia de hoje está concluído. Até amanhã."
+    },
+    "mastery": {
+      "expand": "Mostrar o que moveu esta faixa",
+      "collapse": "Ocultar detalhes",
+      "toggleAria": "Detalhes de {{domain}}",
+      "movedByHeading": "O que moveu isto",
+      "nextHeading": "Para atingir {{band}}",
+      "unlockHeading": "Para desbloquear uma faixa",
+      "historyHeading": "Faixas recentes",
+      "evidenceHeading": "Evidências por detrás desta faixa",
+      "evidenceToday": "Hoje",
+      "evidenceAgo_one": "há {{count}} dia",
+      "evidenceAgo_other": "há {{count}} dias",
+      "practise": "Praticar esta lacuna",
+      "topBand": "Está na faixa mais alta. Mantenha-a estável para a conservar fiável."
+    },
+    "epa": {
+      "expand": "Mostrar a escada de confiança",
+      "collapse": "Ocultar a escada",
+      "ladderAria": "Escada de confiança para {{code}}, nível {{level}} de 5",
+      "current": "Está aqui",
+      "next": "Passo seguinte",
+      "atCeiling": "Nível mais alto atingido. Pode ajudar a supervisionar outros."
+    },
+    "badges": {
+      "filterAria": "Filtrar marcos",
+      "all": "Todos",
+      "earned": "Conquistados",
+      "inProgress": "Em curso",
+      "emptyEarned": "Ainda não há marcos conquistados nesta vista.",
+      "emptyInProgress": "Nada em curso neste momento."
+    },
+    "trajectory": {
+      "metricAria": "Escolha uma métrica para focar",
+      "metricGap": "Diferença de confiança",
+      "metricBrier": "Pontuação de Brier",
+      "focusHeading": "Sessão a sessão",
+      "sessionsAria": "Sessões, da mais antiga à mais recente. Use as teclas de seta esquerda e direita para inspecionar uma sessão.",
+      "sessionAria": "Sessão {{label}}, {{metric}} {{value}}",
+      "selected": "Sessão {{label}}",
+      "readoutGap": "{{value}}% de diferença de confiança",
+      "readoutBrier": "Brier {{value}}",
+      "sinceFirst": "Desde a sua primeira sessão",
+      "betterGap": "{{points}} pontos mais estreita",
+      "betterBrier": "{{value}} mais baixa",
+      "worse": "{{value}} mais alta",
+      "flat": "Ainda sem alteração"
+    },
+    "review": {
+      "start": "Iniciar revisão espaçada",
+      "resume": "Continuar revisão",
+      "sessionAria": "Sessão de revisão espaçada",
+      "progress": "Cartão {{current}} de {{total}}",
+      "promptLabel": "Estímulo de evocação",
+      "gradePrompt": "Como sentiu essa evocação?",
+      "gradeAria": "Avalie a sua evocação",
+      "gradeAgain": "Repetir",
+      "gradeHard": "Difícil",
+      "gradeGood": "Bom",
+      "gradeEasy": "Fácil",
+      "hintAgain": "Em branco",
+      "hintHard": "Trabalhoso",
+      "hintGood": "Evocado",
+      "hintEasy": "Imediato",
+      "previewLater": "Mais logo",
+      "previewDays_one": "{{count}} dia",
+      "previewDays_other": "{{count}} dias",
+      "keyboardHint": "Prima de 1 a 4 para avaliar sem o rato.",
+      "announce": "Avaliado como {{grade}}. {{schedule}}",
+      "scheduleAgain": "Este cartão volta mais tarde na sessão.",
+      "scheduleNext_one": "Próxima revisão em {{count}} dia, estabilidade agora de {{stability}} dias.",
+      "scheduleNext_other": "Próxima revisão em {{count}} dias, estabilidade agora de {{stability}} dias.",
+      "doneHeading": "Sessão concluída",
+      "doneBody_one": "Reviu {{count}} cartão. Cada um está agendado para regressar antes de o esquecer.",
+      "doneBody_other": "Reviu {{count}} cartões. Cada um está agendado para regressar antes de o esquecer.",
+      "doneNextDue_one": "O próximo cartão vence dentro de {{count}} dia.",
+      "doneNextDue_other": "O próximo cartão vence dentro de {{count}} dias.",
+      "doneNoneDue": "Não há mais nada por vencer. Volte amanhã.",
+      "again": "Rever novamente",
+      "close": "Fechar revisão",
+      "filterAria": "Filtrar os cartões de revisão",
+      "all": "Todos",
+      "due": "A vencer",
+      "learning": "Em aprendizagem",
+      "scheduled": "Agendados",
+      "empty": "Nenhum cartão corresponde a este filtro.",
+      "allClear": "Tudo em dia. Não há cartões por vencer neste momento.",
+      "justGraded": "Acabado de rever"
+    }
+  },
+  "progress3": {
+    "snapshot": {
+      "level": "Nível",
+      "streak": "Sequência",
+      "calibrationGap": "Diferença de calibração",
+      "reviewsDue": "Revisões por vencer",
+      "gapTrend": "{{points}} pp mais estreita",
+      "streakUnit": "dias",
+      "reviewsUnit": "cartões"
+    },
+    "review": {
+      "tableLabel": "Fila de revisão",
+      "tableCaption": "Fila de revisão por repetição espaçada com evocação, estabilidade e data de vencimento por cartão.",
+      "col": {
+        "prompt": "Estímulo",
+        "domain": "Domínio",
+        "recall": "Evocação",
+        "stability": "Estabilidade",
+        "due": "Vencimento",
+        "state": "Estado"
+      }
+    }
+  },
+  "home": {
+    "snapshotEmpty": "Conclua um encontro para construir o seu resumo de calibração."
+  },
+  "progress": {
+    "mastery": {
+      "empty": "Conclua um encontro para começar a mapear o seu domínio nas várias áreas de competência."
+    },
+    "trajectoryEmptyHint": "A sua tendência de calibração aparece aqui assim que terminar um encontro."
+  },
+  "rooms": {
+    "join": {
+      "title": "Entrar com um código",
+      "subtitle": "Tem um código de sala de um colega de equipa? Introduza-o para ocupar um lugar livre.",
+      "label": "Código da sala",
+      "placeholder": "Código da sala, ex.: ACS-7K2",
+      "action": "Entrar",
+      "notFound": "Nenhuma sala aberta corresponde a esse código. Verifique-o e tente novamente.",
+      "or": "ou"
+    },
+    "card": {
+      "code": "Código",
+      "copyCode": "Copiar o código da sala",
+      "copied": "Copiado"
+    },
+    "create": {
+      "localeLabel": "Língua do encontro",
+      "localeHint": "A língua partilhada do roleplay para toda a sala."
+    },
+    "phase": {
+      "startSession": "Iniciar sessão",
+      "endSession": "Terminar e fazer o debriefing",
+      "reopen": "Reabrir a sala",
+      "startedNote": "O relógio da equipa está a correr. Os papéis estão restritos aos seus âmbitos."
+    },
+    "invite": {
+      "label": "Código de convite",
+      "copy": "Copiar o código de convite",
+      "copied": "Copiado",
+      "hint": "Partilhe este código para que um colega de equipa possa ocupar um lugar livre."
+    },
+    "inroom": {
+      "takeThisSeat": "Ocupar lugar",
+      "takeSeatAria": "Ocupar o lugar de {{role}}",
+      "leaveSeat": "Deixar o lugar",
+      "leaveSeatAria": "Deixar o lugar de {{role}}",
+      "ready": "Pronto",
+      "notReady": "Não pronto",
+      "toggleReadyAria": "Alternar pronto para o lugar de {{role}}",
+      "makeLead": "Tornar líder da equipa",
+      "makeLeadAria": "Dar a função de líder da equipa ao {{role}}",
+      "giveFloor": "Dar a palavra",
+      "giveFloorAria": "Dar a palavra ao {{role}}",
+      "handRaised": "Mão levantada",
+      "hasFloor": "Tem a palavra",
+      "seatControlsLabel": "Controlos do lugar",
+      "backfillInline": "Preenchimento por IA",
+      "backfillInlineAria": "Preencher os lugares vazios com IA",
+      "requestFloorAgain": "A pedir a palavra",
+      "lowerHand": "Baixar a mão",
+      "youRaised": "A sua mão está levantada. O líder da equipa dar-lhe-á a palavra.",
+      "youHaveFloor": "Tem a palavra",
+      "passFloor": "Passar a palavra",
+      "floorControlsLabel": "Controlo da palavra e da vez",
+      "observer": "Observador",
+      "observerScope": "Está a observar esta sala. Ocupe um lugar para nela atuar.",
+      "delegatedNote": "As delegações e os pedidos são publicados no painel da equipa e registados como evidência.",
+      "sbarPosted": "Escalada publicada no painel",
+      "youClosedLoop": "Confirmou este ciclo"
+    },
+    "debrief": {
+      "live": "Em tempo real desta sessão",
+      "loopsClosed": "Confirmações de ciclo fechado que completou",
+      "loopsValue": "{{closed}} de {{total}}",
+      "pending": "As marcas abaixo são ilustrativas até a sessão terminar."
+    }
+  },
+  "rooms3": {
+    "eyebrow": "Multijogador",
+    "card": {
+      "seats": "Lugares",
+      "live": "Em tempo real"
+    }
+  },
+  "authoring3": {
+    "eyebrow": "Fluxo de casos",
+    "draft": {
+      "factsLabel": "Factos rascunhados",
+      "reviewLabel": "A aguardar revisão"
+    },
+    "monitor": {
+      "tableLabel": "Casos publicados e monitorizados",
+      "colCase": "Caso",
+      "colLocales": "Idiomas",
+      "colEncounters": "Encontros",
+      "colStatus": "Estado",
+      "colAction": "Ação"
+    }
+  },
+  "roomscollab": {
+    "roles": {
+      "doctor": "Médico",
+      "nurse": "Enfermeiro",
+      "paramedic": "Paramédico"
+    },
+    "acting": {
+      "as": "A atuar como {{role}}",
+      "switch": "Mudar de papel",
+      "actAs": "Atuar como {{role}}",
+      "hint": "Um navegador, toda a equipa — troque de lugar para desempenhar cada papel sobre o mesmo doente.",
+      "youAreAi": "Este papel é controlado por IA. Assuma-o para o desempenhar você mesmo.",
+      "label": "Papel a desempenhar"
+    },
+    "scope": {
+      "doctor": "Lidere a investigação: colha a anamnese, peça exames e tratamentos, assuma o diagnóstico e o plano.",
+      "nurse": "Conduza o trabalho à cabeceira: execute a fila de tarefas, administre a medicação, monitorize a resposta em tempo real, escale.",
+      "paramedic": "Defina o cenário: dê o quadro pré-hospitalar e uma passagem estruturada ATMIST/SBAR."
+    },
+    "tabs": {
+      "workspace": "Espaço de trabalho",
+      "interview": "Entrevista",
+      "prehospital": "Pré-hospitalar",
+      "orders": "Pedidos e tarefas",
+      "floor": "Painel da equipa",
+      "debrief": "Debriefing"
+    },
+    "orders": {
+      "title": "Pedidos e passagem",
+      "subtitle": "O médico pede; o pedido torna-se uma tarefa na fila do papel executor.",
+      "compose": "Efetuar um pedido",
+      "medications": "Medicação e tratamentos",
+      "diagnostics": "Exames complementares",
+      "place": "Pedir",
+      "placeAria": "Pedir {{name}}",
+      "doctorOnly": "Só o médico pode efetuar pedidos. Mude para o lugar de médico para pedir em nome da equipa.",
+      "handsTo": "Entrega ao {{role}}",
+      "reason": "Motivo (opcional)"
+    },
+    "task": {
+      "queueTitle": "Fila de tarefas",
+      "queueSubtitle": "Pedidos entregues à equipa, com estado e um tempo de resposta realista.",
+      "empty": "Ainda não há tarefas. Os pedidos que o médico efetuar chegam aqui como trabalho para a equipa.",
+      "mineEmpty": "A sua fila está limpa. Os novos pedidos que lhe forem atribuídos aparecem aqui.",
+      "orderedBy": "Pedido por {{role}}",
+      "for": "Para {{role}}",
+      "eta": "Previsão {{eta}}",
+      "claim": "Assumir",
+      "claimAria": "Assumir {{name}}",
+      "claimedBy": "Assumido por {{role}}",
+      "administer": "Administrar",
+      "administerAria": "Administrar {{name}}",
+      "collect": "Colher e enviar",
+      "collectAria": "Colher e enviar {{name}}",
+      "doneBy": "Executado por {{role}}",
+      "resultPending": "No laboratório — a processar o resultado",
+      "resultReady": "Resultado disponível",
+      "notYours": "Mude para o lugar de {{role}} para executar esta tarefa.",
+      "status": {
+        "pending": "Pendente",
+        "claimed": "Assumido",
+        "done": "Concluído"
+      },
+      "kind": {
+        "medication": "Medicação",
+        "diagnostic": "Exame complementar",
+        "intervention": "Intervenção"
+      }
+    },
+    "vitals": {
+      "live": "Em tempo real",
+      "responding": "A responder ao tratamento",
+      "triage": "Triagem",
+      "sharedNote": "Um doente partilhado — todos os papéis leem o mesmo monitor em tempo real."
+    },
+    "status": {
+      "improving": "A melhorar",
+      "stable": "Estável",
+      "deteriorating": "A deteriorar",
+      "critical": "Crítico"
+    },
+    "handoff": {
+      "title": "Passagem",
+      "pass": "Passar ao {{role}}",
+      "passAria": "Passar o controlo ao {{role}}",
+      "timeline": "Cronologia das passagens",
+      "empty": "Ainda não há passagens. Passe o controlo para registar uma aqui.",
+      "arrow": "{{from}} para {{role}}",
+      "holds": "O {{role}} detém o controlo"
+    },
+    "paramedic": {
+      "title": "Passagem pré-hospitalar",
+      "desc": "Foi você que trouxe o doente. Dê à equipa o quadro do cenário e a cronologia e depois passe ao médico.",
+      "give": "Dar a passagem ATMIST",
+      "given": "Passagem entregue à equipa."
+    },
+    "nurse": {
+      "title": "Cabeceira e fila de tarefas",
+      "desc": "Execute os pedidos do médico, administre a medicação e observe o monitor partilhado a responder."
+    },
+    "doctor": {
+      "title": "Investigação e pedidos",
+      "desc": "Colha a anamnese, peça exames e tratamentos para a equipa e assuma o plano."
+    },
+    "debrief": {
+      "loopTitle": "Ciclo do pedido à execução",
+      "ordersPlaced": "Pedidos efetuados",
+      "tasksExecuted": "Tarefas executadas",
+      "medsGiven": "Medicação administrada",
+      "handoffs": "Passagens registadas",
+      "byHuman": "por si",
+      "byAi": "por IA",
+      "note": "O ciclo da equipa acima é obtido a partir do que realmente aconteceu nesta sessão: pedidos do médico, execuções do enfermeiro e a resposta em tempo real do doente."
+    }
+  },
+  "routeFallback": {
+    "loading": "A carregar a página"
+  },
+  "scopeGuard": {
+    "composer": {
+      "label": "Pergunte ao doente pelas suas próprias palavras",
+      "placeholder": "Escreva uma pergunta ao doente e depois prima Enter",
+      "send": "Enviar",
+      "hint": "A sua mensagem é analisada quanto ao âmbito e à segurança antes de o doente a ouvir."
+    },
+    "focus": {
+      "onTask": "Na tarefa",
+      "offTaskCount_one": "{{count}} fora do tema",
+      "offTaskCount_other": "{{count}} fora do tema",
+      "tooltip": "Quantas perguntas se desviaram do caso. As rondas fora do tema e as que procuram a resposta não fazem avançar o quadro clínico."
+    },
+    "youAsked": "Perguntou",
+    "dismiss": "Dispensar este aviso",
+    "offTopic": {
+      "chip": "Fora do tema · não faz avançar",
+      "reply": "Preferia falar sobre o motivo por que vim cá hoje, doutor.",
+      "note": "Isto não fez avançar o quadro clínico."
+    },
+    "answerSeeking": {
+      "chip": "Dentro da personagem · sem resposta dada",
+      "reply": "Sinceramente não sei o que se passa. É isso que espero que descubra.",
+      "note": "A simulação não lhe vai dar o diagnóstico. Investigue-o."
+    },
+    "injection": {
+      "chip": "Mensagem bloqueada",
+      "note": "Isto pareceu uma tentativa de alterar as instruções do assistente, pelo que não foi enviado ao doente."
+    },
+    "unsafe": {
+      "title": "Vamos parar um momento",
+      "chip": "Apoio",
+      "note": "Se está a passar por dificuldades, contacte alguém de confiança ou uma linha de apoio local. Podemos pausar o caso sempre que precisar."
+    }
+  },
+  "select2": {
+    "cases": {
+      "generator": {
+        "eyebrow": "Gerador de casos"
+      },
+      "table": {
+        "case": "Caso",
+        "code": "Código",
+        "acuity": "Gravidade",
+        "time": "Tempo est.",
+        "action": "Iniciar"
+      }
+    },
+    "start": {
+      "mode": {
+        "eyebrow": "Sessão"
+      },
+      "role": {
+        "eyebrow": "O seu lugar"
+      },
+      "complaint": {
+        "eyebrow": "Apresentação"
+      },
+      "tune": {
+        "eyebrow": "Calibração"
+      },
+      "review": {
+        "eyebrow": "Resumo da sessão",
+        "mode": "Modo",
+        "role": "Papel",
+        "presentation": "Apresentação",
+        "on": "Ligado",
+        "off": "Desligado"
+      },
+      "lang": {
+        "en": "Inglês",
+        "tr": "Turco"
+      }
+    }
+  },
+  "status": {
+    "pill": {
+      "online": "Backend em tempo real online",
+      "offline": "Backend em tempo real offline",
+      "checking": "A verificar o backend"
+    },
+    "boundary": {
+      "title": "Este ecrã encontrou um problema",
+      "body": "Um erro inesperado interrompeu a página. O seu progresso e a transcrição estão seguros. Recarregue para continuar de onde parou.",
+      "reload": "Recarregar a página"
+    }
+  },
+  "treatments": {
+    "timeline": "{{name}} administrado",
+    "eventLabel": "Tratamento",
+    "appropriateness": {
+      "indicated": "Indicado",
+      "contraindicated": "Contraindicado",
+      "neutral": "Neutro"
+    }
+  }
+}
