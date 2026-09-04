@@ -30,16 +30,11 @@ export interface LevelState {
   xpTotal: number;
 }
 
-export const levelState: LevelState = {
-  level: 6,
-  title: {
-    en: "Calibrating clinician",
-    tr: "Kalibrasyonunu geliştiren hekim",
-  },
-  xpIntoLevel: 340,
-  xpForNextLevel: 500,
-  xpTotal: 3140,
-};
+/**
+ * Level/XP is now DERIVED from real recorded encounters — see
+ * `useLevelState()` in `src/state/progressStore.ts`. A new learner starts at
+ * level 1 with no XP; the type stays here for the derivation to satisfy.
+ */
 
 /**
  * Recent XP awards — each names *why* it was earned so XP reads as competence
@@ -61,38 +56,7 @@ export interface XpAward {
   daysAgo: number;
 }
 
-export const recentXp: XpAward[] = [
-  {
-    id: "xp-1",
-    reason: "calibrationTightened",
-    amount: 60,
-    detail: {
-      en: "Reasoning: confidence-performance gap narrowed to 17%",
-      tr: "Klinik akıl yürütme: güven-performans farkı %17'ye geriledi",
-    },
-    daysAgo: 0,
-  },
-  {
-    id: "xp-2",
-    reason: "gapClosed",
-    amount: 45,
-    detail: {
-      en: "Ordered a 12-lead ECG before management in 3 encounters running",
-      tr: "Üst üste 3 vakada tedaviden önce 12 derivasyonlu EKG istendi",
-    },
-    daysAgo: 2,
-  },
-  {
-    id: "xp-3",
-    reason: "bandUp",
-    amount: 80,
-    detail: {
-      en: "History-taking moved from Proficient to Strong",
-      tr: "Anamnez alma Yeterli'den Güçlü'ye yükseldi",
-    },
-    daysAgo: 5,
-  },
-];
+/** Recent XP awards are derived from real records — see `useRecentXp()`. */
 
 /* -------------------------------------------------------------------------- */
 /* Forgiving streak — freeze / grace days, built for a high-burnout cohort    */
@@ -129,23 +93,7 @@ export interface StreakDay {
   state: StreakDayState;
 }
 
-export const streakState: StreakState = {
-  currentDays: 9,
-  bestDays: 14,
-  freezesLeft: 2,
-  freezesTotal: 3,
-  graceActive: true,
-  todayDone: false,
-  week: [
-    { key: "mon", state: "practised" },
-    { key: "tue", state: "practised" },
-    { key: "wed", state: "freeze" },
-    { key: "thu", state: "practised" },
-    { key: "fri", state: "practised" },
-    { key: "sat", state: "practised" },
-    { key: "sun", state: "today" },
-  ],
-};
+/** The streak is derived from real recorded encounter dates — see `useStreakState()`. */
 
 /* -------------------------------------------------------------------------- */
 /* Mastery map — 6 competency domains x banded level, with per-domain trend   */
@@ -171,51 +119,7 @@ export interface MasteryDomain {
   evidenceCount: number;
 }
 
-export const masteryDomains: MasteryDomain[] = [
-  {
-    key: "history",
-    axis: "clinical",
-    band: "strong",
-    deltaBand: 1,
-    evidenceCount: 12,
-  },
-  {
-    key: "exam",
-    axis: "clinical",
-    band: "proficient",
-    deltaBand: 0,
-    evidenceCount: 9,
-  },
-  {
-    key: "reasoning",
-    axis: "clinical",
-    band: "developing",
-    deltaBand: 1,
-    evidenceCount: 11,
-  },
-  {
-    key: "communication",
-    axis: "communication",
-    band: "strong",
-    deltaBand: 0,
-    evidenceCount: 10,
-  },
-  {
-    key: "management",
-    axis: "clinical",
-    band: "developing",
-    deltaBand: 0,
-    evidenceCount: 8,
-  },
-  {
-    key: "professionalism",
-    axis: "communication",
-    // Below the reliability threshold — surfaced as "not enough data yet".
-    band: "withheld",
-    deltaBand: 0,
-    evidenceCount: 3,
-  },
-];
+/** The mastery map is derived from real records — see `useMasteryDomains()`. */
 
 /* -------------------------------------------------------------------------- */
 /* EPAs — entrustable professional activities, entrustment level, not scored  */
@@ -404,19 +308,9 @@ export interface CalibrationSession {
 }
 
 /**
- * Eight recent sessions. Both the gap and the Brier score trend downward,
- * which is the core private "dopamine" of the screen (docs §5.1).
+ * The per-session gap + Brier series is derived from real recorded encounters —
+ * see `useCalibrationSessions()`. Empty until the first encounter is completed.
  */
-export const calibrationSessions: CalibrationSession[] = [
-  { label: "S-1", gap: 0.34, brier: 0.29 },
-  { label: "S-2", gap: 0.31, brier: 0.27 },
-  { label: "S-3", gap: 0.29, brier: 0.26 },
-  { label: "S-4", gap: 0.26, brier: 0.24 },
-  { label: "S-5", gap: 0.24, brier: 0.22 },
-  { label: "S-6", gap: 0.22, brier: 0.21 },
-  { label: "S-7", gap: 0.19, brier: 0.19 },
-  { label: "S-8", gap: 0.17, brier: 0.18 },
-];
 
 /** Per-domain calibration gap trend (each a small-multiple sparkline). */
 export interface DomainTrend {
@@ -425,13 +319,7 @@ export interface DomainTrend {
   gaps: number[];
 }
 
-export const domainTrends: DomainTrend[] = [
-  { domain: "history", gaps: [0.22, 0.2, 0.17, 0.14, 0.11] },
-  { domain: "exam", gaps: [0.19, 0.2, 0.18, 0.17, 0.16] },
-  { domain: "reasoning", gaps: [0.34, 0.31, 0.27, 0.23, 0.19] },
-  { domain: "communication", gaps: [0.16, 0.14, 0.13, 0.12, 0.1] },
-  { domain: "management", gaps: [0.3, 0.29, 0.27, 0.26, 0.24] },
-];
+/** Per-domain gap trends are derived from real records — see `useDomainTrends()`. */
 
 /* -------------------------------------------------------------------------- */
 /* Spaced-repetition queue — FSRS-style due cards from past gaps, each cited   */

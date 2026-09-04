@@ -22,14 +22,13 @@ import {
 import { CalibrationPlot } from "@/components";
 import { CaseListRow } from "@/components/home/CaseListRow";
 import { ActivityRow } from "@/components/home/ActivityRow";
+import { recommendedCases, type DashboardStat } from "@/data/mock";
 import {
-  calibrationPoints,
-  calibrationTrajectory,
-  dashboardStats,
-  recentFeedback,
-  recommendedCases,
-  type DashboardStat,
-} from "@/data/mock";
+  useCalibrationPoints,
+  useCalibrationTrajectory,
+  useDashboardStats,
+  useRecentActivity,
+} from "@/state/progressStore";
 import { useLang } from "@/lib/useLang";
 import { useReveal, useStagger } from "@/lib/motion";
 
@@ -44,6 +43,11 @@ export function HomePage() {
   const { t } = useTranslation();
   const lang = useLang();
   const displayName = useDisplayName();
+  // Real, earned session data (empty for a new user → honest empty states).
+  const calibrationPoints = useCalibrationPoints();
+  const calibrationTrajectory = useCalibrationTrajectory();
+  const dashboardStats = useDashboardStats();
+  const recentFeedback = useRecentActivity();
   const header = useReveal();
   const strip = useReveal(0.06);
   const body = useReveal(0.12);
@@ -160,7 +164,11 @@ export function HomePage() {
               <h2 className="text-sm font-semibold tracking-tight text-fg">
                 {t("home.snapshotHeading")}
               </h2>
-              <p className="mt-1 text-sm text-muted">{t("home.snapshotSub")}</p>
+              <p className="mt-1 text-sm text-muted">
+                {calibrationPoints.length > 0
+                  ? t("home.snapshotSub")
+                  : t("home.snapshotEmpty")}
+              </p>
               <div className="mt-4">
                 <CalibrationPlot
                   points={calibrationPoints}
