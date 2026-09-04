@@ -23,9 +23,17 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 
-import { PageContainer } from "@/components/shell";
-import { Button, Card, Badge, Switch } from "@/components/ui";
-import { LanguageSwitcher } from "@/components/shell";
+import { PageContainer, PageHeader, LanguageSwitcher } from "@/components/shell";
+import {
+  Button,
+  Card,
+  Badge,
+  Switch,
+  Divider,
+  SectionLabel,
+  DescriptionList,
+  KeyValue,
+} from "@/components/ui";
 import { useEntry, useLang } from "@/lib/useLang";
 import { cn } from "@/lib/cn";
 import {
@@ -67,8 +75,42 @@ export interface StartSelection {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Selectable card                                                             */
+/* Selectable card — one radio, three densities so the steps never look alike  */
 /* -------------------------------------------------------------------------- */
+
+type ChoiceLayout = "stack" | "row" | "tile";
+
+function SelectMark({
+  selected,
+  badge,
+  size = "md",
+}: {
+  selected: boolean;
+  badge?: string;
+  size?: "sm" | "md";
+}) {
+  if (selected) {
+    return (
+      <span
+        className={cn(
+          "grid shrink-0 place-items-center rounded-full bg-brand text-white",
+          size === "sm" ? "h-4 w-4" : "h-5 w-5",
+        )}
+        aria-hidden
+      >
+        <Check weight="bold" className={size === "sm" ? "h-2.5 w-2.5" : "h-3 w-3"} />
+      </span>
+    );
+  }
+  if (badge) {
+    return (
+      <Badge tone="neutral" variant="outline" className="shrink-0">
+        {badge}
+      </Badge>
+    );
+  }
+  return null;
+}
 
 function ChoiceCard({
   icon: IconCmp,
@@ -79,6 +121,7 @@ function ChoiceCard({
   badge,
   onSelect,
   ariaLabel,
+  layout,
 }: {
   icon: Icon;
   title: string;
@@ -88,7 +131,21 @@ function ChoiceCard({
   badge?: string;
   onSelect: () => void;
   ariaLabel: string;
+  layout: ChoiceLayout;
 }) {
+  const shell = cn(
+    "group relative w-full rounded-card border text-left",
+    "transition-[background-color,border-color] duration-150 ease-out",
+    "focus-visible:outline-none",
+    disabled
+      ? "cursor-not-allowed border-border bg-bg-subtle opacity-70"
+      : selected
+        ? "border-brand bg-brand-tint"
+        : "border-border bg-surface hover:border-border-strong hover:bg-bg-subtle",
+  );
+
+  const iconTone = selected ? "text-brand" : "text-subtle";
+
   return (
     <button
       type="button"
@@ -98,63 +155,99 @@ function ChoiceCard({
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "group relative flex min-h-24 w-full flex-col gap-1.5 rounded-card border p-4 text-left",
-        "transition-[background-color,border-color,box-shadow] duration-200 ease-out",
-        "focus-visible:outline-none",
-        disabled
-          ? "cursor-not-allowed border-border bg-bg-subtle opacity-70"
-          : selected
-            ? "border-brand bg-brand-tint shadow-soft"
-            : "border-border bg-surface hover:border-brand/40 hover:bg-bg-subtle",
+        shell,
+        layout === "stack" && "flex min-h-[7.75rem] flex-col gap-3 p-4",
+        layout === "row" && "grid grid-cols-[auto_1fr_auto] items-start gap-3 p-3.5",
+        layout === "tile" && "flex flex-col gap-1.5 p-3",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <span
-          className={cn(
-            "grid h-9 w-9 shrink-0 place-items-center rounded-control transition-colors duration-200",
-            selected
-              ? "bg-brand text-white"
-              : "bg-brand-tint text-brand group-hover:bg-brand/15",
-          )}
-        >
-          <IconCmp weight="bold" className="h-5 w-5" aria-hidden />
-        </span>
-        {selected ? (
-          <span
-            className="grid h-5 w-5 place-items-center rounded-full bg-brand text-white"
+      {layout === "stack" ? (
+        <>
+          <div className="flex items-start justify-between">
+            <span
+              className={cn(
+                "grid h-10 w-10 place-items-center rounded-control border transition-colors duration-150",
+                selected
+                  ? "border-brand/40 bg-brand-tint text-brand"
+                  : "border-border text-subtle group-hover:border-border-strong",
+              )}
+            >
+              <IconCmp weight="bold" className="h-5 w-5" aria-hidden />
+            </span>
+            <SelectMark selected={selected} badge={badge} />
+          </div>
+          <div className="mt-auto flex flex-col gap-1">
+            <span className="text-[0.9375rem] font-semibold text-fg">
+              {title}
+            </span>
+            <span className="text-sm leading-relaxed text-muted">{body}</span>
+          </div>
+        </>
+      ) : null}
+
+      {layout === "row" ? (
+        <>
+          <IconCmp
+            weight="bold"
+            className={cn("mt-0.5 h-5 w-5 shrink-0", iconTone)}
             aria-hidden
-          >
-            <Check weight="bold" className="h-3 w-3" />
+          />
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-sm font-semibold text-fg">{title}</span>
+            <span className="text-xs leading-relaxed text-muted">{body}</span>
           </span>
-        ) : badge ? (
-          <Badge tone="neutral">{badge}</Badge>
-        ) : null}
-      </div>
-      <span className="text-sm font-semibold text-fg">{title}</span>
-      <span className="text-xs leading-relaxed text-muted">{body}</span>
+          <SelectMark selected={selected} badge={badge} />
+        </>
+      ) : null}
+
+      {layout === "tile" ? (
+        <>
+          <div className="flex items-center gap-2">
+            <IconCmp
+              weight="bold"
+              className={cn("h-4 w-4 shrink-0", iconTone)}
+              aria-hidden
+            />
+            <span className="text-sm font-semibold text-fg">{title}</span>
+            <span className="ml-auto">
+              <SelectMark selected={selected} badge={badge} size="sm" />
+            </span>
+          </div>
+          <span className="text-xs leading-relaxed text-muted">{body}</span>
+        </>
+      ) : null}
     </button>
   );
 }
 
-function SectionHeading({
+/* -------------------------------------------------------------------------- */
+/* Step heading — numbered step preserved, rendered through SectionLabel       */
+/* -------------------------------------------------------------------------- */
+
+function StepHeading({
+  id,
   step,
+  eyebrow,
   title,
   hint,
 }: {
+  id: string;
   step: number;
+  eyebrow: string;
   title: string;
   hint: string;
 }) {
   return (
-    <div className="flex items-baseline gap-2.5">
-      <span
-        className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-tint font-mono text-xs font-semibold text-brand"
-        aria-hidden
-      >
-        {step}
-      </span>
+    <div className="flex flex-col gap-1.5">
+      <SectionLabel>
+        <span className="tnum text-brand">{String(step).padStart(2, "0")}</span>
+        <span aria-hidden className="mx-1 text-border-strong">
+          /
+        </span>
+        <span>{eyebrow}</span>
+      </SectionLabel>
       <div>
-        <h2 className="text-base font-semibold tracking-tight text-fg">
+        <h2 id={id} className="text-lg font-semibold tracking-tight text-fg">
           {title}
         </h2>
         <p className="text-sm text-muted">{hint}</p>
@@ -169,10 +262,12 @@ function SectionHeading({
 
 /**
  * StartPage — the onboarding / session setup (docs/design/01 Journey 1.3-1.5).
- * Choose the session mode, the participant role, a chief complaint (or a random
- * draw), the difficulty, and whether guidance starts on; then begin the
- * encounter. The chosen constraints ride to /encounter via router state and the
- * workspace generates a matching case (or the curated seed for a random draw).
+ * Four numbered steps choose the session mode, the participant role, a chief
+ * complaint (or a random draw), and the calibration (difficulty, language,
+ * guidance). Each step is deliberately a different density — hero mode cards,
+ * a compact role list, small presentation tiles, and a real control panel — so
+ * the wizard never reads as four identical grids. The chosen constraints ride
+ * to /encounter via router state; the workspace generates a matching case.
  */
 export function StartPage() {
   const { t } = useTranslation();
@@ -204,6 +299,11 @@ export function StartPage() {
   const [guidance, setGuidance] = useState(true);
 
   const difficultyLabel = DIFFICULTY_LABELS[difficulty][lang];
+  const modeLabel = MODE_OPTIONS.find((m) => m.id === mode)?.label[lang] ?? "";
+  const roleLabel = ROLE_OPTIONS.find((r) => r.id === role)?.label[lang] ?? "";
+  const complaintLabel =
+    CHIEF_COMPLAINT_OPTIONS.find((c) => c.id === chiefComplaint)?.label[lang] ??
+    CHIEF_COMPLAINT_OPTIONS[0].label[lang];
 
   function begin() {
     const selection: StartSelection = {
@@ -217,27 +317,26 @@ export function StartPage() {
   }
 
   return (
-    <PageContainer className="flex flex-col gap-9">
+    <PageContainer className="flex flex-col gap-10">
       {/* Header */}
-      <motion.header {...header} className="max-w-3xl">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted">
-          <span className="gradient-mark h-1.5 w-1.5 rounded-full" aria-hidden />
-          {t("start.eyebrow")}
-        </span>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
-          {t("start.title")}
-        </h1>
-        <p className="mt-3 max-w-2xl text-lg text-muted">{t("start.subtitle")}</p>
-      </motion.header>
+      <motion.div {...header}>
+        <PageHeader
+          eyebrow={t("start.eyebrow")}
+          title={t("start.title")}
+          description={t("start.subtitle")}
+        />
+      </motion.div>
 
-      {/* Step 1 — Mode */}
+      {/* Step 1 — Mode (hero cards) */}
       <motion.section
         {...s1}
         aria-labelledby="start-mode-heading"
         className="flex flex-col gap-4"
       >
-        <SectionHeading
+        <StepHeading
+          id="start-mode-heading"
           step={1}
+          eyebrow={t("select2.start.mode.eyebrow")}
           title={t("start.mode.heading")}
           hint={t("start.mode.hint")}
         />
@@ -249,6 +348,7 @@ export function StartPage() {
           {MODE_OPTIONS.map((m) => (
             <ChoiceCard
               key={m.id}
+              layout="stack"
               icon={MODE_ICON[m.icon]}
               title={m.label[lang]}
               body={m.description[lang]}
@@ -262,14 +362,16 @@ export function StartPage() {
         </div>
       </motion.section>
 
-      {/* Step 2 — Role */}
+      {/* Step 2 — Role (compact list) */}
       <motion.section
         {...s2}
         aria-labelledby="start-role-heading"
         className="flex flex-col gap-4"
       >
-        <SectionHeading
+        <StepHeading
+          id="start-role-heading"
           step={2}
+          eyebrow={t("select2.start.role.eyebrow")}
           title={t("start.role.heading")}
           hint={t("start.role.hint")}
         />
@@ -281,6 +383,7 @@ export function StartPage() {
           {ROLE_OPTIONS.map((r) => (
             <ChoiceCard
               key={r.id}
+              layout="row"
               icon={ROLE_ICON[r.icon]}
               title={r.label[lang]}
               body={r.scope[lang]}
@@ -294,32 +397,34 @@ export function StartPage() {
         </div>
       </motion.section>
 
-      {/* Step 3 — Chief complaint */}
+      {/* Step 3 — Chief complaint (small tiles) */}
       <motion.section
         {...s3}
         aria-labelledby="start-cc-heading"
         className="flex flex-col gap-4"
       >
-        <SectionHeading
+        <StepHeading
+          id="start-cc-heading"
           step={3}
+          eyebrow={t("select2.start.complaint.eyebrow")}
           title={t("start.complaint.heading")}
           hint={t("start.complaint.hint")}
         />
         <div
           role="radiogroup"
           aria-label={t("start.complaint.heading")}
-          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3"
         >
           {CHIEF_COMPLAINT_OPTIONS.map((c) => {
             const key = c.id ?? "random";
-            const selected = chiefComplaint === c.id;
             return (
               <ChoiceCard
                 key={key}
+                layout="tile"
                 icon={CC_ICON[c.icon]}
                 title={c.label[lang]}
                 body={c.hint[lang]}
-                selected={selected}
+                selected={chiefComplaint === c.id}
                 onSelect={() => setChiefComplaint(c.id)}
                 ariaLabel={c.label[lang]}
               />
@@ -328,18 +433,20 @@ export function StartPage() {
         </div>
       </motion.section>
 
-      {/* Step 4 — Difficulty + language + guidance */}
+      {/* Step 4 — Calibration (real controls + a structured summary) */}
       <motion.section
         {...s4}
         aria-labelledby="start-tune-heading"
         className="flex flex-col gap-4"
       >
-        <SectionHeading
+        <StepHeading
+          id="start-tune-heading"
           step={4}
+          eyebrow={t("select2.start.tune.eyebrow")}
           title={t("start.tune.heading")}
           hint={t("start.tune.hint")}
         />
-        <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,320px)]">
+        <div className="grid gap-4 lg:grid-cols-[1.35fr_minmax(0,1fr)]">
           {/* Difficulty dial */}
           <Card padding="lg" className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
@@ -350,7 +457,7 @@ export function StartPage() {
                 {t("start.difficulty.label")}
               </label>
               <span className="inline-flex items-center gap-2">
-                <span className="font-mono text-sm font-semibold text-fg">
+                <span className="tnum font-mono text-sm font-semibold text-fg">
                   {difficulty}
                 </span>
                 <Badge tone="brand">{difficultyLabel}</Badge>
@@ -376,20 +483,26 @@ export function StartPage() {
               <span>{DIFFICULTY_LABELS[1][lang]}</span>
               <span>{DIFFICULTY_LABELS[5][lang]}</span>
             </div>
-            <p className="mt-1 flex items-start gap-1.5 text-xs text-muted">
-              <Info weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+            <p className="mt-1 flex items-start gap-1.5 border-t border-border pt-3 text-xs text-muted">
+              <Info
+                weight="bold"
+                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle"
+                aria-hidden
+              />
               {t("start.difficulty.forgiveness")}
             </p>
           </Card>
 
-          {/* Language + guidance */}
-          <div className="flex flex-col gap-3">
-            <Card padding="md" className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-control bg-brand-tint text-brand">
-                  <Translate weight="bold" className="h-4.5 w-4.5" aria-hidden />
-                </span>
-                <span>
+          {/* Language + guidance — real controls, no icon-chip squares */}
+          <Card padding="md" className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-3 py-1.5">
+              <span className="flex min-w-0 items-start gap-2">
+                <Translate
+                  weight="bold"
+                  className="mt-0.5 h-4 w-4 shrink-0 text-subtle"
+                  aria-hidden
+                />
+                <span className="min-w-0">
                   <span className="block text-sm font-medium text-fg">
                     {t("start.language.label")}
                   </span>
@@ -399,14 +512,18 @@ export function StartPage() {
                 </span>
               </span>
               <LanguageSwitcher />
-            </Card>
+            </div>
 
-            <Card padding="md" className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-control bg-brand-tint text-brand">
-                  <Lightbulb weight="bold" className="h-4.5 w-4.5" aria-hidden />
-                </span>
-                <span>
+            <Divider />
+
+            <div className="flex items-center justify-between gap-3 py-1.5">
+              <span className="flex min-w-0 items-start gap-2">
+                <Lightbulb
+                  weight="bold"
+                  className="mt-0.5 h-4 w-4 shrink-0 text-subtle"
+                  aria-hidden
+                />
+                <span className="min-w-0">
                   <label
                     htmlFor="start-guidance"
                     className="block text-sm font-medium text-fg"
@@ -424,9 +541,38 @@ export function StartPage() {
                 onCheckedChange={setGuidance}
                 aria-label={t("start.guidance.label")}
               />
-            </Card>
-          </div>
+            </div>
+          </Card>
         </div>
+
+        {/* Structured recap of the assembled session */}
+        <Card padding="md">
+          <SectionLabel>{t("select2.start.review.eyebrow")}</SectionLabel>
+          <DescriptionList divided className="mt-2">
+            <KeyValue label={t("select2.start.review.mode")} value={modeLabel} />
+            <KeyValue label={t("select2.start.review.role")} value={roleLabel} />
+            <KeyValue
+              label={t("select2.start.review.presentation")}
+              value={complaintLabel}
+            />
+            <KeyValue
+              label={t("start.difficulty.label")}
+              value={`${difficulty} · ${difficultyLabel}`}
+            />
+            <KeyValue
+              label={t("start.language.label")}
+              value={t(`select2.start.lang.${lang}`)}
+            />
+            <KeyValue
+              label={t("start.guidance.label")}
+              value={
+                guidance
+                  ? t("select2.start.review.on")
+                  : t("select2.start.review.off")
+              }
+            />
+          </DescriptionList>
+        </Card>
       </motion.section>
 
       {/* Begin */}
@@ -436,10 +582,8 @@ export function StartPage() {
       >
         <p className="text-sm text-muted">
           {t("start.summary", {
-            role: ROLE_OPTIONS.find((r) => r.id === role)?.label[lang] ?? "",
-            complaint:
-              CHIEF_COMPLAINT_OPTIONS.find((c) => c.id === chiefComplaint)
-                ?.label[lang] ?? CHIEF_COMPLAINT_OPTIONS[0].label[lang],
+            role: roleLabel,
+            complaint: complaintLabel,
             difficulty: difficultyLabel,
           })}
         </p>

@@ -11,12 +11,13 @@ import {
   Target,
   Broadcast,
   WifiSlash,
+  Check,
   X,
 } from "@phosphor-icons/react";
 
 import { EncounterChat } from "@/components/EncounterChat";
 import { GuidanceCard } from "@/components/GuidanceCard";
-import { Badge, Button, Switch } from "@/components/ui";
+import { Badge, Button, Switch, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
   askQuestion,
@@ -481,22 +482,18 @@ export function InterviewTab({
             <label htmlFor="acudx-ask" className="sr-only">
               {t("scopeGuard.composer.label")}
             </label>
-            <input
+            <TextInput
               id="acudx-ask"
               type="text"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder={t("scopeGuard.composer.placeholder")}
               autoComplete="off"
-              className={cn(
-                "min-w-0 flex-1 rounded-control border border-border bg-surface px-3 py-2",
-                "text-sm text-fg placeholder:text-muted",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
-              )}
+              className="min-w-0 flex-1"
             />
             <Button
               type="submit"
-              size="sm"
+              size="md"
               variant="primary"
               disabled={draft.trim().length === 0}
               leadingIcon={<PaperPlaneTilt weight="bold" className="h-4 w-4" />}
@@ -824,9 +821,7 @@ function Chip({
       )}
     >
       {active ? (
-        <span aria-hidden className="text-brand">
-          ✓
-        </span>
+        <Check weight="bold" className="h-3 w-3 text-brand" aria-hidden />
       ) : null}
       {label}
     </button>

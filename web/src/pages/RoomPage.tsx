@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
   Plus,
-  UsersThree,
   ArrowLeft,
   ShieldCheck,
   Broadcast,
@@ -15,8 +14,18 @@ import {
   Check,
 } from "@phosphor-icons/react";
 
-import { PageContainer } from "@/components/shell";
-import { Button, Card, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui";
+import { PageContainer, PageHeader } from "@/components/shell";
+import {
+  Button,
+  Card,
+  Badge,
+  SectionLabel,
+  StatusDot,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui";
 import { PatientBanner, SimBadge } from "@/components/ehr";
 import { InterviewTab } from "@/components/ehr/tabs/InterviewTab";
 import {
@@ -98,26 +107,22 @@ function Lobby() {
   const openRooms = roomsList.filter((r) => r.status !== "debrief");
 
   return (
-    <PageContainer width="wide" className="flex flex-col gap-6">
+    <PageContainer width="wide" className="flex flex-col gap-8">
       {/* Header */}
-      <motion.div {...top} className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="grid h-10 w-10 place-items-center rounded-control bg-brand-tint text-brand">
-              <UsersThree weight="bold" className="h-6 w-6" aria-hidden />
-            </span>
-            <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-              {t("rooms.lobby.title")}
-            </h1>
-          </div>
-          <p className="mt-2 max-w-2xl text-sm text-muted">{t("rooms.lobby.subtitle")}</p>
-        </div>
-        <Button
-          onClick={() => setCreateOpen(true)}
-          leadingIcon={<Plus weight="bold" className="h-4 w-4" />}
-        >
-          {t("rooms.lobby.create")}
-        </Button>
+      <motion.div {...top}>
+        <PageHeader
+          eyebrow={t("rooms3.eyebrow")}
+          title={t("rooms.lobby.title")}
+          description={t("rooms.lobby.subtitle")}
+          actions={
+            <Button
+              onClick={() => setCreateOpen(true)}
+              leadingIcon={<Plus weight="bold" className="h-4 w-4" />}
+            >
+              {t("rooms.lobby.create")}
+            </Button>
+          }
+        />
       </motion.div>
 
       {/* Join with a code */}
@@ -126,13 +131,19 @@ function Lobby() {
       </motion.div>
 
       {/* Open rooms */}
-      <motion.div {...body}>
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-fg">
-          <Broadcast weight="bold" className="h-4 w-4 text-brand" aria-hidden />
+      <motion.div {...body} className="flex flex-col gap-3">
+        <SectionLabel
+          icon={<Broadcast weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+          trailing={
+            <span className="tnum text-xs font-medium text-muted">
+              {openRooms.length}
+            </span>
+          }
+        >
           {t("rooms.lobby.openRooms")}
-        </h2>
+        </SectionLabel>
         {openRooms.length === 0 ? (
-          <Card padding="lg">
+          <Card variant="inset" padding="lg">
             <p className="text-sm text-muted">{t("rooms.lobby.empty")}</p>
           </Card>
         ) : (
@@ -146,8 +157,12 @@ function Lobby() {
 
       {/* Production note (mock presence) */}
       <motion.div {...body}>
-        <Card padding="md" className="flex items-start gap-2.5 border-dashed">
-          <ShieldCheck weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
+        <Card
+          variant="inset"
+          padding="md"
+          className="flex items-start gap-2.5"
+        >
+          <ShieldCheck weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-subtle" aria-hidden />
           <p className="text-xs leading-relaxed text-muted">{t("rooms.lobby.prodNote")}</p>
         </Card>
       </motion.div>
@@ -310,14 +325,19 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
           <span className="hidden text-muted sm:inline" aria-hidden>·</span>
           <h1 className="text-lg font-semibold tracking-tight text-fg">{room.title[lang]}</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Badge tone="neutral">{t(`rooms.locale.${room.locale}`)}</Badge>
-          <Badge
-            tone={room.status === "in-progress" ? "caution" : "normal"}
-            icon={<Broadcast weight="fill" className="h-3 w-3" aria-hidden />}
-          >
-            {t(`rooms.status.${room.status}`)}
-          </Badge>
+          <StatusDot
+            tone={
+              room.status === "in-progress"
+                ? "caution"
+                : room.status === "debrief"
+                  ? "neutral"
+                  : "normal"
+            }
+            pulse={room.status === "in-progress"}
+            label={t(`rooms.status.${room.status}`)}
+          />
           <InviteChip code={room.joinCode} />
           {room.status === "open" ? (
             <Button

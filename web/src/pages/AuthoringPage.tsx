@@ -13,8 +13,6 @@ import {
   RocketLaunch,
   Pulse,
   CheckCircle,
-  DotsThreeCircle,
-  Circle,
   ArrowRight,
   ArrowClockwise,
   ArrowCounterClockwise,
@@ -38,9 +36,26 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 
-import { PageContainer } from "@/components/shell";
+import { PageContainer, PageHeader } from "@/components/shell";
 import { SimBadge } from "@/components/ehr";
-import { Card, Badge, Button } from "@/components/ui";
+import {
+  Card,
+  Badge,
+  Button,
+  SectionLabel,
+  StatusDot,
+  Stat,
+  DescriptionList,
+  KeyValue,
+  TableWrap,
+  Table,
+  THead,
+  TBody,
+  Tr,
+  Th,
+  Td,
+  type StatusTone,
+} from "@/components/ui";
 import { CitationPill } from "@/components";
 import { BlueprintCard } from "@/components/authoring";
 import { cn } from "@/lib/cn";
@@ -90,10 +105,10 @@ const stageIcon: Record<PipelineStage, Icon> = {
   monitor: Pulse,
 };
 
-const stateIcon: Record<StageState, Icon> = {
-  done: CheckCircle,
-  active: DotsThreeCircle,
-  pending: Circle,
+const stateTone: Record<StageState, StatusTone> = {
+  done: "normal",
+  active: "brand",
+  pending: "neutral",
 };
 
 const actorIcon: Record<PipelineStageMeta["actor"], Icon> = {
@@ -142,7 +157,6 @@ function PipelineStepper({
             state.stageIndex,
             state.published,
           );
-          const StateIcon = stateIcon[display];
           const ActorIcon = actorIcon[stage.actor];
           const isActive = i === state.stageIndex;
           const isDone = display === "done";
@@ -160,7 +174,7 @@ function PipelineStepper({
                   `authoring.pipeline.state.${display}`,
                 )}`}
                 className={cn(
-                  "flex flex-1 flex-col gap-2 rounded-card border p-3.5 text-left",
+                  "flex flex-1 flex-col gap-2.5 rounded-card border p-3.5 text-left",
                   "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                   isActive
                     ? "border-brand bg-brand-tint"
@@ -182,16 +196,15 @@ function PipelineStepper({
                   >
                     <StageIcon weight="bold" className="h-4 w-4" aria-hidden />
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
-                    <ActorIcon weight="bold" className="h-3 w-3" aria-hidden />
+                  <Badge tone="neutral" variant="outline" icon={<ActorIcon weight="bold" className="h-3 w-3" aria-hidden />}>
                     {t(`authoring.pipeline.actor.${stage.actor}`)}
-                  </span>
+                  </Badge>
                 </div>
-                <div>
+                <div className="flex flex-col gap-0.5">
                   <p
                     className={cn(
-                      "text-[11px] font-mono font-semibold",
-                      isActive ? "text-brand" : "text-muted",
+                      "tnum text-[11px] font-mono font-semibold",
+                      isActive ? "text-brand" : "text-subtle",
                     )}
                   >
                     {String(i + 1).padStart(2, "0")}
@@ -200,35 +213,18 @@ function PipelineStepper({
                     {title}
                   </p>
                 </div>
-                <span
-                  className={cn(
-                    "mt-auto inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                    blocked
-                      ? "text-[color:var(--state-warning)] bg-[color-mix(in_srgb,var(--state-warning)_16%,transparent)]"
-                      : isActive
-                        ? "bg-brand text-white"
-                        : isDone
-                          ? "text-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_14%,transparent)]"
-                          : "bg-bg-subtle text-muted",
-                  )}
-                >
-                  {blocked ? (
-                    <WarningCircle
-                      weight="fill"
-                      className="h-3 w-3"
-                      aria-hidden
-                    />
-                  ) : (
-                    <StateIcon
-                      weight={display === "pending" ? "regular" : "fill"}
-                      className="h-3 w-3"
-                      aria-hidden
-                    />
-                  )}
-                  {blocked
-                    ? t("authoring2.stepper.blocked")
-                    : t(`authoring.pipeline.state.${display}`)}
-                </span>
+                {blocked ? (
+                  <Badge tone="warning" className="mt-auto w-fit" icon={<WarningCircle weight="fill" className="h-3 w-3" aria-hidden />}>
+                    {t("authoring2.stepper.blocked")}
+                  </Badge>
+                ) : (
+                  <span className="mt-auto inline-flex items-center gap-1.5">
+                    <StatusDot tone={stateTone[display]} pulse={isActive} size="sm" aria-hidden="true" />
+                    <span className="text-[11px] font-medium text-muted">
+                      {t(`authoring.pipeline.state.${display}`)}
+                    </span>
+                  </span>
+                )}
               </button>
               {i < pipelineStages.length - 1 ? (
                 <span
@@ -282,18 +278,17 @@ function StageHeading({ stage }: { stage: PipelineStageMeta }) {
   const StageIcon = stageIcon[stage.key];
   const ActorIcon = actorIcon[stage.actor];
   return (
-    <div className="mb-4">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="mb-4 flex flex-col gap-1.5">
+      <SectionLabel icon={<ActorIcon weight="bold" className="h-3.5 w-3.5" aria-hidden />}>
+        {t(`authoring.pipeline.actor.${stage.actor}`)}
+      </SectionLabel>
+      <div className="flex items-center gap-2">
         <StageIcon weight="bold" className="h-5 w-5 text-brand" aria-hidden />
         <h2 className="text-lg font-semibold tracking-tight text-fg">
           {t(`authoring.pipeline.stage.${stage.key}.title`)}
         </h2>
-        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted">
-          <ActorIcon weight="bold" className="h-3 w-3" aria-hidden />
-          {t(`authoring.pipeline.actor.${stage.actor}`)}
-        </span>
       </div>
-      <p className="mt-1 max-w-2xl text-sm text-muted">
+      <p className="max-w-2xl text-sm text-muted">
         {t(`authoring.pipeline.stage.${stage.key}.desc`)}
       </p>
     </div>
@@ -316,46 +311,45 @@ function DraftPanel({
   const pending = publishBlockers(state.facts).length;
 
   return (
-    <Card padding="lg" className="flex flex-col gap-4">
-      <div className="flex items-start gap-3">
-        <span
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-brand-tint text-brand"
-          aria-hidden
-        >
-          <Sparkle weight="bold" className="h-5 w-5" />
-        </span>
-        <div>
-          <h3 className="text-sm font-semibold tracking-tight text-fg">
-            {t("authoring2.draft.heading")}
-          </h3>
-          <p className="mt-1 max-w-xl text-xs text-muted">
-            {t("authoring2.draft.sub")}
-          </p>
-        </div>
+    <Card padding="lg" className="flex flex-col gap-5">
+      <div>
+        <h3 className="text-sm font-semibold tracking-tight text-fg">
+          {t("authoring2.draft.heading")}
+        </h3>
+        <p className="mt-1 max-w-xl text-xs text-muted">
+          {t("authoring2.draft.sub")}
+        </p>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
-        <div className="rounded-control border border-border bg-bg-subtle p-3">
-          <p className="font-mono text-lg font-semibold text-fg">{total}</p>
-          <p className="text-xs text-muted">
-            {t("authoring2.draft.factsDrafted", { count: total })}
-          </p>
-        </div>
-        <div
-          className={cn(
-            "rounded-control border p-3",
-            pending > 0
-              ? "border-[color:var(--state-warning)] bg-[color-mix(in_srgb,var(--state-warning)_8%,transparent)]"
-              : "border-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_8%,transparent)]",
-          )}
-        >
-          <p className="font-mono text-lg font-semibold text-fg">{pending}</p>
-          <p className="text-xs text-muted">
-            {pending > 0
-              ? t("authoring2.draft.needsReview", { count: pending })
-              : t("authoring2.draft.allLocked")}
-          </p>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card variant="inset" padding="sm">
+          <Stat
+            label={t("authoring3.draft.factsLabel")}
+            value={total}
+            size="lg"
+            icon={<Sparkle weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+            hint={t("authoring2.draft.factsDrafted", { count: total })}
+          />
+        </Card>
+        <Card variant="inset" padding="sm">
+          <Stat
+            label={t("authoring3.draft.reviewLabel")}
+            value={pending}
+            size="lg"
+            hint={
+              <span className="inline-flex items-center gap-1.5">
+                <StatusDot
+                  tone={pending > 0 ? "warning" : "normal"}
+                  size="sm"
+                  aria-hidden="true"
+                />
+                {pending > 0
+                  ? t("authoring2.draft.needsReview", { count: pending })
+                  : t("authoring2.draft.allLocked")}
+              </span>
+            }
+          />
+        </Card>
       </div>
 
       <p className="inline-flex items-start gap-2 text-xs text-muted">
@@ -785,37 +779,23 @@ function PsychometricPanel({ dispatch }: { dispatch: Dispatcher }) {
           {t("authoring.psychometric.sub")}
         </p>
       </div>
-      <ul className="grid gap-2 sm:grid-cols-2">
+      <ul className="grid gap-3 sm:grid-cols-2">
         {peerReviewSignals.map((s) => (
-          <li
-            key={s.id}
-            className="flex flex-col gap-1 rounded-control border border-border bg-bg-subtle p-3"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-muted">
-                {t(s.labelKey)}
-              </span>
-              <span
-                className={cn(
-                  s.ok
-                    ? "text-[color:var(--state-normal)]"
-                    : "text-[color:var(--state-warning)]",
-                )}
-                aria-hidden
-              >
-                {s.ok ? (
-                  <CheckCircle weight="fill" className="h-4 w-4" />
-                ) : (
-                  <WarningCircle weight="fill" className="h-4 w-4" />
-                )}
-              </span>
-            </div>
-            <span className="font-mono text-lg font-semibold text-fg">
-              {s.value}
-            </span>
-            <span className="text-[11px] leading-snug text-muted">
-              {s.note[lang]}
-            </span>
+          <li key={s.id}>
+            <Card variant="inset" padding="sm" className="relative h-full">
+              <StatusDot
+                tone={s.ok ? "normal" : "warning"}
+                size="sm"
+                aria-hidden="true"
+                className="absolute right-3 top-3.5"
+              />
+              <Stat
+                label={t(s.labelKey)}
+                value={s.value}
+                size="md"
+                hint={s.note[lang]}
+              />
+            </Card>
           </li>
         ))}
       </ul>
@@ -967,24 +947,18 @@ function SignOffPanel({
             {t("authoring.signoff.versionHeading")}
           </p>
         </div>
-        <dl className="mt-2 grid gap-1.5 sm:grid-cols-2">
-          <div className="flex items-center justify-between gap-2">
-            <dt className="text-[11px] text-muted">
-              {t("authoring.signoff.caseHash")}
-            </dt>
-            <dd className="font-mono text-xs font-semibold text-fg">
-              {caseHash}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <dt className="text-[11px] text-muted">
-              {t("authoring.signoff.rubricHash")}
-            </dt>
-            <dd className="font-mono text-xs font-semibold text-fg">
-              {rubricHash}
-            </dd>
-          </div>
-        </dl>
+        <DescriptionList divided className="mt-2">
+          <KeyValue
+            label={t("authoring.signoff.caseHash")}
+            value={caseHash}
+            mono
+          />
+          <KeyValue
+            label={t("authoring.signoff.rubricHash")}
+            value={rubricHash}
+            mono
+          />
+        </DescriptionList>
         <p className="mt-2 text-[11px] text-muted">
           {state.published
             ? t("authoring2.signoff.frozenNote")
@@ -1127,7 +1101,65 @@ function SignOffPanel({
 /* Monitor stage                                                               */
 /* -------------------------------------------------------------------------- */
 
-function MonitorCard({
+function MonitorStatus({ pub, isNew }: { pub: PublishedCase; isNew: boolean }) {
+  const { t } = useTranslation();
+  if (isNew) {
+    return (
+      <Badge tone="brand" icon={<Sparkle weight="fill" className="h-3 w-3" aria-hidden />}>
+        {t("authoring2.monitor.newBadge")}
+      </Badge>
+    );
+  }
+  if (pub.status === "flagged") {
+    return (
+      <Badge tone="caution" icon={<WarningCircle weight="fill" className="h-3 w-3" aria-hidden />}>
+        {t("authoring.monitor.status.flagged")}
+      </Badge>
+    );
+  }
+  if (pub.status === "en-only") {
+    return <Badge tone="neutral">{t("authoring.monitor.status.enOnly")}</Badge>;
+  }
+  return (
+    <Badge tone="normal" icon={<CheckCircle weight="fill" className="h-3 w-3" aria-hidden />}>
+      {t("authoring.monitor.status.live")}
+    </Badge>
+  );
+}
+
+function MonitorLocales({ pub }: { pub: PublishedCase }) {
+  const { t } = useTranslation();
+  return (
+    <ul className="flex flex-wrap gap-1.5">
+      {pub.locales.map((l) => (
+        <li key={l.locale}>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-chip border px-2 py-0.5 text-[11px] font-medium",
+              l.offered
+                ? "border-transparent text-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_12%,transparent)]"
+                : "border-dashed border-border text-muted",
+            )}
+            title={t(
+              l.offered
+                ? "authoring.monitor.localeOffered"
+                : "authoring.monitor.localePending",
+            )}
+          >
+            {l.offered ? (
+              <CheckCircle weight="fill" className="h-3 w-3" aria-hidden />
+            ) : (
+              <WarningCircle weight="bold" className="h-3 w-3" aria-hidden />
+            )}
+            {l.locale.toUpperCase()}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function MonitorRow({
   pub,
   isNew = false,
 }: {
@@ -1139,116 +1171,52 @@ function MonitorCard({
   const flagged = pub.status === "flagged";
 
   return (
-    <li>
-      <Card
-        padding="md"
-        className={cn(
-          "flex flex-col gap-3",
-          isNew
-            ? "border-l-2 border-l-brand"
-            : flagged
-              ? "border-l-2 border-l-[color:var(--state-warning)]"
-              : "",
-        )}
-      >
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-fg">{pub.title[lang]}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted">
-              <span className="inline-flex items-center gap-1 font-mono">
-                <Hash weight="bold" className="h-3 w-3" aria-hidden />
-                {pub.versionHash}
-              </span>
-              <span aria-hidden>·</span>
-              <span>
-                {isNew
-                  ? t("authoring2.monitor.justPublished")
-                  : t("authoring.monitor.lastReviewed", {
-                      date: pub.lastReviewed,
-                    })}
-              </span>
-              <span aria-hidden>·</span>
-              <span>
-                {t("authoring.monitor.encounters", { count: pub.encounters })}
-              </span>
-            </div>
-          </div>
-          {isNew ? (
-            <Badge tone="brand">
-              <Sparkle weight="fill" className="h-3 w-3" aria-hidden />
-              {t("authoring2.monitor.newBadge")}
-            </Badge>
-          ) : flagged ? (
-            <Badge tone="caution">
-              <WarningCircle weight="fill" className="h-3 w-3" aria-hidden />
-              {t("authoring.monitor.status.flagged")}
-            </Badge>
-          ) : pub.status === "en-only" ? (
-            <Badge tone="neutral">{t("authoring.monitor.status.enOnly")}</Badge>
-          ) : (
-            <Badge tone="normal">
-              <CheckCircle weight="fill" className="h-3 w-3" aria-hidden />
-              {t("authoring.monitor.status.live")}
-            </Badge>
-          )}
+    <Tr className={isNew ? "bg-brand-tint" : undefined}>
+      <Td>
+        <div className="flex min-w-[13rem] flex-col gap-0.5">
+          <span className="font-medium text-fg">{pub.title[lang]}</span>
+          <span className="inline-flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+            <span className="inline-flex items-center gap-1 font-mono">
+              <Hash weight="bold" className="h-3 w-3" aria-hidden />
+              {pub.versionHash}
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              {isNew
+                ? t("authoring2.monitor.justPublished")
+                : t("authoring.monitor.lastReviewed", { date: pub.lastReviewed })}
+            </span>
+          </span>
+          {flagged && pub.flagReason ? (
+            <span className="mt-0.5 inline-flex items-start gap-1 text-[11px] text-[color:var(--state-warning)]">
+              <ArrowClockwise weight="bold" className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+              {pub.flagReason[lang]}
+            </span>
+          ) : null}
         </div>
-
-        <ul className="flex flex-wrap gap-1.5">
-          {pub.locales.map((l) => (
-            <li key={l.locale}>
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
-                  l.offered
-                    ? "border-transparent text-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_12%,transparent)]"
-                    : "border-dashed border-border text-muted",
-                )}
-              >
-                {l.offered ? (
-                  <CheckCircle weight="fill" className="h-3 w-3" aria-hidden />
-                ) : (
-                  <WarningCircle weight="bold" className="h-3 w-3" aria-hidden />
-                )}
-                {l.locale.toUpperCase()}
-                {" · "}
-                {t(
-                  l.offered
-                    ? "authoring.monitor.localeOffered"
-                    : "authoring.monitor.localePending",
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        {flagged && pub.flagReason ? (
-          <div className="flex items-start gap-2 rounded-control bg-[color-mix(in_srgb,var(--state-warning)_10%,transparent)] p-2.5">
-            <ArrowClockwise
-              weight="bold"
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--state-warning)]"
-              aria-hidden
-            />
-            <p className="text-xs text-fg">{pub.flagReason[lang]}</p>
-          </div>
-        ) : null}
-
-        <div>
-          <Button
-            size="sm"
-            variant={flagged ? "primary" : "secondary"}
-            trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
-          >
-            {flagged
-              ? t("authoring.monitor.review")
-              : t("authoring.monitor.open")}
-          </Button>
-        </div>
-      </Card>
-    </li>
+      </Td>
+      <Td>
+        <MonitorLocales pub={pub} />
+      </Td>
+      <Td numeric>{pub.encounters}</Td>
+      <Td>
+        <MonitorStatus pub={pub} isNew={isNew} />
+      </Td>
+      <Td className="text-right">
+        <Button
+          size="sm"
+          variant={flagged ? "primary" : "secondary"}
+          trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
+        >
+          {flagged ? t("authoring.monitor.review") : t("authoring.monitor.open")}
+        </Button>
+      </Td>
+    </Tr>
   );
 }
 
 function MonitorPanel({ state }: { state: AuthoringUIState }) {
+  const { t } = useTranslation();
   const justPublished: PublishedCase | null =
     state.published && state.frozen
       ? {
@@ -1267,12 +1235,27 @@ function MonitorPanel({ state }: { state: AuthoringUIState }) {
       : null;
 
   return (
-    <ul className="grid gap-3 lg:grid-cols-3">
-      {justPublished ? <MonitorCard pub={justPublished} isNew /> : null}
-      {publishedCases.map((p) => (
-        <MonitorCard key={p.id} pub={p} />
-      ))}
-    </ul>
+    <TableWrap>
+      <Table aria-label={t("authoring3.monitor.tableLabel")}>
+        <THead>
+          <Tr>
+            <Th>{t("authoring3.monitor.colCase")}</Th>
+            <Th>{t("authoring3.monitor.colLocales")}</Th>
+            <Th numeric>{t("authoring3.monitor.colEncounters")}</Th>
+            <Th>{t("authoring3.monitor.colStatus")}</Th>
+            <Th className="text-right">
+              <span className="sr-only">{t("authoring3.monitor.colAction")}</span>
+            </Th>
+          </Tr>
+        </THead>
+        <TBody>
+          {justPublished ? <MonitorRow pub={justPublished} isNew /> : null}
+          {publishedCases.map((p) => (
+            <MonitorRow key={p.id} pub={p} />
+          ))}
+        </TBody>
+      </Table>
+    </TableWrap>
   );
 }
 
@@ -1341,25 +1324,39 @@ export function AuthoringPage() {
   return (
     <PageContainer width="wide" className="flex flex-col gap-8">
       {/* Header */}
-      <motion.header {...header} className="max-w-3xl">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted">
-            <PencilRuler weight="bold" className="h-3.5 w-3.5" aria-hidden />
-            {t("authoring.eyebrow")}
-          </span>
-          <SimBadge variant="chip" />
-        </div>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
-          {t("authoring.title")}
-        </h1>
-        <p className="mt-3 max-w-2xl text-lg text-muted">
-          {t("authoring.subtitle")}
-        </p>
-        <p className="mt-3 inline-flex items-center gap-2 text-xs text-muted">
-          <Robot weight="bold" className="h-3.5 w-3.5" aria-hidden />
-          {t("authoring.aiHumanNote")}
-        </p>
-      </motion.header>
+      <motion.div {...header}>
+        <PageHeader
+          eyebrow={
+            <span className="inline-flex items-center gap-1.5">
+              <PencilRuler weight="bold" className="h-3.5 w-3.5" aria-hidden />
+              {t("authoring.eyebrow")}
+            </span>
+          }
+          title={t("authoring.title")}
+          description={t("authoring.subtitle")}
+          meta={
+            <>
+              <SimBadge variant="chip" />
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                <Robot weight="bold" className="h-3.5 w-3.5" aria-hidden />
+                {t("authoring.aiHumanNote")}
+              </span>
+            </>
+          }
+          actions={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => dispatch({ type: "reset" })}
+              leadingIcon={
+                <ArrowCounterClockwise weight="bold" className="h-4 w-4" />
+              }
+            >
+              {t("authoring2.reset")}
+            </Button>
+          }
+        />
+      </motion.div>
 
       {/* Steppable pipeline + working panel */}
       <motion.section
@@ -1367,21 +1364,9 @@ export function AuthoringPage() {
         aria-labelledby="authoring-pipeline"
         className="flex flex-col gap-6"
       >
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <p id="authoring-pipeline" className="max-w-2xl text-sm text-muted">
-            {t("authoring2.intro")}
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => dispatch({ type: "reset" })}
-            leadingIcon={
-              <ArrowCounterClockwise weight="bold" className="h-4 w-4" />
-            }
-          >
-            {t("authoring2.reset")}
-          </Button>
-        </div>
+        <p id="authoring-pipeline" className="max-w-2xl text-sm text-muted">
+          {t("authoring2.intro")}
+        </p>
 
         <PipelineStepper state={state} dispatch={dispatch} />
 

@@ -15,7 +15,20 @@ import {
   ArrowLeft,
   ArrowCounterClockwise,
 } from "@phosphor-icons/react";
-import { Card, Badge, Button } from "@/components/ui";
+import {
+  Card,
+  Badge,
+  Button,
+  SectionLabel,
+  StatusDot,
+  TableWrap,
+  Table,
+  THead,
+  TBody,
+  Tr,
+  Th,
+  Td,
+} from "@/components/ui";
 import { CitationPill } from "@/components";
 import { cn } from "@/lib/cn";
 import { useLang } from "@/lib/useLang";
@@ -377,38 +390,82 @@ export function RemediationLoop() {
   const total = remediationRecords.length;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-bg-subtle px-3 py-2">
-        <p className="text-xs font-medium text-muted">
-          {t("institution.remediation.step.summary", {
-            closed: closedCount,
-            total,
-          })}
-        </p>
-        <div
-          className="flex items-center gap-1.5"
-          role="img"
-          aria-label={t("institution.remediation.step.summary", {
-            closed: closedCount,
-            total,
-          })}
+    <div className="flex flex-col gap-4">
+      {/* At-a-glance queue — the dense triage view above the actionable records */}
+      <div className="flex flex-col gap-2">
+        <SectionLabel
+          trailing={
+            <span className="text-xs font-medium normal-case tracking-normal text-muted">
+              {t("institution.remediation.step.summary", {
+                closed: closedCount,
+                total,
+              })}
+            </span>
+          }
         >
-          {remediationRecords.map((r) => {
-            const isClosed = (steps[r.id] ?? baselineStep(r)) === STAGE_COUNT;
-            return (
-              <span
-                key={r.id}
-                aria-hidden
-                className="h-1.5 w-6 rounded-full"
-                style={{
-                  backgroundColor: isClosed
-                    ? "var(--state-normal)"
-                    : "color-mix(in srgb, var(--state-warning) 45%, transparent)",
-                }}
-              />
-            );
-          })}
-        </div>
+          {t("institution.remediation.queue.caption")}
+        </SectionLabel>
+        <TableWrap>
+          <Table>
+            <caption className="sr-only">
+              {t("institution.remediation.queue.tableCaption")}
+            </caption>
+            <THead>
+              <Tr>
+                <Th>{t("institution.heatmap.learnerCol")}</Th>
+                <Th>{t("institution.heatmap.sectionCol")}</Th>
+                <Th numeric>{t("institution.remediation.queue.openedCol")}</Th>
+                <Th>{t("institution.remediation.queue.stageCol")}</Th>
+                <Th>{t("institution.remediation.queue.statusCol")}</Th>
+              </Tr>
+            </THead>
+            <TBody>
+              {remediationRecords.map((r) => {
+                const step = steps[r.id] ?? baselineStep(r);
+                const closed = step === STAGE_COUNT;
+                const stageWord = closed
+                  ? t("institution.remediation.closed")
+                  : t(`institution.remediation.stage.${REMEDIATION_STAGES[step]}`);
+                return (
+                  <Tr key={r.id}>
+                    <Td className="font-mono font-medium text-fg">
+                      {r.learnerHandle}
+                    </Td>
+                    <Td className="text-muted">
+                      {t(`institution.section.${r.sectionKey}`)}
+                    </Td>
+                    <Td numeric>
+                      {t("institution.remediation.queue.days", {
+                        count: r.openedDaysAgo,
+                      })}
+                    </Td>
+                    <Td>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="tnum text-xs text-subtle">
+                          {closed
+                            ? `${STAGE_COUNT}/${STAGE_COUNT}`
+                            : `${step + 1}/${STAGE_COUNT}`}
+                        </span>
+                        <span className="text-fg">{stageWord}</span>
+                      </span>
+                    </Td>
+                    <Td>
+                      <StatusDot
+                        tone={closed ? "normal" : "warning"}
+                        size="sm"
+                        label={
+                          closed
+                            ? t("institution.remediation.closed")
+                            : t("institution.remediation.open")
+                        }
+                      />
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </TBody>
+          </Table>
+        </TableWrap>
       </div>
 
       <ul className="flex flex-col gap-3" aria-label="remediation">

@@ -11,11 +11,19 @@ import {
   Circle,
 } from "@phosphor-icons/react";
 
-import { Badge, Button, Switch } from "@/components/ui";
+import { Badge, Button, Switch, StatusDot, type StatusTone } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { RoleAvatar } from "./RoleAvatar";
-import { ROLE_ICON, PRESENCE_COLOR } from "./roleMeta";
+import { ROLE_ICON } from "./roleMeta";
 import { EncounterClock } from "@/components/ehr";
+import type { Presence } from "@/data/rooms";
+
+/** Presence → StatusDot tone (label is always carried by the name/ready text). */
+const PRESENCE_TONE: Record<Presence, StatusTone> = {
+  active: "normal",
+  idle: "caution",
+  reconnecting: "warning",
+};
 import {
   effectiveHolder,
   CLINICAL_ROLE_ORDER,
@@ -151,10 +159,10 @@ export function ParticipantsPanel({
                         </span>
                       ) : (
                         <>
-                          <span
-                            className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-                            style={{ backgroundColor: PRESENCE_COLOR[holder.presence] }}
-                            aria-hidden
+                          <StatusDot
+                            tone={PRESENCE_TONE[holder.presence]}
+                            size="sm"
+                            aria-hidden="true"
                           />
                           <span className="truncate text-muted">
                             {holder.id === ME.id ? t("rooms.you") : holder.name}

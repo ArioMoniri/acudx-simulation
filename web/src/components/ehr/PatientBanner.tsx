@@ -1,13 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { type ReactNode } from "react";
-import {
-  Warning,
-  IdentificationCard,
-  FirstAid,
-  Heartbeat,
-} from "@phosphor-icons/react";
+import { Warning, FirstAid, Heartbeat } from "@phosphor-icons/react";
 
-import { Badge } from "@/components/ui";
+import {
+  Badge,
+  DescriptionList,
+  KeyValue,
+  StatusDot,
+  type StatusTone,
+} from "@/components/ui";
 import { stateMap } from "@/components/clinicalState";
 import { SimBadge } from "./SimBadge";
 import { conceptText, esiToState, pick } from "./labels";
@@ -24,19 +25,20 @@ export interface PatientBannerProps {
 /**
  * PatientBanner — the persistent Epic-Storyboard-condensed header (docs §2.1).
  *
- * Given-at-start context only: synthetic identity, chief complaint, ALLERGIES
- * (always visible, with a warning icon + list), code status, encounter type,
- * and ESI acuity. Allergies + acuity carry an icon + text label so meaning is
- * never color-only (WCAG 1.4.1). Sticky so it never scrolls away.
+ * Given-at-start context only: synthetic identity, the identifier strip (MRN /
+ * age / sex / code status as tabular key-values), chief complaint, ALLERGIES
+ * (always visible, with a warning icon + list), encounter type, and ESI acuity.
+ * Allergies + acuity carry an icon/dot + text label so meaning is never
+ * color-only (WCAG 1.4.1). Sticky so it never scrolls away.
  */
 export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProps) {
   const { t } = useTranslation();
   const { patient, encounter, allergies } = caseInstance;
 
   const sexLabel = t(`common.${patient.gender === "female" ? "female" : "male"}`);
-  const acuityState = esiToState(caseInstance.acuityESI);
-  const acuityPresent = stateMap[acuityState];
-  const AcuityIcon = acuityPresent.icon;
+  const acuityPresent = stateMap[esiToState(caseInstance.acuityESI)];
+  const acuityWord = t(acuityPresent.labelKey);
+  const acuityTone = `esi-${caseInstance.acuityESI}` as StatusTone;
 
   // Allergy display: NKDA collapses to one calm chip; real allergies are a
   // high-visibility warning list.
@@ -51,30 +53,35 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
       className="sticky top-0 z-30 rounded-card border border-border bg-surface/95 px-4 py-3 shadow-soft backdrop-blur supports-[backdrop-filter]:bg-surface/80"
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        {/* Identity + chief complaint */}
+        {/* Identity + identifiers + chief complaint */}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <h2 className="text-lg font-semibold tracking-tight text-fg">
               {patient.name}
             </h2>
-            <span className="text-sm text-muted">
-              {t("ehr.banner.ageSex", {
-                age: patient.ageYears,
-                sex: sexLabel,
-              })}
-            </span>
-            <span
-              className="inline-flex items-center gap-1 font-mono text-xs text-muted"
-              title={t("ehr.banner.mrn")}
-            >
-              <IdentificationCard weight="bold" className="h-3.5 w-3.5" aria-hidden />
-              <span className="sr-only">{t("ehr.banner.mrn")}: </span>
-              {patient.mrn}
-            </span>
             <SimBadge />
           </div>
 
-          <p className="mt-1.5 flex items-start gap-1.5 text-sm text-fg">
+          {/* Identifier strip — dense Epic-storyboard key/values, tabular
+              figures, hairline dividers between fields. */}
+          <DescriptionList
+            layout="stacked"
+            aria-label={t("ehr.storyboard.demographics")}
+            className="mt-2 flex flex-wrap items-center gap-y-1 [&>div]:px-3 [&>div:first-child]:pl-0 [&>div:not(:first-child)]:border-l [&>div:not(:first-child)]:border-border"
+          >
+            <KeyValue label={t("ehr.banner.mrn")} value={patient.mrn} mono />
+            <KeyValue
+              label={t("ehrPolish.age")}
+              value={<span className="tnum">{patient.ageYears}</span>}
+            />
+            <KeyValue label={t("ehrPolish.sex")} value={sexLabel} />
+            <KeyValue
+              label={t("ehr.banner.codeStatus")}
+              value={t("ehr.codeStatus.full")}
+            />
+          </DescriptionList>
+
+          <p className="mt-2 flex items-start gap-1.5 text-sm text-fg">
             <span className="font-medium text-muted">{t("ehr.banner.chiefComplaint")}:</span>
             <span>{pick(caseInstance.chiefComplaint, lang)}</span>
           </p>
@@ -106,32 +113,24 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
           </div>
         </div>
 
-        {/* Status column: encounter type, acuity, code status + toolbar */}
+        {/* Status column: encounter type, ESI acuity + toolbar */}
         <div className="flex shrink-0 flex-col items-start gap-2 lg:items-end">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             <Badge tone="brand" className="gap-1.5">
               <Heartbeat weight="bold" className="h-3.5 w-3.5" aria-hidden />
               {t(`ehr.encounterClass.${encounter.class}`)}
             </Badge>
 
-            <span
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
-              style={{
-                color: acuityPresent.colorVar,
-                backgroundColor: `color-mix(in srgb, ${acuityPresent.colorVar} 15%, transparent)`,
-              }}
+            <StatusDot
+              tone={acuityTone}
+              pulse={caseInstance.acuityESI === 1}
+              label={`${t("ehr.banner.esi", { level: caseInstance.acuityESI })} · ${acuityWord}`}
               aria-label={t("ehr.banner.acuityLabel", {
                 level: caseInstance.acuityESI,
-                state: t(acuityPresent.labelKey),
+                state: acuityWord,
               })}
-            >
-              <AcuityIcon weight="fill" className="h-3.5 w-3.5" aria-hidden />
-              {t("ehr.banner.esi", { level: caseInstance.acuityESI })}
-            </span>
-
-            <Badge tone="neutral">
-              {t("ehr.banner.codeStatus")}: {t("ehr.codeStatus.full")}
-            </Badge>
+              className="rounded-pill border border-border bg-surface px-2.5 py-0.5"
+            />
           </div>
 
           {toolbar ? (

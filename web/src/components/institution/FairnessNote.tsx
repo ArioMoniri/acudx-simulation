@@ -1,6 +1,16 @@
 import { useTranslation } from "react-i18next";
 import { Scales, CheckCircle, WarningCircle } from "@phosphor-icons/react";
-import { Card } from "@/components/ui";
+import {
+  Card,
+  Badge,
+  TableWrap,
+  Table,
+  THead,
+  TBody,
+  Tr,
+  Th,
+  Td,
+} from "@/components/ui";
 import { fairnessMetrics, fairnessCohort } from "@/data/institution";
 
 /**
@@ -40,63 +50,63 @@ export function FairnessNote() {
       </div>
 
       {/* TR vs EN table */}
-      <div className="overflow-x-auto" tabIndex={0}>
-        <table className="w-full text-left text-sm">
+      <TableWrap>
+        <Table>
           <caption className="sr-only">
             {t("institution.fairness.tableCaption")}
           </caption>
-          <thead>
-            <tr className="border-b border-border">
-              <th scope="col" className="py-2 pr-3 font-semibold text-fg">
-                {t("institution.fairness.metricCol")}
-              </th>
-              <th scope="col" className="py-2 pr-3 font-semibold text-fg">
+          <THead>
+            <Tr>
+              <Th>{t("institution.fairness.metricCol")}</Th>
+              <Th numeric>
                 {t("institution.fairness.trCol", {
                   count: fairnessCohort.trLearners,
                 })}
-              </th>
-              <th scope="col" className="py-2 pr-3 font-semibold text-fg">
+              </Th>
+              <Th numeric>
                 {t("institution.fairness.enCol", {
                   count: fairnessCohort.enLearners,
                 })}
-              </th>
-              <th scope="col" className="py-2 font-semibold text-fg">
-                {t("institution.fairness.statusCol")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </Th>
+              <Th>{t("institution.fairness.statusCol")}</Th>
+            </Tr>
+          </THead>
+          <TBody>
             {fairnessMetrics.map((m) => (
-              <tr key={m.id} className="border-b border-border/60">
-                <th scope="row" className="py-2 pr-3 font-medium text-fg">
-                  {t(m.labelKey)}
-                </th>
-                <td className="py-2 pr-3 font-mono text-xs text-fg">{m.tr}</td>
-                <td className="py-2 pr-3 font-mono text-xs text-fg">{m.en}</td>
-                <td className="py-2">
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-medium"
-                    style={{
-                      color: m.withinTolerance
-                        ? "var(--state-normal)"
-                        : "var(--state-caution)",
-                    }}
-                  >
-                    {m.withinTolerance ? (
-                      <CheckCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
-                    ) : (
-                      <WarningCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
-                    )}
-                    {m.withinTolerance
-                      ? t("institution.fairness.withinTolerance")
-                      : t("institution.fairness.flagged")}
-                  </span>
-                </td>
-              </tr>
+              <Tr key={m.id}>
+                <Td className="font-medium text-fg">{t(m.labelKey)}</Td>
+                <Td numeric className="text-xs">
+                  {m.tr}
+                </Td>
+                <Td numeric className="text-xs">
+                  {m.en}
+                </Td>
+                <Td>
+                  {m.withinTolerance ? (
+                    <Badge
+                      tone="normal"
+                      icon={
+                        <CheckCircle weight="fill" className="h-3.5 w-3.5" />
+                      }
+                    >
+                      {t("institution.fairness.withinTolerance")}
+                    </Badge>
+                  ) : (
+                    <Badge
+                      tone="caution"
+                      icon={
+                        <WarningCircle weight="fill" className="h-3.5 w-3.5" />
+                      }
+                    >
+                      {t("institution.fairness.flagged")}
+                    </Badge>
+                  )}
+                </Td>
+              </Tr>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TBody>
+        </Table>
+      </TableWrap>
 
       <p className="text-xs text-muted">{t("institution.fairness.footnote")}</p>
     </Card>

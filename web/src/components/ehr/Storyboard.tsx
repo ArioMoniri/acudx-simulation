@@ -12,6 +12,12 @@ import {
 
 import { cn } from "@/lib/cn";
 import {
+  DescriptionList,
+  KeyValue,
+  StatusDot,
+  type StatusTone,
+} from "@/components/ui";
+import {
   PatientAvatar,
   signsFromVitals,
   type ClinicalSignIntensity,
@@ -131,6 +137,7 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
 
   const clinicalSigns: ClinicalSignIntensity[] = signsFromVitals(triageVitals);
   const sexLabel = t(`common.${patient.gender === "female" ? "female" : "male"}`);
+  const acuityTone = `esi-${caseInstance.acuityESI}` as StatusTone;
 
   const allergyTexts = allergies.map((a) => conceptText(a.code, lang));
   const isNkda =
@@ -141,7 +148,7 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
       aria-label={t("ehr.storyboard.label")}
       className="overflow-hidden rounded-card border border-border bg-surface"
     >
-      {/* Avatar + demographics (given at start) */}
+      {/* Avatar (given at start) — the portrait on the monitor-dark accent. */}
       <div className="border-b border-border bg-monitor-bg px-3 py-3">
         <PatientAvatar
           name={patient.name}
@@ -149,22 +156,38 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
           clinicalSigns={clinicalSigns}
           tier="2d"
         />
-        <dl className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]" style={{ color: "var(--monitor-dim)" }}>
-          <div className="flex items-center gap-1">
-            <dt className="sr-only">{t("ehr.banner.mrn")}</dt>
-            <dd className="font-mono">{patient.mrn}</dd>
-          </div>
-          <div className="flex items-center gap-1">
-            <dt className="sr-only">{t("ehr.storyboard.demographics")}</dt>
-            <dd>{t("ehr.banner.ageSex", { age: patient.ageYears, sex: sexLabel })}</dd>
-          </div>
+      </div>
+
+      {/* Demographics — identifiers as a dense key/value record (Attio/Heidi). */}
+      <div className="border-b border-border px-4 py-3">
+        <DescriptionList
+          layout="rows"
+          divided
+          aria-label={t("ehr.storyboard.demographics")}
+        >
+          <KeyValue label={t("ehr.banner.mrn")} value={patient.mrn} mono />
+          <KeyValue
+            label={t("ehrPolish.age")}
+            value={<span className="tnum">{patient.ageYears}</span>}
+          />
+          <KeyValue label={t("ehrPolish.sex")} value={sexLabel} />
+          <KeyValue
+            label={t("ehrPolish.acuity")}
+            value={
+              <StatusDot
+                tone={acuityTone}
+                label={t("ehr.banner.esi", { level: caseInstance.acuityESI })}
+              />
+            }
+          />
           {patient.weightKg ? (
-            <div className="flex items-center gap-1">
-              <dt className="sr-only">{t("ehr.storyboard.weight")}</dt>
-              <dd className="font-mono">{patient.weightKg} kg</dd>
-            </div>
+            <KeyValue
+              label={t("ehr.storyboard.weight")}
+              value={`${patient.weightKg} kg`}
+              mono
+            />
           ) : null}
-        </dl>
+        </DescriptionList>
       </div>
 
       {/* Progressive-disclosure cue: the rail fills in as the chart is worked */}

@@ -1,0 +1,24 @@
+{
+  "rooms3": {
+    "eyebrow": "Multiplayer",
+    "card": {
+      "seats": "Seats",
+      "live": "Live"
+    }
+  },
+  "authoring3": {
+    "eyebrow": "Case pipeline",
+    "draft": {
+      "factsLabel": "Facts drafted",
+      "reviewLabel": "Awaiting review"
+    },
+    "monitor": {
+      "tableLabel": "Published and monitored cases",
+      "colCase": "Case",
+      "colLocales": "Locales",
+      "colEncounters": "Encounters",
+      "colStatus": "Status",
+      "colAction": "Action"
+    }
+  }
+}

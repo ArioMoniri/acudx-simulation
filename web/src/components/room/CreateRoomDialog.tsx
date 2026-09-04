@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Plus, Users, Robot } from "@phosphor-icons/react";
 
-import { Button, Switch } from "@/components/ui";
+import { Button, Switch, Field, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { ROLE_ICON } from "./roleMeta";
 import { CLINICAL_ROLE_ORDER, type ClinicalRole, type RoomLocale } from "@/data/rooms";
@@ -82,6 +82,7 @@ export function CreateRoomDialog({
     onCreate({ caseId, humanRoles, aiBackfill, locale });
   }
 
+  const selectedCase = seedCases.find((c) => c.id === caseId);
   const locales: RoomLocale[] = ["tr", "en"];
 
   return (
@@ -123,50 +124,30 @@ export function CreateRoomDialog({
         </div>
 
         {/* Case picker */}
-        <fieldset className="mt-5">
-          <legend className="text-xs font-semibold uppercase tracking-wide text-muted">
-            {t("rooms.create.caseLabel")}
-          </legend>
-          <div className="mt-2 flex flex-col gap-2" role="radiogroup" aria-label={t("rooms.create.caseLabel")}>
-            {seedCases.map((c) => {
-              const selected = c.id === caseId;
-              return (
-                <button
-                  key={c.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setCaseId(c.id)}
-                  className={cn(
-                    "flex items-center justify-between gap-3 rounded-control border px-3 py-2.5 text-left",
-                    "transition-colors duration-200 ease-out focus-visible:outline-none",
-                    selected
-                      ? "border-brand bg-brand-tint"
-                      : "border-border bg-bg-subtle hover:bg-surface",
-                  )}
-                >
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium text-fg">
-                      {pick(c.chiefComplaint, lang)}
-                    </span>
-                    <span className="block text-xs text-muted">
-                      {t("rooms.create.difficulty", { level: c.difficulty })}
-                    </span>
-                  </span>
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "grid h-4 w-4 shrink-0 place-items-center rounded-full border",
-                      selected ? "border-brand" : "border-border",
-                    )}
-                  >
-                    {selected ? <span className="h-2 w-2 rounded-full bg-brand" /> : null}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
+        <div className="mt-5">
+          <Field
+            label={t("rooms.create.caseLabel")}
+            hint={
+              selectedCase
+                ? t("rooms.create.difficulty", { level: selectedCase.difficulty })
+                : undefined
+            }
+          >
+            {(aria) => (
+              <Select
+                {...aria}
+                value={caseId}
+                onChange={(e) => setCaseId(e.target.value)}
+              >
+                {seedCases.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {pick(c.chiefComplaint, lang)}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        </div>
 
         {/* Role assignment */}
         <fieldset className="mt-5">

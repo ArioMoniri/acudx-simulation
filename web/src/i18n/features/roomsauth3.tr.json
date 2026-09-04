@@ -1,0 +1,24 @@
+{
+  "rooms3": {
+    "eyebrow": "Çok oyunculu",
+    "card": {
+      "seats": "Koltuk",
+      "live": "Canlı"
+    }
+  },
+  "authoring3": {
+    "eyebrow": "Vaka hattı",
+    "draft": {
+      "factsLabel": "Taslak bulgular",
+      "reviewLabel": "İnceleme bekliyor"
+    },
+    "monitor": {
+      "tableLabel": "Yayınlanan ve izlenen vakalar",
+      "colCase": "Vaka",
+      "colLocales": "Diller",
+      "colEncounters": "Görüşme",
+      "colStatus": "Durum",
+      "colAction": "İşlem"
+    }
+  }
+}

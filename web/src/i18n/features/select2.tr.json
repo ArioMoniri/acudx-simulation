@@ -1,0 +1,42 @@
+{
+  "select2": {
+    "cases": {
+      "generator": {
+        "eyebrow": "Olgu üreteci"
+      },
+      "table": {
+        "case": "Olgu",
+        "code": "Kod",
+        "acuity": "Aciliyet",
+        "time": "Süre",
+        "action": "Başlat"
+      }
+    },
+    "start": {
+      "mode": {
+        "eyebrow": "Oturum"
+      },
+      "role": {
+        "eyebrow": "Rolünüz"
+      },
+      "complaint": {
+        "eyebrow": "Başvuru"
+      },
+      "tune": {
+        "eyebrow": "Ayar"
+      },
+      "review": {
+        "eyebrow": "Oturum özeti",
+        "mode": "Mod",
+        "role": "Rol",
+        "presentation": "Başvuru",
+        "on": "Açık",
+        "off": "Kapalı"
+      },
+      "lang": {
+        "en": "İngilizce",
+        "tr": "Türkçe"
+      }
+    }
+  }
+}

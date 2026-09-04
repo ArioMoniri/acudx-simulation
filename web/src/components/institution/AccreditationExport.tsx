@@ -9,7 +9,19 @@ import {
   Eye,
   X,
 } from "@phosphor-icons/react";
-import { Card, Button, Switch, Badge } from "@/components/ui";
+import {
+  Card,
+  Button,
+  Switch,
+  Badge,
+  TableWrap,
+  Table,
+  THead,
+  TBody,
+  Tr,
+  Th,
+  Td,
+} from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useLang } from "@/lib/useLang";
 import { useReveal } from "@/lib/motion";
@@ -218,52 +230,39 @@ function PreviewPanel({
         <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
           {t("institution.export.preview.sampleHeading")}
         </p>
-        <div className="overflow-x-auto rounded-control border border-border bg-surface" tabIndex={0}>
-          <table className="w-full text-left text-xs">
+        <TableWrap>
+          <Table className="text-xs">
             <caption className="sr-only">
               {t("institution.export.preview.sampleCaption")}
             </caption>
-            <thead>
-              <tr className="border-b border-border">
-                <th scope="col" className="px-2.5 py-1.5 font-semibold text-fg">
-                  {t("institution.heatmap.learnerCol")}
-                </th>
-                <th scope="col" className="px-2.5 py-1.5 font-semibold text-fg">
-                  {t("institution.heatmap.sectionCol")}
-                </th>
+            <THead>
+              <Tr>
+                <Th>{t("institution.heatmap.learnerCol")}</Th>
+                <Th>{t("institution.heatmap.sectionCol")}</Th>
                 {HEATMAP_DOMAINS.map((d) => (
-                  <th
-                    key={d.key}
-                    scope="col"
-                    className="px-2.5 py-1.5 font-semibold text-fg"
-                  >
-                    {t(`feedback.domains.${d.key}`)}
-                  </th>
+                  <Th key={d.key}>{t(`feedback.domains.${d.key}`)}</Th>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </Tr>
+            </THead>
+            <TBody>
               {sample.map((learner) => (
-                <tr key={learner.id} className="border-b border-border/60">
-                  <th
-                    scope="row"
-                    className="px-2.5 py-1.5 font-mono font-medium text-fg"
-                  >
+                <Tr key={learner.id}>
+                  <Td className="font-mono font-medium text-fg">
                     {learner.handle}
-                  </th>
-                  <td className="px-2.5 py-1.5 text-muted">
+                  </Td>
+                  <Td className="whitespace-nowrap text-muted">
                     {t(`institution.section.${learner.sectionKey}`)}
-                  </td>
+                  </Td>
                   {HEATMAP_DOMAINS.map((d) => (
-                    <td key={d.key} className="px-2.5 py-1.5 text-fg">
+                    <Td key={d.key} className="whitespace-nowrap text-fg">
                       {t(`bands.${learner.cells[d.key].band}`)}
-                    </td>
+                    </Td>
                   ))}
-                </tr>
+                </Tr>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TBody>
+          </Table>
+        </TableWrap>
         <p className="mt-1 text-[11px] text-muted">
           {t("institution.export.preview.sampleCaption")}
           {moreCount > 0 ? (
