@@ -1,9 +1,13 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
   Sparkle,
+  Lightning,
+  CircleNotch,
+  CloudSlash,
+  CheckCircle,
   FunnelSimple,
   Heartbeat,
   Brain,
@@ -42,6 +46,11 @@ import { pick, esiToState } from "@/components/ehr/labels";
 import { stateMap } from "@/components/clinicalState";
 import { seedCases } from "@/data/seedCases";
 import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
+import {
+  generateCaseFromBackend,
+  type GeneratedSource,
+} from "@/lib/liveCaseGen";
+import { useLiveBackend } from "@/lib/liveBackend";
 import type { CaseInstance } from "@/domain/case";
 import {
   specialtyOf,
@@ -147,24 +156,38 @@ function FilterRow({
 /* Generator control surface                                                   */
 /* -------------------------------------------------------------------------- */
 
+/** Outcome banner for the last generation run (source + fallback / degraded). */
+interface GenNote {
+  source: GeneratedSource;
+  degraded: boolean;
+  /** True when the AI path was requested but fell back to local generation. */
+  fellBack: boolean;
+}
+
 function GeneratePanel({
-  onGenerate,
+  onQuickGenerate,
+  onAiGenerate,
+  onCancel,
+  busy,
+  note,
   lang,
 }: {
-  onGenerate: (
-    seedMode: "random" | "constrained",
+  onQuickGenerate: (
     complaint: ChiefComplaintFamily | null,
     difficulty: 1 | 2 | 3 | 4 | 5,
   ) => void;
+  onAiGenerate: (
+    complaint: ChiefComplaintFamily | null,
+    difficulty: 1 | 2 | 3 | 4 | 5,
+  ) => void;
+  onCancel: () => void;
+  busy: boolean;
+  note: GenNote | null;
   lang: "en" | "tr";
 }) {
   const { t } = useTranslation();
   const [complaint, setComplaint] = useState<ChiefComplaintFamily | null>(null);
   const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
-
-  function run() {
-    onGenerate(complaint ? "constrained" : "random", complaint, difficulty);
-  }
 
   return (
     <Card padding="lg" className="flex flex-col gap-5">
@@ -182,12 +205,13 @@ function GeneratePanel({
       </div>
 
       {/* Constraint controls read as a real generator bar */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t("cases.generate.complaintLegend")}>
           {(aria) => (
             <Select
               {...aria}
               value={complaint ?? "surprise"}
+              disabled={busy}
               onChange={(e) =>
                 setComplaint(
                   e.target.value === "surprise"
@@ -211,6 +235,7 @@ function GeneratePanel({
             <Select
               {...aria}
               value={String(difficulty)}
+              disabled={busy}
               onChange={(e) =>
                 setDifficulty(Number(e.target.value) as 1 | 2 | 3 | 4 | 5)
               }
@@ -223,21 +248,115 @@ function GeneratePanel({
             </Select>
           )}
         </Field>
-
-        <Button
-          size="md"
-          onClick={run}
-          fullWidth
-          className="sm:col-span-2 lg:col-span-1 lg:w-auto"
-          leadingIcon={<Sparkle weight="fill" className="h-4 w-4" />}
-        >
-          {t("cases.generate.action")}
-        </Button>
       </div>
+
+      {/* Two clear generation paths: instant (default) + async AI (richer) */}
+      <div className="flex flex-col gap-2">
+        <span className="eyebrow">{t("livegen.modeLegend")}</span>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Button
+              size="md"
+              fullWidth
+              disabled={busy}
+              onClick={() => onQuickGenerate(complaint, difficulty)}
+              leadingIcon={<Lightning weight="fill" className="h-4 w-4" />}
+            >
+              {t("livegen.quick")}
+            </Button>
+            <p className="text-xs text-muted">{t("livegen.quickHint")}</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Button
+              size="md"
+              variant="secondary"
+              fullWidth
+              disabled={busy}
+              onClick={() => onAiGenerate(complaint, difficulty)}
+              leadingIcon={<Sparkle weight="fill" className="h-4 w-4" />}
+            >
+              {t("livegen.ai")}
+            </Button>
+            <p className="text-xs text-muted">{t("livegen.aiHint")}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress + outcome surface (never blocks; AI runs async) */}
+      {busy ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-3 rounded-control border border-border bg-bg-subtle px-3 py-2.5"
+        >
+          <CircleNotch
+            weight="bold"
+            className="h-4 w-4 shrink-0 animate-spin text-brand"
+            aria-hidden
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-medium text-fg">
+              {t("livegen.generating")}
+            </span>
+            <span className="text-xs text-muted">
+              {t("livegen.generatingHint")}
+            </span>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onCancel}
+            leadingIcon={<X weight="bold" className="h-3.5 w-3.5" />}
+          >
+            {t("livegen.cancel")}
+          </Button>
+        </div>
+      ) : note ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-start gap-2 rounded-control border border-border bg-bg-subtle px-3 py-2.5 text-xs text-muted"
+        >
+          {note.fellBack ? (
+            <CloudSlash
+              weight="bold"
+              className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--state-caution)]"
+              aria-hidden
+            />
+          ) : (
+            <CheckCircle
+              weight="fill"
+              className="mt-0.5 h-4 w-4 shrink-0 text-brand"
+              aria-hidden
+            />
+          )}
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="inline-flex flex-wrap items-center gap-1.5">
+              <span className="font-medium text-fg">
+                {t("livegen.sourceLabel")}
+              </span>
+              <Badge
+                tone={
+                  note.fellBack
+                    ? "caution"
+                    : note.source === "local"
+                      ? "neutral"
+                      : "brand"
+                }
+                variant="outline"
+              >
+                {t(`livegen.source.${note.source}`)}
+              </Badge>
+            </span>
+            {note.fellBack ? <span>{t("livegen.unavailable")}</span> : null}
+            {note.degraded ? <span>{t("livegen.degraded")}</span> : null}
+          </div>
+        </div>
+      ) : null}
 
       <p className="flex items-start gap-2 border-t border-border pt-4 text-xs text-muted">
         <Sparkle weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle" aria-hidden />
-        {t("cases.generate.unlimited")}
+        {t("livegen.note")} {t("cases.generate.unlimited")}
       </p>
     </Card>
   );
@@ -410,9 +529,20 @@ export function CasesPage() {
   const filterEntry = useReveal(0.09);
   const gridEntry = useReveal(0.13);
 
+  // The live pod backend availability (health-probed once); used to skip the
+  // network wait when the gateway is known to be offline.
+  const { available, checking } = useLiveBackend();
+
   // Generated cases live in page state so the library grows without a reload,
   // demonstrating the unlimited non-repeating generation claim. Newest first.
   const [generated, setGenerated] = useState<CaseInstance[]>([]);
+
+  // Async AI-generation state. `aiBusy` drives the progress surface; `genNote`
+  // is the outcome banner (source + fallback / degraded). An AbortController
+  // lets the learner cancel a slow pod request.
+  const [aiBusy, setAiBusy] = useState(false);
+  const [genNote, setGenNote] = useState<GenNote | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Facet filters.
   const [specialty, setSpecialty] = useState<Specialty | null>(null);
@@ -439,21 +569,73 @@ export function CasesPage() {
     setComplaint(null);
   }, []);
 
-  const handleGenerate = useCallback(
-    (
-      seedMode: "random" | "constrained",
-      cc: ChiefComplaintFamily | null,
-      diff: 1 | 2 | 3 | 4 | 5,
-    ) => {
+  // Quick generate — INSTANT, offline, deterministic. The default path.
+  const handleQuickGenerate = useCallback(
+    (cc: ChiefComplaintFamily | null, diff: 1 | 2 | 3 | 4 | 5) => {
       const next = generateCase(
-        seedMode === "constrained" && cc
+        cc
           ? { seedMode: "constrained", chiefComplaint: cc, difficulty: diff, locale: lang }
           : { seedMode: "random", difficulty: diff, locale: lang },
       );
       setGenerated((prev) => [next, ...prev]);
+      setGenNote({ source: "local", degraded: false, fellBack: false });
     },
     [lang],
   );
+
+  // AI generate — ASYNC pod backend, richer + ICD/DSM-sampled, with a progress
+  // state and a graceful fallback to the instant client. Never blocks the UI.
+  const handleAiGenerate = useCallback(
+    (cc: ChiefComplaintFamily | null, diff: 1 | 2 | 3 | 4 | 5) => {
+      const constraints = {
+        locale: lang,
+        difficulty: diff,
+        complaint: cc,
+        ...(specialty ? { specialty } : {}),
+      };
+
+      // Backend health-probed as offline: skip the wait, generate locally now.
+      if (!checking && !available) {
+        const next = generateCase(
+          cc
+            ? { seedMode: "constrained", chiefComplaint: cc, difficulty: diff, locale: lang }
+            : { seedMode: "random", difficulty: diff, locale: lang },
+        );
+        setGenerated((prev) => [next, ...prev]);
+        setGenNote({ source: "local", degraded: false, fellBack: true });
+        return;
+      }
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setAiBusy(true);
+      setGenNote(null);
+
+      void (async () => {
+        try {
+          const result = await generateCaseFromBackend(constraints, {
+            signal: controller.signal,
+          });
+          setGenerated((prev) => [result.case, ...prev]);
+          setGenNote({
+            source: result.source,
+            degraded: result.degraded,
+            fellBack: result.source === "local",
+          });
+        } catch {
+          // Aborted by the learner (Cancel) — leave the library untouched.
+        } finally {
+          if (abortRef.current === controller) abortRef.current = null;
+          setAiBusy(false);
+        }
+      })();
+    },
+    [lang, specialty, available, checking],
+  );
+
+  const handleCancelGenerate = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
 
   const startCase = useCallback(
     (c: CaseInstance) => {
@@ -476,7 +658,14 @@ export function CasesPage() {
 
       {/* Generator */}
       <motion.section {...genEntry} aria-labelledby="cases-generate-heading">
-        <GeneratePanel onGenerate={handleGenerate} lang={lang} />
+        <GeneratePanel
+          onQuickGenerate={handleQuickGenerate}
+          onAiGenerate={handleAiGenerate}
+          onCancel={handleCancelGenerate}
+          busy={aiBusy}
+          note={genNote}
+          lang={lang}
+        />
       </motion.section>
 
       {/* Filter toolbar */}

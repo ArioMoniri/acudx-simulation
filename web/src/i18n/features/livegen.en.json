@@ -1,0 +1,22 @@
+{
+  "livegen": {
+    "modeLegend": "Generation",
+    "quick": "Quick generate",
+    "quickHint": "Instant, offline. Builds a case on-device from the seeded template engine.",
+    "ai": "AI generate",
+    "aiHint": "Runs on the pod: ICD/DSM-sampled and grounded, richer detail.",
+    "note": "AI generation runs the open model on the pod and may take a moment.",
+    "generating": "Generating…",
+    "generatingHint": "Sampling, grounding and verifying on the pod. You can cancel.",
+    "cancel": "Cancel",
+    "unavailable": "AI backend unavailable — generated locally",
+    "degraded": "Grounding degraded — verify guideline anchors",
+    "ready": "Case ready",
+    "sourceLabel": "Source",
+    "source": {
+      "ai": "AI",
+      "template": "Template",
+      "local": "Local"
+    }
+  }
+}
