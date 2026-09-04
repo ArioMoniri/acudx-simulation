@@ -1,0 +1,25 @@
+{
+  "progress3": {
+    "snapshot": {
+      "level": "Level",
+      "streak": "Streak",
+      "calibrationGap": "Calibration gap",
+      "reviewsDue": "Reviews due",
+      "gapTrend": "{{points}} pp narrower",
+      "streakUnit": "days",
+      "reviewsUnit": "cards"
+    },
+    "review": {
+      "tableLabel": "Review queue",
+      "tableCaption": "Spaced-repetition review queue with recall, stability and due date per card.",
+      "col": {
+        "prompt": "Prompt",
+        "domain": "Domain",
+        "recall": "Recall",
+        "stability": "Stability",
+        "due": "Due",
+        "state": "State"
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "progress3": {
+    "snapshot": {
+      "level": "Seviye",
+      "streak": "Seri",
+      "calibrationGap": "Kalibrasyon farkı",
+      "reviewsDue": "Bekleyen tekrar",
+      "gapTrend": "{{points}} puan daraldı",
+      "streakUnit": "gün",
+      "reviewsUnit": "kart"
+    },
+    "review": {
+      "tableLabel": "Tekrar kuyruğu",
+      "tableCaption": "Her kart için hatırlama, kararlılık ve son tarih ile aralıklı tekrar kuyruğu.",
+      "col": {
+        "prompt": "Soru",
+        "domain": "Alan",
+        "recall": "Hatırlama",
+        "stability": "Kararlılık",
+        "due": "Zamanı",
+        "state": "Durum"
+      }
+    }
+  }
+}

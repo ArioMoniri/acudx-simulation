@@ -1,0 +1,20 @@
+{
+  "feedback3": {
+    "verdict": {
+      "eyebrow": "Performance summary",
+      "bandsProficient": "Bands at proficient+",
+      "overall": "of {{total}} scored competency bands",
+      "byAxis": "By axis",
+      "calibrationGap": "Calibration gap",
+      "gapTrend": "{{points}} pp narrower",
+      "gapHint": "Self-rating vs measured, latest session",
+      "withheldNote": "{{count}} domain withheld pending more evidence"
+    },
+    "section": {
+      "bands": "Competency bands",
+      "process": "Process & timing",
+      "gaps": "Evidence-anchored gaps",
+      "steps": "Next steps"
+    }
+  }
+}
