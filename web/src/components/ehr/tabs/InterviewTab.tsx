@@ -13,10 +13,14 @@ import {
   WifiSlash,
   Check,
   X,
+  SpeakerHigh,
+  SpeakerSlash,
 } from "@phosphor-icons/react";
 
 import { EncounterChat } from "@/components/EncounterChat";
 import { GuidanceCard } from "@/components/GuidanceCard";
+import { PatientAvatar3D } from "@/components/avatar3d/PatientAvatar3D";
+import { SymptomSummary, type VitalsLike } from "@/components/PatientViewer";
 import { Badge, Button, Switch, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
@@ -24,6 +28,7 @@ import {
   requestExam,
   logGuardOutcome,
   getOffTaskCount,
+  getCurrentVitals,
   useEncounterState,
 } from "@/state/encounterStore";
 import {
@@ -257,6 +262,27 @@ export function InterviewTab({
     () => ({ ...affectByTurn, ...liveAffect }),
     [affectByTurn, liveAffect],
   );
+
+  // The patient's most recent spoken line (in the encounter's content language),
+  // fed to the 3D avatar so its mouth lip-syncs the reply as it lands. Changing
+  // the string starts a fresh spoken turn; an empty transcript leaves the face
+  // at rest. This is what makes the patient visibly "talk" while you converse.
+  const lastPatientUtterance = useMemo(() => {
+    for (let i = allTurns.length - 1; i >= 0; i--) {
+      if (allTurns[i].role === "patient") return allTurns[i][lang];
+    }
+    return "";
+  }, [allTurns, lang]);
+
+  // Opt-in spoken audio (Web Speech API) for the patient replies; OFF by default
+  // so the encounter is silent in shared/clinical spaces — the lip-sync still
+  // plays. Toggling it on takes effect on the NEXT reply.
+  const [voiceOn, setVoiceOn] = useState(false);
+
+  // Live vitals (same course the bedside monitor reads) drive the avatar's
+  // clinical signs + the concise symptom line beneath it. Falls back to triage
+  // before the encounter clock starts.
+  const vitals = getCurrentVitals(state) ?? caseInstance.triageVitals;
 
   // A cited Socratic hint for the interview step (reuses the existing hints).
   const activeHint =
@@ -617,8 +643,16 @@ export function InterviewTab({
         </div>
       </div>
 
-      {/* Ask / examine chips */}
+      {/* Patient presence + ask / examine chips */}
       <div className="flex flex-col gap-4">
+        <PatientPresence
+          caseInstance={caseInstance}
+          vitals={vitals}
+          utterance={lastPatientUtterance}
+          voiceOn={voiceOn}
+          onToggleVoice={() => setVoiceOn((v) => !v)}
+        />
+
         <ChipPanel
           title={t("ehr.interview.askHeading")}
           hint={t("ehr.interview.askHint")}
@@ -837,6 +871,78 @@ function FocusIndicator({ offTask }: { offTask: number }) {
     >
       {label}
     </Badge>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Patient presence — the talking, symptom-aware avatar                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * PatientPresence — the person the learner is interviewing, shown beside the
+ * dialogue. The symptom-aware 3D head lip-syncs each patient reply (`utterance`)
+ * via the client-side viseme timeline — no audio, no server GPU — so the patient
+ * visibly "talks" as you converse. A voice toggle opts into spoken audio (Web
+ * Speech API) for the next reply. A concise live clinical-sign line sits beneath,
+ * so the demographic-matched face is always tied to the current vitals.
+ */
+function PatientPresence({
+  caseInstance,
+  vitals,
+  utterance,
+  voiceOn,
+  onToggleVoice,
+}: {
+  caseInstance: CaseInstance;
+  vitals: VitalsLike;
+  utterance: string;
+  voiceOn: boolean;
+  onToggleVoice: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section className="rounded-card border border-border bg-surface p-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          {t("ehr.interview.patient.heading", { defaultValue: "Patient" })}
+        </h3>
+        <button
+          type="button"
+          onClick={onToggleVoice}
+          aria-pressed={voiceOn}
+          title={t("ehr.interview.patient.voiceToggle", {
+            defaultValue: "Toggle spoken audio for patient replies",
+          })}
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+            "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+            voiceOn
+              ? "border-transparent bg-brand-tint text-brand"
+              : "border-border bg-bg-subtle text-muted hover:text-fg",
+          )}
+        >
+          {voiceOn ? (
+            <SpeakerHigh weight="bold" className="h-3.5 w-3.5" aria-hidden />
+          ) : (
+            <SpeakerSlash weight="bold" className="h-3.5 w-3.5" aria-hidden />
+          )}
+          {voiceOn
+            ? t("ehr.interview.patient.voiceOn", { defaultValue: "Voice on" })
+            : t("ehr.interview.patient.voiceOff", { defaultValue: "Voice off" })}
+        </button>
+      </div>
+
+      <div className="mt-2">
+        <PatientAvatar3D
+          profileSeed={caseInstance.seed}
+          utterance={utterance}
+          voice={voiceOn}
+          className="w-full"
+        />
+      </div>
+
+      <SymptomSummary vitals={vitals} className="mt-2 text-muted" />
+    </section>
   );
 }
 

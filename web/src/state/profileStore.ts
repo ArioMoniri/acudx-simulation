@@ -24,6 +24,8 @@
 
 import { useSyncExternalStore } from "react";
 
+import { SUPPORTED_LANGUAGES, type Language } from "@/i18n";
+
 /* -------------------------------------------------------------------------- */
 /* Types                                                                       */
 /* -------------------------------------------------------------------------- */
@@ -42,13 +44,14 @@ export const PROFILE_ROLES: readonly ProfileRole[] = [
   "dean",
 ] as const;
 
-/** Preferred UI language — the two locales AcuDx ships (EN + TR). */
-export type ProfileLanguage = "en" | "tr";
+/**
+ * Preferred UI language — any of the locales AcuDx ships. This is the single
+ * source of truth in `src/i18n` (12 languages incl. Arabic RTL), so the profile
+ * can store whichever the person picked, not just EN/TR.
+ */
+export type ProfileLanguage = Language;
 
-export const PROFILE_LANGUAGES: readonly ProfileLanguage[] = [
-  "en",
-  "tr",
-] as const;
+export const PROFILE_LANGUAGES: readonly ProfileLanguage[] = SUPPORTED_LANGUAGES;
 
 /**
  * Avatar identities the person can choose between. Each seed drives a
@@ -108,7 +111,10 @@ function isProfileRole(v: unknown): v is ProfileRole {
 }
 
 function isProfileLanguage(v: unknown): v is ProfileLanguage {
-  return v === "en" || v === "tr";
+  return (
+    typeof v === "string" &&
+    (SUPPORTED_LANGUAGES as readonly string[]).includes(v)
+  );
 }
 
 /** Validate an unknown blob (from storage) into a UserProfile, or null. */

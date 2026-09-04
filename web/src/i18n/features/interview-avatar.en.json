@@ -1,0 +1,12 @@
+{
+  "ehr": {
+    "interview": {
+      "patient": {
+        "heading": "Patient",
+        "voiceOn": "Voice on",
+        "voiceOff": "Voice off",
+        "voiceToggle": "Toggle spoken audio for patient replies"
+      }
+    }
+  }
+}
