@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
-/* Self-hosted fonts (NO CDN) */
-@import "@fontsource-variable/geist";
+/* Self-hosted fonts (NO CDN) — Manrope (display/brand), Inter (UI), Geist Mono (data) */
+@import "@fontsource-variable/manrope";
+@import "@fontsource-variable/inter";
 @import "@fontsource/geist-mono";
 
 /* ============================================================
@@ -83,8 +84,9 @@
   --dur-base: 220ms;
   --dur-slow: 360ms;
 
-  /* ---- Fonts (self-hosted) ---- */
-  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* ---- Fonts (self-hosted): Manrope display, Inter UI, Geist Mono data ---- */
+  --font-display: "Manrope Variable", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
 
   /* ---- Vitals monitor — ALWAYS dark (both themes) ---- */
@@ -210,6 +212,7 @@
   --shadow-soft-md: var(--shadow-md);
   --shadow-pop: var(--shadow-pop);
 
+  --font-display: var(--font-display);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 
@@ -239,7 +242,8 @@
     font-family: var(--font-sans);
     font-size: 0.9375rem; /* 15px base — denser, software-grade */
     line-height: 1.55;
-    font-feature-settings: "cv11", "ss01";
+    font-optical-sizing: auto;
+    font-feature-settings: "cv05", "cv11"; /* Inter: l-with-tail, single-story a */
   }
 
   /* Tabular numerals for any monospace numeric readout (vitals) */
@@ -250,6 +254,8 @@
   }
 
   h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
     text-wrap: balance;
     letter-spacing: -0.02em;
     line-height: 1.12;
