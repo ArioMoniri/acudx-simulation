@@ -1,6 +1,16 @@
 {
   "livegen": {
     "modeLegend": "Generation",
+    "endless": "Generate a fresh case",
+    "endlessHint": "A brand-new synthetic patient every time — endless and never repeating.",
+    "endlessSub": "Draws across every specialty and self-checks each case for consistency.",
+    "engineAi": "AI · realtime",
+    "engineLocal": "Instant · offline",
+    "engineChecking": "Checking pod…",
+    "refine": "Refine (optional)",
+    "pickEngine": "Or choose a specific engine",
+    "orCurated": "Or start from a curated case",
+    "curatedHint": "Fully authored teaching cases with guideline anchors.",
     "quick": "Quick generate",
     "quickHint": "Instant, offline. Builds a case on-device from the seeded template engine.",
     "ai": "AI generate",

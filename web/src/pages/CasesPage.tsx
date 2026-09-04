@@ -14,6 +14,7 @@ import {
   Flask,
   Wind,
   Stethoscope,
+  Stack,
   ArrowRight,
   X,
   type Icon,
@@ -165,13 +166,20 @@ interface GenNote {
 }
 
 function GeneratePanel({
+  onEndless,
   onQuickGenerate,
   onAiGenerate,
   onCancel,
   busy,
   note,
   lang,
+  available,
+  checking,
 }: {
+  onEndless: (
+    complaint: ChiefComplaintFamily | null,
+    difficulty: 1 | 2 | 3 | 4 | 5,
+  ) => void;
   onQuickGenerate: (
     complaint: ChiefComplaintFamily | null,
     difficulty: 1 | 2 | 3 | 4 | 5,
@@ -184,10 +192,16 @@ function GeneratePanel({
   busy: boolean;
   note: GenNote | null;
   lang: "en" | "tr";
+  /** Pod backend availability — drives the "AI · realtime" vs "Instant" badge. */
+  available: boolean;
+  checking: boolean;
 }) {
   const { t } = useTranslation();
   const [complaint, setComplaint] = useState<ChiefComplaintFamily | null>(null);
   const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
+
+  // Which engine the headline "Generate a fresh case" button will use right now.
+  const engine = checking ? "checking" : available ? "ai" : "local";
 
   return (
     <Card padding="lg" className="flex flex-col gap-5">
@@ -204,59 +218,103 @@ function GeneratePanel({
         <p className="max-w-2xl text-sm text-muted">{t("cases.generate.hint")}</p>
       </div>
 
-      {/* Constraint controls read as a real generator bar */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={t("cases.generate.complaintLegend")}>
-          {(aria) => (
-            <Select
-              {...aria}
-              value={complaint ?? "surprise"}
-              disabled={busy}
-              onChange={(e) =>
-                setComplaint(
-                  e.target.value === "surprise"
-                    ? null
-                    : (e.target.value as ChiefComplaintFamily),
-                )
-              }
-            >
-              <option value="surprise">{t("cases.generate.surprise")}</option>
-              {COMPLAINT_ORDER.map((c) => (
-                <option key={c} value={c}>
-                  {COMPLAINT_LABELS[c][lang]}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-
-        <Field label={t("cases.generate.difficultyLegend")}>
-          {(aria) => (
-            <Select
-              {...aria}
-              value={String(difficulty)}
-              disabled={busy}
-              onChange={(e) =>
-                setDifficulty(Number(e.target.value) as 1 | 2 | 3 | 4 | 5)
-              }
-            >
-              {DIFFICULTIES.map((d) => (
-                <option key={d} value={d}>
-                  {d} · {DIFFICULTY_BAND[d][lang]}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
+      {/* Headline action: endless generation, backend-first when the pod is up. */}
+      <div className="flex flex-col gap-2.5 rounded-card border border-brand/30 bg-brand-tint/40 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-fg">
+            {t("livegen.endless")}
+          </span>
+          <Badge
+            tone={engine === "ai" ? "brand" : "neutral"}
+            variant="outline"
+            icon={
+              engine === "ai" ? (
+                <Sparkle weight="fill" className="h-3 w-3" />
+              ) : engine === "checking" ? (
+                <CircleNotch weight="bold" className="h-3 w-3 animate-spin" />
+              ) : (
+                <Lightning weight="fill" className="h-3 w-3" />
+              )
+            }
+          >
+            {t(
+              engine === "ai"
+                ? "livegen.engineAi"
+                : engine === "checking"
+                  ? "livegen.engineChecking"
+                  : "livegen.engineLocal",
+            )}
+          </Badge>
+        </div>
+        <Button
+          size="lg"
+          fullWidth
+          disabled={busy}
+          onClick={() => onEndless(complaint, difficulty)}
+          leadingIcon={<Sparkle weight="fill" className="h-5 w-5" />}
+        >
+          {t("livegen.endless")}
+        </Button>
+        <p className="text-xs text-muted">{t("livegen.endlessHint")}</p>
       </div>
 
-      {/* Two clear generation paths: instant (default) + async AI (richer) */}
+      {/* Optional constraint controls that shape the generated case */}
       <div className="flex flex-col gap-2">
-        <span className="eyebrow">{t("livegen.modeLegend")}</span>
+        <span className="eyebrow">{t("livegen.refine")}</span>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("cases.generate.complaintLegend")}>
+            {(aria) => (
+              <Select
+                {...aria}
+                value={complaint ?? "surprise"}
+                disabled={busy}
+                onChange={(e) =>
+                  setComplaint(
+                    e.target.value === "surprise"
+                      ? null
+                      : (e.target.value as ChiefComplaintFamily),
+                  )
+                }
+              >
+                <option value="surprise">{t("cases.generate.surprise")}</option>
+                {COMPLAINT_ORDER.map((c) => (
+                  <option key={c} value={c}>
+                    {COMPLAINT_LABELS[c][lang]}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+
+          <Field label={t("cases.generate.difficultyLegend")}>
+            {(aria) => (
+              <Select
+                {...aria}
+                value={String(difficulty)}
+                disabled={busy}
+                onChange={(e) =>
+                  setDifficulty(Number(e.target.value) as 1 | 2 | 3 | 4 | 5)
+                }
+              >
+                {DIFFICULTIES.map((d) => (
+                  <option key={d} value={d}>
+                    {d} · {DIFFICULTY_BAND[d][lang]}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        </div>
+      </div>
+
+      {/* Secondary: force a specific engine (preserves the quick / AI split) */}
+      <div className="flex flex-col gap-2">
+        <span className="eyebrow">{t("livegen.pickEngine")}</span>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Button
-              size="md"
+              size="sm"
+              variant="secondary"
               fullWidth
               disabled={busy}
               onClick={() => onQuickGenerate(complaint, difficulty)}
@@ -268,7 +326,7 @@ function GeneratePanel({
           </div>
           <div className="flex flex-col gap-1.5">
             <Button
-              size="md"
+              size="sm"
               variant="secondary"
               fullWidth
               disabled={busy}
@@ -633,6 +691,22 @@ export function CasesPage() {
     [lang, specialty, available, checking],
   );
 
+  // Endless generation — the DEFAULT, headline action. Prefers the realtime pod
+  // backend (unlimited ICD-11 / ICD-10 / DSM-5-TR synthesis) whenever it is
+  // reachable, and drops to the instant on-device generator only when the pod is
+  // known to be offline. Either way the learner gets a brand-new, non-repeating
+  // case; the pod path shows a brief, cancellable loading state.
+  const handleEndlessGenerate = useCallback(
+    (cc: ChiefComplaintFamily | null, diff: 1 | 2 | 3 | 4 | 5) => {
+      if (!checking && !available) {
+        handleQuickGenerate(cc, diff);
+      } else {
+        handleAiGenerate(cc, diff);
+      }
+    },
+    [available, checking, handleQuickGenerate, handleAiGenerate],
+  );
+
   const handleCancelGenerate = useCallback(() => {
     abortRef.current?.abort();
   }, []);
@@ -659,14 +733,24 @@ export function CasesPage() {
       {/* Generator */}
       <motion.section {...genEntry} aria-labelledby="cases-generate-heading">
         <GeneratePanel
+          onEndless={handleEndlessGenerate}
           onQuickGenerate={handleQuickGenerate}
           onAiGenerate={handleAiGenerate}
           onCancel={handleCancelGenerate}
           busy={aiBusy}
           note={genNote}
           lang={lang}
+          available={available}
+          checking={checking}
         />
       </motion.section>
+
+      {/* Secondary affordance: the curated + generated catalogue below */}
+      <motion.div {...filterEntry} className="-mb-4">
+        <SectionLabel icon={<Stack weight="bold" className="h-3.5 w-3.5" />}>
+          {t("livegen.orCurated")}
+        </SectionLabel>
+      </motion.div>
 
       {/* Filter toolbar */}
       <motion.section

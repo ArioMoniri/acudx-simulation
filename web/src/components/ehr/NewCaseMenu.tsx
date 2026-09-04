@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Shuffle, Sparkle, CaretDown, Sliders, Stack } from "@phosphor-icons/react";
+import { Sparkle, CaretDown, Sliders, Stack } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui";
 import { seedCases } from "@/data/seedCases";
@@ -111,7 +111,7 @@ export function NewCaseMenu({
           aria-label={t("ehr.newCase.menuLabel")}
           className="absolute right-0 z-40 mt-2 w-72 origin-top-right rounded-card border border-border bg-surface p-3 shadow-soft-md motion-safe:animate-[fade-up_0.16s_ease-out]"
         >
-          {/* Random */}
+          {/* Primary: endless, fresh, non-repeating case (the default action) */}
           <button
             ref={firstItemRef}
             type="button"
@@ -120,19 +120,19 @@ export function NewCaseMenu({
               onRandom();
               close();
             }}
-            className="flex w-full items-center gap-2 rounded-control px-2.5 py-2 text-left text-sm text-fg hover:bg-bg-subtle focus-visible:outline-none"
+            className="flex w-full items-center gap-2.5 rounded-control bg-brand px-3 py-2.5 text-left text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-none"
           >
-            <Shuffle weight="bold" className="h-4 w-4 text-brand" aria-hidden />
-            <span>
-              <span className="block font-medium">{t("ehr.newCase.random")}</span>
-              <span className="block text-xs text-muted">
-                {t("ehr.newCase.randomHint")}
+            <Sparkle weight="fill" className="h-5 w-5 shrink-0" aria-hidden />
+            <span className="min-w-0">
+              <span className="block">{t("livegen.endless")}</span>
+              <span className="block text-xs font-normal text-white/80">
+                {t("livegen.endlessHint")}
               </span>
             </span>
           </button>
 
-          {/* Constrained */}
-          <div className="mt-2 rounded-control border border-border p-2.5">
+          {/* Secondary: constrain the draw */}
+          <div className="mt-2.5 rounded-control border border-border p-2.5">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
               <Sliders weight="bold" className="h-3.5 w-3.5" aria-hidden />
               {t("ehr.newCase.constrained")}
@@ -186,11 +186,11 @@ export function NewCaseMenu({
             </Button>
           </div>
 
-          {/* Seed cases */}
+          {/* Tertiary: start from a curated case */}
           <div className="mt-2 border-t border-border pt-2">
             <p className="flex items-center gap-1.5 px-2.5 text-xs font-semibold uppercase tracking-wide text-muted">
               <Stack weight="bold" className="h-3.5 w-3.5" aria-hidden />
-              {t("ehr.newCase.seedHeading")}
+              {t("livegen.orCurated")}
             </p>
             <ul className="mt-1 max-h-40 overflow-y-auto">
               {seedCases.map((c: CaseInstance) => (
