@@ -140,6 +140,7 @@ const STOPWORDS = new Set([
  */
 const CLINICAL_STEMS: string[] = [
   // symptoms / signs (EN)
+  "complain", "complaint", "symptom", "problem", "bother", "wrong", "feel",
   "pain", "ache", "hurt", "sore", "chest", "breath", "cough", "fever", "temperatur",
   "nausea", "vomit", "dizz", "faint", "headache", "migrain", "sweat", "palpit",
   "radiat", "onset", "sudden", "gradual", "sever", "worse", "aggrava", "reliev",
@@ -301,7 +302,12 @@ function classifyScope(raw: string, caseInstance: CaseInstance): Classification 
   if (INTERROGATIVE_RE.test(raw)) {
     return { class: "in-scope", score: 0.5, rationale: "Question form without a clear clinical term; treated as in-scope (borderline)" };
   }
-  return { class: "off-topic", score: 0.65, rationale: "No clinical overlap with the case; reads as off-topic" };
+  // Anything left that is NOT a greeting, chit-chat, or a hard class is a
+  // genuine (if terse or mistyped) attempt to engage the patient — e.g. a bare
+  // "complaint", a partial word, a fragment. Err toward engaging rather than
+  // penalising the learner with an off-task flag (docs §OQ1). The patient can
+  // ask them to say more when no intent resolves.
+  return { class: "in-scope", score: 0.4, rationale: "No clear clinical term, but not social/meta — engaging the patient (borderline)" };
 }
 
 /* -------------------------------------------------------------------------- */

@@ -16,7 +16,6 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 
-import { cn } from "@/lib/cn";
 import { useReveal, useStagger } from "@/lib/motion";
 import {
   Badge,

@@ -153,6 +153,13 @@ describe("classifyUtterance — the opening / reason-for-visit question (regress
     expect(classifyUtterance("Hi there, good morning", chestCase).class).toBe("off-topic");
   });
 
+  it("terse or mistyped clinical attempts engage the patient, not an off-task flag", () => {
+    // Regression: "complaint" / a partial word were penalised as off-topic.
+    expect(classifyUtterance("complaint", chestCase).class).toBe("in-scope");
+    expect(classifyUtterance("your symptoms", chestCase).class).toBe("in-scope");
+    expect(classifyUtterance("complainy", chestCase).class).toBe("in-scope");
+  });
+
   it("maps the opening question to a real intent so the patient answers", () => {
     const intent = inferQuestionIntent("Why did you come in today?", chestCase);
     expect(intent).not.toBeNull();

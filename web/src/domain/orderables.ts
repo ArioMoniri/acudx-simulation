@@ -30,7 +30,6 @@ import type { Bilingual } from "@/data/mock";
 import type { CaseInstance } from "@/domain/case";
 import {
   CODE_SYSTEMS,
-  LOINC,
   type Coding,
   type DiagnosticReport,
   type Observation,
@@ -367,7 +366,7 @@ function normalObservation(
     return { ...base, valueString: spec.qualitative };
   }
   const value = spec.band ? sample(seedKey, spec.band, spec.decimals ?? 0) : 0;
-  return { ...base, valueQuantity: { value, ...(spec.unit ? { unit: spec.unit } : {}) } };
+  return { ...base, valueQuantity: { value, unit: spec.unit ?? "" } };
 }
 
 const NO_ACUTE: Bilingual = {
