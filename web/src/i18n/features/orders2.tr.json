@@ -1,0 +1,77 @@
+{
+  "orders2": {
+    "tab": {
+      "diagnostics": "Tetkik iste",
+      "treatments": "Tedaviler"
+    },
+    "group": {
+      "labs": "Laboratuvar",
+      "bloodgas": "Kan gazı",
+      "micro": "Mikrobiyoloji",
+      "imaging": "Görüntüleme",
+      "poc": "Yatak başı"
+    },
+    "search": {
+      "label": "İstenebilir tetkiklerde ara",
+      "placeholder": "Tetkik ara — hemogram, troponin, BT, kültür…",
+      "clear": "Aramayı temizle",
+      "noMatches": "Aramanızla eşleşen istenebilir tetkik yok."
+    },
+    "turnaround": {
+      "aria": "Sonuç süresi {{eta}}"
+    },
+    "order": {
+      "place": "İste",
+      "ordered": "İstendi",
+      "placeAria": "{{name}} iste",
+      "orderedAria": "{{name}} zaten istendi",
+      "itemsCount": "{{count}} tetkik"
+    },
+    "flag": {
+      "indicated": "Endike",
+      "indicatedAria": "Bu tabloda endike",
+      "lowValue": "Düşük değer",
+      "lowValueAria": "Bu tabloda düşük değerli veya endike değil"
+    },
+    "tracker": {
+      "heading": "İstem takibi",
+      "empty": "Henüz istem yok. Bir tetkik seçin, sonucunu izleyin.",
+      "summary": "{{placed}} istem · {{pending}} beklemede · {{resulted}} sonuçlandı",
+      "inProgress": "Sürüyor",
+      "resultedGroup": "Sonuçlandı",
+      "pending": "Beklemede",
+      "resultedTag": "Sonuçlandı",
+      "eta": "Tahmini {{eta}}",
+      "readyIn": "yaklaşık {{sec}} sn sonra",
+      "readyNow": "tamamlanıyor…",
+      "orderedAt": "{{min}} dk’da istendi",
+      "resultedAt": "{{min}} dk’da sonuçlandı",
+      "progressAria": "{{name}} sonuç ilerlemesi",
+      "hint": "Her tetkik tamamlandıkça sonuçlar Sonuçlar sekmesinde açılır."
+    },
+    "treatments": {
+      "heading": "Tedaviler",
+      "subtitle": "Uygulayın; hasta değişir — monitör canlı yanıt verir.",
+      "administer": "Uygula",
+      "administered": "Verildi",
+      "administerAria": "{{name}} uygula",
+      "administeredAria": "{{name}} uygulandı",
+      "route": "Yol",
+      "givenAt": "{{min}} dk’da verildi",
+      "givenCount": "{{count}} verildi",
+      "empty": "Henüz tedavi verilmedi."
+    },
+    "results": {
+      "wnl": "Normal sınırlar içinde",
+      "representativeImage": "Temsili görüntü",
+      "syntheticNote": "Vakaya özgü anormallik yok — normal sınırlar içinde raporlandı.",
+      "timeline": "{{ordered}} dk’da istendi → {{resulted}} dk’da sonuçlandı",
+      "etaLabel": "Beklenen sonuç süresi {{eta}}",
+      "inProgress": "Sürüyor",
+      "eta": "Tahmini {{eta}}",
+      "finalReport": "Nihai rapor",
+      "normalHeading": "Ek sonuçlar (normal)",
+      "normalNote": "Vakaya özgü bulgusu olmayan istenmiş tetkikler burada, normal sınırlar içinde raporlanır."
+    }
+  }
+}

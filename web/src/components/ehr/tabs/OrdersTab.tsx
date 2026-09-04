@@ -3,27 +3,50 @@ import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
   Flask,
-  Broadcast,
-  Pill,
-  UsersThree,
-  Plus,
+  Drop,
+  Virus,
+  Scan,
+  Pulse,
+  Syringe,
   Timer,
   CheckCircle,
+  Plus,
   MagnifyingGlass,
   X,
+  type Icon,
 } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/cn";
 import { useReveal, useStagger } from "@/lib/motion";
-import { LOINC, type Coding, type ServiceRequestKind } from "@/domain/fhir";
-import { conceptCode, minutesOf, pick } from "../labels";
 import {
+  Badge,
+  Button,
+  SectionLabel,
+  StatusDot,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  TextInput,
+} from "@/components/ui";
+import { orderTiming } from "@/domain/orderCatalog";
+import { TREATMENT_CATALOG, type TreatmentOption } from "@/domain/treatments";
+import {
+  ORDERABLES_BY_GROUP,
+  ORDER_GROUPS,
+  getOrderableByCode,
+  type Orderable,
+  type OrderCategory,
+} from "@/domain/orderables";
+import {
+  administerTreatment,
   getEncounterClockMs,
   placeOrder,
   useEncounterState,
 } from "@/state/encounterStore";
 import type { PlacedOrder } from "@/state/encounterStore";
-import type { Lang, Bilingual } from "@/data/mock";
+import { minutesOf, pick } from "../labels";
+import type { Bilingual, Lang } from "@/data/mock";
 import type { CaseInstance } from "@/domain/case";
 
 export interface OrdersTabProps {
@@ -31,69 +54,15 @@ export interface OrdersTabProps {
   lang: Lang;
 }
 
-type OrderCategory = "laboratory" | "imaging" | "medication" | "consult";
-
-interface Orderable {
-  code: string;
-  label: Bilingual;
-  category: OrderCategory;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Standard order set (always offered, alongside the case-specific orders)    */
-/* -------------------------------------------------------------------------- */
-
-const STANDARD_LABS: { code: Coding; label: Bilingual }[] = [
-  { code: LOINC.wbc, label: { en: "Full blood count", tr: "Tam kan sayımı" } },
-  { code: LOINC.crp, label: { en: "C-reactive protein", tr: "C-reaktif protein" } },
-  { code: LOINC.creatinine, label: { en: "Renal function", tr: "Böbrek fonksiyonu" } },
-  { code: LOINC.troponinHs, label: { en: "High-sensitivity troponin", tr: "Yüksek duyarlıklı troponin" } },
-  { code: LOINC.dDimer, label: { en: "D-dimer", tr: "D-dimer" } },
-  { code: LOINC.lactate, label: { en: "Lactate", tr: "Laktat" } },
-];
-
-const STANDARD_IMAGING: { code: string; label: Bilingual }[] = [
-  { code: LOINC.ecg12.code, label: { en: "12-lead ECG", tr: "12 derivasyonlu EKG" } },
-  { code: "cxr", label: { en: "Chest X-ray", tr: "Akciğer grafisi" } },
-];
-
-const STANDARD_MEDS: { code: string; label: Bilingual }[] = [
-  { code: "med-aspirin", label: { en: "Aspirin 300 mg PO", tr: "Aspirin 300 mg PO" } },
-  { code: "med-analgesia", label: { en: "Analgesia (titrated)", tr: "Analjezi (titre edilerek)" } },
-  { code: "med-antiemetic", label: { en: "Antiemetic", tr: "Antiemetik" } },
-];
-
-const STANDARD_CONSULTS: { code: string; label: Bilingual }[] = [
-  { code: "consult-cardiology", label: { en: "Cardiology consult", tr: "Kardiyoloji konsültasyonu" } },
-  { code: "consult-surgery", label: { en: "General surgery consult", tr: "Genel cerrahi konsültasyonu" } },
-  { code: "consult-neurology", label: { en: "Neurology consult", tr: "Nöroloji konsültasyonu" } },
-];
-
-function kindToCategory(kind: ServiceRequestKind): OrderCategory {
-  switch (kind) {
-    case "imaging":
-      return "imaging";
-    case "consult":
-      return "consult";
-    case "procedure":
-      return "medication";
-    case "laboratory":
-    default:
-      return "laboratory";
-  }
-}
-
-const CATEGORY_META: Record<
-  OrderCategory,
-  { icon: React.ReactNode; key: string }
-> = {
-  laboratory: { icon: <Flask weight="bold" className="h-4 w-4" />, key: "labs" },
-  imaging: { icon: <Broadcast weight="bold" className="h-4 w-4" />, key: "imaging" },
-  medication: { icon: <Pill weight="bold" className="h-4 w-4" />, key: "meds" },
-  consult: { icon: <UsersThree weight="bold" className="h-4 w-4" />, key: "consults" },
+const GROUP_ICON: Record<OrderCategory, Icon> = {
+  labs: Flask,
+  bloodgas: Drop,
+  micro: Virus,
+  imaging: Scan,
+  poc: Pulse,
 };
 
-/** Local 1 Hz tick so pending-order countdowns advance between store events. */
+/** Local 1 Hz tick so pending countdowns advance + synthetic orders flip live. */
 function useSecondTick(active: boolean): void {
   const [, force] = useState(0);
   useEffect(() => {
@@ -103,212 +72,218 @@ function useSecondTick(active: boolean): void {
   }, [active]);
 }
 
+/** Realistic turnaround label for an orderable (the "sense of time"). */
+function turnaround(o: Orderable, lang: Lang): string {
+  const timing = orderTiming(o.code, o.kind === "imaging" ? "imaging" : "laboratory", o.label);
+  return pick(timing.clinicalLabel, lang);
+}
+
 /**
- * OrdersTab — the CPOE (docs §2.2). Categories Labs / Imaging / Meds / Consults;
- * items come from the case's expected workup (so the indicated orders are
- * present) merged with a standard set (so over-ordering is possible and
- * measurable, docs §4). A search box narrows the catalog across categories.
- * placeOrder logs an event and schedules a simulated result; the tracker splits
- * placed orders into in-progress (with a live turnaround countdown driven by the
- * store timer) and resulted, so the pending -> resulted transition is legible.
+ * OrdersTab — an Epic/AMBOSS-style order-entry surface (docs §2.2). A searchable,
+ * categorised catalog lets the student order ANY lab, blood gas, culture,
+ * imaging or point-of-care test — not just the case's expected work-up — each
+ * showing its realistic turnaround so cultures visibly take 36–48 h while a POC
+ * glucose is minutes. Placing an order schedules a timed result and moves it to
+ * the live tracker (countdown → resulted). A Treatments section, grouped by
+ * class, administers agents that drive the live vitals course. Indicated vs
+ * low-value orders are flagged from the case rubric, but anything is orderable.
  */
 export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
   const { t } = useTranslation();
   const state = useEncounterState();
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<"diagnostics" | "treatments">("diagnostics");
 
   const summaryReveal = useReveal();
 
-  // Merge case-specific orderables with the standard set (dedupe by code).
-  const orderables = useMemo<Orderable[]>(() => {
-    const map = new Map<string, Orderable>();
-
-    // Case-specific first (from expected workup + result codes).
+  // Indicated / low-value flags from the case rubric (ordering stays unlimited).
+  const rubric = useMemo(() => {
+    const m = new Map<string, "indicated" | "lowValue">();
     for (const w of caseInstance.expectedWorkup) {
-      map.set(conceptCode(w.code), {
-        code: conceptCode(w.code),
-        label: w.label,
-        category: kindToCategory(w.kind),
-      });
+      const code = w.code.coding[0]?.code;
+      if (!code) continue;
+      m.set(code, w.lowValue ? "lowValue" : "indicated");
     }
-    for (const im of caseInstance.groundTruth.imaging) {
-      if (!map.has(im.orderCode)) {
-        map.set(im.orderCode, {
-          code: im.orderCode,
-          label: im.modality,
-          category: "imaging",
-        });
+    return m;
+  }, [caseInstance]);
+
+  // The catalog, plus any case-specific lab/imaging codes not already listed so
+  // the indicated order is always present and flaggable.
+  const groups = useMemo<Record<OrderCategory, Orderable[]>>(() => {
+    const out = {
+      labs: [...ORDERABLES_BY_GROUP.labs],
+      bloodgas: [...ORDERABLES_BY_GROUP.bloodgas],
+      micro: [...ORDERABLES_BY_GROUP.micro],
+      imaging: [...ORDERABLES_BY_GROUP.imaging],
+      poc: [...ORDERABLES_BY_GROUP.poc],
+    } satisfies Record<OrderCategory, Orderable[]>;
+    for (const w of caseInstance.expectedWorkup) {
+      const code = w.code.coding[0]?.code;
+      if (!code || getOrderableByCode(code)) continue;
+      if (w.kind === "imaging") {
+        out.imaging.push({ code, label: w.label, kind: "imaging", category: "imaging" });
+      } else if (w.kind === "laboratory") {
+        out.labs.push({ code, label: w.label, kind: "laboratory", category: "labs" });
       }
     }
-
-    const add = (code: string, label: Bilingual, category: OrderCategory) => {
-      if (!map.has(code)) map.set(code, { code, label, category });
-    };
-    STANDARD_LABS.forEach((o) => add(o.code.code, o.label, "laboratory"));
-    STANDARD_IMAGING.forEach((o) => add(o.code, o.label, "imaging"));
-    STANDARD_MEDS.forEach((o) => add(o.code, o.label, "medication"));
-    STANDARD_CONSULTS.forEach((o) => add(o.code, o.label, "consult"));
-
-    return Array.from(map.values());
+    return out;
   }, [caseInstance]);
 
   const q = query.trim().toLowerCase();
   const matches = (o: Orderable) =>
     q === "" ||
-    pick(o.label, lang).toLowerCase().includes(q) ||
     o.label.en.toLowerCase().includes(q) ||
+    o.label.tr.toLowerCase().includes(q) ||
     o.code.toLowerCase().includes(q);
 
-  const byCategory = (cat: OrderCategory) =>
-    orderables.filter((o) => o.category === cat && matches(o));
-
   const placedCodes = new Set(state.orders.map((o) => o.code));
-  const expectedCodes = new Set(
-    caseInstance.expectedWorkup
-      .filter((w) => !w.lowValue)
-      .map((w) => conceptCode(w.code)),
-  );
+  const givenCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const tr of state.treatments) m.set(tr.code, (m.get(tr.code) ?? 0) + 1);
+    return m;
+  }, [state.treatments]);
 
-  const categories: OrderCategory[] = [
-    "laboratory",
-    "imaging",
-    "medication",
-    "consult",
-  ];
+  const anyMatch = ORDER_GROUPS.some((g) => groups[g].some(matches));
 
-  const anyMatch = categories.some((cat) => byCategory(cat).length > 0);
-
-  const pending = state.orders.filter((o) => !o.resolved);
-  const resulted = state.orders.filter((o) => o.resolved);
-  useSecondTick(pending.length > 0);
   const nowMs = getEncounterClockMs(state);
+  const isResulted = (o: PlacedOrder) => o.resolved || nowMs >= o.resultsReadyAt;
+  const pending = state.orders.filter((o) => !isResulted(o));
+  const resulted = state.orders.filter(isResulted);
+  useSecondTick(pending.length > 0);
+
+  const treatmentGroups = useMemo(() => groupTreatments(TREATMENT_CATALOG), []);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,320px)]">
-      {/* Order catalog */}
-      <div className="flex flex-col gap-4">
-        {/* Search across every category */}
-        <div className="relative">
-          <MagnifyingGlass
-            weight="bold"
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-            aria-hidden
-          />
-          <label htmlFor="order-search" className="sr-only">
-            {t("ehr2.orders.searchLabel")}
-          </label>
-          <input
-            id="order-search"
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("ehr2.orders.searchPlaceholder")}
-            className="w-full rounded-control border border-border bg-surface py-2 pl-9 pr-9 text-sm text-fg placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-          />
-          {query ? (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-muted transition-colors duration-200 ease-out hover:bg-bg-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-              aria-label={t("ehr2.orders.clearSearch")}
-            >
-              <X weight="bold" className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          ) : null}
-        </div>
-
-        {!anyMatch ? (
-          <div className="rounded-card border border-dashed border-border bg-bg-subtle px-4 py-8 text-center">
-            <p className="text-sm text-muted">{t("ehr2.orders.noMatches")}</p>
-          </div>
-        ) : null}
-
-        {categories.map((cat) => {
-          const items = byCategory(cat);
-          if (items.length === 0) return null;
-          const meta = CATEGORY_META[cat];
-          const placedInCat = items.filter((o) => placedCodes.has(o.code)).length;
-          return (
-            <section
-              key={cat}
-              className="rounded-card border border-border bg-surface p-3"
-            >
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
-                  <span aria-hidden className="text-muted">
-                    {meta.icon}
-                  </span>
-                  {t(`ehr.orders.category.${meta.key}`)}
-                </h3>
-                <span className="font-mono text-[11px] tabular-nums text-muted">
-                  {placedInCat > 0
-                    ? `${placedInCat}/${items.length}`
-                    : t("ehr2.orders.itemsCount", { count: items.length })}
+    <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,340px)]">
+      {/* Catalog + treatments */}
+      <div className="flex min-w-0 flex-col gap-4">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+          <TabsList variant="underline">
+            <TabsTrigger value="diagnostics">{t("orders2.tab.diagnostics")}</TabsTrigger>
+            <TabsTrigger value="treatments">
+              {t("orders2.tab.treatments")}
+              {state.treatments.length > 0 ? (
+                <span className="ml-1.5 rounded-pill bg-brand-tint px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-brand">
+                  {state.treatments.length}
                 </span>
+              ) : null}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* --- Diagnostics --- */}
+          <TabsContent value="diagnostics" className="flex flex-col gap-4">
+            {/* Search across every group */}
+            <div className="relative">
+              <MagnifyingGlass
+                weight="bold"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle"
+                aria-hidden
+              />
+              <label htmlFor="order-search" className="sr-only">
+                {t("orders2.search.label")}
+              </label>
+              <TextInput
+                id="order-search"
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("orders2.search.placeholder")}
+                className="pl-9 pr-9"
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label={t("orders2.search.clear")}
+                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-subtle transition-colors duration-150 hover:bg-bg-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  <X weight="bold" className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              ) : null}
+            </div>
+
+            {!anyMatch ? (
+              <div className="rounded-card border border-dashed border-border bg-bg-subtle px-4 py-8 text-center">
+                <p className="text-sm text-muted">{t("orders2.search.noMatches")}</p>
               </div>
-              <ul className="flex flex-col divide-y divide-border">
-                {items.map((o) => {
-                  const placed = placedCodes.has(o.code);
-                  return (
-                    <li
-                      key={o.code}
-                      className="flex items-center justify-between gap-3 py-2"
-                    >
-                      <span className="min-w-0 text-sm text-fg">
-                        {pick(o.label, lang)}
+            ) : null}
+
+            {ORDER_GROUPS.map((group) => {
+              const items = groups[group].filter(matches);
+              if (items.length === 0) return null;
+              const GroupIcon = GROUP_ICON[group];
+              return (
+                <section
+                  key={group}
+                  className="rounded-card border border-border bg-surface p-3"
+                >
+                  <SectionLabel
+                    icon={<GroupIcon weight="bold" className="h-4 w-4" aria-hidden />}
+                    trailing={
+                      <span className="font-mono text-[11px] tabular-nums text-subtle">
+                        {t("orders2.order.itemsCount", { count: items.length })}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          placeOrder(o.code, { en: o.label.en, tr: o.label.tr })
-                        }
-                        disabled={placed}
-                        className={cn(
-                          "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
-                          "transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]",
-                          placed
-                            ? "cursor-default border-transparent bg-bg-subtle text-muted"
-                            : "border-border bg-surface text-brand hover:bg-brand-tint",
-                        )}
-                        aria-label={
-                          placed
-                            ? t("ehr.orders.ordered", { name: pick(o.label, lang) })
-                            : t("ehr.orders.place", { name: pick(o.label, lang) })
-                        }
-                      >
-                        {placed ? (
-                          <>
-                            <CheckCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
-                            {t("ehr.orders.orderedShort")}
-                          </>
-                        ) : (
-                          <>
-                            <Plus weight="bold" className="h-3.5 w-3.5" aria-hidden />
-                            {t("ehr.orders.order")}
-                          </>
-                        )}
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          );
-        })}
+                    }
+                    className="mb-2"
+                  >
+                    {t(`orders2.group.${group}`)}
+                  </SectionLabel>
+                  <ul className="flex flex-col divide-y divide-border">
+                    {items.map((o) => (
+                      <OrderRow
+                        key={o.code}
+                        orderable={o}
+                        lang={lang}
+                        placed={placedCodes.has(o.code)}
+                        rubric={rubric.get(o.code)}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </TabsContent>
+
+          {/* --- Treatments --- */}
+          <TabsContent value="treatments" className="flex flex-col gap-4">
+            <p className="text-xs text-muted">{t("orders2.treatments.subtitle")}</p>
+            {treatmentGroups.map(({ klass, items }) => (
+              <section
+                key={klass.en}
+                className="rounded-card border border-border bg-surface p-3"
+              >
+                <SectionLabel
+                  icon={<Syringe weight="bold" className="h-4 w-4" aria-hidden />}
+                  className="mb-2"
+                >
+                  {pick(klass, lang)}
+                </SectionLabel>
+                <ul className="flex flex-col divide-y divide-border">
+                  {items.map((tx) => (
+                    <TreatmentRow
+                      key={tx.code}
+                      option={tx}
+                      lang={lang}
+                      given={givenCounts.get(tx.code) ?? 0}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </TabsContent>
+        </Tabs>
       </div>
 
-      {/* Placed orders tracker (in progress / resulted) */}
+      {/* Live order tracker */}
       <motion.aside
         {...summaryReveal}
         className="flex h-max flex-col gap-3 rounded-card border border-border bg-surface p-3"
       >
         <div>
-          <h3 className="text-sm font-semibold text-fg">
-            {t("ehr.orders.placedHeading")}
-          </h3>
+          <h3 className="text-sm font-semibold text-fg">{t("orders2.tracker.heading")}</h3>
           {state.orders.length > 0 ? (
-            <p className="mt-0.5 text-[11px] text-muted">
-              {t("ehr2.orders.summary", {
+            <p className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
+              {t("orders2.tracker.summary", {
                 placed: state.orders.length,
                 pending: pending.length,
                 resulted: resulted.length,
@@ -318,22 +293,20 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
         </div>
 
         {state.orders.length === 0 ? (
-          <p className="text-xs italic text-muted">
-            {t("ehr.orders.placedEmpty")}
-          </p>
+          <p className="text-xs italic text-muted">{t("orders2.tracker.empty")}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {pending.length > 0 ? (
-              <PlacedGroup
-                heading={t("ehr2.orders.inProgressHeading")}
+              <TrackerGroup
+                heading={t("orders2.tracker.inProgress")}
                 orders={pending}
                 lang={lang}
                 nowMs={nowMs}
               />
             ) : null}
             {resulted.length > 0 ? (
-              <PlacedGroup
-                heading={t("ehr2.orders.resultedHeading")}
+              <TrackerGroup
+                heading={t("orders2.tracker.resultedGroup")}
                 orders={resulted}
                 lang={lang}
                 nowMs={nowMs}
@@ -343,20 +316,132 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
         )}
 
         <p className="mt-1 border-t border-border pt-3 text-[11px] text-muted">
-          {t("ehr2.orders.resultsHint")}
+          {t("orders2.tracker.hint")}
         </p>
       </motion.aside>
-
-      {/* sr-only appropriateness note for the expected set */}
-      <span className="sr-only">
-        {t("ehr.orders.expectedNote", { count: expectedCodes.size })}
-      </span>
     </div>
   );
 }
 
-/** A titled group of placed orders (either all pending or all resulted). */
-function PlacedGroup({
+/* -------------------------------------------------------------------------- */
+/* Rows                                                                        */
+/* -------------------------------------------------------------------------- */
+
+/** One catalog order: name, turnaround, indicated/low-value flag, Order button. */
+function OrderRow({
+  orderable,
+  lang,
+  placed,
+  rubric,
+}: {
+  orderable: Orderable;
+  lang: Lang;
+  placed: boolean;
+  rubric?: "indicated" | "lowValue";
+}) {
+  const { t } = useTranslation();
+  const name = pick(orderable.label, lang);
+  const eta = turnaround(orderable, lang);
+
+  return (
+    <li className="flex items-center justify-between gap-3 py-2">
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="min-w-0 text-sm text-fg">{name}</span>
+        <span className="flex flex-wrap items-center gap-1.5">
+          <Badge tone="neutral" icon={<Timer weight="bold" className="h-3 w-3" aria-hidden />}>
+            {eta}
+          </Badge>
+          {rubric === "indicated" ? (
+            <Badge
+              tone="normal"
+              dot
+              aria-label={t("orders2.flag.indicatedAria")}
+            >
+              {t("orders2.flag.indicated")}
+            </Badge>
+          ) : null}
+          {rubric === "lowValue" ? (
+            <Badge
+              tone="caution"
+              dot
+              aria-label={t("orders2.flag.lowValueAria")}
+            >
+              {t("orders2.flag.lowValue")}
+            </Badge>
+          ) : null}
+        </span>
+      </div>
+      <Button
+        size="sm"
+        variant={placed ? "ghost" : "secondary"}
+        disabled={placed}
+        onClick={() => placeOrder(orderable.code, { en: orderable.label.en, tr: orderable.label.tr })}
+        leadingIcon={
+          placed ? (
+            <CheckCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
+          ) : (
+            <Plus weight="bold" className="h-3.5 w-3.5" aria-hidden />
+          )
+        }
+        aria-label={
+          placed
+            ? t("orders2.order.orderedAria", { name })
+            : t("orders2.order.placeAria", { name })
+        }
+        className="shrink-0"
+      >
+        {placed ? t("orders2.order.ordered") : t("orders2.order.place")}
+      </Button>
+    </li>
+  );
+}
+
+/** One treatment: name, route, Administer button (repeatable — serial doses). */
+function TreatmentRow({
+  option,
+  lang,
+  given,
+}: {
+  option: TreatmentOption;
+  lang: Lang;
+  given: number;
+}) {
+  const { t } = useTranslation();
+  const name = pick(option.label, lang);
+
+  return (
+    <li className="flex items-center justify-between gap-3 py-2">
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="min-w-0 text-sm text-fg">{name}</span>
+        <span className="flex flex-wrap items-center gap-1.5">
+          {option.route ? (
+            <Badge tone="neutral" variant="outline">
+              {t("orders2.treatments.route")}: {pick(option.route, lang)}
+            </Badge>
+          ) : null}
+          {given > 0 ? (
+            <Badge tone="brand" dot>
+              {t("orders2.treatments.givenCount", { count: given })}
+            </Badge>
+          ) : null}
+        </span>
+      </div>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => administerTreatment(option.code, { en: option.label.en, tr: option.label.tr })}
+        leadingIcon={<Syringe weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+        aria-label={t("orders2.treatments.administerAria", { name })}
+        className="shrink-0"
+      >
+        {t("orders2.treatments.administer")}
+      </Button>
+    </li>
+  );
+}
+
+/** A titled group of tracked orders (all pending, or all resulted). */
+function TrackerGroup({
   heading,
   orders,
   lang,
@@ -370,13 +455,11 @@ function PlacedGroup({
   const { container, item } = useStagger();
   return (
     <section>
-      <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
-        {heading}
-      </h4>
+      <h4 className="mb-1.5 eyebrow">{heading}</h4>
       <motion.ul {...container} className="flex flex-col gap-2">
         {orders.map((o, i) => (
           <motion.li key={`${o.code}-${i}`} {...item}>
-            <PlacedOrderRow order={o} lang={lang} nowMs={nowMs} />
+            <TrackerRow order={o} lang={lang} nowMs={nowMs} />
           </motion.li>
         ))}
       </motion.ul>
@@ -384,8 +467,8 @@ function PlacedGroup({
   );
 }
 
-/** One placed order: label, status, and a live turnaround bar while pending. */
-function PlacedOrderRow({
+/** One tracked order: label, status, live turnaround bar + clinical ETA. */
+function TrackerRow({
   order,
   lang,
   nowMs,
@@ -396,32 +479,36 @@ function PlacedOrderRow({
 }) {
   const { t } = useTranslation();
   const name = lang === "tr" ? order.labelTr : order.labelEn;
+  const clinicalEta = lang === "tr" ? order.clinicalLabelTr : order.clinicalLabelEn;
+  const done = order.resolved || nowMs >= order.resultsReadyAt;
 
   const total = Math.max(1, order.resultsReadyAt - order.placedAt);
   const elapsed = Math.min(total, Math.max(0, nowMs - order.placedAt));
-  const pct = order.resolved ? 100 : Math.round((elapsed / total) * 100);
+  const pct = done ? 100 : Math.round((elapsed / total) * 100);
   const etaSec = Math.max(0, Math.ceil((order.resultsReadyAt - nowMs) / 1000));
 
   return (
     <div className="rounded-control border border-border bg-bg-subtle px-2.5 py-2">
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm text-fg">{name}</span>
-        {order.resolved ? (
-          <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-[color:var(--state-normal)]">
-            <CheckCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
-            {t("ehr.orders.resulted")}
-          </span>
+        {done ? (
+          <StatusDot tone="normal" label={t("orders2.tracker.resultedTag")} size="sm" />
         ) : (
           <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-[color:var(--state-caution)]">
             <Timer weight="bold" className="h-3.5 w-3.5 motion-safe:animate-pulse" aria-hidden />
-            {t("ehr.orders.pending")}
+            {t("orders2.tracker.pending")}
           </span>
         )}
       </div>
 
-      {order.resolved ? (
+      {/* Clinical turnaround (realistic ETA), always shown. */}
+      <p className="mt-0.5 font-mono text-[11px] tabular-nums text-subtle">
+        {t("orders2.tracker.eta", { eta: clinicalEta })}
+      </p>
+
+      {done ? (
         <p className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
-          {t("ehr.orders.placedAt", { min: minutesOf(order.placedAt) })}
+          {t("orders2.tracker.resultedAt", { min: minutesOf(nowMs) })}
         </p>
       ) : (
         <>
@@ -431,7 +518,7 @@ function PlacedOrderRow({
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={pct}
-            aria-label={t("ehr2.orders.progressLabel", { name })}
+            aria-label={t("orders2.tracker.progressAria", { name })}
           >
             <div
               className="h-full rounded-full bg-brand motion-safe:transition-[width] motion-safe:duration-1000 motion-safe:ease-linear"
@@ -439,15 +526,38 @@ function PlacedOrderRow({
             />
           </div>
           <div className="mt-1 flex items-center justify-between gap-2 font-mono text-[11px] tabular-nums text-muted">
-            <span>{t("ehr.orders.placedAt", { min: minutesOf(order.placedAt) })}</span>
+            <span>{t("orders2.tracker.orderedAt", { min: minutesOf(order.placedAt) })}</span>
             <span aria-live="off">
               {etaSec > 0
-                ? t("ehr2.orders.readyIn", { sec: etaSec })
-                : t("ehr2.orders.readyNow")}
+                ? t("orders2.tracker.readyIn", { sec: etaSec })
+                : t("orders2.tracker.readyNow")}
             </span>
           </div>
         </>
       )}
     </div>
   );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Group the treatment catalog by pharmacologic class, preserving order. */
+function groupTreatments(
+  catalog: TreatmentOption[],
+): Array<{ klass: Bilingual; items: TreatmentOption[] }> {
+  const groups: Array<{ klass: Bilingual; items: TreatmentOption[] }> = [];
+  const index = new Map<string, number>();
+  for (const tx of catalog) {
+    const key = tx.klass.en;
+    let i = index.get(key);
+    if (i === undefined) {
+      i = groups.length;
+      index.set(key, i);
+      groups.push({ klass: tx.klass, items: [] });
+    }
+    groups[i].items.push(tx);
+  }
+  return groups;
 }
