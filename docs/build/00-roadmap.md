@@ -92,3 +92,23 @@ The runnable `web/` demo has **three screens** — **Home** (dashboard: stats, r
 | **v2 sovereign** | On-prem air-gapped appliance | Sovereign design partner + break-even + on-prem eval parity, zero data egress |
 
 **Guiding discipline throughout (risk R6):** ruthless text-EM wedge first; defer voice/3D/multiplayer/dashboards behind MVP-metric gates; instrument the loop before enriching it. Open-source-first, sovereign-capable, EN/TR — at every phase.
+
+---
+
+## Demo feature build — the dynamic encounter (pulled forward into `web/`, in progress)
+
+To make the runnable demo *functional* (not just a presentation prototype), these MVP/v1/v2 capabilities are being implemented in `web/` as client engines driven by a rich **case truth**, with the pod (open Qwen2.5-7B + Turkish embed/rerank, AIRGAPPED) providing generation + grounding. Each is a GitHub issue → PR → merge; built by parallel engineers on disjoint files. Everything stays dynamic to what the student **asks and does**, EN/TR, resource-safe.
+
+| Feature | Maps to | Shape |
+|---|---|---|
+| **Unlimited case generation** | GEN-1 (MVP) | pod `/v1/case/generate` samples ICD-11/ICD-10/DSM-5-TR from a broad catalog → open model synthesises a full case spec; client adapts to a `CaseInstance`. Deterministic templated fallback when the model is down. |
+| **Orders with clinical time** | Vitals/Case-State (Ph0) + REST/SSE (MVP) | per-test turnaround so a **culture returns much later than a CBC**; realistic ETA labels + live countdown; POC fast, CT/MRI slow, micro-cultures far out. |
+| **Dynamic response to treatment** | Case State + Vitals Engine + reveal graph | `administerTreatment` → a clinical-course engine evolves vitals/status over sim time from the case's treatment-response map (or a physiologic fallback: O₂↑SpO₂, fluids↑BP, antipyretic↓temp…). |
+| **Live vitals + trend monitor** | RP-4 vitals + Vitals Engine | a **real bedside-monitor UI** (live waveforms, big colour numerics HR/SpO₂/BP/RR/Temp, alarm limits) + trend graphs, dynamic off the sim clock. |
+| **Real condition imaging** | (new) | ordering imaging fetches a **real representative image** of the condition from open-licensed Wikimedia Commons, attributed + licensed + labelled "representative image, not this patient". |
+| **Realtime cited guidance + attending tips** | G-1..3 grounding + guide mode | a live guidance panel (cited to WHO/NICE/ATLS/DSM via pod grounding) + an **attending-physician tip/outline** coach: next-best-action, coverage gaps, timing nudges. AMBOSS-like reference UI. |
+| **Multiplayer rooms — one case, many roles** | MP-1..4, RP-3, EHR-3 (v1.1) | students join a room on the **same patient**, take roles (doctor / nurse / paramedic …), see role-scoped EHR views, and **hand orders/tasks to each other** (doctor orders → nurse executes). Demo runs a shared local case-state with role handoff; networked transport (LiveKit) stays the v1.1 production path. |
+| **3D avatar** | AV-3/AV-4 (v2) | R3F patient head with physiology-driven clinical-sign overlays (pallor/cyanosis/diaphoresis) off the one vitals state + mouth movement on patient turns; graceful fallback to the 2D avatar. |
+| **AMBOSS/Mobbin-grade UI** | design | the "Clinical Instrument" system (merged) + AMBOSS-like dense reference/guidance surfaces; Manrope/Inter type; crafted instrument logo. |
+
+**Interview correctness (shipped):** the opening "why did you come in?" question is in-scope and elicits the presenting complaint; the patient stays dynamic to what is asked and what has been done.
