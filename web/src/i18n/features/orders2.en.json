@@ -1,0 +1,77 @@
+{
+  "orders2": {
+    "tab": {
+      "diagnostics": "Order tests",
+      "treatments": "Treatments"
+    },
+    "group": {
+      "labs": "Laboratory",
+      "bloodgas": "Blood gas",
+      "micro": "Microbiology",
+      "imaging": "Imaging",
+      "poc": "Point of care"
+    },
+    "search": {
+      "label": "Search orderable tests",
+      "placeholder": "Search tests — CBC, troponin, CT, culture…",
+      "clear": "Clear search",
+      "noMatches": "No orderable tests match your search."
+    },
+    "turnaround": {
+      "aria": "Turnaround {{eta}}"
+    },
+    "order": {
+      "place": "Order",
+      "ordered": "Ordered",
+      "placeAria": "Order {{name}}",
+      "orderedAria": "{{name}} already ordered",
+      "itemsCount": "{{count}} tests"
+    },
+    "flag": {
+      "indicated": "Indicated",
+      "indicatedAria": "Indicated for this presentation",
+      "lowValue": "Low value",
+      "lowValueAria": "Low-value or not indicated for this presentation"
+    },
+    "tracker": {
+      "heading": "Order tracker",
+      "empty": "No orders yet. Pick a test to watch its result arrive.",
+      "summary": "{{placed}} placed · {{pending}} pending · {{resulted}} resulted",
+      "inProgress": "In progress",
+      "resultedGroup": "Resulted",
+      "pending": "Pending",
+      "resultedTag": "Resulted",
+      "eta": "ETA {{eta}}",
+      "readyIn": "ready in ~{{sec}}s",
+      "readyNow": "finalising…",
+      "orderedAt": "ordered {{min}} min",
+      "resultedAt": "resulted {{min}} min",
+      "progressAria": "{{name}} result progress",
+      "hint": "Results open in the Results tab as each test finalises."
+    },
+    "treatments": {
+      "heading": "Treatments",
+      "subtitle": "Administer to change the patient — the monitor responds live.",
+      "administer": "Administer",
+      "administered": "Given",
+      "administerAria": "Administer {{name}}",
+      "administeredAria": "{{name}} administered",
+      "route": "Route",
+      "givenAt": "given {{min}} min",
+      "givenCount": "{{count}} given",
+      "empty": "No treatments given yet."
+    },
+    "results": {
+      "wnl": "Within normal limits",
+      "representativeImage": "Representative image",
+      "syntheticNote": "No case-specific abnormality — reported within normal limits.",
+      "timeline": "Ordered {{ordered}} min → resulted {{resulted}} min",
+      "etaLabel": "Expected turnaround {{eta}}",
+      "inProgress": "In progress",
+      "eta": "ETA {{eta}}",
+      "finalReport": "Final report",
+      "normalHeading": "Additional results (normal)",
+      "normalNote": "Ordered tests with no case-specific finding are reported here, within normal limits."
+    }
+  }
+}
