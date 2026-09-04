@@ -4,9 +4,11 @@ import { TopNav } from "./TopNav";
 import { TooltipProvider } from "@/components/ui";
 
 /**
- * AppFrame — the app shell. A thin teal->blue->pink gradient border wraps
- * the whole surface (the medkit signature), with the TopNav pinned inside.
- * The education-only disclaimer is persistent (AI-Act / MDR education-side).
+ * AppFrame — the app shell. A calm, full-bleed clinical surface: sticky
+ * TopNav, the content region on the app ground, and a persistent
+ * education-only disclaimer (AI-Act / MDR education-side). The former neon
+ * teal->pink app border is gone; the single brand gradient now lives only on
+ * the logo mark, so the chrome reads as software, not a marketing template.
  */
 export function AppFrame({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
@@ -20,21 +22,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
         {t("nav.skipToContent")}
       </a>
 
-      <div className="min-h-[100dvh] bg-bg-subtle p-2 sm:p-3">
-        {/* Gradient frame around the whole app */}
-        <div className="gradient-frame min-h-[calc(100dvh-1rem)] overflow-hidden rounded-[20px] bg-surface sm:min-h-[calc(100dvh-1.5rem)]">
-          <div className="flex min-h-[calc(100dvh-1rem)] flex-col sm:min-h-[calc(100dvh-1.5rem)]">
-            <TopNav />
-            <main id="main" className="flex-1 bg-bg-subtle">
-              {children}
-            </main>
-            <footer className="border-t border-border bg-surface px-4 py-3 sm:px-6">
-              <p className="mx-auto max-w-6xl text-center text-xs text-muted">
-                {t("app.eduDisclaimer")}
-              </p>
-            </footer>
-          </div>
-        </div>
+      <div className="flex min-h-[100dvh] flex-col bg-bg-subtle">
+        <TopNav />
+        <main id="main" className="flex-1">
+          {children}
+        </main>
+        <footer className="border-t border-border bg-surface px-4 py-3 sm:px-6">
+          <p className="mx-auto max-w-7xl text-center text-xs text-muted">
+            {t("app.eduDisclaimer")}
+          </p>
+        </footer>
       </div>
     </TooltipProvider>
   );

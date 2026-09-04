@@ -1,48 +1,115 @@
 import { type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
+type StatSize = "sm" | "md" | "lg" | "xl";
+type TrendDir = "up" | "down" | "flat";
+
+export interface StatTrend {
+  /** Displayed delta, e.g. "+12%" or "-3 pts". */
+  value: ReactNode;
+  /** Direction drives the color/arrow. `flat` is neutral. */
+  dir?: TrendDir;
+  /**
+   * When true, "up" is the good direction (green) and "down" is bad (red).
+   * When false (e.g. error rate, time-to-critical), the mapping inverts.
+   * Default true. `flat` is always neutral.
+   */
+  goodUp?: boolean;
+}
+
 export interface StatProps {
   label: ReactNode;
   value: ReactNode;
   /** Small unit shown after the value (e.g. "bpm"). */
   unit?: ReactNode;
-  /** Supporting line below (e.g. status, trend). */
+  /** Supporting line below (e.g. status, context). */
   hint?: ReactNode;
+  /** Optional leading icon rendered in a tinted chip. */
+  icon?: ReactNode;
+  /** Optional delta chip (unifies the old bespoke trend pills). */
+  trend?: StatTrend;
   /** Use tabular monospace for the value (default true for numeric readouts). */
   mono?: boolean;
+  /** Value type scale. */
+  size?: StatSize;
   className?: string;
 }
 
+const valueSize: Record<StatSize, string> = {
+  sm: "text-lg",
+  md: "text-2xl",
+  lg: "text-[2rem]",
+  xl: "text-[2.75rem]",
+};
+
+function trendClasses(dir: TrendDir, goodUp: boolean): string {
+  if (dir === "flat") return "text-muted bg-bg-inset";
+  const good = dir === "up" ? goodUp : !goodUp;
+  return good
+    ? "text-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_12%,transparent)]"
+    : "text-[color:var(--state-critical)] bg-[color-mix(in_srgb,var(--state-critical)_12%,transparent)]";
+}
+
+const arrow: Record<TrendDir, string> = { up: "↑", down: "↓", flat: "→" };
+
 /**
- * Stat — a single labeled metric. Token-driven; numeric values default to
- * tabular monospace so digits do not jitter when they update.
+ * Stat — a single labeled metric. Token-driven; the one canonical stat/KPI
+ * tile (replaces HomePage `StatTile` and institution `KpiCard`). Numeric
+ * values default to tabular monospace so digits do not jitter on update.
  */
 export function Stat({
   label,
   value,
   unit,
   hint,
+  icon,
+  trend,
   mono = true,
+  size = "md",
   className,
 }: StatProps) {
+  const dir = trend?.dir ?? "flat";
   return (
-    <div className={cn("flex flex-col gap-1", className)}>
-      <span className="text-xs font-medium uppercase tracking-wide text-muted">
-        {label}
-      </span>
-      <span className="flex items-baseline gap-1">
-        <span
-          className={cn(
-            "text-2xl font-semibold leading-none text-fg",
-            mono && "font-mono",
-          )}
-        >
-          {value}
-        </span>
-        {unit ? (
-          <span className="text-sm font-medium text-muted">{unit}</span>
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      <div className="flex items-center gap-2">
+        {icon ? (
+          <span
+            aria-hidden="true"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-chip bg-brand-tint text-brand"
+          >
+            {icon}
+          </span>
         ) : null}
-      </span>
+        <span className="eyebrow">{label}</span>
+      </div>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="flex items-baseline gap-1">
+          <span
+            className={cn(
+              "font-semibold leading-none tracking-tight text-fg",
+              valueSize[size],
+              mono && "font-mono",
+            )}
+          >
+            {value}
+          </span>
+          {unit ? (
+            <span className="text-sm font-medium text-muted">{unit}</span>
+          ) : null}
+        </span>
+        {trend ? (
+          <span
+            className={cn(
+              "inline-flex items-center gap-0.5 rounded-pill px-1.5 py-0.5",
+              "text-xs font-semibold tabular-nums",
+              trendClasses(dir, trend.goodUp ?? true),
+            )}
+          >
+            <span aria-hidden="true">{arrow[dir]}</span>
+            {trend.value}
+          </span>
+        ) : null}
+      </div>
       {hint ? <span className="text-xs text-muted">{hint}</span> : null}
     </div>
   );

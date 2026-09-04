@@ -5,38 +5,54 @@
 @import "@fontsource/geist-mono";
 
 /* ============================================================
-   AcuDx design tokens — medkit design language
-   Light = default (clinical white). Dark via .dark class.
+   AcuDx design tokens — "Clinical Instrument" language (v2)
+   medkit lineage: clinical white, single locked blue, dark
+   vitals monitor. v2 sharpens toward real EHR software:
+   hairline borders over shadows, tighter geometry, a true
+   neutral ramp, and a labelled typographic hierarchy.
+   Light = default. Dark via .dark class.
    Vitals-monitor tokens are ALWAYS dark in both themes.
-   All values are the locked AcuDx tokens (WCAG 2.2 AA).
+   All values verified WCAG 2.2 AA on their pairings.
    ============================================================ */
 
 :root {
   color-scheme: light;
 
   /* ---- Brand (single locked blue accent) ---- */
-  --brand-50: #eff6ff;
+  --brand-50: #eff5ff;
+  --brand-100: #dbe8fe;
   --brand-600: #2563eb;
   --brand-700: #1d4ed8;
 
-  /* Brand gradient (SPARSE — app frame accent + logo mark only) */
+  /* Brand gradient — RESERVED for the logo mark ONLY (one place). */
   --grad-teal: #2dd4bf;
   --grad-blue: #3b82f6;
   --grad-pink: #f472b6;
 
-  /* ---- Surfaces & text (light) ---- */
+  /* ---- Neutral ramp (slate-tuned, the spine of the UI) ---- */
   --bg: #ffffff;
-  --bg-subtle: #f8fafc;
+  --bg-subtle: #f7f8fa; /* app ground / behind cards */
+  --bg-inset: #eef1f5; /* wells, track backgrounds, code */
   --surface: #ffffff;
+  --surface-2: #fbfcfe; /* raised rows / striped tables */
   --fg: #0f172a;
-  --fg-muted: #64748b;
-  --border: #e2e8f0;
+  --fg-muted: #5b6472; /* secondary text (AA on white) */
+  --fg-subtle: #8a93a3; /* tertiary text, labels, placeholders */
+  --border: #e6e9ef; /* default hairline */
+  --border-strong: #cfd5de; /* emphasized dividers, inputs */
 
   /* ---- Clinical semantic states (NEVER color alone) ---- */
-  --state-normal: #10b981; /* normal / in range */
-  --state-caution: #f59e0b; /* elevated / caution */
-  --state-warning: #f97316; /* warning */
-  --state-critical: #ef4444; /* critical */
+  --state-normal: #059669; /* normal / in range */
+  --state-caution: #d97706; /* elevated / caution */
+  --state-warning: #ea580c; /* warning */
+  --state-critical: #dc2626; /* critical */
+
+  /* ESI / triage acuity ramp (1 = resuscitation … 5 = non-urgent) */
+  --esi-1: #dc2626;
+  --esi-2: #ea580c;
+  --esi-3: #d97706;
+  --esi-4: #059669;
+  --esi-5: #0891b2;
 
   /* ---- Feedback dual-axis (orthogonal, always paired with icon) ---- */
   --axis-clinical: #2563eb; /* ◆ clinical reasoning */
@@ -46,31 +62,36 @@
   --calib-line: #0f172a; /* identity y=x diagonal */
   --calib-over: #c2603a; /* over-confident direction */
   --calib-under: #3a7bc2; /* under-confident direction */
-  --calib-well: #10b981; /* well-calibrated band */
+  --calib-well: #059669; /* well-calibrated band */
 
-  /* ---- Radius (ONE scale) ---- */
-  --r-card: 16px;
-  --r-control: 10px;
+  /* ---- Radius (tightened — precise, not bubbly) ---- */
+  --r-card: 12px;
+  --r-control: 8px;
+  --r-chip: 6px;
+  --r-pill: 999px;
 
-  /* ---- Soft, slate-tinted shadows (no harsh black) ---- */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.06);
+  /* ---- Shadows — RESERVED for lifted/overlay surfaces ----
+     Resting cards use hairline borders, not shadow. */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 16px -4px rgba(15, 23, 42, 0.08);
+  --shadow-pop: 0 12px 32px -8px rgba(15, 23, 42, 0.16),
+    0 2px 6px -2px rgba(15, 23, 42, 0.08);
 
   /* ---- Motion ---- */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --dur-fast: 200ms;
-  --dur-base: 300ms;
-  --dur-slow: 400ms;
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
 
   /* ---- Fonts (self-hosted) ---- */
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
 
   /* ---- Vitals monitor — ALWAYS dark (both themes) ---- */
-  --monitor-bg: #0b1220;
-  --monitor-border: #1e293b;
-  --monitor-fg: #e2e8f0;
-  --monitor-dim: #64748b;
+  --monitor-bg: #0a0f1c;
+  --monitor-border: #1c2536;
+  --monitor-fg: #e6edf7;
+  --monitor-dim: #5b6678;
   --monitor-online: #10b981;
 }
 
@@ -78,58 +99,78 @@
   color-scheme: dark;
 
   --brand-50: #172554;
-  --brand-600: #2563eb;
-  --brand-700: #1d4ed8;
+  --brand-100: #1e3a8a;
+  --brand-600: #3b82f6;
+  --brand-700: #2563eb;
 
-  --bg: #0b1120;
-  --bg-subtle: #0f172a;
-  --surface: #111827;
-  --fg: #e2e8f0;
-  --fg-muted: #94a3b8;
-  --border: #1e293b;
+  --bg: #0a0f1c;
+  --bg-subtle: #0c1220;
+  --bg-inset: #131b2b;
+  --surface: #111a2b;
+  --surface-2: #16202f;
+  --fg: #e6edf7;
+  --fg-muted: #9aa6b8;
+  --fg-subtle: #6b7688;
+  --border: #1f2a3d;
+  --border-strong: #2c394f;
 
-  /* Clinical states hold hue in dark (contrast verified on dark surfaces) */
-  --state-normal: #10b981;
-  --state-caution: #f59e0b;
-  --state-warning: #f97316;
-  --state-critical: #ef4444;
+  /* Clinical states brighten slightly for contrast on dark surfaces */
+  --state-normal: #34d399;
+  --state-caution: #fbbf24;
+  --state-warning: #fb923c;
+  --state-critical: #f87171;
+
+  --esi-1: #f87171;
+  --esi-2: #fb923c;
+  --esi-3: #fbbf24;
+  --esi-4: #34d399;
+  --esi-5: #22d3ee;
 
   --axis-clinical: #60a5fa;
   --axis-communication: #a78bfa;
 
-  --calib-line: #e2e8f0;
+  --calib-line: #e6edf7;
   --calib-over: #e0865c;
   --calib-under: #60a5fa;
-  --calib-well: #10b981;
+  --calib-well: #34d399;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.7),
+    0 2px 8px -2px rgba(0, 0, 0, 0.5);
 
   /* Vitals monitor stays dark — unchanged across themes */
-  --monitor-bg: #0b1220;
-  --monitor-border: #1e293b;
-  --monitor-fg: #e2e8f0;
-  --monitor-dim: #64748b;
+  --monitor-bg: #0a0f1c;
+  --monitor-border: #1c2536;
+  --monitor-fg: #e6edf7;
+  --monitor-dim: #5b6678;
   --monitor-online: #10b981;
 }
 
 /* ============================================================
    Map tokens -> Tailwind theme (CSS-first @theme).
-   Enables classes: bg-surface, text-fg, text-muted,
-   border-border, bg-brand, rounded-card, rounded-control,
-   shadow-soft, font-sans, font-mono, text-state-*, etc.
+   Enables: bg-surface / bg-surface-2 / bg-inset, text-fg /
+   text-muted / text-subtle, border-border / border-strong,
+   rounded-card / rounded-control / rounded-chip / rounded-pill,
+   shadow-soft / shadow-soft-md / shadow-pop, text-state-*,
+   text-esi-*, font-sans / font-mono, etc.
    ============================================================ */
 @theme inline {
   --color-bg: var(--bg);
   --color-bg-subtle: var(--bg-subtle);
+  --color-bg-inset: var(--bg-inset);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-fg: var(--fg);
   --color-muted: var(--fg-muted);
+  --color-subtle: var(--fg-subtle);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
 
   --color-brand: var(--brand-600);
   --color-brand-hover: var(--brand-700);
   --color-brand-tint: var(--brand-50);
+  --color-brand-tint-2: var(--brand-100);
 
   --color-grad-teal: var(--grad-teal);
   --color-grad-blue: var(--grad-blue);
@@ -139,6 +180,12 @@
   --color-state-caution: var(--state-caution);
   --color-state-warning: var(--state-warning);
   --color-state-critical: var(--state-critical);
+
+  --color-esi-1: var(--esi-1);
+  --color-esi-2: var(--esi-2);
+  --color-esi-3: var(--esi-3);
+  --color-esi-4: var(--esi-4);
+  --color-esi-5: var(--esi-5);
 
   --color-axis-clinical: var(--axis-clinical);
   --color-axis-communication: var(--axis-communication);
@@ -156,9 +203,12 @@
 
   --radius-card: var(--r-card);
   --radius-control: var(--r-control);
+  --radius-chip: var(--r-chip);
+  --radius-pill: var(--r-pill);
 
   --shadow-soft: var(--shadow-sm);
   --shadow-soft-md: var(--shadow-md);
+  --shadow-pop: var(--shadow-pop);
 
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
@@ -167,7 +217,7 @@
 }
 
 /* ============================================================
-   Base element styles — premium, grain-free, calm
+   Base element styles — precise, grain-free, calm
    ============================================================ */
 @layer base {
   * {
@@ -187,7 +237,7 @@
     background-color: var(--bg-subtle);
     color: var(--fg);
     font-family: var(--font-sans);
-    font-size: 1rem;
+    font-size: 0.9375rem; /* 15px base — denser, software-grade */
     line-height: 1.55;
     font-feature-settings: "cv11", "ss01";
   }
@@ -202,7 +252,7 @@
   h1, h2, h3, h4 {
     text-wrap: balance;
     letter-spacing: -0.02em;
-    line-height: 1.1;
+    line-height: 1.12;
   }
 
   /* Focus-visible ring — clinical, high-contrast, never clipped */
@@ -215,20 +265,43 @@
   }
 
   ::selection {
-    background-color: color-mix(in srgb, var(--brand-600) 22%, transparent);
+    background-color: color-mix(in srgb, var(--brand-600) 20%, transparent);
   }
 }
 
 /* ============================================================
-   Utilities — the teal->pink gradient app frame accent
+   Typographic helpers — the labelled hierarchy that reads as
+   crafted software rather than marketing copy.
    ============================================================ */
-@utility gradient-frame {
-  /* 2-3px teal->blue->pink border around the app shell */
-  position: relative;
-  background:
-    linear-gradient(var(--surface), var(--surface)) padding-box,
-    linear-gradient(120deg, var(--grad-teal), var(--grad-blue), var(--grad-pink)) border-box;
-  border: 2.5px solid transparent;
+
+/* Eyebrow / section label — small, uppercase, tracked, muted. */
+@utility eyebrow {
+  font-size: 0.6875rem; /* 11px */
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+/* Tabular numerals on demand (data cells, timers, counts). */
+@utility tnum {
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Hairline rule token, for hand-rolled dividers. */
+@utility hairline {
+  border-color: var(--border);
+}
+
+/* ============================================================
+   Brand-mark gradient — the ONE sanctioned gradient surface.
+   (gradient-text kept for backwards-compat but no longer used
+   in the shell; prefer solid --fg headings.)
+   ============================================================ */
+@utility gradient-mark {
+  background: linear-gradient(135deg, var(--grad-teal), var(--grad-blue), var(--grad-pink));
 }
 
 @utility gradient-text {
@@ -237,10 +310,6 @@
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-}
-
-@utility gradient-mark {
-  background: linear-gradient(135deg, var(--grad-teal), var(--grad-blue), var(--grad-pink));
 }
 
 /* ============================================================
@@ -267,7 +336,7 @@
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;

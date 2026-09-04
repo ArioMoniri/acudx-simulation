@@ -13,14 +13,27 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   tone?: Tone;
   /**
    * Icon slot. For clinical states this is REQUIRED so meaning is never
-   * carried by color alone (WCAG 1.4.1).
+   * carried by color alone (WCAG 1.4.1). A `dot` also satisfies this.
    */
   icon?: ReactNode;
+  /** Leading status dot in the tone color (tabular status treatment). */
+  dot?: boolean;
+  /** `soft` (default) = tinted fill; `outline` = hairline chip on surface. */
+  variant?: "soft" | "outline";
 }
 
-// Border + tinted text on a soft tint. Text label is always present.
-const tones: Record<Tone, string> = {
-  neutral: "bg-bg-subtle text-muted border-border",
+const dotColor: Record<Tone, string> = {
+  neutral: "var(--fg-subtle)",
+  brand: "var(--brand-600)",
+  normal: "var(--state-normal)",
+  caution: "var(--state-caution)",
+  warning: "var(--state-warning)",
+  critical: "var(--state-critical)",
+};
+
+// Soft: tinted text on a soft tint. Text label is always present.
+const soft: Record<Tone, string> = {
+  neutral: "bg-bg-subtle text-muted border-transparent",
   brand: "bg-brand-tint text-brand border-transparent",
   normal:
     "border-transparent text-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_14%,transparent)]",
@@ -32,10 +45,21 @@ const tones: Record<Tone, string> = {
     "border-transparent text-[color:var(--state-critical)] bg-[color-mix(in_srgb,var(--state-critical)_15%,transparent)]",
 };
 
-/** Badge — small pill. Clinical tones pair an icon with the text label. */
+const outline: Record<Tone, string> = {
+  neutral: "bg-surface text-muted border-border",
+  brand: "bg-surface text-brand border-brand-tint-2",
+  normal: "bg-surface text-[color:var(--state-normal)] border-border",
+  caution: "bg-surface text-[color:var(--state-caution)] border-border",
+  warning: "bg-surface text-[color:var(--state-warning)] border-border",
+  critical: "bg-surface text-[color:var(--state-critical)] border-border",
+};
+
+/** Badge — small pill. Clinical tones pair an icon or dot with the label. */
 export function Badge({
   tone = "neutral",
   icon,
+  dot,
+  variant = "soft",
   className,
   children,
   ...props
@@ -43,13 +67,20 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5",
+        "inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-0.5",
         "text-xs font-medium leading-5",
-        tones[tone],
+        variant === "soft" ? soft[tone] : outline[tone],
         className,
       )}
       {...props}
     >
+      {dot ? (
+        <span
+          aria-hidden="true"
+          className="h-1.5 w-1.5 shrink-0 rounded-full"
+          style={{ backgroundColor: dotColor[tone] }}
+        />
+      ) : null}
       {icon ? (
         <span className="shrink-0" aria-hidden="true">
           {icon}

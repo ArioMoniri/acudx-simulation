@@ -8,13 +8,13 @@ import {
 } from "react";
 import { cn } from "@/lib/cn";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
-  /** Optional trailing icon shown inside a circle (primary CTA affordance). */
+  /** Optional trailing icon shown inside a soft circle (CTA affordance). */
   trailingIcon?: ReactNode;
   /** Leading icon, inline (no circle). */
   leadingIcon?: ReactNode;
@@ -30,28 +30,29 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const base =
   "inline-flex items-center justify-center gap-2 font-medium whitespace-nowrap " +
   "rounded-control select-none transition-[background-color,color,box-shadow,transform] " +
-  "duration-200 ease-out active:scale-[0.98] disabled:opacity-50 " +
+  "duration-150 ease-out active:scale-[0.98] disabled:opacity-50 " +
   "disabled:pointer-events-none focus-visible:outline-none no-underline";
 
 const variants: Record<Variant, string> = {
-  // The ONE locked accent CTA.
-  primary: "bg-brand text-white hover:bg-brand-hover shadow-soft",
-  secondary:
-    "bg-surface text-fg border border-border hover:bg-bg-subtle shadow-soft",
+  // The ONE locked accent CTA — flat, no float.
+  primary: "bg-brand text-white hover:bg-brand-hover",
+  secondary: "bg-surface text-fg border border-border-strong hover:bg-bg-subtle",
   ghost: "bg-transparent text-fg hover:bg-bg-subtle",
+  danger:
+    "bg-[color:var(--state-critical)] text-white hover:brightness-95",
 };
 
-// Min 24px target; touch-comfortable at md/lg.
+// Tighter, software-grade heights. Min target stays comfortable at md/lg.
 const sizes: Record<Size, string> = {
-  sm: "h-9 px-3 text-sm min-w-9",
-  md: "h-11 px-5 text-[0.95rem] min-w-11",
-  lg: "h-12 px-6 text-base min-w-12",
+  sm: "h-8 px-3 text-[0.8125rem] min-w-8",
+  md: "h-9 px-4 text-sm min-w-9",
+  lg: "h-11 px-6 text-[0.9375rem] min-w-11",
 };
 
 const circleSizes: Record<Size, string> = {
-  sm: "h-5 w-5 -mr-1",
-  md: "h-6 w-6 -mr-1.5",
-  lg: "h-7 w-7 -mr-2",
+  sm: "h-4 w-4 -mr-0.5",
+  md: "h-5 w-5 -mr-1",
+  lg: "h-6 w-6 -mr-1.5",
 };
 
 function renderContent(
@@ -74,7 +75,9 @@ function renderContent(
           aria-hidden="true"
           className={cn(
             "inline-flex shrink-0 items-center justify-center rounded-full",
-            variant === "primary" ? "bg-white/20" : "bg-brand-tint text-brand",
+            variant === "primary" || variant === "danger"
+              ? "bg-white/20"
+              : "bg-brand-tint text-brand",
             circleSizes[size],
           )}
         >
