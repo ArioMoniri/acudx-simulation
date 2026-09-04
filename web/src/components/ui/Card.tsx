@@ -1,8 +1,19 @@
 import { forwardRef, type HTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
+type Variant = "surface" | "flat" | "inset" | "interactive";
+
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  /** Adds a soft resting shadow. Off by default for the flattest surfaces. */
+  /**
+   * Surface treatment:
+   *  - `surface` (default): hairline-bordered white surface, NO resting shadow
+   *    (crafted-clinical default — depth comes from the border, not a float).
+   *  - `flat`: no border, sits directly on the page ground (for nested groups).
+   *  - `inset`: recessed well on `bg-inset` (for sub-panels, empty states).
+   *  - `interactive`: bordered surface that lifts on hover (nav / clickable cards).
+   */
+  variant?: Variant;
+  /** Opt-in resting elevation (overlays, popovers, the rare floating card). */
   elevated?: boolean;
   /** Inner padding preset. */
   padding?: "none" | "sm" | "md" | "lg";
@@ -15,17 +26,28 @@ const paddings = {
   lg: "p-6 sm:p-7",
 } as const;
 
-/** Card — subtly-bordered rounded surface with a soft bezel. */
+const variants: Record<Variant, string> = {
+  surface: "border border-border bg-surface",
+  flat: "bg-transparent",
+  inset: "border border-border bg-inset",
+  interactive:
+    "border border-border bg-surface transition-[border-color,box-shadow,transform] " +
+    "duration-200 ease-out hover:border-border-strong hover:shadow-soft-md " +
+    "focus-within:border-brand active:translate-y-px",
+};
+
+/** Card — hairline-bordered surface. Depth is drawn, not floated. */
 export const Card = forwardRef<HTMLDivElement, CardProps>(function Card(
-  { elevated, padding = "md", className, ...props },
+  { variant = "surface", elevated, padding = "md", className, ...props },
   ref,
 ) {
   return (
     <div
       ref={ref}
       className={cn(
-        "rounded-card border border-border bg-surface text-fg",
-        elevated ? "shadow-soft-md" : "shadow-soft",
+        "rounded-card text-fg",
+        variants[variant],
+        elevated && "shadow-soft-md",
         paddings[padding],
         className,
       )}
@@ -38,7 +60,9 @@ export function CardHeader({
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("mb-3 flex flex-col gap-1", className)} {...props} />;
+  return (
+    <div className={cn("mb-3 flex flex-col gap-1", className)} {...props} />
+  );
 }
 
 export function CardTitle({
@@ -47,7 +71,10 @@ export function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("text-lg font-semibold tracking-tight text-fg", className)}
+      className={cn(
+        "text-base font-semibold tracking-tight text-fg",
+        className,
+      )}
       {...props}
     />
   );
