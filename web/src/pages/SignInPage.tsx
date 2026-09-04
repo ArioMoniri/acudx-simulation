@@ -1,69 +1,21 @@
-import { type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
-import {
-  ArrowRight,
-  Buildings,
-  GraduationCap,
-  Lock,
-  ShieldCheck,
-} from "@phosphor-icons/react";
+import { ArrowRight } from "@phosphor-icons/react";
 
 import { PageContainer, PageHeader } from "@/components/shell";
-import { Badge, Button, Card, Divider } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { useEntry } from "@/lib/useLang";
 import { signIn, useIsSignedIn, useProfile } from "@/state/profileStore";
 import { ProfileAvatar } from "./ProfilePage";
 
-/** A single production auth method — presented as the real path, gated until the
- *  institution connects AcuDx (so the affordance never pretends to work). */
-function SsoOption({
-  icon,
-  label,
-  hint,
-  badge,
-}: {
-  icon: ReactNode;
-  label: string;
-  hint: string;
-  badge: string;
-}) {
-  return (
-    <button
-      type="button"
-      disabled
-      aria-disabled="true"
-      className={
-        "flex w-full items-center gap-3 rounded-control border border-border-strong bg-surface " +
-        "px-4 py-3 text-left opacity-70 cursor-not-allowed"
-      }
-    >
-      <span
-        aria-hidden="true"
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-brand-tint text-brand"
-      >
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-fg">{label}</span>
-        <span className="block text-xs text-muted">{hint}</span>
-      </span>
-      <Badge tone="neutral" variant="outline" className="shrink-0">
-        {badge}
-      </Badge>
-    </button>
-  );
-}
-
 /**
  * SignInPage — the entry screen.
  *
- * The production sign-in path (institution SSO / LTI 1.3, per the build
- * roadmap) is presented first as the real path; it is gated until an
- * institution connects AcuDx, so nothing here collects a password or fakes a
- * credential. Below it, "Continue on this device" creates or resumes the
- * genuine LOCAL profile the person authors during onboarding.
+ * AcuDx runs air-gapped with no identity backend, so the only real path is the
+ * self-authored LOCAL profile: "Continue on this device" resumes a saved
+ * profile, or the person creates one during onboarding. Nothing here collects a
+ * password or fakes a credential.
  */
 export function SignInPage() {
   const { t } = useTranslation();
@@ -92,41 +44,6 @@ export function SignInPage() {
           title={t("profile.signIn.title")}
           description={t("profile.signIn.lede")}
         />
-
-        {/* Production path — institution-managed SSO / LTI. */}
-        <Card padding="lg" className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck
-              weight="bold"
-              className="h-4 w-4 text-brand"
-              aria-hidden="true"
-            />
-            <h2 className="text-sm font-semibold tracking-tight text-fg">
-              {t("profile.signIn.ssoHeading")}
-            </h2>
-          </div>
-          <p className="text-xs text-muted">{t("profile.signIn.ssoNote")}</p>
-          <div className="flex flex-col gap-2">
-            <SsoOption
-              icon={<Buildings weight="bold" className="h-5 w-5" />}
-              label={t("profile.signIn.sso")}
-              hint={t("profile.signIn.ssoHint")}
-              badge={t("profile.signIn.productionBadge")}
-            />
-            <SsoOption
-              icon={<GraduationCap weight="bold" className="h-5 w-5" />}
-              label={t("profile.signIn.lti")}
-              hint={t("profile.signIn.ltiHint")}
-              badge={t("profile.signIn.productionBadge")}
-            />
-          </div>
-          <p className="flex items-center gap-1.5 text-xs text-subtle">
-            <Lock weight="bold" className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            {t("profile.signIn.unavailableNote")}
-          </p>
-        </Card>
-
-        <Divider label={t("profile.signIn.or")} />
 
         {/* Local path — create or resume the real, self-authored profile. */}
         <Card padding="lg" className="flex flex-col gap-4">

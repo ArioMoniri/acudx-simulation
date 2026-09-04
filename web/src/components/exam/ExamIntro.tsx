@@ -10,7 +10,7 @@ import {
 
 import { Card, Button, SectionLabel } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import type { ChiefComplaintFamily } from "@/domain/caseGen";
+import { CHIEF_COMPLAINT_FAMILIES, type ChiefComplaintFamily } from "@/domain/caseGen";
 import {
   EXAM_LENGTH_CHOICES,
   EXAM_TIME_CHOICES,
@@ -28,12 +28,11 @@ export interface ExamIntroProps {
   attemptsCount: number;
 }
 
-const FAMILY_LABEL: Record<ChiefComplaintFamily, string> = {
-  "chest-pain": "Chest pain",
-  headache: "Headache",
-  "abdominal-pain": "Abdominal pain",
-  dyspnea: "Dyspnea",
-};
+// Derived from the generator's canonical family list (English label as the
+// fallback for the `exam.family.*` i18n keys), so all families are covered.
+const FAMILY_LABEL: Record<ChiefComplaintFamily, string> = Object.fromEntries(
+  CHIEF_COMPLAINT_FAMILIES.map((f) => [f.id, f.label.en]),
+) as Record<ChiefComplaintFamily, string>;
 
 /** One segmented option button (shared by the length + time pickers). */
 function ChoiceButton({

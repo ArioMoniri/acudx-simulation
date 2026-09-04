@@ -414,22 +414,62 @@ export function diagnosisCoding(e: DiagnosisEntry, lang: Lang): Coding {
 }
 
 /**
+ * Build a searchable entry from a case-provided diagnosis — a code plus an
+ * already-localized display — so a diagnosis the generator or the pod backend
+ * emits *outside* the static catalogue (unbounded ICD-11 / ICD-10 / DSM-5-TR
+ * synthesis, see lib/liveCaseGen.ts) is still findable by name in the picker,
+ * not merely committable from the "suggested" row. Pass the result(s) to
+ * `searchDiagnoses(query, lang, limit, extra)`. On a code collision the richer
+ * catalogue entry wins (see `mergeCorpus`), so this only ever surfaces a
+ * genuinely novel diagnosis. The display is stored under both language labels
+ * because that is the only rendering the case hands us.
+ */
+export function caseEntry(code: string, display: string): DiagnosisEntry {
+  return { icd10: code, label: { en: display, tr: display }, system: "general" };
+}
+
+/**
+ * Fold `extra` case-provided entries into the catalogue for a single search.
+ * A catalogue entry always wins a code collision (by ANY of its codes), so a
+ * generated diagnosis whose code the catalogue already covers is never
+ * duplicated; only truly novel diagnoses are appended.
+ */
+function mergeCorpus(extra?: readonly DiagnosisEntry[]): readonly DiagnosisEntry[] {
+  if (!extra || extra.length === 0) return ENTRIES;
+  const known = new Set(BY_CODE.keys()); // already upper-cased
+  const merged = ENTRIES.slice();
+  for (const e of extra) {
+    const codes = entryCodes(e).map((c) => c.toUpperCase());
+    if (codes.length === 0 || codes.some((c) => known.has(c))) continue;
+    for (const c of codes) known.add(c);
+    merged.push(e);
+  }
+  return merged;
+}
+
+/**
  * searchDiagnoses — rank the catalogue against a free-text query in `lang`.
  *
  * Matches label (active language + English + Turkish), ICD-10 / ICD-11 / DSM
  * codes, synonyms and the system label. Ranks exact-code and prefix hits above
  * substring hits so the intended diagnosis surfaces first. An empty query
  * returns the catalogue in a stable, system-grouped order.
+ *
+ * ALL matches are returned by default (no silent truncation): the caller paginates
+ * for display. Pass `extra` (see `caseEntry`) to make case-provided diagnoses that
+ * live outside the catalogue searchable too; pass `limit` only to cap deliberately.
  */
 export function searchDiagnoses(
   query: string,
   lang: Lang,
-  limit = 40,
+  limit: number = Number.POSITIVE_INFINITY,
+  extra?: readonly DiagnosisEntry[],
 ): DiagnosisSearchResult[] {
+  const corpus = mergeCorpus(extra);
   const q = fold(query);
 
   if (!q) {
-    return ENTRIES.slice(0, limit).map((e) => ({
+    return corpus.slice(0, limit).map((e) => ({
       ...e,
       display: diagnosisLabel(e, lang),
       rank: 0,
@@ -437,14 +477,14 @@ export function searchDiagnoses(
   }
 
   const results: DiagnosisSearchResult[] = [];
-  for (const e of ENTRIES) {
+  for (const e of corpus) {
     const display = diagnosisLabel(e, lang);
     const rank = scoreEntry(e, display, lang, q);
     if (rank < Infinity) results.push({ ...e, display, rank });
   }
 
   results.sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.display.localeCompare(b.display)));
-  return results.slice(0, limit);
+  return Number.isFinite(limit) ? results.slice(0, limit) : results;
 }
 
 /** Score one entry against a folded query. Lower = better; Infinity = no match. */

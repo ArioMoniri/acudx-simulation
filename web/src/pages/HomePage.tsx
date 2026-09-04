@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { useCallback, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
   ArrowRight,
   ArrowUpRight,
+  ArrowsClockwise,
   Fire,
   Target,
   Trophy,
@@ -22,13 +24,36 @@ import {
 import { CalibrationPlot } from "@/components";
 import { CaseListRow } from "@/components/home/CaseListRow";
 import { ActivityRow } from "@/components/home/ActivityRow";
-import { recommendedCases, type DashboardStat } from "@/data/mock";
+import {
+  difficultyToTier,
+  recommendedCases,
+  type Band,
+  type DashboardStat,
+  type FeedbackDomainKey,
+  type Lang,
+  type RecommendedCase,
+} from "@/data/mock";
 import {
   useCalibrationPoints,
   useCalibrationTrajectory,
   useDashboardStats,
+  useMasteryDomains,
   useRecentActivity,
 } from "@/state/progressStore";
+import type { MasteryDomain } from "@/data/progress";
+import {
+  generateCase,
+  CHIEF_COMPLAINT_FAMILIES,
+  type ChiefComplaintFamily,
+} from "@/domain/caseGen";
+import type { CaseInstance } from "@/domain/case";
+import {
+  SPECIALTY_LABELS,
+  specialtyOf,
+  guidelineTagOf,
+  languagesOf,
+  estMinutesOf,
+} from "@/data/caseLibrary";
 import { useLang } from "@/lib/useLang";
 import { useReveal, useStagger } from "@/lib/motion";
 
@@ -38,16 +63,199 @@ const statIcon: Record<DashboardStat["key"], typeof Trophy> = {
   gap: Target,
 };
 
+/* -------------------------------------------------------------------------- */
+/* Recommended rail — a fresh, personalized, non-repeating draw                */
+/* -------------------------------------------------------------------------- */
+
+/** How many fresh cases the rail shows. */
+const RECOMMENDED_COUNT = 4;
+
+// Every family the generator supports, so the recommended rail can draw across
+// the whole catalogue (not just the original four).
+const ALL_FAMILIES: ChiefComplaintFamily[] = CHIEF_COMPLAINT_FAMILIES.map(
+  (f) => f.id,
+);
+
+/** Band → "how much this domain needs work" (lower band = weaker = pulled harder). */
+const BAND_WEAKNESS: Record<Band, number> = {
+  emerging: 5,
+  developing: 4,
+  proficient: 3,
+  strong: 2,
+  exemplary: 1,
+  withheld: 0, // not enough evidence → contributes no personalization signal
+};
+
+const BAND_ORDER: Exclude<Band, "withheld">[] = [
+  "emerging",
+  "developing",
+  "proficient",
+  "strong",
+  "exemplary",
+];
+
+/**
+ * Which chief-complaint families most exercise each competency domain, so a weak
+ * domain pulls in more of the cases that train it. professionalism is never
+ * scored by an encounter, so it never actually contributes.
+ */
+const DOMAIN_FAMILIES: Record<FeedbackDomainKey, ChiefComplaintFamily[]> = {
+  history: ["abdominal-pain", "headache"],
+  exam: ["abdominal-pain", "dyspnea"],
+  reasoning: ["chest-pain", "headache"],
+  communication: ["headache", "chest-pain"],
+  management: ["chest-pain", "dyspnea"],
+  professionalism: ["abdominal-pain", "dyspnea"],
+};
+
+/** One rail entry: the display row + the live case to hand off (null = fallback). */
+interface RecommendedRow {
+  row: RecommendedCase;
+  instance: CaseInstance | null;
+}
+
+/**
+ * Per-family draw weights from real mastery. Every family starts at 1 (so the
+ * set always spreads), and each scored-but-weak domain adds weight to the
+ * families that train it. With no history all families stay at 1 → an even
+ * spread.
+ */
+function familyWeights(mastery: MasteryDomain[]): Map<ChiefComplaintFamily, number> {
+  const weights = new Map<ChiefComplaintFamily, number>(
+    ALL_FAMILIES.map((f) => [f, 1]),
+  );
+  for (const m of mastery) {
+    if (m.evidenceCount === 0) continue;
+    const weak = BAND_WEAKNESS[m.band];
+    if (weak <= 0) continue;
+    for (const fam of DOMAIN_FAMILIES[m.key]) {
+      weights.set(fam, (weights.get(fam) ?? 1) + weak);
+    }
+  }
+  return weights;
+}
+
+/**
+ * A focus difficulty from overall mastery: a struggling learner gets gentler
+ * reps to rebuild weak areas, a strong one gets a stretch. No history → core.
+ */
+function focusDifficulty(mastery: MasteryDomain[]): 1 | 2 | 3 | 4 | 5 {
+  const scored = mastery.filter(
+    (m) => m.evidenceCount > 0 && m.band !== "withheld",
+  );
+  if (scored.length === 0) return 3;
+  const meanBand =
+    scored.reduce((sum, m) => sum + BAND_ORDER.indexOf(m.band as Exclude<Band, "withheld">), 0) /
+    scored.length; // 0 (all emerging) .. 4 (all exemplary)
+  if (meanBand < 1) return 2;
+  if (meanBand < 2.5) return 3;
+  return 4;
+}
+
+/** Draw N families, weighted, decaying each pick so the set spreads out. */
+function drawFamilies(
+  weights: Map<ChiefComplaintFamily, number>,
+  n: number,
+): ChiefComplaintFamily[] {
+  const pool = new Map(weights);
+  const out: ChiefComplaintFamily[] = [];
+  for (let i = 0; i < n; i++) {
+    const entries = [...pool.entries()];
+    const total = entries.reduce((s, [, w]) => s + w, 0);
+    let r = Math.random() * total;
+    let chosen = entries[0][0];
+    for (const [fam, w] of entries) {
+      r -= w;
+      if (r <= 0) {
+        chosen = fam;
+        break;
+      }
+    }
+    out.push(chosen);
+    pool.set(chosen, (pool.get(chosen) ?? 1) * 0.35);
+  }
+  return out;
+}
+
+/** Nudge the difficulty ±1 around the focus so the rail is not monotone. */
+function jitterDifficulty(base: 1 | 2 | 3 | 4 | 5): 1 | 2 | 3 | 4 | 5 {
+  const delta = Math.floor(Math.random() * 3) - 1; // -1, 0, +1
+  return Math.min(5, Math.max(1, base + delta)) as 1 | 2 | 3 | 4 | 5;
+}
+
+/** Map a generated CaseInstance onto the row shape the rail renders. */
+function toRow(c: CaseInstance): RecommendedCase {
+  const female = c.patient.gender === "female";
+  return {
+    id: c.id,
+    // Title is the presenting complaint; the sub-line carries the specialty so
+    // the two lines never read as the same text.
+    title: c.chiefComplaint,
+    chiefComplaint: SPECIALTY_LABELS[specialtyOf(c)],
+    setting: { en: "Emergency", tr: "Acil" },
+    ageSex: {
+      en: `${c.patient.ageYears}${female ? "F" : "M"}`,
+      tr: `${c.patient.ageYears}${female ? "K" : "E"}`,
+    },
+    difficulty: difficultyToTier(c.difficulty),
+    guidelineTag: guidelineTagOf(c),
+    estMinutes: estMinutesOf(c),
+    languages: languagesOf(c),
+  };
+}
+
+/**
+ * Build the fresh rail: draw weighted families, generate a constrained case for
+ * each, and map it to a row. On any generator failure fall back to the tiny
+ * static list (which navigates to the default encounter, no live instance).
+ */
+function buildRecommended(mastery: MasteryDomain[], locale: Lang): RecommendedRow[] {
+  try {
+    const weights = familyWeights(mastery);
+    const base = focusDifficulty(mastery);
+    return drawFamilies(weights, RECOMMENDED_COUNT).map((chiefComplaint) => {
+      const instance = generateCase({
+        seedMode: "constrained",
+        chiefComplaint,
+        difficulty: jitterDifficulty(base),
+        locale,
+      });
+      return { row: toRow(instance), instance };
+    });
+  } catch {
+    return recommendedCases.map((row) => ({ row, instance: null }));
+  }
+}
+
 /** HomePage — the learner's clinical instrument panel. */
 export function HomePage() {
   const { t } = useTranslation();
   const lang = useLang();
+  const navigate = useNavigate();
   const displayName = useDisplayName();
   // Real, earned session data (empty for a new user → honest empty states).
   const calibrationPoints = useCalibrationPoints();
   const calibrationTrajectory = useCalibrationTrajectory();
   const dashboardStats = useDashboardStats();
   const recentFeedback = useRecentActivity();
+  // Mastery drives the weighted draw; the nonce lets "Show different cases"
+  // regenerate a brand-new, non-repeating set on demand.
+  const mastery = useMasteryDomains();
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const recommended = useMemo(
+    () => buildRecommended(mastery, lang),
+    // `refreshNonce` is a deliberate regenerate trigger; `mastery` is a stable
+    // reference until real records change (progressStore caches it).
+    [mastery, lang, refreshNonce],
+  );
+  const showDifferent = useCallback(() => setRefreshNonce((n) => n + 1), []);
+  const openCase = useCallback(
+    (instance: CaseInstance) => {
+      // Hand THIS generated case to the workspace exactly like the Case Library.
+      navigate("/encounter", { state: { caseInstance: instance } });
+    },
+    [navigate],
+  );
   const header = useReveal();
   const strip = useReveal(0.06);
   const body = useReveal(0.12);
@@ -132,7 +340,7 @@ export function HomePage() {
       >
         {/* LEFT — recommended cases as an information-hierarchy list. */}
         <section className="flex flex-col gap-4">
-          <div className="flex items-baseline justify-between gap-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
             <div>
               <h2 className="text-lg font-semibold tracking-tight text-fg">
                 {t("home.recommendedHeading")}
@@ -141,17 +349,55 @@ export function HomePage() {
                 {t("home.recommendedSub")}
               </p>
             </div>
-            <Link
-              to="/encounter"
-              className="shrink-0 text-sm font-medium text-brand hover:underline focus-visible:outline-none"
-            >
-              {t("home.viewAllCases")}
-            </Link>
+            <div className="flex shrink-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={showDifferent}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-fg focus-visible:outline-none"
+              >
+                <ArrowsClockwise
+                  weight="bold"
+                  className="h-3.5 w-3.5"
+                  aria-hidden
+                />
+                {t("home.showDifferent", { defaultValue: "Show different cases" })}
+              </button>
+              <Link
+                to="/encounter"
+                className="text-sm font-medium text-brand hover:underline focus-visible:outline-none"
+              >
+                {t("home.viewAllCases")}
+              </Link>
+            </div>
           </div>
           <motion.ul {...cases.container} className="flex flex-col gap-3">
-            {recommendedCases.map((c) => (
-              <motion.li key={c.id} {...cases.item}>
-                <CaseListRow data={c} lang={lang} />
+            {recommended.map(({ row, instance }) => (
+              <motion.li
+                key={row.id}
+                {...cases.item}
+                onClickCapture={
+                  instance
+                    ? (e) => {
+                        // Plain left-click hands the generated instance to the
+                        // encounter via router state (a bare <Link> cannot carry
+                        // it). Modifier / middle clicks fall through to the Link.
+                        if (
+                          e.defaultPrevented ||
+                          e.button !== 0 ||
+                          e.metaKey ||
+                          e.ctrlKey ||
+                          e.shiftKey ||
+                          e.altKey
+                        ) {
+                          return;
+                        }
+                        e.preventDefault();
+                        openCase(instance);
+                      }
+                    : undefined
+                }
+              >
+                <CaseListRow data={row} lang={lang} />
               </motion.li>
             ))}
           </motion.ul>

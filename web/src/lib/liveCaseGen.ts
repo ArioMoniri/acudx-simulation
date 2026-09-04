@@ -42,6 +42,7 @@ import {
 } from "@/domain/fhir";
 import {
   generateCase,
+  noteServedCase,
   validateCase,
   type ChiefComplaintFamily,
   type GenerateCaseOptions,
@@ -1084,6 +1085,12 @@ export async function generateCaseFromBackend(
       const instance = specToCaseInstance(res.data);
       const meta = res.data.meta;
       const source: GeneratedSource = meta?.source === "template" ? "template" : "ai";
+      // Feed the shared anti-repeat memory so a following LOCAL fallback draw
+      // does not repeat the diagnosis / patient the backend just served.
+      noteServedCase(
+        instance.correctDiagnosis.code.coding[0]?.code,
+        instance.patient.name,
+      );
       return { case: instance, source, degraded: Boolean(meta?.degraded), meta };
     } catch {
       // Malformed spec — fall through to the local generator below.

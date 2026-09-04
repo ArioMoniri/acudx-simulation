@@ -15,6 +15,13 @@ import {
   Brain,
   Flask,
   Wind,
+  Virus,
+  Drop,
+  Pulse,
+  Warning,
+  Baby,
+  Bone,
+  ChatCircle,
   ArrowRight,
   Check,
   Info,
@@ -63,6 +70,14 @@ const CC_ICON: Record<string, Icon> = {
   Brain,
   Flask,
   Wind,
+  Lungs: Wind, // no dedicated lungs glyph in this icon set
+  Virus,
+  Drop,
+  Pulse,
+  Warning,
+  Baby,
+  Bone,
+  ChatCircle,
 };
 
 /** Constraints handed to the encounter workspace via router state. */
@@ -306,6 +321,17 @@ export function StartPage() {
     CHIEF_COMPLAINT_OPTIONS[0].label[lang];
 
   function begin() {
+    // Multiplayer and Observe route into the real Rooms surface rather than a
+    // dead card; the observer arrives with an intent the lobby can honour. Solo
+    // keeps the direct encounter flow with the assembled constraints.
+    if (mode === "multiplayer") {
+      navigate("/rooms");
+      return;
+    }
+    if (mode === "observe") {
+      navigate("/rooms", { state: { intent: "observe" } });
+      return;
+    }
     const selection: StartSelection = {
       mode,
       role,
@@ -353,9 +379,7 @@ export function StartPage() {
               title={m.label[lang]}
               body={m.description[lang]}
               selected={mode === m.id}
-              disabled={!m.available}
-              badge={m.badge?.[lang]}
-              onSelect={() => m.available && setMode(m.id)}
+              onSelect={() => setMode(m.id)}
               ariaLabel={m.label[lang]}
             />
           ))}
@@ -421,7 +445,7 @@ export function StartPage() {
               <ChoiceCard
                 key={key}
                 layout="tile"
-                icon={CC_ICON[c.icon]}
+                icon={CC_ICON[c.icon] ?? Stethoscope}
                 title={c.label[lang]}
                 body={c.hint[lang]}
                 selected={chiefComplaint === c.id}

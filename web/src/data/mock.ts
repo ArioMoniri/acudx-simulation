@@ -486,7 +486,17 @@ export interface DashboardStat {
 /** Difficulty tier for a recommended case. */
 export type CaseDifficulty = "foundation" | "core" | "advanced";
 
-/** A recommended EM case shown on the home grid. */
+/**
+ * Map the generator's 1-5 difficulty onto the three browsing tiers a
+ * {@link RecommendedCase} row shows. Pure; shared by the Home rail mapper.
+ */
+export function difficultyToTier(difficulty: number): CaseDifficulty {
+  if (difficulty <= 2) return "foundation";
+  if (difficulty >= 4) return "advanced";
+  return "core";
+}
+
+/** A recommended EM case row (the shape the Home rail renders). */
 export interface RecommendedCase {
   id: string;
   title: Bilingual;
@@ -502,6 +512,12 @@ export interface RecommendedCase {
   languages: Lang[];
 }
 
+/**
+ * Static FALLBACK rail — used ONLY when the client case generator throws while
+ * building the Home "Recommended for you" set. The live rail is drawn fresh each
+ * session from `generateCase` and weighted toward the learner's weakest domains
+ * (see `HomePage`), so these hard-coded rows are never the always-on content.
+ */
 export const recommendedCases: RecommendedCase[] = [
   {
     id: "em-acs-001",

@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
+  CHIEF_COMPLAINT_FAMILIES,
   generateCase,
   mulberry32,
   validateCase,
+  type ChiefComplaintFamily,
   type GenerateCaseOptions,
 } from "@/domain/caseGen";
 import type { CaseInstance } from "@/domain/case";
@@ -205,5 +207,124 @@ describe("generateCase — endless breadth", () => {
       seeds.add(generateCase({ seedMode: "random", locale: "en" }).seed);
     }
     expect(seeds.size).toBe(25);
+  });
+});
+
+describe("generateCase — compositional variety", () => {
+  // "endocrine" resolves to a single template (DKA), so the diagnosis is held
+  // fixed and only the compositional axes (onset × severity × comorbidity ×
+  // complication, plus jittered labs / vitals) can make the two draws differ.
+  it("two draws of the SAME diagnosis differ in text and numbers", () => {
+    const a = generateCase({ seedMode: "constrained", chiefComplaint: "endocrine", locale: "en", seed: 101 });
+    const b = generateCase({ seedMode: "constrained", chiefComplaint: "endocrine", locale: "en", seed: 202 });
+
+    expect(a.correctDiagnosis.code.coding[0]?.code).toBe(
+      b.correctDiagnosis.code.coding[0]?.code,
+    );
+    expect(JSON.stringify(a)).not.toEqual(JSON.stringify(b));
+
+    const vitalsDiffer =
+      JSON.stringify(a.triageVitals) !== JSON.stringify(b.triageVitals);
+    const labsDiffer =
+      JSON.stringify(a.groundTruth.labs) !== JSON.stringify(b.groundTruth.labs);
+    expect(vitalsDiffer || labsDiffer).toBe(true);
+  });
+
+  it("stays byte-identical for the same seed despite the new axes", () => {
+    const a = generateCase({ seedMode: "constrained", chiefComplaint: "endocrine", locale: "en", seed: 303 });
+    const b = generateCase({ seedMode: "constrained", chiefComplaint: "endocrine", locale: "en", seed: 303 });
+    expect(JSON.stringify(a)).toEqual(JSON.stringify(b));
+  });
+
+  it("recombines patient names into many distinct identities", () => {
+    const names = new Set<string>();
+    for (let seed = 1; seed <= 50; seed++) {
+      names.add(generateCase({ seedMode: "random", locale: "en", seed }).patient.name);
+    }
+    // Far beyond the reach of the old ~24 fixed name strings.
+    expect(names.size).toBeGreaterThanOrEqual(20);
+  });
+});
+
+describe("generateCase — families beyond the original four", () => {
+  // Specialty families that map to exactly one curated template — a constrained
+  // draw must land on that diagnosis and pass validity across seeds.
+  const SINGLE_TEMPLATE_FAMILY_CODE: Record<string, string> = {
+    endocrine: "E10.10",
+    allergy: "T78.2XXA",
+    obgyn: "O00.9",
+    rheumatology: "M31.6",
+    psychiatry: "300.01",
+  };
+
+  for (const [family, code] of Object.entries(SINGLE_TEMPLATE_FAMILY_CODE)) {
+    it(`constrained ${family} generates a valid case with the expected dx`, () => {
+      for (let seed = 1; seed <= 12; seed++) {
+        const c = generateCase({
+          seedMode: "constrained",
+          chiefComplaint: family as ChiefComplaintFamily,
+          locale: "en",
+          seed,
+        });
+        expect(validateCase(c).ok, `seed ${seed}`).toBe(true);
+        expect(c.correctDiagnosis.code.coding[0]?.code).toBe(code);
+      }
+    });
+  }
+
+  it("a multi-template specialty family draws more than one diagnosis", () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const c = generateCase({
+        seedMode: "constrained",
+        chiefComplaint: "cardiology",
+        locale: "en",
+        seed,
+      });
+      seen.add(c.correctDiagnosis.code.coding[0]?.code ?? "");
+    }
+    expect(seen.size).toBeGreaterThan(1);
+  });
+});
+
+describe("generateCase — anti-repeat (unseeded run)", () => {
+  it("never repeats a diagnosis back-to-back across a fresh run", () => {
+    let prevCode = "";
+    let prevName = "";
+    for (let i = 0; i < 12; i++) {
+      const c = generateCase({ seedMode: "random", locale: "en" });
+      const code = c.correctDiagnosis.code.coding[0]?.code ?? "";
+      expect(code).not.toBe(prevCode);
+      expect(c.patient.name).not.toBe(prevName);
+      prevCode = code;
+      prevName = c.patient.name;
+    }
+  });
+});
+
+describe("CHIEF_COMPLAINT_FAMILIES export", () => {
+  it("lists every family with bilingual labels and unique ids", () => {
+    expect(CHIEF_COMPLAINT_FAMILIES.length).toBeGreaterThanOrEqual(12);
+    const ids = CHIEF_COMPLAINT_FAMILIES.map((f) => f.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const orig of ["chest-pain", "headache", "abdominal-pain", "dyspnea"] as const) {
+      expect(ids).toContain(orig);
+    }
+    for (const f of CHIEF_COMPLAINT_FAMILIES) {
+      expect(f.label.en.length).toBeGreaterThan(0);
+      expect(f.label.tr.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every listed family actually produces a valid case (breadth is real)", () => {
+    for (const f of CHIEF_COMPLAINT_FAMILIES) {
+      const c = generateCase({
+        seedMode: "constrained",
+        chiefComplaint: f.id,
+        locale: "en",
+        seed: 7,
+      });
+      expect(validateCase(c).ok, f.id).toBe(true);
+    }
   });
 });

@@ -13,6 +13,13 @@ import {
   Brain,
   Flask,
   Wind,
+  Virus,
+  Drop,
+  Pulse,
+  Warning,
+  Baby,
+  Bone,
+  ChatCircle,
   Stethoscope,
   Stack,
   ArrowRight,
@@ -46,7 +53,11 @@ import { cn } from "@/lib/cn";
 import { pick, esiToState } from "@/components/ehr/labels";
 import { stateMap } from "@/components/clinicalState";
 import { seedCases } from "@/data/seedCases";
-import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
+import {
+  generateCase,
+  CHIEF_COMPLAINT_FAMILIES,
+  type ChiefComplaintFamily,
+} from "@/domain/caseGen";
 import {
   generateCaseFromBackend,
   type GeneratedSource,
@@ -79,19 +90,31 @@ const SPECIALTY_ORDER: Specialty[] = [
   "psychiatry",
 ];
 
-const COMPLAINT_ORDER: ChiefComplaintFamily[] = [
-  "chest-pain",
-  "headache",
-  "abdominal-pain",
-  "dyspnea",
-];
+// Every family the generator supports is targetable here (all 16, and any
+// future addition auto-surfaces).
+const COMPLAINT_ORDER: ChiefComplaintFamily[] = CHIEF_COMPLAINT_FAMILIES.map(
+  (f) => f.id,
+);
 
-const COMPLAINT_ICON: Record<ChiefComplaintFamily, Icon> = {
-  "chest-pain": Heartbeat,
-  headache: Brain,
-  "abdominal-pain": Flask,
-  dyspnea: Wind,
+// Map the generator's free-form icon-name hint onto a real phosphor component,
+// derived for every family so no exhaustive literal needs hand-maintenance.
+const ICON_BY_NAME: Record<string, Icon> = {
+  Heartbeat,
+  Brain,
+  Flask,
+  Wind,
+  Lungs: Wind, // no dedicated lungs glyph in this icon set
+  Virus,
+  Drop,
+  Pulse,
+  Warning,
+  Baby,
+  Bone,
+  ChatCircle,
 };
+const COMPLAINT_ICON: Record<ChiefComplaintFamily, Icon> = Object.fromEntries(
+  CHIEF_COMPLAINT_FAMILIES.map((f) => [f.id, ICON_BY_NAME[f.icon ?? ""] ?? Stethoscope]),
+) as Record<ChiefComplaintFamily, Icon>;
 
 const DIFFICULTIES: (1 | 2 | 3 | 4 | 5)[] = [1, 2, 3, 4, 5];
 
