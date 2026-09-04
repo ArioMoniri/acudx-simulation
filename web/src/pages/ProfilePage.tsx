@@ -18,6 +18,7 @@ import {
   Select,
 } from "@/components/ui";
 import { useEntry } from "@/lib/useLang";
+import { LANGUAGE_META, normalizeLanguage } from "@/i18n";
 import {
   AVATAR_SEEDS,
   PROFILE_LANGUAGES,
@@ -259,11 +260,21 @@ function ProfileForm({ mode, initial, onSubmit, saved, onCancel }: ProfileFormPr
               value={language}
               onChange={(e) => setLanguage(e.target.value as ProfileLanguage)}
             >
-              {PROFILE_LANGUAGES.map((l) => (
-                <option key={l} value={l}>
-                  {t(`profile.languages.${l}`)}
-                </option>
-              ))}
+              {PROFILE_LANGUAGES.map((l) => {
+                const meta = LANGUAGE_META[l];
+                // Native name is already localized ("Türkçe", "العربية"); append
+                // the English name for the languages whose native script the
+                // reader may not recognize, so every option stays identifiable.
+                const label =
+                  meta.nativeName === meta.englishName
+                    ? meta.nativeName
+                    : `${meta.nativeName} · ${meta.englishName}`;
+                return (
+                  <option key={l} value={l} lang={l}>
+                    {label}
+                  </option>
+                );
+              })}
             </Select>
           )}
         </Field>
@@ -341,7 +352,7 @@ export function ProfilePage() {
       role: (profile?.role ?? "") as ProfileRole | "",
       institution: profile?.institution ?? "",
       specialty: profile?.specialty ?? "",
-      language: (profile?.language ?? (i18n.resolvedLanguage === "tr" ? "tr" : "en")) as ProfileLanguage,
+      language: profile?.language ?? normalizeLanguage(i18n.resolvedLanguage),
       avatarSeed: profile?.avatarSeed ?? AVATAR_SEEDS[0],
     }),
     // Re-seed the form only when the identity of the saved profile changes.

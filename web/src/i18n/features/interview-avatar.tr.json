@@ -1,0 +1,12 @@
+{
+  "ehr": {
+    "interview": {
+      "patient": {
+        "heading": "Hasta",
+        "voiceOn": "Ses açık",
+        "voiceOff": "Ses kapalı",
+        "voiceToggle": "Hasta yanıtları için sesli okumayı aç/kapat"
+      }
+    }
+  }
+}
