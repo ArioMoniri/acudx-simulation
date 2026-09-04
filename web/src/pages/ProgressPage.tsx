@@ -51,22 +51,12 @@ import { CalibrationPlot, CitationPill, Sparkline } from "@/components";
 import { useEntry, useLang } from "@/lib/useLang";
 import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/cn";
+import { type Band } from "@/data/mock";
 import {
-  calibrationPoints,
-  calibrationTrajectory,
-  type Band,
-} from "@/data/mock";
-import {
-  levelState,
-  recentXp,
-  streakState,
-  masteryDomains,
   masteryDetail,
   MASTERY_BANDS,
   epaProgress,
   badges,
-  calibrationSessions,
-  domainTrends,
   reviewQueue,
   scheduleReview,
   REVIEW_GRADE_ORDER,
@@ -81,6 +71,17 @@ import {
   type ReviewCard,
   type ReviewGrade,
 } from "@/data/progress";
+import {
+  useCalibrationPoints,
+  useCalibrationTrajectory,
+  useCalibrationSessions,
+  useDomainTrends,
+  useMasteryDomains,
+  useLevelState,
+  useRecentXp,
+  useStreakState,
+  useProgressRecords,
+} from "@/state/progressStore";
 
 /* -------------------------------------------------------------------------- */
 /* Small shared helpers                                                        */
@@ -195,6 +196,8 @@ function LevelCard() {
   const { t } = useTranslation();
   const lang = useLang();
   const labelId = useId();
+  const levelState = useLevelState();
+  const recentXp = useRecentXp();
   const pct = Math.round(
     (levelState.xpIntoLevel / levelState.xpForNextLevel) * 100,
   );
@@ -247,7 +250,8 @@ function LevelCard() {
       </div>
 
       {/* Why you earned it — XP reads as competence gain, not grinding */}
-      <div>
+      {recentXp.length > 0 ? (
+        <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
           {t("progress.level.whyHeading")}
         </p>
@@ -272,7 +276,8 @@ function LevelCard() {
             );
           })}
         </ul>
-      </div>
+        </div>
+      ) : null}
     </Card>
   );
 }
@@ -329,6 +334,7 @@ function StreakDayCell({ day, logged }: { day: StreakDay; logged: boolean }) {
 
 function StreakCard() {
   const { t } = useTranslation();
+  const streakState = useStreakState();
   const [logged, setLogged] = useState(streakState.todayDone);
   const current = streakState.currentDays + (logged && !streakState.todayDone ? 1 : 0);
 
@@ -1008,11 +1014,12 @@ function FocusChart({
   const h = 96;
   const pad = 8;
   const n = series.length;
+  const denom = n > 1 ? n - 1 : 1;
   const min = Math.min(...series);
   const max = Math.max(...series);
   const span = max - min || 1;
   const pts = series.map((v, i) => {
-    const x = pad + (i / (n - 1)) * (w - 2 * pad);
+    const x = pad + (i / denom) * (w - 2 * pad);
     const y = pad + (h - 2 * pad) - ((v - min) / span) * (h - 2 * pad);
     return [x, y] as const;
   });
@@ -1075,14 +1082,17 @@ function FocusChart({
 
 function TrajectoryFocus() {
   const { t } = useTranslation();
+  const calibrationSessions = useCalibrationSessions();
   const [metric, setMetric] = useState<TrajectoryMetric>("gap");
-  const [selected, setSelected] = useState(calibrationSessions.length - 1);
+  const [selected, setSelected] = useState(() => calibrationSessions.length - 1);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const isGap = metric === "gap";
   const color = isGap ? "var(--brand-600)" : "var(--axis-communication)";
   const series = calibrationSessions.map((s) => (isGap ? s.gap : s.brier));
-  const session = calibrationSessions[selected];
+  // Clamp against the live session count (records may have grown since mount).
+  const sel = Math.max(0, Math.min(selected, calibrationSessions.length - 1));
+  const session = calibrationSessions[sel];
   const value = isGap ? session.gap : session.brier;
 
   const metricLabel = isGap
@@ -1115,11 +1125,11 @@ function TrajectoryFocus() {
 
   function onScrubKey(e: React.KeyboardEvent) {
     const n = calibrationSessions.length;
-    let next = selected;
+    let next = sel;
     if (e.key === "ArrowRight" || e.key === "ArrowDown")
-      next = Math.min(n - 1, selected + 1);
+      next = Math.min(n - 1, sel + 1);
     else if (e.key === "ArrowLeft" || e.key === "ArrowUp")
-      next = Math.max(0, selected - 1);
+      next = Math.max(0, sel - 1);
     else if (e.key === "Home") next = 0;
     else if (e.key === "End") next = n - 1;
     else return;
@@ -1158,7 +1168,7 @@ function TrajectoryFocus() {
           </span>
         </div>
         <div className="mt-3">
-          <FocusChart series={series} selected={selected} color={color} />
+          <FocusChart series={series} selected={sel} color={color} />
         </div>
         <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium">
           <TrendDown
@@ -1189,7 +1199,7 @@ function TrajectoryFocus() {
         className="flex items-center gap-1"
       >
         {calibrationSessions.map((s, i) => {
-          const active = i === selected;
+          const active = i === sel;
           const sVal = isGap ? s.gap : s.brier;
           const readout = isGap
             ? `${Math.round(sVal * 100)}%`
@@ -1231,6 +1241,26 @@ function TrajectoryFocus() {
 function TrajectoryCard() {
   const { t } = useTranslation();
   const lang = useLang();
+  const calibrationSessions = useCalibrationSessions();
+  const domainTrends = useDomainTrends();
+  const calibrationPoints = useCalibrationPoints();
+  const calibrationTrajectory = useCalibrationTrajectory();
+
+  // Honest empty state — no fabricated trajectory before any encounter.
+  if (calibrationSessions.length === 0) {
+    return (
+      <Card padding="lg">
+        <div className="rounded-control border border-dashed border-border bg-bg-subtle p-6 text-center">
+          <p className="text-sm font-medium text-fg">
+            {t("progress.trajectory.empty")}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {t("progress.trajectoryEmptyHint")}
+          </p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card padding="lg" className="flex flex-col gap-5">
@@ -1239,6 +1269,7 @@ function TrajectoryCard() {
         <div className="flex flex-col gap-5">
           <TrajectoryFocus />
 
+          {domainTrends.length > 0 ? (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">
               {t("progress.trajectory.perDomain")}
@@ -1281,6 +1312,7 @@ function TrajectoryCard() {
               })}
             </ul>
           </div>
+          ) : null}
         </div>
 
         {/* The signature calibration scatter, reused */}
@@ -1902,24 +1934,36 @@ export function ProgressPage() {
   const review = useEntry(0.24);
   const cohort = useEntry(0.28);
 
+  // Real, earned progress (empty for a new user → honest empty states).
+  const records = useProgressRecords();
+  const masteryDomains = useMasteryDomains();
+  const levelState = useLevelState();
+  const streakState = useStreakState();
+  const calibrationTrajectory = useCalibrationTrajectory();
+  const hasHistory = records.length > 0;
+
   const clinicalMastery = useMemo(
     () => masteryDomains.filter((d) => d.axis === "clinical"),
-    [],
+    [masteryDomains],
   );
   const commMastery = useMemo(
     () => masteryDomains.filter((d) => d.axis === "communication"),
-    [],
+    [masteryDomains],
   );
 
   // Snapshot readouts — the calibration gap now vs. its first tracked session
   // (smaller is better), and how many cards are due for review.
-  const calibGapNow = Math.round(
-    calibrationTrajectory[calibrationTrajectory.length - 1] * 100,
-  );
-  const calibGapFirst = Math.round(calibrationTrajectory[0] * 100);
-  const calibNarrowed = calibGapFirst - calibGapNow;
+  const calibGapNow =
+    calibrationTrajectory.length > 0
+      ? Math.round(calibrationTrajectory[calibrationTrajectory.length - 1] * 100)
+      : null;
+  const calibGapFirst =
+    calibrationTrajectory.length > 0
+      ? Math.round(calibrationTrajectory[0] * 100)
+      : 0;
+  const calibNarrowed = calibGapNow == null ? 0 : calibGapFirst - calibGapNow;
   const calibTrend: StatTrend | undefined =
-    calibNarrowed !== 0
+    calibGapNow != null && calibrationTrajectory.length > 1 && calibNarrowed !== 0
       ? {
           value: t("progress3.snapshot.gapTrend", {
             points: Math.abs(calibNarrowed),
@@ -1977,8 +2021,8 @@ export function ProgressPage() {
               <Stat
                 size="lg"
                 label={t("progress3.snapshot.calibrationGap")}
-                value={calibGapNow}
-                unit="%"
+                value={calibGapNow == null ? "—" : calibGapNow}
+                unit={calibGapNow == null ? undefined : "%"}
                 icon={<Target weight="bold" className="h-3.5 w-3.5" />}
                 trend={calibTrend}
               />
@@ -2014,6 +2058,12 @@ export function ProgressPage() {
         <p className="mt-1 max-w-2xl text-sm text-muted">
           {t("progress.mastery.subtitle")}
         </p>
+
+        {!hasHistory ? (
+          <p className="mt-4 rounded-control border border-dashed border-border bg-bg-subtle p-4 text-sm text-muted">
+            {t("progress.mastery.empty")}
+          </p>
+        ) : null}
 
         <div className="mt-4 grid gap-6 md:grid-cols-2">
           {/* Clinical group */}

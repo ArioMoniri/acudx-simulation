@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
@@ -34,24 +35,19 @@ import {
   TreatmentChecklist,
   CitationPill,
 } from "@/components";
+import { type Band, type FeedbackAxis } from "@/data/mock";
+import { safetyCriticalMisses } from "@/domain/processMetrics";
+import { useEncounterState } from "@/state/encounterStore";
 import {
-  feedbackReport,
-  feedbackDomains,
-  feedbackGaps,
-  calibrationPoints,
-  calibrationTrajectory,
-  feedbackEncounterEvents,
-  treatmentBehaviors,
-  type Band,
-  type FeedbackAxis,
-} from "@/data/mock";
-import { chestPainNstemiCase } from "@/data/seedCases";
-import { expectedIntents } from "@/domain/case";
-import {
-  computeProcessMetrics,
-  safetyCriticalMisses,
-} from "@/domain/processMetrics";
-import type { EncounterEvent } from "@/state/encounterStore";
+  buildEncounterRecord,
+  deriveFeedbackGaps,
+  deriveTreatmentBehaviors,
+  hasMeaningfulProgress,
+  recordEncounter,
+  useCalibrationTrajectory,
+  useLatestRecord,
+  useProgressRecords,
+} from "@/state/progressStore";
 import { useEntry, useLang } from "@/lib/useLang";
 
 /** Whole minutes from ms for compact timing readouts. */
@@ -87,7 +83,15 @@ function AxisMark({ axis }: { axis: FeedbackAxis }) {
   );
 }
 
-/** FeedbackPage — the post-encounter formative report. */
+/**
+ * FeedbackPage — the post-encounter formative report.
+ *
+ * Everything here is derived from the learner's OWN completed encounter: if an
+ * encounter is live it is scored from the real event log (`computeProcessMetrics`
+ * runs over the store's EncounterEvent[]) and recorded; otherwise the most
+ * recent recorded encounter is shown. With no history at all, an honest empty
+ * state is shown — never a fabricated report.
+ */
 export function FeedbackPage() {
   const { t } = useTranslation();
   const lang = useLang();
@@ -98,16 +102,69 @@ export function FeedbackPage() {
   const gaps = useEntry(0.2);
   const remediation = useEntry(0.24);
 
-  const clinicalDomains = feedbackDomains.filter((d) => d.axis === "clinical");
-  const commDomains = feedbackDomains.filter((d) => d.axis === "communication");
+  const enc = useEncounterState();
+  const latest = useLatestRecord();
+  const trajectory = useCalibrationTrajectory();
+  const records = useProgressRecords();
 
-  const safetyGap = feedbackGaps.find((g) => g.safetyCritical);
-  const otherGaps = feedbackGaps.filter((g) => !g.safetyCritical);
+  // Score a live/just-finished encounter from its REAL log, if one is present.
+  const liveRecord = useMemo(() => {
+    if (
+      enc.caseInstance &&
+      enc.startTs != null &&
+      hasMeaningfulProgress(enc.events)
+    ) {
+      return buildEncounterRecord(enc.events, enc.caseInstance, enc.startTs);
+    }
+    return null;
+  }, [enc]);
+
+  // Persist the live encounter's outcome so the plots fill from earned data.
+  useEffect(() => {
+    if (liveRecord) recordEncounter(liveRecord);
+  }, [liveRecord]);
+
+  const rec = liveRecord ?? latest;
+
+  // Honest empty state — nothing to report until an encounter is completed.
+  if (!rec) {
+    return (
+      <PageContainer className="flex flex-col gap-8">
+        <motion.div {...header}>
+          <PageHeader
+            eyebrow={t("feedback.title")}
+            title={t("feedback.empty.title")}
+            description={t("feedback.empty.body")}
+          />
+        </motion.div>
+        <Card padding="lg">
+          <div className="rounded-control border border-dashed border-border bg-bg-subtle p-8 text-center">
+            <p className="text-sm font-medium text-fg">
+              {t("common.emptyEncounters")}
+            </p>
+            <div className="mt-4">
+              <Button asChild>
+                <Link to="/encounter">{t("home.primaryCtaContinue")}</Link>
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </PageContainer>
+    );
+  }
+
+  const metrics = rec.metrics;
+  const clinicalDomains = rec.domainScores.filter((d) => d.axis === "clinical");
+  const commDomains = rec.domainScores.filter((d) => d.axis === "communication");
+
+  const gapList = deriveFeedbackGaps(rec);
+  const safetyGap = gapList.find((g) => g.safetyCritical);
+  const otherGaps = gapList.filter((g) => !g.safetyCritical);
 
   // Headline verdict, derived from the band evidence (no hidden numeric score):
   // how many scored competency bands sit at proficient-or-above, split by axis.
-  const scored = feedbackDomains.filter((d) => d.band !== "withheld");
-  const withheldCount = feedbackDomains.length - scored.length;
+  const scored = rec.domainScores.filter((d) => d.scored);
+  const withheldCount = rec.domainScores.length - scored.length;
   const proficientPlus = scored.filter(
     (d) => bandRank(d.band) >= PROFICIENT_INDEX,
   ).length;
@@ -119,15 +176,19 @@ export function FeedbackPage() {
   const clinicalSummary = axisSummary("clinical");
   const commSummary = axisSummary("communication");
 
+  // The calibration scatter + trajectory arrow for the plot. When the current
+  // encounter has not been persisted yet, append its gap so the arrow includes it.
+  const inHistory = records.some((r) => r.sourceKey === rec.sourceKey);
+  const plotTrajectory = inHistory ? trajectory : [...trajectory, rec.overallGap];
+
   // Calibration headline: the latest self-vs-measured gap and how far it has
   // narrowed since the first tracked session (smaller is better).
-  const latestGap = Math.round(
-    calibrationTrajectory[calibrationTrajectory.length - 1] * 100,
-  );
-  const firstGap = Math.round(calibrationTrajectory[0] * 100);
+  const latestGap = Math.round(rec.overallGap * 100);
+  const firstGap =
+    plotTrajectory.length > 0 ? Math.round(plotTrajectory[0] * 100) : latestGap;
   const gapNarrowed = firstGap - latestGap;
   const gapTrend: StatTrend | undefined =
-    gapNarrowed !== 0
+    plotTrajectory.length > 1 && gapNarrowed !== 0
       ? {
           value: t("feedback3.verdict.gapTrend", { points: Math.abs(gapNarrowed) }),
           dir: gapNarrowed > 0 ? "down" : "up",
@@ -135,20 +196,10 @@ export function FeedbackPage() {
         }
       : undefined;
 
-  // Process metrics derived from a representative event log against the seed
-  // NSTEMI case (docs/00-overview/04 §4). Pure + memoized on the static fixture.
-  const metrics = useMemo(
-    () =>
-      computeProcessMetrics(
-        feedbackEncounterEvents as unknown as EncounterEvent[],
-        chestPainNstemiCase,
-      ),
-    [],
-  );
-
   // Safety-critical process misses, surfaced separately and always (§4.2, AS-8):
   // a missed time-critical action OR an unmet critical safety behavior (e.g. the
   // allergy check before prescribing).
+  const treatmentBehaviors = deriveTreatmentBehaviors(rec);
   const timingMisses = safetyCriticalMisses(metrics);
   const safetyBehaviorMisses = treatmentBehaviors.filter(
     (b) => b.critical && !b.met,
@@ -157,7 +208,7 @@ export function FeedbackPage() {
     timingMisses.length > 0 || safetyBehaviorMisses.length > 0;
 
   const coveragePct = Math.round(metrics.historyCoveragePct * 100);
-  const expectedCount = expectedIntents(chestPainNstemiCase).length;
+  const expectedCount = Math.max(1, rec.expectedIntentCount);
   const coveredCount = Math.round(metrics.historyCoveragePct * expectedCount);
 
   // On-time rate across the timed (non low-value) expected actions, for a
@@ -184,7 +235,7 @@ export function FeedbackPage() {
       <motion.div {...header}>
         <PageHeader
           eyebrow={t("feedback.title")}
-          title={t("feedback.encounterTitle")}
+          title={rec.title[lang]}
           description={t("feedback.subtitle")}
           meta={
             <>
@@ -192,8 +243,7 @@ export function FeedbackPage() {
                 {t("feedback.formativeBadge")}
               </Badge>
               <span className="text-xs text-subtle">
-                {t("feedback.provenance.mode")}: {feedbackReport.mode[lang]} ·{" "}
-                {t("feedback.provenance.version")}: {feedbackReport.version}
+                {liveRecord ? t("feedback.live") : t("feedback.recorded")}
               </span>
             </>
           }
@@ -313,8 +363,8 @@ export function FeedbackPage() {
                 </p>
               </div>
               <CalibrationPlot
-                points={calibrationPoints}
-                trajectory={calibrationTrajectory}
+                points={rec.calibration}
+                trajectory={plotTrajectory}
                 lang={lang}
               />
               <div className="flex items-start gap-2 rounded-control bg-bg-subtle p-3">
@@ -639,12 +689,23 @@ export function FeedbackPage() {
             {t("feedback.gapsHeading")}
           </h2>
         </div>
-        <div className="mt-3 flex flex-col gap-3">
-          {safetyGap ? <GapCard gap={safetyGap} lang={lang} /> : null}
-          {otherGaps.map((g) => (
-            <GapCard key={g.id} gap={g} lang={lang} />
-          ))}
-        </div>
+        {gapList.length > 0 ? (
+          <div className="mt-3 flex flex-col gap-3">
+            {safetyGap ? <GapCard gap={safetyGap} lang={lang} /> : null}
+            {otherGaps.map((g) => (
+              <GapCard key={g.id} gap={g} lang={lang} />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 flex items-start gap-2 rounded-control border border-dashed border-border bg-bg-subtle p-4 text-sm text-muted">
+            <CheckCircle
+              weight="fill"
+              className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--state-normal)]"
+              aria-hidden
+            />
+            {t("feedback.process.safety.cleanNote")}
+          </p>
+        )}
       </motion.section>
 
       {/* Remediation CTAs */}

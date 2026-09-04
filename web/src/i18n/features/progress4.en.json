@@ -1,0 +1,19 @@
+{
+  "home": {
+    "snapshotEmpty": "Complete an encounter to build your calibration snapshot."
+  },
+  "progress": {
+    "mastery": {
+      "empty": "Complete an encounter to start mapping your mastery across the competency domains."
+    },
+    "trajectoryEmptyHint": "Your calibration trend appears here once you finish an encounter."
+  },
+  "feedback": {
+    "empty": {
+      "title": "No encounter to report on yet",
+      "body": "Finish an encounter and your formative report — calibration, competency bands and process timing — is built from what you actually did."
+    },
+    "recorded": "From your last completed encounter",
+    "live": "From the encounter in progress"
+  }
+}

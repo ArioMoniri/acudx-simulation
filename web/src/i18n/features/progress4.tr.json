@@ -1,0 +1,19 @@
+{
+  "home": {
+    "snapshotEmpty": "Kalibrasyon anlık görüntünüzü oluşturmak için bir görüşme tamamlayın."
+  },
+  "progress": {
+    "mastery": {
+      "empty": "Yeterlilik alanlarındaki ustalığınızı haritalamaya başlamak için bir görüşme tamamlayın."
+    },
+    "trajectoryEmptyHint": "Bir görüşmeyi tamamladığınızda kalibrasyon eğiliminiz burada görünür."
+  },
+  "feedback": {
+    "empty": {
+      "title": "Henüz raporlanacak bir görüşme yok",
+      "body": "Bir görüşmeyi tamamlayın; kalibrasyon, yeterlilik bantları ve süreç zamanlamasından oluşan biçimlendirici raporunuz gerçekte yaptıklarınızdan oluşturulur."
+    },
+    "recorded": "Son tamamladığınız görüşmeden",
+    "live": "Devam eden görüşmeden"
+  }
+}
