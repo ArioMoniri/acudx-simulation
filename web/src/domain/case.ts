@@ -26,6 +26,7 @@ import type {
   Quantity,
   ServiceRequestKind,
 } from "@/domain/fhir";
+import type { VitalEffect } from "@/domain/treatments";
 
 /* -------------------------------------------------------------------------- */
 /* Trigger + intent vocabularies                                              */
@@ -119,6 +120,16 @@ export interface ImagingResult {
   orderCode: string;
   modality: Bilingual;
   report: DiagnosticReport;
+  /**
+   * A representative-image search phrase (bilingual), e.g.
+   * {en:"lobar pneumonia chest x-ray", tr:"lober pnömoni akciğer grafisi"}. Lets
+   * the UI surface a teaching illustration without shipping a real patient film.
+   */
+  imageQuery?: Bilingual;
+  /** Optional direct URL to a representative teaching image (open-licensed). */
+  imageUrl?: string;
+  /** Attribution / license line for `imageUrl`, when supplied. */
+  imageAttribution?: string;
 }
 
 /** A point on the vitals trajectory (baseline + evolution over sim time). */
@@ -169,6 +180,20 @@ export interface OrderExpectation {
   citationId: string;
 }
 
+/**
+ * A case-specific response to a treatment. When present it OVERRIDES the generic
+ * physiology fallback for that agent (src/domain/treatments.ts genericEffect):
+ * `effects` drive the live vitals course, `appropriateness` scores the choice,
+ * and `narrative` is the bilingual clinical note shown to the learner.
+ */
+export interface TreatmentResponse {
+  /** Treatment code (matches TreatmentOption.code / the administered code). */
+  treatmentCode: string;
+  appropriateness: "indicated" | "contraindicated" | "neutral";
+  effects: VitalEffect[];
+  narrative: Bilingual;
+}
+
 export type Disposition =
   | "admit-ccu"
   | "admit-ward"
@@ -212,6 +237,11 @@ export interface CaseInstance {
   groundTruth: CaseGroundTruth;
   expectedWorkup: OrderExpectation[];
   disposition: Disposition;
+  /**
+   * Optional case-specific treatment responses. When absent for an administered
+   * agent, the live course falls back to genericEffect (src/domain/treatments.ts).
+   */
+  treatmentResponses?: TreatmentResponse[];
   /** Provenance: 'seed' (curated) or 'generated' (caseGen). */
   provenance: "seed" | "generated";
 }

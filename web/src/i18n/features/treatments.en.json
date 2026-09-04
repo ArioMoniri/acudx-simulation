@@ -1,0 +1,11 @@
+{
+  "treatments": {
+    "timeline": "Administered {{name}}",
+    "eventLabel": "Treatment",
+    "appropriateness": {
+      "indicated": "Indicated",
+      "contraindicated": "Contraindicated",
+      "neutral": "Neutral"
+    }
+  }
+}
