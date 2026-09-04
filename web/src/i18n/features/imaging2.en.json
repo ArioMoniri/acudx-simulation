@@ -1,0 +1,15 @@
+{
+  "imaging2": {
+    "disclaimer": "Representative image — not this patient",
+    "disclaimerShort": "Representative image",
+    "source": "Source",
+    "viewSource": "View on Wikimedia Commons",
+    "license": "License",
+    "attribution": "Attribution",
+    "noImage": "No representative image available",
+    "noImageHint": "We couldn't load an open-licensed image for this finding.",
+    "loading": "Loading representative image…",
+    "alt": "{{modality}} — representative image of {{query}}",
+    "altNoModality": "Representative image of {{query}}"
+  }
+}
