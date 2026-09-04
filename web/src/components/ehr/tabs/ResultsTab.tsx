@@ -5,6 +5,7 @@ import {
   Timer,
   Flask,
   Scan,
+  Virus,
   ShieldWarning,
 } from "@phosphor-icons/react";
 
@@ -28,11 +29,11 @@ import {
 import type { PlacedOrder } from "@/state/encounterStore";
 import {
   getOrderableByCode,
-  hasGroundTruthResult,
+  isPanelOrder,
   syntheticNormalResult,
   type Orderable,
 } from "@/domain/orderables";
-import type { CaseInstance, ImagingResult } from "@/domain/case";
+import type { CaseInstance, ImagingResult, LabResult } from "@/domain/case";
 import type { Observation } from "@/domain/fhir";
 import type { Bilingual, Lang } from "@/data/mock";
 
@@ -55,6 +56,29 @@ interface ResultRow {
   id: string;
   observation: Observation;
   synthetic: boolean;
+}
+
+/** A resulted lab/blood-gas/POC order rendered as a complete analyte panel. */
+interface PanelGroup {
+  key: string;
+  title: Bilingual;
+  orderedAt?: number;
+  resultedAt: number;
+  clinicalEta: string;
+  rows: ResultRow[];
+  abnormalCount: number;
+}
+
+/** A microbiology / narrative-report result (culture, viral panel, serology). */
+interface MicroEntry {
+  id: string;
+  title: Bilingual;
+  conclusion?: Bilingual;
+  orderedAt?: number;
+  resultedAt: number;
+  clinicalEta: string;
+  synthetic: boolean;
+  abnormal: boolean;
 }
 
 /** A unified imaging entry: ground-truth study OR synthetic normal study. */
@@ -81,7 +105,7 @@ function orderIsImaging(order: PlacedOrder): boolean {
 function modalityShort(modalityEn: string): string {
   const m = modalityEn.toLowerCase();
   if (/\bct\b|tomograph|ctpa|angiogram/.test(m)) return "CT";
-  if (/x-?ray|radiograph|cxr|axr/.test(m)) return "X-ray";
+  if (/x-?ray|radiograph|cxr|axr|kub/.test(m)) return "X-ray";
   if (/ultrasound|\bus\b|doppler|pocus|echo/.test(m)) return "US";
   if (/mri|\bmr\b|magnetic/.test(m)) return "MRI";
   if (/ecg|ekg|electrocardio/.test(m)) return "ECG";
@@ -101,16 +125,30 @@ function orderableFor(order: PlacedOrder): Orderable {
   };
 }
 
+/** The primary analyte code of an observation. */
+function analyteCode(obs: Observation): string {
+  return obs.code.coding[0]?.code ?? "";
+}
+
+/** Is an observation abnormal (any non-normal interpretation)? */
+function isAbnormal(obs: Observation): boolean {
+  return interpretationToState(obs.interpretation) !== "normal";
+}
+
 /**
  * ResultsTab — the resulted-data surface (docs §2.2 / §2.3). Progressive
  * disclosure holds: only ORDERED tests appear. A summary strip counts resulted
  * orders and flags abnormal / critical values; criticals surface in a dedicated
- * callout. Pending orders show a live "in progress · ETA" countdown. Ground-truth
- * labs render in a dense table with reference ranges and icon+text abnormal flags
- * (never colour alone). Every IMAGING order shows a REAL representative image via
- * ConditionImage. Orders the case carries no ground truth for still resolve — as
- * a plausible within-normal-limits result — so ANY order returns something, with
- * authored (abnormal) ground truth always taking precedence.
+ * callout. Pending orders show a live "in progress · ETA" countdown.
+ *
+ * Every resulted lab / blood-gas / POC order renders as a COMPLETE analyte
+ * panel — a dense table of individual measurands, each with a value, unit,
+ * reference range and icon+text abnormal flag (never colour alone). Authored
+ * ground truth takes precedence PER ANALYTE, so an abnormal creatinine sits
+ * inside an otherwise-normal, fully-populated BMP. Microbiology / serology
+ * orders render as narrative reports; every IMAGING order shows a REAL
+ * representative image via ConditionImage. Any order the case carries no ground
+ * truth for still resolves — as a plausible within-normal-limits result.
  */
 export function ResultsTab({ lang }: ResultsTabProps) {
   const { t } = useTranslation();
@@ -126,29 +164,91 @@ export function ResultsTab({ lang }: ResultsTabProps) {
   const groundLabs = getDiscoveredLabs(state);
   const groundImaging = getDiscoveredImaging(state);
 
-  // Synthetic results for resulted orders the case has no ground truth for.
-  const { syntheticLabRows, syntheticImaging } = useMemo(() => {
-    const labs: ResultRow[] = [];
+  // Ground-truth labs indexed by the order code that reveals them.
+  const groundByCode = useMemo(() => {
+    const m = new Map<string, LabResult[]>();
+    for (const l of groundLabs) {
+      const arr = m.get(l.orderCode) ?? [];
+      arr.push(l);
+      m.set(l.orderCode, arr);
+    }
+    return m;
+  }, [groundLabs]);
+
+  const resultedAtOf = (code: string, order: PlacedOrder): number =>
+    state.results.find((r) => r.code === code)?.at ?? order.resultsReadyAt;
+
+  // Resulted lab / blood-gas / POC orders → complete analyte panels, merging
+  // authored ground-truth analytes over the synthetic within-normal panel.
+  const { panelGroups, microEntries, syntheticImaging } = useMemo(() => {
+    const panels: PanelGroup[] = [];
+    const micro: MicroEntry[] = [];
     const imaging: ImagingEntry[] = [];
-    if (!caseInstance) return { syntheticLabRows: labs, syntheticImaging: imaging };
+    if (!caseInstance) return { panelGroups: panels, microEntries: micro, syntheticImaging: imaging };
+
     for (const order of state.orders) {
       if (!isResulted(order)) continue;
-      if (hasGroundTruthResult(caseInstance, order.code)) continue;
       const orderable = orderableFor(order);
-      const syn = syntheticNormalResult(orderable, caseInstance);
+      const ground = groundByCode.get(order.code) ?? [];
+      const clinicalEta = lang === "tr" ? order.clinicalLabelTr : order.clinicalLabelEn;
+      const resultedAt = resultedAtOf(order.code, order);
+
+      // Imaging — real representative image (ground truth handled separately).
       if (orderIsImaging(order)) {
-        imaging.push(
-          buildSyntheticImaging(order, orderable, syn.report?.conclusion, lang),
-        );
-      } else {
-        for (const obs of syn.observations) {
-          labs.push({ id: `${order.code}-${obs.id}`, observation: obs, synthetic: true });
+        if (!ground.length) {
+          const syn = syntheticNormalResult(orderable, caseInstance);
+          imaging.push(buildSyntheticImaging(order, orderable, syn.report?.conclusion, lang));
         }
+        continue;
       }
+
+      // Microbiology / serology — narrative report.
+      if (orderable.category === "micro") {
+        if (ground.length) {
+          const g = ground[0];
+          micro.push({
+            id: `micro-${order.code}`,
+            title: orderable.label,
+            conclusion: g.report?.conclusion ?? g.observation.valueString,
+            orderedAt: order.placedAt,
+            resultedAt,
+            clinicalEta,
+            synthetic: false,
+            abnormal: ground.some((l) => isAbnormal(l.observation)),
+          });
+        } else {
+          const syn = syntheticNormalResult(orderable, caseInstance);
+          micro.push({
+            id: `micro-${order.code}`,
+            title: orderable.label,
+            conclusion: syn.report?.conclusion,
+            orderedAt: order.placedAt,
+            resultedAt,
+            clinicalEta,
+            synthetic: true,
+            abnormal: false,
+          });
+        }
+        continue;
+      }
+
+      // Labs / blood gas / POC — a complete, per-analyte panel.
+      const rows = buildPanelRows(order.code, orderable, ground, caseInstance);
+      if (rows.length === 0) continue;
+      panels.push({
+        key: order.code,
+        title: orderable.label,
+        orderedAt: order.placedAt,
+        resultedAt,
+        clinicalEta,
+        rows,
+        abnormalCount: rows.filter((r) => isAbnormal(r.observation)).length,
+      });
     }
-    return { syntheticLabRows: labs, syntheticImaging: imaging };
+
+    return { panelGroups: panels, microEntries: micro, syntheticImaging: imaging };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseInstance, state.orders, nowMs, lang]);
+  }, [caseInstance, state.orders, state.results, groundByCode, nowMs, lang]);
 
   // Ground-truth imaging → unified entries (with dx-derived image queries).
   const groundImagingEntries = useMemo<ImagingEntry[]>(() => {
@@ -164,7 +264,7 @@ export function ResultsTab({ lang }: ResultsTabProps) {
   );
 
   const abnormalLabs = useMemo(
-    () => groundLabs.filter((l) => interpretationToState(l.observation.interpretation) !== "normal"),
+    () => groundLabs.filter((l) => isAbnormal(l.observation)),
     [groundLabs],
   );
   const criticalLabs = useMemo(
@@ -172,15 +272,19 @@ export function ResultsTab({ lang }: ResultsTabProps) {
     [groundLabs],
   );
 
-  const groundRows: ResultRow[] = (abnormalOnly ? abnormalLabs : groundLabs).map((l) => ({
-    id: l.id,
-    observation: l.observation,
-    synthetic: false,
-  }));
-  const shownLabRows = abnormalOnly ? groundRows : [...groundRows, ...syntheticLabRows];
+  // Abnormal-only view: keep only abnormal analytes / non-normal reports.
+  const shownPanels = abnormalOnly
+    ? panelGroups
+        .map((g) => ({ ...g, rows: g.rows.filter((r) => isAbnormal(r.observation)) }))
+        .filter((g) => g.rows.length > 0)
+    : panelGroups;
+  const shownMicro = abnormalOnly ? microEntries.filter((e) => e.abnormal) : microEntries;
+  const shownImaging = abnormalOnly ? imagingEntries.filter((e) => !e.synthetic) : imagingEntries;
 
   const nothingOrdered = state.orders.length === 0;
   const resultedOrders = state.orders.filter(isResulted).length;
+  const nothingAbnormalShown =
+    abnormalOnly && shownPanels.length === 0 && shownMicro.length === 0 && shownImaging.length === 0;
 
   const summaryReveal = useReveal();
   const criticalReveal = useReveal(0.04);
@@ -312,51 +416,111 @@ export function ResultsTab({ lang }: ResultsTabProps) {
         </Card>
       ) : null}
 
-      {/* Laboratory results (ground truth + synthetic normal) */}
-      {shownLabRows.length > 0 ? (
+      {/* Laboratory results — one complete analyte panel per resulted order */}
+      {shownPanels.length > 0 ? (
         <Card padding="md">
           <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-fg">
             <Flask weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("ehr.results.labsHeading")}
           </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[460px] border-collapse text-sm">
-              <caption className="sr-only">{t("ehr.results.labsCaption")}</caption>
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.analyte")}</th>
-                  <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.value")}</th>
-                  <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.reference")}</th>
-                  <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.flag")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shownLabRows.map((r) => (
-                  <LabResultRow key={r.id} row={r} lang={lang} />
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-col gap-5">
+            {shownPanels.map((g) => (
+              <PanelTable key={g.key} group={g} lang={lang} />
+            ))}
           </div>
-          {abnormalOnly && shownLabRows.length === 0 ? (
-            <p className="py-2 text-center text-xs italic text-muted">
-              {t("ehr2.results.noAbnormal")}
-            </p>
-          ) : null}
+        </Card>
+      ) : null}
+
+      {/* Microbiology, serology & other narrative reports */}
+      {shownMicro.length > 0 ? (
+        <Card padding="md">
+          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-fg">
+            <Virus weight="bold" className="h-4 w-4 text-muted" aria-hidden />
+            {t("labs2.results.microHeading")}
+          </h3>
+          <MicroList entries={shownMicro} lang={lang} />
         </Card>
       ) : null}
 
       {/* Imaging — every study shows a REAL representative image */}
-      {imagingEntries.length > 0 ? (
+      {shownImaging.length > 0 ? (
         <Card padding="md">
           <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-fg">
             <Scan weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("ehr.results.imagingHeading")}
           </h3>
-          <ImagingList entries={imagingEntries} lang={lang} />
+          <ImagingList entries={shownImaging} lang={lang} />
+        </Card>
+      ) : null}
+
+      {nothingAbnormalShown ? (
+        <Card padding="md">
+          <p className="py-2 text-center text-xs italic text-muted">
+            {t("ehr2.results.noAbnormal")}
+          </p>
         </Card>
       ) : null}
     </div>
   );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Panel builders                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Build the rows for one resulted lab/gas/POC order. A panel order expands to
+ * its full analyte set; authored ground-truth analytes replace the matching
+ * synthetic normal (per-analyte precedence), and any authored analyte outside
+ * the modelled panel is appended. A non-panel (bespoke) code shows only its
+ * authored ground truth, or a single generic within-normal line if none.
+ */
+function buildPanelRows(
+  code: string,
+  orderable: Orderable,
+  ground: LabResult[],
+  caseInstance: CaseInstance,
+): ResultRow[] {
+  const groundByAnalyte = new Map<string, Observation>();
+  for (const l of ground) {
+    const key = analyteCode(l.observation);
+    if (!groundByAnalyte.has(key)) groundByAnalyte.set(key, l.observation);
+  }
+
+  if (!isPanelOrder(code)) {
+    // Bespoke / uncatalogued code: prefer authored ground truth, else a single
+    // synthetic within-normal line.
+    if (ground.length > 0) {
+      return ground.map((l) => ({ id: `${code}-${l.id}`, observation: l.observation, synthetic: false }));
+    }
+    const syn = syntheticNormalResult(orderable, caseInstance);
+    return syn.observations.map((obs) => ({ id: `${code}-${obs.id}`, observation: obs, synthetic: true }));
+  }
+
+  const syn = syntheticNormalResult(orderable, caseInstance);
+  const rows: ResultRow[] = [];
+  const consumed = new Set<string>();
+
+  for (const obs of syn.observations) {
+    const key = analyteCode(obs);
+    const gt = groundByAnalyte.get(key);
+    if (gt) {
+      consumed.add(key);
+      rows.push({ id: `${code}-${key}`, observation: gt, synthetic: false });
+    } else {
+      rows.push({ id: `${code}-${obs.id}`, observation: obs, synthetic: true });
+    }
+  }
+
+  // Authored analytes that fall outside the modelled panel — append them.
+  for (const l of ground) {
+    const key = analyteCode(l.observation);
+    if (consumed.has(key)) continue;
+    consumed.add(key);
+    rows.push({ id: `${code}-extra-${l.id}`, observation: l.observation, synthetic: false });
+  }
+
+  return rows;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -447,6 +611,51 @@ function SummaryStat({
   );
 }
 
+/** One complete analyte panel: heading + timeline + dense value table. */
+function PanelTable({ group, lang }: { group: PanelGroup; lang: Lang }) {
+  const { t } = useTranslation();
+  return (
+    <section>
+      <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <h4 className="flex items-baseline gap-2 text-sm font-semibold text-fg">
+          {pick(group.title, lang)}
+          <span className="font-mono text-[11px] font-normal tabular-nums text-subtle">
+            {t("labs2.results.analytes", { count: group.rows.length })}
+          </span>
+        </h4>
+        <span className="font-mono text-[11px] tabular-nums text-muted">
+          {group.orderedAt != null
+            ? t("orders2.results.timeline", {
+                ordered: minutesOf(group.orderedAt),
+                resulted: minutesOf(group.resultedAt),
+              })
+            : t("ehr.results.reportedAt", { min: minutesOf(group.resultedAt) })}
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[460px] border-collapse text-sm">
+          <caption className="sr-only">
+            {pick(group.title, lang)} — {t("ehr.results.labsCaption")}
+          </caption>
+          <thead>
+            <tr className="border-b border-border text-left">
+              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.analyte")}</th>
+              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.value")}</th>
+              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.reference")}</th>
+              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.flag")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.rows.map((r) => (
+              <LabResultRow key={r.id} row={r} lang={lang} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 /** One result row — ground truth (with abnormal flag) or synthetic normal. */
 function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
   const { t } = useTranslation();
@@ -498,6 +707,68 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
         </span>
       </td>
     </tr>
+  );
+}
+
+/** Microbiology / serology narrative reports (no representative image). */
+function MicroList({ entries, lang }: { entries: MicroEntry[]; lang: Lang }) {
+  const { t } = useTranslation();
+  const { container, item } = useStagger();
+
+  return (
+    <motion.ul {...container} className="flex flex-col gap-3">
+      {entries.map((e) => {
+        const st = e.abnormal ? stateMap.warning : stateMap.normal;
+        const Icon = st.icon;
+        return (
+          <motion.li
+            key={e.id}
+            {...item}
+            className="rounded-control border border-border bg-bg-subtle p-3"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-fg">
+                <Virus weight="bold" className="h-4 w-4 text-muted" aria-hidden />
+                {pick(e.title, lang)}
+              </span>
+              <span className="font-mono text-[11px] tabular-nums text-muted">
+                {e.orderedAt != null
+                  ? t("orders2.results.timeline", {
+                      ordered: minutesOf(e.orderedAt),
+                      resulted: minutesOf(e.resultedAt),
+                    })
+                  : t("ehr.results.reportedAt", { min: minutesOf(e.resultedAt) })}
+              </span>
+            </div>
+
+            {e.clinicalEta ? (
+              <p className="mt-0.5 font-mono text-[11px] tabular-nums text-subtle">
+                {t("orders2.results.etaLabel", { eta: e.clinicalEta })}
+              </p>
+            ) : null}
+
+            {e.conclusion ? (
+              <p className="mt-1.5 flex items-start gap-1.5 text-sm leading-relaxed text-fg">
+                <Icon
+                  weight="fill"
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                  style={{ color: st.colorVar }}
+                  aria-hidden
+                />
+                <span>
+                  {pick(e.conclusion, lang)}
+                  {e.synthetic ? (
+                    <span className="ml-1 text-xs italic text-muted">
+                      ({t("orders2.results.wnl")})
+                    </span>
+                  ) : null}
+                </span>
+              </p>
+            ) : null}
+          </motion.li>
+        );
+      })}
+    </motion.ul>
   );
 }
 
