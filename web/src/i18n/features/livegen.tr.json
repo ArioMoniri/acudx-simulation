@@ -1,0 +1,22 @@
+{
+  "livegen": {
+    "modeLegend": "Üretim",
+    "quick": "Hızlı üret",
+    "quickHint": "Anında, çevrimdışı. Tohumlu şablon motoruyla cihazda vaka oluşturur.",
+    "ai": "Yapay zeka ile üret",
+    "aiHint": "Pod üzerinde çalışır: ICD/DSM örneklemeli, dayanaklı ve daha zengin.",
+    "note": "Yapay zeka üretimi açık modeli pod üzerinde çalıştırır ve biraz sürebilir.",
+    "generating": "Üretiliyor…",
+    "generatingHint": "Pod üzerinde örnekleme, dayanaklandırma ve doğrulama yapılıyor. İptal edebilirsiniz.",
+    "cancel": "İptal",
+    "unavailable": "Yapay zeka arka ucuna ulaşılamadı — yerel olarak üretildi",
+    "degraded": "Dayanaklandırma sınırlı — kılavuz dayanaklarını doğrulayın",
+    "ready": "Vaka hazır",
+    "sourceLabel": "Kaynak",
+    "source": {
+      "ai": "Yapay zeka",
+      "template": "Şablon",
+      "local": "Yerel"
+    }
+  }
+}
