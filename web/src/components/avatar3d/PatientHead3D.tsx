@@ -58,6 +58,11 @@ import type {
 export interface PatientHead3DProps {
   /** Character profile — drives skin tone, hair, headwear. */
   profile: PatientProfile;
+  /**
+   * Explicit display name (the CASE patient's name). When set it overrides the
+   * profile's own name so the head never contradicts the case identity.
+   */
+  name?: string;
   /** Clinical-sign intensities (0..1) shading the face. Same contract as 2D. */
   signs: ClinicalSignIntensity[];
   /** Affect (intensity scales idle-motion strength). */
@@ -481,6 +486,7 @@ function levelKey(intensity: number): "mild" | "moderate" | "marked" {
 
 export default function PatientHead3D({
   profile,
+  name: nameProp,
   signs,
   affect,
   rr,
@@ -499,7 +505,9 @@ export default function PatientHead3D({
   );
 
   const animate = inView && !reduceMotion;
-  const name = i18n.language.startsWith("tr") ? profile.name.tr : profile.name.en;
+  // The case patient's name wins over the profile's own (identity coherence).
+  const name =
+    nameProp ?? (i18n.language.startsWith("tr") ? profile.name.tr : profile.name.en);
 
   // Lip-sync: text → animated jaw/mouth-shape. The clock is paused whenever the
   // head is offscreen or the tab is hidden (`active: inView`) so we never burn

@@ -33,6 +33,17 @@ export interface ActivityTabsProps {
   affectLabel: string;
   guidanceOn: boolean;
   onGuidanceChange: (on: boolean) => void;
+  /**
+   * Optional controlled active tab. When provided, the parent owns tab state
+   * (e.g. the command palette / number hotkeys). Absent → the component stays
+   * fully uncontrolled and manages its own tab as before.
+   */
+  activeTab?: string;
+  /**
+   * Notified whenever the active tab changes — from a click, a number hotkey,
+   * or the store-stage follow-sync. Pair with `activeTab` for a controlled tab.
+   */
+  onActiveTabChange?: (id: string) => void;
 }
 
 type TabKey =
@@ -44,6 +55,9 @@ type TabKey =
   | "results"
   | "guidance"
   | "problem-list";
+
+/** The tab id union, exposed so owners can build navigation without magic strings. */
+export type ActivityTabKey = TabKey;
 
 // `stage` is optional: the Monitor and Guidance tabs are always-available views
 // that must NOT advance the clinical stage when opened (they are reference
@@ -59,8 +73,19 @@ const TABS: { key: TabKey; icon: Icon; stage?: EncounterStage }[] = [
   { key: "problem-list", icon: ListChecks, stage: "assessment" },
 ];
 
+/**
+ * The tab ids in strip order, exposed so owners (the command palette / number
+ * hotkeys) can enumerate tabs without re-declaring the list.
+ */
+export const ACTIVITY_TAB_KEYS: readonly TabKey[] = TABS.map((tab) => tab.key);
+
+/** The i18n key for a tab's label (`ehr.tabs.<camelKey>`), shared with the strip. */
+export function activityTabLabelKey(key: string): string {
+  return `ehr.tabs.${camel(key)}`;
+}
+
 /** Map the store's canonical stage to the tab that best represents it. */
-function stageToTab(stage: EncounterStage): TabKey {
+export function stageToTab(stage: EncounterStage): TabKey {
   switch (stage) {
     case "chart-review":
       return "chart-review";
@@ -92,25 +117,72 @@ export function ActivityTabs({
   affectLabel,
   guidanceOn,
   onGuidanceChange,
+  activeTab: controlledTab,
+  onActiveTabChange,
 }: ActivityTabsProps) {
   const { t } = useTranslation();
   const state = useEncounterState();
 
-  // The active tab is student-controlled local state (so any tab is clickable),
-  // seeded from the store stage on mount. It is kept in sync two ways:
+  // The active tab is student-controlled (so any tab is clickable), seeded from
+  // the store stage on mount. When the parent passes `activeTab` the component
+  // is controlled and defers to that value; otherwise it owns local state — the
+  // original, uncontrolled behavior. It is kept in sync two ways:
   //  - the student clicking a tab sets it and advances the store stage;
   //  - an action that moves the store stage on its own (e.g. a result returns)
   //    follows along, without trapping the student on a tab they left.
-  const [activeTab, setActiveTab] = useState<TabKey>(() =>
+  const [uncontrolledTab, setUncontrolledTab] = useState<TabKey>(() =>
     stageToTab(state.stage),
   );
+  const isControlled = controlledTab !== undefined;
+  const activeTab: TabKey = isControlled
+    ? (controlledTab as TabKey)
+    : uncontrolledTab;
+
+  // Commit a tab change to whichever party owns the state, and always notify.
+  const commitTab = useCallback(
+    (next: TabKey) => {
+      if (!isControlled) setUncontrolledTab(next);
+      onActiveTabChange?.(next);
+    },
+    [isControlled, onActiveTabChange],
+  );
+
   const prevStageRef = useRef(state.stage);
+  // Marks a controlled-tab change as originating from the store→tab sync below,
+  // so the controlled-only effect knows not to push the stage back (some stages
+  // — e.g. exam — legitimately map onto a tab whose own stage differs).
+  const syncingFromStageRef = useRef(false);
   useEffect(() => {
     if (state.stage !== prevStageRef.current) {
       prevStageRef.current = state.stage;
-      setActiveTab(stageToTab(state.stage));
+      syncingFromStageRef.current = true;
+      commitTab(stageToTab(state.stage));
     }
-  }, [state.stage]);
+  }, [state.stage, commitTab]);
+
+  // Controlled-only: when the parent drives the tab (palette / number hotkeys),
+  // advance the store stage to match — mirroring a click — guarded by the same
+  // prevStageRef so the follow-effect above never bounces us off the new tab.
+  // prevControlledTabRef suppresses the effect on mount (and no-op re-renders)
+  // so seeding the controlled tab never nudges the stage; syncingFromStageRef
+  // skips changes the store sync itself produced. Only real navigation acts.
+  const prevControlledTabRef = useRef(controlledTab);
+  useEffect(() => {
+    if (!isControlled) return;
+    if (prevControlledTabRef.current === controlledTab) return;
+    prevControlledTabRef.current = controlledTab;
+    if (syncingFromStageRef.current) {
+      syncingFromStageRef.current = false;
+      return;
+    }
+    const tab = TABS.find((x) => x.key === controlledTab);
+    if (tab?.stage && tab.stage !== prevStageRef.current) {
+      prevStageRef.current = tab.stage;
+      setStage(tab.stage);
+    }
+    // Runs on external tab changes only; store-stage sync is handled above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [controlledTab, isControlled]);
 
   // Small live counts for the nav (results returned, orders placed, problems).
   const counts = useMemo(
@@ -153,7 +225,7 @@ export function ActivityTabs({
   function handleValueChange(value: string) {
     const tab = TABS.find((x) => x.key === value);
     if (!tab) return;
-    setActiveTab(tab.key);
+    commitTab(tab.key);
     // Reflect the navigation in the store stage (drives ProgressStages), but do
     // not let the follow-effect above bounce us off the tab we just chose.
     // Reference tabs (Monitor / Guidance) carry no stage and never advance it.

@@ -15,7 +15,15 @@ import {
   NewCaseMenu,
   SimBadge,
 } from "@/components/ehr";
+import {
+  ACTIVITY_TAB_KEYS,
+  activityTabLabelKey,
+  stageToTab,
+} from "@/components/ehr/ActivityTabs";
+import { CommandPalette, type Command } from "@/components/ehr/CommandPalette";
+import { PatientViewer } from "@/components/PatientViewer";
 import { cn } from "@/lib/cn";
+import { useHotkeys } from "@/lib/useHotkeys";
 import { useLang } from "@/lib/useLang";
 import { useReveal } from "@/lib/motion";
 import { chestPainNstemiCase, getSeedCase } from "@/data/seedCases";
@@ -100,6 +108,14 @@ export function EncounterPage() {
   const [guidanceOn, setGuidanceOn] = useState(startSelection?.guidance ?? true);
   const [railOpen, setRailOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
+  // Command palette (⌘K) + the tab it steers, lifted here so the palette and
+  // number hotkeys can drive ActivityTabs. Seeded from the store stage so the
+  // controlled tab matches ActivityTabs' own initial pick.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(() =>
+    stageToTab(state.stage),
+  );
 
   // Latest store snapshot for the unmount recorder (the mount-only cleanup would
   // otherwise capture the initial, empty state).
@@ -206,6 +222,72 @@ export function EncounterPage() {
     return t("encounter.affect.distress");
   }, [caseInstance, t]);
 
+  const selectTab = useCallback((key: string) => setActiveTab(key), []);
+
+  // ⌘K / Ctrl-K toggles the palette — allowed to fire even while typing in the
+  // chart so it is always reachable.
+  useHotkeys(
+    [
+      {
+        combo: "mod+k",
+        whenTyping: true,
+        handler: (e) => {
+          e.preventDefault();
+          setPaletteOpen((o) => !o);
+        },
+      },
+    ],
+    true,
+  );
+  // Number keys jump directly to a chart tab; "?" opens the palette. Suspended
+  // while the palette is open, so its search field owns the keyboard then.
+  useHotkeys(
+    [
+      ...ACTIVITY_TAB_KEYS.slice(0, 9).map((key, i) => ({
+        combo: String(i + 1),
+        handler: () => selectTab(key),
+      })),
+      { combo: "?", handler: () => setPaletteOpen(true) },
+    ],
+    !paletteOpen,
+  );
+
+  // Palette commands: one "go to" per chart tab, plus the workspace actions.
+  const commands = useMemo<Command[]>(() => {
+    const sectionNav = t("commandPalette.sectionNav", { defaultValue: "Navigate" });
+    const sectionActions = t("commandPalette.sectionActions", {
+      defaultValue: "Actions",
+    });
+    const nav: Command[] = ACTIVITY_TAB_KEYS.map((key, i) => {
+      const label = t(activityTabLabelKey(key));
+      return {
+        id: `nav:${key}`,
+        label,
+        hint: i < 9 ? String(i + 1) : undefined,
+        section: sectionNav,
+        keywords: `go to open switch tab ${label}`,
+        run: () => selectTab(key),
+      };
+    });
+    const actions: Command[] = [
+      {
+        id: "action:enlarge",
+        label: t("commandPalette.enlarge", { defaultValue: "Enlarge patient view" }),
+        section: sectionActions,
+        keywords: "patient photo zoom enlarge portrait",
+        run: () => setViewerOpen(true),
+      },
+      {
+        id: "action:new-case",
+        label: t("commandPalette.newCase", { defaultValue: "New random case" }),
+        section: sectionActions,
+        keywords: "generate random new case",
+        run: handleRandom,
+      },
+    ];
+    return [...nav, ...actions];
+  }, [t, selectTab, handleRandom]);
+
   const currentIndex = progressIndexFor(state.stage);
 
   if (!caseInstance) {
@@ -286,6 +368,8 @@ export function EncounterPage() {
             affectLabel={affectLabel}
             guidanceOn={guidanceOn}
             onGuidanceChange={setGuidanceOn}
+            activeTab={activeTab}
+            onActiveTabChange={setActiveTab}
           />
         </motion.div>
       </div>
@@ -299,6 +383,19 @@ export function EncounterPage() {
           <Storyboard caseInstance={caseInstance} lang={lang} affectLabel={affectLabel} />
         </MobileRailDrawer>
       ) : null}
+
+      {/* ⌘K command palette + the enlarged patient view it can open */}
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={commands}
+      />
+      <PatientViewer
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        caseInstance={caseInstance}
+        affectLabel={affectLabel}
+      />
     </PageContainer>
   );
 }

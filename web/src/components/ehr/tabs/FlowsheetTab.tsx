@@ -4,8 +4,12 @@ import { useTranslation } from "react-i18next";
 import { VitalCard } from "@/components/VitalCard";
 import { stateMap, trendGlyph } from "@/components/clinicalState";
 import { PatientPhoto } from "@/components/PatientPhoto";
-import { PatientViewer, SymptomSummary } from "@/components/PatientViewer";
-import { signsFromVitals } from "@/components/ehr/PatientAvatar";
+import {
+  PatientViewer,
+  SymptomSummary,
+  photoSignsFromVitals,
+} from "@/components/PatientViewer";
+import { resolvePatientVisual } from "@/domain/patientIdentity";
 import { getCurrentVitals, useEncounterState } from "@/state/encounterStore";
 import { EncounterClock } from "../EncounterClock";
 import { minutesOf } from "../labels";
@@ -165,7 +169,9 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
   const liveVitals =
     state.caseInstance?.id === caseInstance.id ? getCurrentVitals(state) : null;
   const currentVitals = liveVitals ?? triageVitals;
-  const clinicalSigns = signsFromVitals(currentVitals);
+  // The ONE unified visual identity — same distinct face + case name everywhere.
+  const visual = resolvePatientVisual(caseInstance);
+  const clinicalSigns = photoSignsFromVitals(currentVitals);
 
   const readings = useMemo(
     () => buildReadings(triageVitals, trajectory),
@@ -249,10 +255,11 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
           }}
         >
           <PatientPhoto
-            sex={patient.gender === "female" ? "female" : "male"}
-            age={patient.ageYears}
-            seed={caseInstance.seed}
+            sex={visual.sexAtBirth}
+            age={visual.age}
+            photoId={visual.photoId}
             signs={clinicalSigns}
+            rr={currentVitals.rr}
             alt={t("patientviewer.syntheticNote")}
             className="h-16 w-16 shrink-0 ring-1 ring-white/10"
             onClick={() => setViewerOpen(true)}

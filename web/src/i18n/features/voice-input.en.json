@@ -1,0 +1,13 @@
+{
+  "ehr": {
+    "interview": {
+      "voiceInput": {
+        "mic": "Dictate",
+        "listening": "Listening…",
+        "stop": "Stop dictation",
+        "unsupported": "Voice dictation isn’t available in this browser.",
+        "hint": "Speak your question; it’s typed into the box so you can edit it before sending."
+      }
+    }
+  }
+}

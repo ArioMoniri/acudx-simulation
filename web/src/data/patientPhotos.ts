@@ -52,16 +52,20 @@ export function patientVideoUrl(id: string): string {
   return `${import.meta.env.BASE_URL}patients/${id}.mp4`;
 }
 
+/** How many nearest-age faces a patient can spread across (distinctness window). */
+const NEAREST_WINDOW = 4;
+
 /**
- * Pick the closest-matching portrait for a case: same sex first, then the
- * nearest age; a stable seed varies the choice among near-equal ages so two
- * different 58-year-old men don't always get the identical face.
+ * Pick a portrait for a patient: same sex first, then a small window of the
+ * NEAREST ages, and the (identity-derived) seed selects DISTINCTLY within that
+ * window — so two different 45-year-old women get different faces while the same
+ * patient stays perfectly stable across renders.
  *
- * Among equally-good demographic matches (same sex, within ~10y of the closest
- * age) a face that ships an "alive" idle video loop is PREFERRED, so the visible
- * patient moves rather than sitting as a frozen still whenever a suitable
- * animated face exists. Stills still get a gentle breathing animation in the UI,
- * but a real video always wins when the match is just as good.
+ * There is deliberately NO video-preference bias: a face that ships an "alive"
+ * idle loop is used only when it is the natural demographic pick, never forced on
+ * many unrelated patients just because it can move. (That old bias collapsed most
+ * cases onto the three video faces.) Stills get a gentle breathing animation in
+ * the UI, so a still never looks frozen either.
  */
 export function pickPatientPhoto(
   sex: PhotoSex,
@@ -70,16 +74,14 @@ export function pickPatientPhoto(
 ): PatientPhotoMeta {
   const pool = PATIENT_PHOTOS.filter((p) => p.sex === sex);
   const candidates = pool.length ? pool : PATIENT_PHOTOS;
+  // Rank by age proximity (id as a stable tiebreak), then keep a small window of
+  // the nearest faces so distinct patients fan out across several plausible
+  // matches instead of all colliding on the single closest age.
   const sorted = [...candidates].sort(
-    (a, b) => Math.abs(a.age - age) - Math.abs(b.age - age),
+    (a, b) =>
+      Math.abs(a.age - age) - Math.abs(b.age - age) || a.id.localeCompare(b.id),
   );
-  const bestAge = sorted[0].age;
-  const near = sorted.filter((p) => Math.abs(p.age - bestAge) <= 10);
-  // Prefer an equally-good match that has a video loop; fall back to any near
-  // match when none of them ship a video. The seed still varies the choice
-  // within the preferred subset so distinct cases don't clone one face.
-  const withVideo = near.filter((p) => hasPatientVideo(p.id));
-  const chooseFrom = withVideo.length > 0 ? withVideo : near;
-  const idx = Math.abs(Math.floor(seed)) % chooseFrom.length;
-  return chooseFrom[idx];
+  const window = sorted.slice(0, Math.min(NEAREST_WINDOW, sorted.length));
+  const idx = Math.abs(Math.floor(seed)) % window.length;
+  return window[idx];
 }

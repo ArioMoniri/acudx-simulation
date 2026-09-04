@@ -15,6 +15,7 @@ import {
   SealCheck,
   Note,
   Path,
+  GraduationCap,
 } from "@phosphor-icons/react";
 
 import { Badge, Button, Card, StatusDot } from "@/components/ui";
@@ -22,11 +23,13 @@ import { cn } from "@/lib/cn";
 import { useStagger } from "@/lib/motion";
 import { conceptCode, conceptText } from "../labels";
 import { DiagnosisPicker, type DxOption } from "../DiagnosisPicker";
+import { DebriefReport } from "../DebriefReport";
 import {
   addProblem,
   commitDiagnosis,
   useEncounterState,
 } from "@/state/encounterStore";
+import { buildDebrief } from "@/domain/debrief";
 import type { Lang } from "@/data/mock";
 import type { CaseInstance, Disposition } from "@/domain/case";
 import type { Condition } from "@/domain/fhir";
@@ -85,6 +88,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
   const [order, setOrder] = useState<string[]>([]);
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
   const [annotations, setAnnotations] = useState<Record<string, Annotation>>({});
+  const [debriefOpen, setDebriefOpen] = useState(false);
 
   /* ---- Case ground truth as suggested (unlabelled) candidates ------------- */
   const correctCode = conceptCode(caseInstance.correctDiagnosis.code);
@@ -225,6 +229,13 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
     if (correctSystem && committedSystem && correctSystem === committedSystem) return "near";
     return "incorrect";
   }, [committed, correctCode, caseDifferentialCodes]);
+
+  // Attending debrief (GH #110) — built lazily from the event-sourced state once
+  // a working diagnosis is committed. Pure; recomputed when the store changes.
+  const debrief = useMemo(
+    () => (committed ? buildDebrief(state, caseInstance) : null),
+    [committed, state, caseInstance],
+  );
 
   const hasSummary =
     Boolean(committed) || rankedCodes.length > 0 || planEntries.length > 0 || Boolean(disposition);
@@ -407,7 +418,21 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
               {t("diagnosis2.workingHeading")}
             </h3>
             {committed && workingEntry ? (
-              <VerdictPanel verdict={verdict} display={workingEntry.display} code={committed} t={t} />
+              <>
+                <VerdictPanel verdict={verdict} display={workingEntry.display} code={committed} t={t} />
+                {debrief ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    fullWidth
+                    className="mt-3"
+                    onClick={() => setDebriefOpen(true)}
+                    leadingIcon={<GraduationCap weight="bold" className="h-4 w-4" aria-hidden />}
+                  >
+                    {t("debrief.open", { defaultValue: "View attending debrief" })}
+                  </Button>
+                ) : null}
+              </>
             ) : (
               <p className="text-xs italic text-muted">{t("diagnosis2.workingEmpty")}</p>
             )}
@@ -508,6 +533,15 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
           annotations={annotations}
           planEntries={planEntries.map((p) => p.note ?? p.display)}
           disposition={disposition}
+        />
+      ) : null}
+
+      {/* Attending debrief (GH #110) — after-action, process-aware report. */}
+      {debriefOpen && debrief ? (
+        <DebriefReport
+          debrief={debrief}
+          caseInstance={caseInstance}
+          onClose={() => setDebriefOpen(false)}
         />
       ) : null}
     </div>

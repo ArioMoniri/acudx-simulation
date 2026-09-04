@@ -2,17 +2,18 @@
  * AcuDx — PatientViewer: the enlarged, symptom-aware patient modal.
  *
  * Opened from the small storyboard / flowsheet patient visual (see
- * PatientPhoto's `onClick`). It shows, side-by-side:
- *   - the realistic demographic-matched PatientPhoto, large, with the live
- *     physiology tint (pallor / cyanosis / diaphoresis) applied; and
- *   - the symptom-aware 3D head (PatientAvatar3D), which renders live pallor,
- *     cyanosis, diaphoresis and distress off the SAME vitals course as the
- *     bedside monitor.
- * Plus a concise, LIVE clinical-sign summary and the current vitals, so the
- * visual always reflects the patient's clinical picture — not a static label.
+ * PatientPhoto's `onClick`). It LEADS with the realistic, demographic-matched
+ * PatientPhoto — large, the same unified identity (`resolvePatientVisual`: the
+ * case patient's name + one distinct face) every other surface shows — with the
+ * live physiology made clearly visible on it (pallor / cyanosis / diaphoresis /
+ * fever / distress, breathing at the live RR). Beside it sits a concise LIVE
+ * clinical-sign summary + current vitals, so the visual always reflects the
+ * patient's clinical picture — not a static label. The crude procedural 3D head
+ * is no longer shown here; the realistic photo is the star.
  *
- * This file also exports the shared `describeVitalSigns` helper + `SymptomSummary`
- * component so the small storyboard/flowsheet visuals show the same live summary.
+ * This file also exports the shared `describeVitalSigns` + `photoSignsFromVitals`
+ * helpers and the `SymptomSummary` component so every patient visual shows the
+ * same live signs off the same source.
  *
  * Accessible: role="dialog" + aria-modal, focus trap, Escape to close, focus
  * restored to the trigger on close. Reduced-motion aware (media components honor
@@ -26,8 +27,8 @@ import { useTranslation } from "react-i18next";
 import { X, Pulse } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/cn";
-import { PatientPhoto } from "@/components/PatientPhoto";
-import { PatientAvatar3D } from "@/components/avatar3d/PatientAvatar3D";
+import { PatientPhoto, type ClinicalSignHint } from "@/components/PatientPhoto";
+import { resolvePatientVisual } from "@/domain/patientIdentity";
 import { signsFromVitals } from "@/components/ehr/PatientAvatar";
 import {
   getCurrentVitals,
@@ -102,6 +103,32 @@ export function describeVitalSigns(v: VitalsLike, max = 4): VitalSignToken[] {
     if (tokens.length >= max) break;
   }
   return tokens;
+}
+
+/**
+ * The full physiology sign channel for the realistic PHOTO: the canonical
+ * cyanosis / respiratory-distress / diaphoresis channel (`signsFromVitals`)
+ * augmented with pallor, fever (warm flush) and reduced-LOC so every live sign
+ * is visible on the face, not just the three the base channel emits. Pure +
+ * deterministic; thresholds mirror the physiology engine so the tint never
+ * contradicts the monitor or the summary words. Shared by all patient surfaces.
+ */
+export function photoSignsFromVitals(v: VitalsLike): ClinicalSignHint[] {
+  const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+  const out: ClinicalSignHint[] = signsFromVitals(v).map((s) => ({
+    sign: s.sign,
+    intensity: s.intensity,
+  }));
+  const add = (sign: string, intensity: number) => {
+    const i = clamp01(intensity);
+    if (i > 0.001) out.push({ sign, intensity: i });
+  };
+  // Pallor from hypoperfusion (falling systolic), warm flush from fever, and an
+  // ashen droop from severe hypoxia / hypotension.
+  add("pallor", (105 - v.systolic) / 45);
+  add("fever", (v.tempC - 38) / 2.5);
+  add("reduced-loc", Math.max((88 - v.spo2) / 16, (85 - v.systolic) / 30));
+  return out;
 }
 
 export interface SymptomSummaryProps {
@@ -253,10 +280,12 @@ export function PatientViewer({
   const storeVitals =
     state.caseInstance?.id === caseInstance.id ? getCurrentVitals(state) : null;
   const vitals: CurrentVitals | TriageVitals = storeVitals ?? caseInstance.triageVitals;
-  const signs = signsFromVitals(vitals);
+  // Full physiology channel so pallor / fever / reduced-LOC show on the photo too.
+  const signs = photoSignsFromVitals(vitals);
 
   const { patient } = caseInstance;
-  const photoSex = patient.gender === "female" ? "female" : "male";
+  // The ONE unified identity — same distinct face + case name as every other surface.
+  const visual = resolvePatientVisual(caseInstance);
 
   // Focus trap + Escape + scroll lock; restore focus to the trigger on close.
   useEffect(() => {
@@ -352,41 +381,41 @@ export function PatientViewer({
           </button>
         </div>
 
-        {/* Photo + symptom-aware 3D, side by side (stacked on mobile) */}
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Panel label={t("patientviewer.photoLabel")}>
+        {/* LEAD with the realistic, symptom-tinted, breathing patient — the live
+            clinical-signs surface — with the sign summary + current vitals beside
+            it (stacked on mobile). The crude procedural 3D head is no longer the
+            primary visual here; the realistic photo is the star. */}
+        <div className="mt-5 grid gap-4 sm:grid-cols-[minmax(0,320px)_1fr]">
+          <Panel label={t("patientviewer.signsLabel")}>
+            {/* Same distinct face + case name as every other surface; the live
+                vitals course tints pallor / cyanosis / diaphoresis / fever /
+                distress and drives the breathing cadence. */}
             <PatientPhoto
-              sex={photoSex}
-              age={patient.ageYears}
-              seed={caseInstance.seed}
+              sex={visual.sexAtBirth}
+              age={visual.age}
+              photoId={visual.photoId}
               signs={signs}
+              rr={vitals.rr}
               alt={t("patientviewer.syntheticNote")}
-              caption={t("patientviewer.syntheticNote")}
+              caption={patient.name}
               className="aspect-[4/5] w-full ring-1 ring-border"
             />
           </Panel>
 
-          <Panel label={t("patientviewer.signsLabel")}>
-            {/* Reads the live course from the store and renders pallor / cyanosis
-                / diaphoresis / distress off the current vitals. */}
-            <PatientAvatar3D profileSeed={caseInstance.seed} className="w-full" />
-          </Panel>
-        </div>
-
-        {/* Live clinical-sign summary + current vitals */}
-        <div className="mt-5 flex flex-col gap-3 rounded-card border border-border bg-bg-subtle/40 p-4">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                {t("patientviewer.summaryLabel")}
-              </span>
-              <span className="text-[10px] italic text-muted">
-                {t("patientviewer.reflectsLive")}
-              </span>
+          <div className="flex flex-col gap-3 rounded-card border border-border bg-bg-subtle/40 p-4">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  {t("patientviewer.summaryLabel")}
+                </span>
+                <span className="text-[10px] italic text-muted">
+                  {t("patientviewer.reflectsLive")}
+                </span>
+              </div>
+              <SymptomSummary vitals={vitals} variant="pills" />
             </div>
-            <SymptomSummary vitals={vitals} variant="pills" />
+            <VitalsLine vitals={vitals} />
           </div>
-          <VitalsLine vitals={vitals} />
         </div>
       </div>
     </div>

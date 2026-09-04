@@ -1,0 +1,13 @@
+{
+  "ehr": {
+    "interview": {
+      "voiceInput": {
+        "mic": "Dikte et",
+        "listening": "Dinleniyor…",
+        "stop": "Dikteyi durdur",
+        "unsupported": "Sesli dikte bu tarayıcıda kullanılamıyor.",
+        "hint": "Sorunuzu söyleyin; kutuya yazılır, göndermeden önce düzenleyebilirsiniz."
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "commandPalette": {
+    "title": "Komut paleti",
+    "placeholder": "Komut ara…",
+    "sectionNav": "Gezin",
+    "sectionActions": "Eylemler",
+    "enlarge": "Hasta görünümünü büyüt",
+    "newCase": "Yeni rastgele vaka",
+    "empty": "Komut bulunamadı."
+  }
+}

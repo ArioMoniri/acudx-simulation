@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowsOutSimple } from "@phosphor-icons/react";
+import { ArrowsOutSimple, Waveform } from "@phosphor-icons/react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 import {
+  PATIENT_PHOTOS,
   pickPatientPhoto,
   patientPhotoUrl,
   hasPatientVideo,
@@ -34,10 +36,30 @@ export interface PatientPhotoProps {
   age: number;
   /** Stable seed so a given case keeps the same face across renders. */
   seed?: number;
+  /**
+   * Explicit portrait id (from `resolvePatientVisual`). When set it wins over the
+   * sex/age/seed pick, so every surface renders the SAME unified face. Falls back
+   * to the demographic pick when omitted or unknown.
+   */
+  photoId?: string;
   /** Accessible description (defaults to a synthetic-patient statement). */
   alt?: string;
-  /** Physiology signs — apply a subtle clinical tint (pallor/cyanosis/sweat). */
+  /** Physiology signs — apply the live clinical tint + overlays. */
   signs?: ClinicalSignHint[];
+  /**
+   * Live respiratory rate (breaths/min). Drives the breathing cadence so the
+   * face visibly breathes faster under respiratory distress. Defaults to a calm
+   * rate when omitted.
+   */
+  rr?: number;
+  /**
+   * True while the patient is speaking. Shows a clear "speaking" treatment (plays
+   * the video when present, a small waveform pill, and a mouth-region shimmer).
+   * A non-empty `utterance` implies speaking as well.
+   */
+  speaking?: boolean;
+  /** The patient's current spoken line (implies speaking; used for the label). */
+  utterance?: string;
   /** Caption under the photo (e.g. the affect / clinical-sign summary). */
   caption?: ReactNode;
   className?: string;
@@ -53,73 +75,166 @@ export interface PatientPhotoProps {
   expandLabel?: string;
 }
 
-/** Derive a subtle CSS filter + cyanosis overlay strength from the signs. */
-function physiology(signs: ClinicalSignHint[] | undefined): {
+interface Physiology {
   filter?: string;
   cyanosis: number;
-} {
-  let saturate = 1;
-  let brightness = 1;
-  let cyanosis = 0;
+  /** Diaphoresis (glossy sweat sheen) strength. */
+  sweat: number;
+  /** Fever flush (warm cheeks) strength. */
+  flush: number;
+  /** Reduced-LOC dimming/droop strength. */
+  droop: number;
+  /** Pallor strength (desaturate + lighten, already folded into `filter`). */
+  pallor: number;
+  /** Respiratory-distress strength (drives the labored breathing motion). */
+  distress: number;
+}
+
+/** Max matching intensity for any of the given sign-name keywords (0..1). */
+function signMax(
+  signs: ClinicalSignHint[] | undefined,
+  ...keywords: string[]
+): number {
+  let out = 0;
   for (const s of signs ?? []) {
     const k = s.sign.toLowerCase();
-    if (k.includes("cyanos")) cyanosis = Math.max(cyanosis, s.intensity);
-    if (k.includes("pallor") || k.includes("pale")) {
-      saturate = Math.min(saturate, 1 - 0.45 * s.intensity);
-      brightness = Math.min(1.08, brightness + 0.06 * s.intensity);
+    if (keywords.some((w) => k.includes(w))) {
+      out = Math.max(out, Math.max(0, Math.min(1, s.intensity)));
     }
-    if (k.includes("diaphor") || k.includes("sweat"))
-      brightness = Math.min(1.1, brightness + 0.05 * s.intensity);
   }
-  const parts: string[] = [];
-  if (saturate < 0.999) parts.push(`saturate(${saturate.toFixed(2)})`);
-  if (Math.abs(brightness - 1) > 0.001) parts.push(`brightness(${brightness.toFixed(2)})`);
-  return { filter: parts.length ? parts.join(" ") : undefined, cyanosis };
+  return out;
 }
 
 /**
- * A subtle, GPU-cheap "alive" idle for a STILL face: a slow breathing scale plus
- * a faint luminance breathe (~4s). Compositor-friendly (transform + filter on a
- * wrapper) and collapsed entirely under prefers-reduced-motion. The wrapper's
- * brightness composes with the img's physiology filter, so pallor/sweat tints
- * are preserved. Rendered once per photo; identical duplicate <style> tags are
+ * Derive the CSS filter + per-overlay strengths that make the live clinical
+ * signs clearly VISIBLE on the face (and, unchanged, on the video). Pallor
+ * desaturates + lightens; fever adds warmth + saturation; diaphoresis lifts
+ * luminance under the sheen; reduced-LOC dims/flattens. Cyanosis, sweat, flush
+ * and droop are also returned so the caller can paint the matching overlays.
+ */
+function physiology(signs: ClinicalSignHint[] | undefined): Physiology {
+  const cyanosis = signMax(signs, "cyanos");
+  const pallor = signMax(signs, "pallor", "pale");
+  const sweat = signMax(signs, "diaphor", "sweat");
+  const flush = signMax(signs, "fever", "febrile", "flush");
+  const droop = signMax(signs, "loc", "droop", "drows", "responsive");
+  const distress = signMax(signs, "distress", "respirat");
+
+  let saturate = 1;
+  let brightness = 1;
+  let contrast = 1;
+  // Pallor — wash out colour and lift luminance (bloodless).
+  saturate -= 0.5 * pallor;
+  brightness += 0.08 * pallor;
+  // Fever — warmer, more saturated flush across the face.
+  saturate += 0.16 * flush;
+  brightness += 0.02 * flush;
+  // Diaphoresis — a touch brighter under the sheen highlight.
+  brightness += 0.05 * sweat;
+  // Reduced LOC — dimmer + flatter, an ashen, less-responsive look.
+  brightness -= 0.07 * droop;
+  contrast -= 0.07 * droop;
+  // Cyanosis — slightly desaturate before the bluish overlay lands.
+  saturate -= 0.1 * cyanosis;
+
+  saturate = Math.max(0.35, Math.min(1.35, saturate));
+  brightness = Math.max(0.82, Math.min(1.2, brightness));
+  contrast = Math.max(0.82, Math.min(1.12, contrast));
+
+  const parts: string[] = [];
+  if (Math.abs(saturate - 1) > 0.01) parts.push(`saturate(${saturate.toFixed(2)})`);
+  if (Math.abs(brightness - 1) > 0.01) parts.push(`brightness(${brightness.toFixed(2)})`);
+  if (Math.abs(contrast - 1) > 0.01) parts.push(`contrast(${contrast.toFixed(2)})`);
+
+  return {
+    filter: parts.length ? parts.join(" ") : undefined,
+    cyanosis,
+    sweat,
+    flush,
+    droop,
+    pallor,
+    distress,
+  };
+}
+
+/**
+ * Subtle, GPU-cheap keyframes: a calm breathing scale, a deeper "labored" breathe
+ * under respiratory distress (adds a faint shoulder lift), and a mouth-region
+ * shimmer while speaking. Compositor-friendly (transform + filter) and all
+ * collapsed under prefers-reduced-motion. Identical duplicate <style> tags are
  * harmless if several photos mount.
  */
-const BREATHE_KEYFRAMES = `
+const PHOTO_KEYFRAMES = `
 @keyframes acudx-patient-breathe {
   0%, 100% { transform: scale(1); filter: brightness(1); }
   50% { transform: scale(1.015); filter: brightness(1.04); }
+}
+@keyframes acudx-patient-breathe-labored {
+  0%, 100% { transform: scale(1) translateY(0); filter: brightness(1); }
+  50% { transform: scale(1.03) translateY(-1.4%); filter: brightness(1.05); }
+}
+@keyframes acudx-patient-speak {
+  0%, 100% { opacity: 0.28; transform: translateX(-50%) scaleY(0.85); }
+  50% { opacity: 0.6; transform: translateX(-50%) scaleY(1.15); }
 }`;
+
+/** Breathing period (seconds) from the live RR, faster under distress. */
+function breathePeriod(rr: number | undefined): number {
+  const rrSafe = rr && rr > 0 ? Math.max(6, Math.min(45, rr)) : 16;
+  return Math.max(1.3, Math.min(6, 60 / rrSafe));
+}
 
 /**
  * PatientPhoto — the realistic synthetic patient face for a case, matched to the
- * demographic (sex + age). Physiology signs apply a subtle clinical tint. When a
- * face ships an "alive" idle loop it autoplays (muted/looping) so the patient
- * moves; otherwise the still gets a gentle breathing animation so it never looks
- * frozen. The visible "synthetic patient" label is carried by the surrounding
- * banner; here the synthetic nature stays in the accessible alt text. Static +
- * bundled: no runtime generation, air-gapped-safe.
+ * demographic (sex + age) or pinned to a unified `photoId`. The live clinical
+ * signs are clearly visible: pallor / fever / diaphoresis / reduced-LOC tint the
+ * face and a set of overlays paint cyanosis (bluish lips/periphery), a sweat
+ * sheen, a warm fever flush and an ashen droop — on BOTH the still and the video.
+ * The face breathes at the live RR (faster + labored under distress); when a face
+ * ships an "alive" idle loop it autoplays, otherwise the still breathes so it is
+ * never frozen. A speaking treatment (waveform pill + mouth shimmer) plays while
+ * the patient talks. Static + bundled: no runtime generation, air-gapped-safe.
  */
 export function PatientPhoto({
   sex,
   age,
   seed = 0,
+  photoId,
   alt,
   signs,
+  rr,
+  speaking = false,
+  utterance,
   caption,
   className,
   onClick,
   expandable,
   expandLabel,
 }: PatientPhotoProps) {
-  const photo = useMemo(() => pickPatientPhoto(sex, age, seed), [sex, age, seed]);
-  const { filter, cyanosis } = useMemo(() => physiology(signs), [signs]);
+  const { t } = useTranslation();
+  const photo = useMemo(() => {
+    if (photoId) {
+      const found = PATIENT_PHOTOS.find((p) => p.id === photoId);
+      if (found) return found;
+    }
+    return pickPatientPhoto(sex, age, seed);
+  }, [photoId, sex, age, seed]);
+
+  const physio = useMemo(() => physiology(signs), [signs]);
+  const { filter, cyanosis, sweat, flush, droop, distress } = physio;
   const reduced = usePrefersReducedMotion();
+
+  const isSpeaking = speaking || Boolean(utterance && utterance.trim().length > 0);
+
   // Play the "alive" idle loop when one exists for this face and motion is ok;
   // otherwise the still photo (also the video poster) stands in.
   const useVideo = hasPatientVideo(photo.id) && !reduced;
   // A still face breathes gently so it reads as alive rather than frozen.
   const breathe = !useVideo && !reduced;
+  const labored = distress > 0.35;
+  const breatheAnim = breathe
+    ? `${labored ? "acudx-patient-breathe-labored" : "acudx-patient-breathe"} ${breathePeriod(rr).toFixed(2)}s ease-in-out infinite`
+    : undefined;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   // Autoplay policies can leave a muted <video> paused after mount; nudge it.
@@ -128,7 +243,7 @@ export function PatientPhoto({
     if (!useVideo || !v) return;
     const play = v.play();
     if (play && typeof play.catch === "function") play.catch(() => {});
-  }, [useVideo, photo.id]);
+  }, [useVideo, photo.id, isSpeaking]);
 
   const interactive = typeof onClick === "function";
   const showExpand = interactive && expandable !== false;
@@ -140,15 +255,15 @@ export function PatientPhoto({
         className,
       )}
     >
-      {breathe ? <style>{BREATHE_KEYFRAMES}</style> : null}
+      {breathe || (isSpeaking && !reduced) ? <style>{PHOTO_KEYFRAMES}</style> : null}
       {/* Breathing wrapper: transform/filter here compose with the media's own
           physiology filter and don't disturb the caption / overlays. */}
       <div
         className="h-full w-full"
         style={
-          breathe
+          breatheAnim
             ? {
-                animation: "acudx-patient-breathe 4.2s ease-in-out infinite",
+                animation: breatheAnim,
                 willChange: "transform, filter",
                 transformOrigin: "50% 40%",
               }
@@ -181,17 +296,92 @@ export function PatientPhoto({
           />
         )}
       </div>
-      {/* Cyanosis overlay — a faint bluish cast when hypoxic (never sole cue). */}
+
+      {/* Cyanosis — faint full-face cast plus a stronger bluish perioral/periphery
+          tint at the lower face (lips), never the sole cue. */}
       {cyanosis > 0.05 ? (
+        <>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 mix-blend-multiply"
+            style={{ backgroundColor: "#3b6ea5", opacity: Math.min(0.3, cyanosis * 0.34) }}
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 mix-blend-multiply"
+            style={{
+              background: "linear-gradient(to top, #2f5f97, transparent)",
+              opacity: Math.min(0.5, cyanosis * 0.6),
+            }}
+          />
+        </>
+      ) : null}
+
+      {/* Diaphoresis — a glossy sweat sheen (specular highlights on forehead/cheeks). */}
+      {sweat > 0.05 ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 mix-blend-screen"
+          style={{
+            background:
+              "radial-gradient(50% 30% at 50% 20%, rgba(255,255,255,0.55), transparent 72%), radial-gradient(34% 22% at 36% 40%, rgba(255,255,255,0.4), transparent 72%), radial-gradient(34% 22% at 64% 40%, rgba(255,255,255,0.4), transparent 72%)",
+            opacity: Math.min(0.55, sweat * 0.7),
+          }}
+        />
+      ) : null}
+
+      {/* Fever — a warm flush over the cheeks. */}
+      {flush > 0.05 ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 mix-blend-soft-light"
+          style={{
+            background:
+              "radial-gradient(40% 30% at 33% 56%, rgba(224,74,60,0.85), transparent 70%), radial-gradient(40% 30% at 67% 56%, rgba(224,74,60,0.85), transparent 70%)",
+            opacity: Math.min(0.6, flush * 0.72),
+          }}
+        />
+      ) : null}
+
+      {/* Reduced LOC — an ashen, dimming veil weighted to the lower face. */}
+      {droop > 0.05 ? (
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 mix-blend-multiply"
           style={{
-            backgroundColor: "#3b6ea5",
-            opacity: Math.min(0.28, cyanosis * 0.34),
+            background: "linear-gradient(to bottom, rgba(44,48,58,0.12), rgba(18,20,28,0.42))",
+            opacity: Math.min(0.5, droop * 0.6),
           }}
         />
       ) : null}
+
+      {/* Speaking — mouth-region shimmer (subtle, reduced-motion-safe). */}
+      {isSpeaking ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute mix-blend-soft-light"
+          style={{
+            left: "50%",
+            bottom: "15%",
+            width: "38%",
+            height: "16%",
+            transform: "translateX(-50%)",
+            borderRadius: "9999px",
+            background: "radial-gradient(closest-side, rgba(255,255,255,0.5), transparent)",
+            animation: reduced ? undefined : "acudx-patient-speak 0.5s ease-in-out infinite",
+            opacity: reduced ? 0.4 : undefined,
+          }}
+        />
+      ) : null}
+
+      {/* Speaking pill (top-left; the expand affordance owns the top-right). */}
+      {isSpeaking ? (
+        <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 inline-flex items-center gap-1 rounded-pill bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm backdrop-blur-sm">
+          <Waveform weight="bold" className="h-3 w-3" aria-hidden />
+          {t("avatar3d.speaking", { defaultValue: "Speaking" })}
+        </span>
+      ) : null}
+
       {caption ? (
         <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-4 text-[11px] leading-tight text-white/90">
           {caption}
