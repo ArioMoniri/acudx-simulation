@@ -1,0 +1,98 @@
+{
+  "guidance3": {
+    "panel": {
+      "title": "Clinical guidance",
+      "subtitle": "Live, cited coaching for your work-up",
+      "education": "Education only",
+      "empty": "Start an encounter to see live, cited guidance for the current focus."
+    },
+    "focus": "Current focus",
+    "reference": {
+      "live": "Live guideline grounding",
+      "offline": "Offline reference",
+      "loading": "Grounding…"
+    },
+    "guideline": {
+      "more": "More guideline detail ({{count}})",
+      "hide": "Hide guideline detail"
+    },
+    "sources": {
+      "title": "Sources",
+      "open": "Source"
+    },
+    "coverage": {
+      "title": "Coverage",
+      "history": "History",
+      "exam": "Examination",
+      "workup": "Work-up",
+      "complete": "Complete",
+      "aria": "{{label}}: {{done}} of {{expected}} covered"
+    },
+    "redflags": {
+      "title": "Red flags",
+      "count": "{{screened}}/{{total}} screened",
+      "screened": "Screened",
+      "notScreened": "Not yet screened"
+    },
+    "nba": {
+      "title": "Next best action",
+      "askAbout": "Ask about {{topic}}",
+      "examine": "Examine: {{system}}",
+      "order": "Order {{label}}",
+      "screenRedFlags": "Screen the remaining red flags",
+      "complete": "Core work-up covered — consolidate your assessment",
+      "urgent": "Time-critical"
+    },
+    "workup": {
+      "title": "What a strong work-up covers",
+      "do": "Do",
+      "consider": "Consider",
+      "within": "{{label}} within {{minutes}} min",
+      "ordered": "Ordered",
+      "overdue": "Overdue",
+      "pending": "Due",
+      "onTime": "On time",
+      "late": "Late"
+    },
+    "guide": {
+      "title": "Attending tips",
+      "subtitle": "A senior clinician, watching your process",
+      "mode": "Guide mode",
+      "processOnly": "Coaches your process, never the diagnosis.",
+      "offBody": "Guide mode is off. Turn it on for live coaching on your next best action and timing.",
+      "dismiss": "Dismiss attending tips",
+      "reopen": "Attending tips"
+    },
+    "intent": {
+      "onset": "onset",
+      "location": "location",
+      "character": "character",
+      "radiation": "radiation",
+      "severity": "severity",
+      "timing": "timing and pattern",
+      "aggravating": "aggravating factors",
+      "relieving": "relieving factors",
+      "associated-symptoms": "associated symptoms",
+      "red-flags": "red flags",
+      "past-medical-history": "past medical history",
+      "medications": "medications",
+      "allergies": "allergies",
+      "family-history": "family history",
+      "social-history": "social history",
+      "risk-factors": "risk factors",
+      "ice": "ideas, concerns and expectations"
+    },
+    "maneuver": {
+      "general-inspection": "General inspection",
+      "vitals-recheck": "Vitals recheck",
+      "cardiovascular": "Cardiovascular",
+      "respiratory": "Respiratory",
+      "abdominal": "Abdominal",
+      "neurological": "Neurological",
+      "musculoskeletal": "Musculoskeletal",
+      "skin": "Skin",
+      "ent": "ENT",
+      "focused-special": "Focused special test"
+    }
+  }
+}

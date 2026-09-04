@@ -1,0 +1,98 @@
+{
+  "guidance3": {
+    "panel": {
+      "title": "Klinik rehberlik",
+      "subtitle": "Tetkik süreciniz için canlı, kaynaklı koçluk",
+      "education": "Yalnızca eğitim",
+      "empty": "Güncel odağa yönelik canlı ve kaynaklı rehberliği görmek için bir görüşme başlatın."
+    },
+    "focus": "Güncel odak",
+    "reference": {
+      "live": "Canlı kılavuz temellendirmesi",
+      "offline": "Çevrimdışı referans",
+      "loading": "Temellendiriliyor…"
+    },
+    "guideline": {
+      "more": "Daha fazla kılavuz ayrıntısı ({{count}})",
+      "hide": "Kılavuz ayrıntısını gizle"
+    },
+    "sources": {
+      "title": "Kaynaklar",
+      "open": "Kaynak"
+    },
+    "coverage": {
+      "title": "Kapsam",
+      "history": "Anamnez",
+      "exam": "Muayene",
+      "workup": "Tetkik",
+      "complete": "Tamamlandı",
+      "aria": "{{label}}: {{expected}} öğeden {{done}} tanesi kapsandı"
+    },
+    "redflags": {
+      "title": "Kırmızı bayraklar",
+      "count": "{{total}} öğeden {{screened}} tarandı",
+      "screened": "Tarandı",
+      "notScreened": "Henüz taranmadı"
+    },
+    "nba": {
+      "title": "Sonraki en iyi adım",
+      "askAbout": "{{topic}} sorgulayın",
+      "examine": "Muayene: {{system}}",
+      "order": "{{label}} isteyin",
+      "screenRedFlags": "Kalan kırmızı bayrakları tarayın",
+      "complete": "Temel tetkik kapsandı — değerlendirmenizi pekiştirin",
+      "urgent": "Zaman-kritik"
+    },
+    "workup": {
+      "title": "Güçlü bir tetkik neyi kapsar",
+      "do": "Yap",
+      "consider": "Değerlendir",
+      "within": "{{minutes}} dk içinde {{label}}",
+      "ordered": "İstendi",
+      "overdue": "Gecikti",
+      "pending": "Zamanı geldi",
+      "onTime": "Zamanında",
+      "late": "Geç"
+    },
+    "guide": {
+      "title": "Kıdemli hekim önerileri",
+      "subtitle": "Sürecinizi izleyen kıdemli bir klinisyen",
+      "mode": "Rehber modu",
+      "processOnly": "Tanıyı değil, sürecinizi koçluk eder.",
+      "offBody": "Rehber modu kapalı. Sonraki en iyi adım ve zamanlama için canlı koçluğu açın.",
+      "dismiss": "Kıdemli hekim önerilerini kapat",
+      "reopen": "Kıdemli hekim önerileri"
+    },
+    "intent": {
+      "onset": "başlangıcı",
+      "location": "lokalizasyonu",
+      "character": "niteliği",
+      "radiation": "yayılımı",
+      "severity": "şiddeti",
+      "timing": "zamanlama ve seyri",
+      "aggravating": "artıran faktörleri",
+      "relieving": "azaltan faktörleri",
+      "associated-symptoms": "eşlik eden semptomları",
+      "red-flags": "kırmızı bayrakları",
+      "past-medical-history": "özgeçmişi",
+      "medications": "ilaçları",
+      "allergies": "alerjileri",
+      "family-history": "soygeçmişi",
+      "social-history": "sosyal öyküyü",
+      "risk-factors": "risk faktörlerini",
+      "ice": "fikir, endişe ve beklentileri"
+    },
+    "maneuver": {
+      "general-inspection": "Genel inspeksiyon",
+      "vitals-recheck": "Vital bulguların tekrarı",
+      "cardiovascular": "Kardiyovasküler",
+      "respiratory": "Solunum",
+      "abdominal": "Karın",
+      "neurological": "Nörolojik",
+      "musculoskeletal": "Kas-iskelet",
+      "skin": "Cilt",
+      "ent": "KBB",
+      "focused-special": "Odaklı özel test"
+    }
+  }
+}
