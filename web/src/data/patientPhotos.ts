@@ -56,6 +56,12 @@ export function patientVideoUrl(id: string): string {
  * Pick the closest-matching portrait for a case: same sex first, then the
  * nearest age; a stable seed varies the choice among near-equal ages so two
  * different 58-year-old men don't always get the identical face.
+ *
+ * Among equally-good demographic matches (same sex, within ~10y of the closest
+ * age) a face that ships an "alive" idle video loop is PREFERRED, so the visible
+ * patient moves rather than sitting as a frozen still whenever a suitable
+ * animated face exists. Stills still get a gentle breathing animation in the UI,
+ * but a real video always wins when the match is just as good.
  */
 export function pickPatientPhoto(
   sex: PhotoSex,
@@ -69,6 +75,11 @@ export function pickPatientPhoto(
   );
   const bestAge = sorted[0].age;
   const near = sorted.filter((p) => Math.abs(p.age - bestAge) <= 10);
-  const idx = Math.abs(Math.floor(seed)) % near.length;
-  return near[idx];
+  // Prefer an equally-good match that has a video loop; fall back to any near
+  // match when none of them ship a video. The seed still varies the choice
+  // within the preferred subset so distinct cases don't clone one face.
+  const withVideo = near.filter((p) => hasPatientVideo(p.id));
+  const chooseFrom = withVideo.length > 0 ? withVideo : near;
+  const idx = Math.abs(Math.floor(seed)) % chooseFrom.length;
+  return chooseFrom[idx];
 }
