@@ -183,6 +183,18 @@ const CHITCHAT_STEMS: string[] = [
 
 const GREETING_RE = /^\s*(hi|hello|hey|yo|good\s+(morning|afternoon|evening|day)|thanks?|thank\s+you|cheers|merhaba|selam|g[üu]nayd[ıi]n|iyi\s+g[üu]nler|iyi\s+ak[şs]amlar|te[şs]ekk[üu]rler?)\b/i;
 
+/**
+ * The opening / reason-for-visit question ("what brings you in", "why did you
+ * come today", "what's going on", TR "neden geldiniz", "şikayetiniz ne"). This
+ * is the single most common first move and is ALWAYS in-scope — it elicits the
+ * presenting complaint even though it carries no clinical noun of its own, so
+ * the plain lexical scope check would otherwise miss it (and a leading greeting
+ * would freeze it). Matched anywhere in the utterance so "hi, why are you here?"
+ * is caught regardless of the greeting prefix.
+ */
+const REASON_FOR_VISIT_RE =
+  /\b(what\s+(brings?|brought)\s+(you|ya)|why\s+(are\s+you\s+here|did\s+you\s+(come|visit)|have\s+you\s+(come|been))|reason\s+for\s+(your\s+)?(visit|coming|being\s+here)|chief\s+complaint|what('?s|\s+is|\s+seems)\s+(going\s+on|the\s+matter|bothering\s+you|wrong|the\s+problem|to\s+be)|what\s+happened|what\s+can\s+i\s+(help|do)\s+(you\s+)?(with|for)|how\s+can\s+i\s+help|tell\s+me\s+(what\s+happened|why\s+you\s+came|about\s+(the\s+)?(problem|complaint|symptoms?)))\b|\b(neden|ni[çc]in|niye)\s+(geldin|geldiniz|buraya|hastane)|\bsizi\s+buraya\s+ne\s+getir|\b[şs]ikayet(iniz|in)?\s+ne|\bne\s+oldu|\bnas[ıi]l\s+yard[ıi]mc[ıi]\s+ola/i;
+
 const INTERROGATIVE_RE = /\?|\b(what|when|where|why|who|how|which|did|do|does|have|has|is|are|can|could|would|tell\s+me\s+about)\b|\b(ne|nas[ıi]l|nerede|neden|ni[çc]in|hangi|ka[çc]|kim)\b|\bm[ıiuü]\b/i;
 
 function tokenize(text: string): string[] {
@@ -247,6 +259,17 @@ export function caseScopeKeywords(caseInstance: CaseInstance): Set<string> {
 /* -------------------------------------------------------------------------- */
 
 function classifyScope(raw: string, caseInstance: CaseInstance): Classification {
+  // The opening "why are you here / what brings you in" question is always
+  // in-scope — it elicits the presenting complaint. Checked first so a leading
+  // greeting or the absence of a clinical noun never freezes it (docs §OQ1).
+  if (REASON_FOR_VISIT_RE.test(raw)) {
+    return {
+      class: "in-scope",
+      score: 0.8,
+      rationale: "Opening / reason-for-visit question (elicits the presenting complaint)",
+    };
+  }
+
   const tokens = tokenize(raw);
   const caseKw = caseScopeKeywords(caseInstance);
 
@@ -264,7 +287,10 @@ function classifyScope(raw: string, caseInstance: CaseInstance): Classification 
     };
   }
 
-  if (GREETING_RE.test(raw) && tokens.length <= 6) {
+  // A bare greeting/pleasantry with no question is a social opener (off-topic).
+  // But a greeting FOLLOWED BY a question ("hi, why are you here?") must not be
+  // frozen — let it fall through to the interrogative branch below.
+  if (GREETING_RE.test(raw) && tokens.length <= 6 && !INTERROGATIVE_RE.test(raw)) {
     return { class: "off-topic", score: 0.8, rationale: "Short greeting / social opener with no clinical content" };
   }
   if (tokens.some((tok) => startsWithAny(tok, CHITCHAT_STEMS))) {
@@ -339,6 +365,16 @@ const INTENT_STEMS: Array<[QuestionIntent, string[]]> = [
  * null when nothing scores. Intents the case actually covers win ties. Pure.
  */
 export function inferQuestionIntent(text: string, caseInstance: CaseInstance): QuestionIntent | null {
+  // The opening reason-for-visit question maps to the presenting story: prefer
+  // the case's onset item, else its first expected intent, so the patient
+  // actually answers instead of stalling on "not advancing".
+  if (REASON_FOR_VISIT_RE.test(text)) {
+    const expectedList = expectedIntents(caseInstance);
+    if (expectedList.includes("onset")) return "onset";
+    if (expectedList.length > 0) return expectedList[0];
+    return "onset";
+  }
+
   const tokens = tokenize(text);
   if (tokens.length === 0) return null;
   const expected = new Set(expectedIntents(caseInstance));
