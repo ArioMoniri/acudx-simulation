@@ -1,6 +1,16 @@
 {
   "livegen": {
     "modeLegend": "Üretim",
+    "endless": "Yeni bir vaka üret",
+    "endlessHint": "Her seferinde bambaşka bir sentetik hasta — sınırsız ve asla tekrar etmeyen.",
+    "endlessSub": "Tüm branşlardan örnekler ve her vakayı tutarlılık için kendi kontrol eder.",
+    "engineAi": "Yapay zeka · gerçek zamanlı",
+    "engineLocal": "Anında · çevrimdışı",
+    "engineChecking": "Pod kontrol ediliyor…",
+    "refine": "İnce ayar (isteğe bağlı)",
+    "pickEngine": "Ya da belirli bir motor seçin",
+    "orCurated": "Ya da hazır bir vakayla başlayın",
+    "curatedHint": "Kılavuz dayanaklı, tam olarak yazılmış öğretim vakaları.",
     "quick": "Hızlı üret",
     "quickHint": "Anında, çevrimdışı. Tohumlu şablon motoruyla cihazda vaka oluşturur.",
     "ai": "Yapay zeka ile üret",

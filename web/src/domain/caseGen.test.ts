@@ -145,26 +145,65 @@ describe("validateCase — rejects the implausible", () => {
 });
 
 describe("generateCase — family constraint", () => {
-  it("constrained headache always yields the SAH presentation", () => {
-    for (const seed of [1, 2, 3, 7, 11, 99]) {
+  // The catalogue now spans many diagnoses per family; a constrained draw must
+  // stay WITHIN the requested family but is no longer a single fixed diagnosis.
+  const FAMILY_CODES: Record<string, string[]> = {
+    "chest-pain": ["I21.4", "300.01", "I71.01", "I30.9", "J93.11"],
+    headache: ["I60.9", "G43.909", "G00.9", "I63.9", "M31.6"],
+    "abdominal-pain": [
+      "K35.80", "K81.0", "K85.90", "N20.0", "K56.609", "O00.9", "E10.10", "I71.4", "N10",
+    ],
+    dyspnea: ["I26.99", "J18.9", "I50.9", "J44.1", "J45.901", "T78.2XXA"],
+  };
+
+  for (const [family, codes] of Object.entries(FAMILY_CODES)) {
+    it(`constrained ${family} always stays within its family`, () => {
+      for (let seed = 1; seed <= 40; seed++) {
+        const c = generateCase({
+          seedMode: "constrained",
+          chiefComplaint: family as never,
+          locale: "en",
+          seed,
+        });
+        expect(codes, `seed ${seed}`).toContain(
+          c.correctDiagnosis.code.coding[0]?.code,
+        );
+      }
+    });
+  }
+
+  it("a constrained family surfaces more than one diagnosis (endless variety)", () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++) {
       const c = generateCase({
         seedMode: "constrained",
-        chiefComplaint: "headache",
+        chiefComplaint: "abdominal-pain",
         locale: "en",
         seed,
       });
-      expect(c.correctDiagnosis.code.coding[0]?.code).toBe("I60.9");
-      expect(c.chiefComplaint.en).toBe("Sudden worst-ever headache");
+      seen.add(c.correctDiagnosis.code.coding[0]?.code ?? "");
     }
+    expect(seen.size).toBeGreaterThan(1);
+  });
+});
+
+describe("generateCase — endless breadth", () => {
+  it("random generation spans many systems across seeds", () => {
+    const codes = new Set<string>();
+    for (let seed = 1; seed <= 80; seed++) {
+      const c = gen({ seed });
+      codes.add(c.correctDiagnosis.code.coding[0]?.code ?? "");
+    }
+    // The old generator only ever produced five diagnoses; the broadened
+    // offline catalogue must be visibly richer than that.
+    expect(codes.size).toBeGreaterThanOrEqual(10);
   });
 
-  it("constrained abdominal-pain always yields acute appendicitis", () => {
-    const c = generateCase({
-      seedMode: "constrained",
-      chiefComplaint: "abdominal-pain",
-      locale: "en",
-      seed: 5,
-    });
-    expect(c.correctDiagnosis.code.coding[0]?.code).toBe("K35.80");
+  it("consecutive unseeded random draws never collide on the same seed", () => {
+    const seeds = new Set<number>();
+    for (let i = 0; i < 25; i++) {
+      seeds.add(generateCase({ seedMode: "random", locale: "en" }).seed);
+    }
+    expect(seeds.size).toBe(25);
   });
 });
