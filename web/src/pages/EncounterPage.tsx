@@ -29,6 +29,9 @@ import {
 } from "@/state/encounterStore";
 import type { EncounterStage as StoreStage } from "@/state/encounterStore";
 import type { EncounterStageMeta } from "@/data/mock";
+import { useLiveBackend } from "@/lib/liveBackend";
+import { fetchGeneratedCase } from "@/lib/liveCaseGen";
+import { recordFromEncounter } from "@/state/progressStore";
 
 /* -------------------------------------------------------------------------- */
 /* Progress stages derived from the store stage                                */
@@ -93,8 +96,15 @@ export function EncounterPage() {
   const providedCase = routeState?.caseInstance;
 
   const state = useEncounterState();
+  const { available: backendAvailable } = useLiveBackend();
   const [guidanceOn, setGuidanceOn] = useState(startSelection?.guidance ?? true);
   const [railOpen, setRailOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  // Latest store snapshot for the unmount recorder (the mount-only cleanup would
+  // otherwise capture the initial, empty state).
+  const latestRef = useRef(state);
+  latestRef.current = state;
 
   // Keep a local reference to the active case so the page can render the banner
   // even during a stage transition. Source of truth is the store.
@@ -125,6 +135,17 @@ export function EncounterPage() {
       startEncounter(chestPainNstemiCase);
     }
     return () => {
+      // Record a COMPLETED encounter (a diagnosis was committed) into the
+      // per-user progress store before the log is cleared, so calibration /
+      // mastery plots fill from real work rather than fabricated data.
+      const s = latestRef.current;
+      if (s.caseInstance && s.committedDiagnosis && s.startTs != null) {
+        try {
+          recordFromEncounter(s.events, s.caseInstance, s.startTs);
+        } catch {
+          /* recording is best-effort; never block teardown */
+        }
+      }
       resetEncounter();
     };
     // Intentionally mount-only: the selection is captured at arrival and a
@@ -137,9 +158,20 @@ export function EncounterPage() {
     setRailOpen(false);
   }, []);
 
+  // "New random case" defaults to the pod's unlimited ICD/DSM generator when the
+  // backend is reachable (truly endless, realtime), and falls back instantly to
+  // the on-device generator when offline or on any error.
   const handleRandom = useCallback(() => {
-    loadCase(generateCase({ seedMode: "random", locale: lang }));
-  }, [loadCase, lang]);
+    if (backendAvailable) {
+      setGenerating(true);
+      fetchGeneratedCase({ locale: lang })
+        .then(loadCase)
+        .catch(() => loadCase(generateCase({ seedMode: "random", locale: lang })))
+        .finally(() => setGenerating(false));
+    } else {
+      loadCase(generateCase({ seedMode: "random", locale: lang }));
+    }
+  }, [backendAvailable, loadCase, lang]);
 
   const handleConstrained = useCallback(
     (chiefComplaint: ChiefComplaintFamily, difficulty: 1 | 2 | 3 | 4 | 5) => {
@@ -187,6 +219,14 @@ export function EncounterPage() {
   const toolbar = (
     <>
       <EncounterClock variant="chip" className="hidden sm:inline-flex" />
+      {generating ? (
+        <span
+          role="status"
+          className="inline-flex items-center rounded-control border border-border bg-surface px-2.5 py-1 text-xs text-muted"
+        >
+          {t("ehr.generatingCase", { defaultValue: "Generating a case…" })}
+        </span>
+      ) : null}
       <NewCaseMenu
         lang={lang}
         onRandom={handleRandom}
