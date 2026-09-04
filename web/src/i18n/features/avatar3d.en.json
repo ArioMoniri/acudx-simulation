@@ -4,6 +4,7 @@
     "synthetic": "Synthetic patient",
     "unavailable": "3D unavailable — showing 2D",
     "speaking": "Speaking",
+    "muted": "Muted (silent lip-sync)",
     "signsLabel": "Observable clinical signs",
     "signs": {
       "none": "No acute clinical signs",

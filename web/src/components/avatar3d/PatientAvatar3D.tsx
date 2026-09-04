@@ -51,6 +51,14 @@ export interface PatientAvatar3DProps {
   profileSeed?: string | number;
   /** True while the patient is speaking (drives mouth movement on the 3D head). */
   speaking?: boolean;
+  /**
+   * The patient's current spoken turn. When set, the 3D head lip-syncs to it via
+   * an approximate viseme timeline (client-side, no audio needed). The
+   * orchestrator feeds each patient reply here as it is produced.
+   */
+  utterance?: string;
+  /** Opt in to voicing the utterance via the Web Speech API (default silent). */
+  voice?: boolean;
   className?: string;
 }
 
@@ -133,6 +141,8 @@ class HeadErrorBoundary extends Component<
 export function PatientAvatar3D({
   profileSeed,
   speaking = false,
+  utterance,
+  voice = false,
   className,
 }: PatientAvatar3DProps) {
   const { t, i18n } = useTranslation();
@@ -197,6 +207,8 @@ export function PatientAvatar3D({
             affect={affect}
             rr={rr}
             speaking={speaking}
+            utterance={utterance}
+            voice={voice}
           />
         </Suspense>
       </HeadErrorBoundary>
