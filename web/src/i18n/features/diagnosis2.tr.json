@@ -1,0 +1,66 @@
+{
+  "diagnosis2": {
+    "assessmentHeading": "Değerlendirme ve plan",
+    "catalogHint": "ICD-10 / ICD-11 tanı kataloğunda ara",
+    "resultsCount": "{{count}} sonuç",
+    "searchEmptyHint": "Katalogda aramak için bir tanı adı ya da ICD / DSM kodu yazın.",
+    "suggestedHeading": "Bu tablo için önerilenler",
+    "suggestedHint": "Bu olgu için olası adaylar — düşündüklerinizi ekleyin.",
+    "codeIcd10": "ICD-10",
+    "codeIcd11": "ICD-11",
+    "codeDsm": "DSM-5-TR",
+    "addAria": "{{name}} tanısını ayırıcı tanıya ekle",
+    "retract": "Geri al",
+    "retractAria": "{{name}} tanısını ayırıcı tanıdan çıkar",
+    "moveUpAria": "{{name}} tanısını yukarı taşı",
+    "moveDownAria": "{{name}} tanısını aşağı taşı",
+    "likelihoodAria": "{{name}} için olasılık belirle",
+    "likelihood": {
+      "leading": "Öncelikli",
+      "possible": "Olası",
+      "unlikely": "Düşük olasılık"
+    },
+    "addNote": "Gerekçe ekle",
+    "notePlaceholder": "Ayırt edici bulgu ya da gerekçe...",
+    "noteLabel": "Gerekçe",
+    "workingHeading": "Çalışma tanısı",
+    "workingEmpty": "Geri bildirim almak için ayırıcı tanınızdan bir çalışma tanısı seçip kesinleştirin.",
+    "commitAria": "{{name}} tanısını çalışma tanısı olarak kesinleştir",
+    "changeWorking": "Çalışma tanısını değiştir",
+    "committedAtLabel": "Kesinleşti",
+    "verdict": {
+      "correctTag": "İsabetli",
+      "correctTitle": "Öncelikli tanı ile uyumlu",
+      "correctBody": "Bu tablo için öncelikli tanı budur. Tedavi ve dispozisyonunuzu doğrulayın.",
+      "nearTag": "Yakın",
+      "nearTitle": "Makul, ancak yeniden değerlendirin",
+      "nearBody": "Bu tablo için olası bir alternatif, ancak öncelikli tanı değil. Ayırt edici bulguları yeniden gözden geçirin.",
+      "incorrectTag": "Isabetsiz",
+      "incorrectTitle": "Tanıyı yeniden değerlendirin",
+      "incorrectBody": "Bu, mevcut tabloya uymuyor. Ana bulguları gözden geçirip ayırıcı tanınızı yeniden kurun."
+    },
+    "dispositionHeading": "Dispozisyon",
+    "dispositionHint": "Bu hasta bundan sonra nereye gidiyor?",
+    "dispo": {
+      "admit-ccu": "Yatış — koroner yoğun bakım",
+      "admit-ward": "Yatış — servis",
+      "admit-icu": "Yatış — yoğun bakım",
+      "operating-room": "Ameliyathaneye",
+      "observation": "Gözlem birimi",
+      "discharge": "Güvenlik önlemleriyle taburcu",
+      "refer-specialty": "İlgili branşa sevk"
+    },
+    "summaryHeading": "Problem listesi",
+    "summaryHint": "Girdilerinizden oluşan canlı D&P özeti.",
+    "summaryEmpty": "Ayırıcı tanınız, çalışma tanınız ve planınız oluşturdukça burada görünür.",
+    "summaryWorkingLabel": "Çalışma tanısı",
+    "summaryDifferentialLabel": "Ayırıcı tanı",
+    "summaryPlanLabel": "Plan",
+    "summaryDispositionLabel": "Dispozisyon",
+    "verification": {
+      "confirmed": "Doğrulandı",
+      "provisional": "Geçici",
+      "differential": "Ayırıcı"
+    }
+  }
+}

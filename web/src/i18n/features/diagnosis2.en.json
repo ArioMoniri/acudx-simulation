@@ -1,0 +1,66 @@
+{
+  "diagnosis2": {
+    "assessmentHeading": "Assessment & plan",
+    "catalogHint": "Search the ICD-10 / ICD-11 diagnosis catalogue",
+    "resultsCount": "{{count}} results",
+    "searchEmptyHint": "Type a diagnosis name or an ICD / DSM code to search the catalogue.",
+    "suggestedHeading": "Suggested for this presentation",
+    "suggestedHint": "Plausible candidates for this case — add the ones you are weighing up.",
+    "codeIcd10": "ICD-10",
+    "codeIcd11": "ICD-11",
+    "codeDsm": "DSM-5-TR",
+    "addAria": "Add {{name}} to the differential",
+    "retract": "Retract",
+    "retractAria": "Retract {{name}} from the differential",
+    "moveUpAria": "Move {{name}} up",
+    "moveDownAria": "Move {{name}} down",
+    "likelihoodAria": "Set likelihood for {{name}}",
+    "likelihood": {
+      "leading": "Leading",
+      "possible": "Possible",
+      "unlikely": "Unlikely"
+    },
+    "addNote": "Add reasoning",
+    "notePlaceholder": "Discriminating feature or reasoning...",
+    "noteLabel": "Reasoning",
+    "workingHeading": "Working diagnosis",
+    "workingEmpty": "Pick a working diagnosis from your differential to commit it and get feedback.",
+    "commitAria": "Commit {{name}} as the working diagnosis",
+    "changeWorking": "Change working diagnosis",
+    "committedAtLabel": "Committed",
+    "verdict": {
+      "correctTag": "On target",
+      "correctTitle": "Matches the leading diagnosis",
+      "correctBody": "This is the leading diagnosis for this presentation. Confirm your management and disposition.",
+      "nearTag": "Near miss",
+      "nearTitle": "Reasonable, but reconsider",
+      "nearBody": "A plausible alternative for this presentation, but not the leading diagnosis. Re-examine your discriminators.",
+      "incorrectTag": "Off target",
+      "incorrectTitle": "Reconsider the diagnosis",
+      "incorrectBody": "This does not fit the current picture. Revisit the key findings and rebuild your differential."
+    },
+    "dispositionHeading": "Disposition",
+    "dispositionHint": "Where does this patient go next?",
+    "dispo": {
+      "admit-ccu": "Admit — coronary care unit",
+      "admit-ward": "Admit — ward",
+      "admit-icu": "Admit — intensive care",
+      "operating-room": "To the operating room",
+      "observation": "Observation unit",
+      "discharge": "Discharge with safety-netting",
+      "refer-specialty": "Refer to specialty"
+    },
+    "summaryHeading": "Problem list",
+    "summaryHint": "A live A&P summary built from your entries.",
+    "summaryEmpty": "Your differential, working diagnosis and plan appear here as you build them.",
+    "summaryWorkingLabel": "Working diagnosis",
+    "summaryDifferentialLabel": "Differential",
+    "summaryPlanLabel": "Plan",
+    "summaryDispositionLabel": "Disposition",
+    "verification": {
+      "confirmed": "Confirmed",
+      "provisional": "Provisional",
+      "differential": "Differential"
+    }
+  }
+}
