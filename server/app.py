@@ -11,6 +11,8 @@ GET  /status           {disk, ram} + per-endpoint reachability + model names
 POST /v1/guard         Scope & Injection Guard (docs/architecture/13 §3)
 POST /v1/patient/turn  guard -> route-by-class -> persona + gateway -> FactGate
 POST /v1/grade         decomposed, evidence-forced rubric grading -> banded score
+POST /v1/case/generate sample ICD-11/10/DSM-5-TR condition -> model-synthesized,
+                       schema-validated case spec (deterministic templated fallback)
 POST /v1/ground        delegates to server.grounding.ground() (sibling-owned)
 
 ``server.grounding`` is imported **lazily** (per request) so this app still
@@ -32,6 +34,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import AliasChoices, BaseModel, Field
 
+from server.case_generator import generate_case_spec
+from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
 from server.model_gateway import GatewayError, ModelGateway
 from server.persona import build_patient_turn, fact_assertion_gate
@@ -155,6 +159,18 @@ class GradeResponse(BaseModel):
     meta: dict[str, Any] | None = None
 
 
+class CaseGenerateRequest(BaseModel):
+    # All optional: an empty body samples a fully-random condition. `system`
+    # accepts a catalog system or a common synonym (see condition_catalog);
+    # `complaint` is free text; `seed` makes generation reproducible.
+    model_config = {"populate_by_name": True}
+    system: str | None = None
+    difficulty: int | None = Field(default=None, ge=1, le=5)
+    complaint: str | None = Field(default=None, validation_alias=AliasChoices("complaint", "chief_complaint"))
+    locale: str = "en"
+    seed: int | None = None
+
+
 def _gateway(app: FastAPI) -> ModelGateway:
     return app.state.gateway
 
@@ -236,6 +252,16 @@ async def status() -> dict[str, Any]:
         "disk": _disk(s.status_disk_path),
         "ram": _ram(),
         "endpoints": endpoints,
+        # Case generation reuses the LLM endpoint above; it always answers (a
+        # deterministic template covers a model outage), so its reachability is
+        # that of "llm". Surface its constrainable systems for discoverability.
+        "case_generator": {
+            "route": "/v1/case/generate",
+            "available": True,
+            "depends_on": "llm",
+            "fallback": "deterministic-template",
+            "systems": list_systems(),
+        },
     }
 
 
@@ -321,6 +347,34 @@ async def grade(req: GradeRequest) -> GradeResponse:
         req.transcript, gw, locale=req.locale, concurrency=req.concurrency,
     )
     return GradeResponse(**result)
+
+
+# --------------------------------------------------------------------------- #
+# /v1/case/generate  — unlimited dynamic case synthesis.
+# Samples an ICD-11/ICD-10/DSM-5-TR condition (random by default, constrainable
+# by system/difficulty/complaint), then makes ONE bounded gateway `chat` call
+# (task="case", capped max_tokens, temperature~0.6) to synthesize a full,
+# structured, schema-validated GeneratedCaseSpec. The call runs through the same
+# ModelGateway that enforces the AIRGAPPED no-egress guard; on ANY failure
+# (model unreachable, unparseable, schema-invalid) a deterministic templated
+# spec is returned, so this endpoint always answers 200 with a usable case.
+# Typical latency: ~3-12 s on the pod's local Qwen2.5-7B; sub-ms for fallback.
+# --------------------------------------------------------------------------- #
+@app.post("/v1/case/generate")
+async def case_generate(req: CaseGenerateRequest) -> JSONResponse:
+    try:
+        gw = _gateway(app)
+    except Exception:  # noqa: BLE001 — no gateway wired -> deterministic template
+        gw = None
+    constraints = {
+        "system": req.system,
+        "difficulty": req.difficulty,
+        "complaint": req.complaint,
+        "locale": req.locale,
+        "seed": req.seed,
+    }
+    spec = await generate_case_spec(constraints, gw, seed=req.seed)
+    return JSONResponse(content=spec)
 
 
 # --------------------------------------------------------------------------- #
