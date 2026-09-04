@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
   pickPatientPhoto,
@@ -67,9 +67,26 @@ function physiology(signs: ClinicalSignHint[] | undefined): {
 }
 
 /**
+ * A subtle, GPU-cheap "alive" idle for a STILL face: a slow breathing scale plus
+ * a faint luminance breathe (~4s). Compositor-friendly (transform + filter on a
+ * wrapper) and collapsed entirely under prefers-reduced-motion. The wrapper's
+ * brightness composes with the img's physiology filter, so pallor/sweat tints
+ * are preserved. Rendered once per photo; identical duplicate <style> tags are
+ * harmless if several photos mount.
+ */
+const BREATHE_KEYFRAMES = `
+@keyframes acudx-patient-breathe {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.015); filter: brightness(1.04); }
+}`;
+
+/**
  * PatientPhoto — the realistic synthetic patient face for a case, matched to the
- * demographic (sex + age). Physiology signs apply a subtle clinical tint. Always
- * labelled "Synthetic patient" so the generated nature is never hidden. Static +
+ * demographic (sex + age). Physiology signs apply a subtle clinical tint. When a
+ * face ships an "alive" idle loop it autoplays (muted/looping) so the patient
+ * moves; otherwise the still gets a gentle breathing animation so it never looks
+ * frozen. The visible "synthetic patient" label is carried by the surrounding
+ * banner; here the synthetic nature stays in the accessible alt text. Static +
  * bundled: no runtime generation, air-gapped-safe.
  */
 export function PatientPhoto({
@@ -87,6 +104,17 @@ export function PatientPhoto({
   // Play the "alive" idle loop when one exists for this face and motion is ok;
   // otherwise the still photo (also the video poster) stands in.
   const useVideo = hasPatientVideo(photo.id) && !reduced;
+  // A still face breathes gently so it reads as alive rather than frozen.
+  const breathe = !useVideo && !reduced;
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  // Autoplay policies can leave a muted <video> paused after mount; nudge it.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!useVideo || !v) return;
+    const play = v.play();
+    if (play && typeof play.catch === "function") play.catch(() => {});
+  }, [useVideo, photo.id]);
 
   return (
     <figure
@@ -95,29 +123,47 @@ export function PatientPhoto({
         className,
       )}
     >
-      {useVideo ? (
-        <video
-          src={patientVideoUrl(photo.id)}
-          poster={patientPhotoUrl(photo.id)}
-          aria-label={alt ?? "Synthetic patient — not a real individual"}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="h-full w-full object-cover"
-          style={filter ? { filter } : undefined}
-        />
-      ) : (
-        <img
-          src={patientPhotoUrl(photo.id)}
-          alt={alt ?? "Synthetic patient portrait — not a real individual"}
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full object-cover"
-          style={filter ? { filter } : undefined}
-          draggable={false}
-        />
-      )}
+      {breathe ? <style>{BREATHE_KEYFRAMES}</style> : null}
+      {/* Breathing wrapper: transform/filter here compose with the media's own
+          physiology filter and don't disturb the caption / overlays. */}
+      <div
+        className="h-full w-full"
+        style={
+          breathe
+            ? {
+                animation: "acudx-patient-breathe 4.2s ease-in-out infinite",
+                willChange: "transform, filter",
+                transformOrigin: "50% 40%",
+              }
+            : undefined
+        }
+      >
+        {useVideo ? (
+          <video
+            ref={videoRef}
+            src={patientVideoUrl(photo.id)}
+            poster={patientPhotoUrl(photo.id)}
+            aria-label={alt ?? "Synthetic patient — not a real individual"}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="h-full w-full object-cover"
+            style={filter ? { filter } : undefined}
+          />
+        ) : (
+          <img
+            src={patientPhotoUrl(photo.id)}
+            alt={alt ?? "Synthetic patient portrait — not a real individual"}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover"
+            style={filter ? { filter } : undefined}
+            draggable={false}
+          />
+        )}
+      </div>
       {/* Cyanosis overlay — a faint bluish cast when hypoxic (never sole cue). */}
       {cyanosis > 0.05 ? (
         <span
@@ -129,10 +175,6 @@ export function PatientPhoto({
           }}
         />
       ) : null}
-      {/* Synthetic-patient label — always visible (never hidden). */}
-      <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-chip bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
-        Synthetic
-      </span>
       {caption ? (
         <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-4 text-[11px] leading-tight text-white/90">
           {caption}

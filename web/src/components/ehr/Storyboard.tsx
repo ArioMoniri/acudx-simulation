@@ -1,3 +1,4 @@
+import { useEffect, useReducer } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ClipboardText,
@@ -25,6 +26,7 @@ import { PatientPhoto } from "@/components/PatientPhoto";
 import { EncounterClock } from "./EncounterClock";
 import { conceptText, pick } from "./labels";
 import {
+  getCurrentVitals,
   getDiscoveredExam,
   getDiscoveredHistory,
   useEncounterState,
@@ -39,6 +41,24 @@ export interface StoryboardProps {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Small hooks                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Re-render on a light interval so clock-derived reads (the live vitals course)
+ * evolve even though the store only emits on discrete actions — matching the
+ * bedside LiveVitalsMonitor's tick. SSR-safe.
+ */
+function useTick(ms: number): void {
+  const [, force] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = window.setInterval(() => force(), ms);
+    return () => window.clearInterval(id);
+  }, [ms]);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Section scaffold                                                            */
 /* -------------------------------------------------------------------------- */
 
@@ -46,11 +66,14 @@ function Section({
   icon,
   title,
   count,
+  headerRight,
   children,
 }: {
   icon: React.ReactNode;
   title: string;
   count?: number;
+  /** Optional trailing header slot (e.g. a live/status badge), right-aligned. */
+  headerRight?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -60,7 +83,8 @@ function Section({
           {icon}
         </span>
         {title}
-        {typeof count === "number" && count > 0 ? (
+        {headerRight ? <span className="ml-auto">{headerRight}</span> : null}
+        {!headerRight && typeof count === "number" && count > 0 ? (
           <span className="ml-auto rounded-full bg-bg-subtle px-1.5 text-[10px] font-medium text-muted">
             {count}
           </span>
@@ -85,7 +109,8 @@ function Sparse({ text }: { text: string }) {
  */
 const ITEM_ENTER = "motion-safe:animate-[fade-up_0.28s_ease-out]";
 
-/** Compact vitals snapshot cell (mono, tabular). Triage values, given-at-start. */
+/** Compact vitals snapshot cell (mono, tabular). Shows the LIVE current value
+ * (triage until the encounter clock starts). */
 function MiniVital({
   label,
   value,
@@ -122,7 +147,17 @@ function MiniVital({
 export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps) {
   const { t } = useTranslation();
   const state = useEncounterState();
+  // Tick so the vitals snapshot tracks the live course (the store emits only on
+  // actions; clock-driven vitals evolve between them, like the bedside monitor).
+  useTick(1000);
   const { patient, triageVitals, allergies } = caseInstance;
+
+  // Live current vitals (baseline trajectory + administered treatments). Falls
+  // back to the triage numbers before the encounter clock starts. This is the
+  // SAME source the bedside monitor reads, so the snapshot and monitor agree.
+  const liveVitals = getCurrentVitals(state);
+  const vitals = liveVitals ?? triageVitals;
+  const vitalsAreLive = liveVitals != null;
 
   const discoveredHistory = getDiscoveredHistory(state);
   // Meds + PMH are surfaced from discovered history intents (earned by asking).
@@ -269,20 +304,32 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
         )}
       </Section>
 
-      {/* Vitals snapshot (triage, given at start) */}
+      {/* Vitals snapshot — the LIVE current vitals (matches the bedside monitor);
+          triage values until the encounter clock starts. */}
       <Section
         icon={<Heartbeat weight="bold" className="h-3.5 w-3.5" />}
         title={t("ehr.storyboard.vitalsSnapshot")}
+        headerRight={
+          vitalsAreLive ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">
+              <span
+                aria-hidden
+                className="h-1.5 w-1.5 rounded-full bg-[color:var(--state-normal)] motion-safe:animate-pulse"
+              />
+              {t("vitals.online")}
+            </span>
+          ) : undefined
+        }
       >
         <div className="grid grid-cols-3 gap-1.5">
-          <MiniVital label={t("vitals.hrShort")} value={String(triageVitals.hr)} unit={t("vitals.units.bpm")} />
+          <MiniVital label={t("vitals.hrShort")} value={String(vitals.hr)} unit={t("vitals.units.bpm")} />
           <MiniVital
             label={t("vitals.bpShort")}
-            value={`${triageVitals.systolic}/${triageVitals.diastolic}`}
+            value={`${vitals.systolic}/${vitals.diastolic}`}
           />
-          <MiniVital label={t("vitals.rrShort")} value={String(triageVitals.rr)} unit={t("vitals.units.brpm")} />
-          <MiniVital label={t("vitals.spo2Short")} value={String(triageVitals.spo2)} unit={t("vitals.units.percent")} />
-          <MiniVital label={t("vitals.tempShort")} value={triageVitals.tempC.toFixed(1)} unit={t("vitals.units.celsius")} />
+          <MiniVital label={t("vitals.rrShort")} value={String(vitals.rr)} unit={t("vitals.units.brpm")} />
+          <MiniVital label={t("vitals.spo2Short")} value={String(vitals.spo2)} unit={t("vitals.units.percent")} />
+          <MiniVital label={t("vitals.tempShort")} value={vitals.tempC.toFixed(1)} unit={t("vitals.units.celsius")} />
         </div>
       </Section>
 
