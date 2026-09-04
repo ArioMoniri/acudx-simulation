@@ -1,0 +1,24 @@
+{
+  "avatar3d": {
+    "region": "3B hasta avatarı",
+    "synthetic": "Sentetik hasta",
+    "unavailable": "3B kullanılamıyor — 2B gösteriliyor",
+    "speaking": "Konuşuyor",
+    "signsLabel": "Gözlenebilir klinik bulgular",
+    "signs": {
+      "none": "Akut klinik bulgu yok",
+      "pallor": "Solukluk",
+      "cyanosis": "Siyanoz",
+      "diaphoresis": "Terleme (diyaforez)",
+      "distress": "Solunum sıkıntısı",
+      "reducedLoc": "Bilinç düzeyinde azalma"
+    },
+    "intensity": {
+      "mild": "hafif",
+      "moderate": "orta",
+      "marked": "belirgin"
+    },
+    "signItem": "{{sign}} — {{level}}",
+    "alt": "{{name}} adlı hastanın stilize 3B yüzü. Görünüm: {{state}}."
+  }
+}
