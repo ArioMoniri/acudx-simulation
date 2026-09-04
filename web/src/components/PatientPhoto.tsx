@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ArrowsOutSimple } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import {
   pickPatientPhoto,
@@ -40,6 +41,16 @@ export interface PatientPhotoProps {
   /** Caption under the photo (e.g. the affect / clinical-sign summary). */
   caption?: ReactNode;
   className?: string;
+  /**
+   * Makes the whole photo a button. When provided, a click/Enter/Space fires it
+   * (e.g. to open the enlarged PatientViewer) and — unless `expandable` is
+   * explicitly false — a subtle "expand" affordance is shown in the top corner.
+   */
+  onClick?: () => void;
+  /** Show the corner expand affordance. Defaults to true when `onClick` is set. */
+  expandable?: boolean;
+  /** Accessible label for the button when `onClick` is set (e.g. "Enlarge"). */
+  expandLabel?: string;
 }
 
 /** Derive a subtle CSS filter + cyanosis overlay strength from the signs. */
@@ -97,6 +108,9 @@ export function PatientPhoto({
   signs,
   caption,
   className,
+  onClick,
+  expandable,
+  expandLabel,
 }: PatientPhotoProps) {
   const photo = useMemo(() => pickPatientPhoto(sex, age, seed), [sex, age, seed]);
   const { filter, cyanosis } = useMemo(() => physiology(signs), [signs]);
@@ -115,6 +129,9 @@ export function PatientPhoto({
     const play = v.play();
     if (play && typeof play.catch === "function") play.catch(() => {});
   }, [useVideo, photo.id]);
+
+  const interactive = typeof onClick === "function";
+  const showExpand = interactive && expandable !== false;
 
   return (
     <figure
@@ -176,9 +193,28 @@ export function PatientPhoto({
         />
       ) : null}
       {caption ? (
-        <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-4 text-[11px] leading-tight text-white/90">
+        <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-4 text-[11px] leading-tight text-white/90">
           {caption}
         </figcaption>
+      ) : null}
+      {/* Click-to-enlarge: the whole photo becomes a button with a subtle corner
+          affordance. Keyboard operable and reduced-motion aware (no transition). */}
+      {interactive ? (
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={expandLabel ?? "Enlarge"}
+          className="group absolute inset-0 z-20 flex cursor-zoom-in items-start justify-end rounded-[inherit] p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-0"
+        >
+          {showExpand ? (
+            <span
+              aria-hidden
+              className="pointer-events-none inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-white opacity-80 shadow-sm backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+            >
+              <ArrowsOutSimple weight="bold" className="h-3 w-3" />
+            </span>
+          ) : null}
+        </button>
       ) : null}
     </figure>
   );

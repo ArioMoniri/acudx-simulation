@@ -1,0 +1,27 @@
+{
+  "patientviewer": {
+    "expand": "Hasta görünümünü büyüt",
+    "title": "Hasta — {{name}}",
+    "close": "Kapat",
+    "syntheticNote": "Sentetik hasta — gerçek bir birey değildir",
+    "photoLabel": "Hasta fotoğrafı",
+    "signsLabel": "Canlı klinik bulgular",
+    "summaryLabel": "Klinik bulgular",
+    "reflectsLive": "Canlı yaşamsal seyri yansıtır",
+    "vitalsLabel": "Güncel yaşamsal bulgular",
+    "signs": {
+      "stable": "Akut sıkıntı yok",
+      "distress": "Sıkıntıda",
+      "cyanotic": "Siyanotik",
+      "hypoxic": "Hipoksik",
+      "hypotensive": "Hipotansif",
+      "hypertensive": "Hipertansif",
+      "tachycardic": "Taşikardik",
+      "bradycardic": "Bradikardik",
+      "diaphoretic": "Terli (diyaforetik)",
+      "pale": "Soluk",
+      "febrile": "Ateşli",
+      "hypothermic": "Hipotermik"
+    }
+  }
+}
