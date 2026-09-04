@@ -1,0 +1,71 @@
+{
+  "profile": {
+    "signIn": {
+      "eyebrow": "Sign in",
+      "title": "Sign in to AcuDx",
+      "lede": "AcuDx is an education-only clinical reasoning simulator. Sign in through your institution, or create a local profile to start practising.",
+      "ssoHeading": "Institution sign-in",
+      "ssoNote": "The production path — enabled by your medical school or training programme.",
+      "sso": "Continue with institution SSO",
+      "ssoHint": "SAML / OpenID Connect single sign-on",
+      "lti": "Launch from your LMS (LTI 1.3)",
+      "ltiHint": "Moodle, Canvas, or your virtual learning environment",
+      "productionBadge": "Production",
+      "unavailableNote": "Available once your institution connects AcuDx.",
+      "or": "or",
+      "localHeading": "Continue on this device",
+      "createCta": "Create your profile",
+      "createHint": "Set up a local profile stored only in this browser.",
+      "continueAs": "Continue as {{name}}",
+      "continueAsHint": "Resume your saved profile on this device.",
+      "switchProfile": "Use a different profile",
+      "eduNote": "For clinical education and assessment only. Not for real patient care, and not a medical device.",
+      "privacyNote": "Your local profile stays in this browser. No password is collected."
+    },
+    "onboarding": {
+      "eyebrow": "Create your profile",
+      "title": "Tell us who you are",
+      "lede": "This sets your name, role, and language across AcuDx. You can change it anytime from your account."
+    },
+    "account": {
+      "eyebrow": "Account",
+      "title": "Your profile",
+      "lede": "Update how AcuDx identifies you, or sign out of this device.",
+      "memberSince": "Profile created {{date}}",
+      "signOut": "Sign out"
+    },
+    "form": {
+      "fullName": "Full name",
+      "fullNamePlaceholder": "e.g. Dr. Elif Demir",
+      "fullNameError": "Enter your full name.",
+      "role": "Role",
+      "roleHint": "Sets which surfaces AcuDx shows you.",
+      "roleError": "Select your role.",
+      "institution": "Institution",
+      "institutionPlaceholder": "e.g. Hacettepe University Faculty of Medicine",
+      "institutionError": "Enter your institution.",
+      "specialty": "Specialty or department",
+      "specialtyPlaceholder": "e.g. Emergency medicine",
+      "specialtyHint": "Optional — helps tailor case recommendations.",
+      "language": "Preferred language",
+      "languageHint": "Changes the AcuDx interface language.",
+      "avatar": "Avatar",
+      "avatarHint": "Pick an identicon — no photo needed.",
+      "avatarChoose": "Choose the {{name}} avatar",
+      "create": "Create profile",
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "saved": "Changes saved."
+    },
+    "roles": {
+      "student": "Medical student",
+      "resident": "Resident",
+      "educator": "Educator",
+      "dean": "Dean / administrator"
+    },
+    "languages": {
+      "en": "English",
+      "tr": "Türkçe"
+    }
+  }
+}

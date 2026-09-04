@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { Routes, Route, Link } from "react-router-dom";
+import { lazy, Suspense, type ReactNode } from "react";
+import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion, useReducedMotion } from "motion/react";
 
@@ -7,6 +7,7 @@ import { AppFrame, PageContainer } from "@/components/shell";
 import { RouteFallback } from "@/components/shell/RouteFallback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui";
+import { useIsOnboarded, useIsSignedIn } from "@/state/profileStore";
 
 /* -------------------------------------------------------------------------- */
 /* Lazily-loaded route pages                                                   */
@@ -45,6 +46,12 @@ const RoomPage = lazy(() =>
 const InstitutionPage = lazy(() =>
   import("@/pages/InstitutionPage").then((m) => ({ default: m.InstitutionPage })),
 );
+const SignInPage = lazy(() =>
+  import("@/pages/SignInPage").then((m) => ({ default: m.SignInPage })),
+);
+const ProfilePage = lazy(() =>
+  import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
+);
 
 /* -------------------------------------------------------------------------- */
 /* 404                                                                         */
@@ -73,6 +80,36 @@ function NotFoundPage() {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Onboarding gate                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Gates the app on a REAL local profile. A first-time visitor is sent to the
+ * sign-in screen and can only reach `/profile` to create their profile; once
+ * signed in the whole app opens and the sign-in screen steps aside. This is
+ * the onboarding gate — no seeded/demo user ever slips past it.
+ */
+function AuthGate({ children }: { children: ReactNode }) {
+  const signedIn = useIsSignedIn();
+  const onboarded = useIsOnboarded();
+  const { pathname } = useLocation();
+
+  if (signedIn) {
+    // Already signed in — don't linger on the sign-in screen.
+    if (pathname === "/signin") return <Navigate to="/" replace />;
+    return <>{children}</>;
+  }
+
+  // Not signed in: the sign-in screen is always reachable, and the onboarding
+  // form only for a genuine first-time user (no saved account yet). A signed-out
+  // account resumes via "Continue as …" on the sign-in screen.
+  const onboardingAllowed = !onboarded && pathname === "/profile";
+  if (pathname === "/signin" || onboardingAllowed) return <>{children}</>;
+
+  return <Navigate to="/signin" replace />;
+}
+
+/* -------------------------------------------------------------------------- */
 /* App                                                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -81,20 +118,25 @@ export default function App() {
     <AppFrame>
       <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/welcome" element={<LandingPage />} />
-            <Route path="/authoring" element={<AuthoringPage />} />
-            <Route path="/start" element={<StartPage />} />
-            <Route path="/cases" element={<CasesPage />} />
-            <Route path="/rooms" element={<RoomPage />} />
-            <Route path="/rooms/:id" element={<RoomPage />} />
-            <Route path="/encounter" element={<EncounterPage />} />
-            <Route path="/feedback" element={<FeedbackPage />} />
-            <Route path="/progress" element={<ProgressPage />} />
-            <Route path="/institution" element={<InstitutionPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+          <AuthGate>
+            <Routes>
+              <Route path="/signin" element={<SignInPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/account" element={<ProfilePage />} />
+              <Route path="/" element={<HomePage />} />
+              <Route path="/welcome" element={<LandingPage />} />
+              <Route path="/authoring" element={<AuthoringPage />} />
+              <Route path="/start" element={<StartPage />} />
+              <Route path="/cases" element={<CasesPage />} />
+              <Route path="/rooms" element={<RoomPage />} />
+              <Route path="/rooms/:id" element={<RoomPage />} />
+              <Route path="/encounter" element={<EncounterPage />} />
+              <Route path="/feedback" element={<FeedbackPage />} />
+              <Route path="/progress" element={<ProgressPage />} />
+              <Route path="/institution" element={<InstitutionPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </AuthGate>
         </Suspense>
       </ErrorBoundary>
     </AppFrame>
