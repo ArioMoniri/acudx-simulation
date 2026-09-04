@@ -38,6 +38,21 @@ export function patientPhotoUrl(id: string): string {
 }
 
 /**
+ * Photo ids that also ship a short "alive" idle video loop (subtle head
+ * movement + blinking), so a matching case's patient looks alive rather than a
+ * frozen still. Generated once from the same face; the rest stay stills.
+ */
+export const PATIENT_VIDEO_IDS = new Set<string>(["p01", "p04", "p09"]);
+
+export function hasPatientVideo(id: string): boolean {
+  return PATIENT_VIDEO_IDS.has(id);
+}
+
+export function patientVideoUrl(id: string): string {
+  return `${import.meta.env.BASE_URL}patients/${id}.mp4`;
+}
+
+/**
  * Pick the closest-matching portrait for a case: same sex first, then the
  * nearest age; a stable seed varies the choice among near-equal ages so two
  * different 58-year-old men don't always get the identical face.

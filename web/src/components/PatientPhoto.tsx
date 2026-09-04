@@ -1,10 +1,26 @@
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import {
   pickPatientPhoto,
   patientPhotoUrl,
+  hasPatientVideo,
+  patientVideoUrl,
   type PhotoSex,
 } from "@/data/patientPhotos";
+
+/** Whether the viewer prefers reduced motion (SSR-safe, live-updating). */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const on = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener?.("change", on);
+    return () => mq.removeEventListener?.("change", on);
+  }, []);
+  return reduced;
+}
 
 export interface ClinicalSignHint {
   sign: string;
@@ -67,6 +83,10 @@ export function PatientPhoto({
 }: PatientPhotoProps) {
   const photo = useMemo(() => pickPatientPhoto(sex, age, seed), [sex, age, seed]);
   const { filter, cyanosis } = useMemo(() => physiology(signs), [signs]);
+  const reduced = usePrefersReducedMotion();
+  // Play the "alive" idle loop when one exists for this face and motion is ok;
+  // otherwise the still photo (also the video poster) stands in.
+  const useVideo = hasPatientVideo(photo.id) && !reduced;
 
   return (
     <figure
@@ -75,15 +95,29 @@ export function PatientPhoto({
         className,
       )}
     >
-      <img
-        src={patientPhotoUrl(photo.id)}
-        alt={alt ?? "Synthetic patient portrait — not a real individual"}
-        loading="lazy"
-        decoding="async"
-        className="h-full w-full object-cover"
-        style={filter ? { filter } : undefined}
-        draggable={false}
-      />
+      {useVideo ? (
+        <video
+          src={patientVideoUrl(photo.id)}
+          poster={patientPhotoUrl(photo.id)}
+          aria-label={alt ?? "Synthetic patient — not a real individual"}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="h-full w-full object-cover"
+          style={filter ? { filter } : undefined}
+        />
+      ) : (
+        <img
+          src={patientPhotoUrl(photo.id)}
+          alt={alt ?? "Synthetic patient portrait — not a real individual"}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+          style={filter ? { filter } : undefined}
+          draggable={false}
+        />
+      )}
       {/* Cyanosis overlay — a faint bluish cast when hypoxic (never sole cue). */}
       {cyanosis > 0.05 ? (
         <span

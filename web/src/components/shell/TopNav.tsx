@@ -100,8 +100,8 @@ export function TopNav() {
           <LiveBackendToggle className="hidden sm:inline-flex" />
           <LanguageSwitcher className="hidden sm:inline-flex" />
           <ThemeToggle />
-          <button
-            type="button"
+          <NavLink
+            to="/account"
             aria-label={t("nav.account")}
             className={cn(
               "grid h-9 w-9 place-items-center rounded-control border border-border",
@@ -110,7 +110,7 @@ export function TopNav() {
             )}
           >
             <UserCircle weight="bold" className="h-5 w-5" aria-hidden="true" />
-          </button>
+          </NavLink>
         </div>
       </nav>
 
