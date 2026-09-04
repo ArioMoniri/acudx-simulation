@@ -1,0 +1,27 @@
+{
+  "patientviewer": {
+    "expand": "Enlarge patient view",
+    "title": "Patient — {{name}}",
+    "close": "Close",
+    "syntheticNote": "Synthetic patient — not a real individual",
+    "photoLabel": "Patient photo",
+    "signsLabel": "Live clinical signs",
+    "summaryLabel": "Clinical signs",
+    "reflectsLive": "Reflects the live vitals course",
+    "vitalsLabel": "Current vitals",
+    "signs": {
+      "stable": "No acute distress",
+      "distress": "In distress",
+      "cyanotic": "Cyanotic",
+      "hypoxic": "Hypoxic",
+      "hypotensive": "Hypotensive",
+      "hypertensive": "Hypertensive",
+      "tachycardic": "Tachycardic",
+      "bradycardic": "Bradycardic",
+      "diaphoretic": "Diaphoretic",
+      "pale": "Pale",
+      "febrile": "Febrile",
+      "hypothermic": "Hypothermic"
+    }
+  }
+}

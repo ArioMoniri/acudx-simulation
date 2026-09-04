@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ClipboardText,
@@ -23,6 +23,7 @@ import {
   type ClinicalSignIntensity,
 } from "./PatientAvatar";
 import { PatientPhoto } from "@/components/PatientPhoto";
+import { PatientViewer, SymptomSummary } from "@/components/PatientViewer";
 import { EncounterClock } from "./EncounterClock";
 import { conceptText, pick } from "./labels";
 import {
@@ -147,6 +148,7 @@ function MiniVital({
 export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps) {
   const { t } = useTranslation();
   const state = useEncounterState();
+  const [viewerOpen, setViewerOpen] = useState(false);
   // Tick so the vitals snapshot tracks the live course (the store emits only on
   // actions; clock-driven vitals evolve between them, like the bedside monitor).
   useTick(1000);
@@ -170,7 +172,9 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
 
   const problems = state.problemList;
 
-  const clinicalSigns: ClinicalSignIntensity[] = signsFromVitals(triageVitals);
+  // Signs track the LIVE vitals course (falls back to triage before the clock
+  // starts) so the portrait tint + symptom summary reflect the current picture.
+  const clinicalSigns: ClinicalSignIntensity[] = signsFromVitals(vitals);
   const sexLabel = t(`common.${patient.gender === "female" ? "female" : "male"}`);
   const acuityTone = `esi-${caseInstance.acuityESI}` as StatusTone;
 
@@ -195,6 +199,8 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
             defaultValue: "Synthetic patient portrait — not a real individual",
           })}
           className="h-16 w-16 shrink-0 ring-1 ring-white/10"
+          onClick={() => setViewerOpen(true)}
+          expandLabel={t("patientviewer.expand")}
         />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-monitor-fg">
@@ -204,6 +210,8 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
             <Heartbeat weight="fill" className="h-3 w-3 shrink-0 text-monitor-online" aria-hidden />
             <span className="italic">{affectLabel}</span>
           </p>
+          {/* Live clinical-sign summary derived from the current vitals course. */}
+          <SymptomSummary vitals={vitals} className="mt-1 text-monitor-dim" />
         </div>
       </div>
 
@@ -429,6 +437,14 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
       >
         <EncounterClock variant="inline" />
       </Section>
+
+      {/* Enlarged, symptom-aware patient view (photo + live 3D signs) */}
+      <PatientViewer
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        caseInstance={caseInstance}
+        affectLabel={affectLabel}
+      />
     </aside>
   );
 }

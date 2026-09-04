@@ -1,9 +1,12 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { VitalCard } from "@/components/VitalCard";
 import { stateMap, trendGlyph } from "@/components/clinicalState";
-import { PatientPortrait } from "@/components/PatientPortrait";
+import { PatientPhoto } from "@/components/PatientPhoto";
+import { PatientViewer, SymptomSummary } from "@/components/PatientViewer";
+import { signsFromVitals } from "@/components/ehr/PatientAvatar";
+import { getCurrentVitals, useEncounterState } from "@/state/encounterStore";
 import { EncounterClock } from "../EncounterClock";
 import { minutesOf } from "../labels";
 import type {
@@ -143,8 +146,26 @@ const LEGEND_STATES: ClinicalState[] = ["normal", "caution", "warning", "critica
  */
 export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
   const { t } = useTranslation();
-  const { triageVitals, groundTruth } = caseInstance;
+  const { triageVitals, groundTruth, patient } = caseInstance;
   const trajectory = groundTruth.vitalsTrajectory;
+
+  const state = useEncounterState();
+  const [viewerOpen, setViewerOpen] = useState(false);
+  // Light tick so the photo tint + symptom summary track the evolving course
+  // (the store emits only on actions; clock-driven vitals move between them).
+  const [, tick] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = window.setInterval(() => tick(), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Live current vitals from the SAME store the bedside monitor reads (guarded on
+  // the case id); falls back to the triage numbers before the clock starts.
+  const liveVitals =
+    state.caseInstance?.id === caseInstance.id ? getCurrentVitals(state) : null;
+  const currentVitals = liveVitals ?? triageVitals;
+  const clinicalSigns = signsFromVitals(currentVitals);
 
   const readings = useMemo(
     () => buildReadings(triageVitals, trajectory),
@@ -218,12 +239,36 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
           </tbody>
         </table>
 
-        <div className="mt-3">
-          <PatientPortrait
-            caption={affectLabel}
-            name={caseInstance.patient.name}
+        {/* Realistic, demographic-matched patient photo (click to enlarge). The
+            physiology tint + symptom summary track the LIVE vitals course. */}
+        <figure
+          className="mt-3 flex items-center gap-3 rounded-control border p-2.5"
+          style={{
+            borderColor: "var(--monitor-border)",
+            backgroundColor: "color-mix(in srgb, var(--monitor-fg) 4%, transparent)",
+          }}
+        >
+          <PatientPhoto
+            sex={patient.gender === "female" ? "female" : "male"}
+            age={patient.ageYears}
+            seed={caseInstance.seed}
+            signs={clinicalSigns}
+            alt={t("patientviewer.syntheticNote")}
+            className="h-16 w-16 shrink-0 ring-1 ring-white/10"
+            onClick={() => setViewerOpen(true)}
+            expandLabel={t("patientviewer.expand")}
           />
-        </div>
+          <figcaption className="min-w-0">
+            <p className="truncate text-sm font-medium" style={{ color: "var(--monitor-fg)" }}>
+              {patient.name}
+            </p>
+            <p className="mt-0.5 truncate text-xs italic" style={{ color: "var(--monitor-dim)" }}>
+              {affectLabel}
+            </p>
+            {/* Monitor-panel dim ink so the summary reads on the dark card. */}
+            <SymptomSummary vitals={currentVitals} className="mt-1 text-monitor-dim" />
+          </figcaption>
+        </figure>
       </section>
 
       {/* Flowsheet — latest summary + vitals over time */}
@@ -331,6 +376,14 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
           </div>
         </div>
       </section>
+
+      {/* Enlarged, symptom-aware patient view (photo + live 3D signs) */}
+      <PatientViewer
+        open={viewerOpen}
+        onClose={() => setViewerOpen(false)}
+        caseInstance={caseInstance}
+        affectLabel={affectLabel}
+      />
     </div>
   );
 }
