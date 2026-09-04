@@ -19,11 +19,11 @@
 :root {
   color-scheme: light;
 
-  /* ---- Brand (single locked blue accent) ---- */
-  --brand-50: #eff5ff;
-  --brand-100: #dbe8fe;
-  --brand-600: #2563eb;
-  --brand-700: #1d4ed8;
+  /* ---- Brand (single locked accent — AMBOSS-style petrol teal) ---- */
+  --brand-50: #f0fdfa;
+  --brand-100: #cbfbf1;
+  --brand-600: #0f766e; /* AA on white for text + white-on-fill */
+  --brand-700: #115e59;
 
   /* Brand gradient — RESERVED for the logo mark ONLY (one place). */
   --grad-teal: #2dd4bf;
@@ -100,10 +100,10 @@
 .dark {
   color-scheme: dark;
 
-  --brand-50: #172554;
-  --brand-100: #1e3a8a;
-  --brand-600: #3b82f6;
-  --brand-700: #2563eb;
+  --brand-50: #0b3b37;
+  --brand-100: #134e4a;
+  --brand-600: #2dd4bf; /* brighter teal for text/accents on dark surfaces */
+  --brand-700: #5eead4;
 
   --bg: #0a0f1c;
   --bg-subtle: #0c1220;
