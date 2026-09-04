@@ -4,6 +4,7 @@
     "synthetic": "Sentetik hasta",
     "unavailable": "3B kullanılamıyor — 2B gösteriliyor",
     "speaking": "Konuşuyor",
+    "muted": "Sessiz (dudak senkronu)",
     "signsLabel": "Gözlenebilir klinik bulgular",
     "signs": {
       "none": "Akut klinik bulgu yok",

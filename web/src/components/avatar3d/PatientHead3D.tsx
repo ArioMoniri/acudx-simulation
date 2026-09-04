@@ -33,7 +33,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useReducedMotion } from "motion/react";
-import { Pulse, Waveform } from "@phosphor-icons/react";
+import { Pulse, SpeakerSimpleSlash, Waveform } from "@phosphor-icons/react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { AdaptiveDpr } from "@react-three/drei";
 import { DoubleSide, type Group, type Mesh } from "three";
@@ -44,6 +44,7 @@ import {
   type SkinTone,
   type HairColor,
 } from "@/domain/patientProfiles";
+import { useSpeech, mouthGeometry, type MouthShape } from "@/lib/lipsync";
 import type {
   AvatarAffect,
   ClinicalSignIntensity,
@@ -63,8 +64,20 @@ export interface PatientHead3DProps {
   affect: AvatarAffect;
   /** Respiratory rate (breaths/min) — sets the breathing cadence. */
   rr: number;
-  /** True while the patient is speaking (drives mouth movement). */
+  /**
+   * True while the patient is speaking. Used on its own (no `utterance`) it
+   * plays a generic mouth oscillation; with `utterance` the viseme timeline
+   * drives it and this becomes a fallback/override.
+   */
   speaking?: boolean;
+  /**
+   * The patient's current utterance. When set, its text drives an approximate
+   * viseme timeline so the mouth forms shapes while "spoken" — no audio needed.
+   * Changing the string starts a new turn; clearing it stops.
+   */
+  utterance?: string;
+  /** Opt in to voicing the utterance via the Web Speech API (default silent). */
+  voice?: boolean;
   className?: string;
 }
 
@@ -207,6 +220,7 @@ const EYE_X = 0.34;
 const EYE_R = 0.15;
 const EYE_Z = 0.8;
 const LID_OPEN_Y = EYE_Y + EYE_R + 0.14;
+const MOUTH_Z = 0.86;
 
 function lidYFor(closed: number): number {
   const coverY = EYE_Y - EYE_R * 0.15;
@@ -217,10 +231,16 @@ function HeadModel({
   drive,
   speaking,
   animate,
+  jawOpen,
+  mouthShape,
 }: {
   drive: HeadDrive;
   speaking: boolean;
   animate: boolean;
+  /** Viseme-driven jaw opening (0..1). Null → generic/no lip-sync source. */
+  jawOpen: number | null;
+  /** Viseme-driven mouth shape. Null → generic/no lip-sync source. */
+  mouthShape: MouthShape | null;
 }) {
   const rootRef = useRef<Group>(null);
   const lidLRef = useRef<Mesh>(null);
@@ -249,14 +269,29 @@ function HeadModel({
     if (lidLRef.current) lidLRef.current.position.y = ly;
     if (lidRRef.current) lidRRef.current.position.y = ly;
 
-    // Mouth — oscillate open while speaking, else settle to the rest opening.
+    // Mouth — form visemes from the lip-sync signal while speaking. With a
+    // viseme source we shape the lips (jaw + spread + rounding); with only a
+    // boolean `speaking` we fall back to the generic open/close oscillation;
+    // otherwise the mouth settles to its physiology-driven rest opening.
     if (mouthRef.current) {
-      let target = drive.mouthRest;
+      let targetY = drive.mouthRest;
+      let targetX = 1;
+      let targetZ = MOUTH_Z;
       if (speaking) {
-        const env = Math.max(0, Math.sin(t * 10)) * (0.55 + 0.45 * Math.sin(t * 3.3 + 1));
-        target = drive.mouthRest + env * 0.9;
+        if (jawOpen != null && mouthShape != null) {
+          const g = mouthGeometry(mouthShape);
+          targetY = drive.mouthRest * 0.4 + jawOpen * 0.95;
+          targetX = g.width;
+          targetZ = MOUTH_Z + g.round * 0.05;
+        } else {
+          const env = Math.max(0, Math.sin(t * 10)) * (0.55 + 0.45 * Math.sin(t * 3.3 + 1));
+          targetY = drive.mouthRest + env * 0.9;
+        }
       }
-      mouthRef.current.scale.y += (target - mouthRef.current.scale.y) * 0.35;
+      const m = mouthRef.current;
+      m.scale.y += (targetY - m.scale.y) * 0.35;
+      m.scale.x += (targetX - m.scale.x) * 0.3;
+      m.position.z += (targetZ - m.position.z) * 0.3;
     }
   });
 
@@ -347,8 +382,8 @@ function HeadModel({
         <meshStandardMaterial color={drive.periphery} roughness={drive.roughness} />
       </mesh>
 
-      {/* Mouth — lip-coloured, opens while speaking */}
-      <mesh ref={mouthRef} position={[0, -0.45, 0.86]} scale={[1, drive.mouthRest, 1]}>
+      {/* Mouth — lip-coloured; jaw + lip spread/round form visemes when speaking */}
+      <mesh ref={mouthRef} position={[0, -0.45, MOUTH_Z]} scale={[1, drive.mouthRest, 1]}>
         <boxGeometry args={[0.34, 0.22, 0.06]} />
         <meshStandardMaterial color={mix(drive.lip, "#361f1c", 0.35)} roughness={0.6} />
       </mesh>
@@ -450,6 +485,8 @@ export default function PatientHead3D({
   affect,
   rr,
   speaking = false,
+  utterance,
+  voice = false,
   className,
 }: PatientHead3DProps) {
   const { t, i18n } = useTranslation();
@@ -463,6 +500,32 @@ export default function PatientHead3D({
 
   const animate = inView && !reduceMotion;
   const name = i18n.language.startsWith("tr") ? profile.name.tr : profile.name.en;
+
+  // Lip-sync: text → animated jaw/mouth-shape. The clock is paused whenever the
+  // head is offscreen or the tab is hidden (`active: inView`) so we never burn
+  // frames the viewer can't see. Every string change is a fresh spoken turn.
+  const speech = useSpeech({ active: inView });
+  const { speak, stop } = speech;
+  const trimmedUtterance = utterance?.trim() ?? "";
+  const visemeDriven = trimmedUtterance.length > 0;
+  const speechLang = i18n.language.startsWith("tr") ? "tr" : "en";
+
+  useEffect(() => {
+    if (trimmedUtterance) {
+      speak(trimmedUtterance, { voice, lang: speechLang });
+    } else {
+      stop();
+    }
+    return () => stop();
+  }, [trimmedUtterance, voice, speechLang, speak, stop]);
+
+  // A turn is "speaking" when the viseme timeline is playing, or when the caller
+  // passes the boolean directly (generic oscillation, no text). Under reduced
+  // motion the head stays a static clinical pose, so the viseme signal is not
+  // fed to the scene — the caption/pill still announce the turn.
+  const effectiveSpeaking = visemeDriven ? speech.speaking : speaking;
+  const feedVisemes = visemeDriven && animate;
+  const muted = visemeDriven && !voice;
 
   // Present signs (above the 0.15 noise floor), strongest first.
   const present = TEXT_SIGNS.map((s) => ({ ...s, intensity: sig(signs, s.kind) }))
@@ -508,7 +571,13 @@ export default function PatientHead3D({
           <ambientLight intensity={0.75} />
           <directionalLight position={[2, 3, 4]} intensity={0.7} />
           <pointLight position={[-2, 1.5, 3]} intensity={0.35 + drive.sweat * 0.5} />
-          <HeadModel drive={drive} speaking={speaking} animate={animate} />
+          <HeadModel
+            drive={drive}
+            speaking={effectiveSpeaking}
+            animate={animate}
+            jawOpen={feedVisemes ? speech.jawOpen : null}
+            mouthShape={feedVisemes ? speech.mouthShape : null}
+          />
         </Canvas>
       </div>
 
@@ -521,7 +590,7 @@ export default function PatientHead3D({
           <Pulse size={13} weight="bold" aria-hidden="true" />
           <span className="italic">{captionText}</span>
         </span>
-        {speaking && (
+        {effectiveSpeaking && (
           <span
             className="inline-flex items-center gap-1 rounded-pill px-1.5 py-0.5 text-[10px] font-medium"
             style={{
@@ -531,6 +600,16 @@ export default function PatientHead3D({
           >
             <Waveform size={11} weight="bold" aria-hidden="true" />
             {t("avatar3d.speaking")}
+          </span>
+        )}
+        {effectiveSpeaking && muted && (
+          <span
+            className="inline-flex items-center gap-1 text-[10px]"
+            style={{ color: "var(--monitor-dim)" }}
+            title={t("avatar3d.muted")}
+          >
+            <SpeakerSimpleSlash size={11} weight="bold" aria-hidden="true" />
+            {t("avatar3d.muted")}
           </span>
         )}
         <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--monitor-dim)" }}>
