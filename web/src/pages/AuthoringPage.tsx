@@ -1,5 +1,6 @@
-import { useReducer, type Dispatch } from "react";
+import { useCallback, useMemo, useReducer, useState, type Dispatch } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
   PencilRuler,
@@ -14,7 +15,6 @@ import {
   Pulse,
   CheckCircle,
   ArrowRight,
-  ArrowClockwise,
   ArrowCounterClockwise,
   CaretLeft,
   CaretRight,
@@ -33,6 +33,12 @@ import {
   Certificate,
   Signature,
   SealCheck,
+  MagicWand,
+  Eye,
+  Trash,
+  X,
+  FolderOpen,
+  SignIn,
   type Icon,
 } from "@phosphor-icons/react";
 
@@ -54,22 +60,22 @@ import {
   Tr,
   Th,
   Td,
+  Field,
+  Select,
   type StatusTone,
 } from "@/components/ui";
 import { CitationPill } from "@/components";
-import { BlueprintCard } from "@/components/authoring";
 import { cn } from "@/lib/cn";
 import { useLang, useEntry } from "@/lib/useLang";
+import { useProfile } from "@/state/profileStore";
+import { useProgressRecords } from "@/state/progressStore";
+import {
+  generateCase,
+  CHIEF_COMPLAINT_FAMILIES,
+  type ChiefComplaintFamily,
+} from "@/domain/caseGen";
 import {
   pipelineStages,
-  sampleBlueprint,
-  lockedFacts,
-  rubricItems,
-  domainCoverage,
-  peerReviewSignals,
-  signOffClinician,
-  versionHashes,
-  publishedCases,
   makeInitialAuthoringState,
   authoringReducer,
   publishBlockers,
@@ -79,9 +85,17 @@ import {
   rubricFingerprint,
   isFactLocked,
   stageDisplayState,
+  reviewerFromProfile,
+  readinessSignals,
+  publishCase,
+  removePublishedCase,
+  usePublishedCases,
+  DIFFICULTY_BANDS,
   type AuthoringUIState,
   type AuthoringAction,
   type FactEditState,
+  type DraftBundle,
+  type ReviewerIdentity,
   type PipelineStage,
   type PipelineStageMeta,
   type StageState,
@@ -89,7 +103,6 @@ import {
   type LockedFact,
   type RubricItem,
   type PublishedCase,
-  type ContentLocale,
 } from "@/data/authoring";
 
 /* -------------------------------------------------------------------------- */
@@ -140,7 +153,7 @@ function PipelineStepper({
   dispatch: Dispatcher;
 }) {
   const { t } = useTranslation();
-  const clear = factsClear(state.facts);
+  const clear = state.draft ? factsClear(state.draft.facts, state.edits) : false;
   const atStart = state.stageIndex === 0;
   const atEnd = state.stageIndex === pipelineStages.length - 1;
 
@@ -152,17 +165,13 @@ function PipelineStepper({
       >
         {pipelineStages.map((stage, i) => {
           const StageIcon = stageIcon[stage.key];
-          const display = stageDisplayState(
-            i,
-            state.stageIndex,
-            state.published,
-          );
+          const display = stageDisplayState(i, state.stageIndex, state.published);
           const ActorIcon = actorIcon[stage.actor];
           const isActive = i === state.stageIndex;
           const isDone = display === "done";
           const title = t(`authoring.pipeline.stage.${stage.key}.title`);
           const blocked =
-            stage.key === "publish" && !state.published && !clear;
+            stage.key === "publish" && !state.published && !!state.draft && !clear;
 
           return (
             <li key={stage.key} className="flex items-stretch md:flex-1">
@@ -209,9 +218,7 @@ function PipelineStepper({
                   >
                     {String(i + 1).padStart(2, "0")}
                   </p>
-                  <p className="text-sm font-semibold leading-snug text-fg">
-                    {title}
-                  </p>
+                  <p className="text-sm font-semibold leading-snug text-fg">{title}</p>
                 </div>
                 {blocked ? (
                   <Badge tone="warning" className="mt-auto w-fit" icon={<WarningCircle weight="fill" className="h-3 w-3" aria-hidden />}>
@@ -295,6 +302,228 @@ function StageHeading({ stage }: { stage: PipelineStageMeta }) {
   );
 }
 
+/** Shared "generate a blueprint first" empty state for the downstream stages. */
+function NeedsDraft({ dispatch }: { dispatch: Dispatcher }) {
+  const { t } = useTranslation();
+  return (
+    <Card padding="lg" className="flex flex-col items-start gap-3">
+      <span className="grid h-10 w-10 place-items-center rounded-control bg-bg-subtle text-muted" aria-hidden>
+        <Blueprint weight="bold" className="h-5 w-5" />
+      </span>
+      <div>
+        <h3 className="text-sm font-semibold tracking-tight text-fg">
+          {t("authoringP9.needsDraft.heading", { defaultValue: "No draft yet" })}
+        </h3>
+        <p className="mt-1 max-w-md text-xs text-muted">
+          {t("authoringP9.needsDraft.sub", {
+            defaultValue:
+              "Generate a case blueprint first — the review, sign-off, and monitor stages all reflect that draft.",
+          })}
+        </p>
+      </div>
+      <Button
+        size="sm"
+        onClick={() => dispatch({ type: "setStage", index: 0 })}
+        leadingIcon={<Blueprint weight="bold" className="h-4 w-4" />}
+      >
+        {t("authoringP9.needsDraft.cta", { defaultValue: "Go to the blueprint stage" })}
+      </Button>
+    </Card>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Blueprint stage — the REAL generator prompt + generated summary             */
+/* -------------------------------------------------------------------------- */
+
+function BlueprintPanel({
+  state,
+  dispatch,
+}: {
+  state: AuthoringUIState;
+  dispatch: Dispatcher;
+}) {
+  const { t } = useTranslation();
+  const lang = useLang();
+  const [family, setFamily] = useState<ChiefComplaintFamily | "">("");
+  const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
+
+  const generate = useCallback(() => {
+    const fam = family === "" ? null : family;
+    const caseInstance = fam
+      ? generateCase({
+          seedMode: "constrained",
+          chiefComplaint: fam,
+          difficulty,
+          locale: lang,
+        })
+      : generateCase({ seedMode: "random", difficulty, locale: lang });
+    dispatch({ type: "generate", caseInstance, family: fam });
+  }, [family, difficulty, lang, dispatch]);
+
+  const draft = state.draft;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Generator prompt */}
+      <Card padding="lg" className="flex flex-col gap-4">
+        <div>
+          <div className="flex items-center gap-1.5">
+            <MagicWand weight="bold" className="h-4 w-4 text-brand" aria-hidden />
+            <h3 className="text-sm font-semibold tracking-tight text-fg">
+              {t("authoringP9.blueprint.heading", { defaultValue: "Generate a case blueprint" })}
+            </h3>
+          </div>
+          <p className="mt-1 max-w-xl text-xs text-muted">
+            {t("authoringP9.blueprint.sub", {
+              defaultValue:
+                "Pick a presentation family or specialty and a difficulty. The model drafts the facts and rubric for a fresh, synthetic case; you stay authoritative from here.",
+            })}
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label={t("authoringP9.blueprint.familyLabel", { defaultValue: "Presentation family or specialty" })}>
+            {(aria) => (
+              <Select
+                {...aria}
+                value={family}
+                onChange={(e) => setFamily(e.target.value as ChiefComplaintFamily | "")}
+              >
+                <option value="">
+                  {t("authoringP9.blueprint.familyAny", { defaultValue: "Any — surprise me" })}
+                </option>
+                {CHIEF_COMPLAINT_FAMILIES.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label[lang]}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+
+          <Field label={t("authoringP9.blueprint.difficultyLabel", { defaultValue: "Difficulty" })}>
+            {(aria) => (
+              <Select
+                {...aria}
+                value={String(difficulty)}
+                onChange={(e) =>
+                  setDifficulty(Number(e.target.value) as 1 | 2 | 3 | 4 | 5)
+                }
+              >
+                {([1, 2, 3, 4, 5] as const).map((d) => (
+                  <option key={d} value={String(d)}>
+                    {d} · {DIFFICULTY_BANDS[d][lang]}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="md"
+            onClick={generate}
+            leadingIcon={<MagicWand weight="bold" className="h-4 w-4" />}
+          >
+            {draft
+              ? t("authoringP9.blueprint.regenerate", { defaultValue: "Generate another draft" })
+              : t("authoringP9.blueprint.generate", { defaultValue: "Generate draft" })}
+          </Button>
+          <p className="inline-flex items-center gap-1.5 text-[11px] text-muted">
+            <Robot weight="bold" className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {t("authoring2.draft.tierNote")}
+          </p>
+        </div>
+      </Card>
+
+      {/* Generated blueprint summary */}
+      {draft ? (
+        <Card padding="lg" className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h3 className="text-base font-semibold tracking-tight text-fg">
+                {draft.blueprint.title[lang]}
+              </h3>
+              <p className="mt-0.5 text-xs text-muted">{draft.blueprint.chiefComplaint[lang]}</p>
+            </div>
+            <Badge tone="brand" variant="outline" icon={<Sparkle weight="fill" className="h-3 w-3" aria-hidden />}>
+              {t("authoringP9.blueprint.draftBadge", { defaultValue: "Draft generated" })}
+            </Badge>
+          </div>
+
+          <DescriptionList divided>
+            <KeyValue
+              label={t("authoringP9.blueprint.diagnosis", { defaultValue: "Working diagnosis" })}
+              value={draft.blueprint.diagnosis[lang]}
+            />
+            {draft.blueprint.codeLabel ? (
+              <KeyValue
+                label={t("authoringP9.blueprint.code", { defaultValue: "Diagnosis code" })}
+                value={draft.blueprint.codeLabel}
+                mono
+              />
+            ) : null}
+            <KeyValue
+              label={t("authoringP9.blueprint.family", { defaultValue: "Presentation / specialty" })}
+              value={draft.blueprint.familyLabel[lang]}
+            />
+            <KeyValue
+              label={t("authoring.blueprint.difficulty")}
+              value={`${draft.blueprint.difficulty} · ${draft.blueprint.difficultyBand[lang]}`}
+            />
+          </DescriptionList>
+
+          {/* Learning objectives */}
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              {t("authoring.blueprint.objectives")}
+            </p>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {draft.blueprint.objectives.map((o, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-fg">
+                  <CheckCircle weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />
+                  {o[lang]}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Red flags */}
+          {draft.blueprint.redFlags.length > 0 ? (
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                {t("authoringP9.blueprint.redFlags", { defaultValue: "Can't-miss red flags" })}
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {draft.blueprint.redFlags.map((rf, i) => (
+                  <li key={i}>
+                    <Badge tone="warning">
+                      <ShieldWarning weight="fill" className="h-3 w-3" aria-hidden />
+                      {rf[lang]}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div>
+            <Button
+              size="md"
+              onClick={() => dispatch({ type: "next" })}
+              trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
+            >
+              {t("authoring2.draft.toReview")}
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 /* Draft stage                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -307,8 +536,9 @@ function DraftPanel({
   dispatch: Dispatcher;
 }) {
   const { t } = useTranslation();
-  const total = lockedFacts.length;
-  const pending = publishBlockers(state.facts).length;
+  if (!state.draft) return <NeedsDraft dispatch={dispatch} />;
+  const total = state.draft.facts.length;
+  const pending = publishBlockers(state.draft.facts, state.edits).length;
 
   return (
     <Card padding="lg" className="flex flex-col gap-5">
@@ -316,9 +546,7 @@ function DraftPanel({
         <h3 className="text-sm font-semibold tracking-tight text-fg">
           {t("authoring2.draft.heading")}
         </h3>
-        <p className="mt-1 max-w-xl text-xs text-muted">
-          {t("authoring2.draft.sub")}
-        </p>
+        <p className="mt-1 max-w-xl text-xs text-muted">{t("authoring2.draft.sub")}</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -338,11 +566,7 @@ function DraftPanel({
             size="lg"
             hint={
               <span className="inline-flex items-center gap-1.5">
-                <StatusDot
-                  tone={pending > 0 ? "warning" : "normal"}
-                  size="sm"
-                  aria-hidden="true"
-                />
+                <StatusDot tone={pending > 0 ? "warning" : "normal"} size="sm" aria-hidden="true" />
                 {pending > 0
                   ? t("authoring2.draft.needsReview", { count: pending })
                   : t("authoring2.draft.allLocked")}
@@ -353,11 +577,7 @@ function DraftPanel({
       </div>
 
       <p className="inline-flex items-start gap-2 text-xs text-muted">
-        <Robot
-          weight="bold"
-          className="mt-0.5 h-3.5 w-3.5 shrink-0"
-          aria-hidden
-        />
+        <Robot weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
         {t("authoring2.draft.tierNote")}
       </p>
 
@@ -457,18 +677,12 @@ function FactCard({
                 </Badge>
               ) : null}
             </div>
-            <p className="mt-1 text-sm leading-relaxed text-fg">
-              {fact.claim[lang]}
-            </p>
+            <p className="mt-1 text-sm leading-relaxed text-fg">{fact.claim[lang]}</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 pl-9">
-          <CitationPill
-            citationId={fact.citationId}
-            lang={lang}
-            section={fact.section}
-          />
+          <CitationPill citationId={fact.citationId} lang={lang} section={fact.section} />
           <StatusChip status={status} />
           {edit.humanEdited ? (
             <span className="inline-flex items-center gap-1 text-[11px] text-muted">
@@ -483,9 +697,7 @@ function FactCard({
             {t("authoring2.editor.groundHint")}
           </p>
         ) : open ? (
-          <p className="ml-9 text-[11px] text-muted">
-            {t("authoring2.editor.openHint")}
-          </p>
+          <p className="ml-9 text-[11px] text-muted">{t("authoring2.editor.openHint")}</p>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2 pl-9">
@@ -494,9 +706,7 @@ function FactCard({
               <Button
                 size="sm"
                 variant="secondary"
-                aria-label={t("authoring2.editor.lockAria", {
-                  kind: kindLabel,
-                })}
+                aria-label={t("authoring2.editor.lockAria", { kind: kindLabel })}
                 onClick={() => dispatch({ type: "lock", id: fact.id })}
                 leadingIcon={<LockSimple weight="bold" className="h-4 w-4" />}
               >
@@ -505,9 +715,7 @@ function FactCard({
               <Button
                 size="sm"
                 variant="ghost"
-                aria-label={t("authoring2.editor.editLockAria", {
-                  kind: kindLabel,
-                })}
+                aria-label={t("authoring2.editor.editLockAria", { kind: kindLabel })}
                 onClick={() => dispatch({ type: "editLock", id: fact.id })}
                 leadingIcon={<PencilSimple weight="bold" className="h-4 w-4" />}
               >
@@ -519,9 +727,7 @@ function FactCard({
             <Button
               size="sm"
               variant="primary"
-              aria-label={t("authoring2.editor.groundAria", {
-                kind: kindLabel,
-              })}
+              aria-label={t("authoring2.editor.groundAria", { kind: kindLabel })}
               onClick={() => dispatch({ type: "ground", id: fact.id })}
               leadingIcon={<ShieldCheck weight="bold" className="h-4 w-4" />}
             >
@@ -532,13 +738,9 @@ function FactCard({
             <Button
               size="sm"
               variant="ghost"
-              aria-label={t("authoring2.editor.unlockAria", {
-                kind: kindLabel,
-              })}
+              aria-label={t("authoring2.editor.unlockAria", { kind: kindLabel })}
               onClick={() => dispatch({ type: "unlock", id: fact.id })}
-              leadingIcon={
-                <LockSimpleOpen weight="bold" className="h-4 w-4" />
-              }
+              leadingIcon={<LockSimpleOpen weight="bold" className="h-4 w-4" />}
             >
               {t("authoring2.editor.unlock")}
             </Button>
@@ -553,15 +755,10 @@ function AxisMark({ axis }: { axis: "clinical" | "communication" }) {
   return (
     <span
       aria-hidden
-      className={cn(
-        "h-2 w-2 shrink-0",
-        axis === "clinical" ? "rotate-45" : "rounded-full",
-      )}
+      className={cn("h-2 w-2 shrink-0", axis === "clinical" ? "rotate-45" : "rounded-full")}
       style={{
         backgroundColor:
-          axis === "clinical"
-            ? "var(--axis-clinical)"
-            : "var(--axis-communication)",
+          axis === "clinical" ? "var(--axis-clinical)" : "var(--axis-communication)",
       }}
     />
   );
@@ -601,26 +798,30 @@ function RubricRow({ item }: { item: RubricItem }) {
           ) : null}
         </div>
       </div>
-      <CitationPill
-        citationId={item.citationId}
-        lang={lang}
-        section={item.section}
-      />
+      <CitationPill citationId={item.citationId} lang={lang} section={item.section} />
     </li>
   );
 }
 
-function CoverageStrip() {
+function CoverageStrip({ draft }: { draft: DraftBundle }) {
   const { t } = useTranslation();
+  const complete = draft.coveredDomains >= 6;
   return (
     <div className="rounded-control border border-border bg-bg-subtle p-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
         {t("authoring.editor.coverage")}
       </p>
       <ul className="mt-2 flex flex-wrap gap-1.5">
-        {domainCoverage.map((d) => (
+        {draft.coverage.map((d) => (
           <li key={d.domain}>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] font-medium text-fg">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                d.items > 0
+                  ? "border-border bg-surface text-fg"
+                  : "border-dashed border-border text-muted",
+              )}
+            >
               <AxisMark axis={d.axis} />
               {t(`feedback.domains.${d.domain}`)}
               <span className="font-mono text-muted">{d.items}</span>
@@ -628,9 +829,19 @@ function CoverageStrip() {
           </li>
         ))}
       </ul>
-      <p className="mt-2 inline-flex items-center gap-1 text-[11px] text-[color:var(--state-normal)]">
+      <p
+        className={cn(
+          "mt-2 inline-flex items-center gap-1 text-[11px]",
+          complete ? "text-[color:var(--state-normal)]" : "text-muted",
+        )}
+      >
         <CheckCircle weight="fill" className="h-3 w-3" aria-hidden />
-        {t("authoring.editor.coverageComplete")}
+        {complete
+          ? t("authoring.editor.coverageComplete")
+          : t("authoringP9.editor.coveragePartial", {
+              defaultValue: "{{count}} of 6 competency domains covered",
+              count: draft.coveredDomains,
+            })}
       </p>
     </div>
   );
@@ -644,11 +855,13 @@ function ReviewPanel({
   dispatch: Dispatcher;
 }) {
   const { t } = useTranslation();
-  const total = lockedFacts.length;
-  const locked = lockedCount(state.facts);
-  const blockers = publishBlockers(state.facts).length;
+  if (!state.draft) return <NeedsDraft dispatch={dispatch} />;
+  const draft = state.draft;
+  const total = draft.facts.length;
+  const locked = lockedCount(draft.facts, state.edits);
+  const blockers = publishBlockers(draft.facts, state.edits).length;
   const clear = blockers === 0;
-  const liveHash = caseFingerprint(state.facts);
+  const liveHash = caseFingerprint(draft.facts, state.edits);
 
   return (
     <div className="flex flex-col gap-4">
@@ -677,15 +890,12 @@ function ReviewPanel({
           </div>
           <p className="text-xs text-muted">{t("authoring.editor.factsSub")}</p>
           <ul className="flex flex-col gap-2.5">
-            {lockedFacts.map((f) => (
+            {draft.facts.map((f) => (
               <FactCard
                 key={f.id}
                 fact={f}
                 edit={
-                  state.facts[f.id] ?? {
-                    status: f.status,
-                    humanEdited: f.humanEdited,
-                  }
+                  state.edits[f.id] ?? { status: f.status, humanEdited: f.humanEdited }
                 }
                 dispatch={dispatch}
               />
@@ -699,13 +909,11 @@ function ReviewPanel({
             <h3 className="text-sm font-semibold tracking-tight text-fg">
               {t("authoring.editor.rubricHeading")}
             </h3>
-            <p className="mt-1 text-xs text-muted">
-              {t("authoring.editor.rubricSub")}
-            </p>
+            <p className="mt-1 text-xs text-muted">{t("authoring.editor.rubricSub")}</p>
           </div>
-          <CoverageStrip />
+          <CoverageStrip draft={draft} />
           <ul className="flex flex-col gap-2.5">
-            {rubricItems.map((item) => (
+            {draft.rubric.map((item) => (
               <RubricRow key={item.id} item={item} />
             ))}
           </ul>
@@ -726,9 +934,7 @@ function ReviewPanel({
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
               {t("authoring2.editor.liveHash")}
             </p>
-            <p className="text-[11px] text-muted">
-              {t("authoring2.editor.liveHashNote")}
-            </p>
+            <p className="text-[11px] text-muted">{t("authoring2.editor.liveHashNote")}</p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1.5">
@@ -760,12 +966,21 @@ function ReviewPanel({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Psychometric stage                                                          */
+/* Psychometric stage — honest, draft-derived readiness signals                */
 /* -------------------------------------------------------------------------- */
 
-function PsychometricPanel({ dispatch }: { dispatch: Dispatcher }) {
+function PsychometricPanel({
+  state,
+  dispatch,
+}: {
+  state: AuthoringUIState;
+  dispatch: Dispatcher;
+}) {
   const { t } = useTranslation();
   const lang = useLang();
+  if (!state.draft) return <NeedsDraft dispatch={dispatch} />;
+  const signals = readinessSignals(state.draft);
+
   return (
     <Card padding="lg" className="flex flex-col gap-4">
       <div>
@@ -776,11 +991,14 @@ function PsychometricPanel({ dispatch }: { dispatch: Dispatcher }) {
           </h3>
         </div>
         <p className="mt-1 max-w-xl text-xs text-muted">
-          {t("authoring.psychometric.sub")}
+          {t("authoringP9.psychometric.sub", {
+            defaultValue:
+              "Real, checkable properties of this draft the reviewer weighs before sign-off — not a public metric.",
+          })}
         </p>
       </div>
       <ul className="grid gap-3 sm:grid-cols-2">
-        {peerReviewSignals.map((s) => (
+        {signals.map((s) => (
           <li key={s.id}>
             <Card variant="inset" padding="sm" className="relative h-full">
               <StatusDot
@@ -789,12 +1007,7 @@ function PsychometricPanel({ dispatch }: { dispatch: Dispatcher }) {
                 aria-hidden="true"
                 className="absolute right-3 top-3.5"
               />
-              <Stat
-                label={t(s.labelKey)}
-                value={s.value}
-                size="md"
-                hint={s.note[lang]}
-              />
+              <Stat label={s.label[lang]} value={s.value} size="md" hint={s.note[lang]} />
             </Card>
           </li>
         ))}
@@ -813,26 +1026,29 @@ function PsychometricPanel({ dispatch }: { dispatch: Dispatcher }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Publish stage — the credentialed clinician sign-off gate                    */
+/* Publish stage — the credentialed clinician sign-off gate (real identity)    */
 /* -------------------------------------------------------------------------- */
 
-function LocaleStatus({ loc }: { loc: ContentLocale }) {
+function LocaleStatus({
+  locale,
+  reviewed,
+  reviewerName,
+}: {
+  locale: "en" | "tr";
+  reviewed: boolean;
+  reviewerName: string;
+}) {
   const { t } = useTranslation();
-  const reviewed = loc.status === "reviewed";
   return (
     <li className="flex items-center justify-between gap-2 rounded-control border border-border bg-surface px-3 py-2">
       <span className="inline-flex items-center gap-2">
-        <span className="font-mono text-xs font-semibold uppercase text-fg">
-          {loc.locale}
-        </span>
-        <span className="text-sm text-muted">
-          {t(`authoring.signoff.locale.${loc.locale}`)}
-        </span>
+        <span className="font-mono text-xs font-semibold uppercase text-fg">{locale}</span>
+        <span className="text-sm text-muted">{t(`authoring.signoff.locale.${locale}`)}</span>
       </span>
       {reviewed ? (
         <Badge tone="normal">
           <CheckCircle weight="fill" className="h-3 w-3" aria-hidden />
-          {t("authoring.signoff.localeReviewed", { name: loc.reviewer ?? "" })}
+          {t("authoring.signoff.localeReviewed", { name: reviewerName })}
         </Badge>
       ) : (
         <Badge tone="caution">
@@ -844,20 +1060,52 @@ function LocaleStatus({ loc }: { loc: ContentLocale }) {
   );
 }
 
+function SignInToCoSign() {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-control border border-dashed border-border bg-bg-subtle p-4">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-bg-subtle text-muted" aria-hidden>
+          <SignIn weight="bold" className="h-5 w-5" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-fg">
+            {t("authoringP9.signoff.needIdentity", { defaultValue: "Sign in to co-sign" })}
+          </p>
+          <p className="mt-0.5 max-w-md text-xs text-muted">
+            {t("authoringP9.signoff.needIdentitySub", {
+              defaultValue:
+                "The publish gate records the authenticated clinician's real name and role. Complete your profile to co-sign — no name is fabricated on your behalf.",
+            })}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SignOffPanel({
   state,
   dispatch,
+  reviewer,
+  onPublish,
 }: {
   state: AuthoringUIState;
   dispatch: Dispatcher;
+  reviewer: ReviewerIdentity | null;
+  onPublish: () => void;
 }) {
   const { t } = useTranslation();
   const lang = useLang();
-  const blockers = publishBlockers(state.facts);
+  if (!state.draft) return <NeedsDraft dispatch={dispatch} />;
+  const draft = state.draft;
+
+  const blockers = publishBlockers(draft.facts, state.edits);
   const clear = blockers.length === 0;
-  const canPublish = state.cosigned && clear;
-  const caseHash = state.frozen?.caseHash ?? caseFingerprint(state.facts);
-  const rubricHash = state.frozen?.rubricHash ?? rubricFingerprint();
+  const canPublish = state.cosigned && clear && !!reviewer;
+  const caseHash = state.frozen?.caseHash ?? caseFingerprint(draft.facts, state.edits);
+  const rubricHash = state.frozen?.rubricHash ?? rubricFingerprint(draft.rubric);
+  const otherLocale: "en" | "tr" = lang === "en" ? "tr" : "en";
 
   return (
     <Card padding="lg" className="flex flex-col gap-5">
@@ -869,9 +1117,7 @@ function SignOffPanel({
               {t("authoring.signoff.heading")}
             </h3>
           </div>
-          <p className="mt-1 max-w-xl text-xs text-muted">
-            {t("authoring.signoff.sub")}
-          </p>
+          <p className="mt-1 max-w-xl text-xs text-muted">{t("authoring.signoff.sub")}</p>
         </div>
         {state.published ? (
           <Badge tone="normal">
@@ -886,26 +1132,23 @@ function SignOffPanel({
         )}
       </div>
 
-      {/* Per-locale review status */}
+      {/* Per-locale review status — attested by the real reviewer, in their locale */}
       <div>
         <div className="flex items-center gap-1.5">
-          <GlobeHemisphereWest
-            weight="bold"
-            className="h-4 w-4 text-brand"
-            aria-hidden
-          />
+          <GlobeHemisphereWest weight="bold" className="h-4 w-4 text-brand" aria-hidden />
           <h4 className="text-sm font-semibold tracking-tight text-fg">
             {t("authoring.signoff.localeHeading")}
           </h4>
         </div>
         <ul className="mt-2 flex flex-col gap-2">
-          {sampleBlueprint.contentLocales.map((loc) => (
-            <LocaleStatus key={loc.locale} loc={loc} />
-          ))}
+          <LocaleStatus
+            locale={lang}
+            reviewed={state.published}
+            reviewerName={reviewer?.name ?? ""}
+          />
+          <LocaleStatus locale={otherLocale} reviewed={false} reviewerName="" />
         </ul>
-        <p className="mt-2 text-[11px] text-muted">
-          {t("authoring.signoff.localeNote")}
-        </p>
+        <p className="mt-2 text-[11px] text-muted">{t("authoring.signoff.localeNote")}</p>
       </div>
 
       {/* Live fact-lock read-out (reflects the review stage) */}
@@ -920,9 +1163,7 @@ function SignOffPanel({
         <span
           className={cn(
             "mt-0.5 shrink-0",
-            clear
-              ? "text-[color:var(--state-normal)]"
-              : "text-[color:var(--state-warning)]",
+            clear ? "text-[color:var(--state-normal)]" : "text-[color:var(--state-warning)]",
           )}
           aria-hidden
         >
@@ -948,119 +1189,104 @@ function SignOffPanel({
           </p>
         </div>
         <DescriptionList divided className="mt-2">
-          <KeyValue
-            label={t("authoring.signoff.caseHash")}
-            value={caseHash}
-            mono
-          />
-          <KeyValue
-            label={t("authoring.signoff.rubricHash")}
-            value={rubricHash}
-            mono
-          />
+          <KeyValue label={t("authoring.signoff.caseHash")} value={caseHash} mono />
+          <KeyValue label={t("authoring.signoff.rubricHash")} value={rubricHash} mono />
         </DescriptionList>
         <p className="mt-2 text-[11px] text-muted">
           {state.published
             ? t("authoring2.signoff.frozenNote")
             : t("authoring2.signoff.liveHashNote")}
         </p>
-        <p className="mt-1 text-[11px] text-muted">
-          {t("authoring.signoff.guidelineSet")}: {versionHashes.guidelineSet}
-        </p>
+        {draft.blueprint.guidelineSet ? (
+          <p className="mt-1 text-[11px] text-muted">
+            {t("authoring.signoff.guidelineSet")}: {draft.blueprint.guidelineSet}
+          </p>
+        ) : null}
       </div>
 
-      {/* Credentialed clinician co-sign */}
-      <div className="rounded-control border border-border bg-surface p-4">
-        <div className="flex items-start gap-3">
-          <span
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-brand-tint text-brand"
-            aria-hidden
-          >
-            <Certificate weight="bold" className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-fg">
-              {signOffClinician.name}
-            </p>
-            <p className="text-xs text-muted">
-              {signOffClinician.credential[lang]}
-            </p>
-            <p className="mt-0.5 font-mono text-[11px] text-muted">
-              {signOffClinician.registration}
-              {" · "}
-              {signOffClinician.role[lang]}
-            </p>
+      {/* Credentialed clinician co-sign — the REAL authenticated identity */}
+      {reviewer ? (
+        <div className="rounded-control border border-border bg-surface p-4">
+          <div className="flex items-start gap-3">
+            <span
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-brand-tint text-brand"
+              aria-hidden
+            >
+              <Certificate weight="bold" className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-fg">{reviewer.name}</p>
+              <p className="text-xs text-muted">
+                {reviewer.role[lang]}
+                {reviewer.specialty ? ` · ${reviewer.specialty}` : ""}
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted">{reviewer.institution}</p>
+            </div>
           </div>
-        </div>
 
-        {!state.published ? (
-          <label
-            className={cn(
-              "mt-4 flex items-start gap-3 rounded-control border p-3 cursor-pointer transition-colors",
-              state.cosigned
-                ? "border-brand bg-brand-tint"
-                : "border-border bg-bg-subtle hover:bg-surface",
-            )}
-          >
-            <input
-              type="checkbox"
-              checked={state.cosigned}
-              onChange={(e) =>
-                dispatch({ type: "cosign", value: e.target.checked })
-              }
-              className="mt-0.5 h-5 w-5 shrink-0 accent-[color:var(--brand-600)]"
-            />
-            <span className="flex items-center gap-1.5 text-sm text-fg">
-              <Signature
-                weight="bold"
-                className="h-4 w-4 shrink-0 text-brand"
+          {!state.published ? (
+            <label
+              className={cn(
+                "mt-4 flex items-start gap-3 rounded-control border p-3 cursor-pointer transition-colors",
+                state.cosigned
+                  ? "border-brand bg-brand-tint"
+                  : "border-border bg-bg-subtle hover:bg-surface",
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={state.cosigned}
+                onChange={(e) => dispatch({ type: "cosign", value: e.target.checked })}
+                className="mt-0.5 h-5 w-5 shrink-0 accent-[color:var(--brand-600)]"
+              />
+              <span className="flex items-center gap-1.5 text-sm text-fg">
+                <Signature weight="bold" className="h-4 w-4 shrink-0 text-brand" aria-hidden />
+                {t("authoring.signoff.cosignLabel")}
+              </span>
+            </label>
+          ) : (
+            <div className="mt-4 flex items-center gap-2 rounded-control border border-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_8%,transparent)] p-3">
+              <SealCheck
+                weight="fill"
+                className="h-5 w-5 shrink-0 text-[color:var(--state-normal)]"
                 aria-hidden
               />
-              {t("authoring.signoff.cosignLabel")}
-            </span>
-          </label>
-        ) : (
-          <div className="mt-4 flex items-center gap-2 rounded-control border border-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_8%,transparent)] p-3">
-            <SealCheck
-              weight="fill"
-              className="h-5 w-5 shrink-0 text-[color:var(--state-normal)]"
-              aria-hidden
-            />
-            <p className="text-sm text-fg">
-              {t("authoring.signoff.signedConfirmation", {
-                name: signOffClinician.name,
-              })}
-            </p>
-          </div>
-        )}
-      </div>
+              <p className="text-sm text-fg">
+                {t("authoring.signoff.signedConfirmation", { name: reviewer.name })}
+              </p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <SignInToCoSign />
+      )}
 
       {/* Provenance citations */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
-          {t("authoring.signoff.groundedOn")}
-        </span>
-        <CitationPill citationId="esc-acs-2023" lang={lang} />
-        <CitationPill citationId="nice-ng185" lang={lang} />
-        <CitationPill citationId="tepdad-em" lang={lang} />
-      </div>
+      {draft.caseInstance.expectedWorkup.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
+            {t("authoring.signoff.groundedOn")}
+          </span>
+          {Array.from(new Set(draft.facts.map((f) => f.citationId)))
+            .slice(0, 4)
+            .map((id) => (
+              <CitationPill key={id} citationId={id} lang={lang} />
+            ))}
+        </div>
+      ) : null}
 
       {/* Publish action — hard-gated */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="max-w-md text-xs text-muted">
-          {t("authoring.signoff.modelProvenance")}
-        </p>
+        <p className="max-w-md text-xs text-muted">{t("authoring.signoff.modelProvenance")}</p>
         {state.published ? (
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="secondary"
               size="md"
-              onClick={() => dispatch({ type: "unpublish" })}
-              leadingIcon={
-                <ArrowCounterClockwise weight="bold" className="h-4 w-4" />
-              }
+              onClick={() => dispatch({ type: "reset" })}
+              leadingIcon={<ArrowCounterClockwise weight="bold" className="h-4 w-4" />}
             >
-              {t("authoring.signoff.unpublish")}
+              {t("authoringP9.signoff.authorAnother", { defaultValue: "Author another case" })}
             </Button>
             <Button
               size="md"
@@ -1079,7 +1305,7 @@ function SignOffPanel({
           <Button
             size="md"
             disabled={!canPublish}
-            onClick={() => dispatch({ type: "publish" })}
+            onClick={onPublish}
             leadingIcon={<RocketLaunch weight="fill" className="h-4 w-4" />}
           >
             {t("authoring.signoff.publish")}
@@ -1088,9 +1314,13 @@ function SignOffPanel({
       </div>
       {!canPublish && !state.published ? (
         <p role="status" className="text-[11px] text-[color:var(--state-warning)]">
-          {!clear
-            ? t("authoring.signoff.blockedByFacts")
-            : t("authoring.signoff.blockedByCosign")}
+          {!reviewer
+            ? t("authoringP9.signoff.blockedByIdentity", {
+                defaultValue: "Publish is blocked until an authenticated clinician can co-sign.",
+              })
+            : !clear
+              ? t("authoring.signoff.blockedByFacts")
+              : t("authoring.signoff.blockedByCosign")}
         </p>
       ) : null}
     </Card>
@@ -1098,34 +1328,8 @@ function SignOffPanel({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Monitor stage                                                               */
+/* Monitor stage — reads the persisted store; Open/Review wired                */
 /* -------------------------------------------------------------------------- */
-
-function MonitorStatus({ pub, isNew }: { pub: PublishedCase; isNew: boolean }) {
-  const { t } = useTranslation();
-  if (isNew) {
-    return (
-      <Badge tone="brand" icon={<Sparkle weight="fill" className="h-3 w-3" aria-hidden />}>
-        {t("authoring2.monitor.newBadge")}
-      </Badge>
-    );
-  }
-  if (pub.status === "flagged") {
-    return (
-      <Badge tone="caution" icon={<WarningCircle weight="fill" className="h-3 w-3" aria-hidden />}>
-        {t("authoring.monitor.status.flagged")}
-      </Badge>
-    );
-  }
-  if (pub.status === "en-only") {
-    return <Badge tone="neutral">{t("authoring.monitor.status.enOnly")}</Badge>;
-  }
-  return (
-    <Badge tone="normal" icon={<CheckCircle weight="fill" className="h-3 w-3" aria-hidden />}>
-      {t("authoring.monitor.status.live")}
-    </Badge>
-  );
-}
 
 function MonitorLocales({ pub }: { pub: PublishedCase }) {
   const { t } = useTranslation();
@@ -1141,9 +1345,7 @@ function MonitorLocales({ pub }: { pub: PublishedCase }) {
                 : "border-dashed border-border text-muted",
             )}
             title={t(
-              l.offered
-                ? "authoring.monitor.localeOffered"
-                : "authoring.monitor.localePending",
+              l.offered ? "authoring.monitor.localeOffered" : "authoring.monitor.localePending",
             )}
           >
             {l.offered ? (
@@ -1161,14 +1363,19 @@ function MonitorLocales({ pub }: { pub: PublishedCase }) {
 
 function MonitorRow({
   pub,
-  isNew = false,
+  encounters,
+  isNew,
+  onOpen,
+  onReview,
 }: {
   pub: PublishedCase;
-  isNew?: boolean;
+  encounters: number;
+  isNew: boolean;
+  onOpen: (pub: PublishedCase) => void;
+  onReview: (pub: PublishedCase) => void;
 }) {
   const { t } = useTranslation();
   const lang = useLang();
-  const flagged = pub.status === "flagged";
 
   return (
     <Tr className={isNew ? "bg-brand-tint" : undefined}>
@@ -1187,75 +1394,241 @@ function MonitorRow({
                 : t("authoring.monitor.lastReviewed", { date: pub.lastReviewed })}
             </span>
           </span>
-          {flagged && pub.flagReason ? (
-            <span className="mt-0.5 inline-flex items-start gap-1 text-[11px] text-[color:var(--state-warning)]">
-              <ArrowClockwise weight="bold" className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-              {pub.flagReason[lang]}
-            </span>
-          ) : null}
         </div>
       </Td>
       <Td>
         <MonitorLocales pub={pub} />
       </Td>
-      <Td numeric>{pub.encounters}</Td>
+      <Td numeric>{encounters}</Td>
       <Td>
-        <MonitorStatus pub={pub} isNew={isNew} />
+        {isNew ? (
+          <Badge tone="brand" icon={<Sparkle weight="fill" className="h-3 w-3" aria-hidden />}>
+            {t("authoring2.monitor.newBadge")}
+          </Badge>
+        ) : (
+          <Badge tone="normal" icon={<CheckCircle weight="fill" className="h-3 w-3" aria-hidden />}>
+            {t("authoring.monitor.status.live")}
+          </Badge>
+        )}
       </Td>
       <Td className="text-right">
-        <Button
-          size="sm"
-          variant={flagged ? "primary" : "secondary"}
-          trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
-        >
-          {flagged ? t("authoring.monitor.review") : t("authoring.monitor.open")}
-        </Button>
+        <div className="inline-flex items-center justify-end gap-1.5">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onReview(pub)}
+            leadingIcon={<Eye weight="bold" className="h-4 w-4" />}
+          >
+            {t("authoringP9.monitor.review", { defaultValue: "Review" })}
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => onOpen(pub)}
+            trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
+          >
+            {t("authoring.monitor.open")}
+          </Button>
+        </div>
       </Td>
     </Tr>
   );
 }
 
+function CasePreview({
+  pub,
+  onOpen,
+  onRemove,
+  onClose,
+}: {
+  pub: PublishedCase;
+  onOpen: (pub: PublishedCase) => void;
+  onRemove: (id: string) => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const lang = useLang();
+  return (
+    <Card padding="lg" className="flex flex-col gap-4 border-brand">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <SectionLabel icon={<Eye weight="bold" className="h-3.5 w-3.5" aria-hidden />}>
+            {t("authoringP9.preview.eyebrow", { defaultValue: "Published case detail" })}
+          </SectionLabel>
+          <h3 className="mt-1 text-base font-semibold tracking-tight text-fg">
+            {pub.title[lang]}
+          </h3>
+          <p className="mt-0.5 text-xs text-muted">{pub.chiefComplaint[lang]}</p>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={onClose}
+          aria-label={t("authoringP9.preview.close", { defaultValue: "Close preview" })}
+          leadingIcon={<X weight="bold" className="h-4 w-4" />}
+        >
+          {t("authoringP9.preview.close", { defaultValue: "Close preview" })}
+        </Button>
+      </div>
+
+      <DescriptionList divided>
+        <KeyValue
+          label={t("authoringP9.blueprint.diagnosis", { defaultValue: "Working diagnosis" })}
+          value={pub.diagnosis[lang]}
+        />
+        {pub.codeLabel ? (
+          <KeyValue
+            label={t("authoringP9.blueprint.code", { defaultValue: "Diagnosis code" })}
+            value={pub.codeLabel}
+            mono
+          />
+        ) : null}
+        <KeyValue
+          label={t("authoring.blueprint.difficulty")}
+          value={`${pub.difficulty} · ${pub.difficultyBand[lang]}`}
+        />
+        <KeyValue label={t("authoring.signoff.caseHash")} value={pub.versionHash} mono />
+        <KeyValue label={t("authoring.signoff.rubricHash")} value={pub.rubricHash} mono />
+        <KeyValue
+          label={t("authoringP9.preview.cosigner", { defaultValue: "Co-signed by" })}
+          value={`${pub.reviewer.name} · ${pub.reviewer.role[lang]}`}
+        />
+        <KeyValue
+          label={t("authoringP9.preview.publishedAt", { defaultValue: "Published" })}
+          value={new Date(pub.publishedAt).toLocaleString()}
+        />
+        {pub.guidelineSet ? (
+          <KeyValue label={t("authoring.signoff.guidelineSet")} value={pub.guidelineSet} />
+        ) : null}
+      </DescriptionList>
+
+      <div className="grid grid-cols-3 gap-2">
+        <Card variant="inset" padding="sm">
+          <Stat label={t("authoring3.draft.factsLabel")} value={pub.factCount} size="sm" />
+        </Card>
+        <Card variant="inset" padding="sm">
+          <Stat
+            label={t("authoringP9.preview.rubricItems", { defaultValue: "Rubric items" })}
+            value={pub.rubricItemCount}
+            size="sm"
+          />
+        </Card>
+        <Card variant="inset" padding="sm">
+          <Stat
+            label={t("authoring.editor.safetyCritical")}
+            value={pub.safetyCriticalCount}
+            size="sm"
+          />
+        </Card>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onRemove(pub.id)}
+          leadingIcon={<Trash weight="bold" className="h-4 w-4" />}
+        >
+          {t("authoringP9.preview.remove", { defaultValue: "Remove from library" })}
+        </Button>
+        <Button
+          size="md"
+          onClick={() => onOpen(pub)}
+          trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
+        >
+          {t("authoring.monitor.open")}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 function MonitorPanel({ state }: { state: AuthoringUIState }) {
   const { t } = useTranslation();
-  const justPublished: PublishedCase | null =
-    state.published && state.frozen
-      ? {
-          id: "pub-session",
-          title: sampleBlueprint.title,
-          versionHash: state.frozen.caseHash,
-          lastReviewed: "",
-          locales: [
-            { locale: "en", offered: true },
-            { locale: "tr", offered: false },
-          ],
-          status: "en-only",
-          flagReason: null,
-          encounters: 0,
-        }
-      : null;
+  const navigate = useNavigate();
+  const cases = usePublishedCases();
+  const records = useProgressRecords();
+  const [previewId, setPreviewId] = useState<string | null>(null);
+
+  const encountersFor = useCallback(
+    (caseId: string) => records.filter((r) => r.caseId === caseId).length,
+    [records],
+  );
+
+  const openCase = useCallback(
+    (pub: PublishedCase) => {
+      navigate("/encounter", { state: { caseInstance: pub.caseInstance } });
+    },
+    [navigate],
+  );
+
+  const removeCase = useCallback((id: string) => {
+    removePublishedCase(id);
+    setPreviewId((cur) => (cur === id ? null : cur));
+  }, []);
+
+  const preview = previewId ? cases.find((c) => c.id === previewId) ?? null : null;
+
+  if (cases.length === 0) {
+    return (
+      <Card padding="lg" className="flex flex-col items-start gap-3">
+        <span className="grid h-10 w-10 place-items-center rounded-control bg-bg-subtle text-muted" aria-hidden>
+          <FolderOpen weight="bold" className="h-5 w-5" />
+        </span>
+        <div>
+          <h3 className="text-sm font-semibold tracking-tight text-fg">
+            {t("authoringP9.monitor.emptyHeading", { defaultValue: "No cases published yet" })}
+          </h3>
+          <p className="mt-1 max-w-md text-xs text-muted">
+            {t("authoringP9.monitor.emptySub", {
+              defaultValue:
+                "Generate a blueprint, lock every grounded fact, and co-sign to publish your first case. Your published library and its counts appear here.",
+            })}
+          </p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
-    <TableWrap>
-      <Table aria-label={t("authoring3.monitor.tableLabel")}>
-        <THead>
-          <Tr>
-            <Th>{t("authoring3.monitor.colCase")}</Th>
-            <Th>{t("authoring3.monitor.colLocales")}</Th>
-            <Th numeric>{t("authoring3.monitor.colEncounters")}</Th>
-            <Th>{t("authoring3.monitor.colStatus")}</Th>
-            <Th className="text-right">
-              <span className="sr-only">{t("authoring3.monitor.colAction")}</span>
-            </Th>
-          </Tr>
-        </THead>
-        <TBody>
-          {justPublished ? <MonitorRow pub={justPublished} isNew /> : null}
-          {publishedCases.map((p) => (
-            <MonitorRow key={p.id} pub={p} />
-          ))}
-        </TBody>
-      </Table>
-    </TableWrap>
+    <div className="flex flex-col gap-4">
+      <TableWrap>
+        <Table aria-label={t("authoring3.monitor.tableLabel")}>
+          <THead>
+            <Tr>
+              <Th>{t("authoring3.monitor.colCase")}</Th>
+              <Th>{t("authoring3.monitor.colLocales")}</Th>
+              <Th numeric>{t("authoring3.monitor.colEncounters")}</Th>
+              <Th>{t("authoring3.monitor.colStatus")}</Th>
+              <Th className="text-right">
+                <span className="sr-only">{t("authoring3.monitor.colAction")}</span>
+              </Th>
+            </Tr>
+          </THead>
+          <TBody>
+            {cases.map((p) => (
+              <MonitorRow
+                key={p.id}
+                pub={p}
+                encounters={encountersFor(p.caseInstance.id)}
+                isNew={p.id === state.publishedId}
+                onOpen={openCase}
+                onReview={(pub) => setPreviewId(pub.id)}
+              />
+            ))}
+          </TBody>
+        </Table>
+      </TableWrap>
+
+      {preview ? (
+        <CasePreview
+          pub={preview}
+          onOpen={openCase}
+          onRemove={removeCase}
+          onClose={() => setPreviewId(null)}
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -1267,22 +1640,33 @@ function StagePanel({
   stageKey,
   state,
   dispatch,
+  reviewer,
+  onPublish,
 }: {
   stageKey: PipelineStage;
   state: AuthoringUIState;
   dispatch: Dispatcher;
+  reviewer: ReviewerIdentity | null;
+  onPublish: () => void;
 }) {
   switch (stageKey) {
     case "blueprint":
-      return <BlueprintCard />;
+      return <BlueprintPanel state={state} dispatch={dispatch} />;
     case "draft":
       return <DraftPanel state={state} dispatch={dispatch} />;
     case "review":
       return <ReviewPanel state={state} dispatch={dispatch} />;
     case "psychometric":
-      return <PsychometricPanel dispatch={dispatch} />;
+      return <PsychometricPanel state={state} dispatch={dispatch} />;
     case "publish":
-      return <SignOffPanel state={state} dispatch={dispatch} />;
+      return (
+        <SignOffPanel
+          state={state}
+          dispatch={dispatch}
+          reviewer={reviewer}
+          onPublish={onPublish}
+        />
+      );
     case "monitor":
       return <MonitorPanel state={state} />;
     default:
@@ -1296,21 +1680,24 @@ function StagePanel({
 
 /**
  * AuthoringPage — the educator case-authoring surface (Journey 7, AU-1/AU-2)
- * as a live, steppable pipeline.
+ * as a live, steppable pipeline over a REAL generated draft.
  *
- * The six-stage AI-drafts / human-authoritative pipeline is a real stepper: the
- * rail drives a single working panel. Blueprint and AI draft are read-only
- * context; the expert-review stage is the interactive core, where each
- * AI-drafted fact must be grounded and LOCKED before it can reach a learner and
- * an ungrounded (flagged) fact hard-blocks publish. A live case fingerprint
- * recomputes as facts change and freezes at sign-off. The publish stage is the
- * credentialed-clinician SIGN-OFF gate: publish stays disabled until every fact
- * is locked AND the clinician co-signs, enforced in the reducer, not in copy.
- * On publish the case + rubric freeze with version hashes and appear in the
- * monitor stage. Everything is SIM / synthetic and education only.
+ * The Blueprint stage takes a prompt (presentation family / specialty +
+ * difficulty) and generates a fresh synthetic case with `generateCase`; every
+ * downstream stage reflects that draft. Each AI-drafted fact must be grounded
+ * and LOCKED before it can reach a learner, and publish stays disabled until
+ * every fact is locked AND the AUTHENTICATED clinician (from profileStore, no
+ * fabricated name) co-signs — enforced in the reducer, not in copy. On publish
+ * the case + rubric freeze with version hashes and persist to a local store; the
+ * monitor list + counts read from that store, with Open handing the real case to
+ * the encounter workspace. Everything is SIM / synthetic and education only.
  */
 export function AuthoringPage() {
   const { t } = useTranslation();
+  const lang = useLang();
+  const profile = useProfile();
+  const reviewer = useMemo(() => reviewerFromProfile(profile), [profile]);
+
   const [state, dispatch] = useReducer(
     authoringReducer,
     undefined,
@@ -1320,6 +1707,23 @@ export function AuthoringPage() {
   const wizard = useEntry(0.06);
   const panelReveal = useEntry(0.04);
   const currentStage = pipelineStages[state.stageIndex];
+
+  const handlePublish = useCallback(() => {
+    const draft = state.draft;
+    if (!draft || !reviewer) return;
+    if (!(state.cosigned && factsClear(draft.facts, state.edits))) return;
+    const caseHash = caseFingerprint(draft.facts, state.edits);
+    const rubricHash = rubricFingerprint(draft.rubric);
+    const saved = publishCase({
+      draft,
+      edits: state.edits,
+      reviewer,
+      reviewedLocale: lang,
+      caseHash,
+      rubricHash,
+    });
+    dispatch({ type: "publish", publishedId: saved.id, caseHash, rubricHash });
+  }, [state.draft, state.edits, state.cosigned, reviewer, lang]);
 
   return (
     <PageContainer width="wide" className="flex flex-col gap-8">
@@ -1348,9 +1752,7 @@ export function AuthoringPage() {
               variant="ghost"
               size="sm"
               onClick={() => dispatch({ type: "reset" })}
-              leadingIcon={
-                <ArrowCounterClockwise weight="bold" className="h-4 w-4" />
-              }
+              leadingIcon={<ArrowCounterClockwise weight="bold" className="h-4 w-4" />}
             >
               {t("authoring2.reset")}
             </Button>
@@ -1376,6 +1778,8 @@ export function AuthoringPage() {
             stageKey={currentStage.key}
             state={state}
             dispatch={dispatch}
+            reviewer={reviewer}
+            onPublish={handlePublish}
           />
         </motion.div>
       </motion.section>

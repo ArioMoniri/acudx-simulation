@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
-  Export,
   ShieldCheck,
   CheckCircle,
   Certificate,
   Eye,
   X,
+  DownloadSimple,
+  FileCsv,
+  Info,
 } from "@phosphor-icons/react";
 import {
   Card,
@@ -25,16 +27,35 @@ import {
 import { cn } from "@/lib/cn";
 import { useLang } from "@/lib/useLang";
 import { useReveal } from "@/lib/motion";
+import { useProgressRecords } from "@/state/progressStore";
 import {
   accreditationFrameworks,
   exportScopeOptions,
-  cohortLearners,
+  deriveEncounterRows,
+  buildAccreditationExport,
   HEATMAP_DOMAINS,
   FRAMEWORK_DOMAIN_TAG,
   type AccreditationFramework,
+  type EncounterRow,
 } from "@/data/institution";
 
 const SAMPLE_ROWS = 4;
+
+/** Serialize a string to a Blob and trigger a real browser download, then revoke. */
+function triggerDownload(filename: string, mime: string, content: string): void {
+  if (typeof document === "undefined" || typeof URL.createObjectURL !== "function")
+    return;
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 function FrameworkChip({
   fw,
@@ -90,16 +111,18 @@ function FrameworkChip({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Preview panel                                                               */
+/* Preview panel — shows exactly what the real file contains                   */
 /* -------------------------------------------------------------------------- */
 
 function PreviewPanel({
+  rows,
   selectedFrameworks,
   selectedScopes,
   deidentified,
   fairnessIncluded,
   onClose,
 }: {
+  rows: EncounterRow[];
   selectedFrameworks: AccreditationFramework[];
   selectedScopes: string[];
   deidentified: boolean;
@@ -116,8 +139,8 @@ function PreviewPanel({
   }, []);
 
   const crosswalkFw = selectedFrameworks[0];
-  const sample = cohortLearners.slice(0, SAMPLE_ROWS);
-  const moreCount = cohortLearners.length - sample.length;
+  const sample = rows.slice(0, SAMPLE_ROWS);
+  const moreCount = rows.length - sample.length;
 
   return (
     <motion.div
@@ -162,9 +185,11 @@ function PreviewPanel({
             : t("institution.export.preview.reidWarn")}
         </Badge>
         {fairnessIncluded ? (
-          <Badge tone="normal">
-            <ShieldCheck weight="fill" className="h-3 w-3" aria-hidden />
-            {t("institution.export.preview.fairnessAppended")}
+          <Badge tone="neutral">
+            <Info weight="fill" className="h-3 w-3" aria-hidden />
+            {t("institution.export.preview.fairnessInsufficient", {
+              defaultValue: "Fairness: insufficient data note appended",
+            })}
           </Badge>
         ) : null}
       </div>
@@ -218,60 +243,74 @@ function PreviewPanel({
                   className="h-3 w-3 text-[color:var(--state-normal)]"
                   aria-hidden
                 />
-                {t(opt.labelKey)}
+                {t(opt.labelKey, { defaultValue: opt.labelDefault })}
               </li>
             );
           })}
         </ul>
       </div>
 
-      {/* De-identified sample rows */}
+      {/* De-identified sample rows (real) */}
       <div>
         <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">
           {t("institution.export.preview.sampleHeading")}
         </p>
-        <TableWrap>
-          <Table className="text-xs">
-            <caption className="sr-only">
-              {t("institution.export.preview.sampleCaption")}
-            </caption>
-            <THead>
-              <Tr>
-                <Th>{t("institution.heatmap.learnerCol")}</Th>
-                <Th>{t("institution.heatmap.sectionCol")}</Th>
-                {HEATMAP_DOMAINS.map((d) => (
-                  <Th key={d.key}>{t(`feedback.domains.${d.key}`)}</Th>
-                ))}
-              </Tr>
-            </THead>
-            <TBody>
-              {sample.map((learner) => (
-                <Tr key={learner.id}>
-                  <Td className="font-mono font-medium text-fg">
-                    {learner.handle}
-                  </Td>
-                  <Td className="whitespace-nowrap text-muted">
-                    {t(`institution.section.${learner.sectionKey}`)}
-                  </Td>
-                  {HEATMAP_DOMAINS.map((d) => (
-                    <Td key={d.key} className="whitespace-nowrap text-fg">
-                      {t(`bands.${learner.cells[d.key].band}`)}
-                    </Td>
+        {sample.length > 0 ? (
+          <>
+            <TableWrap>
+              <Table className="text-xs">
+                <caption className="sr-only">
+                  {t("institution.export.preview.sampleCaption")}
+                </caption>
+                <THead>
+                  <Tr>
+                    <Th>
+                      {t("institution.heatmap.encounterCol", {
+                        defaultValue: "Encounter",
+                      })}
+                    </Th>
+                    {HEATMAP_DOMAINS.map((d) => (
+                      <Th key={d.key}>{t(`feedback.domains.${d.key}`)}</Th>
+                    ))}
+                  </Tr>
+                </THead>
+                <TBody>
+                  {sample.map((row) => (
+                    <Tr key={row.id}>
+                      <Td className="font-mono font-medium text-fg">
+                        {row.handle}
+                      </Td>
+                      {HEATMAP_DOMAINS.map((d) => (
+                        <Td key={d.key} className="whitespace-nowrap text-fg">
+                          {t(`bands.${row.readouts[d.key].band}`)}
+                        </Td>
+                      ))}
+                    </Tr>
                   ))}
-                </Tr>
-              ))}
-            </TBody>
-          </Table>
-        </TableWrap>
-        <p className="mt-1 text-[11px] text-muted">
-          {t("institution.export.preview.sampleCaption")}
-          {moreCount > 0 ? (
-            <>
-              {" "}
-              {t("institution.export.preview.andMore", { count: moreCount })}
-            </>
-          ) : null}
-        </p>
+                </TBody>
+              </Table>
+            </TableWrap>
+            <p className="mt-1 text-[11px] text-muted">
+              {t("institution.export.preview.sampleOwnCaption", {
+                defaultValue:
+                  "A sample of your own de-identified encounter rows as they appear in the export. Handles are masked per-encounter codes.",
+              })}
+              {moreCount > 0 ? (
+                <>
+                  {" "}
+                  {t("institution.export.preview.andMore", { count: moreCount })}
+                </>
+              ) : null}
+            </p>
+          </>
+        ) : (
+          <p className="rounded-control border border-dashed border-border bg-surface px-3 py-4 text-[11px] text-muted">
+            {t("institution.export.preview.emptyRows", {
+              defaultValue:
+                "No encounters recorded yet. The export is still a genuine file: it carries the metadata, the selected framework crosswalk, and an empty record set.",
+            })}
+          </p>
+        )}
       </div>
 
       {/* Domain crosswalk for the first selected framework */}
@@ -297,25 +336,6 @@ function PreviewPanel({
           </ul>
         </div>
       ) : null}
-
-      {/* Download (demonstration only) */}
-      <div className="flex flex-col gap-1.5">
-        <Button
-          disabled={!fairnessIncluded}
-          leadingIcon={<Export weight="bold" className="h-4.5 w-4.5" />}
-        >
-          {t("institution.export.preview.download")}
-        </Button>
-        {fairnessIncluded ? (
-          <p className="text-[11px] text-muted">
-            {t("institution.export.preview.downloadNote")}
-          </p>
-        ) : (
-          <p role="status" className="text-[11px] text-[color:var(--state-caution)]">
-            {t("institution.export.blocked")}
-          </p>
-        )}
-      </div>
     </motion.div>
   );
 }
@@ -324,9 +344,12 @@ function PreviewPanel({
 /* Section                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/** AccreditationExport — framework-tagged, de-identified, previewable export builder (IN-3). */
+/** AccreditationExport — a real, framework-tagged, de-identified downloadable export from own records (IN-3). */
 export function AccreditationExport() {
   const { t } = useTranslation();
+  const records = useProgressRecords();
+  const rows = deriveEncounterRows(records);
+
   const [selectedFw, setSelectedFw] = useState<Set<string>>(
     () => new Set(["acgme", "epa", "tepdad"]),
   );
@@ -355,7 +378,7 @@ export function AccreditationExport() {
 
   const deidentified = scopes.has("deidentified");
   const fairnessIncluded = scopes.has("fairness");
-  const canPreview = selectedFw.size > 0;
+  const canBuild = selectedFw.size > 0;
 
   const selectedFrameworks = accreditationFrameworks.filter((f) =>
     selectedFw.has(f.id),
@@ -364,9 +387,32 @@ export function AccreditationExport() {
     .filter((o) => scopes.has(o.id))
     .map((o) => o.id);
 
+  function handleDownload(format: "json" | "csv") {
+    if (!canBuild) return;
+    const result = buildAccreditationExport(records, {
+      frameworkIds: [...selectedFw],
+      scopeIds: selectedScopes,
+      deidentified,
+      fairnessIncluded,
+    });
+    const stamp = new Date().toISOString().slice(0, 10);
+    if (format === "json") {
+      triggerDownload(
+        `${result.filenameBase}-${stamp}.json`,
+        "application/json",
+        result.json,
+      );
+    } else {
+      triggerDownload(
+        `${result.filenameBase}-${stamp}.csv`,
+        "text/csv;charset=utf-8",
+        result.csv,
+      );
+    }
+  }
+
   function closePreview() {
     setPreviewing(false);
-    // return focus to the trigger for keyboard users
     previewButtonRef.current?.focus();
   }
 
@@ -384,7 +430,10 @@ export function AccreditationExport() {
             {t("institution.export.title")}
           </h3>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            {t("institution.export.subtitle")}
+            {t("institution.export.ownSubtitle", {
+              defaultValue:
+                "Assemble a de-identified, framework-tagged export from your own recorded encounters. The evidence is crosswalked, never re-graded.",
+            })}
           </p>
         </div>
       </div>
@@ -410,34 +459,34 @@ export function AccreditationExport() {
       <div className="flex flex-col gap-2 rounded-control bg-bg-subtle p-3">
         {exportScopeOptions.map((opt) => {
           const on = scopes.has(opt.id);
-          const locked = opt.id === "deidentified" || opt.id === "fairness";
+          const secure = opt.id === "deidentified";
           return (
             <div key={opt.id} className="flex items-center justify-between gap-3">
               <label
                 htmlFor={`scope-${opt.id}`}
                 className="flex items-center gap-2 text-sm text-fg"
               >
-                {locked ? (
+                {secure ? (
                   <ShieldCheck
                     weight="bold"
                     className="h-3.5 w-3.5 shrink-0 text-brand"
                     aria-hidden
                   />
                 ) : null}
-                {t(opt.labelKey)}
+                {t(opt.labelKey, { defaultValue: opt.labelDefault })}
               </label>
               <Switch
                 id={`scope-${opt.id}`}
                 checked={on}
                 onCheckedChange={() => toggleScope(opt.id)}
-                aria-label={t(opt.labelKey)}
+                aria-label={t(opt.labelKey, { defaultValue: opt.labelDefault })}
               />
             </div>
           );
         })}
       </div>
 
-      {/* De-identification + fairness guarantees */}
+      {/* De-identification guarantee */}
       <div className="flex flex-wrap gap-2">
         <Badge tone={deidentified ? "normal" : "warning"}>
           <ShieldCheck weight="fill" className="h-3 w-3" aria-hidden />
@@ -445,36 +494,68 @@ export function AccreditationExport() {
             ? t("institution.export.deidentifiedOn")
             : t("institution.export.deidentifiedOff")}
         </Badge>
-        <Badge tone={fairnessIncluded ? "normal" : "caution"}>
-          <ShieldCheck weight="fill" className="h-3 w-3" aria-hidden />
-          {fairnessIncluded
-            ? t("institution.export.fairnessOn")
-            : t("institution.export.fairnessOff")}
+        <Badge tone="neutral">
+          {t("institution.export.contentSummary", {
+            count: rows.length,
+            frameworks: selectedFw.size,
+            defaultValue: "{{count}} encounters · {{frameworks}} frameworks",
+          })}
         </Badge>
       </div>
 
-      {/* Preview trigger */}
+      {/* Real download actions */}
       <div className="flex flex-col gap-2">
-        <Button
-          ref={previewButtonRef}
-          disabled={!canPreview}
-          aria-expanded={previewing}
-          onClick={() => setPreviewing((v) => !v)}
-          leadingIcon={<Eye weight="bold" className="h-4.5 w-4.5" />}
-        >
-          {previewing
-            ? t("institution.export.preview.close")
-            : t("institution.export.preview.open")}
-        </Button>
-        {!canPreview ? (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            disabled={!canBuild}
+            onClick={() => handleDownload("json")}
+            leadingIcon={<DownloadSimple weight="bold" className="h-4.5 w-4.5" />}
+          >
+            {t("institution.export.downloadJson", { defaultValue: "Download JSON" })}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!canBuild}
+            onClick={() => handleDownload("csv")}
+            leadingIcon={<FileCsv weight="bold" className="h-4.5 w-4.5" />}
+          >
+            {t("institution.export.downloadCsv", { defaultValue: "Download CSV" })}
+          </Button>
+          <Button
+            ref={previewButtonRef}
+            variant="ghost"
+            disabled={!canBuild}
+            aria-expanded={previewing}
+            onClick={() => setPreviewing((v) => !v)}
+            leadingIcon={<Eye weight="bold" className="h-4.5 w-4.5" />}
+          >
+            {previewing
+              ? t("institution.export.preview.close")
+              : t("institution.export.preview.open")}
+          </Button>
+        </div>
+        {!canBuild ? (
           <p role="status" className="text-xs text-[color:var(--state-caution)]">
             {t("institution.export.preview.selectFrameworks")}
           </p>
-        ) : null}
+        ) : (
+          <p className="text-[11px] text-muted">
+            {rows.length === 0
+              ? t("institution.export.emptyNote", {
+                  defaultValue:
+                    "No encounters recorded yet — the download is an honest empty export (metadata + crosswalk, no rows). It never leaves this device.",
+                })
+              : t("institution.export.downloadNote", {
+                  defaultValue:
+                    "Generates a genuine file on this device from your own records. Nothing is uploaded.",
+                })}
+          </p>
+        )}
       </div>
 
-      {previewing && canPreview ? (
+      {previewing && canBuild ? (
         <PreviewPanel
+          rows={rows}
           selectedFrameworks={selectedFrameworks}
           selectedScopes={selectedScopes}
           deidentified={deidentified}

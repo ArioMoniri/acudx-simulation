@@ -43,6 +43,7 @@ import { useEncounterState } from "@/state/encounterStore";
 import {
   buildEncounterRecord,
   deriveFeedbackGaps,
+  enqueueReview,
   deriveTreatmentBehaviors,
   hasMeaningfulProgress,
   recordEncounter,
@@ -234,12 +235,11 @@ export function FeedbackPage() {
 
   // Post-encounter CTAs — both act on THIS encounter's real context.
 
-  // "Schedule spaced repetition": the derived gaps (`gapList`) are the material
-  // a review queue would be seeded from, but neither progressStore nor the FSRS
-  // module (`data/progress.ts`, whose `reviewQueue` is a static seed and whose
-  // `scheduleReview` is a pure grader) exposes an enqueue write. So land the
-  // learner in the spaced-repetition section, where the FSRS queue is driven.
+  // "Schedule spaced repetition": persist this encounter's derived gaps into the
+  // real FSRS review queue (progressStore.enqueueReview — idempotent, preserves
+  // existing schedules), then land the learner in the spaced-repetition section.
   const handleScheduleSpacedRepetition = () => {
+    enqueueReview(gapList);
     navigate("/progress#spaced-review");
   };
 

@@ -22,7 +22,8 @@ import {
   AccreditationExport,
   FairnessNote,
 } from "@/components/institution";
-import { remediationRecords } from "@/data/institution";
+import { deriveRemediationSignals } from "@/data/institution";
+import { useProgressRecords } from "@/state/progressStore";
 
 /* -------------------------------------------------------------------------- */
 /* Section header tiers                                                         */
@@ -123,9 +124,8 @@ export function InstitutionPage() {
   const calibration = useEntry(0.18);
   const compliance = useEntry(0.22);
 
-  const openRemediation = remediationRecords.filter(
-    (r) => r.status.document !== "done",
-  ).length;
+  const records = useProgressRecords();
+  const detectedSignals = deriveRemediationSignals(records).length;
 
   return (
     <PageContainer width="wide" className="flex flex-col gap-12">
@@ -133,22 +133,39 @@ export function InstitutionPage() {
       <motion.div {...header}>
         <PageHeader
           tone="clinical"
-          eyebrow={t("institution.eyebrow")}
-          title={t("institution.title")}
-          description={t("institution.subtitle")}
+          eyebrow={t("institution.ownEyebrow", {
+            defaultValue: "Institution readiness",
+          })}
+          title={t("institution.ownTitle", {
+            defaultValue: "Your competency dashboard",
+          })}
+          description={t("institution.ownSubtitle", {
+            defaultValue:
+              "Your own recorded encounters, banded by competency domain, with the evidence you would take to accreditation. Multi-learner cohort analytics need a connected institution data source.",
+          })}
           meta={
             <span className="inline-flex items-center gap-1.5 text-xs text-muted">
               <Lock weight="bold" className="h-3.5 w-3.5" aria-hidden />
-              {t("institution.privacyBanner")}
+              {t("institution.ownPrivacyBanner", {
+                defaultValue:
+                  "Single-user, on-device view. Nothing here is uploaded or shared.",
+              })}
             </span>
           }
         />
       </motion.div>
 
       {/* KPIs */}
-      <motion.section {...kpis} aria-label={t("institution.kpi.sectionLabel")}>
+      <motion.section
+        {...kpis}
+        aria-label={t("institution.kpi.ownSectionLabel", {
+          defaultValue: "Your headline metrics",
+        })}
+      >
         <SectionLabel className="mb-3">
-          {t("institution.kpi.sectionLabel")}
+          {t("institution.kpi.ownSectionLabel", {
+            defaultValue: "Your headline metrics",
+          })}
         </SectionLabel>
         <KpiRow />
       </motion.section>
@@ -159,14 +176,20 @@ export function InstitutionPage() {
           id="inst-remediation"
           icon={Warning}
           eyebrow={t("institution.remediation.priorityEyebrow")}
-          title={t("institution.remediation.heading")}
-          subtitle={t("institution.remediation.headingSub")}
+          title={t("institution.remediation.ownHeading", {
+            defaultValue: "Detected gaps and remediation",
+          })}
+          subtitle={t("institution.remediation.ownHeadingSub", {
+            defaultValue:
+              "Recurring gaps detected from your own encounters. The closed remediation loop needs a connected institution data source.",
+          })}
           badge={
-            openRemediation > 0 ? (
+            detectedSignals > 0 ? (
               <Badge tone="warning" dot>
                 <WarningCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
-                {t("institution.remediation.openCount", {
-                  count: openRemediation,
+                {t("institution.remediation.detectedBadge", {
+                  count: detectedSignals,
+                  defaultValue: "{{count}} detected",
                 })}
               </Badge>
             ) : undefined

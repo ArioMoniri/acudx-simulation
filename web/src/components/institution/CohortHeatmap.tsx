@@ -7,11 +7,11 @@ import {
   Lock,
   CaretRight,
   Info,
+  WarningCircle,
   X,
 } from "@phosphor-icons/react";
 import {
   Card,
-  Button,
   Tooltip,
   Badge,
   TableWrap,
@@ -25,13 +25,13 @@ import {
 import { cn } from "@/lib/cn";
 import { useLang } from "@/lib/useLang";
 import { useReveal } from "@/lib/motion";
+import { useProgressRecords } from "@/state/progressStore";
 import {
-  cohortLearners,
+  deriveEncounterRows,
   HEATMAP_DOMAINS,
-  drillDatum,
   FRAMEWORK_DOMAIN_TAG,
-  type CohortLearner,
-  type HeatmapCell,
+  type EncounterRow,
+  type DomainReadout,
 } from "@/data/institution";
 import type { Band, FeedbackDomainKey } from "@/data/mock";
 import {
@@ -42,23 +42,34 @@ import {
 } from "./bandMeta";
 
 /* -------------------------------------------------------------------------- */
-/* Drill target                                                                */
+/* Small helpers                                                               */
 /* -------------------------------------------------------------------------- */
 
 interface DrillTarget {
-  learner: CohortLearner;
+  row: EncounterRow;
   domain: FeedbackDomainKey;
 }
 
-/** The learner's widest gap (lowest reliable band), the sensible default drill domain. */
-function weakestDomain(learner: CohortLearner): FeedbackDomainKey {
+/** The encounter's widest gap (lowest reliable band), the default drill domain. */
+function weakestDomain(row: EncounterRow): FeedbackDomainKey {
   const ranked = HEATMAP_DOMAINS.map((d) => ({
     key: d.key,
-    rank: BAND_RANK[learner.cells[d.key].band],
+    rank: BAND_RANK[row.readouts[d.key].band],
   }))
     .filter((x) => x.rank >= 0)
     .sort((a, b) => a.rank - b.rank);
   return ranked[0]?.key ?? HEATMAP_DOMAINS[0].key;
+}
+
+function shortDate(at: number, lang: string): string {
+  try {
+    return new Intl.DateTimeFormat(lang === "tr" ? "tr" : "en", {
+      day: "numeric",
+      month: "short",
+    }).format(new Date(at));
+  } catch {
+    return "";
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -72,22 +83,22 @@ function weakestDomain(learner: CohortLearner): FeedbackDomainKey {
  * withheld cell is an explicit reliability note, never a guessed band.
  */
 function HeatCell({
-  cell,
-  learner,
+  readout,
+  encounterHandle,
   domainName,
   active,
   onDrill,
 }: {
-  cell: HeatmapCell;
-  learner: CohortLearner;
+  readout: DomainReadout;
+  encounterHandle: string;
   domainName: string;
   active: boolean;
   onDrill: () => void;
 }) {
   const { t } = useTranslation();
-  const bandWord = t(`bands.${cell.band}`);
+  const bandWord = t(`bands.${readout.band}`);
 
-  if (cell.band === "withheld") {
+  if (readout.band === "withheld") {
     return (
       <td className="p-1">
         <button
@@ -95,7 +106,7 @@ function HeatCell({
           onClick={onDrill}
           aria-pressed={active}
           aria-label={t("institution.heatmap.cellWithheldAria", {
-            learner: learner.handle,
+            learner: encounterHandle,
             domain: domainName,
           })}
           className={cn(
@@ -113,9 +124,9 @@ function HeatCell({
     );
   }
 
-  const rank = BAND_RANK[cell.band];
-  const tint = BAND_CELL_TINT[cell.band as Exclude<Band, "withheld">];
-  const text = BAND_CELL_TEXT[cell.band as Exclude<Band, "withheld">];
+  const rank = BAND_RANK[readout.band];
+  const tint = BAND_CELL_TINT[readout.band as Exclude<Band, "withheld">];
+  const text = BAND_CELL_TEXT[readout.band as Exclude<Band, "withheld">];
 
   return (
     <td className="p-1">
@@ -123,11 +134,11 @@ function HeatCell({
         type="button"
         onClick={onDrill}
         aria-pressed={active}
-        aria-label={t("institution.heatmap.cellAria", {
-          learner: learner.handle,
+        aria-label={t("institution.heatmap.cellReadoutAria", {
+          learner: encounterHandle,
           domain: domainName,
           band: bandWord,
-          count: cell.encounters,
+          defaultValue: "{{learner}}, {{domain}}: {{band}}. Activate to inspect.",
         })}
         className={cn(
           "group flex h-full min-h-14 w-full flex-col items-center justify-center gap-1 rounded-control px-1 py-1.5",
@@ -138,7 +149,7 @@ function HeatCell({
         style={{ backgroundColor: tint, color: text }}
       >
         <span className="font-mono text-xs font-semibold leading-none">
-          {bandCode(cell.band)}
+          {bandCode(readout.band)}
         </span>
         {/* Ordinal fill bar — the shape/position channel (not colour-only) */}
         <span className="flex items-end gap-[2px]" aria-hidden>
@@ -166,13 +177,16 @@ function HeatCell({
 /* -------------------------------------------------------------------------- */
 
 function MatrixView({
+  rows,
   drill,
   onDrill,
 }: {
+  rows: EncounterRow[];
   drill: DrillTarget | null;
-  onDrill: (learner: CohortLearner, domain: FeedbackDomainKey) => void;
+  onDrill: (row: EncounterRow, domain: FeedbackDomainKey) => void;
 }) {
   const { t } = useTranslation();
+  const lang = useLang();
 
   return (
     <div
@@ -189,10 +203,12 @@ function MatrixView({
           <tr>
             <th
               scope="col"
-              className="sticky left-0 z-10 min-w-[9.5rem] bg-surface px-2 pb-2 text-left align-bottom"
+              className="sticky left-0 z-10 min-w-[10.5rem] bg-surface px-2 pb-2 text-left align-bottom"
             >
               <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-                {t("institution.heatmap.learnerCol")}
+                {t("institution.heatmap.encounterCol", {
+                  defaultValue: "Encounter",
+                })}
               </span>
             </th>
             {HEATMAP_DOMAINS.map((d) => (
@@ -224,37 +240,37 @@ function MatrixView({
           </tr>
         </thead>
         <tbody>
-          {cohortLearners.map((learner) => {
-            const rowActive = drill?.learner.id === learner.id;
+          {rows.map((row) => {
+            const rowActive = drill?.row.id === row.id;
             return (
-              <tr key={learner.id} className="group/row">
+              <tr key={row.id} className="group/row">
                 <th
                   scope="row"
-                  className="sticky left-0 z-10 min-w-[9.5rem] bg-surface py-1 pr-2 text-left"
+                  className="sticky left-0 z-10 min-w-[10.5rem] bg-surface py-1 pr-2 text-left"
                 >
                   <button
                     type="button"
-                    onClick={() => onDrill(learner, weakestDomain(learner))}
+                    onClick={() => onDrill(row, weakestDomain(row))}
                     aria-pressed={rowActive}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left transition-colors hover:bg-bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                       rowActive && "bg-bg-subtle",
                     )}
                     aria-label={t("institution.heatmap.drillLearnerAria", {
-                      learner: learner.handle,
+                      learner: row.handle,
                     })}
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block font-mono text-xs font-semibold text-fg">
-                        {learner.handle}
+                      <span className="block truncate text-xs font-semibold text-fg">
+                        {row.title[lang]}
                       </span>
-                      <span className="block text-[10px] text-muted">
-                        {t(`institution.section.${learner.sectionKey}`)}
+                      <span className="block font-mono text-[10px] text-muted">
+                        {row.handle}
                         {" · "}
-                        {learner.locale.toUpperCase()}
+                        {shortDate(row.at, lang)}
                       </span>
                     </span>
-                    {learner.atRisk ? (
+                    {row.safetyMiss ? (
                       <span
                         className="inline-flex shrink-0 items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--state-warning)]"
                         style={{
@@ -262,7 +278,9 @@ function MatrixView({
                             "color-mix(in srgb, var(--state-warning) 16%, transparent)",
                         }}
                       >
-                        {t("institution.heatmap.atRiskTag")}
+                        {t("institution.heatmap.safetyTag", {
+                          defaultValue: "Safety",
+                        })}
                       </span>
                     ) : null}
                     <CaretRight
@@ -275,11 +293,11 @@ function MatrixView({
                 {HEATMAP_DOMAINS.map((d) => (
                   <HeatCell
                     key={d.key}
-                    cell={learner.cells[d.key]}
-                    learner={learner}
+                    readout={row.readouts[d.key]}
+                    encounterHandle={row.handle}
                     domainName={t(`feedback.domains.${d.key}`)}
                     active={rowActive && drill?.domain === d.key}
-                    onDrill={() => onDrill(learner, d.key)}
+                    onDrill={() => onDrill(row, d.key)}
                   />
                 ))}
               </tr>
@@ -295,7 +313,6 @@ function MatrixView({
 /* Table equivalent (the non-graphical alternative, always available)         */
 /* -------------------------------------------------------------------------- */
 
-/** A band rendered as a compact swatch + word, so meaning is never colour-only. */
 function BandTag({ band, label }: { band: Band; label: string }) {
   if (band === "withheld") {
     return (
@@ -325,8 +342,9 @@ function BandTag({ band, label }: { band: Band; label: string }) {
   );
 }
 
-function TableView() {
+function TableView({ rows }: { rows: EncounterRow[] }) {
   const { t } = useTranslation();
+  const lang = useLang();
   return (
     <TableWrap>
       <Table>
@@ -335,44 +353,47 @@ function TableView() {
         </caption>
         <THead>
           <Tr>
-            <Th>{t("institution.heatmap.learnerCol")}</Th>
-            <Th>{t("institution.heatmap.sectionCol")}</Th>
+            <Th>
+              {t("institution.heatmap.encounterCol", {
+                defaultValue: "Encounter",
+              })}
+            </Th>
+            <Th>
+              {t("institution.heatmap.dateCol", { defaultValue: "Recorded" })}
+            </Th>
             {HEATMAP_DOMAINS.map((d) => (
               <Th key={d.key}>{t(`feedback.domains.${d.key}`)}</Th>
             ))}
           </Tr>
         </THead>
         <TBody>
-          {cohortLearners.map((learner) => (
-            <Tr key={learner.id}>
+          {rows.map((row) => (
+            <Tr key={row.id}>
               <Td>
                 <span className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-semibold text-fg">
-                    {learner.handle}
+                  <span className="max-w-[12rem] truncate text-xs font-semibold text-fg">
+                    {row.title[lang]}
                   </span>
-                  {learner.atRisk ? (
+                  {row.safetyMiss ? (
                     <Badge tone="warning" dot>
-                      {t("institution.heatmap.atRiskTag")}
+                      {t("institution.heatmap.safetyTag", {
+                        defaultValue: "Safety",
+                      })}
                     </Badge>
                   ) : null}
                 </span>
               </Td>
               <Td className="whitespace-nowrap text-xs text-muted">
-                {t(`institution.section.${learner.sectionKey}`)}
-                {" · "}
-                {learner.locale.toUpperCase()}
+                {shortDate(row.at, lang)}
               </Td>
-              {HEATMAP_DOMAINS.map((d) => {
-                const cell = learner.cells[d.key];
-                return (
-                  <Td key={d.key}>
-                    <BandTag
-                      band={cell.band}
-                      label={t(`bands.${cell.band}`)}
-                    />
-                  </Td>
-                );
-              })}
+              {HEATMAP_DOMAINS.map((d) => (
+                <Td key={d.key}>
+                  <BandTag
+                    band={row.readouts[d.key].band}
+                    label={t(`bands.${row.readouts[d.key].band}`)}
+                  />
+                </Td>
+              ))}
             </Tr>
           ))}
         </TBody>
@@ -425,7 +446,7 @@ function Legend() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Drill-down panel (cohort -> section -> learner -> domain -> evidence span)  */
+/* Drill-down panel — real per-domain readout for one recorded encounter       */
 /* -------------------------------------------------------------------------- */
 
 function DrillPanel({
@@ -442,25 +463,22 @@ function DrillPanel({
   const reveal = useReveal();
   const headingRef = useRef<HTMLHeadingElement>(null);
 
-  const { learner, domain } = drill;
-  const datum = drillDatum(learner, domain);
+  const { row, domain } = drill;
+  const readout = row.readouts[domain];
   const domainName = t(`feedback.domains.${domain}`);
-  const bandWord = t(`bands.${datum.band}`);
+  const bandWord = t(`bands.${readout.band}`);
   const acgmeTag = FRAMEWORK_DOMAIN_TAG.acgme[domain];
 
-  // Move focus to the panel heading when a new learner is opened, so keyboard
-  // and screen-reader users land on the detail. Domain switches are announced
-  // by the aria-live body rather than stealing focus each time.
   useEffect(() => {
     headingRef.current?.focus();
-  }, [learner.id]);
+  }, [row.id]);
 
   return (
     <motion.div
       {...reveal}
       role="region"
       aria-label={t("institution.heatmap.drill.regionLabel", {
-        learner: learner.handle,
+        learner: row.handle,
       })}
       className="mt-3 flex flex-col gap-3 rounded-control border border-border bg-bg-subtle p-4"
     >
@@ -472,7 +490,7 @@ function DrillPanel({
             tabIndex={-1}
             className="text-sm font-semibold text-fg outline-none"
           >
-            {t("institution.heatmap.drillTitle", { learner: learner.handle })}
+            {t("institution.heatmap.drillTitle", { learner: row.handle })}
           </h4>
         </div>
         <button
@@ -480,23 +498,21 @@ function DrillPanel({
           onClick={onClose}
           className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-surface hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           aria-label={t("institution.heatmap.drill.closeAria", {
-            learner: learner.handle,
+            learner: row.handle,
           })}
         >
           <X weight="bold" className="h-4 w-4" aria-hidden />
         </button>
       </div>
 
-      {/* Breadcrumb path (cohort -> section -> learner -> domain) */}
+      {/* Breadcrumb: encounter title + date */}
       <p className="text-[11px] text-muted">
-        {t("institution.heatmap.drill.path", {
-          section: t(`institution.section.${learner.sectionKey}`),
-          learner: learner.handle,
-          domain: domainName,
-        })}
+        {row.title[lang]}
+        {" · "}
+        {shortDate(row.at, lang)}
       </p>
 
-      {/* Domain selector — switch which domain's evidence you inspect */}
+      {/* Domain selector */}
       <div>
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
           {t("institution.heatmap.drill.domainSwitchLabel")}
@@ -541,17 +557,12 @@ function DrillPanel({
         </div>
       </div>
 
-      {/* Band + evidence — the live-updating detail for the selected domain */}
+      {/* Band + real readout for the selected domain */}
       <div aria-live="polite" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-fg">{domainName}</span>
           <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
             {t("institution.heatmap.drill.bandLabel")}: {bandWord}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
-            {t("institution.heatmap.drill.encountersLabel", {
-              count: datum.encounters,
-            })}
           </span>
           <Tooltip
             content={t("institution.heatmap.drill.crosswalkTip", {
@@ -564,32 +575,47 @@ function DrillPanel({
           </Tooltip>
         </div>
 
-        {datum.evidence ? (
-          <>
-            <figure className="rounded-control border-l-2 border-brand bg-surface px-3 py-2">
-              <blockquote
-                className="text-sm italic text-fg"
-                lang={learner.locale}
-              >
-                {"“"}
-                {datum.evidence.quote[learner.locale]}
-                {"”"}
-              </blockquote>
-              <figcaption className="mt-1 text-[11px] text-muted">
-                {t("institution.heatmap.drill.evidenceLangNote", {
-                  lang: learner.locale.toUpperCase(),
-                })}
-              </figcaption>
-            </figure>
+        {readout.scored ? (
+          <div className="grid gap-2 sm:grid-cols-2">
             <div className="rounded-control bg-surface px-3 py-2">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
-                {t("institution.heatmap.drill.takeHeading")}
+                {t("institution.heatmap.drill.competence", {
+                  defaultValue: "Measured competence",
+                })}
               </p>
-              <p className="mt-1 text-sm text-fg">
-                {datum.evidence.take[lang]}
+              <p className="mt-1 font-mono text-lg font-semibold text-fg">
+                {Math.round(readout.competence * 100)}%
               </p>
             </div>
-          </>
+            <div className="rounded-control bg-surface px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                {t("institution.heatmap.drill.confidence", {
+                  defaultValue: "Decisiveness",
+                })}
+              </p>
+              <p className="mt-1 font-mono text-lg font-semibold text-fg">
+                {Math.round(readout.confidence * 100)}%
+              </p>
+            </div>
+            {readout.direction ? (
+              <div className="rounded-control bg-surface px-3 py-2 sm:col-span-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                  {t("institution.heatmap.drill.calibration", {
+                    defaultValue: "Calibration",
+                  })}
+                </p>
+                <p className="mt-1 text-sm text-fg">
+                  {t(`institution.calibration.direction.${readout.direction}`)}
+                  {readout.gapPp != null ? (
+                    <span className="ml-1.5 font-mono text-xs text-muted">
+                      ({readout.gapPp > 0 ? "+" : ""}
+                      {readout.gapPp} {t("institution.calibration.ppShort")})
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+            ) : null}
+          </div>
         ) : (
           <div className="flex items-start gap-2 rounded-control border border-dashed border-border bg-surface px-3 py-2.5">
             <Lock
@@ -602,8 +628,9 @@ function DrillPanel({
                 {t("institution.heatmap.drill.withheldHeading")}
               </p>
               <p className="mt-0.5 text-xs text-muted">
-                {t("institution.heatmap.drill.withheldBody", {
-                  count: datum.encounters,
+                {t("institution.heatmap.drill.withheldReadout", {
+                  defaultValue:
+                    "This encounter produced too little evidence to score this domain.",
                 })}
               </p>
             </div>
@@ -615,21 +642,47 @@ function DrillPanel({
 }
 
 /* -------------------------------------------------------------------------- */
+/* Empty state                                                                 */
+/* -------------------------------------------------------------------------- */
+
+function EmptyHeatmap() {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-control border border-dashed border-border bg-bg-subtle px-4 py-10 text-center">
+      <GridFour weight="bold" className="h-6 w-6 text-muted" aria-hidden />
+      <p className="text-sm font-semibold text-fg">
+        {t("institution.heatmap.empty.title", {
+          defaultValue: "No recorded encounters yet",
+        })}
+      </p>
+      <p className="max-w-md text-xs text-muted">
+        {t("institution.heatmap.empty.body", {
+          defaultValue:
+            "Complete an encounter and your competency map fills in from your own earned evidence. Multi-learner cohort analytics need a connected institution data source.",
+        })}
+      </p>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /* Section                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/** CohortHeatmap — learners x 6 domains, accessible band cells, table twin, drill-down (IN-1). */
+/** CohortHeatmap — the learner's OWN encounters x 6 domains, accessible band cells, table twin, drill-down (IN-1). */
 export function CohortHeatmap() {
   const { t } = useTranslation();
+  const records = useProgressRecords();
+  const rows = deriveEncounterRows(records);
   const [view, setView] = useState<"matrix" | "table">("matrix");
   const [drill, setDrill] = useState<DrillTarget | null>(null);
   const headingId = useId();
 
-  function openDrill(learner: CohortLearner, domain: FeedbackDomainKey) {
+  function openDrill(row: EncounterRow, domain: FeedbackDomainKey) {
     setDrill((prev) =>
-      prev && prev.learner.id === learner.id && prev.domain === domain
+      prev && prev.row.id === row.id && prev.domain === domain
         ? null // toggle the same cell closed
-        : { learner, domain },
+        : { row, domain },
     );
   }
 
@@ -641,71 +694,81 @@ export function CohortHeatmap() {
             id={headingId}
             className="text-lg font-semibold tracking-tight text-fg"
           >
-            {t("institution.heatmap.title")}
+            {t("institution.heatmap.ownTitle", {
+              defaultValue: "Your encounters by domain",
+            })}
           </h3>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            {t("institution.heatmap.subtitle")}
+            {t("institution.heatmap.ownSubtitle", {
+              defaultValue:
+                "Each recorded encounter, banded across the six competency domains. Bands are reliability-gated; select a row or cell to inspect the real readout.",
+            })}
           </p>
         </div>
-        <div
-          role="group"
-          aria-label={t("institution.heatmap.viewToggleLabel")}
-          className="inline-flex shrink-0 items-center rounded-control border border-border bg-bg-subtle p-0.5"
-        >
-          <button
-            type="button"
-            onClick={() => setView("matrix")}
-            aria-pressed={view === "matrix"}
-            className={cn(
-              "inline-flex min-h-9 items-center gap-1.5 rounded-[7px] px-3 text-xs font-semibold transition-colors focus-visible:outline-none",
-              view === "matrix"
-                ? "bg-surface text-fg shadow-soft"
-                : "text-muted hover:text-fg",
-            )}
+        {rows.length > 0 ? (
+          <div
+            role="group"
+            aria-label={t("institution.heatmap.viewToggleLabel")}
+            className="inline-flex shrink-0 items-center rounded-control border border-border bg-bg-subtle p-0.5"
           >
-            <GridFour weight="bold" className="h-4 w-4" aria-hidden />
-            {t("institution.heatmap.viewMatrix")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("table")}
-            aria-pressed={view === "table"}
-            className={cn(
-              "inline-flex min-h-9 items-center gap-1.5 rounded-[7px] px-3 text-xs font-semibold transition-colors focus-visible:outline-none",
-              view === "table"
-                ? "bg-surface text-fg shadow-soft"
-                : "text-muted hover:text-fg",
-            )}
-          >
-            <TableIcon weight="bold" className="h-4 w-4" aria-hidden />
-            {t("actions.viewAsTable")}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => setView("matrix")}
+              aria-pressed={view === "matrix"}
+              className={cn(
+                "inline-flex min-h-9 items-center gap-1.5 rounded-[7px] px-3 text-xs font-semibold transition-colors focus-visible:outline-none",
+                view === "matrix"
+                  ? "bg-surface text-fg shadow-soft"
+                  : "text-muted hover:text-fg",
+              )}
+            >
+              <GridFour weight="bold" className="h-4 w-4" aria-hidden />
+              {t("institution.heatmap.viewMatrix")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("table")}
+              aria-pressed={view === "table"}
+              className={cn(
+                "inline-flex min-h-9 items-center gap-1.5 rounded-[7px] px-3 text-xs font-semibold transition-colors focus-visible:outline-none",
+                view === "table"
+                  ? "bg-surface text-fg shadow-soft"
+                  : "text-muted hover:text-fg",
+              )}
+            >
+              <TableIcon weight="bold" className="h-4 w-4" aria-hidden />
+              {t("actions.viewAsTable")}
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      {/* Role-gated note: dean sees aggregate + drill to evidence, never private ego-data */}
+      {/* Honest single-user framing */}
       <div className="flex items-start gap-2 rounded-control bg-bg-subtle px-3 py-2">
-        <Lock
+        <WarningCircle
           weight="bold"
           className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted"
           aria-hidden
         />
         <p className="text-xs text-muted">
-          {t("institution.heatmap.roleGatedNote")}
+          {t("institution.heatmap.singleUserNote", {
+            defaultValue:
+              "Single-user view: your own recorded encounters on this device. This is not a multi-learner cohort — that needs a connected institution data source.",
+          })}
         </p>
       </div>
 
-      {view === "matrix" ? (
+      {rows.length === 0 ? (
+        <EmptyHeatmap />
+      ) : view === "matrix" ? (
         <>
-          <MatrixView drill={drill} onDrill={openDrill} />
+          <MatrixView rows={rows} drill={drill} onDrill={openDrill} />
           <Legend />
           {drill ? (
             <DrillPanel
               drill={drill}
               onSelectDomain={(domain) =>
-                setDrill((prev) =>
-                  prev ? { learner: prev.learner, domain } : prev,
-                )
+                setDrill((prev) => (prev ? { row: prev.row, domain } : prev))
               }
               onClose={() => setDrill(null)}
             />
@@ -716,19 +779,8 @@ export function CohortHeatmap() {
           )}
         </>
       ) : (
-        <TableView />
+        <TableView rows={rows} />
       )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Tooltip content={t("institution.heatmap.frameworkTip")}>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-0.5 text-[11px] font-medium text-muted">
-            {t("institution.heatmap.frameworkChip")}
-          </span>
-        </Tooltip>
-        <Button size="sm" variant="secondary">
-          {t("institution.heatmap.switchFramework")}
-        </Button>
-      </div>
     </Card>
   );
 }

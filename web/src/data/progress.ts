@@ -1,14 +1,17 @@
 /**
- * Progress / gamification mock data (Journey 5, docs/design/01 §5.1).
+ * Progress / gamification TYPES + CATALOGS (Journey 5, docs/design/01 §5.1).
  *
  * Everything here rewards MASTERY and IMPROVEMENT, never raw volume, and is
  * private by design — there is no public leaderboard and no ranking of the
  * learner against a global population (INV-4). XP is earned for closing
  * calibration gaps and moving competency bands, not for grinding cases.
  *
- * Content is realistic emergency-medicine training data: real competency
- * domains, real Turkish medical education milestones (TEPDAD/AAMC-EPA), and
- * a spaced-repetition queue seeded from actual gaps, each cited to a guideline.
+ * This module now holds only shared TYPES, static CATALOGS (the EPA activity
+ * list, the badge definitions) and the pure FSRS scheduler. It carries NO
+ * per-learner state: EPA levels, badge earned-state, the mastery drill-down, the
+ * spaced-repetition queue and the self-comparison are all DERIVED from the
+ * learner's real recorded encounters in `src/state/progressStore.ts`, so a
+ * brand-new learner sees honest empty / emerging states instead of demo data.
  */
 
 import type { Bilingual, Band, FeedbackDomainKey } from "@/data/mock";
@@ -133,18 +136,45 @@ export interface MasteryDomain {
  */
 export type EntrustmentLevel = 1 | 2 | 3 | 4 | 5;
 
+/**
+ * A learner's entrustment on one EPA, DERIVED from their real recorded
+ * encounters (see `useEpaProgress()` in `src/state/progressStore.ts`). `level`,
+ * `demonstrations` and `assessed` all come from earned evidence — a brand-new
+ * learner is `assessed: false` at level 1 with zero demonstrations, never a
+ * fabricated "entrusted" level.
+ */
 export interface EpaProgress {
   id: string;
   /** Short EPA code shown as a mono chip, e.g. "EPA 10". */
   code: string;
   title: Bilingual;
   level: EntrustmentLevel;
-  /** Reps of demonstrated behaviour behind the current level. */
+  /** Reps of demonstrated behaviour behind the current level (real count). */
   demonstrations: number;
   citationId: string;
+  /** False until at least one graded encounter maps to this EPA. */
+  assessed: boolean;
 }
 
-export const epaProgress: EpaProgress[] = [
+/**
+ * The EPA CATALOG — labels, definitions and the competency domains whose real
+ * evidence entrusts each activity. This is a static reference (the AAMC/TEPDAD
+ * activity list), NOT per-learner state: entrustment levels are computed from
+ * the learner's own EncounterRecords. An empty `domains` list marks an activity
+ * the encounter has no instrument for yet (e.g. oral presentation, teamwork) —
+ * it stays honestly "not yet assessed" rather than showing an invented level.
+ */
+export interface EpaCatalogEntry {
+  id: string;
+  /** Short EPA code shown as a mono chip, e.g. "EPA 10". */
+  code: string;
+  title: Bilingual;
+  citationId: string;
+  /** Competency domains whose real evidence entrusts this EPA (empty = not yet derivable). */
+  domains: FeedbackDomainKey[];
+}
+
+export const epaCatalog: EpaCatalogEntry[] = [
   {
     id: "epa-10",
     code: "EPA 10",
@@ -152,9 +182,8 @@ export const epaProgress: EpaProgress[] = [
       en: "Recognise and initiate management of the deteriorating patient",
       tr: "Kötüleşen hastayı tanıma ve yönetimini başlatma",
     },
-    level: 4,
-    demonstrations: 5,
     citationId: "tepdad-em",
+    domains: ["reasoning", "management"],
   },
   {
     id: "epa-3",
@@ -163,9 +192,8 @@ export const epaProgress: EpaProgress[] = [
       en: "Recommend and interpret common diagnostic tests",
       tr: "Sık kullanılan tanısal testleri önerme ve yorumlama",
     },
-    level: 3,
-    demonstrations: 8,
     citationId: "esc-acs-2023",
+    domains: ["reasoning", "exam"],
   },
   {
     id: "epa-6",
@@ -174,9 +202,9 @@ export const epaProgress: EpaProgress[] = [
       en: "Provide an oral presentation of a clinical encounter",
       tr: "Klinik karşılaşmanın sözlü sunumunu yapma",
     },
-    level: 4,
-    demonstrations: 6,
     citationId: "tepdad-em",
+    // No oral-presentation instrument in the encounter — stays not-yet-assessed.
+    domains: [],
   },
   {
     id: "epa-9",
@@ -185,9 +213,9 @@ export const epaProgress: EpaProgress[] = [
       en: "Collaborate as a member of an interprofessional team",
       tr: "Meslekler arası ekibin bir üyesi olarak iş birliği yapma",
     },
-    level: 3,
-    demonstrations: 4,
     citationId: "tepdad-em",
+    // No interprofessional-teamwork instrument yet — stays not-yet-assessed.
+    domains: [],
   },
 ];
 
@@ -203,6 +231,12 @@ export type BadgeIcon =
   | "handshake"
   | "eye";
 
+/**
+ * A badge as shown to the learner. `earned` and `progress` are DERIVED from real
+ * recorded encounters (see `useBadges()` in `src/state/progressStore.ts`) — none
+ * are earned at zero history. The catalog below carries only the identity-forward
+ * copy; the store decides whether the threshold has actually been met.
+ */
 export interface Badge {
   id: string;
   icon: BadgeIcon;
@@ -216,7 +250,31 @@ export interface Badge {
   nextStep?: Bilingual;
 }
 
-export const badges: Badge[] = [
+export type BadgeId =
+  | "badge-deterioration"
+  | "badge-difficult-conversation"
+  | "badge-safety-netting"
+  | "badge-calibrated"
+  | "badge-handover";
+
+/**
+ * A badge DEFINITION — the copy plus the earning rule. `threshold` is the number
+ * of qualifying encounters needed to earn it (and drives the progress bar);
+ * `threshold: null` marks a badge the encounter has no instrument for yet, so it
+ * can never be falsely awarded and always reads "not yet available". The concrete
+ * qualifying predicate lives in the store, keyed by `id`, because it needs real
+ * EncounterRecords.
+ */
+export interface BadgeDef {
+  id: BadgeId;
+  icon: BadgeIcon;
+  title: Bilingual;
+  description: Bilingual;
+  nextStep: Bilingual;
+  threshold: number | null;
+}
+
+export const badgeCatalog: BadgeDef[] = [
   {
     id: "badge-deterioration",
     icon: "heartbeat",
@@ -228,7 +286,11 @@ export const badges: Badge[] = [
       en: "Recognised a deteriorating patient and escalated in time, three times over.",
       tr: "Kötüleşen hastayı üç kez zamanında tanıyıp yükseltti.",
     },
-    earned: true,
+    nextStep: {
+      en: "Finish encounters with strong, on-time management and no safety-critical miss to earn this.",
+      tr: "Bunu kazanmak için güçlü, zamanında yönetim ve güvenlik açısından kritik eksik olmadan karşılaşmaları tamamlayın.",
+    },
+    threshold: 3,
   },
   {
     id: "badge-difficult-conversation",
@@ -241,7 +303,11 @@ export const badges: Badge[] = [
       en: "Stayed calm and clear with an anxious, distressed patient without losing the clinical thread.",
       tr: "Endişeli ve sıkıntılı bir hastayla klinik akışı kaybetmeden sakin ve net kaldı.",
     },
-    earned: true,
+    nextStep: {
+      en: "Reach a strong communication band by exploring concerns and screening red flags in your encounters.",
+      tr: "Karşılaşmalarınızda endişeleri araştırıp alarm bulgularını tarayarak güçlü bir iletişim bandına ulaşın.",
+    },
+    threshold: 3,
   },
   {
     id: "badge-safety-netting",
@@ -251,10 +317,14 @@ export const badges: Badge[] = [
       tr: "Her taburcuda güvenlik ağı kurdu",
     },
     description: {
-      en: "Gave clear return-warning advice on five consecutive discharges.",
-      tr: "Üst üste beş taburcuda net geri dönüş uyarı önerisi verdi.",
+      en: "Closed five consecutive encounters with no safety-critical miss.",
+      tr: "Güvenlik açısından kritik bir eksik olmadan üst üste beş karşılaşmayı tamamladı.",
     },
-    earned: true,
+    nextStep: {
+      en: "String together five encounters in a row with no safety-critical miss.",
+      tr: "Güvenlik açısından kritik eksik olmadan üst üste beş karşılaşma tamamlayın.",
+    },
+    threshold: 5,
   },
   {
     id: "badge-calibrated",
@@ -264,15 +334,14 @@ export const badges: Badge[] = [
       tr: "Kalibre klinik akıl yürütme",
     },
     description: {
-      en: "Kept your confidence within one band of your measured reasoning for a full week.",
-      tr: "Bir hafta boyunca güveninizi ölçülen akıl yürütmenizin bir bandı içinde tuttunuz.",
+      en: "Kept your confidence within one band of your measured reasoning across three encounters.",
+      tr: "Üç karşılaşma boyunca güveninizi ölçülen akıl yürütmenizin bir bandı içinde tuttunuz.",
     },
-    earned: false,
-    progress: 0.6,
     nextStep: {
-      en: "Two more well-calibrated reasoning encounters to unlock this.",
-      tr: "Bunu açmak için iki iyi kalibre edilmiş akıl yürütme karşılaşması daha.",
+      en: "Keep your reasoning calibration gap tight (under ~12%) across three encounters.",
+      tr: "Üç karşılaşma boyunca akıl yürütme kalibrasyon farkınızı dar (%12 altında) tutun.",
     },
+    threshold: 3,
   },
   {
     id: "badge-handover",
@@ -285,12 +354,12 @@ export const badges: Badge[] = [
       en: "Delivered a complete, structured handover under time pressure.",
       tr: "Zaman baskısı altında eksiksiz, yapılandırılmış bir devir teslim yaptı.",
     },
-    earned: false,
-    progress: 0.3,
     nextStep: {
-      en: "Complete a team room encounter as the leader to make progress.",
-      tr: "İlerlemek için ekip odası karşılaşmasını lider olarak tamamlayın.",
+      en: "Structured handover is not yet measured in the encounter — this badge unlocks when it is.",
+      tr: "Yapılandırılmış devir teslim henüz karşılaşmada ölçülmüyor — bu rozet ölçüldüğünde açılacak.",
     },
+    // No handover instrument yet — never falsely awarded.
+    threshold: null,
   },
 ];
 
@@ -344,98 +413,38 @@ export interface ReviewCard {
 }
 
 /**
- * The queue is seeded from real encounter gaps (e.g. the NSTEMI ECG-timing
- * miss). Cards surface oldest-weakest first; each carries its guideline
- * citation so a review is always traceable back to the source of truth.
+ * There is NO static seed queue. The live review queue is DERIVED from the
+ * learner's real encounter gaps (`deriveFeedbackGaps` over their
+ * EncounterRecords) with a persisted FSRS schedule — see `useReviewQueue()`,
+ * `enqueueReview()` and `gradeReview()` in `src/state/progressStore.ts`. A
+ * brand-new learner with no history has an empty queue.
  */
-export const reviewQueue: ReviewCard[] = [
-  {
-    id: "rev-ecg-timing",
-    domain: "reasoning",
-    prompt: {
-      en: "In suspected ACS, what is the target time to a 12-lead ECG from first medical contact?",
-      tr: "AKS şüphesinde, ilk tıbbi temastan 12 derivasyonlu EKG'ye kadarki hedef süre nedir?",
-    },
-    retrievability: 0.62,
-    stabilityDays: 4,
-    dueInDays: 0,
-    state: "due",
-    citationId: "esc-acs-2023",
-  },
-  {
-    id: "rev-troponin",
-    domain: "exam",
-    prompt: {
-      en: "Which high-sensitivity troponin protocol rules in or out MI, and at what intervals?",
-      tr: "Hangi yüksek duyarlıklı troponin protokolü MI'yı dışlar veya doğrular ve hangi aralıklarla?",
-    },
-    retrievability: 0.55,
-    stabilityDays: 6,
-    dueInDays: 0,
-    state: "due",
-    citationId: "esc-acs-2023",
-  },
-  {
-    id: "rev-risk-factors",
-    domain: "history",
-    prompt: {
-      en: "Which cardiac risk factors should be screened during the initial history for chest pain?",
-      tr: "Göğüs ağrısı için ilk anamnez sırasında hangi kardiyak risk faktörleri taranmalı?",
-    },
-    retrievability: 0.78,
-    stabilityDays: 9,
-    dueInDays: 1,
-    state: "learning",
-    citationId: "nice-ng185",
-  },
-  {
-    id: "rev-safety-netting",
-    domain: "communication",
-    prompt: {
-      en: "What return-warning advice must a low-risk chest-pain discharge include?",
-      tr: "Düşük riskli göğüs ağrısı taburcusu hangi geri dönüş uyarı önerilerini içermeli?",
-    },
-    retrievability: 0.71,
-    stabilityDays: 12,
-    dueInDays: 3,
-    state: "scheduled",
-    citationId: "nice-ng185",
-  },
-];
-
-/** Count of cards due now, for the queue header. */
-export const dueNowCount = reviewQueue.filter((c) => c.state === "due").length;
 
 /* -------------------------------------------------------------------------- */
-/* Cohort comparison — opt-in, ranked ONLY on personal improvement            */
+/* Self-comparison — your own trend, never a cohort/percentile fabrication     */
 /* -------------------------------------------------------------------------- */
 
 /**
- * An explicitly opt-in, cohort-only view. It is NOT a global leaderboard and
- * never ranks raw competence: the only quantity shown is *your own*
- * improvement (calibration-gap reduction) placed against an anonymised,
- * de-identified cohort band. No names, no global ranks, no peer ego-data.
+ * A private, self-referential comparison: the learner measured only against
+ * their OWN earlier performance (calibration-gap reduction across their
+ * sessions). A real de-identified COHORT comparison would need a backend that
+ * does not exist in this air-gapped build, so no cohort median, size or
+ * percentile is ever fabricated — see `useSelfComparison()` in
+ * `src/state/progressStore.ts`. Empty (`hasBaseline: false`) until there are at
+ * least two recorded sessions to compare.
  */
-export interface CohortComparison {
-  /** Whether the learner has opted in (default off). */
-  optedIn: boolean;
-  /** Your calibration-gap improvement this month, in percentage points. */
-  yourImprovementPct: number;
-  /** Cohort median improvement, for a private, formative reference band. */
-  cohortMedianImprovementPct: number;
-  /** Anonymised cohort size (de-identified aggregate). */
-  cohortSize: number;
-  /** Your improvement percentile within the cohort (improvement only). */
-  improvementPercentile: number;
+export interface SelfComparison {
+  /** True once there are ≥2 sessions to compare against a baseline. */
+  hasBaseline: boolean;
+  /** Number of recorded sessions behind the comparison. */
+  sessionCount: number;
+  /** Calibration gap at the first tracked session, in percentage points (0-100). */
+  baselineGapPct: number;
+  /** Calibration gap at the latest session, in percentage points (0-100). */
+  latestGapPct: number;
+  /** Improvement = baseline − latest, in percentage points (positive = tighter). */
+  improvementPct: number;
 }
-
-export const cohortComparison: CohortComparison = {
-  optedIn: false,
-  yourImprovementPct: 11,
-  cohortMedianImprovementPct: 6,
-  cohortSize: 48,
-  improvementPercentile: 72,
-};
 
 /* -------------------------------------------------------------------------- */
 /* Mastery detail — evidence + trajectory behind each band (progressive reveal) */
@@ -472,214 +481,12 @@ export interface MasteryDetail {
 }
 
 /**
- * Detail keyed by competency domain. Content is realistic emergency-medicine
- * evidence. The withheld domain (professionalism) carries only a next-step so
- * the learner knows exactly what unlocks a reliable band.
+ * The detail behind a mastery band is DERIVED per domain from the learner's
+ * real recorded encounters — see `useMasteryDetail()` in
+ * `src/state/progressStore.ts`. Every evidence row keys to an encounter the
+ * learner actually did (no invented cases), and a domain with no evidence shows
+ * an honest empty state. Only the TYPE remains here.
  */
-export const masteryDetail: Partial<Record<FeedbackDomainKey, MasteryDetail>> = {
-  history: {
-    movedBy: {
-      en: "Your histories now open with a structured presenting-complaint frame and screen red flags before you close.",
-      tr: "Anamnezleriniz artık yapılandırılmış bir yakınma çerçevesiyle başlıyor ve kapatmadan önce alarm bulgularını tarıyor.",
-    },
-    nextStep: {
-      en: "Reach Exemplary by eliciting ideas, concerns and expectations in every encounter, not only when prompted.",
-      tr: "Örnek düzeye ulaşmak için hastanın düşünce, endişe ve beklentilerini yalnızca sorulduğunda değil her karşılaşmada öğrenin.",
-    },
-    bandHistory: ["proficient", "proficient", "strong"],
-    evidence: [
-      {
-        id: "ev-h1",
-        case: {
-          en: "58-year-old with central chest pain",
-          tr: "Santral göğüs ağrısı olan 58 yaşında hasta",
-        },
-        note: {
-          en: "Screened cardiac risk factors and red flags before examining.",
-          tr: "Muayeneden önce kardiyak risk faktörleri ve alarm bulguları tarandı.",
-        },
-        daysAgo: 1,
-      },
-      {
-        id: "ev-h2",
-        case: {
-          en: "Young adult with palpitations",
-          tr: "Çarpıntı ile başvuran genç erişkin",
-        },
-        note: {
-          en: "Built a structured history with a clear symptom timeline.",
-          tr: "Net bir semptom zaman çizelgesiyle yapılandırılmış öykü alındı.",
-        },
-        daysAgo: 4,
-      },
-    ],
-    reviewCardId: "rev-risk-factors",
-  },
-  exam: {
-    movedBy: {
-      en: "Hypothesis-driven examination is consistent; a full secondary survey is still sometimes skipped under time pressure.",
-      tr: "Hipoteze dayalı muayene tutarlı; zaman baskısı altında tam ikincil bakı hâlâ zaman zaman atlanıyor.",
-    },
-    nextStep: {
-      en: "Reach Strong by completing a focused secondary survey on every high-acuity presentation.",
-      tr: "Güçlü düzeye ulaşmak için her yüksek aciliyetli başvuruda odaklı bir ikincil bakı tamamlayın.",
-    },
-    bandHistory: ["developing", "proficient", "proficient"],
-    evidence: [
-      {
-        id: "ev-e1",
-        case: {
-          en: "Breathlessness in an older patient",
-          tr: "Yaşlı hastada nefes darlığı",
-        },
-        note: {
-          en: "Focused cardiorespiratory examination guided by the differential.",
-          tr: "Ayırıcı tanıya göre yönlendirilmiş odaklı kardiyorespiratuvar muayene.",
-        },
-        daysAgo: 2,
-      },
-      {
-        id: "ev-e2",
-        case: {
-          en: "Abdominal pain, query surgical",
-          tr: "Karın ağrısı, cerrahi şüphesi",
-        },
-        note: {
-          en: "Elicited peritonism but deferred a full secondary survey.",
-          tr: "Peritonizm saptandı ancak tam ikincil bakı ertelendi.",
-        },
-        daysAgo: 6,
-      },
-    ],
-    reviewCardId: "rev-troponin",
-  },
-  reasoning: {
-    movedBy: {
-      en: "You now commit to a leading diagnosis with a stated differential instead of an open-ended list.",
-      tr: "Artık açık uçlu bir liste yerine belirtilen bir ayırıcı tanıyla öncelikli tanıya karar veriyorsunuz.",
-    },
-    nextStep: {
-      en: "Reach Proficient by ordering the key rule-out test before starting empirical management.",
-      tr: "Yeterli düzeye ulaşmak için ampirik tedaviye başlamadan önce temel dışlama testini isteyin.",
-    },
-    bandHistory: ["emerging", "emerging", "developing"],
-    evidence: [
-      {
-        id: "ev-r1",
-        case: {
-          en: "Suspected acute coronary syndrome",
-          tr: "Akut koroner sendrom şüphesi",
-        },
-        note: {
-          en: "Committed to a leading diagnosis with a clear differential.",
-          tr: "Net bir ayırıcı tanıyla öncelikli tanıya karar verildi.",
-        },
-        daysAgo: 0,
-      },
-      {
-        id: "ev-r2",
-        case: {
-          en: "Headache with red flags",
-          tr: "Alarm bulgulu baş ağrısı",
-        },
-        note: {
-          en: "Ordered the key rule-out test late in the encounter.",
-          tr: "Temel dışlama testi karşılaşmanın geç aşamasında istendi.",
-        },
-        daysAgo: 3,
-      },
-    ],
-    reviewCardId: "rev-ecg-timing",
-  },
-  communication: {
-    movedBy: {
-      en: "Clear, jargon-free explanations and consistent safety-netting on discharge.",
-      tr: "Net, tıbbi jargon içermeyen açıklamalar ve taburculukta tutarlı güvenlik ağı.",
-    },
-    nextStep: {
-      en: "Reach Exemplary by checking understanding with teach-back on every discharge.",
-      tr: "Örnek düzeye ulaşmak için her taburculukta geri anlatma yöntemiyle hastanın anlayışını doğrulayın.",
-    },
-    bandHistory: ["strong", "strong", "strong"],
-    evidence: [
-      {
-        id: "ev-c1",
-        case: {
-          en: "Discharge after low-risk chest pain",
-          tr: "Düşük riskli göğüs ağrısı sonrası taburculuk",
-        },
-        note: {
-          en: "Gave clear, specific return-warning advice.",
-          tr: "Net ve belirgin geri dönüş uyarı önerileri verildi.",
-        },
-        daysAgo: 1,
-      },
-      {
-        id: "ev-c2",
-        case: {
-          en: "Anxious patient, uncertain diagnosis",
-          tr: "Endişeli hasta, belirsiz tanı",
-        },
-        note: {
-          en: "Explained the uncertainty without alarming the patient.",
-          tr: "Hastayı tedirgin etmeden belirsizlik açıklandı.",
-        },
-        daysAgo: 5,
-      },
-    ],
-    reviewCardId: "rev-safety-netting",
-  },
-  management: {
-    movedBy: {
-      en: "Initial management is appropriate, but escalation and senior review are sometimes late.",
-      tr: "İlk tedavi uygun ancak yükseltme ve kıdemli değerlendirmesi zaman zaman geç kalıyor.",
-    },
-    nextStep: {
-      en: "Reach Proficient by stating explicit escalation criteria and a time-to-review for unstable patients.",
-      tr: "Yeterli düzeye ulaşmak için stabil olmayan hastalar için açık yükseltme ölçütleri ve bir yeniden değerlendirme süresi belirtin.",
-    },
-    bandHistory: ["developing", "developing", "developing"],
-    evidence: [
-      {
-        id: "ev-m1",
-        case: {
-          en: "Sepsis of unclear source",
-          tr: "Kaynağı belirsiz sepsis",
-        },
-        note: {
-          en: "Started the sepsis bundle but escalated to seniors late.",
-          tr: "Sepsis paketi başlatıldı ancak kıdemlilere yükseltme geç yapıldı.",
-        },
-        daysAgo: 2,
-      },
-      {
-        id: "ev-m2",
-        case: {
-          en: "Acute asthma exacerbation",
-          tr: "Akut astım alevlenmesi",
-        },
-        note: {
-          en: "Appropriate first-line treatment with timely reassessment.",
-          tr: "Zamanında yeniden değerlendirmeyle uygun ilk basamak tedavi.",
-        },
-        daysAgo: 4,
-      },
-    ],
-    reviewCardId: "rev-ecg-timing",
-  },
-  professionalism: {
-    movedBy: {
-      en: "Not enough graded encounters yet to show a reliable band.",
-      tr: "Güvenilir bir bant göstermek için henüz yeterli değerlendirilmiş karşılaşma yok.",
-    },
-    nextStep: {
-      en: "Three more graded encounters are needed before a reliable band appears.",
-      tr: "Güvenilir bir bant görünmeden önce üç değerlendirilmiş karşılaşma daha gerekiyor.",
-    },
-    bandHistory: [],
-    evidence: [],
-  },
-};
 
 /* -------------------------------------------------------------------------- */
 /* Spaced-repetition scheduler — a compact, faithful FSRS forgetting model     */
