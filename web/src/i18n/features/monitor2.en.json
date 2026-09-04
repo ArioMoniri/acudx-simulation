@@ -1,0 +1,45 @@
+{
+  "monitor2": {
+    "title": "Bedside monitor",
+    "trendTitle": "Trends",
+    "online": "Live",
+    "offline": "Standby",
+    "elapsed": "Elapsed",
+    "bed": "Bed",
+    "awaiting": "No signal",
+    "awaitingHint": "Awaiting encounter — vitals begin when the case starts.",
+    "trendAwaiting": "No trend data yet — readings accumulate as the encounter runs.",
+    "alarm": "Alarm",
+    "alarmClear": "No active alarms",
+    "leads": "Leads II",
+    "limitHi": "Hi",
+    "limitLo": "Lo",
+    "now": "Now",
+    "min": "Min",
+    "max": "Max",
+    "treatment": "Treatment",
+    "treatmentGiven": "Treatment administered",
+    "status": {
+      "improving": "Improving",
+      "stable": "Stable",
+      "deteriorating": "Deteriorating",
+      "critical": "Critical"
+    },
+    "params": {
+      "hr": { "label": "Heart rate", "short": "HR", "unit": "bpm" },
+      "spo2": { "label": "Oxygen saturation", "short": "SpO₂", "unit": "%" },
+      "bp": { "label": "Blood pressure", "short": "ABP", "unit": "mmHg" },
+      "map": { "label": "Mean arterial pressure", "short": "MAP", "unit": "mmHg" },
+      "rr": { "label": "Respiratory rate", "short": "RR", "unit": "/min" },
+      "temp": { "label": "Temperature", "short": "Temp", "unit": "°C" }
+    },
+    "a11y": {
+      "region": "Live vital signs monitor",
+      "trendRegion": "Vital signs trends",
+      "tableCaption": "Current vital signs",
+      "colParam": "Parameter",
+      "colValue": "Value",
+      "alarmAnnounce": "{{status}} alarm: {{params}}"
+    }
+  }
+}

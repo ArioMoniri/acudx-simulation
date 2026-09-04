@@ -1,0 +1,45 @@
+{
+  "monitor2": {
+    "title": "Başucu monitörü",
+    "trendTitle": "Eğilimler",
+    "online": "Canlı",
+    "offline": "Beklemede",
+    "elapsed": "Geçen süre",
+    "bed": "Yatak",
+    "awaiting": "Sinyal yok",
+    "awaitingHint": "Görüşme bekleniyor — vitaller vaka başladığında başlar.",
+    "trendAwaiting": "Henüz eğilim verisi yok — ölçümler görüşme ilerledikçe birikir.",
+    "alarm": "Alarm",
+    "alarmClear": "Etkin alarm yok",
+    "leads": "DII derivasyonu",
+    "limitHi": "Üst",
+    "limitLo": "Alt",
+    "now": "Şu an",
+    "min": "En düşük",
+    "max": "En yüksek",
+    "treatment": "Tedavi",
+    "treatmentGiven": "Tedavi uygulandı",
+    "status": {
+      "improving": "İyileşiyor",
+      "stable": "Stabil",
+      "deteriorating": "Kötüleşiyor",
+      "critical": "Kritik"
+    },
+    "params": {
+      "hr": { "label": "Kalp hızı", "short": "KH", "unit": "atım/dk" },
+      "spo2": { "label": "Oksijen satürasyonu", "short": "SpO₂", "unit": "%" },
+      "bp": { "label": "Kan basıncı", "short": "ABP", "unit": "mmHg" },
+      "map": { "label": "Ortalama arter basıncı", "short": "OAB", "unit": "mmHg" },
+      "rr": { "label": "Solunum hızı", "short": "SH", "unit": "/dk" },
+      "temp": { "label": "Ateş", "short": "Ateş", "unit": "°C" }
+    },
+    "a11y": {
+      "region": "Canlı yaşamsal bulgu monitörü",
+      "trendRegion": "Yaşamsal bulgu eğilimleri",
+      "tableCaption": "Güncel yaşamsal bulgular",
+      "colParam": "Parametre",
+      "colValue": "Değer",
+      "alarmAnnounce": "{{status}} alarmı: {{params}}"
+    }
+  }
+}
