@@ -1,0 +1,20 @@
+{
+  "feedback3": {
+    "verdict": {
+      "eyebrow": "Performans özeti",
+      "bandsProficient": "Yeterli+ seviyedeki alanlar",
+      "overall": "puanlanan {{total}} yetkinlik alanından",
+      "byAxis": "Eksene göre",
+      "calibrationGap": "Kalibrasyon farkı",
+      "gapTrend": "{{points}} puan daraldı",
+      "gapHint": "Öz değerlendirme vs ölçülen, son oturum",
+      "withheldNote": "{{count}} alan yeterli kanıt oluşana dek gizlendi"
+    },
+    "section": {
+      "bands": "Yetkinlik seviyeleri",
+      "process": "Süreç ve zamanlama",
+      "gaps": "Kanıta dayalı boşluklar",
+      "steps": "Sonraki adımlar"
+    }
+  }
+}

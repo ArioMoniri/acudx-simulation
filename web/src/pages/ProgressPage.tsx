@@ -29,8 +29,24 @@ import {
   X,
 } from "@phosphor-icons/react";
 
-import { PageContainer } from "@/components/shell";
-import { Card, Badge, Button, Switch, Tooltip } from "@/components/ui";
+import { PageContainer, PageHeader } from "@/components/shell";
+import {
+  Card,
+  Badge,
+  Button,
+  Switch,
+  Tooltip,
+  SectionLabel,
+  Stat,
+  type StatTrend,
+  TableWrap,
+  Table,
+  THead,
+  TBody,
+  Tr,
+  Th,
+  Td,
+} from "@/components/ui";
 import { CalibrationPlot, CitationPill, Sparkline } from "@/components";
 import { useEntry, useLang } from "@/lib/useLang";
 import { EASE } from "@/lib/motion";
@@ -185,24 +201,12 @@ function LevelCard() {
   const remaining = levelState.xpForNextLevel - levelState.xpIntoLevel;
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
+    <Card padding="md" className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-brand-tint text-brand"
-            aria-hidden
-          >
-            <Trophy weight="bold" className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              {t("progress.level.eyebrow", { level: levelState.level })}
-            </p>
-            <p className="text-lg font-semibold tracking-tight text-fg">
-              {levelState.title[lang]}
-            </p>
-          </div>
-        </div>
+        <SectionLabel icon={<Trophy weight="bold" className="h-3.5 w-3.5" />}>
+          {t("progress.level.eyebrow", { level: levelState.level })} ·{" "}
+          {levelState.title[lang]}
+        </SectionLabel>
         <span className="shrink-0 text-right">
           <span className="block font-mono text-sm font-semibold text-fg">
             {levelState.xpTotal.toLocaleString(lang)}
@@ -329,30 +333,18 @@ function StreakCard() {
   const current = streakState.currentDays + (logged && !streakState.todayDone ? 1 : 0);
 
   return (
-    <Card padding="lg" className="flex h-full flex-col gap-5">
+    <Card padding="md" className="flex h-full flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-control text-[color:var(--state-warning)]"
-            style={{
-              backgroundColor:
-                "color-mix(in srgb, var(--state-warning) 14%, transparent)",
-            }}
-            aria-hidden
-          >
-            <Fire weight="fill" className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted">
-              {t("progress.streak.eyebrow")}
-            </p>
-            <p className="text-2xl font-semibold leading-tight text-fg">
-              <span className="font-mono">{current}</span>{" "}
-              <span className="text-base font-medium text-muted">
-                {t("progress.streak.days")}
-              </span>
-            </p>
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <SectionLabel icon={<Fire weight="fill" className="h-3.5 w-3.5" />}>
+            {t("progress.streak.eyebrow")}
+          </SectionLabel>
+          <p className="text-2xl font-semibold leading-none text-fg">
+            <span className="font-mono">{current}</span>{" "}
+            <span className="text-base font-medium text-muted">
+              {t("progress.streak.days")}
+            </span>
+          </p>
         </div>
         <span className="shrink-0 text-right">
           <span className="block font-mono text-sm font-semibold text-fg">
@@ -1354,7 +1346,7 @@ const gradeHintKey: Record<ReviewGrade, string> = {
   easy: "progress2.review.hintEasy",
 };
 
-function ReviewRow({
+function ReviewTableRow({
   card,
   justGraded,
 }: {
@@ -1364,61 +1356,60 @@ function ReviewRow({
   const { t } = useTranslation();
   const lang = useLang();
   const recallPct = Math.round(card.retrievability * 100);
-  const dueLabel =
-    card.dueInDays <= 0
-      ? t("progress.review.dueNow")
-      : t("progress.review.dueInDays", { count: card.dueInDays });
+  const dueNow = card.dueInDays <= 0;
+  const dueLabel = dueNow
+    ? t("progress.review.dueNow")
+    : t("progress.review.dueInDays", { count: card.dueInDays });
 
   return (
-    <li className="flex flex-col gap-2.5 rounded-control border border-border bg-surface p-4">
-      <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 flex-1 text-sm font-medium text-fg">
-          {card.prompt[lang]}
-        </p>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {justGraded ? (
-            <Badge tone="normal">
-              <CheckCircle weight="fill" className="h-3 w-3" aria-hidden />
-              {t("progress2.review.justGraded")}
-            </Badge>
-          ) : null}
-          <Badge tone={reviewStateTone[card.state]}>
-            {card.state === "due" ? (
-              <Fire weight="fill" className="h-3 w-3" aria-hidden />
-            ) : card.state === "learning" ? (
-              <Sparkle weight="fill" className="h-3 w-3" aria-hidden />
-            ) : (
-              <CalendarCheck weight="bold" className="h-3 w-3" aria-hidden />
-            )}
-            {t(`progress.review.state.${card.state}`)}
-          </Badge>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-        <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-          <span
-            className="inline-block rounded-full px-1.5 py-0.5 font-mono text-[11px] font-medium text-fg"
-            style={{
-              backgroundColor:
-                "color-mix(in srgb, var(--fg-muted) 12%, transparent)",
-            }}
-          >
-            {t(`feedback.domains.${card.domain}` as const)}
-          </span>
-        </span>
-        <span className="text-xs text-muted">
-          {t("progress.review.recall", { percent: recallPct })}
-        </span>
-        <span className="text-xs text-muted">
-          {t("progress.review.stability", { days: card.stabilityDays })}
-        </span>
-        <span className="text-xs font-medium text-fg">{dueLabel}</span>
-        <span className="ml-auto">
+    <Tr>
+      <Td className="min-w-[16rem]">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium text-fg">
+              {card.prompt[lang]}
+            </span>
+            {justGraded ? (
+              <Badge tone="normal" dot>
+                <CheckCircle weight="fill" className="h-3 w-3" aria-hidden />
+                {t("progress2.review.justGraded")}
+              </Badge>
+            ) : null}
+          </div>
           <CitationPill citationId={card.citationId} lang={lang} />
+        </div>
+      </Td>
+      <Td>
+        <span
+          className="inline-block whitespace-nowrap rounded-chip px-1.5 py-0.5 font-mono text-[11px] font-medium text-fg"
+          style={{
+            backgroundColor:
+              "color-mix(in srgb, var(--fg-muted) 12%, transparent)",
+          }}
+        >
+          {t(`feedback.domains.${card.domain}` as const)}
         </span>
-      </div>
-    </li>
+      </Td>
+      <Td numeric>{recallPct}%</Td>
+      <Td numeric>{card.stabilityDays}d</Td>
+      <Td className="whitespace-nowrap">
+        <span className={cn("text-sm", dueNow ? "font-medium text-fg" : "text-muted")}>
+          {dueLabel}
+        </span>
+      </Td>
+      <Td>
+        <Badge tone={reviewStateTone[card.state]} dot>
+          {card.state === "due" ? (
+            <Fire weight="fill" className="h-3 w-3" aria-hidden />
+          ) : card.state === "learning" ? (
+            <Sparkle weight="fill" className="h-3 w-3" aria-hidden />
+          ) : (
+            <CalendarCheck weight="bold" className="h-3 w-3" aria-hidden />
+          )}
+          {t(`progress.review.state.${card.state}`)}
+        </Badge>
+      </Td>
+    </Tr>
   );
 }
 
@@ -1600,15 +1591,32 @@ function ReviewSection() {
       ) : null}
 
       {filteredQueue.length > 0 ? (
-        <ul className="mt-3 flex flex-col gap-2.5">
-          {filteredQueue.map((c) => (
-            <ReviewRow
-              key={c.id}
-              card={c}
-              justGraded={reviewedIds.includes(c.id)}
-            />
-          ))}
-        </ul>
+        <TableWrap className="mt-3">
+          <Table>
+            <caption className="sr-only">
+              {t("progress3.review.tableCaption")}
+            </caption>
+            <THead>
+              <Tr>
+                <Th>{t("progress3.review.col.prompt")}</Th>
+                <Th>{t("progress3.review.col.domain")}</Th>
+                <Th numeric>{t("progress3.review.col.recall")}</Th>
+                <Th numeric>{t("progress3.review.col.stability")}</Th>
+                <Th>{t("progress3.review.col.due")}</Th>
+                <Th>{t("progress3.review.col.state")}</Th>
+              </Tr>
+            </THead>
+            <TBody>
+              {filteredQueue.map((c) => (
+                <ReviewTableRow
+                  key={c.id}
+                  card={c}
+                  justGraded={reviewedIds.includes(c.id)}
+                />
+              ))}
+            </TBody>
+          </Table>
+        </TableWrap>
       ) : (
         <p className="mt-3 rounded-control border border-dashed border-border bg-bg-subtle p-4 text-sm text-muted">
           {t("progress2.review.empty")}
@@ -1884,13 +1892,15 @@ function CohortCard() {
 /** ProgressPage — the returning-learner hub (Journey 5). */
 export function ProgressPage() {
   const { t } = useTranslation();
+  const lang = useLang();
   const header = useEntry();
-  const topRow = useEntry(0.06);
+  const snapshot = useEntry(0.06);
   const mastery = useEntry(0.1);
   const trajectory = useEntry(0.14);
-  const badgesEntry = useEntry(0.18);
-  const review = useEntry(0.22);
-  const cohort = useEntry(0.26);
+  const momentum = useEntry(0.18);
+  const badgesEntry = useEntry(0.2);
+  const review = useEntry(0.24);
+  const cohort = useEntry(0.28);
 
   const clinicalMastery = useMemo(
     () => masteryDomains.filter((d) => d.axis === "clinical"),
@@ -1901,34 +1911,96 @@ export function ProgressPage() {
     [],
   );
 
+  // Snapshot readouts — the calibration gap now vs. its first tracked session
+  // (smaller is better), and how many cards are due for review.
+  const calibGapNow = Math.round(
+    calibrationTrajectory[calibrationTrajectory.length - 1] * 100,
+  );
+  const calibGapFirst = Math.round(calibrationTrajectory[0] * 100);
+  const calibNarrowed = calibGapFirst - calibGapNow;
+  const calibTrend: StatTrend | undefined =
+    calibNarrowed !== 0
+      ? {
+          value: t("progress3.snapshot.gapTrend", {
+            points: Math.abs(calibNarrowed),
+          }),
+          dir: calibNarrowed > 0 ? "down" : "up",
+          goodUp: false,
+        }
+      : undefined;
+  const dueReviews = reviewQueue.filter((c) => c.state === "due").length;
+
   return (
     <PageContainer className="flex flex-col gap-10">
       {/* Header */}
-      <motion.header {...header} className="max-w-3xl">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted">
-          <span className="gradient-mark h-1.5 w-1.5 rounded-full" aria-hidden />
-          {t("progress.eyebrow")}
-        </span>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
-          {t("progress.title")}
-        </h1>
-        <p className="mt-3 max-w-2xl text-lg text-muted">
-          {t("progress.subtitle")}
-        </p>
-        <p className="mt-3 inline-flex items-center gap-2 text-xs text-muted">
-          <Lock weight="bold" className="h-3.5 w-3.5" aria-hidden />
-          {t("home.noPublicLeaderboard")}
-        </p>
-      </motion.header>
+      <motion.div {...header}>
+        <PageHeader
+          eyebrow={t("progress.eyebrow")}
+          title={t("progress.title")}
+          description={t("progress.subtitle")}
+          meta={
+            <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+              <Lock weight="bold" className="h-3.5 w-3.5" aria-hidden />
+              {t("home.noPublicLeaderboard")}
+            </span>
+          }
+        />
+      </motion.div>
 
-      {/* Level + XP | Streak */}
+      {/* Snapshot strip — level, streak, calibration and review at a glance. */}
       <motion.section
-        {...topRow}
+        {...snapshot}
         aria-label={t("progress.level.sectionLabel")}
-        className="grid gap-6 lg:grid-cols-2"
       >
-        <LevelCard />
-        <StreakCard />
+        <Card padding="none" className="overflow-hidden">
+          <div className="grid grid-cols-2 gap-px bg-border lg:grid-cols-4">
+            <div className="bg-surface p-5">
+              <Stat
+                size="lg"
+                label={t("progress3.snapshot.level")}
+                value={levelState.level}
+                icon={<Trophy weight="bold" className="h-3.5 w-3.5" />}
+                hint={levelState.title[lang]}
+              />
+            </div>
+            <div className="bg-surface p-5">
+              <Stat
+                size="lg"
+                label={t("progress3.snapshot.streak")}
+                value={streakState.currentDays}
+                unit={t("progress3.snapshot.streakUnit")}
+                icon={<Fire weight="fill" className="h-3.5 w-3.5" />}
+                hint={t("progress.streak.best") + ": " + streakState.bestDays}
+              />
+            </div>
+            <div className="bg-surface p-5">
+              <Stat
+                size="lg"
+                label={t("progress3.snapshot.calibrationGap")}
+                value={calibGapNow}
+                unit="%"
+                icon={<Target weight="bold" className="h-3.5 w-3.5" />}
+                trend={calibTrend}
+              />
+            </div>
+            <div className="bg-surface p-5">
+              <Stat
+                size="lg"
+                label={t("progress3.snapshot.reviewsDue")}
+                value={dueReviews}
+                unit={t("progress3.snapshot.reviewsUnit")}
+                icon={
+                  <ClockCounterClockwise weight="bold" className="h-3.5 w-3.5" />
+                }
+                hint={
+                  dueReviews > 0
+                    ? t("progress.review.subtitle")
+                    : t("progress2.review.allClear")
+                }
+              />
+            </div>
+          </div>
+        </Card>
       </motion.section>
 
       {/* Mastery map */}
@@ -2017,6 +2089,20 @@ export function ProgressPage() {
         </p>
         <div className="mt-3">
           <TrajectoryCard />
+        </div>
+      </motion.section>
+
+      {/* Momentum — level detail + forgiving streak (supporting, not the lead). */}
+      <motion.section
+        {...momentum}
+        aria-label={t("progress.level.sectionLabel")}
+      >
+        <SectionLabel className="mb-3">
+          {t("progress.level.sectionLabel")}
+        </SectionLabel>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <LevelCard />
+          <StreakCard />
         </div>
       </motion.section>
 

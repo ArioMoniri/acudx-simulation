@@ -10,12 +10,24 @@ import {
   Timer,
   Heartbeat,
   Flask,
+  Lock,
 } from "@phosphor-icons/react";
 
-import { PageContainer } from "@/components/shell";
-import { Card, Badge, Button, Stat } from "@/components/ui";
+import { PageContainer, PageHeader } from "@/components/shell";
+import {
+  Card,
+  Badge,
+  Button,
+  Stat,
+  SectionLabel,
+  Divider,
+  DescriptionList,
+  KeyValue,
+  type StatTrend,
+} from "@/components/ui";
 import {
   DomainBand,
+  BAND_SCALE,
   GapCard,
   CalibrationPlot,
   ProcessTimingCard,
@@ -30,6 +42,8 @@ import {
   calibrationTrajectory,
   feedbackEncounterEvents,
   treatmentBehaviors,
+  type Band,
+  type FeedbackAxis,
 } from "@/data/mock";
 import { chestPainNstemiCase } from "@/data/seedCases";
 import { expectedIntents } from "@/domain/case";
@@ -45,13 +59,41 @@ function toMin(ms: number): number {
   return Math.round(ms / 60_000);
 }
 
+/** Rank of a scored band on the five-step scale (proficient = index 2). */
+const PROFICIENT_INDEX = BAND_SCALE.indexOf("proficient");
+function bandRank(b: Band): number {
+  return b === "withheld"
+    ? -1
+    : BAND_SCALE.indexOf(b as Exclude<Band, "withheld">);
+}
+
+/** Small ◆ clinical / ● communication axis marker. */
+function AxisMark({ axis }: { axis: FeedbackAxis }) {
+  return (
+    <span
+      aria-hidden
+      className={
+        axis === "clinical"
+          ? "inline-block h-2 w-2 rotate-45"
+          : "inline-block h-2 w-2 rounded-full"
+      }
+      style={{
+        backgroundColor:
+          axis === "clinical"
+            ? "var(--axis-clinical)"
+            : "var(--axis-communication)",
+      }}
+    />
+  );
+}
+
 /** FeedbackPage — the post-encounter formative report. */
 export function FeedbackPage() {
   const { t } = useTranslation();
   const lang = useLang();
   const header = useEntry();
-  const bands = useEntry(0.06);
-  const calib = useEntry(0.12);
+  const hero = useEntry(0.06);
+  const bands = useEntry(0.12);
   const process = useEntry(0.16);
   const gaps = useEntry(0.2);
   const remediation = useEntry(0.24);
@@ -61,6 +103,37 @@ export function FeedbackPage() {
 
   const safetyGap = feedbackGaps.find((g) => g.safetyCritical);
   const otherGaps = feedbackGaps.filter((g) => !g.safetyCritical);
+
+  // Headline verdict, derived from the band evidence (no hidden numeric score):
+  // how many scored competency bands sit at proficient-or-above, split by axis.
+  const scored = feedbackDomains.filter((d) => d.band !== "withheld");
+  const withheldCount = feedbackDomains.length - scored.length;
+  const proficientPlus = scored.filter(
+    (d) => bandRank(d.band) >= PROFICIENT_INDEX,
+  ).length;
+  const axisSummary = (axis: FeedbackAxis) => {
+    const ds = scored.filter((d) => d.axis === axis);
+    const strong = ds.filter((d) => bandRank(d.band) >= PROFICIENT_INDEX).length;
+    return { total: ds.length, strong };
+  };
+  const clinicalSummary = axisSummary("clinical");
+  const commSummary = axisSummary("communication");
+
+  // Calibration headline: the latest self-vs-measured gap and how far it has
+  // narrowed since the first tracked session (smaller is better).
+  const latestGap = Math.round(
+    calibrationTrajectory[calibrationTrajectory.length - 1] * 100,
+  );
+  const firstGap = Math.round(calibrationTrajectory[0] * 100);
+  const gapNarrowed = firstGap - latestGap;
+  const gapTrend: StatTrend | undefined =
+    gapNarrowed !== 0
+      ? {
+          value: t("feedback3.verdict.gapTrend", { points: Math.abs(gapNarrowed) }),
+          dir: gapNarrowed > 0 ? "down" : "up",
+          goodUp: false,
+        }
+      : undefined;
 
   // Process metrics derived from a representative event log against the seed
   // NSTEMI case (docs/00-overview/04 §4). Pure + memoized on the static fixture.
@@ -106,24 +179,34 @@ export function FeedbackPage() {
     .join(", ");
 
   return (
-    <PageContainer className="flex flex-col gap-8">
+    <PageContainer className="flex flex-col gap-10">
       {/* Header */}
-      <motion.header {...header}>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-            {t("feedback.encounterTitle")}
-          </h1>
-          <Badge tone="brand">{t("feedback.formativeBadge")}</Badge>
-        </div>
-        <p className="mt-2 max-w-2xl text-muted">{t("feedback.subtitle")}</p>
+      <motion.div {...header}>
+        <PageHeader
+          eyebrow={t("feedback.title")}
+          title={t("feedback.encounterTitle")}
+          description={t("feedback.subtitle")}
+          meta={
+            <>
+              <Badge tone="brand" dot>
+                {t("feedback.formativeBadge")}
+              </Badge>
+              <span className="text-xs text-subtle">
+                {t("feedback.provenance.mode")}: {feedbackReport.mode[lang]} ·{" "}
+                {t("feedback.provenance.version")}: {feedbackReport.version}
+              </span>
+            </>
+          }
+        />
 
         {/* Safety strip — always shown; distinct when a miss exists */}
         <div
-          className="mt-4 flex items-start gap-2.5 rounded-card border p-3.5"
+          className="mt-5 flex items-center gap-2.5 rounded-card border p-3.5"
           style={
             safetyGap
               ? {
-                  borderColor: "color-mix(in srgb, var(--state-critical) 45%, transparent)",
+                  borderColor:
+                    "color-mix(in srgb, var(--state-critical) 45%, transparent)",
                   backgroundColor:
                     "color-mix(in srgb, var(--state-critical) 8%, transparent)",
                 }
@@ -138,13 +221,13 @@ export function FeedbackPage() {
           {safetyGap ? (
             <ShieldWarning
               weight="fill"
-              className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--state-critical)]"
+              className="h-5 w-5 shrink-0 text-[color:var(--state-critical)]"
               aria-hidden
             />
           ) : (
             <CheckCircle
               weight="fill"
-              className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--state-normal)]"
+              className="h-5 w-5 shrink-0 text-[color:var(--state-normal)]"
               aria-hidden
             />
           )}
@@ -154,91 +237,86 @@ export function FeedbackPage() {
               : t("feedback.safetyStripClean")}
           </p>
         </div>
-      </motion.header>
+      </motion.div>
 
-      {/* Dual-axis band scores */}
-      <motion.section {...bands} aria-label={t("feedback.domainsHeading")}>
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold tracking-tight text-fg">
-            {t("feedback.dualAxis.title")}
-          </h2>
-        </div>
-        <p className="mt-1 text-sm text-muted">
-          {t("feedback.dualAxis.orthogonalNote")}
-        </p>
+      {/* HERO — the verdict + the signature calibration scatter, side by side. */}
+      <motion.section {...hero} aria-label={t("feedback3.verdict.eyebrow")}>
+        <Card padding="lg">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,320px)_1fr] lg:gap-10">
+            {/* Verdict — a band-only read of the two orthogonal axes. */}
+            <div className="flex flex-col gap-5">
+              <SectionLabel>{t("feedback3.verdict.eyebrow")}</SectionLabel>
 
-        <div className="mt-4 grid gap-6 md:grid-cols-2">
-          {/* Clinical group */}
-          <div>
-            <div className="mb-2.5 flex items-center gap-2">
-              <span
-                className="h-2.5 w-2.5 rotate-45"
-                style={{ backgroundColor: "var(--axis-clinical)" }}
-                aria-hidden
+              <Stat
+                size="xl"
+                label={t("feedback3.verdict.bandsProficient")}
+                value={`${proficientPlus}/${scored.length}`}
+                hint={t("feedback3.verdict.overall", { total: scored.length })}
               />
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-fg">
-                {t("feedback.clinicalGroup")}
-              </h3>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {clinicalDomains.map((d) => (
-                <DomainBand
-                  key={d.key}
-                  domainKey={d.key}
-                  band={d.band}
-                  axis={d.axis}
-                />
-              ))}
-            </div>
-          </div>
 
-          {/* Communication / professionalism group */}
-          <div>
-            <div className="mb-2.5 flex items-center gap-2">
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: "var(--axis-communication)" }}
-                aria-hidden
+              <Divider />
+
+              <div>
+                <SectionLabel className="mb-2">
+                  {t("feedback3.verdict.byAxis")}
+                </SectionLabel>
+                <DescriptionList divided>
+                  <KeyValue
+                    label={
+                      <span className="inline-flex items-center gap-2">
+                        <AxisMark axis="clinical" />
+                        {t("feedback.clinicalGroup")}
+                      </span>
+                    }
+                    value={`${clinicalSummary.strong}/${clinicalSummary.total}`}
+                    mono
+                  />
+                  <KeyValue
+                    label={
+                      <span className="inline-flex items-center gap-2">
+                        <AxisMark axis="communication" />
+                        {t("feedback.communicationGroup")}
+                      </span>
+                    }
+                    value={`${commSummary.strong}/${commSummary.total}`}
+                    mono
+                  />
+                </DescriptionList>
+              </div>
+
+              <Divider />
+
+              <Stat
+                label={t("feedback3.verdict.calibrationGap")}
+                value={latestGap}
+                unit="%"
+                trend={gapTrend}
+                hint={t("feedback3.verdict.gapHint")}
               />
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-fg">
-                {t("feedback.communicationGroup")}
-              </h3>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {commDomains.map((d) => (
-                <DomainBand
-                  key={d.key}
-                  domainKey={d.key}
-                  band={d.band}
-                  axis={d.axis}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </motion.section>
 
-      {/* THE SIGNATURE — calibration plot */}
-      <motion.section {...calib}>
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold tracking-tight text-fg">
-            {t("calibration.title")}
-          </h2>
-        </div>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          {t("calibration.subtitle")}
-        </p>
-        <Card padding="lg" className="mt-3">
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
-            <CalibrationPlot
-              points={calibrationPoints}
-              trajectory={calibrationTrajectory}
-              lang={lang}
-            />
-            <div className="flex flex-col gap-3">
-              <p className="text-sm leading-relaxed text-fg">
-                {t("calibration.explainer")}
-              </p>
+              {withheldCount > 0 ? (
+                <p className="inline-flex items-center gap-1.5 text-xs text-muted">
+                  <Lock weight="bold" className="h-3.5 w-3.5" aria-hidden />
+                  {t("feedback3.verdict.withheldNote", { count: withheldCount })}
+                </p>
+              ) : null}
+            </div>
+
+            {/* The signature calibration scatter. */}
+            <div className="flex flex-col gap-3 lg:border-l lg:border-border lg:pl-10">
+              <div>
+                <h2 className="text-base font-semibold tracking-tight text-fg">
+                  {t("calibration.title")}
+                </h2>
+                <p className="mt-1 text-sm text-muted">
+                  {t("calibration.subtitle")}
+                </p>
+              </div>
+              <CalibrationPlot
+                points={calibrationPoints}
+                trajectory={calibrationTrajectory}
+                lang={lang}
+              />
               <div className="flex items-start gap-2 rounded-control bg-bg-subtle p-3">
                 <Info
                   weight="fill"
@@ -255,17 +333,74 @@ export function FeedbackPage() {
         </Card>
       </motion.section>
 
+      {/* Dual-axis band scores — the supporting detail behind the verdict. */}
+      <motion.section {...bands} aria-label={t("feedback.domainsHeading")}>
+        <div className="flex flex-col gap-1">
+          <SectionLabel>{t("feedback3.section.bands")}</SectionLabel>
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-lg font-semibold tracking-tight text-fg">
+              {t("feedback.dualAxis.title")}
+            </h2>
+            <p className="hidden text-sm text-muted sm:block">
+              {t("feedback.dualAxis.orthogonalNote")}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-6 md:grid-cols-2">
+          {/* Clinical group */}
+          <div>
+            <div className="mb-2.5 flex items-center gap-2">
+              <AxisMark axis="clinical" />
+              <h3 className="eyebrow">{t("feedback.clinicalGroup")}</h3>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {clinicalDomains.map((d) => (
+                <DomainBand
+                  key={d.key}
+                  domainKey={d.key}
+                  band={d.band}
+                  axis={d.axis}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Communication / professionalism group */}
+          <div>
+            <div className="mb-2.5 flex items-center gap-2">
+              <AxisMark axis="communication" />
+              <h3 className="eyebrow">{t("feedback.communicationGroup")}</h3>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {commDomains.map((d) => (
+                <DomainBand
+                  key={d.key}
+                  domainKey={d.key}
+                  band={d.band}
+                  axis={d.axis}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
       {/* Process & timing (docs/00-overview/04 §4) */}
       <motion.section {...process} aria-label={t("feedback.process.heading")}>
-        <div className="flex items-center gap-2">
-          <Timer weight="bold" className="h-5 w-5 text-brand" aria-hidden />
+        <div className="flex flex-col gap-1">
+          <SectionLabel
+            icon={<Timer weight="bold" className="h-3.5 w-3.5" />}
+          >
+            {t("feedback3.section.process")}
+          </SectionLabel>
           <h2 className="text-lg font-semibold tracking-tight text-fg">
             {t("feedback.process.heading")}
           </h2>
+          <p className="max-w-2xl text-sm text-muted">
+            {t("feedback.process.subtitle")}
+          </p>
         </div>
-        <p className="mt-1 max-w-2xl text-sm text-muted">
-          {t("feedback.process.subtitle")}
-        </p>
 
         {/* Safety-critical process miss — separate + always shown (AS-8) */}
         <div
@@ -340,68 +475,71 @@ export function FeedbackPage() {
           </div>
         </div>
 
-        {/* Coverage / efficiency / totals */}
-        <Card padding="md" className="mt-4">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
-            <Stat
-              label={t("feedback.process.coverage.label")}
-              value={coveragePct}
-              unit="%"
-              hint={t("feedback.process.coverage.hint", {
-                covered: coveredCount,
-                expected: expectedCount,
-              })}
-            />
-            <Stat
-              label={t("feedback.process.redundant.label")}
-              value={metrics.redundantQuestions}
-              hint={t("feedback.process.redundant.hint", {
-                count: metrics.irrelevantQuestions,
-              })}
-            />
-            <Stat
-              label={t("feedback.process.totalTime.label")}
-              value={toMin(metrics.totalTimeMs)}
-              unit={t("feedback.process.minUnit")}
-              hint={t("feedback.process.totalTime.hint")}
-            />
-            <Stat
-              label={t("feedback.process.timeToDx.label")}
-              value={
-                metrics.timeToDiagnosisMs == null
-                  ? "-"
-                  : toMin(metrics.timeToDiagnosisMs)
-              }
-              unit={metrics.timeToDiagnosisMs == null ? undefined : t("feedback.process.minUnit")}
-              hint={
-                metrics.diagnosisCorrect
-                  ? t("feedback.process.timeToDx.correct")
-                  : t("feedback.process.timeToDx.incorrect")
-              }
-            />
+        {/* Coverage / efficiency / totals — a dense instrument strip. */}
+        <Card padding="none" className="mt-4 overflow-hidden">
+          <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+            <div className="bg-surface p-5">
+              <Stat
+                label={t("feedback.process.coverage.label")}
+                value={coveragePct}
+                unit="%"
+                hint={t("feedback.process.coverage.hint", {
+                  covered: coveredCount,
+                  expected: expectedCount,
+                })}
+              />
+            </div>
+            <div className="bg-surface p-5">
+              <Stat
+                label={t("feedback.process.redundant.label")}
+                value={metrics.redundantQuestions}
+                hint={t("feedback.process.redundant.hint", {
+                  count: metrics.irrelevantQuestions,
+                })}
+              />
+            </div>
+            <div className="bg-surface p-5">
+              <Stat
+                label={t("feedback.process.totalTime.label")}
+                value={toMin(metrics.totalTimeMs)}
+                unit={t("feedback.process.minUnit")}
+                hint={t("feedback.process.totalTime.hint")}
+              />
+            </div>
+            <div className="bg-surface p-5">
+              <Stat
+                label={t("feedback.process.timeToDx.label")}
+                value={
+                  metrics.timeToDiagnosisMs == null
+                    ? "-"
+                    : toMin(metrics.timeToDiagnosisMs)
+                }
+                unit={
+                  metrics.timeToDiagnosisMs == null
+                    ? undefined
+                    : t("feedback.process.minUnit")
+                }
+                hint={
+                  metrics.diagnosisCorrect
+                    ? t("feedback.process.timeToDx.correct")
+                    : t("feedback.process.timeToDx.incorrect")
+                }
+              />
+            </div>
           </div>
         </Card>
 
         {/* Time-to-critical-action list (each cited) */}
-        <div className="mt-4">
+        <div className="mt-6">
           <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-fg">
-                {t("feedback.process.criticalActions")}
-              </h3>
+              <SectionLabel>{t("feedback.process.criticalActions")}</SectionLabel>
               <p className="mt-1 text-xs text-muted">
                 {t("feedback.process.criticalActionsNote")}
               </p>
             </div>
             {actionTotal > 0 ? (
-              <span
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold"
-                style={{
-                  color: `var(${allOnTime ? "--state-normal" : "--state-caution"})`,
-                  borderColor: `color-mix(in srgb, var(${allOnTime ? "--state-normal" : "--state-caution"}) 40%, transparent)`,
-                  backgroundColor: `color-mix(in srgb, var(${allOnTime ? "--state-normal" : "--state-caution"}) 10%, transparent)`,
-                }}
-              >
+              <Badge tone={allOnTime ? "normal" : "caution"} dot>
                 {allOnTime ? (
                   <CheckCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
                 ) : (
@@ -411,7 +549,7 @@ export function FeedbackPage() {
                   onTime: onTimeCount,
                   total: actionTotal,
                 })}
-              </span>
+              </Badge>
             ) : null}
           </div>
           <div className="mt-3 grid gap-2.5 md:grid-cols-2">
@@ -422,82 +560,85 @@ export function FeedbackPage() {
         </div>
 
         {/* Investigation stewardship — order appropriateness, cited (§4) */}
-        <div className="mt-5">
-          <div className="flex items-center gap-2">
-            <Flask weight="bold" className="h-4 w-4 text-brand" aria-hidden />
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-fg">
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div>
+            <SectionLabel
+              icon={<Flask weight="bold" className="h-3.5 w-3.5" />}
+            >
               {t("feedback.process.stewardship.heading")}
-            </h3>
+            </SectionLabel>
+            <p className="mt-1 text-xs text-muted">
+              {t("feedback.process.stewardship.subtitle")}
+            </p>
+            <Card padding="md" className="mt-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <Stat
+                  label={t("feedback.process.stewardship.indicated")}
+                  value={steward.indicated}
+                  hint={t("feedback.process.stewardship.indicatedHint")}
+                />
+                <Stat
+                  label={t("feedback.process.stewardship.lowValue")}
+                  value={steward.lowValue}
+                  hint={t("feedback.process.stewardship.lowValueHint")}
+                />
+              </div>
+              <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
+                {steward.lowValue > 0 ? (
+                  <p className="flex items-start gap-2 text-xs text-fg">
+                    <ShieldWarning
+                      weight="fill"
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--state-caution)]"
+                      aria-hidden
+                    />
+                    <span className="font-medium">
+                      {t("feedback.process.stewardship.flagged", {
+                        codes: lowValueList,
+                      })}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="flex items-start gap-2 text-xs text-muted">
+                    <CheckCircle
+                      weight="fill"
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--state-normal)]"
+                      aria-hidden
+                    />
+                    {t("feedback.process.stewardship.cleanNote")}
+                  </p>
+                )}
+                <p className="text-xs text-muted">
+                  {t("feedback.process.stewardship.note")}
+                </p>
+                <span>
+                  <CitationPill citationId="esc-acs-2023" lang={lang} />
+                </span>
+              </div>
+            </Card>
           </div>
-          <p className="mt-1 text-xs text-muted">
-            {t("feedback.process.stewardship.subtitle")}
-          </p>
-          <Card padding="md" className="mt-3">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-              <Stat
-                label={t("feedback.process.stewardship.indicated")}
-                value={steward.indicated}
-                hint={t("feedback.process.stewardship.indicatedHint")}
-              />
-              <Stat
-                label={t("feedback.process.stewardship.lowValue")}
-                value={steward.lowValue}
-                hint={t("feedback.process.stewardship.lowValueHint")}
-              />
-            </div>
-            <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
-              {steward.lowValue > 0 ? (
-                <p className="flex items-start gap-2 text-xs text-fg">
-                  <ShieldWarning
-                    weight="fill"
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--state-caution)]"
-                    aria-hidden
-                  />
-                  <span className="font-medium">
-                    {t("feedback.process.stewardship.flagged", {
-                      codes: lowValueList,
-                    })}
-                  </span>
-                </p>
-              ) : (
-                <p className="flex items-start gap-2 text-xs text-muted">
-                  <CheckCircle
-                    weight="fill"
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--state-normal)]"
-                    aria-hidden
-                  />
-                  {t("feedback.process.stewardship.cleanNote")}
-                </p>
-              )}
-              <p className="text-xs text-muted">
-                {t("feedback.process.stewardship.note")}
-              </p>
-              <span>
-                <CitationPill citationId="esc-acs-2023" lang={lang} />
-              </span>
-            </div>
-          </Card>
-        </div>
 
-        {/* How the patient was treated — communication + safety, cited */}
-        <div className="mt-5">
-          <div className="flex items-center gap-2">
-            <Heartbeat weight="bold" className="h-4 w-4 text-brand" aria-hidden />
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-fg">
+          {/* How the patient was treated — communication + safety, cited */}
+          <div>
+            <SectionLabel
+              icon={<Heartbeat weight="bold" className="h-3.5 w-3.5" />}
+            >
               {t("feedback.process.treatment.heading")}
-            </h3>
-          </div>
-          <div className="mt-3">
-            <TreatmentChecklist behaviors={treatmentBehaviors} lang={lang} />
+            </SectionLabel>
+            <div className="mt-3">
+              <TreatmentChecklist behaviors={treatmentBehaviors} lang={lang} />
+            </div>
           </div>
         </div>
       </motion.section>
 
       {/* Gap analysis */}
       <motion.section {...gaps} aria-label={t("feedback.gapsHeading")}>
-        <h2 className="text-lg font-semibold tracking-tight text-fg">
-          {t("feedback.gapsHeading")}
-        </h2>
+        <div className="flex flex-col gap-1">
+          <SectionLabel>{t("feedback3.section.gaps")}</SectionLabel>
+          <h2 className="text-lg font-semibold tracking-tight text-fg">
+            {t("feedback.gapsHeading")}
+          </h2>
+        </div>
         <div className="mt-3 flex flex-col gap-3">
           {safetyGap ? <GapCard gap={safetyGap} lang={lang} /> : null}
           {otherGaps.map((g) => (
@@ -507,31 +648,29 @@ export function FeedbackPage() {
       </motion.section>
 
       {/* Remediation CTAs */}
-      <motion.section
-        {...remediation}
-        className="rounded-card border border-border bg-surface p-5 sm:p-6"
-      >
-        <h2 className="text-lg font-semibold tracking-tight text-fg">
-          {t("feedback.remediationHeading")}
-        </h2>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <Button
-            leadingIcon={<CalendarPlus weight="bold" className="h-4 w-4" />}
-          >
-            {t("feedback.remediation.spacedRepetition")}
-          </Button>
-          <Button
-            variant="secondary"
-            leadingIcon={<ArrowClockwise weight="bold" className="h-4 w-4" />}
-          >
-            {t("feedback.remediation.harderVariant")}
-          </Button>
-        </div>
-        <p className="mt-3 text-xs text-muted">
-          {t("feedback.remediation.note")} · {t("feedback.provenance.mode")}:{" "}
-          {feedbackReport.mode[lang]} · {t("feedback.provenance.version")}:{" "}
-          {feedbackReport.version}
-        </p>
+      <motion.section {...remediation} aria-label={t("feedback.remediationHeading")}>
+        <Card variant="inset" padding="lg">
+          <SectionLabel>{t("feedback3.section.steps")}</SectionLabel>
+          <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-fg">
+            {t("feedback.remediationHeading")}
+          </h2>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button
+              leadingIcon={<CalendarPlus weight="bold" className="h-4 w-4" />}
+            >
+              {t("feedback.remediation.spacedRepetition")}
+            </Button>
+            <Button
+              variant="secondary"
+              leadingIcon={<ArrowClockwise weight="bold" className="h-4 w-4" />}
+            >
+              {t("feedback.remediation.harderVariant")}
+            </Button>
+          </div>
+          <p className="mt-3 text-xs text-muted">
+            {t("feedback.remediation.note")}
+          </p>
+        </Card>
       </motion.section>
     </PageContainer>
   );
