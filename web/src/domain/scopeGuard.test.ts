@@ -105,24 +105,47 @@ describe("classifyUtterance — in-scope (clinical, EN + TR)", () => {
   });
 });
 
-describe("classifyUtterance — off-topic (social, EN + TR)", () => {
+describe("classifyUtterance — off-topic (genuine chit-chat only, EN + TR)", () => {
   it("marks a chit-chat question off-topic", () => {
     expect(
       classifyUtterance("Did you watch the football match this weekend?", chestCase).class,
     ).toBe("off-topic");
   });
 
-  it("marks a short greeting off-topic", () => {
-    expect(classifyUtterance("Hi there, good morning", chestCase).class).toBe("off-topic");
-  });
-
-  it("marks a Turkish social opener off-topic", () => {
+  it("marks a Turkish social opener (real chit-chat) off-topic", () => {
     expect(classifyUtterance("Hafta sonu maç izledin mi?", chestCase).class).toBe("off-topic");
   });
 
   it("treats empty input as off-topic, not a crash", () => {
     expect(classifyUtterance("", chestCase).class).toBe("off-topic");
     expect(classifyUtterance("   ", chestCase).class).toBe("off-topic");
+  });
+});
+
+describe("classifyUtterance — greeting (soft, no off-task penalty, EN + TR)", () => {
+  it("classifies a bare greeting as `greeting`, NOT off-topic", () => {
+    const r = classifyUtterance("Hi there, good morning", chestCase);
+    expect(r.class).toBe("greeting");
+    expect(r.class).not.toBe("off-topic");
+  });
+
+  it("classifies common English openers and thanks as greeting", () => {
+    expect(classifyUtterance("Hello", chestCase).class).toBe("greeting");
+    expect(classifyUtterance("Hey doctor", chestCase).class).toBe("greeting");
+    expect(classifyUtterance("Good afternoon", chestCase).class).toBe("greeting");
+    expect(classifyUtterance("Thanks", chestCase).class).toBe("greeting");
+  });
+
+  it("classifies a bare Turkish greeting as greeting", () => {
+    expect(classifyUtterance("Merhaba", chestCase).class).toBe("greeting");
+    expect(classifyUtterance("Günaydın doktor", chestCase).class).toBe("greeting");
+  });
+
+  it("a greeting that leads into the opening question stays in-scope, not greeting", () => {
+    // The reason-for-visit clause dominates a leading pleasantry.
+    expect(classifyUtterance("Hi, why did you come in today?", chestCase).class).toBe(
+      "in-scope",
+    );
   });
 });
 
@@ -149,8 +172,10 @@ describe("classifyUtterance — the opening / reason-for-visit question (regress
     expect(classifyUtterance("Şikayetiniz ne?", chestCase).class).toBe("in-scope");
   });
 
-  it("a bare greeting with no question is still off-topic", () => {
-    expect(classifyUtterance("Hi there, good morning", chestCase).class).toBe("off-topic");
+  it("a bare greeting with no question is a soft greeting, never a penalty", () => {
+    const r = classifyUtterance("Hi there, good morning", chestCase);
+    expect(r.class).toBe("greeting");
+    expect(r.class).not.toBe("off-topic");
   });
 
   it("terse or mistyped clinical attempts engage the patient, not an off-task flag", () => {

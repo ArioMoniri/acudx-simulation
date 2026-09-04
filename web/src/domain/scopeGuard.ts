@@ -38,9 +38,15 @@ import { expectedIntents, type CaseInstance, type QuestionIntent } from "@/domai
 /* Public types                                                               */
 /* -------------------------------------------------------------------------- */
 
-/** The five learner-utterance classes (docs §3.1). */
+/**
+ * Learner-utterance classes (docs §3.1). `greeting` is a soft, non-penalised
+ * sibling of `off-topic`: a bare "hi" / "good morning" / "thanks" is a normal
+ * social opening, so the patient greets back in character and it does NOT count
+ * as a focus lapse. `off-topic` is reserved for genuine non-clinical chit-chat.
+ */
 export type UtteranceClass =
   | "in-scope"
+  | "greeting"
   | "off-topic"
   | "answer-seeking"
   | "injection"
@@ -288,11 +294,13 @@ function classifyScope(raw: string, caseInstance: CaseInstance): Classification 
     };
   }
 
-  // A bare greeting/pleasantry with no question is a social opener (off-topic).
-  // But a greeting FOLLOWED BY a question ("hi, why are you here?") must not be
-  // frozen — let it fall through to the interrogative branch below.
+  // A bare greeting/pleasantry with no question is a social opener. It is NOT a
+  // focus lapse — the patient just greets back in character (docs §3.1) — so it
+  // gets its own soft `greeting` class rather than the penalised `off-topic`.
+  // A greeting FOLLOWED BY a question ("hi, why are you here?") must not be
+  // frozen — it falls through to the interrogative branch below instead.
   if (GREETING_RE.test(raw) && tokens.length <= 6 && !INTERROGATIVE_RE.test(raw)) {
-    return { class: "off-topic", score: 0.8, rationale: "Short greeting / social opener with no clinical content" };
+    return { class: "greeting", score: 0.8, rationale: "Short greeting / social pleasantry; patient replies in character, no penalty" };
   }
   if (tokens.some((tok) => startsWithAny(tok, CHITCHAT_STEMS))) {
     return { class: "off-topic", score: 0.82, rationale: "Non-clinical / social topic, outside the case scope" };

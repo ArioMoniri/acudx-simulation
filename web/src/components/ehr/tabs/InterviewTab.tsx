@@ -31,11 +31,9 @@ import {
   inferQuestionIntent,
   type UtteranceClass,
 } from "@/domain/scopeGuard";
-import { expectedIntents } from "@/domain/case";
 import type { QuestionIntent, ExamManeuver, CaseInstance } from "@/domain/case";
 import { useLiveBackend } from "@/lib/liveBackend";
 import {
-  guard as backendGuard,
   patientTurn as backendPatientTurn,
   type PatientTurnRequest,
 } from "@/lib/backend";
@@ -50,8 +48,50 @@ export interface InterviewTabProps {
   onGuidanceChange: (on: boolean) => void;
 }
 
-/** The non-advancing guard classes surfaced in the composer notice region. */
-type GuardNoticeClass = Exclude<UtteranceClass, "in-scope">;
+/**
+ * The guard classes surfaced in the composer notice region. `in-scope` routes to
+ * the patient; `greeting` gets a friendly in-character reply — neither shows a
+ * notice, so both are excluded here.
+ */
+type GuardNoticeClass = Exclude<UtteranceClass, "in-scope" | "greeting">;
+
+/**
+ * In-character canned patient lines used offline (and as the live fallback), kept
+ * bilingual so they render correctly in EN/TR just like the reveal-graph turns.
+ * Varied so the patient never feels robotic. `greeting` answers a social opener;
+ * `clarify` answers an in-scope utterance that maps to no specific datum — the
+ * patient stays engaged and gently asks the learner to be more specific instead
+ * of a hard "off-topic" penalty.
+ */
+const GREETING_REPLIES: ReadonlyArray<{ en: string; tr: string }> = [
+  {
+    en: "Hello, doctor. Thank you for seeing me today.",
+    tr: "Merhaba doktor. Bugün beni gördüğünüz için teşekkür ederim.",
+  },
+  {
+    en: "Hi, doctor — I'm glad you could see me. I've not been feeling right.",
+    tr: "Merhaba doktor — beni görebildiğinize sevindim. Kendimi pek iyi hissetmiyorum.",
+  },
+  {
+    en: "Good to meet you, doctor. I'm ready whenever you'd like to begin.",
+    tr: "Sizinle tanışmak güzel doktor. Başlamak istediğinizde hazırım.",
+  },
+];
+
+const CLARIFY_REPLIES: ReadonlyArray<{ en: string; tr: string }> = [
+  {
+    en: "I'm sorry, I'm not quite sure what you mean — could you ask that a different way?",
+    tr: "Üzgünüm, tam olarak ne demek istediğinizi anlayamadım — biraz farklı sorabilir misiniz?",
+  },
+  {
+    en: "Could you be a little more specific about what you'd like to know?",
+    tr: "Neyi öğrenmek istediğiniz konusunda biraz daha açık olabilir misiniz?",
+  },
+  {
+    en: "I didn't quite follow — what would you like to ask me about?",
+    tr: "Tam takip edemedim — bana neyi sormak istersiniz?",
+  },
+];
 
 interface GuardNoticeState {
   cls: GuardNoticeClass;
@@ -136,6 +176,8 @@ export function InterviewTab({
   const [liveAffect, setLiveAffect] = useState<Record<string, string>>({});
   const [fallbackNotice, setFallbackNotice] = useState(false);
   const liveSeq = useRef(0);
+  // Rotates the canned greeting/clarify lines so repeats don't feel robotic.
+  const cannedSeq = useRef(0);
   useEffect(() => {
     return () => {
       if (typingTimer.current) window.clearTimeout(typingTimer.current);
@@ -187,15 +229,17 @@ export function InterviewTab({
           affect[patId] = affectLabel;
         }
       } else {
-        // Off-target question: the patient cannot help with that here.
+        // Off-target question: the patient has nothing specific for that, so
+        // they stay in character and (varied, by seq) ask for more detail rather
+        // than repeating one robotic "I'm not sure how to answer that" line.
         const patId = `p-${ev.seq}-miss`;
-        const miss = t("ehr.interview.noInfo");
+        const miss = CLARIFY_REPLIES[ev.seq % CLARIFY_REPLIES.length];
         turnsAcc.push({
           id: patId,
           role: "patient",
           stage: "history",
-          en: miss,
-          tr: miss,
+          en: miss.en,
+          tr: miss.tr,
         });
         affect[patId] = affectLabel;
       }
@@ -229,29 +273,41 @@ export function InterviewTab({
     pulseTyping();
   }
 
-  /** Best-guess intent when free text is in-scope but maps to no clear intent. */
-  function fallbackIntent(): QuestionIntent {
-    const asked = new Set(
-      state.events.filter((e) => e.type === "question").map((e) => e.ref),
-    );
-    return (
-      expectedIntents(caseInstance).find((i) => !asked.has(i)) ??
-      "associated-symptoms"
-    );
+  /** Append an in-character canned patient reply (greeting / clarify) offline. */
+  function appendCannedReply(
+    doctorText: string,
+    pool: ReadonlyArray<{ en: string; tr: string }>,
+  ) {
+    const reply = pool[cannedSeq.current++ % pool.length];
+    appendExchange(doctorText, reply, affectLabel);
   }
 
   /**
    * The offline path: the client-side Scope & Injection Guard, routed per class.
-   * This is EXACTLY the pre-existing behavior and is what runs when Live mode is
-   * off, and what a failed backend call falls back to.
+   * Runs when Live mode is off, and as the fallback when a backend call fails.
+   *
+   * `greeting` and an in-scope utterance that maps to no datum both get a brief
+   * in-character reply with NO off-task penalty; only genuine chit-chat
+   * (off-topic) and the hard-safety classes surface a notice.
    */
   function routeClientVerdict(text: string) {
     const verdict = classifyUtterance(text, caseInstance);
     switch (verdict.class) {
-      case "in-scope": {
-        // Normal flow: map to the closest intent and let state advance.
+      case "greeting":
+        // Social opener: the patient greets back in character. Not a lapse.
         setNotice(null);
-        handleAsk(inferQuestionIntent(text, caseInstance) ?? fallbackIntent());
+        appendCannedReply(text, GREETING_REPLIES);
+        break;
+      case "in-scope": {
+        // Normal flow: map to the closest intent and let state advance. When no
+        // intent resolves, stay engaged and ask for specifics — no penalty.
+        setNotice(null);
+        const intent = inferQuestionIntent(text, caseInstance);
+        if (intent) {
+          handleAsk(intent);
+        } else {
+          appendCannedReply(text, CLARIFY_REPLIES);
+        }
         break;
       }
       case "off-topic":
@@ -352,16 +408,24 @@ export function InterviewTab({
     };
   }
 
-  /** Append a doctor turn + a backend-sourced patient reply (badged "Live · pod"). */
-  function appendLiveExchange(doctorText: string, patientText: string) {
+  /**
+   * Append a doctor turn + a patient reply to the free-text transcript. `affect`
+   * both labels the patient turn and, when it is the Live badge, marks the reply
+   * as model-sourced ("Live · pod"); canned offline replies pass affectLabel.
+   */
+  function appendExchange(
+    doctorText: string,
+    patient: { en: string; tr: string },
+    affect: string,
+  ) {
     const n = liveSeq.current++;
     const patId = `live-${n}-p`;
     setLiveTurns((prev) => [
       ...prev,
       { id: `live-${n}-d`, role: "doctor", stage: "history", en: doctorText, tr: doctorText },
-      { id: patId, role: "patient", stage: "history", en: patientText, tr: patientText },
+      { id: patId, role: "patient", stage: "history", en: patient.en, tr: patient.tr },
     ]);
-    setLiveAffect((prev) => ({ ...prev, [patId]: t("liveBackend.badge") }));
+    setLiveAffect((prev) => ({ ...prev, [patId]: affect }));
   }
 
   /** Any backend failure lands here: note it, then run the offline path. */
@@ -371,56 +435,22 @@ export function InterviewTab({
   }
 
   /**
-   * The live path: guard() on the pod first, then route by class exactly as the
-   * offline guard does — in-scope calls patientTurn() and renders the REAL reply;
-   * off-topic / answer-seeking / injection / unsafe reuse the existing notices.
-   * ANY backend error falls back to the mock path (badge cleared).
+   * Send an in-scope / greeting utterance to the pod persona and render the REAL
+   * model reply as the patient turn. A "typing…" state shows while the model
+   * responds (CPU inference can take a few seconds). ANY failure — not ok, empty
+   * utterance, or a thrown error — degrades to the offline reveal-graph path.
    */
-  async function handleLiveSend(text: string) {
-    setNotice(null);
-    setFallbackNotice(false);
+  async function sendToPatient(text: string) {
     if (typingTimer.current) window.clearTimeout(typingTimer.current);
     setTyping(true);
     try {
-      const gres = await backendGuard(text, buildCaseContext());
-      if (!gres.ok) {
+      const tres = await backendPatientTurn(buildPatientTurnRequest(text));
+      if (!tres.ok || !tres.data.utterance) {
         liveFallback(text);
         return;
       }
-      const verdict = gres.data;
-      const score = typeof verdict.score === "number" ? verdict.score : 0;
-      const rationale = verdict.rationale ?? "";
-
-      switch (verdict.cls) {
-        case "in-scope": {
-          const tres = await backendPatientTurn(buildPatientTurnRequest(text));
-          if (!tres.ok || !tres.data.utterance) {
-            liveFallback(text);
-            return;
-          }
-          appendLiveExchange(text, tres.data.utterance);
-          return;
-        }
-        case "off-topic":
-          logGuardOutcome({ type: "offtopic", utterance: text, score, rationale });
-          setNotice({ cls: "off-topic", utterance: text });
-          return;
-        case "answer-seeking":
-          logGuardOutcome({ type: "answer-seeking", utterance: text, score, rationale });
-          setNotice({ cls: "answer-seeking", utterance: text });
-          return;
-        case "injection":
-          logGuardOutcome({ type: "injection", utterance: text, score, rationale });
-          setNotice({ cls: "injection", utterance: text });
-          return;
-        case "unsafe":
-          logGuardOutcome({ type: "unsafe", utterance: text, score, rationale });
-          setNotice({ cls: "unsafe", utterance: text });
-          return;
-        default:
-          liveFallback(text);
-          return;
-      }
+      const reply = tres.data.utterance;
+      appendExchange(text, { en: reply, tr: reply }, t("liveBackend.badge"));
     } catch {
       // Belt and suspenders: the client never throws, but never trust the wire.
       liveFallback(text);
@@ -429,8 +459,47 @@ export function InterviewTab({
     }
   }
 
-  // Run the guard on the learner's free-text message, then route per class. When
-  // Live mode is on, this goes to the pod gateway; otherwise it stays offline.
+  /**
+   * The live path. The deterministic client guard classifies first so the
+   * hard-safety classes (injection / unsafe / answer-seeking) NEVER reach the
+   * model and genuine chit-chat is redirected — everything the patient should
+   * actually hear (a greeting or any in-scope question) is routed to
+   * /v1/patient/turn for a dynamic, varied reply. This is what makes free-typed
+   * questions get a real answer instead of a canned reveal-graph line, and it
+   * stops well-formed questions from being over-flagged as "off-topic".
+   */
+  async function handleLiveSend(text: string) {
+    setNotice(null);
+    setFallbackNotice(false);
+    const verdict = classifyUtterance(text, caseInstance);
+    const { score, rationale } = verdict;
+    switch (verdict.class) {
+      case "greeting":
+      case "in-scope":
+        await sendToPatient(text);
+        return;
+      case "off-topic":
+        logGuardOutcome({ type: "offtopic", utterance: text, score, rationale });
+        setNotice({ cls: "off-topic", utterance: text });
+        return;
+      case "answer-seeking":
+        logGuardOutcome({ type: "answer-seeking", utterance: text, score, rationale });
+        setNotice({ cls: "answer-seeking", utterance: text });
+        return;
+      case "injection":
+        logGuardOutcome({ type: "injection", utterance: text, score, rationale });
+        setNotice({ cls: "injection", utterance: text });
+        return;
+      case "unsafe":
+        logGuardOutcome({ type: "unsafe", utterance: text, score, rationale });
+        setNotice({ cls: "unsafe", utterance: text });
+        return;
+    }
+  }
+
+  // Route the learner's free-text message. When Live mode is on, in-scope and
+  // greeting turns go to the pod gateway for a dynamic reply; otherwise (and on
+  // any backend failure) the offline reveal-graph path answers.
   function handleSend(e?: React.FormEvent) {
     e?.preventDefault();
     const text = draft.trim();
