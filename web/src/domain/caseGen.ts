@@ -112,16 +112,75 @@ function makeRng(seed: number): Rng {
 /* -------------------------------------------------------------------------- */
 
 /**
- * The browsable chief-complaint families. Kept intentionally at four values
- * because they are the shared, cross-file filter facet (`Record<ChiefComplaintFamily, …>`
- * lives in data/caseLibrary.ts and pages/StartPage.tsx). The generator spans FAR
- * more clinical territory than four complaints: each PresentationTemplate below is
- * tagged with the closest of these four families for constraint/filter purposes,
- * while the catalogue itself covers cardiology, respiratory, GI/surgical, neurology,
- * infectious, endocrine, renal/urology, vascular, allergy, OB-GYN, rheumatology and
- * psychiatry — dozens of distinct ICD-10 / DSM-5-TR presentations.
+ * The browsable chief-complaint families — the shared, cross-file filter facet
+ * used by the Start wizard, the case library and the summative exam. The first
+ * four are the original symptom-led families; the remainder are organ-system /
+ * specialty families so the offline catalogue can be filtered along the same
+ * axes this module's header describes (cardiology, respiratory, GI / surgical,
+ * neurology, infectious, endocrine, renal / urology, vascular, allergy, OB-GYN,
+ * rheumatology, psychiatry).
+ *
+ * Every PresentationTemplate carries a primary symptom `family` PLUS zero or
+ * more specialty tags (see SPECIALTY_TAGS), and constrained generation matches
+ * on EITHER — so "cardiology" draws ACS, pericarditis, dissection and
+ * decompensated heart failure across the chest-pain and dyspnea symptom
+ * families.
+ *
+ * NOTE: this union deliberately grew past the original four. Any exhaustive
+ * `Record<ChiefComplaintFamily, …>` (e.g. the library labels, exam labels and
+ * case icons) must now enumerate every id — build those from the canonical
+ * CHIEF_COMPLAINT_FAMILIES list below rather than hand-maintaining keys.
  */
-export type ChiefComplaintFamily = "chest-pain" | "headache" | "abdominal-pain" | "dyspnea";
+export type ChiefComplaintFamily =
+  | "chest-pain"
+  | "headache"
+  | "abdominal-pain"
+  | "dyspnea"
+  | "cardiology"
+  | "respiratory"
+  | "gi-surgical"
+  | "neurology"
+  | "infectious"
+  | "endocrine"
+  | "renal-urology"
+  | "vascular"
+  | "allergy"
+  | "obgyn"
+  | "rheumatology"
+  | "psychiatry";
+
+/** Canonical picker metadata for one chief-complaint family. */
+export interface ChiefComplaintFamilyMeta {
+  id: ChiefComplaintFamily;
+  /** Icon hint (a name string; the UI maps it onto its own icon set). */
+  icon?: string;
+  label: Bilingual;
+  hint?: Bilingual;
+}
+
+/**
+ * The canonical, ordered list of browsable families — the single source of
+ * truth the Start wizard / library / exam pickers build their controls from, so
+ * a new family only has to be declared here.
+ */
+export const CHIEF_COMPLAINT_FAMILIES: ChiefComplaintFamilyMeta[] = [
+  { id: "chest-pain", icon: "Heartbeat", label: { en: "Chest pain", tr: "Göğüs ağrısı" }, hint: { en: "ACS, dissection, PE and the can't-miss mimics.", tr: "AKS, diseksiyon, PE ve atlanmaması gereken taklitçiler." } },
+  { id: "headache", icon: "Brain", label: { en: "Headache", tr: "Baş ağrısı" }, hint: { en: "Thunderclap, meningitis and stroke vs benign causes.", tr: "Gök gürültüsü, menenjit ve inme; iyi huylu nedenlerden ayrım." } },
+  { id: "abdominal-pain", icon: "Flask", label: { en: "Abdominal pain", tr: "Karın ağrısı" }, hint: { en: "Surgical abdomen, colic and metabolic mimics.", tr: "Cerrahi akut karın, kolik ve metabolik taklitçiler." } },
+  { id: "dyspnea", icon: "Wind", label: { en: "Breathlessness", tr: "Nefes darlığı" }, hint: { en: "PE, pneumonia, failure and airway disease.", tr: "PE, pnömoni, yetmezlik ve hava yolu hastalığı." } },
+  { id: "cardiology", icon: "Heartbeat", label: { en: "Cardiology", tr: "Kardiyoloji" }, hint: { en: "Ischaemia, pericardium and decompensated failure.", tr: "İskemi, perikard ve dekompanse yetmezlik." } },
+  { id: "respiratory", icon: "Lungs", label: { en: "Respiratory", tr: "Solunum" }, hint: { en: "Airway, pleura and pulmonary vasculature.", tr: "Hava yolu, plevra ve pulmoner damarlar." } },
+  { id: "gi-surgical", icon: "Flask", label: { en: "GI / surgical", tr: "GİS / cerrahi" }, hint: { en: "Appendix, gallbladder, pancreas and obstruction.", tr: "Apandis, safra kesesi, pankreas ve tıkanıklık." } },
+  { id: "neurology", icon: "Brain", label: { en: "Neurology", tr: "Nöroloji" }, hint: { en: "Stroke, haemorrhage, meningitis and migraine.", tr: "İnme, kanama, menenjit ve migren." } },
+  { id: "infectious", icon: "Virus", label: { en: "Infectious", tr: "Enfeksiyon" }, hint: { en: "Sepsis-spectrum illness and source identification.", tr: "Sepsis spektrumu hastalık ve odak tespiti." } },
+  { id: "endocrine", icon: "Drop", label: { en: "Endocrine / metabolic", tr: "Endokrin / metabolik" }, hint: { en: "Diabetic emergencies and metabolic derangement.", tr: "Diyabetik aciller ve metabolik bozukluk." } },
+  { id: "renal-urology", icon: "Drop", label: { en: "Renal / urology", tr: "Böbrek / üroloji" }, hint: { en: "Colic, obstruction and upper-tract infection.", tr: "Kolik, obstrüksiyon ve üst üriner enfeksiyon." } },
+  { id: "vascular", icon: "Pulse", label: { en: "Vascular", tr: "Vasküler" }, hint: { en: "Aneurysm, dissection and thromboembolism.", tr: "Anevrizma, diseksiyon ve tromboemboli." } },
+  { id: "allergy", icon: "Warning", label: { en: "Allergy / immunology", tr: "Alerji / immünoloji" }, hint: { en: "Anaphylaxis recognition and time-critical adrenaline.", tr: "Anafilaksi tanıma ve zaman-kritik adrenalin." } },
+  { id: "obgyn", icon: "Baby", label: { en: "OB-GYN", tr: "Kadın hastalıkları ve doğum" }, hint: { en: "Pregnancy-related and pelvic emergencies.", tr: "Gebelikle ilişkili ve pelvik aciller." } },
+  { id: "rheumatology", icon: "Bone", label: { en: "Rheumatology", tr: "Romatoloji" }, hint: { en: "Vasculitis and sight-threatening inflammation.", tr: "Vaskülit ve görmeyi tehdit eden enflamasyon." } },
+  { id: "psychiatry", icon: "ChatCircle", label: { en: "Psychiatry", tr: "Psikiyatri" }, hint: { en: "Panic and functional presentations after rule-out.", tr: "Dışlama sonrası panik ve işlevsel tablolar." } },
+];
 
 /**
  * Physiological state class that governs plausible vitals bands (and the base ESI
@@ -1049,29 +1108,278 @@ const PRESENTATIONS: PresentationTemplate[] = [
 ];
 
 /* -------------------------------------------------------------------------- */
-/* Demographic pools                                                           */
+/* Specialty tagging (a template can belong to several browsable families)     */
 /* -------------------------------------------------------------------------- */
 
-const MALE_NAMES = [
-  "Ahmet Yılmaz", "Mehmet Demir", "Mustafa Kaya", "Emre Şahin", "Can Aydın",
-  "Burak Çelik", "Ali Öztürk", "Hüseyin Arslan", "Kaan Doğan", "Yusuf Kılıç",
-  "Onur Aksoy", "Serkan Güneş",
+/**
+ * Organ-system / specialty families each template ALSO belongs to, keyed by
+ * template.key. Constrained generation matches a requested family against the
+ * template's primary symptom `family` OR any of these, so the specialty
+ * families added to ChiefComplaintFamily all resolve to real cases without
+ * duplicating the curated catalogue.
+ */
+const SPECIALTY_TAGS: Record<string, ChiefComplaintFamily[]> = {
+  acs: ["cardiology"],
+  panic: ["psychiatry"],
+  "aortic-dissection": ["cardiology", "vascular"],
+  pericarditis: ["cardiology"],
+  pneumothorax: ["respiratory"],
+  sah: ["neurology", "vascular"],
+  migraine: ["neurology"],
+  meningitis: ["neurology", "infectious"],
+  "ischemic-stroke": ["neurology", "vascular"],
+  "temporal-arteritis": ["neurology", "rheumatology", "vascular"],
+  appendicitis: ["gi-surgical"],
+  cholecystitis: ["gi-surgical"],
+  pancreatitis: ["gi-surgical"],
+  "renal-colic": ["renal-urology"],
+  "bowel-obstruction": ["gi-surgical"],
+  "ectopic-pregnancy": ["obgyn"],
+  dka: ["endocrine"],
+  aaa: ["vascular"],
+  pyelonephritis: ["renal-urology", "infectious"],
+  pe: ["respiratory", "vascular"],
+  pneumonia: ["respiratory", "infectious"],
+  "acute-heart-failure": ["cardiology"],
+  "copd-exacerbation": ["respiratory"],
+  asthma: ["respiratory"],
+  anaphylaxis: ["allergy", "respiratory"],
+};
+
+/** All families a template can be filtered by: its primary symptom family plus tags. */
+function familiesOf(p: PresentationTemplate): ChiefComplaintFamily[] {
+  return [p.family, ...(SPECIALTY_TAGS[p.key] ?? [])];
+}
+
+/* -------------------------------------------------------------------------- */
+/* Demographic pools (recombinant given-name × surname, locale-aware)          */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Names are recombined from separate given-name and surname pools (≈80 each per
+ * axis) so that combinations run into the thousands and no small fixed set of
+ * "case patients" recurs. Pools are locale-aware (EN / TR) and given names are
+ * sex-specific so the generated identity stays demographically coherent.
+ */
+
+const MALE_GIVEN_TR = [
+  "Ahmet", "Mehmet", "Mustafa", "Ali", "Hüseyin", "Hasan", "İbrahim", "Osman",
+  "Yusuf", "Murat", "Ömer", "Ramazan", "Süleyman", "İsmail", "Kemal", "Emre",
+  "Burak", "Can", "Kaan", "Onur", "Serkan", "Cem", "Barış", "Volkan", "Tolga",
+  "Uğur", "Eren", "Furkan", "Berk", "Arda", "Mert", "Emir", "Efe", "Ege",
+  "Yiğit", "Batuhan", "Doğukan", "Kerem", "Alperen", "Bora", "Çağatay", "Hakan",
+  "Levent", "Sinan", "Tarık", "Okan", "Selim", "Fatih", "Gökhan", "Halil",
+  "Recep", "Enes", "Bülent", "Cenk", "Ferhat", "Görkem", "Koray", "Metin",
+  "Nihat", "Oğuz", "Polat", "Sedat", "Şahin", "Taner", "Turgut", "Ünal",
+  "Vedat", "Yavuz", "Zafer", "Abdullah", "Bekir", "Cihan", "Erdem", "Kadir",
+  "Melih", "Orhan", "Rıza", "Tuncay", "Yalın", "Deniz",
 ];
-const FEMALE_NAMES = [
-  "Elif Demir", "Ayşe Şahin", "Zeynep Kaya", "Fatma Yıldız", "Deniz Aydın",
-  "Merve Arslan", "Selin Koç", "Buse Yılmaz", "Ece Polat", "Nur Çetin",
-  "Melis Aslan", "Gizem Kurt",
+const FEMALE_GIVEN_TR = [
+  "Ayşe", "Fatma", "Emine", "Hatice", "Zeynep", "Elif", "Meryem", "Şerife",
+  "Zehra", "Sultan", "Hanife", "Merve", "Büşra", "Esra", "Havva", "Rabia",
+  "Sevim", "Yasemin", "Gül", "Dilek", "Selin", "Buse", "Ece", "Nur", "Melis",
+  "Gizem", "Derya", "Ebru", "Funda", "Gamze", "Hande", "Irmak", "Kübra", "Lale",
+  "Melek", "Nazlı", "Özlem", "Pınar", "Rana", "Sıla", "Tuğçe", "Ülkü", "Vildan",
+  "Yağmur", "Aslı", "Bahar", "Ceren", "Damla", "Eda", "Feride", "Gökçe", "Hazal",
+  "İpek", "Kader", "Leyla", "Mine", "Nalan", "Oya", "Pelin", "Reyhan", "Seda",
+  "Tuba", "Ümran", "Vuslat", "Yeliz", "Zübeyde", "Aleyna", "Beren", "Cansu",
+  "Dilara", "Ela", "Feyza", "Gonca", "Handan", "İclal", "Kevser", "Lamia",
+  "Miray", "Nehir", "Sena",
+];
+const SURNAMES_TR = [
+  "Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız", "Yıldırım", "Öztürk",
+  "Aydın", "Özdemir", "Arslan", "Doğan", "Kılıç", "Aslan", "Çetin", "Kara",
+  "Koç", "Kurt", "Özkan", "Şimşek", "Polat", "Korkmaz", "Çakır", "Erdoğan",
+  "Yavuz", "Aksoy", "Güneş", "Bulut", "Keskin", "Gül", "Aydemir", "Özer",
+  "Türk", "Acar", "Bozkurt", "Yalçın", "Işık", "Uçar", "Tekin", "Sarı", "Avcı",
+  "Bal", "Güler", "Duman", "Ateş", "Aktaş", "Şen", "Taş", "Köse", "Erdem",
+  "Yüksel", "Uzun", "Kaplan", "Çınar", "Turan", "Ünal", "Coşkun", "Sezer",
+  "Karadağ", "Balcı", "Özcan", "Soylu", "Toprak", "Ergün", "Aydoğan", "Çakmak",
+  "Demirci", "Elmas", "Fidan", "Gökçe", "Kahraman", "Küçük", "Mutlu", "Öztaş",
+  "Pekcan", "Sağlam", "Taşkın", "Ulusoy", "Vural", "Yetkin",
 ];
 
-/** Seeded onset-duration phrases, appended to the encounter reason for variety. */
-const ONSET_DURATIONS: Bilingual[] = [
-  { en: "about 30 minutes", tr: "yaklaşık 30 dakika" },
-  { en: "about 1 hour", tr: "yaklaşık 1 saat" },
-  { en: "a couple of hours", tr: "birkaç saat" },
-  { en: "since this morning", tr: "bu sabahtan beri" },
-  { en: "since last night", tr: "dün geceden beri" },
-  { en: "about a day", tr: "yaklaşık bir gün" },
+const MALE_GIVEN_EN = [
+  "James", "John", "Robert", "Michael", "William", "David", "Richard", "Joseph",
+  "Thomas", "Charles", "Christopher", "Daniel", "Matthew", "Anthony", "Mark",
+  "Donald", "Steven", "Paul", "Andrew", "Joshua", "Kenneth", "Kevin", "Brian",
+  "George", "Timothy", "Ronald", "Edward", "Jason", "Jeffrey", "Ryan", "Jacob",
+  "Gary", "Nicholas", "Eric", "Jonathan", "Stephen", "Justin", "Scott",
+  "Brandon", "Benjamin", "Samuel", "Gregory", "Alexander", "Patrick", "Frank",
+  "Raymond", "Jack", "Dennis", "Tyler", "Aaron", "Henry", "Douglas", "Peter",
+  "Adam", "Nathan", "Zachary", "Walter", "Kyle", "Carl", "Jeremy", "Keith",
+  "Roger", "Arthur", "Sean", "Christian", "Ethan", "Austin", "Albert", "Jesse",
+  "Bryan", "Bruce", "Noah", "Liam", "Oliver", "Elijah", "Lucas", "Mason",
+  "Logan", "Owen", "Leo",
 ];
+const FEMALE_GIVEN_EN = [
+  "Mary", "Patricia", "Jennifer", "Linda", "Elizabeth", "Barbara", "Susan",
+  "Jessica", "Sarah", "Karen", "Lisa", "Nancy", "Betty", "Margaret", "Sandra",
+  "Ashley", "Kimberly", "Emily", "Donna", "Michelle", "Carol", "Amanda",
+  "Dorothy", "Melissa", "Deborah", "Stephanie", "Rebecca", "Sharon", "Laura",
+  "Cynthia", "Kathleen", "Amy", "Angela", "Anna", "Brenda", "Pamela", "Emma",
+  "Nicole", "Helen", "Samantha", "Katherine", "Christine", "Rachel", "Carolyn",
+  "Janet", "Catherine", "Maria", "Heather", "Diane", "Olivia", "Julie",
+  "Victoria", "Kelly", "Christina", "Lauren", "Megan", "Andrea", "Hannah",
+  "Jacqueline", "Martha", "Gloria", "Teresa", "Sara", "Madison", "Kathryn",
+  "Abigail", "Alice", "Julia", "Sophia", "Grace", "Chloe", "Isabella", "Ava",
+  "Mia", "Ruby", "Zoe", "Ella", "Lily", "Freya", "Amelia",
+];
+const SURNAMES_EN = [
+  "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
+  "Davis", "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson",
+  "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez",
+  "Thompson", "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis",
+  "Robinson", "Walker", "Young", "Allen", "King", "Wright", "Scott", "Torres",
+  "Nguyen", "Hill", "Flores", "Green", "Adams", "Nelson", "Baker", "Hall",
+  "Rivera", "Campbell", "Mitchell", "Carter", "Roberts", "Gomez", "Phillips",
+  "Evans", "Turner", "Diaz", "Parker", "Cruz", "Edwards", "Collins", "Reyes",
+  "Stewart", "Morris", "Morales", "Murphy", "Cook", "Rogers", "Morgan",
+  "Cooper", "Peterson", "Bailey", "Reed", "Kelly", "Howard", "Ramos", "Kim",
+  "Cox", "Ward", "Richardson", "Watson", "Brooks",
+];
+
+/** Seeded onset-timing phrases woven into the encounter reason for variety. */
+const ONSET_VARIANTS: Bilingual[] = [
+  { en: "about 30 minutes ago", tr: "yaklaşık 30 dakika önce" },
+  { en: "about an hour ago", tr: "yaklaşık bir saat önce" },
+  { en: "a couple of hours ago", tr: "birkaç saat önce" },
+  { en: "since early this morning", tr: "bu sabahın erken saatlerinden beri" },
+  { en: "since last night", tr: "dün geceden beri" },
+  { en: "since yesterday", tr: "dünden beri" },
+  { en: "over the past two days", tr: "son iki gündür" },
+  { en: "gradually over several days", tr: "birkaç gün içinde giderek" },
+];
+
+/* Severity descriptors, chosen by acuity so a benign case is not "9/10" and a
+   time-critical one is not "mild". Independent axis from onset / comorbidity. */
+const SEVERITY_LOW: Bilingual[] = [
+  { en: "It is mild, around 2 out of 10.", tr: "Hafif, 10 üzerinden yaklaşık 2." },
+  { en: "It is mild and comes and goes, about 3 out of 10.", tr: "Hafif ve gelip geçici, 10 üzerinden yaklaşık 3." },
+  { en: "It is niggling but bearable, maybe 3 out of 10.", tr: "Rahatsız edici ama katlanılır, belki 10 üzerinden 3." },
+];
+const SEVERITY_MID: Bilingual[] = [
+  { en: "It is moderate, around 5 out of 10.", tr: "Orta şiddette, 10 üzerinden yaklaşık 5." },
+  { en: "It is quite uncomfortable, about 6 out of 10.", tr: "Oldukça rahatsız edici, 10 üzerinden yaklaşık 6." },
+  { en: "It is enough to stop me concentrating, 5 to 6 out of 10.", tr: "Odaklanmamı engelleyecek kadar, 10 üzerinden 5-6." },
+];
+const SEVERITY_HIGH: Bilingual[] = [
+  { en: "It is severe, about 8 out of 10.", tr: "Şiddetli, 10 üzerinden yaklaşık 8." },
+  { en: "It is close to the worst I have felt, 9 out of 10.", tr: "Hissettiğim en kötüye yakın, 10 üzerinden 9." },
+  { en: "It is overwhelming, easily 8 to 9 out of 10.", tr: "Dayanılmaz, rahatlıkla 10 üzerinden 8-9." },
+];
+
+/* Background comorbidities (a coherent PMH line) vs a "well" baseline. */
+const COMORBIDITY_VARIANTS: Bilingual[] = [
+  { en: "I have high blood pressure.", tr: "Yüksek tansiyonum var." },
+  { en: "I have type 2 diabetes.", tr: "Tip 2 diyabetim var." },
+  { en: "I have high cholesterol.", tr: "Yüksek kolesterolüm var." },
+  { en: "I am a current smoker.", tr: "Halen sigara içiyorum." },
+  { en: "I used to smoke but stopped a while ago.", tr: "Sigara içerdim ama bir süre önce bıraktım." },
+  { en: "I have asthma.", tr: "Astımım var." },
+  { en: "I have an underactive thyroid.", tr: "Tiroid bezim yavaş çalışıyor." },
+  { en: "I take medication for reflux.", tr: "Reflü için ilaç kullanıyorum." },
+];
+const WELLNESS_VARIANTS: Bilingual[] = [
+  { en: "Otherwise I am generally well.", tr: "Aksi halde genel olarak iyiyim." },
+  { en: "I have no ongoing medical problems.", tr: "Süregelen bir sağlık sorunum yok." },
+  { en: "I am usually fit and healthy.", tr: "Genelde formda ve sağlıklıyım." },
+  { en: "I take no regular medications.", tr: "Düzenli olarak ilaç kullanmıyorum." },
+];
+
+/* Generic, broadly-safe systemic complaints that MAY surface as an extra
+   associated symptom (a light "complication" axis). Deliberately non-specific
+   so they stay clinically plausible across any presentation. */
+const COMPLICATION_VARIANTS: Bilingual[] = [
+  { en: "I have also been feeling very sweaty.", tr: "Ayrıca çok terlediğimi hissediyorum." },
+  { en: "I feel lightheaded when I stand up.", tr: "Ayağa kalkınca başım dönüyor." },
+  { en: "I have been feeling generally unwell.", tr: "Genel olarak kendimi kötü hissediyorum." },
+  { en: "I have had the shivers on and off.", tr: "Zaman zaman üşüme ve titremem oldu." },
+  { en: "My appetite has dropped off.", tr: "İştahım azaldı." },
+];
+
+/** Locale- and sex-appropriate given-name / surname pools. */
+function namePools(
+  locale: Lang,
+  gender: Patient["gender"],
+): { given: readonly string[]; surnames: readonly string[] } {
+  const tr = locale === "tr";
+  const given =
+    gender === "male"
+      ? tr
+        ? MALE_GIVEN_TR
+        : MALE_GIVEN_EN
+      : tr
+        ? FEMALE_GIVEN_TR
+        : FEMALE_GIVEN_EN;
+  return { given, surnames: tr ? SURNAMES_TR : SURNAMES_EN };
+}
+
+/** Recombine a full name, avoiding recently-served names when possible. */
+function pickName(
+  rng: Rng,
+  locale: Lang,
+  gender: Patient["gender"],
+  avoid: ReadonlySet<string>,
+): string {
+  const { given, surnames } = namePools(locale, gender);
+  let name = `${rng.pick(given)} ${rng.pick(surnames)}`;
+  for (let attempt = 0; attempt < 8 && avoid.has(name); attempt++) {
+    name = `${rng.pick(given)} ${rng.pick(surnames)}`;
+  }
+  return name;
+}
+
+/** Severity pool matched to case acuity (independent narrative axis). */
+function severityPoolFor(esi: number): Bilingual[] {
+  if (esi <= 2) return SEVERITY_HIGH;
+  if (esi === 3) return SEVERITY_MID;
+  return SEVERITY_LOW;
+}
+
+/**
+ * Jitter a catalogue lab value within a plausible, interpretation-preserving
+ * band so two draws of the same diagnosis differ numerically without flipping
+ * an abnormal flag to normal (or vice-versa). Deterministic via the seeded RNG.
+ */
+function jitterLab(
+  rng: Rng,
+  value: number,
+  interp: Observation["interpretation"],
+): number {
+  let lo: number;
+  let hi: number;
+  switch (interp) {
+    case "HH":
+      lo = 0.95;
+      hi = 1.32;
+      break;
+    case "H":
+      lo = 0.9;
+      hi = 1.25;
+      break;
+    case "LL":
+      lo = 0.66;
+      hi = 1.0;
+      break;
+    case "L":
+      lo = 0.8;
+      hi = 1.05;
+      break;
+    case "N":
+      lo = 0.9;
+      hi = 1.1;
+      break;
+    default:
+      lo = 0.85;
+      hi = 1.2;
+      break;
+  }
+  const factor = lo + rng.next() * (hi - lo);
+  const jittered = value * factor;
+  const decimals = Math.abs(value) < 10 ? 1 : 0;
+  return Number(jittered.toFixed(decimals));
+}
 
 /* -------------------------------------------------------------------------- */
 /* Physiological vitals bands (deterministic-check target)                     */
@@ -1233,24 +1541,39 @@ function condition(
   };
 }
 
-function generateOnce(seed: number, opts: GenerateCaseOptions): CaseInstance {
+function generateOnce(
+  seed: number,
+  opts: GenerateCaseOptions,
+  avoidDx: ReadonlySet<string>,
+  avoidNames: ReadonlySet<string>,
+): CaseInstance {
   const rng = makeRng(seed);
 
   // 1) Sample a target presentation (weighted; family-constrained if asked).
-  const pool =
-    opts.seedMode === "constrained" && opts.chiefComplaint
-      ? PRESENTATIONS.filter((p) => p.family === opts.chiefComplaint)
-      : PRESENTATIONS;
-  const candidates = pool.length > 0 ? pool : PRESENTATIONS;
+  //    A family matches the template's primary symptom family OR any specialty
+  //    tag, so the specialty families resolve to the curated catalogue.
+  const target =
+    opts.seedMode === "constrained" ? opts.chiefComplaint ?? null : null;
+  let candidates = target
+    ? PRESENTATIONS.filter((p) => familiesOf(p).includes(target))
+    : PRESENTATIONS.slice();
+  if (candidates.length === 0) candidates = PRESENTATIONS.slice();
+  // Anti-repeat: drop recently-served diagnoses when that still leaves choices.
+  if (avoidDx.size > 0) {
+    const fresh = candidates.filter((p) => !avoidDx.has(p.diagnosisCode.code));
+    if (fresh.length > 0) candidates = fresh;
+  }
   const tmpl = rng.weighted(candidates, candidates.map((p) => p.weight));
 
   const difficulty = (opts.difficulty ?? (rng.int(2, 4) as 1 | 2 | 3 | 4 | 5));
+  const acuityESI = esiFor(tmpl.physio, difficulty);
 
-  // 2) Randomize demographics within plausible bands.
+  // 2) Randomize demographics within plausible bands. The name is recombined
+  //    from locale/sex-aware pools and steered clear of recently-served names.
   const gender: Patient["gender"] =
     tmpl.sexConstraint ?? (rng.bool(0.5) ? "male" : "female");
   const age = rng.int(tmpl.ageRange[0], tmpl.ageRange[1]);
-  const name = gender === "male" ? rng.pick(MALE_NAMES) : rng.pick(FEMALE_NAMES);
+  const name = pickName(rng, opts.locale, gender, avoidNames);
   const weightKg = rng.int(52, 98);
   const pid = `gen-${seed.toString(36)}`;
 
@@ -1265,9 +1588,9 @@ function generateOnce(seed: number, opts: GenerateCaseOptions): CaseInstance {
     active: true,
   };
 
-  // Seeded onset duration enriches the encounter reason so no two draws read
+  // Seeded onset timing enriches the encounter reason so no two draws read
   // identically even when they share a diagnosis.
-  const duration = rng.pick(ONSET_DURATIONS);
+  const duration = rng.pick(ONSET_VARIANTS);
   const encounter: Encounter = {
     resourceType: "Encounter",
     id: `enc-${pid}`,
@@ -1298,17 +1621,49 @@ function generateOnce(seed: number, opts: GenerateCaseOptions): CaseInstance {
   // 3) Vitals within physiological range for the state.
   const triageVitals = generateVitals(rng, tmpl.physio);
 
-  // 4) History / exam / labs / imaging consistent with the dx.
+  // 4) History / exam / labs / imaging consistent with the dx. Independent
+  //    seeded axes (onset × severity × comorbidity × complication) make two
+  //    draws of the SAME diagnosis differ meaningfully in text and numbers.
   const history: HistoryItem[] = tmpl.history.map((h, i) => ({
     id: `h-${pid}-${i}`,
     intent: h.intent,
     answer: h.answer,
     ...(h.redFlag ? { redFlag: true } : {}),
   }));
-  // Add a couple of generic-but-consistent history intents for depth.
-  history.push({ id: `h-${pid}-pmh`, intent: "past-medical-history", answer: { en: "Otherwise generally well.", tr: "Aksi halde genelde iyi." } });
+  // Severity axis — only when the template does not already state it.
+  if (!tmpl.history.some((h) => h.intent === "severity")) {
+    history.push({
+      id: `h-${pid}-sev`,
+      intent: "severity",
+      answer: rng.pick(severityPoolFor(acuityESI)),
+    });
+  }
+  // Comorbidity axis — a coherent background PMH line or a "well" baseline.
+  history.push({
+    id: `h-${pid}-pmh`,
+    intent: "past-medical-history",
+    answer: rng.bool(0.6)
+      ? rng.pick(COMORBIDITY_VARIANTS)
+      : rng.pick(WELLNESS_VARIANTS),
+  });
+  // Complication axis — a generic systemic symptom that MAY surface.
+  if (rng.bool(0.5)) {
+    history.push({
+      id: `h-${pid}-cx`,
+      intent: "associated-symptoms",
+      answer: rng.pick(COMPLICATION_VARIANTS),
+    });
+  }
 
-  const exam: ExamFinding[] = tmpl.exam.map((e, i) => ({
+  // Randomize WHICH exam findings surface: every abnormal finding is kept, the
+  // first (post-shuffle) is always shown, and remaining normal findings appear
+  // only sometimes — so the exam differs between draws of the same diagnosis.
+  const shuffledExam = rng.shuffle(tmpl.exam);
+  const chosenExam = shuffledExam.filter(
+    (e, idx) => e.abnormal || idx === 0 || rng.bool(0.6),
+  );
+  const examSource = chosenExam.length > 0 ? chosenExam : shuffledExam;
+  const exam: ExamFinding[] = examSource.map((e, i) => ({
     id: `e-${pid}-${i}`,
     maneuver: e.maneuver,
     system: e.system,
@@ -1316,7 +1671,9 @@ function generateOnce(seed: number, opts: GenerateCaseOptions): CaseInstance {
     abnormal: e.abnormal,
   }));
 
+  // Jitter each lab value within an interpretation-preserving band.
   const labs: LabResult[] = tmpl.labs.map((l, i) => {
+    const value = jitterLab(rng, l.value, l.interp);
     const obs: Observation = {
       resourceType: "Observation",
       id: `obs-${pid}-${i}`,
@@ -1325,7 +1682,7 @@ function generateOnce(seed: number, opts: GenerateCaseOptions): CaseInstance {
       code: concept(l.code),
       subject: pid,
       effectiveTime: 0,
-      valueQuantity: { value: l.value, unit: l.unit },
+      valueQuantity: { value, unit: l.unit },
       interpretation: l.interp,
       referenceRange: l.ref,
     };
@@ -1407,7 +1764,7 @@ function generateOnce(seed: number, opts: GenerateCaseOptions): CaseInstance {
     allergies,
     triageVitals,
     difficulty,
-    acuityESI: esiFor(tmpl.physio, difficulty),
+    acuityESI,
     correctDiagnosis,
     differentials,
     redFlags: tmpl.redFlags,
@@ -1418,19 +1775,70 @@ function generateOnce(seed: number, opts: GenerateCaseOptions): CaseInstance {
   };
 }
 
+/* -------------------------------------------------------------------------- */
+/* Per-session anti-repeat memory (module-level, process-lifetime)             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Only the UNSEEDED "fresh case" path consults / updates this memory, so an
+ * explicitly-seeded draw (the reproducible "share this case" path and every
+ * test that passes `seed`) stays byte-identical. It simply excludes the last
+ * few served diagnoses and names from the next draw so a run does not repeat
+ * back-to-back.
+ */
+const RECENT_DX_MAX = 5;
+const RECENT_NAME_MAX = 8;
+const recentDxCodes: string[] = [];
+const recentNames: string[] = [];
+const EMPTY_SET: ReadonlySet<string> = new Set<string>();
+
+function rememberServed(code: string | undefined, name: string | undefined): void {
+  if (code) {
+    recentDxCodes.push(code);
+    while (recentDxCodes.length > RECENT_DX_MAX) recentDxCodes.shift();
+  }
+  if (name) {
+    recentNames.push(name);
+    while (recentNames.length > RECENT_NAME_MAX) recentNames.shift();
+  }
+}
+
+/**
+ * Record a served case so the next UNSEEDED draw avoids repeating it. Exported
+ * so other entrypoints (e.g. liveCaseGen's backend path) can feed the same
+ * memory, making anti-repeat span AI + local generations within one session.
+ */
+export function noteServedCase(
+  diagnosisCode: string | undefined,
+  patientName: string | undefined,
+): void {
+  rememberServed(diagnosisCode, patientName);
+}
+
 /**
  * generateCase — deterministic entrypoint. Same seed => same case.
  * Runs the internal validity check and regenerates (with a derived seed) on
  * failure, up to a small bound (the local analogue of the verify -> loop step).
+ * Unseeded ("fresh") draws additionally avoid recently-served diagnoses / names.
  */
 export function generateCase(opts: GenerateCaseOptions): CaseInstance {
+  const explicitSeed = typeof opts.seed === "number";
+  const avoidDx = explicitSeed ? EMPTY_SET : new Set(recentDxCodes);
+  const avoidNames = explicitSeed ? EMPTY_SET : new Set(recentNames);
+
   let seed = deriveSeed(opts);
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const candidate = generateOnce(seed, opts);
-    if (validateCase(candidate).ok) return candidate;
+  let candidate = generateOnce(seed, opts, avoidDx, avoidNames);
+  for (let attempt = 0; attempt < 8 && !validateCase(candidate).ok; attempt++) {
     // Perturb the seed deterministically and retry.
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    candidate = generateOnce(seed, opts, avoidDx, avoidNames);
   }
-  // Last resort: return the final candidate (bands guarantee plausibility).
-  return generateOnce(seed, opts);
+
+  if (!explicitSeed) {
+    rememberServed(
+      candidate.correctDiagnosis.code.coding[0]?.code,
+      candidate.patient.name,
+    );
+  }
+  return candidate;
 }

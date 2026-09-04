@@ -15,7 +15,7 @@
 import type { Bilingual, Lang } from "@/data/mock";
 import { CODE_SYSTEMS } from "@/domain/fhir";
 import type { CaseInstance } from "@/domain/case";
-import type { ChiefComplaintFamily } from "@/domain/caseGen";
+import { CHIEF_COMPLAINT_FAMILIES, type ChiefComplaintFamily } from "@/domain/caseGen";
 
 /* -------------------------------------------------------------------------- */
 /* Specialty facet                                                             */
@@ -63,12 +63,12 @@ export function specialtyOf(c: CaseInstance): Specialty {
 /* Chief-complaint family facet (aligns with caseGen constraints)             */
 /* -------------------------------------------------------------------------- */
 
-export const COMPLAINT_LABELS: Record<ChiefComplaintFamily, Bilingual> = {
-  "chest-pain": { en: "Chest pain", tr: "Göğüs ağrısı" },
-  headache: { en: "Headache", tr: "Baş ağrısı" },
-  "abdominal-pain": { en: "Abdominal pain", tr: "Karın ağrısı" },
-  dyspnea: { en: "Breathlessness", tr: "Nefes darlığı" },
-};
+// Derived from the generator's canonical family list so every family (all 16,
+// and any future addition) always has a label — no exhaustive literal to update.
+export const COMPLAINT_LABELS: Record<ChiefComplaintFamily, Bilingual> =
+  Object.fromEntries(
+    CHIEF_COMPLAINT_FAMILIES.map((f) => [f.id, f.label]),
+  ) as Record<ChiefComplaintFamily, Bilingual>;
 
 /**
  * Classify a case into a chief-complaint family from its diagnosis code, so the

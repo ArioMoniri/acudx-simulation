@@ -1,17 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MagnifyingGlass, Plus, Check, Stethoscope } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, Check, Stethoscope, CaretDown } from "@phosphor-icons/react";
 
 import { Card } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import type { Lang } from "@/data/mock";
 import {
+  caseEntry,
   diagnosisLabel,
   searchDiagnoses,
   systemLabel,
   type DiagnosisEntry,
   type DiagnosisSystem,
 } from "@/domain/diagnosisCatalog";
+
+/** How many results to reveal per page before offering "Load more". */
+const RESULTS_PAGE_SIZE = 40;
 
 /** One pickable/added candidate, resolved to a grade-aligned store code. */
 export interface DxOption {
@@ -54,7 +58,29 @@ export function DiagnosisPicker({
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
 
-  const results = useMemo(() => searchDiagnoses(query, lang, 40), [query, lang]);
+  // Diagnoses the case grounds on but the static catalogue does not carry (the
+  // pod backend can synthesise dx beyond the 192-row set). Merge them into the
+  // search corpus so any generated diagnosis is findable by name — not merely
+  // committable from the "suggested" row below. Catalogue entries win on a code
+  // collision inside searchDiagnoses, so in-catalogue cases are never doubled.
+  const extraEntries = useMemo<DiagnosisEntry[]>(
+    () => caseOptions.filter((o) => !o.entry).map((o) => caseEntry(o.code, o.display)),
+    [caseOptions],
+  );
+
+  // Every match, ranked — never silently truncated. The list is paged for the
+  // DOM via `visibleCount` + a "Load more" control below.
+  const results = useMemo(
+    () => searchDiagnoses(query, lang, undefined, extraEntries),
+    [query, lang, extraEntries],
+  );
+
+  const [visibleCount, setVisibleCount] = useState(RESULTS_PAGE_SIZE);
+  // Reset paging whenever the result set changes (new query / language / case).
+  useEffect(() => setVisibleCount(RESULTS_PAGE_SIZE), [results]);
+
+  const shown = results.slice(0, visibleCount);
+  const hasMore = results.length > shown.length;
 
   /** Map a catalogue entry to a case code when it denotes the same diagnosis. */
   function toOption(entry: DiagnosisEntry): DxOption {
@@ -103,24 +129,48 @@ export function DiagnosisPicker({
         <p className="mt-1.5 text-[11px] text-muted">{t("diagnosis2.catalogHint")}</p>
 
         {query.trim() ? (
-          <ul className="mt-2 flex max-h-72 flex-col divide-y divide-border overflow-y-auto">
-            {results.map((r) => {
-              const o = toOption(r);
-              const added = visibleSet.has(o.code);
-              return (
-                <li key={r.icd10} className="flex items-start justify-between gap-3 py-2">
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm text-fg">{o.display}</span>
-                    <CodeChips entry={r} lang={lang} system={r.system} />
-                  </span>
-                  <AddButton added={added} label={o.display} onClick={() => onAdd(o)} />
-                </li>
-              );
-            })}
-            {results.length === 0 ? (
-              <li className="py-3 text-center text-xs italic text-muted">{t("ehr.ap.noMatches")}</li>
+          <>
+            <ul className="mt-2 flex max-h-72 flex-col divide-y divide-border overflow-y-auto">
+              {shown.map((r) => {
+                const o = toOption(r);
+                const added = visibleSet.has(o.code);
+                return (
+                  <li key={r.icd10} className="flex items-start justify-between gap-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm text-fg">{o.display}</span>
+                      <CodeChips entry={r} lang={lang} system={r.system} />
+                    </span>
+                    <AddButton added={added} label={o.display} onClick={() => onAdd(o)} />
+                  </li>
+                );
+              })}
+              {results.length === 0 ? (
+                <li className="py-3 text-center text-xs italic text-muted">{t("ehr.ap.noMatches")}</li>
+              ) : null}
+            </ul>
+            {hasMore ? (
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="font-mono text-[11px] tabular-nums text-muted">
+                  {t("diagnosis2.showingCount", {
+                    defaultValue: "Showing {{shown}} of {{total}}",
+                    shown: shown.length,
+                    total: results.length,
+                  })}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((n) => n + RESULTS_PAGE_SIZE)}
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1 rounded-control border border-border bg-surface px-2.5 py-1 text-xs font-medium text-brand",
+                    "transition-colors duration-200 ease-out hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]",
+                  )}
+                >
+                  <CaretDown weight="bold" className="h-3.5 w-3.5" aria-hidden />
+                  {t("diagnosis2.loadMore", { defaultValue: "Load more" })}
+                </button>
+              </div>
             ) : null}
-          </ul>
+          </>
         ) : (
           <p className="mt-3 rounded-control border border-dashed border-border bg-bg-subtle px-3 py-4 text-center text-xs text-muted">
             {t("diagnosis2.searchEmptyHint")}

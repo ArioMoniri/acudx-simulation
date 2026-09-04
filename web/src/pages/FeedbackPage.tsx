@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
@@ -36,6 +36,8 @@ import {
   CitationPill,
 } from "@/components";
 import { type Band, type FeedbackAxis } from "@/data/mock";
+import { complaintFamilyOf } from "@/data/caseLibrary";
+import { generateCase } from "@/domain/caseGen";
 import { safetyCriticalMisses } from "@/domain/processMetrics";
 import { useEncounterState } from "@/state/encounterStore";
 import {
@@ -94,6 +96,7 @@ function AxisMark({ axis }: { axis: FeedbackAxis }) {
  */
 export function FeedbackPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const lang = useLang();
   const header = useEntry();
   const hero = useEntry(0.06);
@@ -228,6 +231,39 @@ export function FeedbackPage() {
   const lowValueList = steward.lowValueCodes
     .map((c) => lowValueLabels[c]?.[lang] ?? c)
     .join(", ");
+
+  // Post-encounter CTAs — both act on THIS encounter's real context.
+
+  // "Schedule spaced repetition": the derived gaps (`gapList`) are the material
+  // a review queue would be seeded from, but neither progressStore nor the FSRS
+  // module (`data/progress.ts`, whose `reviewQueue` is a static seed and whose
+  // `scheduleReview` is a pure grader) exposes an enqueue write. So land the
+  // learner in the spaced-repetition section, where the FSRS queue is driven.
+  const handleScheduleSpacedRepetition = () => {
+    navigate("/progress#spaced-review");
+  };
+
+  // "Try a harder variant": a fresh case of the SAME presentation as the
+  // just-finished encounter, one difficulty step higher (capped at 5). The
+  // finished case (`enc.caseInstance`) supplies the chief-complaint family,
+  // current difficulty and locale; hand the built case to /encounter the same
+  // way the Case Library does (`state: { caseInstance }`).
+  const handleHarderVariant = () => {
+    const finished = enc.caseInstance;
+    const family = finished ? complaintFamilyOf(finished) : null;
+    const current = finished?.difficulty ?? 3;
+    const locale = finished?.locale ?? lang;
+    const harder = Math.min(5, current + 1) as 1 | 2 | 3 | 4 | 5;
+    const caseInstance = family
+      ? generateCase({
+          seedMode: "constrained",
+          chiefComplaint: family,
+          difficulty: harder,
+          locale,
+        })
+      : generateCase({ seedMode: "random", difficulty: harder, locale });
+    navigate("/encounter", { state: { caseInstance } });
+  };
 
   return (
     <PageContainer className="flex flex-col gap-10">
@@ -717,12 +753,16 @@ export function FeedbackPage() {
           </h2>
           <div className="mt-4 flex flex-wrap gap-3">
             <Button
+              type="button"
+              onClick={handleScheduleSpacedRepetition}
               leadingIcon={<CalendarPlus weight="bold" className="h-4 w-4" />}
             >
               {t("feedback.remediation.spacedRepetition")}
             </Button>
             <Button
+              type="button"
               variant="secondary"
+              onClick={handleHarderVariant}
               leadingIcon={<ArrowClockwise weight="bold" className="h-4 w-4" />}
             >
               {t("feedback.remediation.harderVariant")}
