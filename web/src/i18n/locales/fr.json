@@ -1,0 +1,1309 @@
+{
+  "app": {
+    "name": "AcuDx",
+    "tagline": "Le raisonnement clinique, répété.",
+    "eduDisclaimer": "À des fins pédagogiques uniquement. Pas pour la prise en charge réelle de patients.",
+    "aiLabel": "IA"
+  },
+  "nav": {
+    "home": "Accueil",
+    "encounter": "Consultation",
+    "feedback": "Rétroaction",
+    "start": "Commencer",
+    "cases": "Cas",
+    "rooms": "Salles",
+    "progress": "Progression",
+    "authoring": "Création",
+    "review": "Revue",
+    "institution": "Établissement",
+    "account": "Compte",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "skipToContent": "Aller au contenu"
+  },
+  "role": {
+    "viewAs": "Voir en tant que",
+    "viewAsRole": "Voir en tant que {{role}}",
+    "learner": "Apprenant",
+    "educator": "Formateur",
+    "dean": "Doyen"
+  },
+  "actions": {
+    "start": "Commencer",
+    "startEncounter": "Démarrer la consultation",
+    "continue": "Continuer",
+    "resume": "Reprendre",
+    "back": "Retour",
+    "next": "Suivant",
+    "submit": "Soumettre",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "retry": "Réessayer",
+    "close": "Fermer",
+    "send": "Envoyer",
+    "viewFeedback": "Voir la rétroaction",
+    "viewAsTable": "Voir sous forme de tableau",
+    "showEvidence": "Afficher les preuves",
+    "orderTest": "Prescrire un examen",
+    "requestExam": "Demander un examen",
+    "commitDiagnosis": "Confirmer le diagnostic",
+    "rateConfidence": "Évaluez votre confiance"
+  },
+  "language": {
+    "label": "Langue",
+    "en": "Anglais",
+    "tr": "Turc",
+    "switchTo": "Passer en {{lang}}"
+  },
+  "theme": {
+    "label": "Thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "toggle": "Changer de thème",
+    "toLight": "Passer au thème clair",
+    "toDark": "Passer au thème sombre"
+  },
+  "home": {
+    "title": "Répétez le cas avant que le cas ne vous répète.",
+    "subtitle": "Jeu de rôle en médecine d'urgence, d'abord textuel, avec une rétroaction structurée et ancrée dans les preuves, et un miroir de calibration.",
+    "primaryCta": "Démarrer une consultation",
+    "primaryCtaContinue": "Continuer la consultation",
+    "secondaryCta": "Voir un exemple de rapport de rétroaction",
+    "casesHeading": "Cas disponibles",
+    "continueHeading": "Reprenez là où vous vous êtes arrêté",
+    "welcome": "Bon retour, Dr. Yılmaz",
+    "welcomeSub": "Reprenez un cas de médecine d'urgence ou examinez l'évolution de votre calibration.",
+    "greetingEyebrow": "Votre formation",
+    "resumeChip": "En cours : douleur thoracique, H 58 ans",
+    "statsHeading": "Ce semestre en un coup d'œil",
+    "snapshotHeading": "Aperçu de la calibration",
+    "snapshotSub": "L'écart entre votre confiance et votre performance se réduit.",
+    "recommendedHeading": "Cas recommandés",
+    "recommendedSub": "Des cas de médecine d'urgence adaptés à votre niveau actuel.",
+    "recentHeading": "Rétroaction récente",
+    "recentSub": "Notes formatives de vos dernières consultations.",
+    "viewAllCases": "Voir tous les cas",
+    "noPublicLeaderboard": "Privé par conception. Aucun classement public.",
+    "empty": {
+      "casesTitle": "Aucun cas correspondant pour l'instant",
+      "casesBody": "De nouveaux cas de médecine d'urgence sont ajoutés régulièrement. Revenez bientôt.",
+      "feedbackTitle": "Pas encore de rétroaction",
+      "feedbackBody": "Terminez votre première consultation pour voir ici une rétroaction formative."
+    }
+  },
+  "progress": {
+    "eyebrow": "Votre progression",
+    "title": "La maîtrise, pas un tableau de scores",
+    "subtitle": "Tout ici récompense le fait de combler vos lacunes et d'affiner votre calibration. C'est privé, formatif et rien qu'à vous.",
+    "level": {
+      "sectionLabel": "Niveau et série",
+      "eyebrow": "Niveau {{level}}",
+      "toNext": "Progression vers le niveau {{level}}",
+      "valueText": "{{percent}} % du chemin vers le niveau suivant",
+      "remaining": "Encore {{xp}} XP, gagnés uniquement en vous améliorant",
+      "xpTotal": "XP total",
+      "whyHeading": "Pourquoi vous l'avez gagné",
+      "reason": {
+        "calibrationTightened": "Calibration affinée",
+        "gapClosed": "Écart comblé",
+        "bandUp": "Palier franchi",
+        "epaEntrusted": "EPA confiée",
+        "safetyNetting": "Consignes de surveillance"
+      }
+    },
+    "streak": {
+      "eyebrow": "Série en cours",
+      "days": "jours",
+      "best": "Record personnel",
+      "weekLabel": "Vos sept derniers jours",
+      "weekday": {
+        "mon": "Lun",
+        "tue": "Mar",
+        "wed": "Mer",
+        "thu": "Jeu",
+        "fri": "Ven",
+        "sat": "Sam",
+        "sun": "Dim"
+      },
+      "dayState": {
+        "practised": "Pratiqué",
+        "freeze": "Gel utilisé, série protégée",
+        "rest": "Jour de repos",
+        "today": "Aujourd'hui, une répétition restante",
+        "upcoming": "À venir"
+      },
+      "freezes": "Il vous reste {{left}} gels sur {{total}}. Une semaine difficile ne brisera pas votre série.",
+      "graceNote": "Hier a été couvert par un jour de grâce. Aucune pression pour tout rattraper d'un coup."
+    },
+    "mastery": {
+      "heading": "Carte de maîtrise",
+      "subtitle": "Où vous en êtes dans les six domaines de compétence, présentés en paliers avec l'évolution depuis la semaine dernière.",
+      "notEnough": "Pas encore assez de preuves fiables ({{count}} consultations). Continuez à pratiquer pour débloquer un palier.",
+      "rowAria": "{{domain}} : palier {{band}} atteint",
+      "delta": {
+        "up": "Un palier de plus depuis la semaine dernière",
+        "down": "Un palier de moins depuis la semaine dernière",
+        "steady": "Stable depuis la semaine dernière"
+      },
+      "deltaShort": {
+        "up": "En hausse",
+        "down": "En baisse",
+        "steady": "Stable"
+      }
+    },
+    "epa": {
+      "heading": "Activités confiables",
+      "subtitle": "Les EPA clés et le niveau de supervision que vous avez obtenu. « Confiée » signifie que vous pouvez les pratiquer sous supervision à distance.",
+      "entrusted": "Confiée",
+      "levelShort": "Niveau {{level}} sur 5",
+      "demonstrations": "{{count}} démonstrations à l'appui de ce niveau",
+      "scaleAria": "{{code}} : niveau de confiance {{level}} sur 5",
+      "level": {
+        "1": "Observer",
+        "2": "Supervision directe",
+        "3": "Supervision indirecte",
+        "4": "Supervision à distance",
+        "5": "Superviser les autres"
+      }
+    },
+    "trajectory": {
+      "heading": "Trajectoire de calibration",
+      "subtitle": "Votre écart confiance-performance et votre score de Brier sur les dernières sessions. L'objectif est que les deux diminuent.",
+      "gapLabel": "Écart de confiance",
+      "brierLabel": "Score de Brier",
+      "gapDrop": "En baisse de {{points}} pts",
+      "lowerBetter": "Plus c'est bas, mieux c'est",
+      "perDomain": "Par domaine",
+      "domainNow": "Écart actuel de {{percent}} %",
+      "domainSpark": "Tendance de l'écart en {{domain}}, réduit de {{points}} points",
+      "openReport": "Ouvrir le rapport complet",
+      "empty": "Pas encore assez de sessions pour tracer une trajectoire."
+    },
+    "badges": {
+      "heading": "Jalons",
+      "subtitle": "Des jalons identitaires pour les compétences et les activités confiées. Gagnés par ce que vous avez démontré, jamais par le volume.",
+      "count": "{{earned}} sur {{total}} obtenus",
+      "earned": "Obtenu",
+      "progressAria": "{{badge}} : {{percent}} % avant de l'obtenir",
+      "inProgress": "En cours"
+    },
+    "review": {
+      "heading": "Révision espacée",
+      "subtitle": "Des cartes programmées à partir de vos lacunes passées, espacées pour que chacune revienne juste avant que vous ne l'oubliiez. Chaque carte est citée.",
+      "dueBadge": "{{count}} à réviser maintenant",
+      "startReview": "Commencer la révision",
+      "state": {
+        "due": "À réviser",
+        "learning": "En apprentissage",
+        "scheduled": "Programmée"
+      },
+      "recall": "Rappel {{percent}} %",
+      "stability": "Stable depuis {{days}} jours",
+      "dueNow": "À réviser maintenant",
+      "dueInDays": "À réviser dans {{count}} jour",
+      "dueInDays_other": "À réviser dans {{count}} jours"
+    },
+    "cohort": {
+      "heading": "Comparer sur la progression",
+      "explainer": "Une vue de cohorte facultative et anonymisée, classée uniquement selon votre progression, jamais sur la performance brute. Aucun nom, aucun classement global.",
+      "toggleAria": "Afficher la comparaison de progression de la cohorte",
+      "on": "Activé",
+      "off": "Désactivé",
+      "offNote": "Désactivé par défaut. Activez-le pour voir votre progression par rapport à une cohorte anonymisée. Vous pouvez le désactiver à tout moment.",
+      "yourImprovement": "Votre progression ce mois-ci",
+      "vsMedian": "La progression médiane de la cohorte est de {{median}} points",
+      "percentileLabel": "Centile de progression",
+      "percentileNote": "Parmi {{size}} apprenants anonymisés. Progression uniquement, jamais compétence."
+    }
+  },
+  "start": {
+    "eyebrow": "Nouvelle session",
+    "title": "Configurez votre consultation",
+    "subtitle": "Quelques choix déterminent le cas, votre rôle et l'aide apportée par l'application. Vous pourrez modifier chaque réglage plus tard.",
+    "mode": {
+      "heading": "Comment souhaitez-vous vous entraîner ?",
+      "hint": "Le mode solo exécute tout avec l'IA. Les salles et l'observation arrivent bientôt."
+    },
+    "role": {
+      "heading": "Quel rôle allez-vous jouer ?",
+      "hint": "Votre rôle modifie le cas, l'étendue de vos actions et ce sur quoi vous êtes évalué."
+    },
+    "complaint": {
+      "heading": "Avec quel motif le patient doit-il se présenter ?",
+      "hint": "Choisissez un motif de consultation, ou laissez l'application en choisir un pour vous."
+    },
+    "tune": {
+      "heading": "Ajustez la session",
+      "hint": "Réglez le niveau de difficulté, confirmez votre langue et choisissez si l'aide est activée au départ."
+    },
+    "difficulty": {
+      "label": "Difficulté",
+      "valueText": "Niveau {{level}} sur 5, {{label}}",
+      "forgiveness": "Les niveaux inférieurs ajoutent un étayage et ne pénalisent jamais les questions naïves."
+    },
+    "language": {
+      "label": "Langue",
+      "hint": "Toute la consultation se déroule dans cette langue."
+    },
+    "guidance": {
+      "label": "Guidage",
+      "hint": "Des indices socratiques cités lorsque vous marquez une pause. Rien n'est évalué à partir d'eux."
+    },
+    "summary": "Vous traiterez un cas de {{complaint}} de niveau {{difficulty}} en tant que {{role}}.",
+    "begin": "Démarrer la consultation",
+    "eduNote": "À des fins pédagogiques uniquement. Patients synthétiques. Pas pour la prise en charge réelle de patients."
+  },
+  "cases": {
+    "eyebrow": "Bibliothèque de cas",
+    "title": "Parcourir et générer des cas",
+    "subtitle": "Partez d'un cas sélectionné ou générez une réserve infinie de nouveaux patients synthétiques. Chaque cas repose sur des recommandations et est conçu pour enseigner.",
+    "eduNote": "À des fins pédagogiques uniquement. Patients synthétiques. Pas pour la prise en charge réelle de patients.",
+    "generate": {
+      "heading": "Générer un cas",
+      "hint": "Créez un nouveau patient synthétique à la demande. Le générateur sélectionne selon la prévalence et la valeur pédagogique, puis vérifie la cohérence interne du cas avant de l'ajouter.",
+      "complaintLegend": "Motif de consultation",
+      "surprise": "Surprenez-moi",
+      "difficultyLegend": "Difficulté",
+      "difficultyValueText": "Niveau {{level}} sur 5, {{label}}",
+      "unlimited": "Nouveaux à chaque fois et jamais répétés. Les cas générés sont ajoutés en haut de la bibliothèque.",
+      "action": "Générer le cas"
+    },
+    "filters": {
+      "label": "Filtres",
+      "clear": "Effacer les filtres",
+      "all": "Tous",
+      "specialty": "Spécialité",
+      "complaint": "Motif de consultation",
+      "difficulty": "Difficulté"
+    },
+    "results": {
+      "label": "Cas",
+      "count_one": "{{count}} cas",
+      "count_other": "{{count}} cas",
+      "empty": "Aucun cas ne correspond encore à ces filtres. Ajustez les filtres ou générez un nouveau cas."
+    },
+    "card": {
+      "ageSex": "{{age}} ans, {{sex}}",
+      "generated": "Généré",
+      "codeLabel": "Code {{system}} {{code}}",
+      "start": "Démarrer ce cas"
+    }
+  },
+  "stats": {
+    "completed": "Terminés",
+    "streak": "Série en cours",
+    "gap": "Écart de calibration",
+    "days": "jours",
+    "trendingUp": "En hausse",
+    "trendingDown": "En baisse"
+  },
+  "caseCard": {
+    "difficulty": "Difficulté",
+    "guideline": "Recommandation",
+    "estimate": "~{{minutes}} min",
+    "languages": "Disponible en",
+    "difficultyLevel": {
+      "foundation": "Fondamental",
+      "core": "Intermédiaire",
+      "advanced": "Avancé"
+    }
+  },
+  "recentFeedback": {
+    "topBand": "Palier supérieur",
+    "safetyFlag": "A eu un manquement critique pour la sécurité",
+    "noSafety": "Aucun manquement critique pour la sécurité",
+    "today": "Aujourd'hui",
+    "daysAgo": "Il y a {{count}} jours",
+    "daysAgo_one": "Hier",
+    "open": "Ouvrir le rapport"
+  },
+  "encounter": {
+    "title": "Consultation",
+    "patient": "Patient",
+    "doctor": "Vous",
+    "colleague": "Collègue",
+    "examiner": "Examinateur",
+    "stageLabel": "Étape",
+    "stages": {
+      "history": "Anamnèse",
+      "exam": "Examen clinique",
+      "tests": "Examens complémentaires",
+      "ddx": "Diagnostic différentiel",
+      "diagnosis": "Diagnostic",
+      "management": "Prise en charge"
+    },
+    "composerPlaceholder": "Écrivez au patient, ou prescrivez un examen...",
+    "aiTyping": "Le patient répond",
+    "quickActions": "Actions rapides",
+    "caseChip": "H 58 ans - Douleur thoracique - Urgences",
+    "transcriptLabel": "Transcription de la consultation",
+    "you": "Vous",
+    "voiceMode": "Mode vocal",
+    "attach": "Joindre un fichier ou un résultat",
+    "sendHint": "Appuyez sur Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne",
+    "affect": {
+      "distress": "Douloureux, anxieux",
+      "guarded": "Réservé, fatigué",
+      "relieved": "Plus calme, coopérant"
+    },
+    "portrait": {
+      "title": "Patient",
+      "caption": "Diaphorétique, détresse légère",
+      "sign": "Signe clinique"
+    },
+    "monitorActions": "Actions au chevet",
+    "guidance": {
+      "title": "Guidage",
+      "toggle": "Guidage",
+      "on": "Activé",
+      "off": "Désactivé",
+      "abstained": "Aucun guidage fondé pour cette étape pour l'instant.",
+      "citation": "Source",
+      "lastReviewed": "Dernière révision",
+      "educationOnly": "À visée pédagogique uniquement"
+    },
+    "safety": {
+      "title": "Vérification de sécurité",
+      "resources": "Ressources d'aide"
+    },
+    "resumeToast": "Session reprise."
+  },
+  "ehr": {
+    "sim": {
+      "tag": "SIM",
+      "short": "patient synthétique",
+      "full": "Simulation. Patient synthétique. À des fins pédagogiques uniquement.",
+      "synthetic": "patient synthétique",
+      "education": "à visée pédagogique uniquement"
+    },
+    "workspace": {
+      "caseMeta": "Difficulté {{difficulty}}/5 · {{provenance}}"
+    },
+    "provenance": {
+      "seed": "Cas sélectionné",
+      "generated": "Cas généré"
+    },
+    "banner": {
+      "label": "Bandeau patient",
+      "ageSex": "{{age}} ans, {{sex}}",
+      "mrn": "MRN",
+      "chiefComplaint": "Motif de consultation",
+      "allergies": "Allergies",
+      "allergiesLabel": "Allergies, toujours visibles",
+      "nkda": "Aucune allergie médicamenteuse connue",
+      "codeStatus": "Réanimation",
+      "esi": "ESI {{level}}",
+      "acuityLabel": "Gravité ESI {{level}}, {{state}}"
+    },
+    "encounterClass": {
+      "emergency": "Urgences (SU)",
+      "ambulatory": "Ambulatoire",
+      "inpatient": "Hospitalisation",
+      "prehospital": "Préhospitalier"
+    },
+    "codeStatus": {
+      "full": "Réanimation complète"
+    },
+    "storyboard": {
+      "label": "Synthèse",
+      "demographics": "Données démographiques",
+      "weight": "Poids",
+      "problemList": "Liste des problèmes",
+      "problemsEmpty": "Aucun problème ajouté pour l'instant. Construisez-les dans Évaluation et Plan.",
+      "vitalsSnapshot": "Aperçu des constantes",
+      "medList": "Traitements et antécédents",
+      "medsEmpty": "Interrogez sur les traitements et les antécédents pour compléter cette section.",
+      "careTeam": "Équipe soignante",
+      "open": "Ouvrir la synthèse",
+      "chart": "Synthèse"
+    },
+    "problemRole": {
+      "differential": "Différentiel",
+      "working": "De travail",
+      "plan": "Plan"
+    },
+    "careTeam": {
+      "you": "Vous",
+      "nurse": "Infirmier de triage",
+      "roleClinician": "Clinicien traitant",
+      "roleNurse": "Soins infirmiers"
+    },
+    "clock": {
+      "title": "Horloge de la consultation",
+      "label": "Horloge de la consultation, minutes et secondes écoulées"
+    },
+    "tabs": {
+      "chartReview": "Revue du dossier",
+      "interview": "Entretien",
+      "flowsheets": "Feuilles de surveillance",
+      "orders": "Prescriptions",
+      "results": "Résultats",
+      "problemList": "Liste des problèmes / É&P"
+    },
+    "chartReview": {
+      "triageNote": "Note de triage",
+      "triageMeta": "{{class}} · triage",
+      "triageBody": "Patient de {{age}} ans se présentant pour {{complaint}}. Placé sous monitorage à l'arrivée.",
+      "timeline": "Chronologie de la consultation",
+      "timelineEmpty": "Vos actions apparaîtront ici dans l'ordre au fur et à mesure que vous travaillez le dossier.",
+      "atMin": "{{min}} min"
+    },
+    "timeline": {
+      "question": "A interrogé sur {{intent}}",
+      "exam": "A examiné : {{maneuver}}",
+      "order": "A prescrit {{code}}",
+      "result": "Résultat reçu : {{code}}",
+      "diagnosis": "Diagnostic confirmé : {{dx}}",
+      "note": "A rédigé une note"
+    },
+    "intents": {
+      "onset": "Début",
+      "location": "Localisation",
+      "character": "Caractère",
+      "radiation": "Irradiation",
+      "severity": "Intensité",
+      "timing": "Chronologie",
+      "aggravating": "Facteurs aggravants",
+      "relieving": "Facteurs soulageants",
+      "associatedSymptoms": "Symptômes associés",
+      "redFlags": "Signes d'alarme",
+      "pastMedicalHistory": "Antécédents médicaux",
+      "medications": "Traitements",
+      "allergies": "Allergies",
+      "familyHistory": "Antécédents familiaux",
+      "socialHistory": "Mode de vie",
+      "riskFactors": "Facteurs de risque",
+      "ice": "Idées, préoccupations, attentes"
+    },
+    "maneuvers": {
+      "generalInspection": "Inspection générale",
+      "vitalsRecheck": "Recontrôler les constantes",
+      "cardiovascular": "Ausculter le cœur",
+      "respiratory": "Ausculter les poumons",
+      "abdominal": "Palper l'abdomen",
+      "neurological": "Examen neurologique",
+      "musculoskeletal": "Musculosquelettique",
+      "skin": "Peau",
+      "ent": "ORL",
+      "focusedSpecial": "Tests spécifiques"
+    },
+    "interview": {
+      "empty": "Commencez l'anamnèse : choisissez une question ci-dessous et le patient répondra. Rien ne s'affiche tant que vous ne posez pas de question.",
+      "noInfo": "Je ne sais pas trop comment répondre à cela.",
+      "askHeading": "Interroger le patient",
+      "askHint": "Chaque question ne révèle que ce que vous demandez.",
+      "examHeading": "Manœuvres d'examen",
+      "examHint": "Demandez une manœuvre pour révéler le résultat.",
+      "extractionNote": "L'anamnèse et l'examen sont extraits ici. Les données objectives se prescrivent dans l'onglet Prescriptions."
+    },
+    "flowsheet": {
+      "title": "Feuille de surveillance infirmière",
+      "subtitle": "Constantes vitales enregistrées au fil du temps.",
+      "caption": "Constantes vitales durant la consultation, avec le statut de chaque mesure",
+      "time": "Heure",
+      "minute": "{{min}} min"
+    },
+    "orders": {
+      "category": {
+        "labs": "Biologie",
+        "imaging": "Imagerie",
+        "meds": "Traitements",
+        "consults": "Avis spécialisés"
+      },
+      "order": "Prescrire",
+      "orderedShort": "Prescrit",
+      "place": "Prescrire {{name}}",
+      "ordered": "{{name}} déjà prescrit",
+      "placedHeading": "Prescriptions passées",
+      "placedEmpty": "Aucune prescription passée pour l'instant.",
+      "placedAt": "Passée à {{min}} min",
+      "pending": "En attente",
+      "resulted": "Résultat disponible",
+      "footnote": "Les résultats reviennent après un court délai simulé. Consultez l'onglet Résultats.",
+      "expectedNote": "{{count}} prescriptions indiquées sont attendues pour ce cas."
+    },
+    "results": {
+      "none": "Aucun résultat pour l'instant. Passez une prescription pour voir les résultats ici.",
+      "pendingHeading": "En attente",
+      "labsHeading": "Biologie",
+      "labsCaption": "Résultats de biologie avec valeurs de référence et signalements d'anomalie",
+      "analyte": "Analyse",
+      "value": "Valeur",
+      "reference": "Référence",
+      "flag": "Signalement",
+      "imagingHeading": "Imagerie et comptes rendus",
+      "impression": "Conclusion",
+      "reportedAt": "Rendu à {{min}} min",
+      "interp": {
+        "normal": "Normal",
+        "high": "Élevé",
+        "low": "Bas",
+        "criticalHigh": "Critique élevé",
+        "criticalLow": "Critique bas",
+        "abnormal": "Anormal"
+      }
+    },
+    "ap": {
+      "pickerHeading": "Ajouter un diagnostic",
+      "searchPlaceholder": "Rechercher des diagnostics ou un code ICD/DSM...",
+      "addToDifferential": "Ajouter {{name}} au diagnostic différentiel",
+      "add": "Ajouter",
+      "added": "Ajouté",
+      "noMatches": "Aucun diagnostic correspondant.",
+      "differentialHeading": "Diagnostic différentiel",
+      "differentialEmpty": "Ajoutez des candidats depuis le sélecteur pour construire votre diagnostic différentiel.",
+      "setWorking": "Définir comme diagnostic de travail",
+      "working": "De travail",
+      "committedNote": "Diagnostic de travail confirmé : {{dx}}",
+      "planHeading": "Plan",
+      "planPlaceholder": "Rédigez votre plan de prise en charge et d'orientation...",
+      "savePlan": "Enregistrer le plan"
+    },
+    "avatar": {
+      "signs": {
+        "none": "Confortable, sans détresse aiguë",
+        "cyanosis": "Cyanose",
+        "pallor": "Pâleur",
+        "diaphoresis": "Diaphorétique",
+        "respiratoryDistress": "Détresse respiratoire",
+        "reducedLoc": "Niveau de conscience réduit",
+        "jaundice": "Ictère",
+        "flushing": "Rougeur cutanée"
+      }
+    },
+    "chiefComplaint": {
+      "chestPain": "Douleur thoracique",
+      "headache": "Céphalée",
+      "abdominalPain": "Douleur abdominale",
+      "dyspnea": "Dyspnée"
+    },
+    "newCase": {
+      "button": "Nouveau cas",
+      "menuLabel": "Générer ou charger un cas",
+      "random": "Cas aléatoire",
+      "randomHint": "Échantillonné depuis ICD/DSM selon la prévalence et la valeur pédagogique.",
+      "constrained": "Contraint",
+      "chiefComplaint": "Motif de consultation",
+      "difficulty": "Difficulté",
+      "difficultyLevel": "Niveau de difficulté {{level}} sur 5",
+      "diffMin": "Fondamental",
+      "diffMax": "Expert",
+      "generate": "Générer le cas",
+      "seedHeading": "Cas sélectionnés"
+    }
+  },
+  "vitals": {
+    "title": "Moniteur des constantes",
+    "online": "En direct",
+    "paused": "En pause",
+    "stale": "Aucune donnée récente",
+    "updatedAgo": "Mis à jour il y a {{seconds}} s",
+    "hr": "Fréquence cardiaque",
+    "hrShort": "FC",
+    "bp": "Pression artérielle",
+    "bpShort": "PA",
+    "rr": "Fréquence respiratoire",
+    "rrShort": "FR",
+    "spo2": "Saturation en oxygène",
+    "spo2Short": "SpO2",
+    "temp": "Température",
+    "tempShort": "Temp",
+    "units": {
+      "bpm": "bpm",
+      "mmhg": "mmHg",
+      "brpm": "/min",
+      "percent": "%",
+      "celsius": "°C"
+    },
+    "trend": {
+      "rising": "en hausse",
+      "falling": "en baisse",
+      "steady": "stable"
+    },
+    "table": {
+      "caption": "Constantes vitales, mesure actuelle et statut",
+      "vital": "Constante",
+      "value": "Valeur",
+      "status": "Statut",
+      "trend": "Tendance"
+    }
+  },
+  "rooms": {
+    "you": "Vous",
+    "lobby": {
+      "title": "Salles d'équipe",
+      "subtitle": "Entraînez-vous au vrai travail clinique en équipe : plusieurs personnes dans une même consultation en direct, chacune avec un rôle distinct, l'IA occupant les places vacantes. Une session solo n'est que le cas à une seule personne.",
+      "create": "Créer une salle",
+      "openRooms": "Salles ouvertes",
+      "empty": "Aucune salle ouverte pour l'instant. Créez-en une pour démarrer un exercice d'équipe.",
+      "prodNote": "Ceci est un aperçu avec présence simulée. En production, les salles reposent sur une couche temps réel LiveKit auto-hébergée ; les salles d'équipe en texte constituent la base accessible, et la voix ainsi que la 3D sont des fonctionnalités premium."
+    },
+    "status": {
+      "open": "Ouverte",
+      "in-progress": "En cours",
+      "debrief": "Débriefing"
+    },
+    "locale": {
+      "tr": "Salle en turc",
+      "en": "Salle en anglais"
+    },
+    "role": {
+      "doctor": "Médecin",
+      "nurse": "Infirmier",
+      "paramedic": "Ambulancier"
+    },
+    "presence": {
+      "active": "Actif",
+      "idle": "Inactif",
+      "reconnecting": "Reconnexion"
+    },
+    "seat": {
+      "aiHeld": "Occupé par l'IA",
+      "open": "Place libre"
+    },
+    "teamLead": {
+      "hat": "Chef d'équipe"
+    },
+    "card": {
+      "rosterLabel": "Répartition des rôles",
+      "seatsFilled": "{{filled}} places sur {{total}} occupées",
+      "hostedBy": "Hôte : {{name}}",
+      "takeSeat": "Prendre une place",
+      "rejoin": "Rejoindre à nouveau"
+    },
+    "create": {
+      "title": "Créer une salle",
+      "subtitle": "Choisissez un cas et décidez quels rôles sont des places humaines. Le reste est complété par l'IA.",
+      "caseLabel": "Cas",
+      "difficulty": "Difficulté {{level}} sur 5",
+      "rolesLabel": "Rôles",
+      "rolesHint": "Activez un rôle pour une place humaine, ou laissez-le désactivé pour que l'IA le joue.",
+      "human": "Place humaine",
+      "aiBacked": "Assuré par l'IA",
+      "roleToggle": "Faire de {{role}} une place humaine",
+      "backfillLabel": "Compléter les rôles vacants avec l'IA",
+      "backfillHint": "Les participants IA rejoignent en tant que membres de l'équipe à part entière et sont toujours identifiés.",
+      "confirm": "Créer la salle"
+    },
+    "inroom": {
+      "backToLobby": "Salles",
+      "participants": "Participants",
+      "participantsLabel": "Participants de la salle",
+      "teamClock": "Horloge de l'équipe",
+      "speaking": "Parle",
+      "aiNote": "Les places occupées par l'IA sont clairement identifiées et prennent leur tour de façon visible. Elles ne sont jamais évaluées comme des humains lors du débriefing.",
+      "actionsLabel": "Vos actions",
+      "yourScope": "Vous êtes le {{role}}",
+      "requestFloor": "Demander la parole",
+      "escalateSbar": "Escalader (SBAR)",
+      "delegate": "Déléguer une tâche",
+      "canOrderNote": "Vous pouvez passer des prescriptions pour cette consultation. Confirmez les vérifications de sécurité avant de valider.",
+      "cannotOrderNote": "Ce rôle ne peut pas passer de prescriptions directement. Vous pouvez solliciter le médecin ; votre demande est enregistrée comme élément d'évaluation, elle n'est donc pas perdue si elle reste sans réponse.",
+      "promptDoctor": "Solliciter le médecin",
+      "floor": "Échanges de l'équipe",
+      "floorLabel": "Transcription des échanges de l'équipe",
+      "tabInterview": "Entretien",
+      "tabFloor": "Échanges de l'équipe",
+      "tabDebrief": "Débriefing",
+      "acknowledge": "Accuser réception",
+      "readBackToken": "Répéter : {{token}}",
+      "loopClosed": "Boucle fermée",
+      "floorNote": "La communication en boucle fermée est évaluée. Les prescriptions sont répétées avec le médicament et la dose sous forme de jetons verrouillés."
+    },
+    "floorKind": {
+      "handover": "Transmission",
+      "order": "Prescription",
+      "ack": "Accusé de réception",
+      "readback": "Répétition",
+      "escalate": "Escalade",
+      "assess": "Évaluation"
+    },
+    "debrief": {
+      "label": "Débriefing de l'équipe",
+      "title": "Débriefing",
+      "subtitle": "Vos notes individuelles et les notes cliniques de l'équipe sont conservées séparément, de sorte qu'un bon chef dans une équipe faible, ou l'inverse, apparaisse clairement.",
+      "individual": "Votre leadership",
+      "team": "Clinique de l'équipe",
+      "noHat": "Vous n'avez pas endossé le rôle de chef d'équipe lors de cette session, il n'y a donc pas de notes de leadership individuelles.",
+      "note": "Les rôles tenus par l'IA sont identifiés et ne sont jamais évalués comme des humains. La calibration complète et l'analyse à double axe figurent dans votre rétroaction."
+    }
+  },
+  "states": {
+    "normal": "Normal",
+    "caution": "À surveiller",
+    "warning": "Anormal",
+    "critical": "Critique",
+    "aboveRange": "Au-dessus de la plage",
+    "belowRange": "En dessous de la plage",
+    "inRange": "Dans la plage"
+  },
+  "feedback": {
+    "title": "Rétroaction",
+    "subtitle": "À double axe, ancrée dans les preuves, uniquement en paliers. Aucun score caché.",
+    "encounterTitle": "Douleur thoracique aiguë, H 58 ans - Urgences",
+    "formativeBadge": "Formative - entraînement",
+    "safetyStripTitle": "Critique pour la sécurité : à revoir la prochaine fois",
+    "safetyStripClean": "Aucun manquement critique pour la sécurité dans cette consultation.",
+    "bandScale": "Échelle de paliers",
+    "achievedBand": "Vous avez atteint : {{band}}",
+    "clinicalGroup": "Clinique",
+    "communicationGroup": "Communication et professionnalisme",
+    "remediationHeading": "Prochaines étapes",
+    "remediation": {
+      "spacedRepetition": "Ajouter à la révision espacée",
+      "harderVariant": "Réessayer une variante plus difficile",
+      "note": "Rien ici n'est noté ni classé. Cela alimente votre file d'entraînement."
+    },
+    "dualAxis": {
+      "title": "Raisonnement et communication",
+      "clinical": "Raisonnement clinique",
+      "communication": "Communication",
+      "orthogonalNote": "Ils sont évalués de façon indépendante."
+    },
+    "domainsHeading": "Par domaine",
+    "domains": {
+      "history": "Anamnèse",
+      "exam": "Examen clinique et examens complémentaires",
+      "reasoning": "Raisonnement clinique",
+      "communication": "Communication",
+      "management": "Prise en charge",
+      "professionalism": "Professionnalisme"
+    },
+    "withheld": "Fiabilité insuffisante pour évaluer ceci pour l'instant.",
+    "gapsHeading": "Lacunes et prochaines étapes",
+    "gap": {
+      "evidence": "D'après la transcription",
+      "recurrence": "Vu {{count}} fois récemment",
+      "recurrence_one": "Vu une fois récemment",
+      "safetyCritical": "Critique pour la sécurité",
+      "remediation": "Entraînez-vous là-dessus",
+      "schedule": "Programmer une révision",
+      "acknowledge": "Accuser réception"
+    },
+    "process": {
+      "heading": "Déroulement et délais",
+      "subtitle": "Ce qui a été fait, dans quel ordre et à quelle vitesse, mesuré par rapport aux attentes des recommandations et cité.",
+      "minUnit": "min",
+      "lastReviewed": "Revu le {{date}}",
+      "citationAria": "Source : {{source}}. Ouvrir la provenance.",
+      "criticalActions": "Délai jusqu'aux actions critiques",
+      "criticalActionsNote": "Chaque action est mesurée par rapport à son objectif de recommandation et citée, qu'elle soit à temps ou non.",
+      "criticalTag": "Critique",
+      "criticalActionTitle": "Action urgente. Un manquement est signalé séparément.",
+      "status": {
+        "onTime": "À temps",
+        "late": "En retard",
+        "missed": "Manquée"
+      },
+      "timing": {
+        "takenAnchor": "Prescrite à {{taken}} min ; objectif dans les {{target}} min",
+        "missedAnchor": "Non prescrite ; objectif dans les {{target}} min"
+      },
+      "coverage": {
+        "label": "Couverture de l'anamnèse",
+        "hint": "{{covered}} domaines attendus sur {{expected}} abordés"
+      },
+      "redundant": {
+        "label": "Questions redondantes",
+        "hint": "{{count}} question(s) hors sujet"
+      },
+      "totalTime": {
+        "label": "Durée totale de la consultation",
+        "hint": "De l'arrivée à l'orientation"
+      },
+      "timeToDx": {
+        "label": "Délai jusqu'au diagnostic",
+        "correct": "Diagnostic de travail correct",
+        "incorrect": "Diagnostic de travail pas encore correct"
+      },
+      "safety": {
+        "missTitle": "Manquement critique pour la sécurité dans le déroulement : à revoir",
+        "cleanTitle": "Aucun manquement critique pour la sécurité dans le déroulement",
+        "cleanNote": "Les actions urgentes et les vérifications de sécurité ont été réalisées lors de cette consultation."
+      },
+      "treatment": {
+        "heading": "Comment le patient a été pris en charge",
+        "communication": "Communication",
+        "safety": "Sécurité",
+        "met": "Fait",
+        "notMet": "Manqué"
+      }
+    },
+    "citationsHeading": "Sources",
+    "provenance": {
+      "mode": "Mode",
+      "version": "Version",
+      "reportContent": "Contenu du rapport"
+    }
+  },
+  "calibration": {
+    "title": "Confiance vs performance",
+    "subtitle": "À quel point votre confiance correspond à votre performance. C'est une compétence qui se travaille.",
+    "axisConfidence": "Votre confiance",
+    "axisCompetence": "Performance mesurée",
+    "identityLine": "Bien calibré",
+    "direction": {
+      "over": "La confiance devançait la performance",
+      "under": "La performance devançait la confiance",
+      "well": "Bien calibré"
+    },
+    "quadrant": {
+      "calibratedStrong": "Calibré et solide",
+      "calibratedGrowing": "Calibré et en progression",
+      "blindSpot": "Confiance devançant la performance",
+      "hiddenStrength": "Performance devançant la confiance"
+    },
+    "trajectory": "Votre écart sur les consultations récentes",
+    "trajectoryArrow": "En amélioration au fil des sessions",
+    "insufficient": "Pas encore assez de preuves pour tracer ceci.",
+    "readout": "Résumé en langage simple",
+    "explainer": "Chaque point représente un domaine. Les points sur la ligne pointillée signifient que votre confiance correspondait à votre performance. C'est une compétence qui se travaille, pas une note.",
+    "legend": {
+      "point": "Domaine",
+      "identity": "Parfaitement calibré",
+      "over": "Excès de confiance",
+      "under": "Manque de confiance",
+      "trajectory": "Trajectoire récente"
+    },
+    "table": {
+      "caption": "Calibration par domaine",
+      "domain": "Domaine",
+      "confidence": "Confiance",
+      "competence": "Performance",
+      "direction": "Direction",
+      "trend": "Tendance"
+    }
+  },
+  "institution": {
+    "eyebrow": "Bureau du doyen",
+    "title": "Tableau de bord des compétences de la cohorte",
+    "subtitle": "Comment votre cohorte de médecine d'urgence progresse, où se situent les lacunes récurrentes et les preuves dont vous avez besoin pour l'accréditation.",
+    "privacyBanner": "Agrégé et restreint selon le rôle. La calibration privée d'un apprenant n'est jamais affichée ici.",
+    "section": {
+      "y4": "4e année",
+      "y5": "5e année",
+      "y6": "6e année"
+    },
+    "kpi": {
+      "sectionLabel": "Indicateurs clés de la cohorte",
+      "activeLearners": "Apprenants actifs",
+      "activeLearnersHint": "Ont pratiqué au cours des 14 derniers jours",
+      "encounters": "Consultations",
+      "encountersHint": "Terminées ce semestre",
+      "competenceRise": "Progression de compétence",
+      "competenceRiseHint": "Gain mesuré sur un cas de contrôle",
+      "calibrationGap": "Écart de calibration",
+      "calibrationGapHint": "Confiance de la cohorte moins performance",
+      "safetyResolved": "Manquements de sécurité résolus",
+      "safetyResolvedHint": "Clôturés après remédiation",
+      "remediationClosed": "Remédiations clôturées",
+      "remediationClosedHint": "Boucles entièrement documentées",
+      "improving": "en amélioration",
+      "worsening": "nécessite une attention",
+      "steady": "stable"
+    },
+    "heatmap": {
+      "heading": "Carte thermique des compétences de la cohorte",
+      "headingSub": "Chaque apprenant sur les six domaines de compétence, présenté en paliers et explorable jusqu'à l'extrait de preuve.",
+      "title": "Apprenants par domaine",
+      "subtitle": "Les paliers sont conditionnés par la fiabilité. Sélectionnez un apprenant ou une cellule pour explorer jusqu'à la consultation et son extrait de preuve.",
+      "matrixLabel": "Carte thermique des compétences, apprenants par domaine",
+      "tableCaption": "Palier de compétence de chaque apprenant sur les six domaines, avec une possibilité d'exploration par cellule.",
+      "tableEquivCaption": "Équivalent en tableau de la carte thermique des compétences : palier de compétence de chaque apprenant sur les six domaines.",
+      "learnerCol": "Apprenant",
+      "sectionCol": "Section",
+      "atRiskTag": "À risque",
+      "viewToggleLabel": "Vue en carte thermique",
+      "viewMatrix": "Carte thermique",
+      "roleGatedNote": "Vue restreinte selon le rôle : le doyen voit la compétence en paliers et peut explorer jusqu'à l'extrait de preuve de l'évaluateur, mais jamais le graphique de calibration privé d'un apprenant.",
+      "cellAria": "{{learner}}, {{domain}} : {{band}}, {{count}} consultations. Activez pour explorer.",
+      "cellWithheldAria": "{{learner}}, {{domain}} : palier non affiché, pas encore assez de preuves fiables.",
+      "drillLearnerAria": "Explorer l'apprenant {{learner}}",
+      "drillTitle": "Exploration : {{learner}}",
+      "drillPath": "De la cohorte à la section, à l'apprenant, à la consultation, jusqu'à l'extrait de preuve. Plus grand écart : {{domain}}.",
+      "evidenceCaption": "Extrait de preuve textuel utilisé par l'évaluateur, dans la langue même de l'apprenant.",
+      "frameworkChip": "Référentiel : ACGME Milestones",
+      "frameworkTip": "Vue de correspondance uniquement. Changer de référentiel réattribue les mêmes preuves ; cela ne réévalue jamais.",
+      "switchFramework": "Changer de référentiel"
+    },
+    "remediation": {
+      "heading": "À risque et remédiation",
+      "headingSub": "La boucle fermée : détecter, diagnostiquer, prescrire, réévaluer, documenter. Chaque dossier est exportable.",
+      "openCount": "{{count}} ouvertes",
+      "loopAria": "Étapes de la boucle de remédiation",
+      "stage": {
+        "detect": "Détecter",
+        "diagnose": "Diagnostiquer",
+        "prescribe": "Prescrire",
+        "reassess": "Réévaluer",
+        "document": "Documenter"
+      },
+      "status": {
+        "done": "terminé",
+        "active": "en cours",
+        "pending": "non commencé"
+      },
+      "trigger": {
+        "safety": "Signalé par des manquements critiques pour la sécurité récurrents en cas de suspicion de syndrome coronarien aigu.",
+        "stalled": "Signalé par une compétence stagnante sur plusieurs consultations."
+      },
+      "diagnosedGaps": "Lacunes diagnostiquées",
+      "recurrence": "Vu {{count}} fois",
+      "prescribed": "Prescrit",
+      "reassessed": "Réévalué",
+      "opened": "Ouvert il y a {{days}} jours",
+      "open": "Ouvert",
+      "closed": "Boucle fermée",
+      "openRemediation": "Ouvrir la remédiation",
+      "viewRecord": "Voir le dossier",
+      "exportRecord": "Exporter le dossier"
+    },
+    "calibration": {
+      "heading": "Calibration agrégée",
+      "headingSub": "Là où la cohorte est systématiquement en excès ou en manque de confiance, interprété comme un signal pédagogique.",
+      "title": "Mauvaise calibration systématique par thème",
+      "subtitle": "Un diagnostic du programme au niveau de la cohorte. Un excès de confiance sur un thème clinique est une priorité d'enseignement.",
+      "headline": "Signal pédagogique",
+      "headlineBody": "La cohorte est systématiquement en excès de confiance sur {{topic}}, de {{points}} points. Faites-en une priorité dans le prochain bloc.",
+      "direction": {
+        "over": "Excès de confiance",
+        "under": "Manque de confiance",
+        "well": "Bien calibré"
+      },
+      "ppShort": "pp",
+      "learnerCount": "{{count}} apprenants",
+      "rowAria": "{{topic}} : {{direction}} de {{points}} points.",
+      "privacyNote": "Agrégé uniquement. La calibration d'aucun apprenant individuel n'est exposée ici (la calibration n'est jamais classée)."
+    },
+    "export": {
+      "heading": "Export pour l'accréditation",
+      "headingSub": "Un clic, étiqueté par référentiel, désidentifié, avec la version de correspondance apposée.",
+      "title": "Créer un export désidentifié",
+      "subtitle": "Associez l'export à vos référentiels d'accréditation. Les preuves sont mises en correspondance, jamais réévaluées.",
+      "frameworks": "Référentiels",
+      "mapped": "{{mapped}} éléments sur {{total}}",
+      "scope": {
+        "cohort": "Toute la cohorte",
+        "window": "Cette fenêtre d'évaluation",
+        "deidentified": "Désidentifié",
+        "fairness": "Inclure l'audit d'équité"
+      },
+      "deidentifiedOn": "Désidentifié",
+      "deidentifiedOff": "Réidentifiable, à vérifier",
+      "fairnessOn": "Audit d'équité inclus",
+      "fairnessOff": "Audit d'équité manquant",
+      "generate": "Générer l'export",
+      "blocked": "Incluez l'audit d'équité pour générer l'export."
+    },
+    "fairness": {
+      "heading": "Audit d'équité",
+      "headingSub": "Obligatoire, pas facultatif. Distributions des scores ventilées par sous-groupe linguistique, TR par rapport à EN.",
+      "title": "Équité par sous-groupe linguistique",
+      "subtitle": "Ventilé pour les sous-groupes de langue principale turque et anglaise.",
+      "invariant": "L'axe clinique ne doit pas suivre la langue. L'accent et la forme en seconde langue ne comptent jamais dans le score, de sorte que les paliers cliniques doivent coïncider entre les sous-groupes.",
+      "tableCaption": "Indicateurs d'équité pour les sous-groupes de langue principale turque et anglaise, avec un statut de conformité à la tolérance.",
+      "metricCol": "Indicateur",
+      "trCol": "TR ({{count}})",
+      "enCol": "EN ({{count}})",
+      "statusCol": "Statut",
+      "metric": {
+        "clinicalBand": "Palier clinique médian",
+        "commBand": "Palier de communication médian",
+        "refusalRate": "Taux de refus du modèle",
+        "sttFallback": "Taux de repli de la reconnaissance vocale"
+      },
+      "withinTolerance": "Dans la tolérance",
+      "flagged": "Signalé pour révision",
+      "footnote": "Le taux de repli plus élevé de la reconnaissance vocale en turc est une propriété de la voie vocale, montrée en toute transparence. Il n'alimente jamais un score de compétence."
+    }
+  },
+  "bands": {
+    "emerging": "Émergent",
+    "developing": "En développement",
+    "proficient": "Compétent",
+    "strong": "Solide",
+    "exemplary": "Exemplaire",
+    "withheld": "Non affiché"
+  },
+  "confidenceAnchors": {
+    "low": "Peu confiant",
+    "mid": "Moyennement",
+    "high": "Très confiant"
+  },
+  "common": {
+    "loading": "Chargement",
+    "empty": "Rien ici pour l'instant",
+    "error": "Une erreur est survenue",
+    "errorBody": "Nous n'avons pas pu charger ceci. Votre transcription est en sécurité.",
+    "emptyEncounters": "Aucune consultation pour l'instant. Démarrez votre premier cas.",
+    "of": "sur",
+    "years": "ans",
+    "male": "homme",
+    "female": "femme"
+  },
+  "authoring": {
+    "eyebrow": "Création par le formateur",
+    "title": "Du plan à un cas signé et versionné",
+    "subtitle": "L'IA rédige le cas, un clinicien accrédité conserve l'autorité. Chaque donnée clinique est étayée, citée et verrouillée avant qu'un apprenant ne la voie.",
+    "aiHumanNote": "L'IA rédige. Un clinicien nommément désigné révise, édite et valide. La barrière de validation est imposée dans le code, pas dans une politique.",
+    "eduNote": "Tous les patients sont synthétiques et chaque cas est à visée pédagogique uniquement. Pas pour la prise en charge réelle de patients.",
+    "pipeline": {
+      "heading": "Le processus de création",
+      "headingSub": "Six étapes, d'un plan de cas à un cas publié et surveillé. L'IA rédige la partie centrale ; le clinicien tient la plume à chaque barrière qui compte.",
+      "aria": "Processus de création de cas, six étapes",
+      "actor": {
+        "ai": "Brouillon IA",
+        "human": "Clinicien",
+        "auto": "Automatisé"
+      },
+      "state": {
+        "done": "Terminé",
+        "active": "En révision",
+        "pending": "En attente"
+      },
+      "stage": {
+        "blueprint": {
+          "title": "Plan",
+          "desc": "Motif, objectifs, niveau, pays et conseil de l'ordre, langues."
+        },
+        "draft": {
+          "title": "Brouillon IA",
+          "desc": "Persona, état du cas, déterminants des constantes, items de la grille et ancres."
+        },
+        "review": {
+          "title": "Révision experte et verrouillage",
+          "desc": "Données éditées, étayées, citées et verrouillées par un clinicien."
+        },
+        "psychometric": {
+          "title": "Pairs et psychométrie",
+          "desc": "Aval des pairs, accord inter-évaluateurs, difficulté, contrôle DIF."
+        },
+        "publish": {
+          "title": "Publier et versionner",
+          "desc": "La validation fige le cas et la grille avec des empreintes de version."
+        },
+        "monitor": {
+          "title": "Surveiller",
+          "desc": "Une veille de fraîcheur signale la dérive des recommandations citées pour une nouvelle révision."
+        }
+      }
+    },
+    "blueprint": {
+      "heading": "Plan du cas",
+      "headingSub": "Le cahier des charges à partir duquel l'IA a rédigé. Le pays et le conseil de l'ordre sont indépendants de la langue d'apprentissage.",
+      "difficulty": "Difficulté",
+      "level": "Niveau de l'apprenant",
+      "council": "Pays et conseil de l'ordre",
+      "locales": "Langues du contenu",
+      "objectives": "Objectifs d'apprentissage"
+    },
+    "editor": {
+      "heading": "Révision experte et verrouillage",
+      "headingSub": "Le cœur sous autorité humaine. Les données rédigées par l'IA à gauche avec leur provenance ; la grille et sa couverture des six domaines à droite. Une donnée ne peut atteindre un apprenant tant qu'elle n'est pas citée et verrouillée.",
+      "factsHeading": "Données verrouillées et provenance",
+      "factsSub": "Chaque affirmation clinique porte une référence de recommandation citée et versionnée ainsi qu'un état de verrouillage. Une affirmation non étayée ne peut pas être verrouillée.",
+      "rubricHeading": "Items de la grille",
+      "rubricSub": "Chaque item comporte des ancres comportementales, un poids, un domaine et un marqueur de sécurité. L'énumération des domaines est fixe.",
+      "coverage": "Couverture des domaines",
+      "coverageComplete": "Les six domaines de compétence sont couverts",
+      "weight": "Poids {{value}}",
+      "safetyCritical": "Critique pour la sécurité",
+      "humanEdited": "Édité par le clinicien",
+      "trPending": "Ancre en turc en attente",
+      "flaggedCount": "{{count}} donnée nécessite un étayage",
+      "flaggedCount_other": "{{count}} données nécessitent un étayage",
+      "flaggedNote": "Cette affirmation n'a pas pu être étayée par une source citée. Elle est retenue pour révision et bloque la publication jusqu'à résolution.",
+      "kind": {
+        "persona": "Persona du patient",
+        "vitals": "Constantes de triage",
+        "finding": "Résultat d'examen",
+        "result": "Résultat d'examen complémentaire",
+        "medication": "Médicament",
+        "safety": "Vérification de sécurité"
+      },
+      "status": {
+        "locked": "Verrouillé",
+        "editedLocked": "Édité et verrouillé",
+        "open": "Cité, non verrouillé",
+        "flagged": "Nécessite un étayage"
+      }
+    },
+    "psychometric": {
+      "heading": "Contrôle préalable par les pairs et psychométrique",
+      "sub": "Des indicateurs de qualité des items qu'un relecteur soupèse avant validation. La cohorte pilote est désidentifiée et restreinte ; rien de tout cela n'est un indicateur public.",
+      "agreement": "Relecteurs pairs",
+      "kappa": "Accord inter-évaluateurs",
+      "difficulty": "Difficulté pilote",
+      "dif": "Équité (DIF)"
+    },
+    "signoff": {
+      "sectionHeading": "Validation et publication",
+      "sectionSub": "La barrière stricte : la publication est désactivée tant que chaque donnée n'est pas étayée et qu'un clinicien accrédité ne cosigne pas. La validation fige le cas et la grille avec des empreintes de version.",
+      "heading": "État de préparation à la publication",
+      "sub": "Vérifiez le contrôle préalable, le statut par langue, l'état de verrouillage des données et les empreintes de version avant que le clinicien accrédité ne cosigne.",
+      "gatedBadge": "Bloqué",
+      "publishedBadge": "Publié",
+      "localeHeading": "Révision par langue",
+      "locale": {
+        "en": "Contenu et grille en anglais",
+        "tr": "Contenu et grille en turc"
+      },
+      "localeReviewed": "Révisé par {{name}}",
+      "localeInReview": "En révision",
+      "localeNote": "Un cas n'est proposé que dans une langue dont le contenu et la grille ont passé une révision par un clinicien parlant couramment cette langue. Le turc peut être en retard sur l'anglais jusqu'à ce qu'un relecteur turc valide.",
+      "factsClear": "Toutes les données cliniques sont étayées et verrouillées.",
+      "factsBlocked": "{{count}} donnée n'est pas encore étayée et verrouillée. Résolvez-la avant la publication.",
+      "factsBlocked_other": "{{count}} données ne sont pas encore étayées et verrouillées. Résolvez-les avant la publication.",
+      "versionHeading": "Provenance de la version",
+      "caseHash": "Empreinte de version du cas",
+      "rubricHash": "Empreinte de version de la grille",
+      "guidelineSet": "Ensemble de recommandations",
+      "cosignLabel": "Je suis le clinicien accrédité responsable et j'approuve la publication de ce cas.",
+      "signedConfirmation": "Cosigné par {{name}}. Cas et grille figés.",
+      "groundedOn": "Étayé sur",
+      "modelProvenance": "Rédigé par un grand modèle ouvert, auto-hébergé et vérifié entre familles de modèles. Aucun fournisseur commercial n'est nommé.",
+      "publish": "Publier le cas",
+      "unpublish": "Revenir au brouillon",
+      "blockedByFacts": "La publication est bloquée tant que chaque donnée clinique n'est pas étayée et verrouillée.",
+      "blockedByCosign": "La publication est bloquée tant que le clinicien accrédité n'a pas cosigné."
+    },
+    "monitor": {
+      "heading": "Publié et surveillé",
+      "headingSub": "Vos cas publiés avec les empreintes de version et les dates de dernière révision. Une modification des recommandations signale un cas pour une nouvelle révision ; rien n'est publié automatiquement et rien n'est réécrit automatiquement.",
+      "lastReviewed": "Revu le {{date}}",
+      "encounters": "{{count}} consultation",
+      "encounters_other": "{{count}} consultations",
+      "localeOffered": "proposé",
+      "localePending": "relecteur en attente",
+      "open": "Ouvrir le cas",
+      "review": "Réviser maintenant",
+      "status": {
+        "live": "En ligne",
+        "flagged": "Recommandation modifiée",
+        "enOnly": "Anglais uniquement"
+      }
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Répétez le cas avant que le cas ne vous répète.",
+      "subtitle": "Un simulateur clinique d'abord textuel : prenez en charge un patient synthétique dans un DPI, recevez une rétroaction ancrée dans les preuves et visualisez votre calibration.",
+      "primaryCta": "Accéder à la démo",
+      "secondaryCta": "Voir un rapport de rétroaction",
+      "bilingualNote": "De premier plan en turc et en anglais, texte et voix.",
+      "panelTitle": "Une consultation, trois phases",
+      "panelRow": {
+        "chat": "Interrogez un patient synthétique dans le DPI",
+        "generate": "Chaque cas généré, jamais répété",
+        "calibration": "La confiance mesurée par rapport à la compétence"
+      }
+    },
+    "trust": {
+      "label": "Ce que garantit AcuDx",
+      "formative": "Formatif uniquement",
+      "synthetic": "Patients synthétiques",
+      "cited": "Recommandations citées",
+      "accessible": "WCAG 2.2 AA",
+      "bilingual": "Turc et anglais"
+    },
+    "phases": {
+      "heading": "Parcourez chaque phase du produit",
+      "headingSub": "Chaque phase ouvre l'écran de démo en direct. Commencez où vous voulez, ou suivez la visite guidée depuis la barre supérieure.",
+      "roleplay": {
+        "title": "Jeu de rôle et DPI",
+        "body": "Interrogez un patient synthétique, prescrivez des examens et lisez un moniteur de constantes en direct dans un véritable environnement de DPI.",
+        "link": "Ouvrir la consultation"
+      },
+      "cases": {
+        "title": "Cas dynamiques",
+        "body": "Les cas sont générés à la demande à partir de l'ICD et du DSM, de sorte qu'une cohorte ne peut jamais mémoriser la banque.",
+        "link": "Parcourir et générer"
+      },
+      "guidance": {
+        "title": "Guidage cité",
+        "body": "Des indices socratiques, étayés et cités, qui ne donnent jamais la réponse et ne bloquent jamais la consultation.",
+        "link": "Voir le guidage dans un cas"
+      },
+      "feedback": {
+        "title": "Rétroaction de calibration",
+        "body": "Une rétroaction à double axe et en paliers, avec un miroir de calibration privé et les manquements critiques pour la sécurité toujours mis en évidence.",
+        "link": "Lire un rapport"
+      },
+      "rooms": {
+        "title": "Salles multijoueurs",
+        "body": "Menez un cas partagé entre les rôles de médecin, d'infirmier et d'ambulancier sur un unique état de patient faisant autorité.",
+        "link": "Ouvrir une salle"
+      },
+      "progress": {
+        "title": "Progression",
+        "body": "Suivez la compétence dans le temps comme une aptitude en paliers qui se travaille, sans score numérique ni classement public.",
+        "link": "Voir la progression"
+      },
+      "institution": {
+        "title": "Analytique de l'établissement",
+        "body": "Un doyen voit la compétence de la cohorte, la boucle de remédiation et un audit d'équité, agrégés et restreints selon le rôle.",
+        "link": "Ouvrir le tableau de bord"
+      },
+      "sovereign": {
+        "title": "Ouvert et souverain",
+        "body": "Des modèles à poids ouverts, auto-hébergés, avec une création de cas sous autorité humaine. Aucune dépendance à un fournisseur commercial.",
+        "link": "Voir la création"
+      }
+    },
+    "closing": {
+      "heading": "Suivez la visite guidée",
+      "body": "Parcourez les neuf écrans dans l'ordre pour voir chaque phase, d'une première consultation à la rétroaction de calibration jusqu'au tableau de bord de l'établissement.",
+      "primaryCta": "Accéder à la démo",
+      "educatorCta": "Pour les formateurs",
+      "note": "Actuellement en {{lang}}. Changez de langue à tout moment depuis la barre supérieure."
+    }
+  },
+  "tour": {
+    "button": "Visite guidée",
+    "buttonShort": "Visite",
+    "title": "Parcourez la démo",
+    "description": "Avancez à travers chaque phase dans l'ordre, ou passez à n'importe quel écran.",
+    "here": "Vous êtes ici",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "start": "Démarrer la visite",
+    "stops": {
+      "welcome": {
+        "title": "Bienvenue",
+        "hint": "La présentation du produit et l'accès à la démo."
+      },
+      "start": {
+        "title": "Commencer",
+        "hint": "Choisissez la langue, le rôle et la difficulté."
+      },
+      "cases": {
+        "title": "Cas",
+        "hint": "Parcourez et générez des cas dynamiques."
+      },
+      "encounter": {
+        "title": "Consultation",
+        "hint": "Prenez en charge un patient synthétique dans le DPI."
+      },
+      "feedback": {
+        "title": "Rétroaction",
+        "hint": "Lisez le rapport cité et en paliers."
+      },
+      "rooms": {
+        "title": "Salles",
+        "hint": "Menez un cas multijoueur partagé."
+      },
+      "progress": {
+        "title": "Progression",
+        "hint": "Voyez l'évolution de la compétence dans le temps."
+      },
+      "authoring": {
+        "title": "Création",
+        "hint": "Le processus de validation du formateur."
+      },
+      "institution": {
+        "title": "Établissement",
+        "hint": "Le tableau de bord de cohorte du doyen."
+      }
+    }
+  }
+}
