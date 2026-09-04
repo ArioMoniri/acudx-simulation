@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { PageContainer, PageHeader } from "@/components/shell";
+import { useDisplayName } from "@/state/profileStore";
 import {
   Button,
   Card,
@@ -42,6 +43,7 @@ const statIcon: Record<DashboardStat["key"], typeof Trophy> = {
 export function HomePage() {
   const { t } = useTranslation();
   const lang = useLang();
+  const displayName = useDisplayName();
   const header = useReveal();
   const strip = useReveal(0.06);
   const body = useReveal(0.12);
@@ -54,7 +56,14 @@ export function HomePage() {
       <motion.div {...header}>
         <PageHeader
           eyebrow={t("home.greetingEyebrow")}
-          title={t("home.welcome")}
+          title={
+            displayName
+              ? t("home.welcomeNamed", {
+                  name: displayName,
+                  defaultValue: "Welcome back, {{name}}",
+                })
+              : t("home.welcome")
+          }
           description={t("home.welcomeSub")}
           actions={
             <Button
