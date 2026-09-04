@@ -1,0 +1,73 @@
+{
+  "landing2": {
+    "hero": {
+      "eyebrow": "Clinical reasoning simulator"
+    },
+    "monitor": {
+      "aria": "Demonstration vitals monitor for a synthetic patient: heart rate 84, blood pressure 128 over 76, oxygen saturation 98 percent, respiratory rate 16.",
+      "unit": "Bay 2",
+      "status": "Monitoring",
+      "trace": "Sinus rhythm",
+      "hr": "Heart rate",
+      "bp": "Blood pressure",
+      "spo2": "Oxygen saturation",
+      "rr": "Respiratory rate"
+    },
+    "loop": {
+      "eyebrow": "The core loop",
+      "heading": "Four moves, one encounter",
+      "sub": "Every case runs the same clinical arc, then hands it back to you calibrated.",
+      "cycle": "Each loop tunes your judgement for the next case.",
+      "steps": {
+        "interview": {
+          "title": "Interview",
+          "body": "Take the history from a synthetic patient in plain language, in Turkish or English."
+        },
+        "chart": {
+          "title": "Chart in the EHR",
+          "body": "Order tests, read a live vitals monitor, and document inside a real record shell."
+        },
+        "decision": {
+          "title": "Decide",
+          "body": "Commit to a differential and a plan, and state how confident you are."
+        },
+        "feedback": {
+          "title": "Calibrated feedback",
+          "body": "See competence against confidence, with every safety-critical miss surfaced and cited."
+        }
+      }
+    },
+    "platform": {
+      "eyebrow": "Beyond the encounter",
+      "heading": "A whole training programme around the loop",
+      "sub": "The learner loop sits inside a full clinical-education platform.",
+      "items": {
+        "cases": {
+          "title": "Dynamic cases",
+          "body": "Generated on demand from ICD and DSM, so a cohort can never memorise the bank."
+        },
+        "rooms": {
+          "title": "Multiplayer rooms",
+          "body": "Run one case across doctor, nurse, and paramedic over a shared patient state."
+        },
+        "progress": {
+          "title": "Progress over time",
+          "body": "Competence tracked as trainable, banded skill. No numeric score, no leaderboard."
+        },
+        "institution": {
+          "title": "Institution analytics",
+          "body": "Cohort competency, remediation, and a fairness audit, aggregate and role-gated."
+        },
+        "sovereign": {
+          "title": "Open and sovereign",
+          "body": "Open-weight models, self-hosted, with human-authoritative case authoring."
+        }
+      }
+    },
+    "credibility": {
+      "label": "Grounded in published guidance",
+      "note": "Every hint and every miss is anchored to a source, never invented.",
+      "sources": "NICE · WHO · ATLS · DSM-5-TR · ICD-11"
+    }
+  }
+}

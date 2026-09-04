@@ -1,0 +1,73 @@
+{
+  "landing2": {
+    "hero": {
+      "eyebrow": "Klinik muhakeme simülatörü"
+    },
+    "monitor": {
+      "aria": "Sentetik bir hasta için tanıtım amaçlı yaşam bulguları monitörü: kalp hızı 84, tansiyon 128/76, oksijen satürasyonu yüzde 98, solunum sayısı 16.",
+      "unit": "Bölme 2",
+      "status": "İzleniyor",
+      "trace": "Sinüs ritmi",
+      "hr": "Kalp hızı",
+      "bp": "Tansiyon",
+      "spo2": "Oksijen satürasyonu",
+      "rr": "Solunum sayısı"
+    },
+    "loop": {
+      "eyebrow": "Temel döngü",
+      "heading": "Tek karşılaşma, dört adım",
+      "sub": "Her vaka aynı klinik yayı izler ve sonucu size kalibre edilmiş olarak geri verir.",
+      "cycle": "Her döngü bir sonraki vaka için muhakemenizi ayarlar.",
+      "steps": {
+        "interview": {
+          "title": "Anamnez",
+          "body": "Sentetik bir hastadan öyküyü Türkçe veya İngilizce, gündelik dille alın."
+        },
+        "chart": {
+          "title": "EHR'de kayıt",
+          "body": "Tetkik isteyin, canlı yaşam bulguları monitörünü okuyun ve gerçek bir kayıt kabuğunda belgeleyin."
+        },
+        "decision": {
+          "title": "Karar verin",
+          "body": "Bir ayırıcı tanıya ve plana bağlanın, ne kadar emin olduğunuzu belirtin."
+        },
+        "feedback": {
+          "title": "Kalibre geri bildirim",
+          "body": "Yetkinliği güvene karşı görün; güvenlik açısından kritik her atlama işaretlenir ve kaynağı verilir."
+        }
+      }
+    },
+    "platform": {
+      "eyebrow": "Karşılaşmanın ötesinde",
+      "heading": "Döngünün etrafında eksiksiz bir eğitim programı",
+      "sub": "Öğrenme döngüsü, tam donanımlı bir klinik eğitim platformunun içinde yer alır.",
+      "items": {
+        "cases": {
+          "title": "Dinamik vakalar",
+          "body": "ICD ve DSM'den anlık üretilir, böylece bir grup soru bankasını asla ezberleyemez."
+        },
+        "rooms": {
+          "title": "Çok oyunculu odalar",
+          "body": "Tek vakayı hekim, hemşire ve paramedik rolleriyle ortak bir hasta durumu üzerinde yürütün."
+        },
+        "progress": {
+          "title": "Zaman içinde ilerleme",
+          "body": "Yetkinlik, geliştirilebilir bantlı beceri olarak izlenir. Sayısal puan yok, sıralama yok."
+        },
+        "institution": {
+          "title": "Kurum analitiği",
+          "body": "Kohort yetkinliği, telafi döngüsü ve adalet denetimi; toplu ve role bağlı."
+        },
+        "sovereign": {
+          "title": "Açık ve egemen",
+          "body": "Açık ağırlıklı modeller, kendi sunucunuzda, insan yetkili vaka yazarlığıyla."
+        }
+      }
+    },
+    "credibility": {
+      "label": "Yayımlanmış kılavuzlara dayanır",
+      "note": "Her ipucu ve her atlama bir kaynağa bağlıdır, asla uydurulmaz.",
+      "sources": "NICE · WHO · ATLS · DSM-5-TR · ICD-11"
+    }
+  }
+}
