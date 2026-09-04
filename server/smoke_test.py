@@ -8,6 +8,7 @@ Hits every MVP endpoint and prints PASS / FAIL per endpoint:
     GET  /status
     POST /v1/guard         x3   (an off-topic, an injection, and an in-scope example)
     POST /v1/patient/turn
+    POST /v1/case/generate  (schema-valid case spec; model path OR templated fallback)
     POST /v1/ground
 
 Design notes:
@@ -217,6 +218,129 @@ def check_patient_turn(base: str, timeout: float) -> Result:
     return Result("POST /v1/patient/turn", ok, detail)
 
 
+# --- case generation schema validation (stdlib only) -----------------------
+_INTENTS = {
+    "onset", "location", "character", "radiation", "severity", "timing",
+    "aggravating", "relieving", "associated-symptoms", "red-flags",
+    "past-medical-history", "medications", "allergies", "family-history",
+    "social-history", "risk-factors", "ice",
+}
+_MANEUVERS = {
+    "general-inspection", "vitals-recheck", "cardiovascular", "respiratory",
+    "abdominal", "neurological", "musculoskeletal", "skin", "ent", "focused-special",
+}
+_APPROPRIATENESS = {"indicated", "contraindicated", "neutral"}
+_VITAL_KEYS = ("hr", "systolic", "diastolic", "rr", "spo2", "tempC")
+
+
+def validate_case_spec(spec: Any) -> List[str]:
+    """Return a list of schema problems (empty == a valid GeneratedCaseSpec)."""
+    problems: List[str] = []
+    if not isinstance(spec, dict):
+        return ["response is not a JSON object"]
+
+    def need(key: str, typ: type) -> Any:
+        v = spec.get(key)
+        if not isinstance(v, typ):
+            problems.append(f"missing/invalid '{key}'")
+            return None
+        return v
+
+    if not isinstance(spec.get("seed"), int):
+        problems.append("missing/invalid 'seed'")
+    cond = need("condition", dict)
+    if isinstance(cond, dict):
+        for k in ("icd11", "icd10", "label_en", "label_tr", "system"):
+            if not isinstance(cond.get(k), str) or not cond.get(k):
+                problems.append(f"condition.{k} missing")
+    demo = need("demographics", dict)
+    if isinstance(demo, dict):
+        if not isinstance(demo.get("age"), int):
+            problems.append("demographics.age not an int")
+        for k in ("sex", "name_hint"):
+            if not isinstance(demo.get(k), str):
+                problems.append(f"demographics.{k} missing")
+    for k in ("chief_complaint_en", "chief_complaint_tr", "disposition"):
+        if not isinstance(spec.get(k), str) or not spec.get(k):
+            problems.append(f"'{k}' missing")
+    for k in ("acuity_esi", "difficulty"):
+        v = spec.get(k)
+        if not isinstance(v, int) or not (1 <= v <= 5):
+            problems.append(f"'{k}' out of range")
+
+    hpi = need("hpi", list)
+    if isinstance(hpi, list):
+        if not hpi:
+            problems.append("hpi is empty")
+        for h in hpi[:20]:
+            if not isinstance(h, dict) or h.get("intent") not in _INTENTS:
+                problems.append("hpi[].intent invalid")
+                break
+            if not (isinstance(h.get("answer_en"), str) and isinstance(h.get("answer_tr"), str)):
+                problems.append("hpi[] missing bilingual answer")
+                break
+    exam = need("exam", list)
+    if isinstance(exam, list):
+        for e in exam[:20]:
+            if not isinstance(e, dict) or e.get("maneuver") not in _MANEUVERS:
+                problems.append("exam[].maneuver invalid")
+                break
+    tv = need("triage_vitals", dict)
+    if isinstance(tv, dict):
+        for k in _VITAL_KEYS:
+            if not isinstance(tv.get(k), (int, float)):
+                problems.append(f"triage_vitals.{k} missing")
+                break
+    for k in ("labs", "imaging", "vitals_trajectory"):
+        if not isinstance(spec.get(k), list):
+            problems.append(f"'{k}' not a list")
+    tx = need("treatments", list)
+    if isinstance(tx, list):
+        for t in tx[:20]:
+            if not isinstance(t, dict) or t.get("appropriateness") not in _APPROPRIATENESS:
+                problems.append("treatments[].appropriateness invalid")
+                break
+    anchors = need("guideline_anchors", list)
+    if isinstance(anchors, list) and not anchors:
+        problems.append("guideline_anchors is empty")
+    return problems
+
+
+def check_case_generate(base: str, timeout: float) -> Result:
+    """POST /v1/case/generate and validate the returned GeneratedCaseSpec.
+
+    Passes on 2xx + a schema-valid spec. The endpoint never hard-fails: whether
+    the pod's model is up (source='model') or down (source='template'), a valid
+    spec must come back — so this one check exercises both the model path and the
+    deterministic templated fallback depending on the pod's state. The offline
+    fallback is also exercised directly by `python -m server.case_generator`.
+    """
+    # Slightly longer timeout: a live model call is bounded but not instant.
+    tmo = max(timeout, 30.0)
+    bodies = [
+        {"system": "cardiology", "locale": "en", "seed": 20260904},
+        {"system": "psychiatry", "difficulty": 3, "locale": "en"},
+        {},
+    ]
+    status, data, err, used = _post_first_ok(base, "/v1/case/generate", bodies, tmo)
+    if err or status is None:
+        return Result("POST /v1/case/generate", False, err or "no response")
+    if not (200 <= status < 300):
+        return Result("POST /v1/case/generate", False, f"HTTP {status} {_compact(data)}")
+    problems = validate_case_spec(data)
+    ok = not problems
+    source = data.get("meta", {}).get("source", "?") if isinstance(data, dict) else "?"
+    cond = ""
+    if isinstance(data, dict) and isinstance(data.get("condition"), dict):
+        c = data["condition"]
+        cond = f'{c.get("system")}/{c.get("icd10")} "{c.get("label_en", "")[:32]}"'
+    if ok:
+        detail = f"HTTP {status} " + _dim(f"source={source} spec={cond} (schema-valid)")
+    else:
+        detail = f"HTTP {status} " + _fail("schema") + " " + _dim("; ".join(problems[:4]))
+    return Result("POST /v1/case/generate", ok, detail)
+
+
 def check_ground(base: str, timeout: float) -> Result:
     bodies = [
         {"query": "antibiotic timing in septic shock", "country": "GLOBAL", "locale": "en", "k": 4},
@@ -274,6 +398,7 @@ def main() -> int:
         check_status(base, args.timeout),
         check_guard(base, args.timeout),
         check_patient_turn(base, args.timeout),
+        check_case_generate(base, args.timeout),
         check_ground(base, args.timeout),
     ]
 
