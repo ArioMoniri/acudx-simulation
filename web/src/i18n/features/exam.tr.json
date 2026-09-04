@@ -1,0 +1,93 @@
+{
+  "nav": {
+    "exam": "Sınav"
+  },
+  "exam": {
+    "header": {
+      "eyebrow": "Değerlendirme",
+      "introTitle": "Özet değerlendirme sınavı",
+      "introDesc": "Rehberlik kapalıyken, süreli ve gözetimli bir vaka dizisi; sonunda puanlı bir yetkinlik raporu verir.",
+      "runningTitle": "Sınav sürüyor",
+      "runningDesc": "Her vakayı süre içinde çözün. Rehberlik devre dışı.",
+      "reportTitle": "Yetkinlik raporu",
+      "reportDesc": "Bu denemedeki puanlı sonuçlarınız, bu cihaza kaydedildi."
+    },
+    "intro": {
+      "howItWorks": "Sınav nasıl işler",
+      "rule": {
+        "proctored": {
+          "title": "Gözetimli, tek geçiş",
+          "body": "Her vakayı bir kez çözersiniz. Vaka içinde tekrar hakkı yoktur."
+        },
+        "timed": {
+          "title": "Vaka başına süreli",
+          "body": "Her vakada bir geri sayım çalışır; sıfırda otomatik gönderilir."
+        },
+        "noGuidance": {
+          "title": "Rehberlik kapalı",
+          "body": "Gerçek zamanlı ipuçları ve uzman önerileri baştan sona devre dışıdır."
+        },
+        "scored": {
+          "title": "Puanlı rapor",
+          "body": "Sonunda, bu cihaza kaydedilen bir yetkinlik raporu alırsınız."
+        }
+      },
+      "lengthLabel": "Vaka sayısı",
+      "caseCount": "{{n}} vaka",
+      "timeLabel": "Vaka başına süre",
+      "minutes": "{{n}} dk",
+      "mixLabel": "Vaka karışımı",
+      "mixHint": "Tüm sistemlerden çekmek için hiçbirini seçmeyin ya da belirli aileleri seçin.",
+      "allSystems": "Tüm sistemler",
+      "begin": "Sınava başla",
+      "sourceLive": "Bu sınav için vakalar canlı olarak üretilir.",
+      "sourceLocal": "Bu sınav için vakalar cihaz üzerinde üretilir.",
+      "priorAttempts": "{{n}} deneme zaten kaydedildi."
+    },
+    "family": {
+      "chest-pain": "Göğüs ağrısı",
+      "headache": "Baş ağrısı",
+      "abdominal-pain": "Karın ağrısı",
+      "dyspnea": "Nefes darlığı"
+    },
+    "runner": {
+      "preparing": "{{total}} vakadan {{n}}. hazırlanıyor…",
+      "preparingHint": "Yeni, görülmemiş bir vaka üretiliyor.",
+      "caseProgress": "{{total}} vakadan {{n}}.",
+      "guidanceOff": "Rehberlik kapalı",
+      "submitNext": "Gönder ve devam",
+      "finish": "Gönder ve bitir"
+    },
+    "verdict": {
+      "correct": "Doğru",
+      "nearMiss": "Yakın",
+      "incorrect": "Yanlış"
+    },
+    "report": {
+      "totalScore": "Toplam puan",
+      "acrossCases": "{{n}} vaka boyunca",
+      "completed": "Sınav tamamlandı",
+      "accuracy": "Tanı doğruluğu",
+      "accuracyHint": "{{cases}} vakadan {{correct}} doğru",
+      "redFlags": "Kırmızı bayrak yakalama",
+      "redFlagsHint": "sorgulanan / mevcut",
+      "workup": "Tetkik uygunluğu",
+      "workupHint": "endike / fazla / eksik",
+      "ttd": "Ortalama tanı süresi",
+      "ttdHint": "tanı konan vakalar",
+      "perCase": "Vaka vaka",
+      "col": {
+        "case": "Vaka",
+        "diagnosis": "Tanı",
+        "redFlags": "Kırmızı bayrak",
+        "workup": "Tetkik",
+        "time": "Süre",
+        "points": "Puan"
+      },
+      "timedOut": "Süre doldu",
+      "savedNote": "Bu cihaza kaydedildi. {{n}} deneme kayıtlı.",
+      "retake": "Sınavı tekrarla",
+      "home": "Ana sayfa"
+    }
+  }
+}

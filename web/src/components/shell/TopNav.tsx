@@ -33,6 +33,7 @@ const NAV_BY_ROLE: Record<DemoRole, NavItem[]> = {
     { to: "/start", key: "nav.start" },
     { to: "/cases", key: "nav.cases" },
     { to: "/rooms", key: "nav.rooms" },
+    { to: "/exam", key: "nav.exam" },
     { to: "/progress", key: "nav.progress" },
   ],
   educator: [

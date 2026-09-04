@@ -1,0 +1,93 @@
+{
+  "nav": {
+    "exam": "Exam"
+  },
+  "exam": {
+    "header": {
+      "eyebrow": "Assessment",
+      "introTitle": "Summative exam",
+      "introDesc": "A proctored, timed run of generated cases with guidance switched off, ending in a scored competency report.",
+      "runningTitle": "Exam in progress",
+      "runningDesc": "Work each case on the clock. Guidance is disabled.",
+      "reportTitle": "Competency report",
+      "reportDesc": "Your scored results for this attempt, saved to this device."
+    },
+    "intro": {
+      "howItWorks": "How the exam works",
+      "rule": {
+        "proctored": {
+          "title": "Proctored, one pass",
+          "body": "You work each case once. There is no retry within a case."
+        },
+        "timed": {
+          "title": "Timed per case",
+          "body": "A countdown runs on every case; it auto-submits at zero."
+        },
+        "noGuidance": {
+          "title": "Guidance is off",
+          "body": "Real-time hints and attending tips are disabled throughout."
+        },
+        "scored": {
+          "title": "Scored report",
+          "body": "You get a competency report at the end, saved to this device."
+        }
+      },
+      "lengthLabel": "Number of cases",
+      "caseCount": "{{n}} cases",
+      "timeLabel": "Time per case",
+      "minutes": "{{n}} min",
+      "mixLabel": "Case mix",
+      "mixHint": "Leave every family off to draw across all systems, or pick specific ones.",
+      "allSystems": "All systems",
+      "begin": "Begin exam",
+      "sourceLive": "Cases are generated live for this exam.",
+      "sourceLocal": "Cases are generated on-device for this exam.",
+      "priorAttempts": "{{n}} attempt(s) already saved."
+    },
+    "family": {
+      "chest-pain": "Chest pain",
+      "headache": "Headache",
+      "abdominal-pain": "Abdominal pain",
+      "dyspnea": "Dyspnea"
+    },
+    "runner": {
+      "preparing": "Preparing case {{n}} of {{total}}…",
+      "preparingHint": "Generating a fresh, unseen case.",
+      "caseProgress": "Case {{n}} of {{total}}",
+      "guidanceOff": "Guidance off",
+      "submitNext": "Submit & next",
+      "finish": "Submit & finish"
+    },
+    "verdict": {
+      "correct": "Correct",
+      "nearMiss": "Near miss",
+      "incorrect": "Incorrect"
+    },
+    "report": {
+      "totalScore": "Total score",
+      "acrossCases": "across {{n}} cases",
+      "completed": "Exam complete",
+      "accuracy": "Diagnostic accuracy",
+      "accuracyHint": "{{correct}} of {{cases}} correct",
+      "redFlags": "Red-flag capture",
+      "redFlagsHint": "screened vs present",
+      "workup": "Workup appropriateness",
+      "workupHint": "indicated vs over / under",
+      "ttd": "Mean time to Dx",
+      "ttdHint": "committed cases",
+      "perCase": "Case-by-case",
+      "col": {
+        "case": "Case",
+        "diagnosis": "Diagnosis",
+        "redFlags": "Red flags",
+        "workup": "Workup",
+        "time": "Time",
+        "points": "Points"
+      },
+      "timedOut": "Timed out",
+      "savedNote": "Saved to this device. {{n}} attempt(s) recorded.",
+      "retake": "Retake exam",
+      "home": "Back home"
+    }
+  }
+}

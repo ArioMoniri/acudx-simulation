@@ -18,12 +18,13 @@ import {
   StatusDot,
   type StatusTone,
 } from "@/components/ui";
-import {
-  signsFromVitals,
-  type ClinicalSignIntensity,
-} from "./PatientAvatar";
 import { PatientPhoto } from "@/components/PatientPhoto";
-import { PatientViewer, SymptomSummary } from "@/components/PatientViewer";
+import {
+  PatientViewer,
+  SymptomSummary,
+  photoSignsFromVitals,
+} from "@/components/PatientViewer";
+import { resolvePatientVisual } from "@/domain/patientIdentity";
 import { EncounterClock } from "./EncounterClock";
 import { conceptText, pick } from "./labels";
 import {
@@ -172,9 +173,11 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
 
   const problems = state.problemList;
 
+  // The ONE unified visual identity — same distinct face + case name everywhere.
+  const visual = resolvePatientVisual(caseInstance);
   // Signs track the LIVE vitals course (falls back to triage before the clock
   // starts) so the portrait tint + symptom summary reflect the current picture.
-  const clinicalSigns: ClinicalSignIntensity[] = signsFromVitals(vitals);
+  const clinicalSigns = photoSignsFromVitals(vitals);
   const sexLabel = t(`common.${patient.gender === "female" ? "female" : "male"}`);
   const acuityTone = `esi-${caseInstance.acuityESI}` as StatusTone;
 
@@ -191,10 +194,11 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
           accent, matched to the demographic; physiology tints the face. */}
       <div className="flex items-center gap-3 border-b border-border bg-monitor-bg px-3 py-3">
         <PatientPhoto
-          sex={patient.gender === "female" ? "female" : "male"}
-          age={patient.ageYears}
-          seed={caseInstance.seed}
+          sex={visual.sexAtBirth}
+          age={visual.age}
+          photoId={visual.photoId}
           signs={clinicalSigns}
+          rr={vitals.rr}
           alt={t("ehr.storyboard.avatarAlt", {
             defaultValue: "Synthetic patient portrait — not a real individual",
           })}

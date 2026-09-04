@@ -35,6 +35,8 @@ import {
 } from "@/state/encounterStore";
 import type { CourseStatus, CurrentVitals } from "@/domain/clinicalCourse";
 import { pickProfile, type PatientProfile } from "@/domain/patientProfiles";
+import { patientVisualFromParts } from "@/domain/patientIdentity";
+import type { Patient } from "@/domain/fhir";
 import {
   PatientAvatar,
   type AvatarAffect,
@@ -49,6 +51,14 @@ const PatientHead3D = lazy(() => import("./PatientHead3D"));
 export interface PatientAvatar3DProps {
   /** Stable seed selecting the patient's presentation profile (e.g. case id). */
   profileSeed?: string | number;
+  /**
+   * The CASE patient. When provided, the head takes its NAME + demographics from
+   * here (matching the realistic photo) instead of an unrelated pool profile.
+   * Falls back to the encounter store's active case, then to a generic profile.
+   */
+  patient?: Patient;
+  /** Explicit display name override (wins over `patient.name`). */
+  name?: string;
   /** True while the patient is speaking (drives mouth movement on the 3D head). */
   speaking?: boolean;
   /**
@@ -140,6 +150,8 @@ class HeadErrorBoundary extends Component<
 
 export function PatientAvatar3D({
   profileSeed,
+  patient,
+  name: nameProp,
   speaking = false,
   utterance,
   voice = false,
@@ -170,15 +182,45 @@ export function PatientAvatar3D({
   const [canWebGL] = useState(isWebGLAvailable);
   const [reducedData] = useState(prefersReducedData);
 
-  const profile: PatientProfile = useMemo(
-    () => pickProfile(profileSeed ?? "acudx-patient"),
-    [profileSeed],
-  );
+  // Resolve the CASE identity (prop → active store case). The head/2D portrait
+  // must front the real patient, not an unrelated pool name like the old
+  // pickProfile(seed).name that produced the "Bernard Whitfield" mismatch.
+  const seedForVisual = profileSeed ?? state.caseInstance?.seed ?? "acudx-patient";
+  const effectivePatient = patient ?? state.caseInstance?.patient ?? null;
+
+  // A base profile still supplies hair / headwear / build variety; identity below
+  // overrides name + skin tone + demographics so it agrees with the photo.
+  const baseProfile = useMemo(() => pickProfile(seedForVisual), [seedForVisual]);
+
+  const identity = useMemo(() => {
+    if (!effectivePatient) return null;
+    return patientVisualFromParts({
+      name: nameProp ?? effectivePatient.name,
+      gender: effectivePatient.gender,
+      ageYears: effectivePatient.ageYears,
+      seed: seedForVisual,
+    });
+  }, [effectivePatient, nameProp, seedForVisual]);
+
+  const profile: PatientProfile = useMemo(() => {
+    if (!identity) return baseProfile;
+    return {
+      ...baseProfile,
+      name: { en: identity.name, tr: identity.name },
+      age: identity.age,
+      sexAtBirth: identity.sexAtBirth,
+      appearance: { ...baseProfile.appearance, skinTone: identity.skinTone },
+    };
+  }, [baseProfile, identity]);
 
   const signs = deriveSigns(vitals, status);
   const affect = affectFor(status);
 
-  const name = i18n.language.startsWith("tr") ? profile.name.tr : profile.name.en;
+  const name = identity
+    ? identity.name
+    : i18n.language.startsWith("tr")
+      ? profile.name.tr
+      : profile.name.en;
   const rr = vitals?.rr ?? 16;
 
   const twoD = (note?: string): ReactNode => (
@@ -203,6 +245,7 @@ export function PatientAvatar3D({
         <Suspense fallback={twoD()}>
           <PatientHead3D
             profile={profile}
+            name={name}
             signs={signs}
             affect={affect}
             rr={rr}

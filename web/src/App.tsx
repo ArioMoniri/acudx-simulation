@@ -52,6 +52,9 @@ const SignInPage = lazy(() =>
 const ProfilePage = lazy(() =>
   import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
 );
+const ExamPage = lazy(() =>
+  import("@/pages/ExamPage").then((m) => ({ default: m.ExamPage })),
+);
 
 /* -------------------------------------------------------------------------- */
 /* 404                                                                         */
@@ -133,6 +136,7 @@ export default function App() {
               <Route path="/encounter" element={<EncounterPage />} />
               <Route path="/feedback" element={<FeedbackPage />} />
               <Route path="/progress" element={<ProgressPage />} />
+              <Route path="/exam" element={<ExamPage />} />
               <Route path="/institution" element={<InstitutionPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>

@@ -1,0 +1,11 @@
+{
+  "commandPalette": {
+    "title": "Command palette",
+    "placeholder": "Search commands…",
+    "sectionNav": "Navigate",
+    "sectionActions": "Actions",
+    "enlarge": "Enlarge patient view",
+    "newCase": "New random case",
+    "empty": "No commands found."
+  }
+}

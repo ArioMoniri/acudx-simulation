@@ -15,12 +15,19 @@ import {
   X,
   SpeakerHigh,
   SpeakerSlash,
+  Microphone,
 } from "@phosphor-icons/react";
 
 import { EncounterChat } from "@/components/EncounterChat";
 import { GuidanceCard } from "@/components/GuidanceCard";
 import { PatientAvatar3D } from "@/components/avatar3d/PatientAvatar3D";
-import { SymptomSummary, type VitalsLike } from "@/components/PatientViewer";
+import { PatientPhoto } from "@/components/PatientPhoto";
+import {
+  SymptomSummary,
+  photoSignsFromVitals,
+  type VitalsLike,
+} from "@/components/PatientViewer";
+import { resolvePatientVisual } from "@/domain/patientIdentity";
 import { Badge, Button, Switch, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
@@ -38,6 +45,7 @@ import {
 } from "@/domain/scopeGuard";
 import type { QuestionIntent, ExamManeuver, CaseInstance } from "@/domain/case";
 import { useLiveBackend } from "@/lib/liveBackend";
+import { useSpeechInput } from "@/lib/speechInput";
 import {
   patientTurn as backendPatientTurn,
   type PatientTurnRequest,
@@ -164,12 +172,27 @@ export function InterviewTab({
   guidanceOn,
   onGuidanceChange,
 }: InterviewTabProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const state = useEncounterState();
   const live = useLiveBackend();
 
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState("");
+
+  // Push-to-talk voice DICTATION (GitHub #107): the learner may speak a question
+  // aloud and it fills the composer, where they can edit it before Send. Purely
+  // client-side (browser Web Speech API), opt-in per press, and unrelated to the
+  // air-gapped pod path — interim + final transcripts just feed `draft`. The mic
+  // control renders only when the browser exposes the API (`micSupported`).
+  const {
+    supported: micSupported,
+    listening: micListening,
+    toggle: toggleMic,
+  } = useSpeechInput({
+    lang: i18n.language,
+    onInterim: (text) => setDraft(text),
+    onFinal: (text) => setDraft(text),
+  });
   const [notice, setNotice] = useState<GuardNoticeState | null>(null);
   const typingTimer = useRef<number | null>(null);
 
@@ -586,6 +609,46 @@ export function InterviewTab({
               autoComplete="off"
               className="min-w-0 flex-1"
             />
+            {micSupported ? (
+              <button
+                type="button"
+                onClick={toggleMic}
+                aria-pressed={micListening}
+                aria-label={
+                  micListening
+                    ? t("ehr.interview.voiceInput.stop", {
+                        defaultValue: "Stop dictation",
+                      })
+                    : t("ehr.interview.voiceInput.mic", {
+                        defaultValue: "Dictate",
+                      })
+                }
+                title={
+                  micListening
+                    ? t("ehr.interview.voiceInput.stop", {
+                        defaultValue: "Stop dictation",
+                      })
+                    : t("ehr.interview.voiceInput.hint", {
+                        defaultValue: "Dictate your question, then edit before sending",
+                      })
+                }
+                className={cn(
+                  "relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-control border",
+                  "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+                  micListening
+                    ? "border-transparent bg-brand-tint text-brand"
+                    : "border-border bg-surface text-muted hover:text-fg",
+                )}
+              >
+                <Microphone weight="bold" className="h-4 w-4" aria-hidden />
+                {micListening ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-brand motion-safe:animate-pulse"
+                    aria-hidden
+                  />
+                ) : null}
+              </button>
+            ) : null}
             <Button
               type="submit"
               size="md"
@@ -599,7 +662,19 @@ export function InterviewTab({
 
           <div className="mt-2 flex items-center justify-between gap-3">
             <p className="text-[11px] text-muted">
-              {t("scopeGuard.composer.hint")}
+              {micListening ? (
+                <span className="inline-flex items-center gap-1.5 text-brand">
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-brand motion-safe:animate-pulse"
+                    aria-hidden
+                  />
+                  {t("ehr.interview.voiceInput.listening", {
+                    defaultValue: "Listening…",
+                  })}
+                </span>
+              ) : (
+                t("scopeGuard.composer.hint")
+              )}
             </p>
             <div className="flex shrink-0 items-center gap-2">
               {live.enabled ? (
@@ -900,6 +975,12 @@ function PatientPresence({
   onToggleVoice: () => void;
 }) {
   const { t } = useTranslation();
+  // Unified identity + full physiology channel. The realistic photo LEADS (the
+  // person the learner talks to, matched to the case name); a small lip-sync head
+  // below carries the viseme animation + the optional spoken audio (voice toggle).
+  const visual = resolvePatientVisual(caseInstance);
+  const signs = photoSignsFromVitals(vitals);
+  const speaking = Boolean(utterance && utterance.trim().length > 0);
   return (
     <section className="rounded-card border border-border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
@@ -932,8 +1013,28 @@ function PatientPresence({
         </button>
       </div>
 
+      {/* Primary: the realistic, symptom-tinted patient, matched to the case
+          name; the speaking treatment plays as each reply lands. */}
+      <div className="mt-2">
+        <PatientPhoto
+          sex={visual.sexAtBirth}
+          age={visual.age}
+          photoId={visual.photoId}
+          signs={signs}
+          rr={vitals.rr}
+          speaking={speaking}
+          utterance={utterance}
+          alt={t("patientviewer.syntheticNote")}
+          caption={caseInstance.patient.name}
+          className="aspect-[4/5] w-full ring-1 ring-border"
+        />
+      </div>
+
+      {/* Secondary: the small lip-sync head — CASE identity now — carries the
+          viseme animation and the optional spoken audio (the voice toggle). */}
       <div className="mt-2">
         <PatientAvatar3D
+          patient={caseInstance.patient}
           profileSeed={caseInstance.seed}
           utterance={utterance}
           voice={voiceOn}
