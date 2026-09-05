@@ -38,8 +38,14 @@ import {
   type Coding,
   type DiagnosticReport,
   type Observation,
+  type ObservationInterpretation,
   type ServiceRequestKind,
 } from "@/domain/fhir";
+import {
+  currentVitals,
+  type AdministeredTreatment,
+  type CurrentVitals,
+} from "@/domain/clinicalCourse";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                       */
@@ -614,56 +620,500 @@ const GENERIC_WNL: Bilingual = {
   tr: "Normal sınırlar içinde.",
 };
 
+/* -------------------------------------------------------------------------- */
+/* Condition-specific + time-dynamic synthesis                                 */
+/* -------------------------------------------------------------------------- */
+
 /**
- * A plausible, deterministic WITHIN-NORMAL-LIMITS result for an order the case
- * carries NO ground-truth datum for. Labs/POC/blood-gas return a panel of normal
- * observations (the FULL individual-analyte set); imaging returns a "no acute
- * abnormality" report; micro returns a "no growth / not detected" report. Same
- * case + code → same numbers.
- *
- * Callers apply {@link hasGroundTruthResult} per-analyte: a case's authored
- * (abnormal / relevant) datum always takes precedence over the matching
- * synthetic value, while the rest of the panel stays complete and normal.
+ * Options steering how a synthetic result is synthesised. With `dynamic` FALSE
+ * (the default) the output is the pure within-normal-limits panel used as a
+ * deterministic baseline (and asserted by the unit tests). With `dynamic` TRUE
+ * the result is tuned to THIS case's condition AND to the live clinical course
+ * at the draw time — so a cardiac marker rises across serial troponins, a
+ * lactate falls after resuscitation, and a repeat gas improves after treatment.
  */
-export function syntheticNormalResult(
+export interface SyntheticContext {
+  /** Sim-clock time the sample was drawn (order.placedAt), ms. Default 0. */
+  drawMs?: number;
+  /** Treatments administered so far (drives perfusion / clearance responses). */
+  treatments?: AdministeredTreatment[];
+  /** Apply condition tuning + time dynamics. Default false → pure WNL baseline. */
+  dynamic?: boolean;
+  /** 0-based serial draw index (0 = first draw carries authored truth). */
+  drawIndex?: number;
+}
+
+export interface SyntheticResult {
+  observations: Observation[];
+  report?: DiagnosticReport;
+  /** True when the (dynamic) synthetic reads abnormal for the case's condition. */
+  abnormal?: boolean;
+}
+
+function clampNum(v: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, v));
+}
+
+/** Every modelled analyte spec, indexed by its code (first definition wins). */
+const ANALYTE_INDEX: Map<string, AnalyteSpec> = (() => {
+  const m = new Map<string, AnalyteSpec>();
+  for (const specs of Object.values(PANELS)) {
+    for (const s of specs) if (!m.has(s.code)) m.set(s.code, s);
+  }
+  return m;
+})();
+
+/** How an abnormal analyte moves over clinical time + treatment. */
+type Kinetics = "rise" | "perfusion" | "inflammatory" | "glucose" | "static";
+
+const KINETICS_BY_CODE: Record<string, Kinetics> = {
+  "67151-1": "rise",
+  "2157-6": "rise",
+  "13969-1": "rise",
+  "2524-7": "perfusion",
+  "2703-7": "perfusion",
+  "2019-8": "perfusion",
+  "2708-6": "perfusion",
+  "1925-7": "perfusion",
+  "2744-1": "perfusion",
+  "1963-8": "perfusion",
+  "1863-0": "perfusion",
+  "6690-2": "inflammatory",
+  "770-8": "inflammatory",
+  "1988-5": "inflammatory",
+  "33959-8": "inflammatory",
+  "4537-7": "inflammatory",
+  "2345-7": "glucose",
+  "2339-0": "glucose",
+};
+function kineticsOf(code: string): Kinetics {
+  return KINETICS_BY_CODE[code] ?? "static";
+}
+
+/* --- condition → abnormal analyte targets (presentation magnitudes) -------- */
+
+type ConditionTag =
+  | "acs"
+  | "pe"
+  | "chf"
+  | "sepsis"
+  | "pneumonia"
+  | "appendicitis"
+  | "pancreatitis"
+  | "hepatic"
+  | "renal"
+  | "dka"
+  | "uti"
+  | "anemia"
+  | "thyrotoxic"
+  | "meningitis";
+
+interface AnalyteTarget {
+  code: string;
+  /** Presentation-time magnitude (absolute), for numeric analytes. */
+  value?: number;
+  /** Qualitative positive value, for dipstick / micro-style analytes. */
+  qual?: Bilingual;
+  interp: ObservationInterpretation;
+}
+const nT = (code: string, value: number, interp: ObservationInterpretation): AnalyteTarget => ({ code, value, interp });
+const qT = (code: string, qual: Bilingual, interp: ObservationInterpretation = "A"): AnalyteTarget => ({ code, qual, interp });
+
+const POS: Bilingual = { en: "Positive", tr: "Pozitif" };
+const MANY_BACT: Bilingual = { en: "Many", tr: "Çok sayıda" };
+
+const CONDITION_TARGETS: Record<ConditionTag, AnalyteTarget[]> = {
+  acs: [nT("67151-1", 55, "HH"), nT("2157-6", 340, "H"), nT("13969-1", 12, "H")],
+  pe: [nT("48065-7", 2400, "H"), nT("2703-7", 68, "L"), nT("2019-8", 31, "L"), nT("2708-6", 91, "L"), nT("2524-7", 2.4, "H")],
+  chf: [nT("30934-4", 780, "H"), nT("33762-6", 3200, "H")],
+  sepsis: [nT("6690-2", 17.5, "H"), nT("770-8", 86, "H"), nT("1988-5", 140, "H"), nT("33959-8", 6.5, "H"), nT("2524-7", 3.6, "H")],
+  pneumonia: [nT("6690-2", 15.5, "H"), nT("770-8", 82, "H"), nT("1988-5", 110, "H"), nT("33959-8", 1.8, "H")],
+  appendicitis: [nT("6690-2", 15, "H"), nT("770-8", 80, "H"), nT("1988-5", 45, "H")],
+  pancreatitis: [nT("3040-3", 920, "H"), nT("1798-8", 340, "H"), nT("6690-2", 13.5, "H")],
+  hepatic: [nT("1920-8", 180, "H"), nT("1742-6", 210, "H"), nT("6768-6", 160, "H"), nT("1975-2", 3.2, "H"), nT("2324-2", 120, "H")],
+  renal: [nT("2160-0", 2.8, "H"), nT("3094-0", 52, "H"), nT("2823-3", 5.4, "H"), nT("1963-8", 18, "L")],
+  dka: [nT("2345-7", 440, "H"), nT("2339-0", 440, "H"), nT("1963-8", 12, "L"), nT("1863-0", 24, "H"), nT("2823-3", 5.2, "H"), nT("2744-1", 7.22, "L"), qT("5797-6", POS), qT("5792-7", POS)],
+  uti: [qT("5799-2", POS), qT("5802-4", POS), nT("5821-4", 40, "H"), qT("25145-4", MANY_BACT)],
+  anemia: [nT("718-7", 8.5, "L"), nT("4544-3", 27, "L"), nT("789-8", 3.1, "L")],
+  thyrotoxic: [nT("3016-3", 0.02, "L"), nT("3024-7", 3.2, "H")],
+  meningitis: [nT("6690-2", 14, "H")],
+};
+
+/** Derive coarse condition tags from the case's diagnosis + presentation. */
+function conditionTagsFor(c: CaseInstance): Set<ConditionTag> {
+  const dxCode = c.correctDiagnosis.code.coding[0]?.code ?? "";
+  const hay = [
+    dxCode,
+    c.correctDiagnosis.code.coding[0]?.display,
+    c.correctDiagnosis.code.text?.en,
+    c.correctDiagnosis.code.text?.tr,
+    c.chiefComplaint.en,
+    c.chiefComplaint.tr,
+    ...c.expectedWorkup.map((w) => w.label.en),
+    ...c.redFlags.map((r) => r.en),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const kw = (...ks: string[]) => ks.some((k) => hay.includes(k));
+  const tags = new Set<ConditionTag>();
+  if (/^i2[01]/.test(dxCode) || kw("myocardial", "coronary", "nstemi", "stemi", "angina", "miyokart", "koroner")) tags.add("acs");
+  if (/^i26/.test(dxCode) || kw("pulmonary embolism", "emboli", "pulmoner emb")) tags.add("pe");
+  if (/^i50/.test(dxCode) || kw("heart failure", "kalp yetmez", "pulmonary oedema", "pulmonary edema")) tags.add("chf");
+  if (kw("sepsis", "septic", "sepsi", "septik")) tags.add("sepsis");
+  if (/^j18/.test(dxCode) || kw("pneumonia", "pnömoni", "pnomoni")) tags.add("pneumonia");
+  if (/^k35/.test(dxCode) || kw("appendicitis", "apandisit")) tags.add("appendicitis");
+  if (kw("pancreatitis", "pankreatit")) tags.add("pancreatitis");
+  if (kw("hepatitis", "hepatic", "cholangitis", "karaciğer", "kolanjit")) tags.add("hepatic");
+  if (kw("renal failure", "kidney injury", "acute kidney", "böbrek yetmez", "nephritis", "nefrit")) tags.add("renal");
+  if (kw("ketoacidosis", "ketoasidoz", "diabetic keto", "hyperglycaem", "hyperglycem")) tags.add("dka");
+  if (kw("urinary tract", "pyelonephritis", "cystitis", "idrar yolu", "piyelonefrit", "sistit")) tags.add("uti");
+  if (kw("anaemia", "anemia", "anemi", "melena", "melaena", "hematemesis", "gi bleed", "gastrointestinal bleed")) tags.add("anemia");
+  if (kw("thyrotox", "hyperthyroid", "tirotoksik", "hipertiroid", "thyroid storm", "tiroid fırtına")) tags.add("thyrotoxic");
+  if (kw("meningitis", "menenjit", "encephalitis", "ensefalit")) tags.add("meningitis");
+  return tags;
+}
+
+const TAGS_CACHE = new Map<string, Set<ConditionTag>>();
+function cachedTags(c: CaseInstance): Set<ConditionTag> {
+  let x = TAGS_CACHE.get(c.id);
+  if (!x) {
+    x = conditionTagsFor(c);
+    TAGS_CACHE.set(c.id, x);
+  }
+  return x;
+}
+
+const TARGETS_CACHE = new Map<string, Map<string, AnalyteTarget>>();
+/** The union of abnormal analyte targets implied by the case's condition. */
+function conditionTargets(c: CaseInstance): Map<string, AnalyteTarget> {
+  let m = TARGETS_CACHE.get(c.id);
+  if (m) return m;
+  m = new Map<string, AnalyteTarget>();
+  for (const tag of cachedTags(c)) {
+    for (const tg of CONDITION_TARGETS[tag]) if (!m.has(tg.code)) m.set(tg.code, tg);
+  }
+  TARGETS_CACHE.set(c.id, m);
+  return m;
+}
+
+/* --- course-driven modulation --------------------------------------------- */
+
+/** A coarse abnormality score for a vitals snapshot (higher = sicker). */
+function severityScore(v: CurrentVitals): number {
+  let s = 0;
+  if (v.spo2 < 94) s += 94 - v.spo2;
+  if (v.systolic < 100) s += (100 - v.systolic) * 0.5;
+  if (v.hr > 100) s += (v.hr - 100) * 0.3;
+  if (v.hr < 50) s += (50 - v.hr) * 0.3;
+  if (v.rr > 20) s += (v.rr - 20) * 0.5;
+  if (v.tempC > 38) s += (v.tempC - 38) * 2;
+  return s;
+}
+
+/** Sickness at draw time relative to encounter start (1 = same, <1 = better). */
+function illnessRatio(c: CaseInstance, drawMs: number, treatments: AdministeredTreatment[]): number {
+  const t = Math.max(0, drawMs);
+  const sevT = severityScore(currentVitals(c, t, treatments));
+  const sev0 = severityScore(currentVitals(c, 0, []));
+  return clampNum((sevT + 1.5) / (sev0 + 1.5), 0.15, 1.3);
+}
+
+const isAbxCode = (code: string) => code === "2193" || /cef|penem|cillin|floxacin|micin|antibio|tazo/i.test(code);
+const isInsulinCode = (code: string) => code === "5856" || /insulin|insülin/i.test(code);
+
+/** Earliest administration time (≤ drawMs) of a matching treatment, or null. */
+function earliestDoseBefore(
+  treatments: AdministeredTreatment[],
+  drawMs: number,
+  pred: (code: string) => boolean,
+): number | null {
+  let earliest: number | null = null;
+  for (const tr of treatments) {
+    if (tr.at > drawMs || !pred(tr.code)) continue;
+    earliest = earliest == null ? tr.at : Math.min(earliest, tr.at);
+  }
+  return earliest;
+}
+
+/** The multiplier applied to an analyte's presentation magnitude at draw time. */
+function kineticsFactor(
+  kin: Kinetics,
+  _c: CaseInstance,
+  drawMs: number,
+  treatments: AdministeredTreatment[],
+  ratio: number,
+): number {
+  const hours = Math.max(0, drawMs) / 3_600_000;
+  switch (kin) {
+    case "rise":
+      // Release markers climb with time from onset (independent of treatment).
+      return clampNum(1 + 0.55 * hours, 1, 3);
+    case "perfusion":
+      // Track the live course: improve as vitals recover (e.g. after fluids/O2).
+      return ratio;
+    case "inflammatory": {
+      const abxAt = earliestDoseBefore(treatments, drawMs, isAbxCode);
+      const decline = abxAt == null ? 1 : clampNum(1 - 0.12 * ((drawMs - abxAt) / 3_600_000), 0.6, 1);
+      return clampNum(ratio * decline, 0.4, 1.2);
+    }
+    case "glucose": {
+      const insAt = earliestDoseBefore(treatments, drawMs, isInsulinCode);
+      return insAt == null ? 1 : clampNum(1 - 0.25 * ((drawMs - insAt) / 3_600_000), 0.25, 1);
+    }
+    default:
+      return 1;
+  }
+}
+
+function midOf(spec: AnalyteSpec | undefined, fallback: number): number {
+  if (spec?.band) return (spec.band[0] + spec.band[1]) / 2;
+  return fallback;
+}
+
+/** Move a presentation magnitude toward normal (or up, for rise markers). */
+function modelValue(
+  base: number,
+  spec: AnalyteSpec | undefined,
+  kin: Kinetics,
+  factor: number,
+  seedKey: string,
+  decimals: number,
+): number {
+  const mid = midOf(spec, base);
+  let raw = kin === "rise" ? base * factor : mid + (base - mid) * factor;
+  // Deterministic ± jitter so serial identical-time draws still vary a little.
+  const j = rand01(hashStr(`${seedKey}::j`)) - 0.5;
+  const bandSpan = spec?.band ? spec.band[1] - spec.band[0] : 0;
+  raw += j * (Math.abs(base - mid) * 0.04 + bandSpan * 0.03);
+  const f = 10 ** decimals;
+  return Math.round(raw * f) / f;
+}
+
+/** Interpretation flag derived from where the value sits in its normal band. */
+function interpFromBand(
+  value: number,
+  spec: AnalyteSpec | undefined,
+  fallback: ObservationInterpretation,
+): ObservationInterpretation {
+  if (!spec?.band) return fallback;
+  const [lo, hi] = spec.band;
+  const span = hi - lo || 1;
+  if (value > hi) return value > hi + span * 2 ? "HH" : "H";
+  if (value < lo) return value < lo - span * 2 ? "LL" : "L";
+  return "N";
+}
+
+/** One dynamic panel analyte: condition target modulated by course, else WNL. */
+function dynamicObservation(
+  spec: AnalyteSpec,
+  subject: string,
+  seedKey: string,
+  c: CaseInstance,
+  ctx: SyntheticContext,
+  target: AnalyteTarget | undefined,
+): Observation {
+  const drawIndex = ctx.drawIndex ?? 0;
+  const base: Observation = {
+    resourceType: "Observation",
+    id: `syn-${seedKey}-d${drawIndex}`,
+    status: "final",
+    category: "laboratory",
+    code: { coding: [coding(spec.code, spec.system, spec.label.en)], text: spec.label },
+    subject,
+    effectiveTime: Math.max(0, ctx.drawMs ?? 0),
+    interpretation: "N",
+    referenceRange: spec.ref,
+  };
+  // Qualitative analyte: condition positive, else its normal word.
+  if (spec.qualitative || target?.qual) {
+    if (target?.qual) return { ...base, interpretation: target.interp, valueString: target.qual };
+    return { ...base, valueString: spec.qualitative ?? GENERIC_WNL };
+  }
+  const treatments = ctx.treatments ?? [];
+  const drawMs = Math.max(0, ctx.drawMs ?? 0);
+  if (target && typeof target.value === "number") {
+    const kin = kineticsOf(spec.code);
+    const ratio = illnessRatio(c, drawMs, treatments);
+    const factor = kineticsFactor(kin, c, drawMs, treatments, ratio);
+    const value = modelValue(target.value, spec, kin, factor, seedKey, spec.decimals ?? 0);
+    return { ...base, valueQuantity: { value, unit: spec.unit ?? "" }, interpretation: interpFromBand(value, spec, target.interp) };
+  }
+  // No condition target → a normal value with a small per-draw variation.
+  const value = spec.band ? sample(`${seedKey}-d${drawIndex}`, spec.band, spec.decimals ?? 0) : 0;
+  return { ...base, valueQuantity: { value, unit: spec.unit ?? "" } };
+}
+
+function decimalsOf(v: number): number {
+  const s = String(v);
+  const i = s.indexOf(".");
+  return i < 0 ? 0 : s.length - i - 1;
+}
+
+/** Fabricate a minimal spec (band parsed from the reference range) off-panel. */
+function bandSpecFrom(anchor: Observation): AnalyteSpec | undefined {
+  const ref = anchor.referenceRange;
+  if (!ref) return undefined;
+  const range = ref.match(/(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)/);
+  const upper = ref.match(/^<\s*(-?\d+(?:\.\d+)?)/);
+  let band: [number, number] | undefined;
+  if (range) band = [Number(range[1]), Number(range[2])];
+  else if (upper) band = [0, Number(upper[1])];
+  if (!band) return undefined;
+  return {
+    code: anchor.code.coding[0]?.code ?? "",
+    system: L,
+    label: anchor.code.text ?? { en: "", tr: "" },
+    ref,
+    band,
+  };
+}
+
+/**
+ * Evolve an authored ground-truth observation for a LATER serial draw: the
+ * authored value anchors the first draw, and each repeat draw is re-derived
+ * from the same kinetics + live course so a re-ordered test trends (e.g. a
+ * serial troponin keeps climbing, a repeat lactate falls after fluids).
+ */
+export function evolveAnchor(anchor: Observation, c: CaseInstance, ctx: SyntheticContext): Observation {
+  const q = anchor.valueQuantity;
+  if (!q || typeof q.value !== "number") return anchor;
+  const code = anchor.code.coding[0]?.code ?? "";
+  const spec = ANALYTE_INDEX.get(code) ?? bandSpecFrom(anchor);
+  const kin = kineticsOf(code);
+  const drawMs = Math.max(0, ctx.drawMs ?? 0);
+  const treatments = ctx.treatments ?? [];
+  const ratio = illnessRatio(c, drawMs, treatments);
+  const factor = kineticsFactor(kin, c, drawMs, treatments, ratio);
+  const decimals = spec?.decimals ?? decimalsOf(q.value);
+  const seedKey = `${c.id}::evolve::${code}::${ctx.drawIndex ?? 0}`;
+  const value = modelValue(q.value, spec, kin, factor, seedKey, decimals);
+  return {
+    ...anchor,
+    id: `${anchor.id}-d${ctx.drawIndex ?? 0}`,
+    valueQuantity: { ...q, value },
+    interpretation: interpFromBand(value, spec, anchor.interpretation ?? "N"),
+  };
+}
+
+/* --- condition-tuned narrative reports (micro / imaging) ------------------- */
+
+/** CSF study text, condition-tuned + deterministically varied (synthetic). */
+function csfSynthetic(c: CaseInstance, abnormal: boolean): Bilingual {
+  const n = (k: string, lo: number, hi: number, d = 0) => sample(`${c.id}::csf::${k}`, [lo, hi], d);
+  if (abnormal) {
+    const wbc = n("wbc", 800, 1600);
+    const prot = n("prot", 150, 220);
+    const glu = n("glu", 18, 34);
+    return {
+      en: `Turbid; WBC ${wbc} /µL (neutrophil-predominant), protein ${prot} mg/dL, glucose ${glu} mg/dL; Gram stain: organisms seen; culture pending.`,
+      tr: `Bulanık; lökosit ${wbc} /µL (nötrofil baskın), protein ${prot} mg/dL, glukoz ${glu} mg/dL; Gram boyama: organizma görüldü; kültür beklemede.`,
+    };
+  }
+  const wbc = n("wbc", 0, 4);
+  const prot = n("prot", 20, 42);
+  const glu = n("glu", 50, 72);
+  return {
+    en: `Clear and colourless; WBC ${wbc} /µL, RBC 0 /µL, protein ${prot} mg/dL, glucose ${glu} mg/dL; Gram stain: no organisms; culture pending.`,
+    tr: `Berrak ve renksiz; lökosit ${wbc} /µL, eritrosit 0 /µL, protein ${prot} mg/dL, glukoz ${glu} mg/dL; Gram boyama: organizma yok; kültür beklemede.`,
+  };
+}
+
+function microResult(code: string, c: CaseInstance, dynamic: boolean): { conclusion: Bilingual; abnormal: boolean } {
+  if (!dynamic) return { conclusion: microConclusion(code), abnormal: false };
+  if (code === "csf-studies") {
+    const abnormal = cachedTags(c).has("meningitis");
+    return { conclusion: csfSynthetic(c, abnormal), abnormal };
+  }
+  return { conclusion: microConclusion(code), abnormal: false };
+}
+
+/** Modality-specific NORMAL impressions (real pathology imaging is out of scope). */
+const IMAGING_NORMAL: Record<string, Bilingual> = {
+  ct: {
+    en: "No acute abnormality on this study. Representative teaching image; not this patient.",
+    tr: "Bu incelemede akut anormallik yok. Temsili eğitim görüntüsü; bu hastaya ait değildir.",
+  },
+  xray: {
+    en: "Clear lung fields, no acute abnormality; normal cardiomediastinal contour. Representative teaching image; not this patient.",
+    tr: "Akciğer alanları temiz, akut anormallik yok; normal kardiyomediastinal kontur. Temsili eğitim görüntüsü; bu hastaya ait değildir.",
+  },
+  us: {
+    en: "No acute abnormality; no free fluid or focal collection. Representative teaching image; not this patient.",
+    tr: "Akut anormallik yok; serbest sıvı veya fokal koleksiyon yok. Temsili eğitim görüntüsü; bu hastaya ait değildir.",
+  },
+  mri: {
+    en: "No acute abnormality or restricted diffusion. Representative teaching image; not this patient.",
+    tr: "Akut anormallik veya difüzyon kısıtlılığı yok. Temsili eğitim görüntüsü; bu hastaya ait değildir.",
+  },
+};
+function imagingModalityKey(code: string): string {
+  if (/^ct|ctpa/.test(code)) return "ct";
+  if (/^mri/.test(code)) return "mri";
+  if (/^us|echo/.test(code)) return "us";
+  if (/xr|cxr|axr/.test(code)) return "xray";
+  return "";
+}
+function imagingConclusion(orderable: Orderable, dynamic: boolean): Bilingual {
+  if (!dynamic) return NO_ACUTE;
+  return IMAGING_NORMAL[imagingModalityKey(orderable.code)] ?? NO_ACUTE;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Synthetic result (baseline WNL + condition/time-dynamic)                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A plausible, deterministic result for an order the case carries NO
+ * ground-truth datum for. In the DEFAULT (non-dynamic) mode this is a pure
+ * within-normal-limits panel / "no acute abnormality" report / "no growth"
+ * report — the baseline the Results surface layers authored ground truth on top
+ * of (same case + code → same numbers).
+ *
+ * With `ctx.dynamic` the panel is tuned to THIS case's condition (an un-authored
+ * troponin/CRP/lactate/gas reads case-appropriately, still clearly synthetic)
+ * AND to the clinical course at `ctx.drawMs` + `ctx.treatments`, so re-ordering
+ * later yields a DIFFERENT, trajectory-consistent value.
+ *
+ * Callers still apply {@link hasGroundTruthResult} per-analyte: a case's
+ * authored datum takes precedence over the matching synthetic value.
+ */
+export function syntheticResultAt(
   orderable: Orderable,
   caseInstance: CaseInstance,
-): { observations: Observation[]; report?: DiagnosticReport } {
+  ctx: SyntheticContext = {},
+): SyntheticResult {
   const subject = caseInstance.patient.id;
   const seedBase = `${caseInstance.id}::${orderable.code}`;
+  const dynamic = !!ctx.dynamic;
 
   // ECG (imaging-kind POC) — a normal tracing report + representative image.
   if (orderable.code === "11524-6") {
-    return {
-      observations: [],
-      report: report(orderable.code, subject, "cardiology", orderable.label, ECG_NORMAL),
-    };
+    return { observations: [], report: report(orderable.code, subject, "cardiology", orderable.label, ECG_NORMAL) };
   }
 
   // Imaging — a "no acute abnormality" report; the UI attaches a real image.
   if (orderable.kind === "imaging" || orderable.category === "imaging") {
-    return {
-      observations: [],
-      report: report(orderable.code, subject, "imaging", orderable.label, NO_ACUTE),
-    };
+    return { observations: [], report: report(orderable.code, subject, "imaging", orderable.label, imagingConclusion(orderable, dynamic)) };
   }
 
-  // Micro — a normal culture / panel report (no numeric observations).
+  // Micro — a normal (or condition-tuned) culture / panel report.
   if (orderable.category === "micro") {
-    return {
-      observations: [],
-      report: report(orderable.code, subject, "laboratory", orderable.label, microConclusion(orderable.code)),
-    };
+    const { conclusion, abnormal } = microResult(orderable.code, caseInstance, dynamic);
+    return { observations: [], report: report(orderable.code, subject, "laboratory", orderable.label, conclusion), abnormal };
   }
 
-  // Labs / blood gas / POC — the full panel of normal observations.
+  // Labs / blood gas / POC — the full analyte panel.
   const panel = PANELS[orderable.code];
   if (panel && panel.length > 0) {
-    return {
-      observations: panel.map((spec) =>
-        normalObservation(spec, subject, `${seedBase}::${spec.code}`),
-      ),
-    };
+    if (!dynamic) {
+      return { observations: panel.map((spec) => normalObservation(spec, subject, `${seedBase}::${spec.code}`)) };
+    }
+    const targets = conditionTargets(caseInstance);
+    const observations = panel.map((spec) =>
+      dynamicObservation(spec, subject, `${seedBase}::${spec.code}`, caseInstance, ctx, targets.get(spec.code)),
+    );
+    return { observations, abnormal: observations.some((o) => o.interpretation && o.interpretation !== "N") };
   }
 
   // Unknown code — a single generic "within normal limits" observation so ANY
@@ -676,4 +1126,18 @@ export function syntheticNormalResult(
     qualitative: GENERIC_WNL,
   };
   return { observations: [normalObservation(generic, subject, seedBase)] };
+}
+
+/**
+ * Backwards-compatible WITHIN-NORMAL-LIMITS synthesiser — a thin default over
+ * {@link syntheticResultAt}. Same case + code → identical numbers, every analyte
+ * within reference limits: the deterministic baseline the Results surface layers
+ * authored ground truth and (via {@link syntheticResultAt}) condition tuning on.
+ */
+export function syntheticNormalResult(
+  orderable: Orderable,
+  caseInstance: CaseInstance,
+): { observations: Observation[]; report?: DiagnosticReport } {
+  const r = syntheticResultAt(orderable, caseInstance);
+  return r.report ? { observations: r.observations, report: r.report } : { observations: r.observations };
 }

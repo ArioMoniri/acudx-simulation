@@ -21,19 +21,34 @@ import {
 import { Badge, Button, Card, StatusDot } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useStagger } from "@/lib/motion";
-import { conceptCode, conceptText } from "../labels";
+import { useLiveBackend } from "@/lib/liveBackend";
+import { grade, type GradeTurn } from "@/lib/backend";
+import { conceptCode, conceptText, pick } from "../labels";
 import { DiagnosisPicker, type DxOption } from "../DiagnosisPicker";
 import { DebriefReport } from "../DebriefReport";
 import {
   addProblem,
   commitDiagnosis,
   useEncounterState,
+  type EncounterState,
 } from "@/state/encounterStore";
-import { buildDebrief } from "@/domain/debrief";
+import {
+  buildDebrief,
+  classifyDiagnosis,
+  summariseGrade,
+  type DxVerdict,
+  type DxAssessment,
+  type GradeInsight,
+} from "@/domain/debrief";
 import type { Lang } from "@/data/mock";
-import type { CaseInstance, Disposition } from "@/domain/case";
+import type {
+  CaseInstance,
+  Disposition,
+  ExamManeuver,
+  QuestionIntent,
+} from "@/domain/case";
 import type { Condition } from "@/domain/fhir";
-import { getDiagnosis } from "@/domain/diagnosisCatalog";
+import { getDiagnosis, systemLabel, type DiagnosisEntry } from "@/domain/diagnosisCatalog";
 
 export interface ProblemListTabProps {
   caseInstance: CaseInstance;
@@ -43,9 +58,6 @@ export interface ProblemListTabProps {
 /** How strongly the student rates a differential candidate (student-authored). */
 type Likelihood = "leading" | "possible" | "unlikely";
 const LIKELIHOODS: Likelihood[] = ["leading", "possible", "unlikely"];
-
-/** Verdict of a committed working diagnosis vs. the case ground truth. */
-type Verdict = "correct" | "near" | "incorrect";
 
 /** Generic plan building blocks (student-authored, never the case's answer). */
 const QUICK_PLAN = ["access", "monitor", "analgesia", "reassess", "seniorReview"] as const;
@@ -83,6 +95,8 @@ interface Annotation {
 export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
   const { t } = useTranslation();
   const state = useEncounterState();
+  // Effective Live-mode state: reachable AND not opted out (backend-preferring).
+  const { enabled: liveEnabled } = useLiveBackend();
 
   const [plan, setPlan] = useState("");
   const [order, setOrder] = useState<string[]>([]);
@@ -92,6 +106,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
 
   /* ---- Case ground truth as suggested (unlabelled) candidates ------------- */
   const correctCode = conceptCode(caseInstance.correctDiagnosis.code);
+  const correctDisplay = conceptText(caseInstance.correctDiagnosis.code, lang);
   const caseDifferentialCodes = useMemo(
     () => new Set(caseInstance.differentials.map((c) => conceptCode(c.code))),
     [caseInstance],
@@ -220,21 +235,65 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
   }
 
   /* ---- Grading (revealed only AFTER commit) ------------------------------- */
-  const verdict = useMemo<Verdict | null>(() => {
-    if (!committed) return null;
-    if (committed === correctCode) return "correct";
-    if (caseDifferentialCodes.has(committed)) return "near";
-    const correctSystem = getDiagnosis(correctCode)?.system;
-    const committedSystem = getDiagnosis(committed)?.system;
-    if (correctSystem && committedSystem && correctSystem === committedSystem) return "near";
-    return "incorrect";
-  }, [committed, correctCode, caseDifferentialCodes]);
+  // Local, case-truth verdict — the SHARED classifier the debrief also uses, so
+  // the A&P and the debrief always agree. Always available (offline path).
+  const baseAssessment = useMemo<DxAssessment | null>(
+    () => (committed ? classifyDiagnosis(committed, correctCode, caseDifferentialCodes) : null),
+    [committed, correctCode, caseDifferentialCodes],
+  );
+
+  // Real pod rubric grade (server/rubric.py via POST /v1/grade), fetched once per
+  // commit when Live mode is reachable. Enriches the verdict with the clinical-
+  // reasoning band + a verified evidence quote; on offline/error it stays null
+  // and the local verdict alone renders (graceful degrade).
+  const [gradeInsight, setGradeInsight] = useState<GradeInsight | null>(null);
+  const [grading, setGrading] = useState(false);
+
+  useEffect(() => {
+    setGradeInsight(null);
+    if (!committed || !liveEnabled) {
+      setGrading(false);
+      return;
+    }
+    // Snapshot the transcript at commit time (a fresh commit re-runs this effect).
+    const transcript = buildGradeTranscript(state, caseInstance, lang);
+    if (transcript.length === 0) {
+      setGrading(false);
+      return;
+    }
+    let active = true;
+    const controller = new AbortController();
+    setGrading(true);
+    void grade({ transcript, locale: lang }, { signal: controller.signal }).then((res) => {
+      if (!active) return;
+      setGrading(false);
+      if (res.ok) setGradeInsight(summariseGrade(res.data));
+    });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+    // State is snapshotted intentionally: we grade the committed encounter once,
+    // not on every subsequent store mutation. Re-run only when the commit, the
+    // case, Live availability, or the display language changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [committed, liveEnabled, caseInstance.id, lang]);
+
+  // The verdict shown + shared with the debrief: local classification, enriched
+  // with the pod grade when one arrived.
+  const assessment = useMemo<DxAssessment | null>(() => {
+    if (!baseAssessment) return null;
+    return gradeInsight ? { ...baseAssessment, grade: gradeInsight } : baseAssessment;
+  }, [baseAssessment, gradeInsight]);
+
+  const verdict = assessment?.verdict ?? null;
 
   // Attending debrief (GH #110) — built lazily from the event-sourced state once
-  // a working diagnosis is committed. Pure; recomputed when the store changes.
+  // a working diagnosis is committed. Reuses the SAME assessment (incl. the pod
+  // grade) so the debrief and the A&P agree. Pure; recomputed when state changes.
   const debrief = useMemo(
-    () => (committed ? buildDebrief(state, caseInstance) : null),
-    [committed, state, caseInstance],
+    () => (committed && assessment ? buildDebrief(state, caseInstance, assessment) : null),
+    [committed, state, caseInstance, assessment],
   );
 
   const hasSummary =
@@ -419,7 +478,15 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
             </h3>
             {committed && workingEntry ? (
               <>
-                <VerdictPanel verdict={verdict} display={workingEntry.display} code={committed} t={t} />
+                <VerdictPanel
+                  assessment={assessment}
+                  display={workingEntry.display}
+                  code={committed}
+                  correctDisplay={correctDisplay}
+                  grading={grading}
+                  t={t}
+                  lang={lang}
+                />
                 {debrief ? (
                   <Button
                     variant="primary"
@@ -588,28 +655,121 @@ function IconBtn({
 }
 
 const VERDICT_META: Record<
-  Verdict,
-  { tone: "normal" | "caution" | "warning"; tag: string; title: string; body: string; Icon: typeof CheckCircle }
+  DxVerdict,
+  { tone: "normal" | "caution" | "warning"; tag: string; Icon: typeof CheckCircle }
 > = {
-  correct: { tone: "normal", tag: "correctTag", title: "correctTitle", body: "correctBody", Icon: CheckCircle },
-  near: { tone: "caution", tag: "nearTag", title: "nearTitle", body: "nearBody", Icon: WarningCircle },
-  incorrect: { tone: "warning", tag: "incorrectTag", title: "incorrectTitle", body: "incorrectBody", Icon: XCircle },
+  correct: { tone: "normal", tag: "correctTag", Icon: CheckCircle },
+  "near-miss": { tone: "caution", tag: "nearTag", Icon: WarningCircle },
+  incorrect: { tone: "warning", tag: "incorrectTag", Icon: XCircle },
 };
 
-/** The committed working-diagnosis panel with graded feedback (post-commit). */
+/** Case-specific verdict title copy (interpolates the committed dx). */
+const VERDICT_TITLE_FALLBACK: Record<DxVerdict, string> = {
+  correct: "{{dx}} matches the expected diagnosis.",
+  "near-miss": "{{dx}} is close, but not the expected diagnosis.",
+  incorrect: "{{dx}} doesn't fit this presentation.",
+};
+
+/** Case-specific verdict body copy — reveals the correct dx + a short why. */
+const VERDICT_BODY_FALLBACK: Record<DxVerdict, string> = {
+  correct:
+    "Your working diagnosis is the leading diagnosis for this case — confirm your management and disposition.",
+  "near-miss":
+    "The expected diagnosis was {{correct}} — {{why}} Re-examine the discriminating findings.",
+  incorrect:
+    "The expected diagnosis was {{correct}}. {{why}} Revisit the key findings and rebuild your differential.",
+};
+
+/** Localized, capitalised label for a competency band. */
+function bandLabel(band: string, t: TFn): string {
+  const defaults: Record<string, string> = {
+    strong: "Strong",
+    adequate: "Adequate",
+    developing: "Developing",
+    insufficient: "Insufficient",
+    ungraded: "Not graded",
+  };
+  return t(`diagnosis2.band.${band}`, { defaultValue: defaults[band] ?? band });
+}
+
+/** A short, case-specific "why" for a near-miss / incorrect verdict. */
+function whyText(
+  assessment: DxAssessment,
+  correctEntry: DiagnosisEntry | undefined,
+  lang: Lang,
+  t: TFn,
+): string {
+  switch (assessment.nearMissReason) {
+    case "listed-differential":
+      return t("diagnosis2.verdict2.whyDifferential", {
+        defaultValue:
+          "it's a reasonable alternative on your differential, but the findings point elsewhere.",
+      });
+    case "same-category":
+      return t("diagnosis2.verdict2.whySameCategory", {
+        defaultValue: "it's in the same disease family, so the discriminators are subtle.",
+      });
+    case "same-system":
+      return t("diagnosis2.verdict2.whySameSystem", {
+        defaultValue: "it affects the same body system.",
+      });
+    default:
+      if (correctEntry) {
+        return t("diagnosis2.verdict2.whySystem", {
+          system: systemLabel(correctEntry.system, lang),
+          defaultValue: "It sits in a different area — a {{system}} problem.",
+        });
+      }
+      return "";
+  }
+}
+
+/**
+ * The committed working-diagnosis panel with graded feedback (post-commit). The
+ * verdict copy is now CASE-SPECIFIC: it names the committed dx and, on a
+ * near-miss / incorrect, reveals the case's correct diagnosis + a short why.
+ * When Live mode produced a real pod rubric grade it also shows the graded
+ * clinical-reasoning band + a verified evidence quote ("Examiner's read").
+ */
 function VerdictPanel({
-  verdict,
+  assessment,
   display,
   code,
+  correctDisplay,
+  grading,
   t,
+  lang,
 }: {
-  verdict: Verdict | null;
+  assessment: DxAssessment | null;
   display: string;
   code: string;
+  correctDisplay: string;
+  grading: boolean;
   t: TFn;
+  lang: Lang;
 }) {
+  const verdict = assessment?.verdict ?? null;
   const meta = verdict ? VERDICT_META[verdict] : null;
   const entry = getDiagnosis(code);
+  const correctEntry = getDiagnosis(assessment?.correctCode ?? "");
+  const gradeInsight = assessment?.grade ?? null;
+  const why = assessment ? whyText(assessment, correctEntry, lang, t) : "";
+
+  const title = verdict
+    ? t(`diagnosis2.verdict2.${verdict}Title`, {
+        dx: display,
+        defaultValue: VERDICT_TITLE_FALLBACK[verdict],
+      })
+    : "";
+  const body = verdict
+    ? t(`diagnosis2.verdict2.${verdict}Body`, {
+        dx: display,
+        correct: correctDisplay,
+        why,
+        defaultValue: VERDICT_BODY_FALLBACK[verdict],
+      })
+    : "";
+
   return (
     <div>
       <div className="flex items-start justify-between gap-2">
@@ -636,12 +796,167 @@ function VerdictPanel({
                 : "border-[color:var(--state-warning)]/30 bg-[color-mix(in_srgb,var(--state-warning)_10%,transparent)]",
           )}
         >
-          <p className="text-xs font-semibold text-fg">{t(`diagnosis2.verdict.${meta.title}`)}</p>
-          <p className="mt-0.5 text-xs text-muted">{t(`diagnosis2.verdict.${meta.body}`)}</p>
+          <p className="text-xs font-semibold text-fg">{title}</p>
+          <p className="mt-0.5 text-xs text-muted">{body}</p>
+
+          {gradeInsight?.graded ? (
+            <div className="mt-2 border-t border-border/60 pt-2">
+              <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-fg-subtle">
+                <GraduationCap weight="bold" className="h-3 w-3" aria-hidden />
+                {t("diagnosis2.verdict2.examinerHeading", { defaultValue: "Examiner's read" })}
+              </p>
+              <p className="mt-0.5 text-xs text-muted">
+                {t("diagnosis2.verdict2.reasoningBand", {
+                  band: bandLabel(gradeInsight.reasoningBand, t),
+                  defaultValue: "Clinical reasoning: {{band}}.",
+                })}
+              </p>
+              {gradeInsight.reasoningEvidence ? (
+                <p className="mt-1 border-l-2 border-border pl-2 text-xs italic text-muted">
+                  {"“"}
+                  {gradeInsight.reasoningEvidence}
+                  {"”"}
+                </p>
+              ) : null}
+            </div>
+          ) : grading ? (
+            <p
+              className="mt-2 animate-pulse border-t border-border/60 pt-2 text-[11px] text-muted"
+              aria-live="polite"
+            >
+              {t("diagnosis2.verdict2.grading", {
+                defaultValue: "Grading your reasoning against the rubric…",
+              })}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
   );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Transcript reconstruction for the pod grader                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * English question phrasing per QuestionIntent. The grader reasons in English;
+ * the CLINICIAN's action (the question asked) is scaffolded in English while the
+ * PATIENT's answers stay in the learner's language (verbatim-quote matching is
+ * language-agnostic), so evidence quotes remain legible to the learner.
+ */
+const INTENT_PHRASE: Record<QuestionIntent, string> = {
+  onset: "When did this start, and how did it come on?",
+  location: "Where exactly is the problem?",
+  character: "Can you describe what it feels like?",
+  radiation: "Does it move or spread anywhere?",
+  severity: "How severe is it?",
+  timing: "How has it changed over time?",
+  aggravating: "Does anything make it worse?",
+  relieving: "Does anything make it better?",
+  "associated-symptoms": "Have you noticed any other symptoms?",
+  "red-flags": "Any warning symptoms I should ask you about?",
+  "past-medical-history": "Do you have any past medical problems?",
+  medications: "What medications do you take?",
+  allergies: "Do you have any allergies?",
+  "family-history": "Any relevant family history?",
+  "social-history": "Tell me about smoking, alcohol and your work.",
+  "risk-factors": "Do you have any risk factors for this?",
+  ice: "What are you most worried this could be?",
+};
+
+/** English phrasing per ExamManeuver (see INTENT_PHRASE rationale). */
+const MANEUVER_PHRASE: Record<ExamManeuver, string> = {
+  "general-inspection": "I'll start with a general inspection.",
+  "vitals-recheck": "Let me recheck your vital signs.",
+  cardiovascular: "I'm going to examine your heart and circulation.",
+  respiratory: "I'll listen to your chest.",
+  abdominal: "I'll examine your abdomen.",
+  neurological: "I'll do a neurological examination.",
+  musculoskeletal: "I'll examine the joints and muscles.",
+  skin: "Let me take a look at your skin.",
+  ent: "I'll examine your ears, nose and throat.",
+  "focused-special": "I'll perform a focused special test.",
+};
+
+/**
+ * Reconstruct a labelled doctor-patient transcript from the event-sourced
+ * encounter, for POST /v1/grade. The live free-text dialogue lives in
+ * InterviewTab's local state (not this store), so we synthesise a faithful
+ * proxy from what the store DID capture: the chief complaint, each history
+ * question + its revealed answer, exam maneuvers + findings, orders/treatments,
+ * and the full A&P (differential, working dx, plan). This gives the grader real
+ * material for the clinical-reasoning domain even offline-reconstructed.
+ */
+function buildGradeTranscript(
+  state: EncounterState,
+  caseInstance: CaseInstance,
+  lang: Lang,
+): GradeTurn[] {
+  const turns: GradeTurn[] = [];
+  const cc = pick(caseInstance.chiefComplaint, lang);
+  if (cc) turns.push({ role: "patient", content: cc });
+
+  const historyById = new Map(caseInstance.groundTruth.history.map((h) => [h.id, h]));
+  const examById = new Map(caseInstance.groundTruth.exam.map((e) => [e.id, e]));
+
+  for (const ev of state.events) {
+    const revealed = (ev.meta?.revealed as string[] | undefined) ?? [];
+    if (ev.type === "question") {
+      const intent = ev.ref as QuestionIntent;
+      turns.push({
+        role: "clinician",
+        content: INTENT_PHRASE[intent] ?? `I'd like to ask about ${intent}.`,
+      });
+      for (const id of revealed) {
+        const h = historyById.get(id);
+        const answer = h ? pick(h.answer, lang) : "";
+        if (answer) turns.push({ role: "patient", content: answer });
+      }
+    } else if (ev.type === "exam") {
+      const maneuver = ev.ref as ExamManeuver;
+      turns.push({
+        role: "clinician",
+        content: MANEUVER_PHRASE[maneuver] ?? "I'll examine you now.",
+      });
+      for (const id of revealed) {
+        const e = examById.get(id);
+        if (e) {
+          turns.push({
+            role: "nurse",
+            content: `${pick(e.system, lang)}: ${pick(e.finding, lang)}`,
+          });
+        }
+      }
+    } else if (ev.type === "order") {
+      const placed = state.orders.find((o) => o.code === ev.ref);
+      const label = placed ? (lang === "tr" ? placed.labelTr : placed.labelEn) : ev.ref;
+      turns.push({ role: "clinician", content: `I'm ordering ${label}.` });
+    } else if (ev.type === "treatment") {
+      const disp = (ev.meta?.display as string | undefined) ?? ev.ref;
+      turns.push({ role: "clinician", content: `I'll start ${disp}.` });
+    }
+  }
+
+  // Assessment & plan — the reasoning surface the grader most needs.
+  const differentials = state.problemList
+    .filter((p) => p.role === "differential")
+    .map((p) => p.display);
+  if (differentials.length > 0) {
+    turns.push({ role: "clinician", content: `My differential includes ${differentials.join(", ")}.` });
+  }
+  const working = [...state.problemList].reverse().find((p) => p.role === "working");
+  if (working) {
+    turns.push({ role: "clinician", content: `My working diagnosis is ${working.display}.` });
+  }
+  const planNotes = state.problemList
+    .filter((p) => p.role === "plan")
+    .map((p) => p.note ?? p.display);
+  if (planNotes.length > 0) {
+    turns.push({ role: "clinician", content: `Plan: ${planNotes.join("; ")}.` });
+  }
+
+  return turns;
 }
 
 /** Dense, Epic/AMBOSS-style A&P summary derived entirely from the store. */
@@ -657,7 +972,7 @@ function ProblemSummary({
   disposition,
 }: {
   t: TFn;
-  verdict: Verdict | null;
+  verdict: DxVerdict | null;
   committed: string | null;
   workingDisplay?: string;
   rankedCodes: string[];

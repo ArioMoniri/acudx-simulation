@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Heartbeat } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
@@ -9,7 +10,10 @@ import { cn } from "@/lib/cn";
 /**
  * Build an ECG-like path (repeating P-QRS-T complexes) as an SVG `d` string.
  * Amplitudes are fractions of `amp`; positive is "up" on screen (smaller y).
- * Static geometry — computed once at module load, never animated.
+ *
+ * The geometry is a PERIODIC tile computed once (deterministic — no clock or
+ * random reads). The "live" sweep is a GPU-cheap CSS transform on the group,
+ * so the path itself is never recomputed per frame.
  */
 function ecgPath(opts: {
   beats: number;
@@ -49,7 +53,12 @@ function ecgPath(opts: {
 
 const ECG_W = 268;
 const ECG_H = 56;
-const ECG_D = ecgPath({ beats: 4, beatW: 64, baseY: 32, amp: 17, startX: 6 });
+const BEAT_W = 64;
+// Draw enough whole beats to fill the viewport PLUS spare periods on the right,
+// so the group can be swept left by exactly one beat and loop seamlessly (the
+// waveform is periodic with BEAT_W, so frame at -BEAT_W === frame at 0).
+const ECG_BEATS = Math.ceil(ECG_W / BEAT_W) + 3;
+const ECG_D = ecgPath({ beats: ECG_BEATS, beatW: BEAT_W, baseY: 32, amp: 17, startX: 0 });
 
 /* -------------------------------------------------------------------------- */
 /* Vitals                                                                     */
@@ -59,6 +68,7 @@ interface Vital {
   /** i18n key under landing2.monitor for the full (accessible) name. */
   key: "hr" | "bp" | "spo2" | "rr";
   abbr: string;
+  /** Canonical baseline value (also what reduced-motion viewers see). */
   value: string;
   unit: string;
 }
@@ -70,21 +80,84 @@ const VITALS: readonly Vital[] = [
   { key: "rr", abbr: "RR", value: "16", unit: "/min" },
 ];
 
+/**
+ * Gentle, deterministic drift for a vital as a function of elapsed seconds —
+ * smooth sines around the canonical baseline (no Math.random, no Date.now). Each
+ * vital stays inside a tight physiological band so the monitor "breathes"
+ * without ever reading alarming. Reduced-motion viewers never call this.
+ */
+function liveVital(key: Vital["key"], sec: number): string {
+  switch (key) {
+    case "hr":
+      return String(84 + Math.round(3 * Math.sin(sec / 5)));
+    case "bp": {
+      const sys = 128 + Math.round(4 * Math.sin(sec / 9));
+      const dia = 76 + Math.round(3 * Math.sin(sec / 9 + 0.6));
+      return `${sys}/${dia}`;
+    }
+    case "spo2":
+      return String(98 + Math.round(Math.sin(sec / 7 + 1)));
+    case "rr":
+      return String(16 + Math.round(1.4 * Math.sin(sec / 6 + 2)));
+  }
+}
+
+/** Track the OS "reduce motion" preference so we can freeze all animation. */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return reduced;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Component                                                                  */
 /* -------------------------------------------------------------------------- */
 
 /**
- * VitalsMonitorTile — a compact, genuine-looking bedside monitor readout for
- * the landing hero. Renders on the always-dark `--monitor-*` palette (identical
- * in light and dark themes), with a real ECG trace and tabular vitals. Values
- * are static and synthetic; the tile shows the product instead of blurbing it.
+ * VitalsMonitorTile — a compact, *living* bedside-monitor readout for the
+ * landing hero. Renders on the always-dark `--monitor-*` palette (identical in
+ * light and dark themes): a live-sweeping ECG trace (a CSS transform on a
+ * periodic SVG tile) and vitals that drift gently within physiological bands.
+ * The tile shows the product working instead of blurbing it.
  *
- * Announced to assistive tech as a single labelled image so a screen reader is
- * not walked through a wall of decorative numbers.
+ * All motion is GPU-cheap and reduced-motion-safe: under
+ * `prefers-reduced-motion` the sweep stops and the vitals sit at their canonical
+ * baseline. Announced to assistive tech as a single labelled image, and every
+ * moving number is aria-hidden so a screen reader is not walked through churning
+ * digits.
  */
 export function VitalsMonitorTile({ className }: { className?: string }) {
   const { t } = useTranslation();
+  const reduced = usePrefersReducedMotion();
+  const [sec, setSec] = useState(0);
+
+  // Advance a ~1 Hz clock, but only when motion is allowed. Driven by rAF (not
+  // setInterval) so it pauses with the tab and never reads the wall clock at
+  // module load; state updates at most once per second to keep re-renders cheap.
+  useEffect(() => {
+    if (reduced) return;
+    let raf = 0;
+    const start = performance.now();
+    let lastBucket = -1;
+    const loop = (now: number) => {
+      const elapsed = (now - start) / 1000;
+      const bucket = Math.floor(elapsed);
+      if (bucket !== lastBucket) {
+        lastBucket = bucket;
+        setSec(elapsed);
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [reduced]);
 
   return (
     <div
@@ -100,12 +173,27 @@ export function VitalsMonitorTile({ className }: { className?: string }) {
         color: "var(--monitor-fg)",
       }}
     >
+      {/* Scoped keyframes for the ECG sweep; frozen under reduced motion. */}
+      <style>{`
+        .acudx-ecg-sweep {
+          animation: acudx-ecg-sweep 0.86s linear infinite;
+          will-change: transform;
+        }
+        @keyframes acudx-ecg-sweep {
+          from { transform: translateX(0); }
+          to { transform: translateX(-${BEAT_W}px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .acudx-ecg-sweep { animation: none; }
+        }
+      `}</style>
+
       {/* Header: bay + live status */}
       <div className="flex items-center justify-between gap-3" aria-hidden="true">
         <span className="inline-flex items-center gap-2">
           <Heartbeat
             weight="fill"
-            className="h-4 w-4"
+            className="h-4 w-4 motion-safe:animate-pulse"
             style={{ color: "var(--monitor-online)" }}
           />
           <span
@@ -135,8 +223,8 @@ export function VitalsMonitorTile({ className }: { className?: string }) {
         </span>
       </div>
 
-      {/* ECG trace */}
-      <div className="mt-3" aria-hidden="true">
+      {/* ECG trace — a static baseline with a periodic waveform swept left. */}
+      <div className="mt-3 overflow-hidden" aria-hidden="true">
         <svg
           viewBox={`0 0 ${ECG_W} ${ECG_H}`}
           className="h-14 w-full"
@@ -153,15 +241,17 @@ export function VitalsMonitorTile({ className }: { className?: string }) {
             strokeWidth={1}
             vectorEffect="non-scaling-stroke"
           />
-          <path
-            d={ECG_D}
-            fill="none"
-            stroke="var(--monitor-online)"
-            strokeWidth={1.75}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
+          <g className="acudx-ecg-sweep">
+            <path
+              d={ECG_D}
+              fill="none"
+              stroke="var(--monitor-online)"
+              strokeWidth={1.75}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
         </svg>
         <p
           className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em]"
@@ -171,7 +261,7 @@ export function VitalsMonitorTile({ className }: { className?: string }) {
         </p>
       </div>
 
-      {/* Vitals grid */}
+      {/* Vitals grid — values drift gently while motion is allowed. */}
       <div className="mt-3 grid grid-cols-2 gap-2" aria-hidden="true">
         {VITALS.map((v) => (
           <div
@@ -195,7 +285,7 @@ export function VitalsMonitorTile({ className }: { className?: string }) {
                 className="tnum text-2xl font-semibold"
                 style={{ color: "var(--monitor-fg)" }}
               >
-                {v.value}
+                {reduced ? v.value : liveVital(v.key, sec)}
               </span>
               <span
                 className="text-[11px] font-medium"

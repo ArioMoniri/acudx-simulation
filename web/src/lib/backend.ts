@@ -14,6 +14,7 @@
  *   GET  /health           -> HealthResult
  *   POST /v1/guard         { text, case_context? }              -> GuardVerdict
  *   POST /v1/patient/turn  PatientTurnRequest                   -> PatientTurnResult
+ *   POST /v1/grade         { transcript, locale?, concurrency? } -> GradeResult
  *   POST /v1/ground        { query, country?, locale?, k? }     -> GroundResult
  *
  * Nothing here reads Date.now, mutates global state, or logs. Education only.
@@ -152,6 +153,86 @@ export interface GroundResult {
   [key: string]: unknown;
 }
 
+/* ---- /v1/grade — decomposed, evidence-forced rubric grading -------------- */
+
+/**
+ * A transcript turn as sent to /v1/grade. The server accepts `role` OR `speaker`
+ * and `content` OR `text`; we send the canonical `{ role, content }` (see
+ * server.rubric.normalize_transcript, which labels assistant/patient -> PATIENT
+ * and user/clinician/learner/doctor -> CLINICIAN).
+ */
+export interface GradeTurn {
+  role: string;
+  content: string;
+}
+
+/**
+ * POST /v1/grade request. `transcript` is a flat string OR a list of turns
+ * (mirrors GradeRequest's `transcript`/`history`/`turns` aliases). `locale` is
+ * echoed into the result meta (the grader itself always reasons in English);
+ * `concurrency` optionally overrides the server's per-item grading fan-out.
+ */
+export interface GradeRequest {
+  transcript: string | GradeTurn[];
+  locale?: string;
+  concurrency?: number;
+}
+
+/** Competency bands (best -> worst) + the `ungraded` degraded/empty sentinel. */
+export type GradeBand =
+  | "strong"
+  | "adequate"
+  | "developing"
+  | "insufficient"
+  | "ungraded";
+
+/** Coarse per-item confidence band (the server never leaks raw decimals). */
+export type GradeConfidenceBand = "high" | "medium" | "low";
+
+/** One graded rubric item: met + a forced verbatim evidence quote + a band. */
+export interface GradeItem {
+  id: string;
+  criterion: string;
+  /** Counted met: the model claimed met AND the quote verified AND conf>=min. */
+  met: boolean;
+  /** Confidence band, or null when the item could not be graded (degraded). */
+  confidence: GradeConfidenceBand | null;
+  /** Verified verbatim quote from the transcript ("" when unmet/unverified). */
+  evidence: string;
+  /** Degraded reason / fabricated-quote flag, when present. */
+  note?: string;
+}
+
+/** One rubric domain aggregated to a band (bands + integer counts only). */
+export interface GradeDomain {
+  domain: string;
+  title: { en: string; tr: string };
+  band: GradeBand;
+  met_count: number;
+  item_count: number;
+  graded_count: number;
+  items: GradeItem[];
+}
+
+/** Telemetry attached to a grade result (all optional / defensive). */
+export interface GradeMeta {
+  locale?: string;
+  item_count?: number;
+  graded_count?: number;
+  degraded_count?: number;
+  temperature?: number;
+  tier?: string;
+  model?: string | null;
+  empty_transcript?: boolean;
+}
+
+/** POST /v1/grade response (bands only — never raw scores or decimals). */
+export interface GradeResult {
+  overall_band: GradeBand;
+  domains: GradeDomain[];
+  meta: GradeMeta | null;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Core request helper (timeout + never-throw)                                 */
 /* -------------------------------------------------------------------------- */
@@ -162,6 +243,9 @@ const DEFAULT_TIMEOUTS = {
   // The local model can take a few seconds; keep it bounded but generous.
   patientTurn: 22_000,
   ground: 15_000,
+  // Grading fans out one model call per rubric item (24) at temperature 0; even
+  // batched it can run tens of seconds on the pod's local model — bounded, wide.
+  grade: 45_000,
 } as const;
 
 const JSON_HEADERS: Record<string, string> = {
@@ -256,6 +340,26 @@ export function patientTurn(
     "/v1/patient/turn",
     { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(req) },
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.patientTurn,
+    opts.signal,
+  );
+}
+
+/**
+ * Decomposed rubric grading. Sends the encounter transcript to the pod's
+ * evidence-forced grader (server/rubric.py): each of the fixed rubric's items is
+ * graded independently at temperature 0 and returns {met, evidence, confidence},
+ * aggregated code-side into per-domain + overall competency BANDS (never raw
+ * scores). Never throws — the caller falls back to the local heuristic on any
+ * `{ ok: false }`.
+ */
+export function grade(
+  req: GradeRequest,
+  opts: RequestOptions = {},
+): Promise<BackendResult<GradeResult>> {
+  return request<GradeResult>(
+    "/v1/grade",
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(req) },
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.grade,
     opts.signal,
   );
 }

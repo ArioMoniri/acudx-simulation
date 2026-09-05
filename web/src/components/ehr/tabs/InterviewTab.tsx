@@ -33,11 +33,17 @@ import { cn } from "@/lib/cn";
 import {
   askQuestion,
   requestExam,
+  recordDialogue,
   logGuardOutcome,
   getOffTaskCount,
   getCurrentVitals,
   useEncounterState,
 } from "@/state/encounterStore";
+import {
+  computeCoverage,
+  useLiveGrounding,
+  type NextBestAction,
+} from "@/lib/guidanceEngine";
 import {
   classifyUtterance,
   inferQuestionIntent,
@@ -50,8 +56,7 @@ import {
   patientTurn as backendPatientTurn,
   type PatientTurnRequest,
 } from "@/lib/backend";
-import type { Lang, TranscriptTurn } from "@/data/mock";
-import { guidanceHints } from "@/data/mock";
+import type { GuidanceHint, Lang, TranscriptTurn } from "@/data/mock";
 
 export interface InterviewTabProps {
   caseInstance: CaseInstance;
@@ -151,6 +156,52 @@ function camel(s: string): string {
   return s.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
+type TFunc = ReturnType<typeof useTranslation>["t"];
+
+/**
+ * A short, localized phrase for the single most useful next step (the coverage
+ * layer's next-best-action). Feeds the grounding query so the guidance reacts to
+ * what has been asked / is still missing — never the diagnosis.
+ */
+function nbaPhrase(nba: NextBestAction | null, lang: Lang, t: TFunc): string {
+  if (!nba) return "";
+  switch (nba.kind) {
+    case "history":
+      return nba.ref
+        ? t(`ehr.intents.${camel(nba.ref)}`, { defaultValue: nba.ref })
+        : "";
+    case "exam":
+      return nba.ref
+        ? t(`ehr.maneuvers.${camel(nba.ref)}`, { defaultValue: nba.ref })
+        : "";
+    case "workup":
+      return (lang === "tr" ? nba.labelTr : nba.labelEn) ?? nba.ref ?? "";
+    case "redflag":
+      return nba.ref ?? "";
+    default:
+      return "";
+  }
+}
+
+/**
+ * The citation whose provenance the guidance card cites, derived from the CURRENT
+ * case (next-best-action citation, else the expectation matching it, else the
+ * case's first expected-workup citation). Guideline-anchored, diagnosis-free.
+ */
+function pickGuidanceCitationId(
+  nba: NextBestAction | null,
+  caseInstance: CaseInstance,
+): string {
+  if (nba?.citationId) return nba.citationId;
+  if (nba?.ref) {
+    const exp = caseInstance.expectedWorkup.find(
+      (w) => (w.code.coding[0]?.code ?? "") === nba.ref,
+    );
+    if (exp?.citationId) return exp.citationId;
+  }
+  return caseInstance.expectedWorkup[0]?.citationId ?? "";
+}
+
 /**
  * InterviewTab — where history + exam are EXTRACTED (docs §2.2). The student
  * drives the dynamic patient dialogue with question-intent chips (askQuestion)
@@ -196,16 +247,12 @@ export function InterviewTab({
   const [notice, setNotice] = useState<GuardNoticeState | null>(null);
   const typingTimer = useRef<number | null>(null);
 
-  // Live-backend transcript: doctor free text + REAL patient replies from the
-  // pod gateway, kept separate from the mock reveal-graph turns and merged for
-  // display. `fallbackNotice` flags a turn that silently fell back to the mock
-  // path after a backend error.
-  const [liveTurns, setLiveTurns] = useState<TranscriptTurn[]>([]);
-  const [liveAffect, setLiveAffect] = useState<Record<string, string>>({});
+  // The free-text / voice / live transcript now lives in the encounter store
+  // (state.dialogue): it is logged as encounter events, survives tab-switch /
+  // remount, and is visible to Chart Review, grading, debrief and progress —
+  // instead of the old ephemeral component state. `fallbackNotice` flags a turn
+  // that silently fell back to the offline path after a backend error.
   const [fallbackNotice, setFallbackNotice] = useState(false);
-  const liveSeq = useRef(0);
-  // Rotates the canned greeting/clarify lines so repeats don't feel robotic.
-  const cannedSeq = useRef(0);
   useEffect(() => {
     return () => {
       if (typingTimer.current) window.clearTimeout(typingTimer.current);
@@ -222,8 +269,12 @@ export function InterviewTab({
     const turnsAcc: TranscriptTurn[] = [];
     const affect: Record<string, string> = {};
 
+    // Only the intent-chip reveal-graph questions build these turns; free-text /
+    // voice / live exchanges are logged as `question` events too (meta.dialogue)
+    // but render from the persisted store transcript below — exclude them here so
+    // they are not shown twice.
     const questionEvents = [...state.events]
-      .filter((e) => e.type === "question")
+      .filter((e) => e.type === "question" && e.meta?.dialogue !== true)
       .sort((a, b) => a.seq - b.seq);
 
     for (const ev of questionEvents) {
@@ -275,15 +326,36 @@ export function InterviewTab({
     return { turns: turnsAcc, affectByTurn: affect };
   }, [state.events, caseInstance.groundTruth.history, affectLabel, t]);
 
-  // Merge the mock reveal-graph turns with any live-backend exchanges for the
-  // transcript. Live replies carry a "Live · pod" provenance caption.
+  // The free-text / voice / live exchanges, read from the persisted store log so
+  // they survive remounts and stay in sync with the event-sourced transcript.
+  const dialogueTurns = useMemo<TranscriptTurn[]>(
+    () =>
+      state.dialogue.map((d) => ({
+        id: d.id,
+        role: d.role,
+        stage: "history",
+        en: d.en,
+        tr: d.tr,
+      })),
+    [state.dialogue],
+  );
+  const dialogueAffect = useMemo<Record<string, string>>(() => {
+    const m: Record<string, string> = {};
+    for (const d of state.dialogue) {
+      if (d.role === "patient" && d.affect) m[d.id] = d.affect;
+    }
+    return m;
+  }, [state.dialogue]);
+
+  // Merge the reveal-graph turns with the free-text / live exchanges for display.
+  // Live replies carry a "Live · pod" provenance caption.
   const allTurns = useMemo(
-    () => [...turns, ...liveTurns],
-    [turns, liveTurns],
+    () => [...turns, ...dialogueTurns],
+    [turns, dialogueTurns],
   );
   const allAffect = useMemo(
-    () => ({ ...affectByTurn, ...liveAffect }),
-    [affectByTurn, liveAffect],
+    () => ({ ...affectByTurn, ...dialogueAffect }),
+    [affectByTurn, dialogueAffect],
   );
 
   // The patient's most recent spoken line (in the encounter's content language),
@@ -307,9 +379,51 @@ export function InterviewTab({
   // before the encounter clock starts.
   const vitals = getCurrentVitals(state) ?? caseInstance.triageVitals;
 
-  // A cited Socratic hint for the interview step (reuses the existing hints).
-  const activeHint =
-    guidanceHints.find((h) => h.stage === "history") ?? guidanceHints[0];
+  // Reactive, grounded interview guidance. The coverage layer names the single
+  // most useful next step (what's been asked / is still missing); the guideline
+  // text is grounded via /v1/ground when the live pod is reachable (mirroring the
+  // Guidance tab's useLiveGrounding) and degrades to the case's cited local
+  // reference offline. PROCESS ONLY — it never references the diagnosis.
+  const coverage = computeCoverage(state, caseInstance);
+  const nba = coverage.nextBestAction;
+  const workupCitationIds = useMemo(
+    () => Array.from(new Set(caseInstance.expectedWorkup.map((w) => w.citationId))),
+    [caseInstance],
+  );
+  const guidanceQuery = guidanceOn
+    ? [caseInstance.chiefComplaint[lang], nbaPhrase(nba, lang, t)]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+  const grounding = useLiveGrounding({
+    query: guidanceQuery,
+    locale: lang,
+    citationIds: workupCitationIds,
+  });
+  const leadPassage = grounding.passages[0];
+
+  // Genuine out-of-scope: the learner's most recent move was flagged off-task
+  // (not an in-scope clinical action), or grounding produced nothing — so the
+  // guidance holds back rather than guess (wires GuidanceCard.abstained for real).
+  const lastGuard = state.guardEvents[state.guardEvents.length - 1];
+  const lastClinicalSeq = [...state.events]
+    .reverse()
+    .find((e) => e.type === "question" || e.type === "exam" || e.type === "order")
+    ?.seq;
+  const guidanceOffScope =
+    !!lastGuard &&
+    (lastGuard.type === "offtopic" || lastGuard.type === "answer-seeking") &&
+    (lastClinicalSeq == null || lastGuard.seq > lastClinicalSeq);
+  const guidanceAbstained = guidanceOffScope || grounding.passages.length === 0;
+
+  const activeHint: GuidanceHint = {
+    id: "interview-guidance",
+    stage: "history",
+    text: leadPassage
+      ? { en: leadPassage.text, tr: leadPassage.text }
+      : { en: "", tr: "" },
+    citationId: pickGuidanceCitationId(nba, caseInstance),
+  };
 
   function pulseTyping() {
     setTyping(true);
@@ -327,8 +441,10 @@ export function InterviewTab({
     doctorText: string,
     pool: ReadonlyArray<{ en: string; tr: string }>,
   ) {
-    const reply = pool[cannedSeq.current++ % pool.length];
-    appendExchange(doctorText, reply, affectLabel);
+    // Rotate deterministically from how many exchanges are already logged, so
+    // repeats stay varied without an ephemeral counter that a remount would reset.
+    const reply = pool[Math.floor(state.dialogue.length / 2) % pool.length];
+    appendExchange(doctorText, reply, affectLabel, "offline");
   }
 
   /**
@@ -440,7 +556,7 @@ export function InterviewTab({
       affect_baseline: affectLabel,
     };
     const answers = caseInstance.groundTruth.history.map((h) => h.answer[lang]);
-    const history = [...turns, ...liveTurns].slice(-8).map((tt) => ({
+    const history = [...turns, ...dialogueTurns].slice(-8).map((tt) => ({
       role: tt.role === "doctor" ? "user" : "assistant",
       content: tt[lang],
     }));
@@ -458,23 +574,20 @@ export function InterviewTab({
   }
 
   /**
-   * Append a doctor turn + a patient reply to the free-text transcript. `affect`
-   * both labels the patient turn and, when it is the Live badge, marks the reply
-   * as model-sourced ("Live · pod"); canned offline replies pass affectLabel.
+   * Persist a doctor turn + patient reply to the store's dialogue log AND log it
+   * as an encounter event (via recordDialogue), so this free-text / voice / live
+   * history-taking flows into Chart Review's activity counts + timeline, grading,
+   * debrief and progress — not just an ephemeral local transcript. `affect` both
+   * labels the patient turn and, when it is the Live badge, marks the reply as
+   * model-sourced ("Live · pod"); canned offline replies pass affectLabel.
    */
   function appendExchange(
     doctorText: string,
     patient: { en: string; tr: string },
     affect: string,
+    source: "live" | "offline",
   ) {
-    const n = liveSeq.current++;
-    const patId = `live-${n}-p`;
-    setLiveTurns((prev) => [
-      ...prev,
-      { id: `live-${n}-d`, role: "doctor", stage: "history", en: doctorText, tr: doctorText },
-      { id: patId, role: "patient", stage: "history", en: patient.en, tr: patient.tr },
-    ]);
-    setLiveAffect((prev) => ({ ...prev, [patId]: affect }));
+    recordDialogue({ doctorText, patient, affect, source });
   }
 
   /** Any backend failure lands here: note it, then run the offline path. */
@@ -499,7 +612,7 @@ export function InterviewTab({
         return;
       }
       const reply = tres.data.utterance;
-      appendExchange(text, { en: reply, tr: reply }, t("liveBackend.badge"));
+      appendExchange(text, { en: reply, tr: reply }, t("liveBackend.badge"), "live");
     } catch {
       // Belt and suspenders: the client never throws, but never trust the wire.
       liveFallback(text);
@@ -707,8 +820,14 @@ export function InterviewTab({
             </span>
           </label>
 
-          {guidanceOn && activeHint ? (
-            <GuidanceCard hint={activeHint} lang={lang} />
+          {guidanceOn ? (
+            <GuidanceCard
+              hint={activeHint}
+              lang={lang}
+              abstained={guidanceAbstained}
+              live={!grounding.degraded}
+              sourceUrl={leadPassage?.url}
+            />
           ) : null}
 
           <p className="mt-2 flex items-center gap-1 text-[11px] text-muted">

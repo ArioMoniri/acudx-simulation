@@ -115,19 +115,36 @@ export function describeVitalSigns(v: VitalsLike, max = 4): VitalSignToken[] {
  */
 export function photoSignsFromVitals(v: VitalsLike): ClinicalSignHint[] {
   const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
-  const out: ClinicalSignHint[] = signsFromVitals(v).map((s) => ({
-    sign: s.sign,
-    intensity: s.intensity,
-  }));
-  const add = (sign: string, intensity: number) => {
+  const map = new Map<string, number>();
+  // Take the STRONGEST intensity for each sign so nothing ever contradicts the
+  // canonical channel, and a genuinely symptomatic patient reads clearly on the
+  // face. `raise` only records a sign once it is actually present.
+  const raise = (sign: string, intensity: number) => {
     const i = clamp01(intensity);
-    if (i > 0.001) out.push({ sign, intensity: i });
+    if (i <= 0.001) return;
+    map.set(sign, Math.max(map.get(sign) ?? 0, i));
   };
-  // Pallor from hypoperfusion (falling systolic), warm flush from fever, and an
-  // ashen droop from severe hypoxia / hypotension.
-  add("pallor", (105 - v.systolic) / 45);
-  add("fever", (v.tempC - 38) / 2.5);
-  add("reduced-loc", Math.max((88 - v.spo2) / 16, (85 - v.systolic) / 30));
+
+  // Start from the canonical cyanosis / respiratory-distress / diaphoresis
+  // channel so the words, monitor and portrait agree at the low end.
+  for (const s of signsFromVitals(v)) raise(s.sign, s.intensity);
+
+  // Then STRENGTHEN every channel with steeper slopes so a truly tachycardic /
+  // diaphoretic / hypotensive / distressed / hypoxic / febrile patient lands
+  // well above the ~0.4 "clearly visible" mark, while a stable patient (HR ~75,
+  // BP ~120/80, RR ~14, SpO2 ~98, 37.0 °C) yields nothing at all.
+  raise("cyanosis", (95 - v.spo2) / 8); // SpO2 90 → 0.63, 88 → 0.88
+  raise("respiratory-distress", (v.rr - 18) / 12); // RR 24 → 0.50, 28 → 0.83
+  raise(
+    "diaphoresis",
+    Math.max((v.hr - 95) / 28, (90 - v.systolic) / 45), // HR 110 → 0.54; clammy shock
+  );
+  raise("pallor", (110 - v.systolic) / 40); // sys 100 → 0.25, 90 → 0.50, 80 → 0.75
+  raise("fever", (v.tempC - 37.7) / 2); // 38.5 → 0.40, 39.0 → 0.65
+  raise("reduced-loc", Math.max((88 - v.spo2) / 16, (85 - v.systolic) / 26)); // severe only
+
+  const out: ClinicalSignHint[] = [];
+  for (const [sign, intensity] of map) out.push({ sign, intensity });
   return out;
 }
 

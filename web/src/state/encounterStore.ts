@@ -66,6 +66,26 @@ export interface EncounterEvent {
   meta?: Record<string, unknown>;
 }
 
+/**
+ * A single persisted free-text / voice / live dialogue turn. The natural
+ * (AMBOSS-style) history-taking transcript lives in the store — NOT ephemeral
+ * component state — so it survives tab-switch / remount and stays in sync with
+ * the event-sourced log. Each recorded exchange also appends a `question`
+ * encounter event (see {@link recordDialogue}) so Chart Review, grading, debrief
+ * and progress count ALL history-taking, not just the intent chips.
+ */
+export interface DialogueTurn {
+  id: string;
+  role: "doctor" | "patient";
+  en: string;
+  tr: string;
+  /**
+   * Affect label for a patient turn; also carries the "Live · pod" provenance
+   * badge when the reply came from the live backend. Absent on doctor turns.
+   */
+  affect?: string;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Scope & Injection Guard outcomes (docs/architecture/13 §3, §6)              */
 /* -------------------------------------------------------------------------- */
@@ -151,6 +171,11 @@ export interface EncounterState {
   treatments: AdministeredTreatment[];
   problemList: ProblemListEntry[];
   events: EncounterEvent[];
+  /**
+   * Persisted free-text / voice / live history-taking transcript (doctor
+   * utterances + patient replies), kept alongside the reveal-graph turns.
+   */
+  dialogue: DialogueTurn[];
   /** Scope & Injection Guard outcomes (separate from the clinical event log). */
   guardEvents: GuardEvent[];
   /** Committed diagnosis code, if any. */
@@ -188,6 +213,7 @@ function initialState(): EncounterState {
     treatments: [],
     problemList: [],
     events: [],
+    dialogue: [],
     guardEvents: [],
     committedDiagnosis: null,
   };
@@ -262,6 +288,55 @@ export function askQuestion(intent: QuestionIntent): void {
   setState({
     ...state,
     discovered: hit ? revealDatumIds(datumIds, state.discovered) : state.discovered,
+    events: [...state.events, ev],
+  });
+}
+
+/**
+ * Record a free-text / voice / live patient exchange (doctor utterance + patient
+ * reply) as BOTH a persisted transcript entry AND an encounter EVENT.
+ *
+ * The natural history-taking that does not map to a question-intent chip — live
+ * backend replies, offline canned greetings / clarifications, and in-scope
+ * free-text — is otherwise invisible to the process layer. It is logged here as
+ * a `question` event with the utterance in `meta` and NO `hit`/`redundant`
+ * flags, so it never counts as history coverage, a redundant question, or an
+ * irrelevant question (those consumers key off `meta.hit`), yet it DOES flow into
+ * Chart Review's activity counts + timeline, grading, debrief and progress in
+ * real time. Reusing `question` (rather than widening the event-type union)
+ * keeps exhaustive consumers such as ChartReviewTab intact. The transcript is
+ * stored so it survives remounts; `source` records the reply's provenance.
+ */
+export function recordDialogue(input: {
+  doctorText: string;
+  patient: { en: string; tr: string };
+  affect: string;
+  /** Provenance of the reply: the live pod persona, or the offline fallback. */
+  source?: "live" | "offline";
+}): void {
+  if (!state.caseInstance) return;
+  const utterance = input.doctorText.trim();
+  const ev = appendEvent("question", utterance.slice(0, 80) || "dialogue", {
+    dialogue: true,
+    utterance: utterance.slice(0, 200),
+    source: input.source ?? "offline",
+  });
+  const doctorTurn: DialogueTurn = {
+    id: `dlg-${ev.seq}-d`,
+    role: "doctor",
+    en: input.doctorText,
+    tr: input.doctorText,
+  };
+  const patientTurn: DialogueTurn = {
+    id: `dlg-${ev.seq}-p`,
+    role: "patient",
+    en: input.patient.en,
+    tr: input.patient.tr,
+    affect: input.affect,
+  };
+  setState({
+    ...state,
+    dialogue: [...state.dialogue, doctorTurn, patientTurn],
     events: [...state.events, ev],
   });
 }
@@ -527,6 +602,11 @@ export function getDiscoveredResults(s: EncounterState): {
 /** The student's current problem list (differentials + working dx + plan). */
 export function getProblemList(s: EncounterState): ProblemListEntry[] {
   return s.problemList;
+}
+
+/** The persisted free-text / voice / live history-taking transcript. */
+export function getDialogue(s: EncounterState): DialogueTurn[] {
+  return s.dialogue;
 }
 
 /** Current encounter-clock reading in ms (0 before start). */

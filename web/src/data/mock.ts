@@ -1,9 +1,15 @@
 /**
- * AcuDx mock domain data — bilingual (EN/TR), typed.
+ * AcuDx shared domain types + a little cited reference content — bilingual
+ * (EN/TR), typed.
  *
- * A single acute chest-pain emergency-medicine case with a chat transcript,
- * a live vitals series (for sparklines), cited guidance hints, and a
- * feedback report (6 domains + calibration + evidence-anchored gaps).
+ * This module is the schema hub: the bilingual/clinical primitives, the
+ * case / transcript / vitals / feedback / dashboard shapes that the rest of the
+ * app imports. The superseded single-case demo fixtures (the chest-pain case,
+ * its transcript, and the static vitals series) have been REMOVED — encounters
+ * now run on generated `CaseInstance`s and the live `encounterStore`. What
+ * remains as VALUES is genuinely in use: the guideline `citations` (+
+ * `getCitation`), the cited `guidanceHints`, and the `recommendedCases`
+ * fallback rail.
  *
  * Everything is education-only sample content. No real patient data.
  * Turkish strings use correct clinical terminology.
@@ -62,60 +68,6 @@ export interface ClinicalCase {
   stages: EncounterStageMeta[];
 }
 
-export const chestPainCase: ClinicalCase = {
-  id: "em-acs-001",
-  title: {
-    en: "Acute chest pain in a 58-year-old",
-    tr: "58 yaşında akut göğüs ağrısı",
-  },
-  specialty: {
-    en: "Emergency medicine",
-    tr: "Acil tıp",
-  },
-  chiefComplaint: {
-    en: "Central chest pain radiating to the left arm",
-    tr: "Sol kola yayılan orta hat göğüs ağrısı",
-  },
-  setting: {
-    en: "Emergency department, 40 minutes after symptom onset.",
-    tr: "Acil servis, semptom başlangıcından 40 dakika sonra.",
-  },
-  demographics: {
-    age: 58,
-    sex: "male",
-    summary: {
-      en: "Hypertension, ex-smoker, no prior cardiac history.",
-      tr: "Hipertansiyon, eski sigara içicisi, bilinen kalp hastalığı yok.",
-    },
-  },
-  stages: [
-    {
-      key: "history",
-      label: { en: "History", tr: "Anamnez" },
-    },
-    {
-      key: "exam",
-      label: { en: "Examination", tr: "Muayene" },
-    },
-    {
-      key: "tests",
-      label: { en: "Investigations", tr: "Tetkikler" },
-    },
-    {
-      key: "ddx",
-      label: { en: "Differential", tr: "Ayırıcı tanı" },
-    },
-    {
-      key: "diagnosis",
-      label: { en: "Diagnosis", tr: "Tanı" },
-    },
-    {
-      key: "management",
-      label: { en: "Management", tr: "Tedavi yönetimi" },
-    },
-  ],
-};
-
 /* -------------------------------------------------------------------------- */
 /* Transcript                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -130,51 +82,6 @@ export interface TranscriptTurn {
   /** Which stage the turn belongs to (for grouping / timeline). */
   stage: EncounterStageMeta["key"];
 }
-
-export const transcript: TranscriptTurn[] = [
-  {
-    id: "t1",
-    role: "doctor",
-    stage: "history",
-    en: "Hello, I'm the doctor seeing you today. Can you tell me what brought you in?",
-    tr: "Merhaba, bugün sizi görecek olan doktorum. Sizi buraya getiren şikayeti anlatabilir misiniz?",
-  },
-  {
-    id: "t2",
-    role: "patient",
-    stage: "history",
-    en: "About an hour ago I got this heavy pressure in the middle of my chest. It spread to my left arm.",
-    tr: "Yaklaşık bir saat önce göğsümün ortasında ağır bir baskı hissettim. Sol koluma yayıldı.",
-  },
-  {
-    id: "t3",
-    role: "doctor",
-    stage: "history",
-    en: "On a scale of zero to ten, how severe is the pain, and is it constant or does it come and go?",
-    tr: "Sıfırdan ona kadar bir ölçekte ağrı ne kadar şiddetli ve sürekli mi yoksa gelip geçici mi?",
-  },
-  {
-    id: "t4",
-    role: "patient",
-    stage: "history",
-    en: "It's an eight. It has not eased since it started. I also feel sweaty and a bit sick.",
-    tr: "Sekiz gibi. Başladığından beri hiç azalmadı. Ayrıca terliyorum ve biraz bulantım var.",
-  },
-  {
-    id: "t5",
-    role: "doctor",
-    stage: "exam",
-    en: "I'd like to examine you and get some observations. I'm putting you on the monitor now.",
-    tr: "Sizi muayene etmek ve bazı ölçümler almak istiyorum. Şimdi sizi monitöre bağlıyorum.",
-  },
-  {
-    id: "t6",
-    role: "patient",
-    stage: "exam",
-    en: "Okay. My father had a heart attack at around my age, if that helps.",
-    tr: "Tamam. Babam benim yaşlarımda kalp krizi geçirmişti, faydası olur mu bilmem.",
-  },
-];
 
 /* -------------------------------------------------------------------------- */
 /* Vitals series (for sparklines)                                             */
@@ -196,61 +103,6 @@ export interface VitalReading {
   state: ClinicalState;
   trend: Trend;
 }
-
-export const vitals: VitalReading[] = [
-  {
-    key: "hr",
-    labelKey: "hr",
-    shortKey: "hrShort",
-    value: "104",
-    unitKey: "bpm",
-    history: [88, 90, 93, 97, 99, 101, 104],
-    state: "caution",
-    trend: "rising",
-  },
-  {
-    key: "bp",
-    labelKey: "bp",
-    shortKey: "bpShort",
-    value: "148/92",
-    history: [132, 136, 139, 142, 145, 147, 148],
-    state: "caution",
-    trend: "rising",
-  },
-  {
-    key: "rr",
-    labelKey: "rr",
-    shortKey: "rrShort",
-    value: "20",
-    unitKey: "brpm",
-    history: [16, 17, 18, 18, 19, 19, 20],
-    state: "normal",
-    trend: "steady",
-  },
-  {
-    key: "spo2",
-    labelKey: "spo2",
-    shortKey: "spo2Short",
-    value: "95",
-    unitKey: "percent",
-    history: [98, 98, 97, 97, 96, 96, 95],
-    state: "normal",
-    trend: "falling",
-  },
-  {
-    key: "temp",
-    labelKey: "temp",
-    shortKey: "tempShort",
-    value: "36.8",
-    unitKey: "celsius",
-    history: [36.7, 36.7, 36.8, 36.8, 36.8, 36.8, 36.8],
-    state: "normal",
-    trend: "steady",
-  },
-];
-
-/** Seconds since the monitor last refreshed (for the "updated Xs ago" line). */
-export const vitalsUpdatedSecondsAgo = 3;
 
 /* -------------------------------------------------------------------------- */
 /* Guidance hints (cited)                                                     */

@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { ArrowsOutSimple, Waveform } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
@@ -123,23 +130,25 @@ function physiology(signs: ClinicalSignHint[] | undefined): Physiology {
   let saturate = 1;
   let brightness = 1;
   let contrast = 1;
-  // Pallor — wash out colour and lift luminance (bloodless).
-  saturate -= 0.5 * pallor;
-  brightness += 0.08 * pallor;
-  // Fever — warmer, more saturated flush across the face.
-  saturate += 0.16 * flush;
-  brightness += 0.02 * flush;
-  // Diaphoresis — a touch brighter under the sheen highlight.
-  brightness += 0.05 * sweat;
-  // Reduced LOC — dimmer + flatter, an ashen, less-responsive look.
-  brightness -= 0.07 * droop;
-  contrast -= 0.07 * droop;
-  // Cyanosis — slightly desaturate before the bluish overlay lands.
-  saturate -= 0.1 * cyanosis;
+  // Pallor — wash out colour and clearly lift luminance (bloodless). Works on any
+  // skin tone because it desaturates + brightens rather than tinting a colour.
+  saturate -= 0.62 * pallor;
+  brightness += 0.14 * pallor;
+  // Fever — warmer, markedly more saturated flush across the face.
+  saturate += 0.24 * flush;
+  brightness += 0.03 * flush;
+  // Diaphoresis — brighter under the sheen highlight (wet, glistening skin).
+  brightness += 0.07 * sweat;
+  // Reduced LOC — dimmer, flatter and ashen (desaturated), a less-responsive look.
+  brightness -= 0.12 * droop;
+  contrast -= 0.1 * droop;
+  saturate -= 0.18 * droop;
+  // Cyanosis — desaturate before the bluish lips/periphery overlay lands.
+  saturate -= 0.14 * cyanosis;
 
-  saturate = Math.max(0.35, Math.min(1.35, saturate));
-  brightness = Math.max(0.82, Math.min(1.2, brightness));
-  contrast = Math.max(0.82, Math.min(1.12, contrast));
+  saturate = Math.max(0.28, Math.min(1.4, saturate));
+  brightness = Math.max(0.78, Math.min(1.24, brightness));
+  contrast = Math.max(0.8, Math.min(1.14, contrast));
 
   const parts: string[] = [];
   if (Math.abs(saturate - 1) > 0.01) parts.push(`saturate(${saturate.toFixed(2)})`);
@@ -167,15 +176,19 @@ function physiology(signs: ClinicalSignHint[] | undefined): Physiology {
 const PHOTO_KEYFRAMES = `
 @keyframes acudx-patient-breathe {
   0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.015); filter: brightness(1.04); }
+  50% { transform: scale(1.024); filter: brightness(1.05); }
 }
 @keyframes acudx-patient-breathe-labored {
-  0%, 100% { transform: scale(1) translateY(0); filter: brightness(1); }
-  50% { transform: scale(1.03) translateY(-1.4%); filter: brightness(1.05); }
+  0%, 100% { transform: scale(1) translateY(0); filter: brightness(0.99); }
+  50% { transform: scale(1.042) translateY(-1.8%); filter: brightness(1.06); }
 }
 @keyframes acudx-patient-speak {
   0%, 100% { opacity: 0.28; transform: translateX(-50%) scaleY(0.85); }
   50% { opacity: 0.6; transform: translateX(-50%) scaleY(1.15); }
+}
+@keyframes acudx-patient-sheen {
+  0%, 100% { opacity: calc(var(--acudx-sweat, 0.5) * 0.68); transform: translateY(0) scale(1); }
+  50% { opacity: var(--acudx-sweat, 0.5); transform: translateY(-1.2%) scale(1.03); }
 }`;
 
 /** Breathing period (seconds) from the live RR, faster under distress. */
@@ -221,7 +234,7 @@ export function PatientPhoto({
   }, [photoId, sex, age, seed]);
 
   const physio = useMemo(() => physiology(signs), [signs]);
-  const { filter, cyanosis, sweat, flush, droop, distress } = physio;
+  const { filter, cyanosis, sweat, flush, droop, pallor, distress } = physio;
   const reduced = usePrefersReducedMotion();
 
   const isSpeaking = speaking || Boolean(utterance && utterance.trim().length > 0);
@@ -235,6 +248,26 @@ export function PatientPhoto({
   const breatheAnim = breathe
     ? `${labored ? "acudx-patient-breathe-labored" : "acudx-patient-breathe"} ${breathePeriod(rr).toFixed(2)}s ease-in-out infinite`
     : undefined;
+
+  // Diaphoresis sheen — strong enough to read as wet skin at ~0.4 intensity, and
+  // gently animated so it glistens like sweat rather than sitting as a flat gloss.
+  const sweatOpacity = Math.min(0.72, sweat * 0.95);
+  const sheenAnimate = sweat > 0.05 && !reduced;
+  // Custom property `--acudx-sweat` lets the sheen keyframe oscillate around the
+  // JS-computed opacity. CSSProperties has no custom-property index signature, so
+  // assert (the idiomatic pattern the React types recommend).
+  const sweatStyle = {
+    background:
+      "radial-gradient(48% 30% at 50% 20%, rgba(255,255,255,0.72), transparent 72%), radial-gradient(32% 22% at 34% 40%, rgba(255,255,255,0.55), transparent 72%), radial-gradient(32% 22% at 66% 40%, rgba(255,255,255,0.55), transparent 72%), radial-gradient(30% 20% at 50% 58%, rgba(255,255,255,0.4), transparent 74%)",
+    opacity: sweatOpacity,
+    "--acudx-sweat": String(sweatOpacity),
+    animation: sheenAnimate
+      ? "acudx-patient-sheen 3.4s ease-in-out infinite"
+      : undefined,
+    willChange: sheenAnimate ? "opacity, transform" : undefined,
+  } as CSSProperties;
+  // Inject the shared keyframes whenever anything on the photo animates.
+  const anyKeyframes = breathe || (isSpeaking && !reduced) || sheenAnimate;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   // Autoplay policies can leave a muted <video> paused after mount; nudge it.
@@ -255,7 +288,7 @@ export function PatientPhoto({
         className,
       )}
     >
-      {breathe || (isSpeaking && !reduced) ? <style>{PHOTO_KEYFRAMES}</style> : null}
+      {anyKeyframes ? <style>{PHOTO_KEYFRAMES}</style> : null}
       {/* Breathing wrapper: transform/filter here compose with the media's own
           physiology filter and don't disturb the caption / overlays. */}
       <div
@@ -297,48 +330,60 @@ export function PatientPhoto({
         )}
       </div>
 
-      {/* Cyanosis — faint full-face cast plus a stronger bluish perioral/periphery
-          tint at the lower face (lips), never the sole cue. */}
-      {cyanosis > 0.05 ? (
-        <>
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 mix-blend-multiply"
-            style={{ backgroundColor: "#3b6ea5", opacity: Math.min(0.3, cyanosis * 0.34) }}
-          />
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 mix-blend-multiply"
-            style={{
-              background: "linear-gradient(to top, #2f5f97, transparent)",
-              opacity: Math.min(0.5, cyanosis * 0.6),
-            }}
-          />
-        </>
-      ) : null}
-
-      {/* Diaphoresis — a glossy sweat sheen (specular highlights on forehead/cheeks). */}
-      {sweat > 0.05 ? (
+      {/* Pallor — a cool, near-white glaze that lifts luminance on ANY skin tone
+          (screen blend), reinforcing the desaturate/brighten filter above so the
+          face reads clearly bloodless. Never the sole cue (the sign line carries it). */}
+      {pallor > 0.05 ? (
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 mix-blend-screen"
           style={{
             background:
-              "radial-gradient(50% 30% at 50% 20%, rgba(255,255,255,0.55), transparent 72%), radial-gradient(34% 22% at 36% 40%, rgba(255,255,255,0.4), transparent 72%), radial-gradient(34% 22% at 64% 40%, rgba(255,255,255,0.4), transparent 72%)",
-            opacity: Math.min(0.55, sweat * 0.7),
+              "linear-gradient(to bottom, rgba(228,233,242,0.6), rgba(205,214,228,0.34))",
+            opacity: Math.min(0.42, pallor * 0.52),
           }}
         />
       ) : null}
 
-      {/* Fever — a warm flush over the cheeks. */}
+      {/* Cyanosis — full-face bluish cast plus a stronger perioral/periphery tint
+          at the lower face (lips), never the sole cue. */}
+      {cyanosis > 0.05 ? (
+        <>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 mix-blend-multiply"
+            style={{ backgroundColor: "#3b6ea5", opacity: Math.min(0.42, cyanosis * 0.48) }}
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 mix-blend-multiply"
+            style={{
+              background: "linear-gradient(to top, #234f86, transparent)",
+              opacity: Math.min(0.72, cyanosis * 0.85),
+            }}
+          />
+        </>
+      ) : null}
+
+      {/* Diaphoresis — a glossy, glistening sweat sheen (specular highlights on
+          forehead/cheeks/upper lip) that subtly shimmers so it reads as wet skin. */}
+      {sweat > 0.05 ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 mix-blend-screen"
+          style={sweatStyle}
+        />
+      ) : null}
+
+      {/* Fever — a warm, saturated flush over the cheeks (and a lighter brow band). */}
       {flush > 0.05 ? (
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 mix-blend-soft-light"
           style={{
             background:
-              "radial-gradient(40% 30% at 33% 56%, rgba(224,74,60,0.85), transparent 70%), radial-gradient(40% 30% at 67% 56%, rgba(224,74,60,0.85), transparent 70%)",
-            opacity: Math.min(0.6, flush * 0.72),
+              "radial-gradient(40% 30% at 33% 56%, rgba(226,72,58,0.95), transparent 70%), radial-gradient(40% 30% at 67% 56%, rgba(226,72,58,0.95), transparent 70%), radial-gradient(46% 20% at 50% 24%, rgba(226,96,72,0.6), transparent 74%)",
+            opacity: Math.min(0.72, flush * 0.95),
           }}
         />
       ) : null}
@@ -349,8 +394,8 @@ export function PatientPhoto({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 mix-blend-multiply"
           style={{
-            background: "linear-gradient(to bottom, rgba(44,48,58,0.12), rgba(18,20,28,0.42))",
-            opacity: Math.min(0.5, droop * 0.6),
+            background: "linear-gradient(to bottom, rgba(44,48,58,0.18), rgba(16,18,26,0.56))",
+            opacity: Math.min(0.64, droop * 0.85),
           }}
         />
       ) : null}
