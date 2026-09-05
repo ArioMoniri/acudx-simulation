@@ -341,6 +341,71 @@ def check_case_generate(base: str, timeout: float) -> Result:
     return Result("POST /v1/case/generate", ok, detail)
 
 
+def _cond_sig(spec: Any) -> Tuple[str, str]:
+    """(icd10, label_en) identity of a generated case's condition."""
+    if isinstance(spec, dict) and isinstance(spec.get("condition"), dict):
+        c = spec["condition"]
+        return (str(c.get("icd10", "")), str(c.get("label_en", "")))
+    return ("", "")
+
+
+def _lab_labels(spec: Any) -> frozenset:
+    """The set of lab labels — condition-specific fixtures make these differ
+    between two distinct conditions (troponin+ECG for NSTEMI vs D-dimer+CT for a
+    dissection)."""
+    labs = spec.get("labs") if isinstance(spec, dict) else None
+    if not isinstance(labs, list):
+        return frozenset()
+    return frozenset(str(l.get("label_en", "")) for l in labs if isinstance(l, dict))
+
+
+def check_case_anti_repeat(base: str, timeout: float) -> Result:
+    """Two back-to-back *no-seed* draws from the same system must NOT repeat the
+    diagnosis (the anti-repeat memory), and two different cardiac conditions must
+    carry DIFFERENT objective labs (condition-specific fixtures). The labs
+    assertion is enforced only on the deterministic template path (source=
+    'template'); when the live model authors the case it is informational."""
+    tmo = max(timeout, 30.0)
+    url = base + "/v1/case/generate"
+    body = {"system": "cardiology", "locale": "en", "session_id": "sess_smoke"}
+    s1, d1, e1 = http_call("POST", url, body, tmo)
+    s2, d2, e2 = http_call("POST", url, body, tmo)
+    if e1 or e2 or s1 is None or s2 is None or not (200 <= s1 < 300 and 200 <= s2 < 300):
+        return Result("POST /v1/case/generate (anti-repeat)", False,
+                      f"HTTP {s1}/{s2} {e1 or e2 or ''}")
+
+    c1, c2 = _cond_sig(d1), _cond_sig(d2)
+    src1 = d1.get("meta", {}).get("source", "?") if isinstance(d1, dict) else "?"
+    src2 = d2.get("meta", {}).get("source", "?") if isinstance(d2, dict) else "?"
+    lines: List[str] = []
+    ok = True
+
+    # (1) anti-repeat: distinct diagnoses on consecutive no-seed draws.
+    if c1 == c2:
+        ok = False
+        lines.append(f"      anti-repeat -> {_fail()} repeated diagnosis {c1[1]!r}")
+    else:
+        lines.append(f"      anti-repeat -> {_pass()} " + _dim(f"{c1[1]!r} then {c2[1]!r}"))
+
+    # (2) condition-specific labs: different conditions -> different lab sets.
+    labs1, labs2 = _lab_labels(d1), _lab_labels(d2)
+    if c1 != c2 and labs1 and labs2:
+        if labs1 == labs2:
+            # Only a hard failure on the deterministic template path.
+            if src1 == "template" and src2 == "template":
+                ok = False
+                lines.append(f"      cond-labs   -> {_fail()} identical labs for different cardiac conditions")
+            else:
+                lines.append(f"      cond-labs   -> {_pass()} " + _dim(f"(model path; labs not compared, src={src1}/{src2})"))
+        else:
+            lines.append(f"      cond-labs   -> {_pass()} " + _dim("distinct labs for the two cardiac conditions"))
+    else:
+        lines.append(f"      cond-labs   -> {_pass()} " + _dim("(insufficient data to compare labs)"))
+
+    detail = f"src={src1}/{src2}\n" + "\n".join(lines)
+    return Result("POST /v1/case/generate (anti-repeat)", ok, detail)
+
+
 def check_ground(base: str, timeout: float) -> Result:
     bodies = [
         {"query": "antibiotic timing in septic shock", "country": "GLOBAL", "locale": "en", "k": 4},
@@ -399,6 +464,7 @@ def main() -> int:
         check_guard(base, args.timeout),
         check_patient_turn(base, args.timeout),
         check_case_generate(base, args.timeout),
+        check_case_anti_repeat(base, args.timeout),
         check_ground(base, args.timeout),
     ]
 
