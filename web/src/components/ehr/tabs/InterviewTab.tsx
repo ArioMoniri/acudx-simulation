@@ -816,7 +816,7 @@ function DismissButton({ onDismiss }: { onDismiss: () => void }) {
       onClick={onDismiss}
       aria-label={t("scopeGuard.dismiss")}
       className={cn(
-        "-mr-1 -mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-muted",
+        "-me-1 -mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-muted",
         "transition-colors hover:bg-bg-subtle hover:text-fg",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
       )}

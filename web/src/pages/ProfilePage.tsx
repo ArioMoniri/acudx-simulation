@@ -432,7 +432,7 @@ export function ProfilePage() {
                 </p>
               </div>
               {memberSince ? (
-                <p className="ml-auto hidden shrink-0 text-xs text-subtle sm:block">
+                <p className="ms-auto hidden shrink-0 text-xs text-subtle sm:block">
                   {t("profile.account.memberSince", { date: memberSince })}
                 </p>
               ) : null}

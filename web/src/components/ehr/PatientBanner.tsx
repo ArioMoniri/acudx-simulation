@@ -67,7 +67,7 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
           <DescriptionList
             layout="stacked"
             aria-label={t("ehr.storyboard.demographics")}
-            className="mt-2 flex flex-wrap items-center gap-y-1 [&>div]:px-3 [&>div:first-child]:pl-0 [&>div:not(:first-child)]:border-l [&>div:not(:first-child)]:border-border"
+            className="mt-2 flex flex-wrap items-center gap-y-1 [&>div]:px-3 [&>div:first-child]:ps-0 [&>div:not(:first-child)]:border-l [&>div:not(:first-child)]:border-border"
           >
             <KeyValue label={t("ehr.banner.mrn")} value={patient.mrn} mono />
             <KeyValue

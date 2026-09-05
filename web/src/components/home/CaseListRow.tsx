@@ -99,7 +99,7 @@ export function CaseListRow({ data, lang, to = "/encounter" }: CaseListRowProps)
               </span>
             ))}
           </span>
-          <span className="ml-auto inline-flex items-center gap-1 font-medium text-brand">
+          <span className="ms-auto inline-flex items-center gap-1 font-medium text-brand">
             {t("home2.startCase")}
             <ArrowRight
               weight="bold"

@@ -149,7 +149,7 @@ function ChoiceCard({
   layout: ChoiceLayout;
 }) {
   const shell = cn(
-    "group relative w-full rounded-card border text-left",
+    "group relative w-full rounded-card border text-start",
     "transition-[background-color,border-color] duration-150 ease-out",
     "focus-visible:outline-none",
     disabled
@@ -224,7 +224,7 @@ function ChoiceCard({
               aria-hidden
             />
             <span className="text-sm font-semibold text-fg">{title}</span>
-            <span className="ml-auto">
+            <span className="ms-auto">
               <SelectMark selected={selected} badge={badge} size="sm" />
             </span>
           </div>

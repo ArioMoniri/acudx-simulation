@@ -60,7 +60,7 @@ export function KeyValue({ label, value, mono, className }: KeyValueProps) {
       </dt>
       <dd
         className={cn(
-          "font-medium text-fg group-data-[layout=rows]/dl:text-right",
+          "font-medium text-fg group-data-[layout=rows]/dl:text-end",
           mono && "font-mono tabular-nums",
         )}
       >

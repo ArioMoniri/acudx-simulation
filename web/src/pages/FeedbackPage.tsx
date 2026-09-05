@@ -389,7 +389,7 @@ export function FeedbackPage() {
             </div>
 
             {/* The signature calibration scatter. */}
-            <div className="flex flex-col gap-3 lg:border-l lg:border-border lg:pl-10">
+            <div className="flex flex-col gap-3 lg:border-l lg:border-border lg:ps-10">
               <div>
                 <h2 className="text-base font-semibold tracking-tight text-fg">
                   {t("calibration.title")}

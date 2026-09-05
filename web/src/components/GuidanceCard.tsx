@@ -105,7 +105,7 @@ export function GuidanceCard({ hint, lang, className, abstained = false }: Guida
               {provenance ? (
                 <Tooltip
                   content={
-                    <div className="flex flex-col gap-1 text-left">
+                    <div className="flex flex-col gap-1 text-start">
                       <p className="font-medium text-fg">{provenance.label}</p>
                       <p className="text-muted">
                         {t("encounter.guidance.provenance.issuer", {

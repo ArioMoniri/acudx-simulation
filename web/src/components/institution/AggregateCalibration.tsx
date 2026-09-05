@@ -129,7 +129,7 @@ function TopicRow({ topic }: { topic: DomainCalibration }) {
           aria-hidden
         />
         {/* underconfident half (left) */}
-        <div className="absolute inset-y-0 left-0 right-1/2 flex items-center justify-end pr-1">
+        <div className="absolute inset-y-0 left-0 right-1/2 flex items-center justify-end pe-1">
           {topic.direction === "under" ? (
             <span
               className="h-3 rounded-l-full"
@@ -139,7 +139,7 @@ function TopicRow({ topic }: { topic: DomainCalibration }) {
           ) : null}
         </div>
         {/* overconfident half (right) */}
-        <div className="absolute inset-y-0 left-1/2 right-0 flex items-center pl-1">
+        <div className="absolute inset-y-0 left-1/2 right-0 flex items-center ps-1">
           {topic.direction === "over" ? (
             <span
               className="h-3 rounded-r-full"
@@ -148,7 +148,7 @@ function TopicRow({ topic }: { topic: DomainCalibration }) {
             />
           ) : topic.direction === "well" ? (
             <span
-              className="ml-[-4px] inline-flex items-center gap-1 text-[11px] font-medium"
+              className="ms-[-4px] inline-flex items-center gap-1 text-[11px] font-medium"
               style={{ color: meta.color }}
               aria-hidden
             >

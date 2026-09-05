@@ -58,7 +58,7 @@ export function SignInPage() {
                 onClick={handleContinueSaved}
                 className={
                   "flex w-full items-center gap-3 rounded-control border border-border-strong bg-surface " +
-                  "px-4 py-3 text-left transition-colors duration-150 hover:bg-bg-subtle " +
+                  "px-4 py-3 text-start transition-colors duration-150 hover:bg-bg-subtle " +
                   "focus-visible:outline-none active:scale-[0.99]"
                 }
               >

@@ -50,9 +50,9 @@ const sizes: Record<Size, string> = {
 };
 
 const circleSizes: Record<Size, string> = {
-  sm: "h-4 w-4 -mr-0.5",
-  md: "h-5 w-5 -mr-1",
-  lg: "h-6 w-6 -mr-1.5",
+  sm: "h-4 w-4 -me-0.5",
+  md: "h-5 w-5 -me-1",
+  lg: "h-6 w-6 -me-1.5",
 };
 
 function renderContent(

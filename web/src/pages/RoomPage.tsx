@@ -218,7 +218,7 @@ function InviteChip({ code }: { code: string }) {
   }, [code]);
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-subtle py-0.5 pl-2.5 pr-1 text-xs font-medium text-muted">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-subtle py-0.5 ps-2.5 pe-1 text-xs font-medium text-muted">
       <span>{t("rooms.invite.label")}</span>
       <span className="font-mono tracking-wide text-fg">{code}</span>
       <button

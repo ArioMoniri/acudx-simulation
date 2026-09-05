@@ -195,7 +195,7 @@ function MatrixView({
       aria-label={t("institution.heatmap.matrixLabel")}
       tabIndex={0}
     >
-      <table className="w-full border-separate border-spacing-0 text-left">
+      <table className="w-full border-separate border-spacing-0 text-start">
         <caption className="sr-only">
           {t("institution.heatmap.tableCaption")}
         </caption>
@@ -203,7 +203,7 @@ function MatrixView({
           <tr>
             <th
               scope="col"
-              className="sticky left-0 z-10 min-w-[10.5rem] bg-surface px-2 pb-2 text-left align-bottom"
+              className="sticky left-0 z-10 min-w-[10.5rem] bg-surface px-2 pb-2 text-start align-bottom"
             >
               <span className="text-xs font-semibold uppercase tracking-wide text-muted">
                 {t("institution.heatmap.encounterCol", {
@@ -246,14 +246,14 @@ function MatrixView({
               <tr key={row.id} className="group/row">
                 <th
                   scope="row"
-                  className="sticky left-0 z-10 min-w-[10.5rem] bg-surface py-1 pr-2 text-left"
+                  className="sticky left-0 z-10 min-w-[10.5rem] bg-surface py-1 pe-2 text-start"
                 >
                   <button
                     type="button"
                     onClick={() => onDrill(row, weakestDomain(row))}
                     aria-pressed={rowActive}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left transition-colors hover:bg-bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                      "flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-start transition-colors hover:bg-bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                       rowActive && "bg-bg-subtle",
                     )}
                     aria-label={t("institution.heatmap.drillLearnerAria", {
@@ -607,7 +607,7 @@ function DrillPanel({
                 <p className="mt-1 text-sm text-fg">
                   {t(`institution.calibration.direction.${readout.direction}`)}
                   {readout.gapPp != null ? (
-                    <span className="ml-1.5 font-mono text-xs text-muted">
+                    <span className="ms-1.5 font-mono text-xs text-muted">
                       ({readout.gapPp > 0 ? "+" : ""}
                       {readout.gapPp} {t("institution.calibration.ppShort")})
                     </span>

@@ -101,7 +101,7 @@ export function NewCaseMenu({
         leadingIcon={<Sparkle weight="bold" className="h-4 w-4" />}
       >
         {t("ehr.newCase.button")}
-        <CaretDown weight="bold" className="ml-0.5 h-3.5 w-3.5" aria-hidden />
+        <CaretDown weight="bold" className="ms-0.5 h-3.5 w-3.5" aria-hidden />
       </Button>
 
       {open ? (
@@ -120,7 +120,7 @@ export function NewCaseMenu({
               onRandom();
               close();
             }}
-            className="flex w-full items-center gap-2.5 rounded-control bg-brand px-3 py-2.5 text-left text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-none"
+            className="flex w-full items-center gap-2.5 rounded-control bg-brand px-3 py-2.5 text-start text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-none"
           >
             <Sparkle weight="fill" className="h-5 w-5 shrink-0" aria-hidden />
             <span className="min-w-0">
@@ -202,7 +202,7 @@ export function NewCaseMenu({
                       onLoadSeed(c.id);
                       close();
                     }}
-                    className="w-full truncate rounded-control px-2.5 py-1.5 text-left text-sm text-fg hover:bg-bg-subtle focus-visible:outline-none"
+                    className="w-full truncate rounded-control px-2.5 py-1.5 text-start text-sm text-fg hover:bg-bg-subtle focus-visible:outline-none"
                   >
                     {pick(c.chiefComplaint, lang)}
                   </button>

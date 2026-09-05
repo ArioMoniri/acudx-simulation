@@ -567,7 +567,7 @@ function CaseRow({
       </Td>
 
       {/* Start */}
-      <Td className="text-right">
+      <Td className="text-end">
         <Button
           size="sm"
           variant="secondary"
@@ -908,7 +908,7 @@ export function CasesPage() {
                     <Th numeric className="hidden lg:table-cell">
                       {t("select2.cases.table.time")}
                     </Th>
-                    <Th className="text-right">
+                    <Th className="text-end">
                       {t("select2.cases.table.action")}
                     </Th>
                   </Tr>

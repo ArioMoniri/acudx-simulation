@@ -52,7 +52,7 @@ export const Select = forwardRef<
     <div className="relative">
       <select
         ref={ref}
-        className={cn(controlBase, "h-9 appearance-none pr-9", className)}
+        className={cn(controlBase, "h-9 appearance-none pe-9", className)}
         {...props}
       >
         {children}

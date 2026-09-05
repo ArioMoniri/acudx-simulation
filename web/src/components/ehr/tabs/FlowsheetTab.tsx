@@ -331,7 +331,7 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
             <table className="w-full min-w-[520px] border-collapse text-sm">
               <caption className="sr-only">{t("ehr.flowsheet.caption")}</caption>
               <thead className="sticky top-0 z-10 bg-surface">
-                <tr className="border-b border-border text-left">
+                <tr className="border-b border-border text-start">
                   <th scope="col" className="bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted">
                     {t("ehr.flowsheet.time")}
                   </th>
@@ -426,7 +426,7 @@ function FlowsheetRow({
     >
       <th
         scope="row"
-        className="whitespace-nowrap px-3 py-2 text-left font-mono text-xs tabular-nums text-muted"
+        className="whitespace-nowrap px-3 py-2 text-start font-mono text-xs tabular-nums text-muted"
       >
         <span className="flex items-center gap-1.5">
           {isLatest ? (

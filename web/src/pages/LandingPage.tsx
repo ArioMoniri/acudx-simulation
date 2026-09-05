@@ -84,7 +84,7 @@ export function LandingPage() {
         </motion.div>
 
         {/* Right column — a genuine instrument readout, not a fake screenshot */}
-        <motion.div {...heroArtifact} className="lg:pl-2">
+        <motion.div {...heroArtifact} className="lg:ps-2">
           <VitalsMonitorTile className="mx-auto w-full max-w-sm lg:max-w-none" />
         </motion.div>
       </section>
@@ -155,7 +155,7 @@ export function LandingPage() {
             >
               <Link to="/start">{t("landing.closing.primaryCta")}</Link>
             </Button>
-            <span className="ml-auto hidden text-xs text-muted sm:inline">
+            <span className="ms-auto hidden text-xs text-muted sm:inline">
               {t("landing.closing.note", { lang: lang.toUpperCase() })}
             </span>
           </div>

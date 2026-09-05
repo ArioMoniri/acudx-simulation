@@ -269,7 +269,7 @@ export function ActivityTabs({
                   />
                   {t(`ehr.tabs.${camel(key)}`)}
                   {typeof count === "number" && count > 0 ? (
-                    <span className="ml-0.5 rounded-full bg-brand-tint px-1.5 text-[10px] font-semibold tabular-nums text-brand">
+                    <span className="ms-0.5 rounded-full bg-brand-tint px-1.5 text-[10px] font-semibold tabular-nums text-brand">
                       {count}
                     </span>
                   ) : null}

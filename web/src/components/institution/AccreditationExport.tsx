@@ -74,7 +74,7 @@ function FrameworkChip({
       onClick={onToggle}
       aria-pressed={selected}
       className={cn(
-        "flex min-h-11 flex-col items-start gap-0.5 rounded-control border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        "flex min-h-11 flex-col items-start gap-0.5 rounded-control border px-3 py-2 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
         selected
           ? "border-brand bg-brand-tint"
           : "border-border bg-surface hover:bg-bg-subtle",

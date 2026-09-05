@@ -85,9 +85,9 @@ function Section({
           {icon}
         </span>
         {title}
-        {headerRight ? <span className="ml-auto">{headerRight}</span> : null}
+        {headerRight ? <span className="ms-auto">{headerRight}</span> : null}
         {!headerRight && typeof count === "number" && count > 0 ? (
-          <span className="ml-auto rounded-full bg-bg-subtle px-1.5 text-[10px] font-medium text-muted">
+          <span className="ms-auto rounded-full bg-bg-subtle px-1.5 text-[10px] font-medium text-muted">
             {count}
           </span>
         ) : null}
@@ -129,7 +129,7 @@ function MiniVital({
       </p>
       <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-fg">
         {value}
-        {unit ? <span className="ml-0.5 text-[10px] font-medium text-muted">{unit}</span> : null}
+        {unit ? <span className="ms-0.5 text-[10px] font-medium text-muted">{unit}</span> : null}
       </p>
     </div>
   );
