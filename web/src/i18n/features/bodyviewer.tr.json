@@ -1,0 +1,15 @@
+{
+  "bodyviewer": {
+    "hint": "Döndürmek için sürükleyin · yakınlaştırmak için kaydırın",
+    "turnLeft": "Sola çevir",
+    "turnRight": "Sağa çevir",
+    "zoomIn": "Yakınlaştır",
+    "zoomOut": "Uzaklaştır",
+    "angle": {
+      "front": "Ön",
+      "right": "Sağ",
+      "back": "Arka",
+      "left": "Sol"
+    }
+  }
+}

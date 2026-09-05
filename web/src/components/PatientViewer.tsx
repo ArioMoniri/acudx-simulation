@@ -28,6 +28,8 @@ import { X, Pulse } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/cn";
 import { PatientPhoto, type ClinicalSignHint } from "@/components/PatientPhoto";
+import { PatientBodyViewer } from "@/components/PatientBodyViewer";
+import { resolvePatientBody } from "@/data/bodyImages";
 import { resolvePatientVisual } from "@/domain/patientIdentity";
 import { signsFromVitals } from "@/components/ehr/PatientAvatar";
 import {
@@ -303,6 +305,9 @@ export function PatientViewer({
   const { patient } = caseInstance;
   // The ONE unified identity — same distinct face + case name as every other surface.
   const visual = resolvePatientVisual(caseInstance);
+  // A photoreal full-body image set for this patient's demographic, if one exists
+  // — the interactive turn/zoom/examine surface. Falls back to the portrait.
+  const body = resolvePatientBody(caseInstance);
 
   // Focus trap + Escape + scroll lock; restore focus to the trigger on close.
   useEffect(() => {
@@ -404,19 +409,32 @@ export function PatientViewer({
             primary visual here; the realistic photo is the star. */}
         <div className="mt-5 grid gap-4 sm:grid-cols-[minmax(0,320px)_1fr]">
           <Panel label={t("patientviewer.signsLabel")}>
-            {/* Same distinct face + case name as every other surface; the live
-                vitals course tints pallor / cyanosis / diaphoresis / fever /
-                distress and drives the breathing cadence. */}
-            <PatientPhoto
-              sex={visual.sexAtBirth}
-              age={visual.age}
-              photoId={visual.photoId}
-              signs={signs}
-              rr={vitals.rr}
-              alt={t("patientviewer.syntheticNote")}
-              caption={patient.name}
-              className="aspect-[4/5] w-full ring-1 ring-border"
-            />
+            {/* Interactive photoreal full body (turn / zoom / examine) when a set
+                exists for this demographic; otherwise the realistic portrait.
+                Either way the live vitals tint pallor / cyanosis / diaphoresis. */}
+            {body ? (
+              <PatientBodyViewer
+                frames={body.frames}
+                frameLabels={body.frameLabelKeys.map((k, i) =>
+                  t(k, { defaultValue: ["Front", "Right", "Back", "Left"][i] ?? "" }),
+                )}
+                signs={signs}
+                alt={t("patientviewer.syntheticNote")}
+                caption={patient.name}
+                className="aspect-[3/5] w-full ring-1 ring-border"
+              />
+            ) : (
+              <PatientPhoto
+                sex={visual.sexAtBirth}
+                age={visual.age}
+                photoId={visual.photoId}
+                signs={signs}
+                rr={vitals.rr}
+                alt={t("patientviewer.syntheticNote")}
+                caption={patient.name}
+                className="aspect-[4/5] w-full ring-1 ring-border"
+              />
+            )}
           </Panel>
 
           <div className="flex flex-col gap-3 rounded-card border border-border bg-bg-subtle/40 p-4">

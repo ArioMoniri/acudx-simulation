@@ -1,0 +1,15 @@
+{
+  "bodyviewer": {
+    "hint": "Drag to turn · scroll to zoom",
+    "turnLeft": "Turn left",
+    "turnRight": "Turn right",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "angle": {
+      "front": "Front",
+      "right": "Right",
+      "back": "Back",
+      "left": "Left"
+    }
+  }
+}
