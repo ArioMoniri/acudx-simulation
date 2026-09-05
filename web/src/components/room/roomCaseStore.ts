@@ -242,6 +242,40 @@ function defaultExecutor(): ClinicalRole {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Generated-case registry (the room's unique, shared case)                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Each multiplayer room runs a freshly GENERATED, unique case (not a fixed seed
+ * case). The case is minted once by the room creator and carried in the room
+ * snapshot, so every member ends up with the SAME `CaseInstance` here. This
+ * registry is that shared source of truth, keyed by room id.
+ *
+ * `bindRoomCase` — which `RoomPage` still calls with a fallback seed case —
+ * transparently prefers the registered generated case, so the collaborative
+ * vitals + task loop all run on the same unique patient for the whole team.
+ */
+const roomCaseRegistry: Record<string, CaseInstance> = {};
+
+/**
+ * Register the generated case for a room (called by the room store on create
+ * and whenever a remote snapshot brings the shared case in). If the room is
+ * already bound to a DIFFERENT case (e.g. the snapshot arrived after the first
+ * bind), rebind so the team adopts the shared case; there is no in-flight work
+ * to lose at that point (this happens at join time).
+ */
+export function registerRoomCase(roomId: string, caseInstance: CaseInstance): void {
+  roomCaseRegistry[roomId] = caseInstance;
+  const existing = state.rooms[roomId];
+  if (existing && existing.caseInstance.id !== caseInstance.id) {
+    bindRoomCase(roomId, caseInstance, {
+      actingRole: existing.actingRole,
+      aiBackfill: existing.aiBackfill,
+    });
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* Binding                                                                     */
 /* -------------------------------------------------------------------------- */
 
@@ -249,14 +283,19 @@ function defaultExecutor(): ClinicalRole {
  * Bind a room to a case, creating the shared course if absent. Idempotent for a
  * given (roomId, caseId): a re-mount will NOT wipe in-flight tasks. Pass a fresh
  * caseId (or call resetRoomCase first) to start over.
+ *
+ * When a generated case is registered for this room, it takes precedence over
+ * the passed `caseInstance` (a seed fallback), so every member runs the same
+ * unique, shared case.
  */
 export function bindRoomCase(
   roomId: string,
   caseInstance: CaseInstance,
   opts?: { actingRole?: ClinicalRole; aiBackfill?: boolean },
 ): void {
+  const effective = roomCaseRegistry[roomId] ?? caseInstance;
   const existing = state.rooms[roomId];
-  if (existing && existing.caseInstance.id === caseInstance.id) {
+  if (existing && existing.caseInstance.id === effective.id) {
     // Keep progress; only reconcile acting role / backfill if explicitly given.
     let next = existing;
     if (opts?.actingRole && opts.actingRole !== existing.actingRole) {
@@ -271,7 +310,7 @@ export function bindRoomCase(
   const actingRole = opts?.actingRole ?? "doctor";
   const fresh: RoomCaseState = {
     roomId,
-    caseInstance,
+    caseInstance: effective,
     startTs: clock(),
     actingRole,
     aiBackfill: opts?.aiBackfill ?? true,
@@ -283,7 +322,7 @@ export function bindRoomCase(
     handoffs: [],
     events: [],
   };
-  const ev = appendEvent(fresh, "bind", actingRole, false, caseInstance.id);
+  const ev = appendEvent(fresh, "bind", actingRole, false, effective.id);
   setRoom(roomId, { ...fresh, events: [ev] });
 }
 

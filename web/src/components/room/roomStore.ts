@@ -22,6 +22,7 @@ import {
   acsFloor,
   ME,
   CLINICAL_ROLE_ORDER,
+  type Participant,
   type Room,
   type Seat,
   type ClinicalRole,
@@ -30,8 +31,17 @@ import {
   type FloorEvent,
   type FloorEventKind,
 } from "@/data/rooms";
-import type { Bilingual } from "@/data/mock";
-import { getSeedCase } from "@/data/seedCases";
+import type { Bilingual, Lang } from "@/data/mock";
+import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
+import type { CaseInstance } from "@/domain/case";
+import { registerRoomCase } from "./roomCaseStore";
+import {
+  connectRoom,
+  disconnect as transportDisconnect,
+  sendSnapshot,
+  type RoomConnectionState,
+  type RoomTransportStatus,
+} from "@/lib/roomTransport";
 
 /* -------------------------------------------------------------------------- */
 /* Runtime shapes                                                              */
@@ -50,6 +60,13 @@ export interface RoomRuntime {
   mine: ClinicalRole | null;
   /** Closed-loop confirmations this device completed (debrief signal). */
   loopsClosedByMe: number;
+  /**
+   * The room's unique, GENERATED case, when it runs one (created / joined
+   * multiplayer rooms). Carried in the room snapshot so every member shares the
+   * same patient; undefined for the static seed rooms (which resolve their case
+   * from `caseId`).
+   */
+  caseInstance?: CaseInstance;
 }
 
 interface StoreState {
@@ -92,9 +109,60 @@ function cloneRoom(room: Room): Room {
   return { ...room, seats: room.seats.map(cloneSeat) };
 }
 
-/** Which role (if any) this device currently sits in. */
+/* -------------------------------------------------------------------------- */
+/* Per-device identity                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * With a real transport, two devices (or two browser tabs) must be told apart so
+ * they can hold DIFFERENT seats — otherwise one taking a seat would vacate the
+ * other's. `ME` is a shared fixture ("You", id `u-me`), so this device seats
+ * itself as `SELF`: a clone of `ME` with a stable, per-tab id. `sessionStorage`
+ * scopes the id to this tab (each tab is a distinct participant) while surviving
+ * a reload (so a reconnect keeps your seat). Falls back to an in-memory id when
+ * storage is unavailable (private mode / SSR).
+ */
+const CLIENT_ID_KEY = "acudx-client-id";
+
+function makeClientId(): string {
+  const rand = Math.random().toString(36).slice(2, 10);
+  const stamp =
+    typeof Date !== "undefined" ? Date.now().toString(36).slice(-4) : "0000";
+  return `me-${rand}${stamp}`;
+}
+
+function resolveClientId(): string {
+  try {
+    if (typeof sessionStorage !== "undefined") {
+      const existing = sessionStorage.getItem(CLIENT_ID_KEY);
+      if (existing) return existing;
+      const fresh = makeClientId();
+      sessionStorage.setItem(CLIENT_ID_KEY, fresh);
+      return fresh;
+    }
+  } catch {
+    /* storage unavailable — fall through to an in-memory id */
+  }
+  return makeClientId();
+}
+
+const CLIENT_ID = resolveClientId();
+
+/** This device's seat identity — `ME` re-keyed so seats stay distinct per tab. */
+const SELF: Participant = { ...ME, id: CLIENT_ID };
+
+/**
+ * Which role (if any) THIS device currently sits in. Matches this device's own
+ * `SELF.id`, and also the legacy `ME.id` so the pre-seated seed rooms (which use
+ * the shared `ME` fixture) still resolve as "mine".
+ */
 function deriveMine(room: Room): ClinicalRole | null {
-  return room.seats.find((s) => s.holder?.id === ME.id)?.role ?? null;
+  return room.seats.find(isMine)?.role ?? null;
+}
+
+/** Is this seat held by THIS device (its own id, or the legacy ME fixture)? */
+function isMine(seat: Seat): boolean {
+  return seat.holder?.id === SELF.id || seat.holder?.id === ME.id;
 }
 
 let joinCounter = 0;
@@ -107,8 +175,6 @@ function makeJoinCode(caseId: string): string {
   }
   return `${stem}-${tail}${(joinCounter += 1) % 10}`;
 }
-
-let roomCounter = 0;
 
 /**
  * A short, believable opening floor for a freshly created room: a structured
@@ -153,7 +219,7 @@ function buildSeats(
   const myRole = CLINICAL_ROLE_ORDER.find((r) => humanRoles.includes(r)) ?? null;
   const seats = CLINICAL_ROLE_ORDER.map<Seat>((role) => {
     if (role === myRole) {
-      return { role, holder: ME, ready: true, teamLead: true };
+      return { role, holder: SELF, ready: true, teamLead: true };
     }
     return { role, holder: null, ready: false, teamLead: false };
   });
@@ -198,10 +264,154 @@ function patch(id: string, next: Partial<RoomRuntime>): void {
   if (next.room) merged.mine = deriveMine(next.room);
   state = { ...state, runtimes: { ...state.runtimes, [id]: merged } };
   emit();
+  // Any local mutation that changes shared room state gets broadcast so the
+  // other members converge (suppressed while applying a remote snapshot).
+  broadcast(id);
 }
 
 function withSeats(room: Room, map: (seat: Seat) => Seat): Room {
   return { ...room, seats: room.seats.map(map) };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Realtime transport: pure relay + snapshot cache (see lib/roomTransport)     */
+/* -------------------------------------------------------------------------- */
+
+/** Wire shape of a room snapshot (device-local fields are intentionally omitted). */
+interface RoomSnapshotWire {
+  v: 1;
+  /** Originating client id (debug aid; the relay itself excludes the sender). */
+  origin: string;
+  room: Room;
+  floor: FloorEvent[];
+  hands: ClinicalRole[];
+  floorHolder: ClinicalRole | null;
+  caseInstance: CaseInstance | null;
+}
+
+/**
+ * The relay channel for a room is its shared JOIN CODE, so a room created on one
+ * device and joined by code on another resolve to the SAME channel and the SAME
+ * deterministic room id (`room-<CODE>`). Seed rooms keep their own ids but still
+ * channel on their join code.
+ */
+function normalizeCode(code: string): string {
+  return code.trim().toUpperCase();
+}
+
+function roomIdForCode(code: string): string {
+  return `room-${normalizeCode(code)}`;
+}
+
+// Single active connection at a time (this device is in one room).
+let activeChannel: string | null = null;
+let activeRoomId: string | null = null;
+/** True while merging a remote snapshot — suppresses the echo re-broadcast. */
+let applyingRemote = false;
+/** Rooms materialized from a code-join that should auto-seat once populated. */
+const pendingJoinSeat = new Set<string>();
+
+// Connection status, surfaced to the UI via `useRoomConnection`.
+let connStatus: RoomTransportStatus = { state: "idle", peers: 0, channel: null };
+const statusListeners = new Set<() => void>();
+
+function emitStatus(): void {
+  for (const l of statusListeners) l();
+}
+
+function setConnStatus(next: RoomTransportStatus): void {
+  connStatus = next;
+  emitStatus();
+}
+
+/** Connect this device to a room's channel (idempotent for the same channel). */
+function connect(roomId: string, code: string): void {
+  const channel = normalizeCode(code);
+  activeChannel = channel;
+  activeRoomId = roomId;
+  connectRoom(channel, {
+    onSnapshot: (data) => applyRemoteSnapshot(channel, data),
+    onStatus: (s) => setConnStatus(s),
+  });
+}
+
+/** Broadcast a room's current shared snapshot to the other members. */
+function broadcast(id: string): void {
+  if (applyingRemote) return;
+  if (activeChannel == null || id !== activeRoomId) return;
+  const rt = state.runtimes[id];
+  if (!rt) return;
+  const wire: RoomSnapshotWire = {
+    v: 1,
+    origin: CLIENT_ID,
+    room: rt.room,
+    floor: rt.floor,
+    hands: rt.hands,
+    floorHolder: rt.floorHolder,
+    caseInstance: rt.caseInstance ?? null,
+  };
+  sendSnapshot(activeChannel, wire);
+}
+
+/**
+ * Merge a snapshot received from another member into local state WITHOUT
+ * re-broadcasting (echo-loop guard via `applyingRemote`). Device-local fields
+ * (`loopsClosedByMe`) are preserved and `mine` is recomputed for THIS device, so
+ * a shared last-write-wins replacement never clobbers per-device seat awareness.
+ */
+function applyRemoteSnapshot(channel: string, raw: unknown): void {
+  const wire = raw as Partial<RoomSnapshotWire> | null;
+  if (!wire || typeof wire !== "object" || !wire.room || !wire.room.id) return;
+  const id = wire.room.id;
+
+  applyingRemote = true;
+  try {
+    // Learn the concrete room id behind this channel (code-join started blind).
+    if (channel === activeChannel) activeRoomId = id;
+
+    const prev = state.runtimes[id];
+    const merged: RoomRuntime = {
+      room: wire.room,
+      floor: wire.floor ?? [],
+      hands: wire.hands ?? [],
+      floorHolder: wire.floorHolder ?? null,
+      mine: deriveMine(wire.room),
+      loopsClosedByMe: prev?.loopsClosedByMe ?? 0,
+      caseInstance: wire.caseInstance ?? prev?.caseInstance,
+    };
+    const order = state.order.includes(id) ? state.order : [id, ...state.order];
+    state = { order, runtimes: { ...state.runtimes, [id]: merged } };
+    emit();
+
+    // Adopt the room's shared, unique case for the collaborative store.
+    if (wire.caseInstance) registerRoomCase(id, wire.caseInstance);
+
+    // A code-joiner takes an available seat once the room is populated. Deferred
+    // so the seat mutation runs OUTSIDE `applyingRemote` and DOES broadcast.
+    if (pendingJoinSeat.has(id) && merged.mine == null) {
+      pendingJoinSeat.delete(id);
+      queueMicrotask(() => joinRoom(id));
+    }
+  } finally {
+    applyingRemote = false;
+  }
+}
+
+/**
+ * Chief-complaint family for each curated seed case, so a room's freshly
+ * generated case matches the presentation the host picked in the dialog.
+ */
+const SEED_FAMILY: Record<string, ChiefComplaintFamily> = {
+  "em-acs-001": "chest-pain",
+  "em-sah-002": "headache",
+  "em-appy-003": "abdominal-pain",
+  "em-pe-004": "dyspnea",
+  "em-panic-005": "chest-pain",
+};
+
+/** The chief-complaint family a seed case id maps to (for constrained generation). */
+export function familyForSeedCase(caseId: string): ChiefComplaintFamily | undefined {
+  return SEED_FAMILY[caseId];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -214,11 +424,29 @@ export function createRoom(config: {
   humanRoles: ClinicalRole[];
   aiBackfill: boolean;
   locale?: RoomLocale;
+  /** Chief-complaint family to constrain generation to (from the dialog). */
+  family?: ChiefComplaintFamily;
+  /** A pre-generated case (else one is minted here). */
+  caseInstance?: CaseInstance;
 }): string {
-  const seedCase = getSeedCase(config.caseId);
-  const chiefComplaint: Bilingual =
-    seedCase?.chiefComplaint ?? { en: "Undifferentiated presentation", tr: "Ayrımlaşmamış tablo" };
-  const id = `local-${config.caseId}-${(roomCounter += 1)}`;
+  const locale = (config.locale ?? "tr") as Lang;
+  // Each room runs a fresh, UNIQUE generated case (not a fixed seed), matched to
+  // the presentation family the host chose. Carried in the snapshot so every
+  // member shares the same patient.
+  const family = config.family ?? familyForSeedCase(config.caseId);
+  const caseInstance: CaseInstance =
+    config.caseInstance ??
+    generateCase(
+      family
+        ? { seedMode: "constrained", chiefComplaint: family, locale }
+        : { seedMode: "random", locale },
+    );
+  const chiefComplaint: Bilingual = caseInstance.chiefComplaint;
+
+  // Deterministic id from the shared join code so a device that joins by code
+  // resolves to the SAME room id (and channel) as the creator.
+  const joinCode = makeJoinCode(config.caseId);
+  const id = roomIdForCode(joinCode);
   const { seats, mine } = buildSeats(
     config.humanRoles.length ? config.humanRoles : ["doctor"],
   );
@@ -228,29 +456,39 @@ export function createRoom(config: {
       en: `Team drill: ${chiefComplaint.en}`,
       tr: `Ekip provası: ${chiefComplaint.tr}`,
     },
+    // Keep the seed template id so the solo history interview stays coherent;
+    // the collaborative store uses the generated case via the registry.
     caseId: config.caseId,
     chiefComplaint,
     status: "open",
     locale: config.locale ?? "tr",
-    host: ME,
-    joinCode: makeJoinCode(config.caseId),
+    host: SELF,
+    joinCode,
     aiBackfill: config.aiBackfill,
-    acuityESI: seedCase?.acuityESI ?? 3,
+    acuityESI: caseInstance.acuityESI,
     seats,
   };
   const runtime: RoomRuntime = {
+    // Use the GENERATED case id so the opening floor is the generic, chief-
+    // complaint-driven handover (the authored ACS transcript is specific to the
+    // ACS seed patient and would not match a freshly generated case).
     room,
-    floor: starterFloor(config.caseId, chiefComplaint),
+    floor: starterFloor(caseInstance.id, chiefComplaint),
     hands: [],
     floorHolder: null,
     mine,
     loopsClosedByMe: 0,
+    caseInstance,
   };
   state = {
     order: [id, ...state.order],
     runtimes: { ...state.runtimes, [id]: runtime },
   };
+  // Register the shared case, then connect + seed the relay so members converge.
+  registerRoomCase(id, caseInstance);
   emit();
+  connect(id, joinCode);
+  broadcast(id);
   return id;
 }
 
@@ -263,28 +501,88 @@ function firstAvailableSeat(room: Room): ClinicalRole | null {
 }
 
 /**
- * Seat this device into an available seat of a room it is not yet in (no-op when
- * already seated, or when every seat is held by a human).
+ * Seat this device into an available seat of a room it is not yet in (no-op on
+ * the seating step when already seated, or when every seat is held by a human).
+ * Also connects the transport so the room syncs across devices, even when it was
+ * entered directly (e.g. from a room card) rather than via a join code.
  */
 export function joinRoom(id: string): void {
   const rt = state.runtimes[id];
-  if (!rt || rt.mine != null) return;
+  if (!rt) return;
+  if (activeRoomId !== id) connect(id, rt.room.joinCode);
+  if (rt.mine != null) return;
   const role = firstAvailableSeat(rt.room);
   if (role) takeSeat(id, role);
 }
 
+/** A minimal, valid room shown while a code-join waits for the host's snapshot. */
+function placeholderRuntime(id: string, code: string): RoomRuntime {
+  const room: Room = {
+    id,
+    title: { en: "Joining room…", tr: "Odaya katılınıyor…" },
+    // Coherent fallback for the solo interview until the snapshot lands.
+    caseId: "em-acs-001",
+    chiefComplaint: {
+      en: "Connecting to the host…",
+      tr: "Sunucuya bağlanılıyor…",
+    },
+    status: "open",
+    locale: "tr",
+    host: SELF,
+    joinCode: code,
+    aiBackfill: true,
+    acuityESI: 3,
+    seats: CLINICAL_ROLE_ORDER.map<Seat>((role) => ({
+      role,
+      holder: null,
+      ready: false,
+      teamLead: false,
+    })),
+  };
+  return {
+    room,
+    floor: [],
+    hands: [],
+    floorHolder: null,
+    mine: null,
+    loopsClosedByMe: 0,
+  };
+}
+
 /**
  * Resolve a join code to a room id and seat this device into the first seat a
- * teammate can take (an open or AI-held seat). Returns null for an unknown code.
+ * teammate can take (an open or AI-held seat).
+ *
+ * A room hosted on ANOTHER device (or another tab) is not present locally, so we
+ * subscribe to its channel (= the code) and let the relay's cached snapshot
+ * materialize it, auto-seating once it arrives. This is optimistic: an unknown /
+ * unreachable code simply lands on a quiet "waiting" room rather than throwing.
+ * Returns null only for empty input.
  */
 export function joinByCode(code: string): string | null {
-  const wanted = code.trim().toUpperCase();
+  const wanted = normalizeCode(code);
   if (!wanted) return null;
-  const id = state.order.find(
-    (rid) => state.runtimes[rid]?.room.joinCode.toUpperCase() === wanted,
+
+  // 1) Already present locally (a seed room, or one created on this device).
+  const localId = state.order.find(
+    (rid) => normalizeCode(state.runtimes[rid]?.room.joinCode ?? "") === wanted,
   );
-  if (!id) return null;
-  joinRoom(id);
+  if (localId) {
+    joinRoom(localId);
+    return localId;
+  }
+
+  // 2) Remote room: materialize a placeholder + subscribe; the snapshot fills it.
+  const id = roomIdForCode(wanted);
+  if (!state.runtimes[id]) {
+    state = {
+      order: [id, ...state.order],
+      runtimes: { ...state.runtimes, [id]: placeholderRuntime(id, wanted) },
+    };
+    emit();
+  }
+  pendingJoinSeat.add(id);
+  connect(id, wanted);
   return id;
 }
 
@@ -297,8 +595,8 @@ export function takeSeat(id: string, role: ClinicalRole): void {
   const rt = state.runtimes[id];
   if (!rt) return;
   const room = withSeats(rt.room, (seat) => {
-    if (seat.role === role) return { ...seat, holder: ME, ready: true };
-    if (seat.holder?.id === ME.id) return { ...seat, holder: null, ready: false };
+    if (seat.role === role) return { ...seat, holder: SELF, ready: true };
+    if (isMine(seat)) return { ...seat, holder: null, ready: false };
     return seat;
   });
   patch(id, { room });
@@ -309,7 +607,7 @@ export function leaveSeat(id: string): void {
   const rt = state.runtimes[id];
   if (!rt) return;
   const room = withSeats(rt.room, (seat) =>
-    seat.holder?.id === ME.id ? { ...seat, holder: null, ready: false } : seat,
+    isMine(seat) ? { ...seat, holder: null, ready: false } : seat,
   );
   patch(id, { room });
 }
@@ -552,4 +850,56 @@ export function useRoomRuntime(id: string | undefined): RoomRuntime | undefined 
 /** Non-reactive lookup (e.g. inside an event handler). */
 export function peekRoom(id: string): RoomRuntime | undefined {
   return state.runtimes[id];
+}
+
+/* -------------------------------------------------------------------------- */
+/* Connection status (for a "Live · N connected" vs "Local" indicator)         */
+/* -------------------------------------------------------------------------- */
+
+export interface RoomConnection {
+  /** True only when this device is live-synced on THIS room. */
+  live: boolean;
+  /** Fine-grained transport state for this room. */
+  state: RoomConnectionState;
+  /** Members in the room channel (including this device) when live. */
+  peers: number;
+}
+
+function subscribeStatus(listener: () => void): () => void {
+  statusListeners.add(listener);
+  return () => {
+    statusListeners.delete(listener);
+  };
+}
+
+function getStatusSnapshot(): RoomTransportStatus {
+  return connStatus;
+}
+
+/**
+ * Reactive connection status for a room, so the UI can show "Live · N connected"
+ * vs "Local". Returns a local/idle status for any room that is not the one this
+ * device is currently synced on.
+ */
+export function useRoomConnection(id: string | undefined): RoomConnection {
+  const s = useSyncExternalStore(
+    subscribeStatus,
+    getStatusSnapshot,
+    getStatusSnapshot,
+  );
+  const onThisRoom = !!id && id === activeRoomId;
+  const live = onThisRoom && s.state === "live";
+  return {
+    live,
+    state: onThisRoom ? s.state : "idle",
+    peers: live ? s.peers : 0,
+  };
+}
+
+/** Leave the active room's channel (stops syncing; safe to call anytime). */
+export function leaveRoomTransport(): void {
+  activeChannel = null;
+  activeRoomId = null;
+  transportDisconnect();
+  setConnStatus({ state: "idle", peers: 0, channel: null });
 }

@@ -8,19 +8,23 @@ import { ROLE_ICON } from "./roleMeta";
 import { CLINICAL_ROLE_ORDER, type ClinicalRole, type RoomLocale } from "@/data/rooms";
 import { seedCases } from "@/data/seedCases";
 import type { Lang } from "@/data/mock";
+import type { ChiefComplaintFamily } from "@/domain/caseGen";
+import { familyForSeedCase } from "./roomStore";
 import { pick } from "@/components/ehr/labels";
 
 export interface CreateRoomDialogProps {
   open: boolean;
   onClose: () => void;
   lang: Lang;
-  /** Called with the chosen case, which roles are human seats (rest AI), the
-   *  AI-backfill toggle, and the shared encounter language for the room. */
+  /** Called with the chosen case template, which roles are human seats (rest AI),
+   *  the AI-backfill toggle, the shared encounter language, and the presentation
+   *  `family` used to generate this room's fresh, unique case. */
   onCreate: (config: {
     caseId: string;
     humanRoles: ClinicalRole[];
     aiBackfill: boolean;
     locale: RoomLocale;
+    family?: ChiefComplaintFamily;
   }) => void;
 }
 
@@ -79,7 +83,15 @@ export function CreateRoomDialog({
   }
 
   function submit() {
-    onCreate({ caseId, humanRoles, aiBackfill, locale });
+    // The picked case is a TEMPLATE: the room mints a fresh, unique patient in
+    // that presentation family, so no two rooms share the same case.
+    onCreate({
+      caseId,
+      humanRoles,
+      aiBackfill,
+      locale,
+      family: familyForSeedCase(caseId),
+    });
   }
 
   const selectedCase = seedCases.find((c) => c.id === caseId);
@@ -147,6 +159,12 @@ export function CreateRoomDialog({
               </Select>
             )}
           </Field>
+          <p className="mt-1.5 text-xs text-muted">
+            {t("rooms.create.uniqueCaseHint", {
+              defaultValue:
+                "A fresh, unique patient is generated for each room and shared with everyone who joins.",
+            })}
+          </p>
         </div>
 
         {/* Role assignment */}
