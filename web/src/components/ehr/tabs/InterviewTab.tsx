@@ -20,8 +20,8 @@ import {
 
 import { EncounterChat } from "@/components/EncounterChat";
 import { GuidanceCard } from "@/components/GuidanceCard";
-import { PatientAvatar3D } from "@/components/avatar3d/PatientAvatar3D";
 import { PatientPhoto } from "@/components/PatientPhoto";
+import { useSpeech } from "@/lib/lipsync";
 import {
   SymptomSummary,
   photoSignsFromVitals,
@@ -955,11 +955,10 @@ function FocusIndicator({ offTask }: { offTask: number }) {
 
 /**
  * PatientPresence — the person the learner is interviewing, shown beside the
- * dialogue. The symptom-aware 3D head lip-syncs each patient reply (`utterance`)
- * via the client-side viseme timeline — no audio, no server GPU — so the patient
- * visibly "talks" as you converse. A voice toggle opts into spoken audio (Web
- * Speech API) for the next reply. A concise live clinical-sign line sits beneath,
- * so the demographic-matched face is always tied to the current vitals.
+ * dialogue: the realistic, demographic-matched, symptom-tinted patient PHOTO,
+ * matched to the case name. Each reply plays a brief "speaking" treatment on the
+ * photo; the voice toggle opts into spoken audio (Web Speech API) for that reply.
+ * A concise live clinical-sign line sits beneath, tied to the current vitals.
  */
 function PatientPresence({
   caseInstance,
@@ -974,13 +973,26 @@ function PatientPresence({
   voiceOn: boolean;
   onToggleVoice: () => void;
 }) {
-  const { t } = useTranslation();
-  // Unified identity + full physiology channel. The realistic photo LEADS (the
-  // person the learner talks to, matched to the case name); a small lip-sync head
-  // below carries the viseme animation + the optional spoken audio (voice toggle).
+  const { t, i18n } = useTranslation();
   const visual = resolvePatientVisual(caseInstance);
   const signs = photoSignsFromVitals(vitals);
-  const speaking = Boolean(utterance && utterance.trim().length > 0);
+
+  // Drive a transient "speaking" state (and the optional spoken audio) from each
+  // reply WITHOUT rendering an avatar: useSpeech runs the timeline so the photo's
+  // speaking treatment plays for the duration of the reply, and — when the voice
+  // toggle is on — voices it via the Web Speech API. voiceOn is read from a ref so
+  // the effect fires once per new reply (a mid-reply toggle applies to the next).
+  const { speak, speaking } = useSpeech();
+  const speakRef = useRef(speak);
+  speakRef.current = speak;
+  const voiceRef = useRef(voiceOn);
+  voiceRef.current = voiceOn;
+  const speechLang = i18n.language?.startsWith("tr") ? "tr" : "en";
+  useEffect(() => {
+    const text = utterance?.trim();
+    if (text) speakRef.current(text, { voice: voiceRef.current, lang: speechLang });
+  }, [utterance, speechLang]);
+
   return (
     <section className="rounded-card border border-border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
@@ -1027,18 +1039,6 @@ function PatientPresence({
           alt={t("patientviewer.syntheticNote")}
           caption={caseInstance.patient.name}
           className="aspect-[4/5] w-full ring-1 ring-border"
-        />
-      </div>
-
-      {/* Secondary: the small lip-sync head — CASE identity now — carries the
-          viseme animation and the optional spoken audio (the voice toggle). */}
-      <div className="mt-2">
-        <PatientAvatar3D
-          patient={caseInstance.patient}
-          profileSeed={caseInstance.seed}
-          utterance={utterance}
-          voice={voiceOn}
-          className="w-full"
         />
       </div>
 
