@@ -17,6 +17,7 @@ import { useLang } from "@/lib/useLang";
 import { useEncounterState } from "@/state/encounterStore";
 import {
   computeCoverage,
+  type Coverage,
   type NextBestAction,
   type WorkupItem,
   type WorkupTiming,
@@ -27,6 +28,16 @@ export interface AttendingTipsProps {
   className?: string;
   /** Whether the card starts expanded. Defaults to open. */
   defaultOpen?: boolean;
+  /**
+   * Optional CONTROLLED guidance state. The encounter already owns a single
+   * guidance switch (EncounterPage → ActivityTabs → InterviewTab). When that
+   * shared value is threaded down to this panel, pass it here so the attending
+   * tips reflect the SAME switch instead of owning a second, unsynced one. When
+   * it is omitted (today's render is `<AttendingTips defaultOpen/>`), the panel
+   * stays on and its local control switches coaching DETAIL — never a duplicate
+   * on/off.
+   */
+  guidanceOn?: boolean;
 }
 
 type TFunc = ReturnType<typeof useTranslation>["t"];
@@ -81,17 +92,29 @@ function nextActionText(nba: NextBestAction, lang: Lang, t: TFunc): string {
 
 /**
  * AttendingTips — a compact "attending physician" coach. It surfaces the single
- * next best action, an outline of what a strong work-up covers (as a DO /
- * consider list with timing nudges like "ECG within 10 min"), and a guide-mode
- * toggle. Dismissible to a small reopen chip. It coaches PROCESS ONLY and never
- * names, ranks, or hints at the diagnosis.
+ * next best action, a LIVE reading of how far the learner's work-up has come
+ * (history / exam / orders covered + red-flag screening), and an on-demand
+ * outline of what a strong work-up covers (DO / consider with timing nudges like
+ * "ECG within 10 min"). Everything reacts to the real encounter log via
+ * `computeCoverage`. Dismissible to a small reopen chip. It coaches PROCESS
+ * ONLY and never names, ranks, or hints at the diagnosis.
+ *
+ * The panel does NOT own a second guidance on/off switch. When the shared
+ * `guidanceOn` is passed it mirrors that master switch; its own toggle instead
+ * controls coaching DETAIL (a focused next-step view vs. the full work-up
+ * outline), which is genuinely useful rather than a show/hide of a static block.
  */
-export function AttendingTips({ className, defaultOpen = true }: AttendingTipsProps) {
+export function AttendingTips({
+  className,
+  defaultOpen = true,
+  guidanceOn,
+}: AttendingTipsProps) {
   const { t } = useTranslation();
   const lang = useLang();
   const state = useEncounterState();
   const [open, setOpen] = useState(defaultOpen);
-  const [guideMode, setGuideMode] = useState(true);
+  // Local control over coaching DETAIL — NOT a second on/off guidance switch.
+  const [detailOpen, setDetailOpen] = useState(true);
 
   const caseInstance = state.caseInstance;
   if (!caseInstance) return null;
@@ -115,10 +138,14 @@ export function AttendingTips({ className, defaultOpen = true }: AttendingTipsPr
     );
   }
 
-  const coverage = computeCoverage(state, caseInstance);
-  const nba = coverage.nextBestAction;
-  const critical = coverage.workup.items.filter((w) => w.critical);
-  const consider = coverage.workup.items.filter((w) => !w.critical);
+  // Mirror the shared guidance switch when the parent drives it. Only false
+  // (an explicit off) silences the coach; undefined keeps it on.
+  const coachingOff = guidanceOn === false;
+
+  const coverage = coachingOff ? null : computeCoverage(state, caseInstance);
+  const nba = coverage?.nextBestAction ?? null;
+  const critical = coverage ? coverage.workup.items.filter((w) => w.critical) : [];
+  const consider = coverage ? coverage.workup.items.filter((w) => !w.critical) : [];
 
   return (
     <Card
@@ -145,14 +172,20 @@ export function AttendingTips({ className, defaultOpen = true }: AttendingTipsPr
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1.5">
-            <span className="eyebrow">{t("guidance3.guide.mode")}</span>
-            <Switch
-              checked={guideMode}
-              onCheckedChange={setGuideMode}
-              aria-label={t("guidance3.guide.mode")}
-            />
-          </label>
+          {!coachingOff ? (
+            <label className="flex items-center gap-1.5">
+              <span className="eyebrow">
+                {t("guidance3.guide.detail", { defaultValue: "Full outline" })}
+              </span>
+              <Switch
+                checked={detailOpen}
+                onCheckedChange={setDetailOpen}
+                aria-label={t("guidance3.guide.detailAria", {
+                  defaultValue: "Show the full work-up outline",
+                })}
+              />
+            </label>
+          ) : null}
           <button
             type="button"
             onClick={() => setOpen(false)}
@@ -164,12 +197,15 @@ export function AttendingTips({ className, defaultOpen = true }: AttendingTipsPr
         </div>
       </div>
 
-      {!guideMode ? (
+      {coachingOff || !coverage ? (
         <p className="mt-3 rounded-control border border-border bg-bg-subtle p-3 text-xs leading-relaxed text-muted">
           {t("guidance3.guide.offBody")}
         </p>
       ) : (
         <>
+          {/* Live coverage — reactive to what the learner has / hasn't done. */}
+          <CoverageProgress coverage={coverage} t={t} />
+
           {/* Next best action */}
           {nba ? (
             <div
@@ -215,8 +251,8 @@ export function AttendingTips({ className, defaultOpen = true }: AttendingTipsPr
             </div>
           ) : null}
 
-          {/* What a strong work-up covers */}
-          {coverage.workup.items.length > 0 ? (
+          {/* What a strong work-up covers — only in "Full outline" detail mode. */}
+          {detailOpen && coverage.workup.items.length > 0 ? (
             <div className="mt-3">
               <SectionLabel>{t("guidance3.workup.title")}</SectionLabel>
               {critical.length > 0 ? (
@@ -242,6 +278,85 @@ export function AttendingTips({ className, defaultOpen = true }: AttendingTipsPr
         </>
       )}
     </Card>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Live coverage progress                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A compact, live readout of how complete the work-up is — a meter plus per-area
+ * counters. Every number comes from `computeCoverage`, so it tracks exactly what
+ * the learner has (and has not) done this encounter.
+ */
+function CoverageProgress({ coverage, t }: { coverage: Coverage; t: TFunc }) {
+  const pct = Math.max(0, Math.min(100, Math.round(coverage.overallPct * 100)));
+  const totalDone =
+    coverage.history.done + coverage.exam.done + coverage.workup.done;
+  const totalExpected =
+    coverage.history.expected + coverage.exam.expected + coverage.workup.expected;
+
+  const groups = [
+    { key: "history", done: coverage.history.done, total: coverage.history.expected },
+    { key: "exam", done: coverage.exam.done, total: coverage.exam.expected },
+    { key: "workup", done: coverage.workup.done, total: coverage.workup.expected },
+  ] as const;
+
+  return (
+    <div className="mt-3 rounded-control border border-border bg-bg-subtle p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="eyebrow">
+          {t("guidance3.guide.progress", { defaultValue: "Your work-up so far" })}
+        </span>
+        <span className="tnum text-xs font-semibold text-fg">
+          {t("guidance3.guide.pct", { defaultValue: "{{pct}}% covered", pct })}
+        </span>
+      </div>
+
+      {/* Meter — reflects overall completeness. */}
+      <div
+        className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-border"
+        role="presentation"
+      >
+        <div
+          className="h-full rounded-pill bg-brand transition-[width] duration-500 ease-out motion-reduce:transition-none"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-3 gap-2">
+        {groups.map((g) => (
+          <div key={g.key} className="min-w-0">
+            <p className="truncate text-[11px] font-medium text-muted">
+              {t(`guidance3.coverage.${g.key}`)}
+            </p>
+            <p className="tnum text-sm font-semibold text-fg">
+              {g.done}
+              <span className="text-subtle">/{g.total}</span>
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-2 text-[11px] text-subtle">
+        {t("guidance3.guide.progressSummary", {
+          defaultValue: "{{done}} of {{expected}} expected steps covered",
+          done: totalDone,
+          expected: totalExpected,
+        })}
+        {coverage.redFlags.total > 0 ? (
+          <>
+            {" · "}
+            {t("guidance3.redflags.title")}{" "}
+            {t("guidance3.redflags.count", {
+              screened: coverage.redFlags.screened,
+              total: coverage.redFlags.total,
+            })}
+          </>
+        ) : null}
+      </p>
+    </div>
   );
 }
 

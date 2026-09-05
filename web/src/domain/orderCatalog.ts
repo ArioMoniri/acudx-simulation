@@ -207,3 +207,43 @@ export function orderTiming(
   const meta = CATEGORY_META[category];
   return { playbackMs: meta.playbackMs, clinicalLabel: meta.clinicalLabel, category };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Serial / repeat ordering                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Whether an order is sensibly repeated over time, plus the realistic cadence. */
+export interface SerialInfo {
+  /** True for tests a clinician trends serially (troponin, lactate, gas, POC). */
+  repeatable: boolean;
+  /** Realistic repeat cadence to hint at (bilingual), or null when not serial. */
+  cadence: Bilingual | null;
+}
+
+/**
+ * Categories whose result meaningfully trends when re-ordered — cardiac markers
+ * (serial troponin), routine chemistry / lactate (repeat bloods), blood gases +
+ * bedside tests (recheck after intervention), and coagulation. Imaging and
+ * cultures are deliberately NOT flagged repeatable (re-scanning / re-culturing
+ * is not a routine trend and only inflates over-ordering).
+ */
+const SERIAL_CADENCE: Partial<Record<OrderCategory, Bilingual>> = {
+  cardiac: { en: "repeat 0 / 1 / 3 h", tr: "tekrar 0 / 1 / 3 sa" },
+  lab: { en: "serial as indicated", tr: "gerektikçe seri" },
+  poc: { en: "recheck as needed", tr: "gerektikçe tekrarla" },
+  coag: { en: "repeat q6–12 h", tr: "tekrar 6–12 sa" },
+};
+
+/**
+ * Resolve whether an order supports serial re-ordering and its realistic
+ * cadence, from the same keyword/kind detection that drives turnaround.
+ */
+export function serialInfo(
+  code: string,
+  kind: ServiceRequestKind,
+  label?: Bilingual,
+): SerialInfo {
+  const category = detectCategory(code, label) ?? kindFallback(kind);
+  const cadence = SERIAL_CADENCE[category] ?? null;
+  return { repeatable: cadence != null, cadence };
+}

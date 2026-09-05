@@ -26,6 +26,7 @@ import type { Bilingual } from "@/data/mock";
 import type { CaseInstance } from "@/domain/case";
 import type { CodeableConcept } from "@/domain/fhir";
 import type { EncounterState } from "@/state/encounterStore";
+import type { GradeBand, GradeResult } from "@/lib/backend";
 import {
   computeProcessMetrics,
   safetyCriticalMisses,
@@ -37,6 +38,52 @@ import { getDiagnosis } from "@/domain/diagnosisCatalog";
 /* -------------------------------------------------------------------------- */
 
 export type DxVerdict = "correct" | "near-miss" | "incorrect";
+
+/**
+ * Why a committed diagnosis was judged a near-miss — drives the case-specific
+ * "why" copy and lets the A&P panel and the debrief explain the miss the same
+ * way. Refines the old raw "same top-level system" test:
+ *   - `listed-differential`: an alternative the case author explicitly listed;
+ *   - `same-category`: shares the correct dx's ICD-10 3-char family (e.g.
+ *     STEMI I21.3 vs NSTEMI I21.4) — a strong, same-disease near-miss;
+ *   - `same-system`: same organ system AND same ICD-10 chapter (weaker).
+ */
+export type NearMissReason =
+  | "listed-differential"
+  | "same-category"
+  | "same-system"
+  | null;
+
+/**
+ * The distilled, display-ready slice of a pod /v1/grade result. The overall band
+ * folds in process domains (communication, professionalism) a reconstructed
+ * transcript can't evidence, so consumers headline `reasoningBand` (the
+ * clinical-reasoning competency) + a real, verified evidence quote instead.
+ */
+export interface GradeInsight {
+  overallBand: GradeBand;
+  /** clinical_reasoning domain band — the diagnosis-reasoning competency. */
+  reasoningBand: GradeBand;
+  /** A verified verbatim quote evidencing the learner's reasoning, if any. */
+  reasoningEvidence?: string;
+  /** The grader graded ≥1 item (not fully degraded / empty transcript). */
+  graded: boolean;
+  model?: string | null;
+}
+
+/**
+ * A diagnosis verdict shared by the A&P `VerdictPanel` and the attending
+ * debrief, so both agree and both can carry the real pod grade when present.
+ */
+export interface DxAssessment {
+  verdict: DxVerdict;
+  /** The case's correct-diagnosis code, so the panel can reveal it on a miss. */
+  correctCode: string;
+  /** For a near-miss, how the commit relates to the ground truth. */
+  nearMissReason: NearMissReason;
+  /** Real pod-graded rubric insight, when a live grade was obtained. */
+  grade?: GradeInsight;
+}
 
 /** A graded red-flag danger sign. `label` is the case's own evidence, resolved
  *  to the active language in the component. */
@@ -89,6 +136,8 @@ export interface Debrief {
   /** The case's own red-flag descriptions, for a teaching reference block. */
   redFlagReference: Bilingual[];
   teachingPoints: TeachingPoint[];
+  /** Real pod rubric insight, when the A&P obtained a live grade (optional). */
+  grade?: GradeInsight;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -100,25 +149,76 @@ function primaryCode(concept: CodeableConcept): string {
   return concept.coding[0]?.code ?? "";
 }
 
+/** ICD-10 3-char category root, e.g. "I21.3" -> "I21", "T78.2XXA" -> "T78". */
+function icdRoot(code: string): string {
+  return (code || "").toUpperCase().replace(/[^A-Z0-9].*$/, "").slice(0, 3);
+}
+
+/** ICD-10 chapter letter, e.g. "I21.3" -> "I". */
+function icdChapter(code: string): string {
+  return (code || "").toUpperCase().charAt(0);
+}
+
 /**
- * Classify the committed diagnosis against the case ground truth — the SAME
- * comparison the A&P VerdictPanel uses: exact match is correct; a listed
- * differential (or a diagnosis in the same clinical system) is a near-miss;
- * anything else is incorrect.
+ * Classify the committed diagnosis against the case ground truth — THE shared
+ * comparison the A&P `VerdictPanel` and the debrief both use, so the two never
+ * disagree. Exact match is correct; anything else is graded by relationship:
+ *   - a listed differential -> near-miss (`listed-differential`);
+ *   - sharing the correct dx's ICD-10 3-char family -> near-miss (`same-category`,
+ *     e.g. STEMI I21.3 vs NSTEMI I21.4) — caught even when NOT listed;
+ *   - same clinical system AND same ICD-10 chapter -> near-miss (`same-system`);
+ *   - otherwise incorrect.
+ *
+ * This is stricter than the old raw same-top-level-system test: a same-system
+ * commit in a different ICD chapter (e.g. syncope R55 for STEMI I21) is no
+ * longer auto-credited as a near-miss. Codes are resolved to catalogue entries
+ * first so an ICD-11/DSM-coded case still compares on canonical ICD-10 roots.
  */
-function classifyDx(
+export function classifyDiagnosis(
   committed: string,
   correctCode: string,
   differentialCodes: ReadonlySet<string>,
-): DxVerdict {
-  if (committed === correctCode) return "correct";
-  if (differentialCodes.has(committed)) return "near-miss";
-  const correctSystem = getDiagnosis(correctCode)?.system;
-  const committedSystem = getDiagnosis(committed)?.system;
-  if (correctSystem && committedSystem && correctSystem === committedSystem) {
-    return "near-miss";
+): DxAssessment {
+  if (committed === correctCode) {
+    return { verdict: "correct", correctCode, nearMissReason: null };
   }
-  return "incorrect";
+  if (differentialCodes.has(committed)) {
+    return { verdict: "near-miss", correctCode, nearMissReason: "listed-differential" };
+  }
+  const correctEntry = getDiagnosis(correctCode);
+  const committedEntry = getDiagnosis(committed);
+  if (correctEntry && committedEntry) {
+    if (icdRoot(correctEntry.icd10) === icdRoot(committedEntry.icd10)) {
+      return { verdict: "near-miss", correctCode, nearMissReason: "same-category" };
+    }
+    if (
+      correctEntry.system === committedEntry.system &&
+      icdChapter(correctEntry.icd10) === icdChapter(committedEntry.icd10)
+    ) {
+      return { verdict: "near-miss", correctCode, nearMissReason: "same-system" };
+    }
+  }
+  return { verdict: "incorrect", correctCode, nearMissReason: null };
+}
+
+/**
+ * Distil a raw pod /v1/grade result into the display-ready `GradeInsight` shared
+ * by the A&P panel and the debrief. Pure + defensive: a degraded / empty grade
+ * yields `graded: false` so callers can fall back to the local verdict alone.
+ */
+export function summariseGrade(grade: GradeResult): GradeInsight {
+  const reasoning = grade.domains.find((d) => d.domain === "clinical_reasoning");
+  const evidenceItem =
+    reasoning?.items.find((it) => it.met && it.evidence) ??
+    reasoning?.items.find((it) => it.evidence);
+  const gradedCount = grade.meta?.graded_count ?? 0;
+  return {
+    overallBand: grade.overall_band,
+    reasoningBand: reasoning?.band ?? "ungraded",
+    ...(evidenceItem?.evidence ? { reasoningEvidence: evidenceItem.evidence } : {}),
+    graded: gradedCount > 0 && grade.overall_band !== "ungraded",
+    model: grade.meta?.model ?? null,
+  };
 }
 
 /** Sim-clock offset (ms) at which the committed diagnosis was set. */
@@ -198,22 +298,31 @@ function buildTeachingPoints(input: TeachingInput): TeachingPoint[] {
  * Build the attending debrief for a completed encounter. Pure — reads only the
  * event-sourced state + the case ground truth. Returns null until a working
  * diagnosis is committed.
+ *
+ * `assessment` (optional) lets the A&P surface hand in the verdict it already
+ * computed — including the real pod grade — so the debrief and the A&P agree and
+ * both carry the backend grade when present. When omitted, the verdict is
+ * derived from the same shared `classifyDiagnosis` helper, so the two paths are
+ * always consistent.
  */
 export function buildDebrief(
   state: EncounterState,
   caseInstance: CaseInstance,
+  assessment?: DxAssessment,
 ): Debrief | null {
   const committed = state.committedDiagnosis;
   if (!committed) return null;
 
   const metrics = computeProcessMetrics(state.events, caseInstance);
 
-  /* ---- Diagnosis verdict -------------------------------------------------- */
+  /* ---- Diagnosis verdict (shared with the A&P VerdictPanel) --------------- */
   const correctCode = primaryCode(caseInstance.correctDiagnosis.code);
   const differentialCodes = new Set(
     caseInstance.differentials.map((c) => primaryCode(c.code)),
   );
-  const dxVerdict = classifyDx(committed, correctCode, differentialCodes);
+  const resolved =
+    assessment ?? classifyDiagnosis(committed, correctCode, differentialCodes);
+  const dxVerdict = resolved.verdict;
   const workingEntry = [...state.problemList]
     .reverse()
     .find((p) => p.role === "working");
@@ -301,5 +410,6 @@ export function buildDebrief(
     safetyMiss,
     redFlagReference: caseInstance.redFlags,
     teachingPoints,
+    ...(resolved.grade ? { grade: resolved.grade } : {}),
   };
 }

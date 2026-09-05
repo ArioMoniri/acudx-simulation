@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ClipboardText,
@@ -25,6 +25,7 @@ import {
   photoSignsFromVitals,
 } from "@/components/PatientViewer";
 import { resolvePatientVisual } from "@/domain/patientIdentity";
+import { useRoomsStore } from "@/components/room/roomStore";
 import { EncounterClock } from "./EncounterClock";
 import { conceptText, pick } from "./labels";
 import {
@@ -40,6 +41,17 @@ export interface StoryboardProps {
   caseInstance: CaseInstance;
   lang: Lang;
   affectLabel: string;
+}
+
+/** One row of the care-team roster (a real room seat, or a solo bedside role). */
+interface CareMember {
+  key: string;
+  /** Display name ("You", a teammate's name, or a role-based label). */
+  name: string;
+  /** Localized role line, shown muted on the right. */
+  role: string;
+  /** Optional trailing tag: team lead, or AI-backed. */
+  tag?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -180,6 +192,65 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
   const clinicalSigns = photoSignsFromVitals(vitals);
   const sexLabel = t(`common.${patient.gender === "female" ? "female" : "male"}`);
   const acuityTone = `esi-${caseInstance.acuityESI}` as StatusTone;
+
+  // Reactive care team. When THIS encounter is being run in a multiplayer room
+  // (matched by the room's shared case id), reflect the real seated roster —
+  // names, roles, who is you, who is AI-backed, who holds the team-lead hat.
+  // Solo, fall back to an honest, acuity-appropriate bedside context. Reading the
+  // rooms store is graceful: no matching room ⇒ the solo branch.
+  const roomsStore = useRoomsStore();
+  const roomRuntime = useMemo(
+    () =>
+      roomsStore.order
+        .map((rid) => roomsStore.runtimes[rid])
+        .find((rt) => rt?.caseInstance?.id === caseInstance.id),
+    [roomsStore, caseInstance.id],
+  );
+  // Only treat it as a room roster when at least one seat is actually held.
+  const inRoom = Boolean(roomRuntime?.room.seats.some((s) => s.holder != null));
+  const careTeam = useMemo<CareMember[]>(() => {
+    if (roomRuntime && inRoom) {
+      const members: CareMember[] = [];
+      for (const seat of roomRuntime.room.seats) {
+        const holder = seat.holder;
+        if (!holder) continue; // empty seat — nobody to show
+        const isMine = seat.role === roomRuntime.mine;
+        members.push({
+          key: seat.role,
+          name: isMine ? t("ehr.careTeam.you", { defaultValue: "You" }) : holder.name,
+          role: t(`rooms.role.${seat.role}`, { defaultValue: seat.role }),
+          tag: seat.teamLead
+            ? t("rooms.teamLead.hat", { defaultValue: "Team lead" })
+            : holder.kind === "ai"
+              ? t("rooms.seat.aiHeld", { defaultValue: "AI" })
+              : undefined,
+        });
+      }
+      return members;
+    }
+
+    // Solo — honest bedside context, widened for a resuscitation-acuity patient.
+    const solo: CareMember[] = [
+      {
+        key: "you",
+        name: t("ehr.careTeam.you", { defaultValue: "You" }),
+        role: t("ehr.careTeam.roleClinician", { defaultValue: "Treating clinician" }),
+      },
+      {
+        key: "nurse",
+        name: t("ehr.careTeam.nurse", { defaultValue: "Triage nurse" }),
+        role: t("ehr.careTeam.roleNurse", { defaultValue: "Nursing" }),
+      },
+    ];
+    if (caseInstance.acuityESI <= 2) {
+      solo.push({
+        key: "charge",
+        name: t("ehr.careTeam.charge", { defaultValue: "Charge nurse" }),
+        role: t("ehr.careTeam.roleResus", { defaultValue: "Resuscitation support" }),
+      });
+    }
+    return solo;
+  }, [roomRuntime, inRoom, caseInstance.acuityESI, t]);
 
   const allergyTexts = allergies.map((a) => conceptText(a.code, lang));
   const isNkda =
@@ -417,20 +488,37 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
         )}
       </Section>
 
-      {/* Care team (fixed context) */}
+      {/* Care team — the real room roster when this encounter runs in a room,
+          otherwise an honest, acuity-appropriate solo bedside context. */}
       <Section
         icon={<UsersThree weight="bold" className="h-3.5 w-3.5" />}
         title={t("ehr.storyboard.careTeam")}
+        headerRight={
+          inRoom ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">
+              <span
+                aria-hidden
+                className="h-1.5 w-1.5 rounded-full bg-[color:var(--state-normal)] motion-safe:animate-pulse"
+              />
+              {t("ehr.careTeam.inRoom", { defaultValue: "In room" })}
+            </span>
+          ) : undefined
+        }
       >
         <ul className="flex flex-col gap-1 text-xs text-fg">
-          <li className="flex items-center justify-between gap-2">
-            <span>{t("ehr.careTeam.you")}</span>
-            <span className="text-muted">{t("ehr.careTeam.roleClinician")}</span>
-          </li>
-          <li className="flex items-center justify-between gap-2">
-            <span>{t("ehr.careTeam.nurse")}</span>
-            <span className="text-muted">{t("ehr.careTeam.roleNurse")}</span>
-          </li>
+          {careTeam.map((m) => (
+            <li key={m.key} className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate">{m.name}</span>
+              <span className="flex shrink-0 items-center gap-1.5">
+                {m.tag ? (
+                  <span className="rounded-full bg-bg-subtle px-1.5 py-0.5 text-[10px] font-medium text-muted">
+                    {m.tag}
+                  </span>
+                ) : null}
+                <span className="text-muted">{m.role}</span>
+              </span>
+            </li>
+          ))}
         </ul>
       </Section>
 

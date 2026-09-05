@@ -11,6 +11,7 @@ import {
   Timer,
   CheckCircle,
   Plus,
+  ArrowClockwise,
   MagnifyingGlass,
   X,
   type Icon,
@@ -28,7 +29,7 @@ import {
   TabsTrigger,
   TextInput,
 } from "@/components/ui";
-import { orderTiming } from "@/domain/orderCatalog";
+import { orderTiming, serialInfo } from "@/domain/orderCatalog";
 import { TREATMENT_CATALOG, type TreatmentOption } from "@/domain/treatments";
 import {
   ORDERABLES_BY_GROUP,
@@ -136,6 +137,11 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
     o.code.toLowerCase().includes(q);
 
   const placedCodes = new Set(state.orders.map((o) => o.code));
+  const orderCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const o of state.orders) m.set(o.code, (m.get(o.code) ?? 0) + 1);
+    return m;
+  }, [state.orders]);
   const givenCounts = useMemo(() => {
     const m = new Map<string, number>();
     for (const tr of state.treatments) m.set(tr.code, (m.get(tr.code) ?? 0) + 1);
@@ -234,6 +240,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
                         orderable={o}
                         lang={lang}
                         placed={placedCodes.has(o.code)}
+                        count={orderCounts.get(o.code) ?? 0}
                         rubric={rubric.get(o.code)}
                       />
                     ))}
@@ -326,21 +333,33 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
 /* Rows                                                                        */
 /* -------------------------------------------------------------------------- */
 
-/** One catalog order: name, turnaround, indicated/low-value flag, Order button. */
+/**
+ * One catalog order: name, turnaround, indicated/low-value flag, Order button.
+ * A serial-capable test (troponin, lactate, gas, POC — see orderCatalog
+ * `serialInfo`) stays orderable AFTER it is first placed: it shows a repeat
+ * count + realistic cadence hint and a Repeat button, so the learner can trend
+ * it and the Results surface renders the serial trend. Non-serial tests keep the
+ * single "Ordered" state to discourage duplicate CTs / cultures.
+ */
 function OrderRow({
   orderable,
   lang,
   placed,
+  count,
   rubric,
 }: {
   orderable: Orderable;
   lang: Lang;
   placed: boolean;
+  count: number;
   rubric?: "indicated" | "lowValue";
 }) {
   const { t } = useTranslation();
   const name = pick(orderable.label, lang);
   const eta = turnaround(orderable, lang);
+  const serial = serialInfo(orderable.code, orderable.kind === "imaging" ? "imaging" : "laboratory", orderable.label);
+  const place = () => placeOrder(orderable.code, { en: orderable.label.en, tr: orderable.label.tr });
+  const canRepeat = placed && serial.repeatable;
 
   return (
     <li className="flex items-center justify-between gap-3 py-2">
@@ -350,6 +369,16 @@ function OrderRow({
           <Badge tone="neutral" icon={<Timer weight="bold" className="h-3 w-3" aria-hidden />}>
             {eta}
           </Badge>
+          {placed && count > 1 ? (
+            <Badge tone="brand" dot aria-label={t("orders2.order.timesOrderedAria", { count, defaultValue: "ordered {{count}} times" })}>
+              {t("orders2.order.timesOrdered", { count, defaultValue: "×{{count}}" })}
+            </Badge>
+          ) : null}
+          {placed && serial.repeatable && serial.cadence ? (
+            <Badge tone="neutral" variant="outline">
+              {pick(serial.cadence, lang)}
+            </Badge>
+          ) : null}
           {rubric === "indicated" ? (
             <Badge
               tone="normal"
@@ -372,24 +401,32 @@ function OrderRow({
       </div>
       <Button
         size="sm"
-        variant={placed ? "ghost" : "secondary"}
-        disabled={placed}
-        onClick={() => placeOrder(orderable.code, { en: orderable.label.en, tr: orderable.label.tr })}
+        variant={placed && !canRepeat ? "ghost" : "secondary"}
+        disabled={placed && !canRepeat}
+        onClick={place}
         leadingIcon={
-          placed ? (
+          canRepeat ? (
+            <ArrowClockwise weight="bold" className="h-3.5 w-3.5" aria-hidden />
+          ) : placed ? (
             <CheckCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
           ) : (
             <Plus weight="bold" className="h-3.5 w-3.5" aria-hidden />
           )
         }
         aria-label={
-          placed
-            ? t("orders2.order.orderedAria", { name })
-            : t("orders2.order.placeAria", { name })
+          canRepeat
+            ? t("orders2.order.repeatAria", { name, defaultValue: "Repeat {{name}}" })
+            : placed
+              ? t("orders2.order.orderedAria", { name })
+              : t("orders2.order.placeAria", { name })
         }
         className="shrink-0"
       >
-        {placed ? t("orders2.order.ordered") : t("orders2.order.place")}
+        {canRepeat
+          ? t("orders2.order.repeat", { defaultValue: "Repeat" })
+          : placed
+            ? t("orders2.order.ordered")
+            : t("orders2.order.place")}
       </Button>
     </li>
   );

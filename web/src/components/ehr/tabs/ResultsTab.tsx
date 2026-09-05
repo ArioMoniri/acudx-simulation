@@ -7,6 +7,9 @@ import {
   Scan,
   Virus,
   ShieldWarning,
+  TrendUp,
+  TrendDown,
+  Minus,
 } from "@phosphor-icons/react";
 
 import { Card, Switch } from "@/components/ui";
@@ -30,9 +33,11 @@ import type { PlacedOrder } from "@/state/encounterStore";
 import {
   getOrderableByCode,
   isPanelOrder,
-  syntheticNormalResult,
+  syntheticResultAt,
+  evolveAnchor,
   type Orderable,
 } from "@/domain/orderables";
+import type { AdministeredTreatment } from "@/domain/clinicalCourse";
 import type { CaseInstance, ImagingResult, LabResult } from "@/domain/case";
 import type { Observation } from "@/domain/fhir";
 import type { Bilingual, Lang } from "@/data/mock";
@@ -66,6 +71,42 @@ interface PanelGroup {
   resultedAt: number;
   clinicalEta: string;
   rows: ResultRow[];
+  abnormalCount: number;
+}
+
+/** One draw of one analyte in a serial trend. */
+interface TrendPoint {
+  drawMs: number;
+  resultedAt: number;
+  observation: Observation;
+  synthetic: boolean;
+}
+
+/** One analyte trended across serial draws (sparkline + delta). */
+interface AnalyteTrend {
+  code: string;
+  label: Bilingual;
+  unit?: string;
+  ref?: string;
+  decimals: number;
+  numeric: boolean;
+  points: TrendPoint[];
+  latest: Observation;
+  delta?: number;
+  direction: "up" | "down" | "flat";
+  anyAbnormal: boolean;
+  anySynthetic: boolean;
+}
+
+/** A resulted lab/gas/POC order that was ordered SERIALLY → a trend table. */
+interface TrendGroup {
+  key: string;
+  title: Bilingual;
+  drawCount: number;
+  orderedFirst: number;
+  resultedLast: number;
+  clinicalEta: string;
+  analytes: AnalyteTrend[];
   abnormalCount: number;
 }
 
@@ -175,80 +216,127 @@ export function ResultsTab({ lang }: ResultsTabProps) {
     return m;
   }, [groundLabs]);
 
-  const resultedAtOf = (code: string, order: PlacedOrder): number =>
-    state.results.find((r) => r.code === code)?.at ?? order.resultsReadyAt;
+  const treatments = state.treatments;
 
-  // Resulted lab / blood-gas / POC orders → complete analyte panels, merging
-  // authored ground-truth analytes over the synthetic within-normal panel.
-  const { panelGroups, microEntries, syntheticImaging } = useMemo(() => {
+  // Result timestamps per code, chronological (one per resolved ground-truth draw).
+  const resultsByCode = useMemo(() => {
+    const m = new Map<string, number[]>();
+    for (const r of state.results) {
+      const arr = m.get(r.code) ?? [];
+      arr.push(r.at);
+      m.set(r.code, arr);
+    }
+    for (const arr of m.values()) arr.sort((a, b) => a - b);
+    return m;
+  }, [state.results]);
+
+  // Resulted orders, GROUPED BY CODE so serial re-orders collapse into a trend.
+  // Each draw's synthetic/ground-truth value is tied to the clinical course at
+  // its placedAt (draw time) + treatments, so re-ordering later trends.
+  const { panelGroups, trendGroups, microEntries, syntheticImaging } = useMemo(() => {
     const panels: PanelGroup[] = [];
+    const trends: TrendGroup[] = [];
     const micro: MicroEntry[] = [];
     const imaging: ImagingEntry[] = [];
-    if (!caseInstance) return { panelGroups: panels, microEntries: micro, syntheticImaging: imaging };
+    if (!caseInstance)
+      return { panelGroups: panels, trendGroups: trends, microEntries: micro, syntheticImaging: imaging };
 
-    for (const order of state.orders) {
-      if (!isResulted(order)) continue;
-      const orderable = orderableFor(order);
-      const ground = groundByCode.get(order.code) ?? [];
-      const clinicalEta = lang === "tr" ? order.clinicalLabelTr : order.clinicalLabelEn;
-      const resultedAt = resultedAtOf(order.code, order);
+    const groups = new Map<string, PlacedOrder[]>();
+    for (const o of state.orders) {
+      if (!isResulted(o)) continue;
+      const arr = groups.get(o.code) ?? [];
+      arr.push(o);
+      groups.set(o.code, arr);
+    }
+
+    for (const [code, rawDraws] of groups) {
+      const draws = [...rawDraws].sort((a, b) => a.placedAt - b.placedAt);
+      const last = draws[draws.length - 1];
+      const orderable = orderableFor(draws[0]);
+      const ground = groundByCode.get(code) ?? [];
+      const clinicalEta = lang === "tr" ? last.clinicalLabelTr : last.clinicalLabelEn;
+      const times = resultsByCode.get(code) ?? [];
+      const resultedAtAt = (i: number): number => times[i] ?? draws[i].resultsReadyAt;
 
       // Imaging — real representative image (ground truth handled separately).
-      if (orderIsImaging(order)) {
+      if (orderIsImaging(draws[0])) {
         if (!ground.length) {
-          const syn = syntheticNormalResult(orderable, caseInstance);
-          imaging.push(buildSyntheticImaging(order, orderable, syn.report?.conclusion, lang));
+          const syn = syntheticResultAt(orderable, caseInstance, { dynamic: true });
+          imaging.push(
+            buildSyntheticImaging(last, orderable, syn.report?.conclusion, lang, resultedAtAt(draws.length - 1)),
+          );
         }
         continue;
       }
 
-      // Microbiology / serology — narrative report.
+      // Microbiology / serology — narrative report (latest draw).
       if (orderable.category === "micro") {
+        const resultedAt = resultedAtAt(draws.length - 1);
         if (ground.length) {
           const g = ground[0];
           micro.push({
-            id: `micro-${order.code}`,
+            id: `micro-${code}`,
             title: orderable.label,
             conclusion: g.report?.conclusion ?? g.observation.valueString,
-            orderedAt: order.placedAt,
+            orderedAt: last.placedAt,
             resultedAt,
             clinicalEta,
             synthetic: false,
             abnormal: ground.some((l) => isAbnormal(l.observation)),
           });
         } else {
-          const syn = syntheticNormalResult(orderable, caseInstance);
+          const syn = syntheticResultAt(orderable, caseInstance, {
+            dynamic: true,
+            drawMs: last.placedAt,
+            treatments,
+          });
           micro.push({
-            id: `micro-${order.code}`,
+            id: `micro-${code}`,
             title: orderable.label,
             conclusion: syn.report?.conclusion,
-            orderedAt: order.placedAt,
+            orderedAt: last.placedAt,
             resultedAt,
             clinicalEta,
             synthetic: true,
-            abnormal: false,
+            abnormal: !!syn.abnormal,
           });
         }
         continue;
       }
 
-      // Labs / blood gas / POC — a complete, per-analyte panel.
-      const rows = buildPanelRows(order.code, orderable, ground, caseInstance);
-      if (rows.length === 0) continue;
-      panels.push({
-        key: order.code,
-        title: orderable.label,
-        orderedAt: order.placedAt,
-        resultedAt,
-        clinicalEta,
-        rows,
-        abnormalCount: rows.filter((r) => isAbnormal(r.observation)).length,
-      });
+      // Labs / blood gas / POC — per-draw complete analyte panels.
+      const perDraw = draws.map((o, i) => ({
+        order: o,
+        resultedAt: resultedAtAt(i),
+        rows: buildDrawRows(code, orderable, ground, caseInstance, {
+          drawMs: o.placedAt,
+          treatments,
+          drawIndex: i,
+        }),
+      }));
+      const populated = perDraw.filter((d) => d.rows.length > 0);
+      if (populated.length === 0) continue;
+
+      if (populated.length === 1) {
+        const d0 = populated[0];
+        panels.push({
+          key: code,
+          title: orderable.label,
+          orderedAt: d0.order.placedAt,
+          resultedAt: d0.resultedAt,
+          clinicalEta,
+          rows: d0.rows,
+          abnormalCount: d0.rows.filter((r) => isAbnormal(r.observation)).length,
+        });
+      } else {
+        const tg = buildTrendGroup(code, orderable.label, clinicalEta, populated);
+        if (tg) trends.push(tg);
+      }
     }
 
-    return { panelGroups: panels, microEntries: micro, syntheticImaging: imaging };
+    return { panelGroups: panels, trendGroups: trends, microEntries: micro, syntheticImaging: imaging };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseInstance, state.orders, state.results, groundByCode, nowMs, lang]);
+  }, [caseInstance, state.orders, state.results, treatments, groundByCode, resultsByCode, nowMs, lang]);
 
   // Ground-truth imaging → unified entries (with dx-derived image queries).
   const groundImagingEntries = useMemo<ImagingEntry[]>(() => {
@@ -278,13 +366,22 @@ export function ResultsTab({ lang }: ResultsTabProps) {
         .map((g) => ({ ...g, rows: g.rows.filter((r) => isAbnormal(r.observation)) }))
         .filter((g) => g.rows.length > 0)
     : panelGroups;
+  const shownTrends = abnormalOnly
+    ? trendGroups
+        .map((g) => ({ ...g, analytes: g.analytes.filter((a) => a.anyAbnormal) }))
+        .filter((g) => g.analytes.length > 0)
+    : trendGroups;
   const shownMicro = abnormalOnly ? microEntries.filter((e) => e.abnormal) : microEntries;
   const shownImaging = abnormalOnly ? imagingEntries.filter((e) => !e.synthetic) : imagingEntries;
 
   const nothingOrdered = state.orders.length === 0;
   const resultedOrders = state.orders.filter(isResulted).length;
   const nothingAbnormalShown =
-    abnormalOnly && shownPanels.length === 0 && shownMicro.length === 0 && shownImaging.length === 0;
+    abnormalOnly &&
+    shownPanels.length === 0 &&
+    shownTrends.length === 0 &&
+    shownMicro.length === 0 &&
+    shownImaging.length === 0;
 
   const summaryReveal = useReveal();
   const criticalReveal = useReveal(0.04);
@@ -416,14 +513,17 @@ export function ResultsTab({ lang }: ResultsTabProps) {
         </Card>
       ) : null}
 
-      {/* Laboratory results — one complete analyte panel per resulted order */}
-      {shownPanels.length > 0 ? (
+      {/* Laboratory results — serial trends first, then single-draw panels */}
+      {shownPanels.length > 0 || shownTrends.length > 0 ? (
         <Card padding="md">
           <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-fg">
             <Flask weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("ehr.results.labsHeading")}
           </h3>
           <div className="flex flex-col gap-5">
+            {shownTrends.map((g) => (
+              <TrendPanel key={`trend-${g.key}`} group={g} lang={lang} />
+            ))}
             {shownPanels.map((g) => (
               <PanelTable key={g.key} group={g} lang={lang} />
             ))}
@@ -468,36 +568,48 @@ export function ResultsTab({ lang }: ResultsTabProps) {
 /* Panel builders                                                              */
 /* -------------------------------------------------------------------------- */
 
+/** Draw context: sample time + treatments-so-far + which serial draw this is. */
+interface DrawCtx {
+  drawMs: number;
+  treatments: AdministeredTreatment[];
+  drawIndex: number;
+}
+
 /**
- * Build the rows for one resulted lab/gas/POC order. A panel order expands to
- * its full analyte set; authored ground-truth analytes replace the matching
- * synthetic normal (per-analyte precedence), and any authored analyte outside
- * the modelled panel is appended. A non-panel (bespoke) code shows only its
- * authored ground truth, or a single generic within-normal line if none.
+ * Build the rows for ONE draw of a resulted lab/gas/POC order. A panel order
+ * expands to its full analyte set; authored ground-truth analytes replace the
+ * matching synthetic value (per-analyte precedence). The synthetic values are
+ * condition-tuned AND tied to the clinical course at the draw time. On serial
+ * re-draws (`drawIndex > 0`) an authored analyte is re-derived from its authored
+ * value as an anchor via {@link evolveAnchor}, so the trend actually moves.
  */
-function buildPanelRows(
+function buildDrawRows(
   code: string,
   orderable: Orderable,
   ground: LabResult[],
   caseInstance: CaseInstance,
+  ctx: DrawCtx,
 ): ResultRow[] {
+  const first = ctx.drawIndex === 0;
   const groundByAnalyte = new Map<string, Observation>();
   for (const l of ground) {
     const key = analyteCode(l.observation);
     if (!groundByAnalyte.has(key)) groundByAnalyte.set(key, l.observation);
   }
+  const groundRow = (obs: Observation, key: string): ResultRow =>
+    first
+      ? { id: `${code}-${key}`, observation: obs, synthetic: false }
+      : { id: `${code}-${key}-d${ctx.drawIndex}`, observation: evolveAnchor(obs, caseInstance, ctx), synthetic: true };
 
   if (!isPanelOrder(code)) {
-    // Bespoke / uncatalogued code: prefer authored ground truth, else a single
-    // synthetic within-normal line.
-    if (ground.length > 0) {
-      return ground.map((l) => ({ id: `${code}-${l.id}`, observation: l.observation, synthetic: false }));
-    }
-    const syn = syntheticNormalResult(orderable, caseInstance);
+    // Bespoke / uncatalogued code: authored ground truth (evolved on re-draws),
+    // else a single condition/time-tuned synthetic line.
+    if (ground.length > 0) return ground.map((l) => groundRow(l.observation, l.id));
+    const syn = syntheticResultAt(orderable, caseInstance, { dynamic: true, ...ctx });
     return syn.observations.map((obs) => ({ id: `${code}-${obs.id}`, observation: obs, synthetic: true }));
   }
 
-  const syn = syntheticNormalResult(orderable, caseInstance);
+  const syn = syntheticResultAt(orderable, caseInstance, { dynamic: true, ...ctx });
   const rows: ResultRow[] = [];
   const consumed = new Set<string>();
 
@@ -506,7 +618,7 @@ function buildPanelRows(
     const gt = groundByAnalyte.get(key);
     if (gt) {
       consumed.add(key);
-      rows.push({ id: `${code}-${key}`, observation: gt, synthetic: false });
+      rows.push(groundRow(gt, key));
     } else {
       rows.push({ id: `${code}-${obs.id}`, observation: obs, synthetic: true });
     }
@@ -517,10 +629,95 @@ function buildPanelRows(
     const key = analyteCode(l.observation);
     if (consumed.has(key)) continue;
     consumed.add(key);
-    rows.push({ id: `${code}-extra-${l.id}`, observation: l.observation, synthetic: false });
+    rows.push(
+      first
+        ? { id: `${code}-extra-${l.id}`, observation: l.observation, synthetic: false }
+        : { id: `${code}-extra-${l.id}-d${ctx.drawIndex}`, observation: evolveAnchor(l.observation, caseInstance, ctx), synthetic: true },
+    );
   }
 
   return rows;
+}
+
+/** Trailing-decimal count of a numeric value, for consistent trend formatting. */
+function decimalsOf(v: number | undefined): number {
+  if (typeof v !== "number") return 0;
+  const s = String(v);
+  const i = s.indexOf(".");
+  return i < 0 ? 0 : s.length - i - 1;
+}
+
+/**
+ * Fold a code's serial draws into a per-analyte trend: each analyte carries its
+ * value at every draw (aligned by analyte code), the latest value, and the delta
+ * / direction from first to last draw for the sparkline + change indicator.
+ */
+function buildTrendGroup(
+  code: string,
+  title: Bilingual,
+  clinicalEta: string,
+  perDraw: Array<{ order: PlacedOrder; resultedAt: number; rows: ResultRow[] }>,
+): TrendGroup | null {
+  const seen = new Set<string>();
+  const analyteOrder: string[] = [];
+  for (const d of perDraw) {
+    for (const r of d.rows) {
+      const ac = analyteCode(r.observation);
+      if (!seen.has(ac)) {
+        seen.add(ac);
+        analyteOrder.push(ac);
+      }
+    }
+  }
+
+  const analytes: AnalyteTrend[] = [];
+  for (const ac of analyteOrder) {
+    const points: TrendPoint[] = [];
+    for (const d of perDraw) {
+      const row = d.rows.find((r) => analyteCode(r.observation) === ac);
+      if (!row) continue;
+      points.push({ drawMs: d.order.placedAt, resultedAt: d.resultedAt, observation: row.observation, synthetic: row.synthetic });
+    }
+    if (points.length === 0) continue;
+    const latest = points[points.length - 1].observation;
+    const firstObs = points[0].observation;
+    const lv = latest.valueQuantity?.value;
+    const fv = firstObs.valueQuantity?.value;
+    const numeric = typeof lv === "number";
+    let delta: number | undefined;
+    let direction: "up" | "down" | "flat" = "flat";
+    if (typeof lv === "number" && typeof fv === "number") {
+      delta = lv - fv;
+      const eps = Math.abs(fv) * 0.01 + 1e-6;
+      direction = delta > eps ? "up" : delta < -eps ? "down" : "flat";
+    }
+    analytes.push({
+      code: ac,
+      label: latest.code.text ?? { en: ac, tr: ac },
+      unit: latest.valueQuantity?.unit,
+      ref: latest.referenceRange,
+      decimals: decimalsOf(lv),
+      numeric,
+      points,
+      latest,
+      delta,
+      direction,
+      anyAbnormal: points.some((p) => isAbnormal(p.observation)),
+      anySynthetic: points.some((p) => p.synthetic),
+    });
+  }
+  if (analytes.length === 0) return null;
+
+  return {
+    key: code,
+    title,
+    drawCount: perDraw.length,
+    orderedFirst: perDraw[0].order.placedAt,
+    resultedLast: perDraw[perDraw.length - 1].resultedAt,
+    clinicalEta,
+    analytes,
+    abnormalCount: analytes.filter((a) => a.anyAbnormal).length,
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -558,6 +755,7 @@ function buildSyntheticImaging(
   orderable: Orderable,
   conclusion: Bilingual | undefined,
   lang: Lang,
+  resultedAt: number,
 ): ImagingEntry {
   const modalityEn = orderable.label.en;
   const isEcg = order.code === "11524-6";
@@ -569,7 +767,7 @@ function buildSyntheticImaging(
     query,
     modalityShort: modalityShort(modalityEn),
     orderedAt: order.placedAt,
-    resultedAt: order.resultsReadyAt,
+    resultedAt,
     clinicalEta: lang === "tr" ? order.clinicalLabelTr : order.clinicalLabelEn,
     synthetic: true,
   };
@@ -664,9 +862,12 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
   const present = stateMap[st];
   const Icon = present.icon;
   const abnormal = st !== "normal";
-  const flagText = row.synthetic
-    ? t("orders2.results.wnl")
-    : t(`ehr.results.interp.${interpretationKey(obs.interpretation)}`);
+  // Synthetic + normal reads "WNL"; synthetic + abnormal shows the real flag but
+  // is always tagged "est." so a modelled value is never mistaken for measured.
+  const flagText =
+    row.synthetic && !abnormal
+      ? t("orders2.results.wnl")
+      : t(`ehr.results.interp.${interpretationKey(obs.interpretation)}`);
 
   return (
     <tr className="border-b border-border last:border-b-0">
@@ -693,6 +894,11 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
         ) : (
           "—"
         )}
+        {row.synthetic ? (
+          <span className="ms-1.5 text-[10px] uppercase tracking-wide text-subtle" title={t("orders2.results.estimatedFull", { defaultValue: "Synthetic estimate (not measured)" })}>
+            {t("orders2.results.estimated", { defaultValue: "est." })}
+          </span>
+        ) : null}
       </td>
       <td className="px-2 py-2 font-mono text-xs tabular-nums text-muted">
         {obs.referenceRange ?? "—"}
@@ -702,6 +908,164 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
           className="inline-flex items-center gap-1 text-xs font-medium"
           style={{ color: present.colorVar }}
         >
+          <Icon weight="fill" className="h-3.5 w-3.5" aria-hidden />
+          {flagText}
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+/** A tiny, dependency-free sparkline for a numeric serial trend. */
+function Sparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return null;
+  const w = 84;
+  const h = 24;
+  const pad = 3;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const xs = values.map((_, i) => pad + (i * (w - 2 * pad)) / (values.length - 1));
+  const ys = values.map((v) => h - pad - ((v - min) / span) * (h - 2 * pad));
+  const d = xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden className="shrink-0">
+      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      {xs.map((x, i) => (
+        <circle key={i} cx={x} cy={ys[i]} r={1.7} fill={color} />
+      ))}
+    </svg>
+  );
+}
+
+/** One serially-ordered lab/gas/POC order rendered as a per-analyte trend table. */
+function TrendPanel({ group, lang }: { group: TrendGroup; lang: Lang }) {
+  const { t } = useTranslation();
+  return (
+    <section>
+      <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <h4 className="flex items-baseline gap-2 text-sm font-semibold text-fg">
+          {pick(group.title, lang)}
+          <span className="font-mono text-[11px] font-normal tabular-nums text-subtle">
+            {t("labs2.results.serialDraws", { count: group.drawCount, defaultValue: "{{count}} serial draws" })}
+          </span>
+        </h4>
+        <span className="font-mono text-[11px] tabular-nums text-muted">
+          {t("orders2.results.timeline", {
+            ordered: minutesOf(group.orderedFirst),
+            resulted: minutesOf(group.resultedLast),
+          })}
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px] border-collapse text-sm">
+          <caption className="sr-only">
+            {pick(group.title, lang)} — {t("labs2.results.trendCaption", { defaultValue: "serial trend" })}
+          </caption>
+          <thead>
+            <tr className="border-b border-border text-start">
+              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.analyte")}</th>
+              <th scope="col" className="px-2 py-1.5 eyebrow">{t("labs2.results.latest", { defaultValue: "Latest" })}</th>
+              <th scope="col" className="px-2 py-1.5 eyebrow">{t("labs2.results.trend", { defaultValue: "Trend" })}</th>
+              <th scope="col" className="px-2 py-1.5 eyebrow">{t("labs2.results.change", { defaultValue: "Change" })}</th>
+              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.flag")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.analytes.map((a) => (
+              <TrendRow key={a.code} analyte={a} lang={lang} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+/** One analyte row of a serial trend: latest value, sparkline, delta, flag. */
+function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
+  const { t } = useTranslation();
+  const latest = analyte.latest;
+  const st = interpretationToState(latest.interpretation);
+  const present = stateMap[st];
+  const Icon = present.icon;
+  const abnormal = st !== "normal";
+  const latestSynthetic = analyte.points[analyte.points.length - 1].synthetic;
+  const values = analyte.numeric
+    ? analyte.points
+        .map((p) => p.observation.valueQuantity?.value)
+        .filter((v): v is number => typeof v === "number")
+    : [];
+  const DirIcon = analyte.direction === "up" ? TrendUp : analyte.direction === "down" ? TrendDown : Minus;
+  const flagText =
+    latestSynthetic && !abnormal
+      ? t("orders2.results.wnl")
+      : t(`ehr.results.interp.${interpretationKey(latest.interpretation)}`);
+  const deltaText =
+    typeof analyte.delta === "number"
+      ? `${analyte.delta > 0 ? "+" : analyte.delta < 0 ? "−" : ""}${Math.abs(analyte.delta).toFixed(analyte.decimals)}`
+      : "—";
+
+  return (
+    <tr className="border-b border-border last:border-b-0">
+      <th scope="row" className="px-2 py-2 text-start font-medium text-fg">
+        <span className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className="inline-block h-3.5 w-0.5 rounded-full"
+            style={{ backgroundColor: abnormal ? present.colorVar : "transparent" }}
+          />
+          {conceptText(latest.code, lang)}
+        </span>
+      </th>
+      <td className="px-2 py-2 font-mono tabular-nums text-fg">
+        {latest.valueQuantity ? (
+          <>
+            {latest.valueQuantity.value}
+            {analyte.unit ? <span className="ms-1 text-xs text-muted">{analyte.unit}</span> : null}
+          </>
+        ) : latest.valueString ? (
+          pick(latest.valueString, lang)
+        ) : (
+          "—"
+        )}
+        {latestSynthetic ? (
+          <span className="ms-1.5 text-[10px] uppercase tracking-wide text-subtle">
+            {t("orders2.results.estimated", { defaultValue: "est." })}
+          </span>
+        ) : null}
+      </td>
+      <td className="px-2 py-2">
+        {analyte.numeric && values.length >= 2 ? (
+          <Sparkline values={values} color={present.colorVar} />
+        ) : (
+          <span className="font-mono text-[11px] tabular-nums text-muted">
+            {analyte.points
+              .map((p) =>
+                p.observation.valueQuantity
+                  ? String(p.observation.valueQuantity.value)
+                  : p.observation.valueString
+                    ? pick(p.observation.valueString, lang)
+                    : "—",
+              )
+              .join(" → ")}
+          </span>
+        )}
+      </td>
+      <td className="px-2 py-2">
+        <span
+          className="inline-flex items-center gap-1 font-mono text-xs tabular-nums"
+          style={{ color: present.colorVar }}
+        >
+          <DirIcon weight="bold" className="h-3.5 w-3.5" aria-hidden />
+          {deltaText}
+          {analyte.unit && typeof analyte.delta === "number" ? (
+            <span className="ms-0.5 text-[10px] text-muted">{analyte.unit}</span>
+          ) : null}
+        </span>
+      </td>
+      <td className="px-2 py-2">
+        <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: present.colorVar }}>
           <Icon weight="fill" className="h-3.5 w-3.5" aria-hidden />
           {flagText}
         </span>
@@ -759,7 +1123,7 @@ function MicroList({ entries, lang }: { entries: MicroEntry[]; lang: Lang }) {
                   {pick(e.conclusion, lang)}
                   {e.synthetic ? (
                     <span className="ms-1 text-xs italic text-muted">
-                      ({t("orders2.results.wnl")})
+                      ({e.abnormal ? t("orders2.results.estimated", { defaultValue: "est." }) : t("orders2.results.wnl")})
                     </span>
                   ) : null}
                 </span>

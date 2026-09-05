@@ -8,16 +8,114 @@ import {
   ArrowLeft,
   CheckCircle,
   Circle,
+  Lightbulb,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import { tourStops } from "@/data/landing";
 
+/* -------------------------------------------------------------------------- */
+/* Per-route contextual help                                                   */
+/* -------------------------------------------------------------------------- */
+
 /**
- * GuidedTour — a lightweight "walk every phase" affordance in the shell. A small
- * TopNav button opens an accessible panel listing the demo screens in order. The
- * reviewer can jump to any stop or step Previous / Next sequentially through all
- * phases so they can walk the whole product. The panel tracks the current route
- * and marks visited stops.
+ * Screen-specific "what to do here" content, keyed by tour-stop key. This is
+ * what makes the tour a real HELP mode rather than a bare route-walker: for the
+ * route the reviewer is actually on, the panel explains the screen's purpose and
+ * the concrete next steps. Strings are English defaults surfaced through i18n
+ * (`tour.help.<key>.*`), so a locale can override them without a code change.
+ */
+interface StopHelp {
+  body: string;
+  steps: readonly string[];
+}
+
+const STOP_HELP: Record<string, StopHelp> = {
+  welcome: {
+    body: "The overview. Skim what AcuDx does — the roleplay → guidance → feedback loop — then start a session or jump straight to a case.",
+    steps: [
+      "Read the overview to see how an encounter is scored.",
+      "Use Next below to walk every screen in order.",
+      "Press Start when you're ready to choose a case.",
+    ],
+  },
+  start: {
+    body: "Set up a session before the encounter begins: your language, your training level, and how hard the case should be.",
+    steps: [
+      "Pick the interface language and the case language.",
+      "Choose your role and a difficulty tier.",
+      "Turn on live guidance if you want attending-style coaching.",
+    ],
+  },
+  cases: {
+    body: "Browse recommended cases or generate a fresh one. Each row shows the chief complaint, the setting, and the guideline it's anchored to.",
+    steps: [
+      "Scan the recommended rail for a complaint to practise.",
+      "Generate a new case for a unique presentation.",
+      "Open a case to launch the encounter in the EHR.",
+    ],
+  },
+  encounter: {
+    body: "Work the patient up in the EHR: take a history, examine, order investigations, then reason to a differential and a plan.",
+    steps: [
+      "Interview the patient in your own words on the Interview tab.",
+      "Examine and place orders from their tabs.",
+      "Watch Attending tips for the next best action and timing.",
+      "Enter your differential and diagnosis when you're ready.",
+    ],
+  },
+  feedback: {
+    body: "Read the graded report. Bands are evidence-anchored and cite the guideline behind each judgement — no black-box scores.",
+    steps: [
+      "Review each domain band and the gaps it flags.",
+      "Open a gap to see the exact utterance it's anchored to.",
+      "Follow the cited remediation before your next case.",
+    ],
+  },
+  rooms: {
+    body: "Run a case as a team. The shared floor shows a running transcript and closed-loop communication between roles.",
+    steps: [
+      "Join or create a room and take a role.",
+      "Use closed-loop read-back for orders and results.",
+      "Watch the shared vitals respond to the team's actions.",
+    ],
+  },
+  progress: {
+    body: "Track competence over time. The charts are drawn from your real earned sessions, not sample data, so a new account starts empty.",
+    steps: [
+      "Review the trend for each domain across sessions.",
+      "Spot the weakest domain the case rail weights toward.",
+      "Return to Cases to target that gap next.",
+    ],
+  },
+  authoring: {
+    body: "Author and sign off cases. A credentialed clinician must co-sign before anything publishes, and every fact carries provenance.",
+    steps: [
+      "Draft or review a case blueprint.",
+      "Check the provenance and guideline citations.",
+      "Clear the clinician sign-off gate to publish.",
+    ],
+  },
+  institution: {
+    body: "The cohort view. Aggregate competence and safety signals across a programme, kept privacy-preserving.",
+    steps: [
+      "Scan cohort-level competence and safety flags.",
+      "Drill into a domain to see where learners struggle.",
+      "Share the summary with faculty.",
+    ],
+  },
+};
+
+/* -------------------------------------------------------------------------- */
+/* GuidedTour                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * GuidedTour — a lightweight contextual-help mode in the shell. A small TopNav
+ * button opens an accessible panel. For the route the reviewer is currently on,
+ * the panel leads with real, screen-specific help ("On this screen": what it is
+ * and the concrete next steps). Below that it lists every phase in order so the
+ * reviewer can jump to any stop or step Previous / Next through the whole
+ * product; visited stops are marked and the current one is highlighted.
  *
  * Built as a native disclosure (button + dialog panel) rather than a component-
  * library modal so it shares the app's single React instance and primitives. It
@@ -93,6 +191,10 @@ export function GuidedTour({ className }: { className?: string }) {
   const atEnd = currentIndex === tourStops.length - 1;
   const atStart = currentIndex <= 0;
 
+  // The current stop + its screen-specific help (null when off the tour path).
+  const current = currentIndex >= 0 ? tourStops[currentIndex] : null;
+  const currentHelp = current ? STOP_HELP[current.key] : undefined;
+
   return (
     <div className={cn("relative", className)}>
       <button
@@ -148,8 +250,50 @@ export function GuidedTour({ className }: { className?: string }) {
               </button>
             </div>
 
+            {/* Contextual help for the CURRENT screen (or an off-path nudge). */}
+            {current && currentHelp ? (
+              <div className="mt-4 rounded-control border border-brand/25 bg-brand-tint/40 p-3">
+                <div className="flex items-center gap-2">
+                  <Lightbulb weight="fill" className="h-4 w-4 text-brand" aria-hidden />
+                  <span className="eyebrow text-brand">
+                    {t("tour.onThisScreen", { defaultValue: "On this screen" })}
+                  </span>
+                </div>
+                <h3 className="mt-1.5 text-sm font-semibold text-fg">
+                  {t(`tour.stops.${current.key}.title`)}
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted">
+                  {t(`tour.help.${current.key}.body`, {
+                    defaultValue: currentHelp.body,
+                  })}
+                </p>
+                <ul className="mt-2 flex flex-col gap-1.5">
+                  {currentHelp.steps.map((step, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-fg">
+                      <span
+                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"
+                        aria-hidden
+                      />
+                      <span>
+                        {t(`tour.help.${current.key}.step${i}`, {
+                          defaultValue: step,
+                        })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="mt-4 rounded-control border border-border bg-bg-subtle p-3 text-sm text-muted">
+                {t("tour.offRoute", {
+                  defaultValue:
+                    "You're off the guided path — pick a stop below, or press Start to begin the walkthrough.",
+                })}
+              </p>
+            )}
+
             {/* Ordered stop list */}
-            <ol className="mt-4 flex max-h-[min(60vh,26rem)] flex-col gap-1.5 overflow-y-auto">
+            <ol className="mt-4 flex max-h-[min(50vh,22rem)] flex-col gap-1.5 overflow-y-auto">
               {tourStops.map((stop, i) => {
                 const isCurrent = i === currentIndex;
                 const isVisited = currentIndex >= 0 && i < currentIndex;

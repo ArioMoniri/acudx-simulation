@@ -1,5 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { Lightbulb, BookOpen, ShieldCheck } from "@phosphor-icons/react";
+import {
+  Lightbulb,
+  BookOpen,
+  ShieldCheck,
+  Broadcast,
+  CloudSlash,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import { Tooltip } from "@/components/ui";
 import type { GuidanceHint, Lang } from "@/data/mock";
@@ -17,6 +23,17 @@ export interface GuidanceCardProps {
    * only `{ hint, lang }` keep the original hint behaviour.
    */
   abstained?: boolean;
+  /**
+   * True when the hint text was grounded against the live pod backend, false when
+   * it fell back to the offline cited reference. `undefined` hides the indicator
+   * entirely, so existing callers are unchanged.
+   */
+  live?: boolean;
+  /**
+   * Deep link to the grounding source (supplied by the live backend), rendered
+   * as a small "source" link beneath the hint. Optional; hidden when absent.
+   */
+  sourceUrl?: string;
 }
 
 /**
@@ -29,7 +46,14 @@ export interface GuidanceCardProps {
  * a standing note that guidance abstains outside the scope a hint is grounded
  * in, and it can render a full abstain state when `abstained` is set.
  */
-export function GuidanceCard({ hint, lang, className, abstained = false }: GuidanceCardProps) {
+export function GuidanceCard({
+  hint,
+  lang,
+  className,
+  abstained = false,
+  live,
+  sourceUrl,
+}: GuidanceCardProps) {
   const { t } = useTranslation();
 
   if (abstained) {
@@ -94,6 +118,27 @@ export function GuidanceCard({ hint, lang, className, abstained = false }: Guida
             <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
               {t("encounter.guidance.educationOnly")}
             </span>
+            {typeof live === "boolean" ? (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                  live ? "bg-brand/10 text-brand" : "bg-bg-subtle text-muted",
+                )}
+                title={t(
+                  live ? "guidance3.reference.live" : "guidance3.reference.offline",
+                  { defaultValue: live ? "Live guideline grounding" : "Offline reference" },
+                )}
+              >
+                {live ? (
+                  <Broadcast weight="bold" className="h-3 w-3" aria-hidden />
+                ) : (
+                  <CloudSlash weight="bold" className="h-3 w-3" aria-hidden />
+                )}
+                {t(live ? "encounter.guidance.reference.live" : "encounter.guidance.reference.offline", {
+                  defaultValue: live ? "Live" : "Reference",
+                })}
+              </span>
+            ) : null}
           </div>
 
           <p className="mt-1 text-sm leading-relaxed text-fg">
@@ -162,6 +207,24 @@ export function GuidanceCard({ hint, lang, className, abstained = false }: Guida
                   })}
                 </span>
               ) : null}
+            </div>
+          ) : null}
+
+          {sourceUrl ? (
+            <div className="mt-2">
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-xs font-medium text-brand",
+                  "underline decoration-brand/40 underline-offset-2 hover:decoration-brand",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded",
+                )}
+              >
+                <BookOpen weight="bold" className="h-3 w-3" aria-hidden />
+                {t("guidance3.sources.open", { defaultValue: "Source" })}
+              </a>
             </div>
           ) : null}
 
