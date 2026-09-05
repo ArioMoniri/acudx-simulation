@@ -269,7 +269,7 @@ export function CommandPalette({ open, onClose, commands }: CommandPaletteProps)
                           onClick={() => runAt(index)}
                           onMouseMove={() => setActiveIndex(index)}
                           className={cn(
-                            "flex w-full items-center justify-between gap-3 rounded-control px-2.5 py-2 text-left text-sm transition-colors",
+                            "flex w-full items-center justify-between gap-3 rounded-control px-2.5 py-2 text-start text-sm transition-colors",
                             isActive
                               ? "bg-brand-tint text-fg"
                               : "text-fg hover:bg-bg-subtle",

@@ -160,7 +160,7 @@ export function GuidedTour({ className }: { className?: string }) {
                       onClick={() => go(stop.to)}
                       aria-current={isCurrent ? "step" : undefined}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-control border px-3 py-2 text-left",
+                        "flex w-full items-center gap-3 rounded-control border px-3 py-2 text-start",
                         "transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                         isCurrent
                           ? "border-brand bg-brand-tint"

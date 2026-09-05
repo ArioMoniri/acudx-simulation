@@ -123,7 +123,7 @@ export function DiagnosisPicker({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("ehr.ap.searchPlaceholder")}
-            className="w-full rounded-control border border-border bg-surface py-2 pl-9 pr-3 text-sm text-fg placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="w-full rounded-control border border-border bg-surface py-2 ps-9 pe-3 text-sm text-fg placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
           />
         </div>
         <p className="mt-1.5 text-[11px] text-muted">{t("diagnosis2.catalogHint")}</p>

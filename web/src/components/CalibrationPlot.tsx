@@ -458,7 +458,7 @@ export function CalibrationPlot({
                         {t(`feedback.domains.${activePoint.domain}`)}
                       </span>
                       <span
-                        className="ml-auto text-xs font-medium"
+                        className="ms-auto text-xs font-medium"
                         style={{ color }}
                       >
                         {t(`calibration.direction.${activePoint.direction}`)}

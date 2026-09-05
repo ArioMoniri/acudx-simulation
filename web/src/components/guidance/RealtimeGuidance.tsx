@@ -100,7 +100,7 @@ function MeterRow({
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="w-12 shrink-0 text-right font-mono text-xs tabular-nums text-muted">
+      <span className="w-12 shrink-0 text-end font-mono text-xs tabular-nums text-muted">
         {group.done}/{group.expected}
       </span>
     </div>
@@ -390,7 +390,7 @@ function FootnoteRef({ n }: { n: number }) {
     <a
       href={`#gd-fn-${n}`}
       aria-label={`Source ${n}`}
-      className="ml-0.5 align-super text-[0.65rem] font-semibold text-brand no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
+      className="ms-0.5 align-super text-[0.65rem] font-semibold text-brand no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
     >
       {n}
     </a>

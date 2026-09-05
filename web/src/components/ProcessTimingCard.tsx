@@ -115,7 +115,7 @@ export function ProcessTimingCard({ action, lang }: ProcessTimingCardProps) {
           </span>
         ) : null}
       </div>
-      <div className="pl-7">
+      <div className="ps-7">
         <CitationPill citationId={action.citationId} lang={lang} />
       </div>
     </div>

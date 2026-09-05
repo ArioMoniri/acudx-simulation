@@ -232,17 +232,17 @@ function TimelineRow({
     (ev.type === "question" || ev.type === "exam") && ev.meta?.hit === false;
 
   return (
-    <li className="flex items-start gap-2.5 border-l border-border py-1.5 pl-3">
+    <li className="flex items-start gap-2.5 border-l border-border py-1.5 ps-3">
       <span
         aria-hidden
-        className="-ml-[1.4rem] mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-border bg-surface text-muted"
+        className="-ms-[1.4rem] mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-border bg-surface text-muted"
       >
         {EVENT_ICON[ev.type]}
       </span>
       <span className="min-w-0 flex-1">
         <span className="text-sm text-fg">{label}</span>
         {redundant || noNewInfo ? (
-          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-px text-[10px] font-medium text-muted align-middle">
+          <span className="ms-2 inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-px text-[10px] font-medium text-muted align-middle">
             {redundant ? (
               <ArrowsClockwise weight="bold" className="h-3 w-3" aria-hidden />
             ) : (

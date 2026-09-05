@@ -370,7 +370,7 @@ export function ResultsTab({ lang }: ResultsTabProps) {
                   <span className="font-mono tabular-nums">
                     {l.observation.valueQuantity?.value}
                     {l.observation.valueQuantity?.unit ? (
-                      <span className="ml-1 text-xs text-muted">
+                      <span className="ms-1 text-xs text-muted">
                         {l.observation.valueQuantity.unit}
                       </span>
                     ) : null}
@@ -638,7 +638,7 @@ function PanelTable({ group, lang }: { group: PanelGroup; lang: Lang }) {
             {pick(group.title, lang)} — {t("ehr.results.labsCaption")}
           </caption>
           <thead>
-            <tr className="border-b border-border text-left">
+            <tr className="border-b border-border text-start">
               <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.analyte")}</th>
               <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.value")}</th>
               <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.reference")}</th>
@@ -670,7 +670,7 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
 
   return (
     <tr className="border-b border-border last:border-b-0">
-      <th scope="row" className="px-2 py-2 text-left font-medium text-fg">
+      <th scope="row" className="px-2 py-2 text-start font-medium text-fg">
         <span className="flex items-center gap-2">
           <span
             aria-hidden
@@ -685,7 +685,7 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
           <>
             {obs.valueQuantity.value}
             {obs.valueQuantity.unit ? (
-              <span className="ml-1 text-xs text-muted">{obs.valueQuantity.unit}</span>
+              <span className="ms-1 text-xs text-muted">{obs.valueQuantity.unit}</span>
             ) : null}
           </>
         ) : obs.valueString ? (
@@ -758,7 +758,7 @@ function MicroList({ entries, lang }: { entries: MicroEntry[]; lang: Lang }) {
                 <span>
                   {pick(e.conclusion, lang)}
                   {e.synthetic ? (
-                    <span className="ml-1 text-xs italic text-muted">
+                    <span className="ms-1 text-xs italic text-muted">
                       ({t("orders2.results.wnl")})
                     </span>
                   ) : null}
@@ -811,7 +811,7 @@ function ImagingList({ entries, lang }: { entries: ImagingEntry[]; lang: Lang })
               <span className="font-medium text-muted">{t("ehr.results.impression")}: </span>
               {pick(e.conclusion, lang)}
               {e.synthetic ? (
-                <span className="ml-1 text-xs italic text-muted">
+                <span className="ms-1 text-xs italic text-muted">
                   ({t("orders2.results.wnl")})
                 </span>
               ) : null}

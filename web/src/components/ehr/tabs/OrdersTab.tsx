@@ -162,7 +162,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
             <TabsTrigger value="treatments">
               {t("orders2.tab.treatments")}
               {state.treatments.length > 0 ? (
-                <span className="ml-1.5 rounded-pill bg-brand-tint px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-brand">
+                <span className="ms-1.5 rounded-pill bg-brand-tint px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-brand">
                   {state.treatments.length}
                 </span>
               ) : null}
@@ -187,7 +187,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("orders2.search.placeholder")}
-                className="pl-9 pr-9"
+                className="ps-9 pe-9"
               />
               {query ? (
                 <button

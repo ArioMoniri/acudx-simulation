@@ -103,7 +103,7 @@ export function ConditionImage({
         <span className="truncate font-mono text-xs uppercase tracking-wide text-monitor-fg">
           {modalityLabel}
         </span>
-        <span className="ml-auto inline-flex items-center gap-1 rounded-chip bg-[color-mix(in_srgb,var(--monitor-fg)_8%,transparent)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-monitor-dim">
+        <span className="ms-auto inline-flex items-center gap-1 rounded-chip bg-[color-mix(in_srgb,var(--monitor-fg)_8%,transparent)] px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-monitor-dim">
           {t("imaging2.disclaimerShort")}
         </span>
       </div>

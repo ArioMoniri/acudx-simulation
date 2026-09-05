@@ -89,7 +89,7 @@ export function RoomCard({ room, lang }: RoomCardProps) {
         <span className="inline-flex items-center gap-1.5 text-muted">
           <span>{t(`rooms.locale.${room.locale}`)}</span>
         </span>
-        <span className="ml-auto inline-flex items-center gap-1.5 text-muted">
+        <span className="ms-auto inline-flex items-center gap-1.5 text-muted">
           <span>{t("rooms.card.code")}</span>
           <span className="font-mono tracking-wide text-fg">{room.joinCode}</span>
         </span>
@@ -113,7 +113,7 @@ export function RoomCard({ room, lang }: RoomCardProps) {
                   <RoleIcon weight="bold" className="h-4 w-4 text-muted" aria-hidden />
                   {t(`rooms.role.${role}`)}
                   {seat.teamLead ? (
-                    <Badge tone="brand" className="ml-0.5">
+                    <Badge tone="brand" className="ms-0.5">
                       {t("rooms.teamLead.hat")}
                     </Badge>
                   ) : null}

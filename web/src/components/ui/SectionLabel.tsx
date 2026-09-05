@@ -31,7 +31,7 @@ export function SectionLabel({
         </span>
       ) : null}
       <span className="eyebrow">{children}</span>
-      {trailing ? <span className="ml-auto">{trailing}</span> : null}
+      {trailing ? <span className="ms-auto">{trailing}</span> : null}
     </div>
   );
 }

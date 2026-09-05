@@ -183,7 +183,7 @@ function PipelineStepper({
                   `authoring.pipeline.state.${display}`,
                 )}`}
                 className={cn(
-                  "flex flex-1 flex-col gap-2.5 rounded-card border p-3.5 text-left",
+                  "flex flex-1 flex-col gap-2.5 rounded-card border p-3.5 text-start",
                   "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                   isActive
                     ? "border-brand bg-brand-tint"
@@ -681,7 +681,7 @@ function FactCard({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 pl-9">
+        <div className="flex flex-wrap items-center gap-2 ps-9">
           <CitationPill citationId={fact.citationId} lang={lang} section={fact.section} />
           <StatusChip status={status} />
           {edit.humanEdited ? (
@@ -693,14 +693,14 @@ function FactCard({
         </div>
 
         {flagged ? (
-          <p className="ml-9 rounded-control bg-[color-mix(in_srgb,var(--state-warning)_10%,transparent)] px-2.5 py-1.5 text-[11px] text-fg">
+          <p className="ms-9 rounded-control bg-[color-mix(in_srgb,var(--state-warning)_10%,transparent)] px-2.5 py-1.5 text-[11px] text-fg">
             {t("authoring2.editor.groundHint")}
           </p>
         ) : open ? (
-          <p className="ml-9 text-[11px] text-muted">{t("authoring2.editor.openHint")}</p>
+          <p className="ms-9 text-[11px] text-muted">{t("authoring2.editor.openHint")}</p>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2 pl-9">
+        <div className="flex flex-wrap items-center gap-2 ps-9">
           {open ? (
             <>
               <Button
@@ -1411,7 +1411,7 @@ function MonitorRow({
           </Badge>
         )}
       </Td>
-      <Td className="text-right">
+      <Td className="text-end">
         <div className="inline-flex items-center justify-end gap-1.5">
           <Button
             size="sm"
@@ -1600,7 +1600,7 @@ function MonitorPanel({ state }: { state: AuthoringUIState }) {
               <Th>{t("authoring3.monitor.colLocales")}</Th>
               <Th numeric>{t("authoring3.monitor.colEncounters")}</Th>
               <Th>{t("authoring3.monitor.colStatus")}</Th>
-              <Th className="text-right">
+              <Th className="text-end">
                 <span className="sr-only">{t("authoring3.monitor.colAction")}</span>
               </Th>
             </Tr>

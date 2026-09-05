@@ -81,7 +81,7 @@ export function TopNav() {
           <Wordmark />
         </NavLink>
 
-        <ul className="ml-1 hidden items-center gap-1 md:flex">
+        <ul className="ms-1 hidden items-center gap-1 md:flex">
           {links.map((l) => (
             <li key={l.key}>
               <NavLink
@@ -95,7 +95,7 @@ export function TopNav() {
           ))}
         </ul>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           <GuidedTour className="hidden md:inline-flex" />
           <RoleSwitcher className="hidden sm:flex" />
           <LiveBackendToggle className="hidden sm:inline-flex" />

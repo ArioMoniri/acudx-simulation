@@ -95,9 +95,9 @@ export function Th({
     <th
       scope="col"
       className={cn(
-        "whitespace-nowrap px-3 py-2.5 text-left align-middle",
+        "whitespace-nowrap px-3 py-2.5 text-start align-middle",
         "eyebrow",
-        numeric && "text-right tabular-nums",
+        numeric && "text-end tabular-nums",
         className,
       )}
       {...props}
@@ -114,7 +114,7 @@ export function Td({
     <td
       className={cn(
         "px-3 py-2.5 align-middle text-fg",
-        numeric && "text-right font-mono tabular-nums",
+        numeric && "text-end font-mono tabular-nums",
         className,
       )}
       {...props}

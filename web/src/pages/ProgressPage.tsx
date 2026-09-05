@@ -210,7 +210,7 @@ function LevelCard() {
           {t("progress.level.eyebrow", { level: levelState.level })} ·{" "}
           {levelState.title[lang]}
         </SectionLabel>
-        <span className="shrink-0 text-right">
+        <span className="shrink-0 text-end">
           <span className="block font-mono text-sm font-semibold text-fg">
             {levelState.xpTotal.toLocaleString(lang)}
           </span>
@@ -352,7 +352,7 @@ function StreakCard() {
             </span>
           </p>
         </div>
-        <span className="shrink-0 text-right">
+        <span className="shrink-0 text-end">
           <span className="block font-mono text-sm font-semibold text-fg">
             {streakState.bestDays}
           </span>
@@ -480,7 +480,7 @@ function EvidenceItem({ ev }: { ev: MasteryEvidence }) {
       ? t("progress2.mastery.evidenceToday")
       : t("progress2.mastery.evidenceAgo", { count: ev.daysAgo });
   return (
-    <li className="flex flex-col gap-0.5 border-l-2 border-border pl-3">
+    <li className="flex flex-col gap-0.5 border-l-2 border-border ps-3">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium text-fg">{ev.case[lang]}</span>
         <span className="shrink-0 text-[11px] text-muted">{ago}</span>
@@ -532,7 +532,7 @@ function MasteryRow({ domain }: { domain: MasteryDomain }) {
         aria-controls={detail ? panelId : undefined}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-[6px] text-left",
+          "flex w-full items-center justify-between gap-2 rounded-[6px] text-start",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
         )}
       >
@@ -1752,7 +1752,7 @@ function ReviewSessionCard({
               key={g}
               type="button"
               onClick={() => onGrade(g)}
-              className="flex flex-col items-start gap-1 rounded-control border border-border bg-surface p-3 text-left transition-colors hover:bg-bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className="flex flex-col items-start gap-1 rounded-control border border-border bg-surface p-3 text-start transition-colors hover:bg-bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               <span className="flex items-center gap-1.5">
                 <span

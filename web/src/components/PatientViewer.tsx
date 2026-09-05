@@ -237,7 +237,7 @@ function VitalsLine({ vitals }: { vitals: VitalsLike }) {
           <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-fg">
             {c.value}
             {c.unit ? (
-              <span className="ml-0.5 text-[10px] font-medium text-muted">{c.unit}</span>
+              <span className="ms-0.5 text-[10px] font-medium text-muted">{c.unit}</span>
             ) : null}
           </dd>
         </div>
