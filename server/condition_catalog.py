@@ -237,6 +237,9 @@ _RENAL = _mk("renal", [
     ("glomerulonephritis", "GB4Z", "N05.9", "", "Acute glomerulonephritis", "Akut glomerülonefrit", "Blood in urine with high blood pressure", "Yüksek tansiyonla idrarda kan", 3, 3, [("Rapidly rising creatinine", "Hızla yükselen kreatinin")]),
     ("testicular_torsion", "GB05", "N44.00", "", "Testicular torsion", "Testis torsiyonu", "Sudden severe one-sided testicular pain", "Ani şiddetli tek taraflı testis ağrısı", 1, 3, [("Acute scrotal pain in a young male (time-critical)", "Genç erkekte akut skrotal ağrı (zaman kritik)")]),
     ("bph_retention", "GA90", "N40.1", "", "Benign prostatic hyperplasia", "Benign prostat hiperplazisi", "Poor stream and straining to pass urine", "Zayıf akım ve idrarda zorlanma", 5, 1, [("Retention with post-renal failure", "Postrenal yetmezlikle retansiyon")]),
+    ("epididymo_orchitis", "GB41", "N45.3", "", "Epididymo-orchitis", "Epididimo-orşit", "Painful, swollen testicle developing over a day", "Bir gün içinde gelişen ağrılı, şiş testis", 3, 2, [("Cannot exclude torsion in a young male", "Genç erkekte torsiyon dışlanamıyor")]),
+    ("acute_prostatitis", "GA91", "N41.0", "", "Acute prostatitis", "Akut prostatit", "Fever with pelvic pain and painful urination", "Ateşle pelvik ağrı ve ağrılı idrar", 3, 2, [("Sepsis or acute retention", "Sepsis veya akut retansiyon")]),
+    ("priapism", "MF40.2", "N48.30", "", "Priapism", "Priapizm", "A painful erection lasting several hours", "Saatlerce süren ağrılı ereksiyon", 2, 3, [("Ischaemic priapism beyond 4 hours (time-critical)", "4 saati aşan iskemik priapizm (zaman kritik)")]),
 ])
 
 # --------------------------------------------------------------------------- #
@@ -271,6 +274,10 @@ _HEMATOLOGY = _mk("hematology", [
     ("tumor_lysis", "2A00.0", "E88.3", "", "Tumour lysis syndrome", "Tümör lizis sendromu", "Unwell soon after starting chemotherapy", "Kemoterapi başlangıcından kısa süre sonra kötüleşme", 1, 4, [("Hyperkalaemia with acute kidney injury", "Akut böbrek hasarıyla hiperkalemi")]),
     ("anemia_symptomatic", "3A9Z", "D64.9", "", "Symptomatic anaemia", "Semptomatik anemi", "Tired, pale and breathless on exertion", "Yorgun, solgun ve eforla nefes darlığı", 3, 2, [("Anaemia with chest pain or syncope", "Göğüs ağrısı veya senkopla anemi")]),
     ("dic", "3B20", "D65", "", "Disseminated intravascular coagulation", "Yaygın damar içi pıhtılaşma", "Bleeding and bruising while very unwell", "Çok kötü durumda kanama ve morarma", 1, 4, [("Bleeding with thrombosis and organ failure", "Trombozla kanama ve organ yetmezliği")]),
+    ("itp", "3B64.10", "D69.3", "", "Immune thrombocytopenia", "İmmün trombositopeni", "Easy bruising and a pinpoint rash", "Kolay morarma ve iğne başı döküntü", 3, 3, [("Mucosal or intracranial bleeding", "Mukozal veya kafa içi kanama")]),
+    ("acute_leukemia", "2B33.Z", "C95.00", "", "Acute leukaemia (new)", "Akut lösemi (yeni)", "Weeks of fatigue, bruising and infections", "Haftalarca yorgunluk, morarma ve enfeksiyon", 2, 4, [("Blasts with bleeding or infection", "Kanama veya enfeksiyonla blast")]),
+    ("hemophilia_bleed", "3B10", "D66", "", "Haemophilia with acute bleed", "Akut kanamalı hemofili", "Painful, swollen joint after minor injury", "Küçük travma sonrası ağrılı, şiş eklem", 2, 3, [("Head injury in a haemophiliac", "Hemofili hastasında kafa travması")]),
+    ("transfusion_reaction", "NE80", "T80.919", "", "Acute transfusion reaction", "Akut transfüzyon reaksiyonu", "Fever and chills during a blood transfusion", "Kan transfüzyonu sırasında ateş ve titreme", 2, 3, [("Haemolysis or anaphylaxis during transfusion", "Transfüzyon sırasında hemoliz veya anafilaksi")]),
 ])
 
 _OBGYN = _mk("obstetrics-gynecology", [
@@ -280,6 +287,10 @@ _OBGYN = _mk("obstetrics-gynecology", [
     ("ovarian_torsion", "GA1Z", "N83.51", "", "Ovarian torsion", "Over torsiyonu", "Sudden severe one-sided pelvic pain", "Ani şiddetli tek taraflı pelvik ağrı", 2, 3, [("Acute pelvic pain with an adnexal mass", "Adneksiyal kitleyle akut pelvik ağrı")]),
     ("pid", "GA05", "N73.9", "", "Pelvic inflammatory disease", "Pelvik enflamatuar hastalık", "Pelvic pain, discharge and fever", "Pelvik ağrı, akıntı ve ateş", 3, 2, [("Tubo-ovarian abscess with sepsis", "Sepsisle tubo-ovaryan apse")]),
     ("hyperemesis", "JA86", "O21.0", "", "Hyperemesis gravidarum", "Gebelik hiperemezisi", "Relentless vomiting in early pregnancy", "Erken gebelikte durmayan kusma", 3, 2, [("Ketosis and dehydration", "Ketoz ve dehidratasyon")]),
+    ("eclampsia", "JA25", "O15.9", "", "Eclampsia", "Eklampsi", "A seizure late in pregnancy with high blood pressure", "Gebeliğin geç döneminde yüksek tansiyonla nöbet", 1, 4, [("Seizure with hypertension in pregnancy", "Gebelikte hipertansiyonla nöbet")]),
+    ("placental_abruption", "JA45", "O45.9", "", "Placental abruption", "Plasenta dekolmanı", "Painful vaginal bleeding late in pregnancy", "Gebeliğin geç döneminde ağrılı vajinal kanama", 1, 3, [("Concealed haemorrhage with a tense uterus", "Gergin uterusla gizli kanama")]),
+    ("threatened_miscarriage", "JA00", "O20.0", "", "Threatened miscarriage", "Düşük tehdidi", "Vaginal bleeding in early pregnancy", "Erken gebelikte vajinal kanama", 3, 2, [("Heavy bleeding with haemodynamic change", "Hemodinamik değişimle yoğun kanama")]),
+    ("ovarian_cyst_rupture", "GA1Z", "N83.8", "", "Ruptured ovarian cyst", "Rüptüre over kisti", "Sudden one-sided pelvic pain mid-cycle", "Siklus ortasında ani tek taraflı pelvik ağrı", 3, 2, [("Haemoperitoneum with instability", "İnstabiliteyle hemoperitoneum")]),
 ])
 
 _MSK_TOX = _mk("musculoskeletal", [
@@ -291,6 +302,10 @@ _MSK_TOX = _mk("musculoskeletal", [
     ("paracetamol_od", "NE60", "T39.1X", "", "Paracetamol overdose", "Parasetamol aşırı dozu", "Took many paracetamol tablets", "Çok sayıda parasetamol aldı", 2, 3, [("Late presentation with deranged LFTs", "Bozuk KCFT'yle geç başvuru")]),
     ("tca_overdose", "NE60.1", "T43.0X", "", "Tricyclic antidepressant overdose", "Trisiklik antidepresan aşırı dozu", "Drowsy after taking antidepressants", "Antidepresan sonrası uykululuk", 1, 4, [("Wide QRS with hypotension or seizures", "Hipotansiyon/nöbetle geniş QRS")]),
     ("anticholinergic_tox", "NE60.2", "T44.3X", "", "Anticholinergic toxicity", "Antikolinerjik toksisite", "Confused, flushed and dry after an overdose", "Aşırı doz sonrası konfüze, kızarık ve kuru", 2, 3, [("Hyperthermia with delirium and tachycardia", "Taşikardi ve deliryumla hipertermi")]),
+    ("rhabdomyolysis", "FB32.3", "M62.82", "", "Rhabdomyolysis", "Rabdomiyoliz", "Muscle pain and dark urine after a long lie", "Uzun süre yattıktan sonra kas ağrısı ve koyu idrar", 2, 3, [("Hyperkalaemia or acute kidney injury", "Hiperkalemi veya akut böbrek hasarı")]),
+    ("hip_fracture", "NC72.3", "S72.009", "", "Hip fracture", "Kalça kırığı", "Unable to weight-bear after a fall in an older adult", "Yaşlı hastada düşme sonrası basamama", 3, 2, [("Shortened, externally rotated leg", "Kısalmış, dışa dönük bacak")]),
+    ("salicylate_od", "NE60", "T39.01X", "", "Salicylate (aspirin) overdose", "Salisilat (aspirin) aşırı dozu", "Ringing ears and fast breathing after an overdose", "Aşırı doz sonrası kulak çınlaması ve hızlı solunum", 2, 4, [("Altered mental state with mixed acid-base picture", "Karışık asit-baz tablosuyla bilinç değişimi")]),
+    ("organophosphate_poisoning", "NE61", "T60.0X", "", "Organophosphate poisoning", "Organofosfat zehirlenmesi", "Drooling, sweating and pinpoint pupils after a spray", "İlaçlama sonrası salya, terleme ve iğne başı pupil", 1, 4, [("Cholinergic crisis with bronchorrhoea", "Bronşoreyle kolinerjik kriz")]),
 ])
 
 # All conditions, in a stable order (systems grouped as declared above).
@@ -378,6 +393,7 @@ def sample_condition(
     difficulty: Optional[int] = None,
     complaint: Optional[str] = None,
     rng: Optional[Any] = None,
+    exclude_ids: Optional[set] = None,
 ) -> dict[str, Any]:
     """Sample one condition, optionally constrained. Never raises.
 
@@ -387,6 +403,9 @@ def sample_condition(
     * ``complaint``  — free text; token-overlap match against label / complaint /
       red-flags / codes. Ignored if it selects nothing.
     * ``rng``        — a ``random.Random`` (seedable), an int/str seed, or None.
+    * ``exclude_ids``— recently-served condition ids to avoid (anti-repeat).
+      Applied AFTER the other filters and ONLY while it still leaves at least one
+      candidate, so a constrained pool is never emptied by the exclusion.
 
     Returns a fresh shallow+nested copy so the caller may annotate freely.
     """
@@ -419,6 +438,13 @@ def sample_condition(
 
     if not pool:
         pool = CATALOG
+
+    # Anti-repeat: drop recently-served ids only if some candidate survives.
+    if exclude_ids:
+        fresh = [c for c in pool if c["id"] not in exclude_ids]
+        if fresh:
+            pool = fresh
+
     chosen = r.choice(pool)
     # Deep-ish copy: red_flags list of dicts must not be shared/mutated.
     out = dict(chosen)

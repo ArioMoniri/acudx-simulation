@@ -54,14 +54,19 @@ Education only. Synthetic patients. No real patient-data path.
 
 from __future__ import annotations
 
+import asyncio
+import collections
 import json
+import os
 import random
 import re
+import threading
 import time
 from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
+from server import case_fixtures
 from server.condition_catalog import sample_condition
 
 # --------------------------------------------------------------------------- #
@@ -85,6 +90,78 @@ DISPOSITIONS: tuple[str, ...] = (
 
 MAX_TOKENS = 1600          # bounded — one call, CPU-friendly
 TEMPERATURE = 0.6
+# Wall-clock cap on the single case-synthesis model call. On a CPU-only host the
+# 7B model cannot finish a full case within this budget, so the endpoint returns
+# the (condition-specific) deterministic template PROMPTLY instead of blocking
+# for minutes on token generation; on faster hardware the model reply is used
+# when it lands in time. Overridable via CASE_MODEL_TIMEOUT_S.
+CASE_MODEL_TIMEOUT_S = float(os.getenv("CASE_MODEL_TIMEOUT_S", "15"))
+
+
+# --------------------------------------------------------------------------- #
+# Anti-repeat memory — the intentional stateful exception.                     #
+# A bounded, process-local LRU of *recently served* keys so an endless run does #
+# not quickly repeat the same diagnosis, patient name, or onset phrasing. It is #
+# consulted ONLY for non-reproducible requests (no explicit seed); a request    #
+# that pins a seed is fully deterministic and bypasses this memory entirely     #
+# (so seeded generation stays reproducible). Per-bucket caps keep it small.     #
+# --------------------------------------------------------------------------- #
+_LRU_CAPS: dict[str, int] = {
+    "condition": 24,        # global recent diagnoses
+    "condition_sess": 12,   # per-session recent diagnoses
+    "name": 48,             # recent patient names (global)
+    "onset": 8,             # recent onset phrasings (global)
+}
+_LRU: dict[str, "collections.deque[str]"] = {}
+_LRU_LOCK = threading.Lock()
+
+
+def _lru_cap_for(bucket: str) -> int:
+    # buckets may be namespaced ("condition_sess:<sid>"); cap by the base kind.
+    base = bucket.split(":", 1)[0]
+    return _LRU_CAPS.get(base, 16)
+
+
+def _lru_recent(bucket: str) -> set[str]:
+    """The set of keys currently remembered in ``bucket`` (empty if none)."""
+    with _LRU_LOCK:
+        dq = _LRU.get(bucket)
+        return set(dq) if dq else set()
+
+
+def _lru_add(bucket: str, key: str) -> None:
+    """Record ``key`` as most-recently served in ``bucket`` (unique + bounded)."""
+    if not key:
+        return
+    with _LRU_LOCK:
+        dq = _LRU.get(bucket)
+        if dq is None:
+            dq = collections.deque(maxlen=_lru_cap_for(bucket))
+            _LRU[bucket] = dq
+        try:
+            dq.remove(key)          # move-to-most-recent (dedupe)
+        except ValueError:
+            pass
+        dq.append(key)
+
+
+def _reset_anti_repeat() -> None:
+    """Clear all anti-repeat memory (used by the offline self-test)."""
+    with _LRU_LOCK:
+        _LRU.clear()
+
+
+def _pick_avoiding(
+    rng: random.Random, options: list[Any], recent: set[str],
+    key_of: Any = lambda x: x,
+) -> Any:
+    """Choose from ``options`` avoiding any whose key is in ``recent`` — but only
+    while that still leaves at least one candidate (else fall back to the full
+    pool). Deterministic under ``rng`` for a given ``recent`` set."""
+    if not options:
+        raise ValueError("empty options")
+    fresh = [o for o in options if key_of(o) not in recent]
+    return rng.choice(fresh if fresh else options)
 
 
 # --------------------------------------------------------------------------- #
@@ -290,9 +367,9 @@ class GeneratedCaseSpec(_Base):
 
 # --------------------------------------------------------------------------- #
 # Deterministic template profiles (per body system, with a DEFAULT fallback).  #
+# Patient names now come from the large, locale-aware, recombinant given+       #
+# surname pools in server.case_fixtures (sex-coherent, EN + TR).               #
 # --------------------------------------------------------------------------- #
-_MALE_NAMES = ["Ahmet Y.", "Mehmet D.", "Mustafa K.", "Emre Ş.", "Can A.", "Burak Ç.", "Ali T.", "Hasan Ö."]
-_FEMALE_NAMES = ["Elif D.", "Ayşe Ş.", "Zeynep K.", "Fatma Y.", "Deniz A.", "Merve A.", "Selin B.", "Naz Ü."]
 
 # hr / systolic / diastolic / rr / spo2 / tempC bands by ESI acuity (1 sickest).
 _ACUITY_BANDS: dict[int, dict[str, tuple[float, float]]] = {
@@ -309,6 +386,24 @@ def _profile(system: str) -> dict[str, Any]:
     treatments, guideline anchor). Falls back to a sane emergency default."""
     P = _PROFILES.get(system)
     return P if P is not None else _PROFILES["_default"]
+
+
+def _resolve_fixture(cond: dict[str, Any]) -> dict[str, Any]:
+    """Resolve the objective-data profile for a *specific condition*.
+
+    Starts from the coarse per-system profile (exam target, age band and the
+    long-tail default labs/imaging/treatments/guide) and overlays any
+    condition-specific fixture from ``case_fixtures.CONDITION_FIXTURES`` — so an
+    aortic dissection, a tamponade and an NSTEMI each get their own labs, imaging
+    and treatments instead of a single shared cardiology default. Conditions
+    without a fixture keep the sensible system-level default."""
+    prof = dict(_profile(cond["system"]))            # shallow copy — safe to overlay
+    fixture = case_fixtures.CONDITION_FIXTURES.get(cond.get("id", ""))
+    if fixture:
+        for key in ("labs", "imaging", "treatments", "guide"):
+            if key in fixture:
+                prof[key] = fixture[key]
+    return prof
 
 
 # Each labs entry: (code, en, tr, value, unit, ref_low, ref_high, flag, category)
@@ -560,13 +655,14 @@ def _disposition(system: str, acuity: int) -> str:
     return "discharge"
 
 
-def _hpi(cond: dict[str, Any], rng: random.Random) -> list[dict[str, Any]]:
+def _hpi(cond: dict[str, Any], rng: random.Random, *, avoid_repeats: bool = False) -> list[dict[str, Any]]:
     cc_en, cc_tr = cond["typical_complaint_en"], cond["typical_complaint_tr"]
-    onset_en, onset_tr = rng.choice([
-        ("It came on suddenly earlier today.", "Bugün aniden başladı."),
-        ("It has been building gradually over hours.", "Saatler içinde giderek arttı."),
-        ("It started this morning and has not settled.", "Bu sabah başladı ve geçmedi."),
-    ])
+    recent_onset = _lru_recent("onset") if avoid_repeats else set()
+    onset_en, onset_tr = _pick_avoiding(
+        rng, case_fixtures.ONSET_PHRASES, recent_onset, key_of=lambda p: p[0],
+    )
+    if avoid_repeats:
+        _lru_add("onset", onset_en)
     severity = rng.randint(5, 9)
     items: list[dict[str, Any]] = [
         {"intent": "onset", "answer_en": onset_en, "answer_tr": onset_tr},
@@ -601,10 +697,28 @@ def _exam(cond: dict[str, Any], prof: dict[str, Any], rng: random.Random) -> lis
     ]
 
 
-def _labs(prof: dict[str, Any]) -> list[dict[str, Any]]:
+def _jittered(rng: random.Random, base: Any, jitter: float) -> Any:
+    """Jitter a numeric lab value within ``±jitter`` using a *seeded* rng, so the
+    objective picture varies case-to-case while staying reproducible under a seed.
+    Non-numeric values (e.g. "positive" markers) and a zero jitter pass through.
+    The flag is fixed by the fixture, so jitter is kept small enough to preserve
+    the clinical direction."""
+    if not jitter or isinstance(base, bool) or not isinstance(base, (int, float)):
+        return base
+    val = base + rng.uniform(-jitter, jitter)
+    if isinstance(base, int):
+        return max(0, int(round(val)))
+    decimals = 2 if abs(base) < 10 else 1
+    return round(max(0.0, val), decimals)
+
+
+def _labs(prof: dict[str, Any], rng: random.Random) -> list[dict[str, Any]]:
     out = []
-    for (code, en, tr, val, unit, lo, hi, flag, cat) in prof["labs"]:
-        out.append({"code": code, "label_en": en, "label_tr": tr, "value": val,
+    for row in prof["labs"]:
+        code, en, tr, val, unit, lo, hi, flag, cat = row[:9]
+        jitter = row[9] if len(row) > 9 else 0
+        out.append({"code": code, "label_en": en, "label_tr": tr,
+                    "value": _jittered(rng, val, jitter),
                     "unit": unit, "ref_low": lo, "ref_high": hi, "flag": flag, "category": cat})
     return out
 
@@ -644,7 +758,24 @@ def _trajectory(triage: dict[str, Any], acuity: int) -> list[dict[str, Any]]:
     return pts
 
 
-def _demographics(cond: dict[str, Any], prof: dict[str, Any], rng: random.Random) -> dict[str, Any]:
+def _compose_name(rng: random.Random, givens: list[str], surnames: list[str], recent: set[str]) -> str:
+    """Compose a recombinant "<Given> <SurnameInitial>." avoiding recently served
+    names where possible. With an empty ``recent`` set this consumes exactly one
+    given + one surname draw (so seeded generation stays reproducible)."""
+    name = ""
+    for _ in range(12):
+        given = rng.choice(givens)
+        surname = rng.choice(surnames)
+        name = f"{given} {surname[0]}."
+        if name not in recent:
+            return name
+    return name  # window exhausted — accept the last composed name
+
+
+def _demographics(
+    cond: dict[str, Any], prof: dict[str, Any], rng: random.Random,
+    *, locale: str = "en", avoid_repeats: bool = False,
+) -> dict[str, Any]:
     lo, hi = prof["age"]
     age = rng.randint(lo, hi)
     if cond["system"] == "obstetrics-gynecology":
@@ -653,16 +784,25 @@ def _demographics(cond: dict[str, Any], prof: dict[str, Any], rng: random.Random
         sex = "male"
     else:
         sex = rng.choice(("male", "female"))
-    name = rng.choice(_MALE_NAMES if sex == "male" else _FEMALE_NAMES)
+    givens, surnames = case_fixtures.name_pool(locale, sex)
+    recent_names = _lru_recent("name") if avoid_repeats else set()
+    name = _compose_name(rng, givens, surnames, recent_names)
+    if avoid_repeats:
+        _lru_add("name", name)
     return {"age": age, "sex": sex, "name_hint": name}
 
 
 def build_template_spec(
     cond: dict[str, Any], *, seed: int, locale: str,
     acuity: int, difficulty: int, rng: random.Random,
+    avoid_repeats: bool = False,
 ) -> dict[str, Any]:
-    """Assemble a complete, schema-valid spec from a catalog entry (no model)."""
-    prof = _profile(cond["system"])
+    """Assemble a complete, schema-valid spec from a catalog entry (no model).
+
+    ``avoid_repeats`` (set for non-seeded requests) draws the patient name and
+    onset phrasing away from recently served ones via the anti-repeat memory;
+    objective data is bound to the *specific condition* via ``_resolve_fixture``."""
+    prof = _resolve_fixture(cond)
     triage = _triage_vitals(rng, acuity)
     src, cite, gen, gtr = prof["guide"]
     spec: dict[str, Any] = {
@@ -673,12 +813,12 @@ def build_template_spec(
             "dsm5tr": cond.get("dsm5tr"), "label_en": cond["label_en"],
             "label_tr": cond["label_tr"], "system": cond["system"],
         },
-        "demographics": _demographics(cond, prof, rng),
+        "demographics": _demographics(cond, prof, rng, locale=locale, avoid_repeats=avoid_repeats),
         "chief_complaint_en": cond["typical_complaint_en"],
         "chief_complaint_tr": cond["typical_complaint_tr"],
         "acuity_esi": acuity,
         "difficulty": difficulty,
-        "hpi": _hpi(cond, rng),
+        "hpi": _hpi(cond, rng, avoid_repeats=avoid_repeats),
         "pmh_en": "No significant past medical history reported.",
         "pmh_tr": "Belirgin özgeçmiş bildirilmedi.",
         "meds_en": "No regular medications.", "meds_tr": "Düzenli ilaç yok.",
@@ -686,7 +826,7 @@ def build_template_spec(
         "exam": _exam(cond, prof, rng),
         "triage_vitals": triage,
         "vitals_trajectory": _trajectory(triage, acuity),
-        "labs": _labs(prof),
+        "labs": _labs(prof, rng),
         "imaging": _imaging(prof),
         "treatments": _treatments(prof),
         "disposition": _disposition(cond["system"], acuity),
@@ -820,13 +960,18 @@ def _merge(template: dict[str, Any], model: dict[str, Any]) -> dict[str, Any]:
 
 def _resolve_constraints(constraints: dict[str, Any], seed: Optional[int]) -> dict[str, Any]:
     c = constraints or {}
-    eff_seed = seed if seed is not None else c.get("seed")
+    requested_seed = seed if seed is not None else c.get("seed")
+    # An explicitly-pinned seed means "reproduce this exact case" — such requests
+    # bypass the (stateful) anti-repeat memory so they stay deterministic.
+    explicit_seed = requested_seed is not None
+    eff_seed = requested_seed
     if eff_seed is None:
         eff_seed = random.Random().randrange(1, 2**31 - 1)
     try:
         eff_seed = int(eff_seed) & 0x7FFFFFFF
     except (TypeError, ValueError):
         eff_seed = random.Random().randrange(1, 2**31 - 1)
+        explicit_seed = False
     locale = str(c.get("locale") or "en").lower()
     if locale not in ("en", "tr"):
         locale = "en"
@@ -835,10 +980,14 @@ def _resolve_constraints(constraints: dict[str, Any], seed: Optional[int]) -> di
         diff = _clamp(int(diff), 1, 5) if diff is not None else None
     except (TypeError, ValueError):
         diff = None
+    session_id = c.get("session_id") or c.get("session") or c.get("encounter_id")
+    session_id = str(session_id) if session_id else None
     return {
         "seed": eff_seed, "locale": locale,
         "system": c.get("system"), "complaint": c.get("complaint"),
         "difficulty": diff,
+        "explicit_seed": explicit_seed,
+        "session_id": session_id,
     }
 
 
@@ -859,11 +1008,28 @@ async def generate_case_spec(
     cons = _resolve_constraints(constraints, seed)
     rng = random.Random(cons["seed"])
 
-    # 1) Sample the condition spine (deterministic under the seed).
+    # Anti-repeat is the intentional stateful exception: it applies ONLY to
+    # non-reproducible requests (no explicit seed). Exclude recently-served
+    # diagnoses (global + per-session) from the next draw when it still leaves a
+    # candidate; seeded requests reproduce exactly and touch no memory.
+    avoid_repeats = not cons["explicit_seed"]
+    exclude_ids: Optional[set[str]] = None
+    sess_bucket = f"condition_sess:{cons['session_id']}" if cons["session_id"] else None
+    if avoid_repeats:
+        exclude_ids = _lru_recent("condition")
+        if sess_bucket:
+            exclude_ids = exclude_ids | _lru_recent(sess_bucket)
+
+    # 1) Sample the condition spine (deterministic under the seed; anti-repeat
+    #    only narrows the pool for non-seeded requests).
     cond = sample_condition(
         system=cons["system"], difficulty=cons["difficulty"],
-        complaint=cons["complaint"], rng=rng,
+        complaint=cons["complaint"], rng=rng, exclude_ids=exclude_ids,
     )
+    if avoid_repeats:
+        _lru_add("condition", cond["id"])
+        if sess_bucket:
+            _lru_add(sess_bucket, cond["id"])
     acuity = int(cond["typical_acuity"])
     difficulty = cons["difficulty"] if cons["difficulty"] is not None else int(cond["difficulty"])
 
@@ -871,6 +1037,7 @@ async def generate_case_spec(
     template = build_template_spec(
         cond, seed=cons["seed"], locale=cons["locale"],
         acuity=acuity, difficulty=difficulty, rng=random.Random(cons["seed"] ^ 0x5DEECE66),
+        avoid_repeats=avoid_repeats,
     )
 
     meta: dict[str, Any] = {"source": "template", "model": None, "latency_ms": 0.0, "degraded": False}
@@ -880,8 +1047,11 @@ async def generate_case_spec(
         messages = _build_prompt(cond, locale=cons["locale"], acuity=acuity, difficulty=difficulty)
         t0 = time.monotonic()
         try:
-            result = await gateway.chat(
-                messages, task="case", max_tokens=MAX_TOKENS, temperature=TEMPERATURE,
+            result = await asyncio.wait_for(
+                gateway.chat(
+                    messages, task="case", max_tokens=MAX_TOKENS, temperature=TEMPERATURE,
+                ),
+                timeout=CASE_MODEL_TIMEOUT_S,
             )
             meta["latency_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
             meta["model"] = getattr(result, "model", None)
@@ -1035,6 +1205,62 @@ def _selftest() -> None:
     # (g) complaint constraint biases sampling
     oc = asyncio.run(generate_case_spec({"complaint": "chest pain", "seed": 2}, None))
     check("complaint: schema-valid", _validate_public(oc))
+
+    # (h) anti-repeat: an endless (no-seed) run must not repeat diagnoses, names
+    #     or onset phrasings inside the LRU window. Isolate the memory first.
+    _reset_anti_repeat()
+    n_draws = 12
+    ids: list[str] = []
+    names: list[str] = []
+    onsets: list[str] = []
+    for _ in range(n_draws):
+        o = asyncio.run(generate_case_spec({"system": "cardiology"}, None))  # no seed
+        ids.append(o["condition"]["icd10"] + "|" + o["condition"]["label_en"])
+        names.append(o["demographics"]["name_hint"])
+        onset_items = [h["answer_en"] for h in o["hpi"] if h["intent"] == "onset"]
+        onsets.append(onset_items[0] if onset_items else "")
+    check("anti-repeat: no-seed diagnoses all distinct in window", len(set(ids)) == n_draws)
+    check("anti-repeat: two consecutive no-seed draws differ", ids[0] != ids[1])
+    check("anti-repeat: patient names all distinct in window", len(set(names)) == n_draws)
+    check("anti-repeat: onset phrasings varied (>=8 distinct)", len(set(onsets)) >= 8)
+
+    # (i) explicit seed still reproduces despite the anti-repeat memory existing.
+    os1 = asyncio.run(generate_case_spec({"system": "cardiology", "seed": 4242}, None))
+    os2 = asyncio.run(generate_case_spec({"system": "cardiology", "seed": 4242}, None))
+    check("seeded: reproducible under active anti-repeat memory",
+          os1["condition"] == os2["condition"] and os1["labs"] == os2["labs"])
+
+    # (j) condition-specific fixtures: two different cardiac conditions must get
+    #     DIFFERENT objective data (dissection != NSTEMI != tamponade).
+    from server.condition_catalog import CATALOG
+    _by_id = {c["id"]: c for c in CATALOG}
+
+    def _cond(cid: str) -> dict[str, Any]:
+        c = dict(_by_id[cid])
+        c["red_flags"] = [dict(r) for r in c.get("red_flags", [])]
+        return c
+
+    diss = build_template_spec(_cond("aortic_dissection"), seed=7, locale="en", acuity=1, difficulty=4, rng=random.Random(7))
+    nste = build_template_spec(_cond("acs_nstemi"), seed=7, locale="en", acuity=2, difficulty=3, rng=random.Random(7))
+    tamp = build_template_spec(_cond("cardiac_tamponade"), seed=7, locale="en", acuity=1, difficulty=4, rng=random.Random(7))
+    labs_of = lambda s: [(l["code"], l["label_en"]) for l in s["labs"]]
+    check("fixtures: dissection labs != NSTEMI labs", labs_of(diss) != labs_of(nste))
+    check("fixtures: tamponade labs != NSTEMI labs", labs_of(tamp) != labs_of(nste))
+    check("fixtures: NSTEMI carries a troponin", any("troponin" in l["label_en"].lower() for l in nste["labs"]))
+    check("fixtures: dissection carries a D-dimer (not the generic ECG-only cardiac set)",
+          any("D-dimer" in l["label_en"] for l in diss["labs"]))
+    check("fixtures: dissection imaging is CT angiography (not a 12-lead ECG)",
+          "angiography" in diss["imaging"][0]["modality_en"].lower())
+    # jitter stays reproducible under a fixed seed
+    diss2 = build_template_spec(_cond("aortic_dissection"), seed=7, locale="en", acuity=1, difficulty=4, rng=random.Random(7))
+    check("fixtures: jittered labs reproducible under seed", diss["labs"] == diss2["labs"])
+
+    # (k) locale-aware names: a TR case draws from the Turkish given-name pool.
+    _reset_anti_repeat()
+    tr_case = asyncio.run(generate_case_spec({"system": "cardiology", "locale": "tr", "seed": 11}, None))
+    tr_given = tr_case["demographics"]["name_hint"].split(" ")[0]
+    tr_pool = set(case_fixtures.GIVEN_NAMES["tr"]["male"]) | set(case_fixtures.GIVEN_NAMES["tr"]["female"])
+    check("locale: TR case uses a Turkish given name", tr_given in tr_pool)
 
     print()
     if failures:

@@ -272,6 +272,54 @@ def classify_utterance(text: str, case_context: dict[str, Any] | None = None) ->
 
 
 # --------------------------------------------------------------------------- #
+# Safety Interceptor — locale-mapped crisis-resource responses.               #
+# When the guard classifies an utterance ``unsafe`` (self-harm / safeguarding  #
+# disclosure), the sim breaks character and surfaces real, locale-appropriate  #
+# support wording. This is a *training simulation*, not a crisis service, so    #
+# the message is explicit about that and points to local emergency + crisis    #
+# resources. Numbers are widely-published public helplines; where they vary by  #
+# country the local emergency number is named first.                          #
+# --------------------------------------------------------------------------- #
+_CRISIS_RESOURCES: dict[str, str] = {
+    "en": (
+        "It sounds like you may be going through something serious, and I'm glad "
+        "you said something. This is a training simulation and not a substitute "
+        "for real help. If you are in immediate danger or thinking of harming "
+        "yourself, please contact your local emergency number now — 112 across "
+        "the EU and Türkiye, 911 in the US, or 999 in the UK. You can also reach "
+        "a crisis line: in the US and Canada call or text 988 (Suicide & Crisis "
+        "Lifeline); in the UK and Ireland call the Samaritans on 116 123. You are "
+        "not alone — please talk to a health professional or someone you trust."
+    ),
+    "tr": (
+        "Söyledikleriniz ciddi bir şey yaşıyor olabileceğinizi düşündürüyor ve "
+        "bunu paylaştığınız için iyi ettiniz. Burası bir eğitim simülasyonudur ve "
+        "gerçek yardımın yerini tutmaz. Acil tehlikedeyseniz veya kendinize zarar "
+        "vermeyi düşünüyorsanız lütfen hemen 112 Acil hattını arayın. Ayrıca 7/24 "
+        "hizmet veren ALO 183 Sosyal Destek Hattı'ndan destek alabilirsiniz. Yalnız "
+        "değilsiniz — lütfen bir sağlık çalışanıyla ya da güvendiğiniz biriyle "
+        "konuşun."
+    ),
+    "ar": (
+        "يبدو أنك قد تمرّ بشيء صعب، وأنا سعيد لأنك تحدّثت عن ذلك. هذه محاكاة تدريبية "
+        "وليست بديلاً عن المساعدة الحقيقية. إذا كنت في خطر مباشر أو تفكّر في إيذاء "
+        "نفسك، فيرجى الاتصال برقم الطوارئ المحلي الآن (112 في كثير من الدول). لست "
+        "وحدك — تحدّث إلى مختصّ رعاية صحية أو شخص تثق به في أقرب وقت."
+    ),
+}
+_CRISIS_DEFAULT_LOCALE = "en"
+
+
+def crisis_resources(locale: str | None = "en") -> str:
+    """Return the locale-appropriate crisis-support message for an ``unsafe``
+    utterance. Falls back to English for any unmapped locale. Pure and stateless."""
+    loc = (locale or "").strip().lower()
+    # tolerate region tags like "en-GB", "tr-TR", "ar-SA"
+    loc = loc.split("-", 1)[0].split("_", 1)[0]
+    return _CRISIS_RESOURCES.get(loc, _CRISIS_RESOURCES[_CRISIS_DEFAULT_LOCALE])
+
+
+# --------------------------------------------------------------------------- #
 # Self-test — `python -m server.scope_guard`                                   #
 # --------------------------------------------------------------------------- #
 def _selftest() -> None:
@@ -299,9 +347,25 @@ def _selftest() -> None:
         failures += 0 if ok else 1
         mark = "ok " if ok else "FAIL"
         print(f"[{mark}] {expected:<14} <- {got['cls']:<14} :: {text[:52]!r}")
+
+    # Safety Interceptor: real locale-mapped crisis resources, no placeholder.
+    safety_cases: list[tuple[str, str]] = [
+        ("en", "988"), ("tr", "112"), ("ar", "112"),
+        ("en-GB", "116 123"), ("de", "112"),  # unmapped -> EN default
+    ]
+    for loc, must_contain in safety_cases:
+        msg = crisis_resources(loc)
+        ok = bool(msg) and must_contain in msg and "in production" not in msg.lower()
+        failures += 0 if ok else 1
+        print(f"[{'ok ' if ok else 'FAIL'}] crisis[{loc:<5}] contains {must_contain!r}, no placeholder")
+    # Turkish disclosure should be answerable in Turkish resources.
+    tr_ok = "112" in crisis_resources("tr") and "ALO 183" in crisis_resources("tr")
+    failures += 0 if tr_ok else 1
+    print(f"[{'ok ' if tr_ok else 'FAIL'}] crisis[tr] names 112 + ALO 183")
+
     if failures:
         raise SystemExit(f"{failures} scope-guard self-test(s) FAILED")
-    print(f"\nAll {len(cases)} scope-guard self-tests passed.")
+    print(f"\nAll {len(cases)} scope-guard + safety self-tests passed.")
 
 
 if __name__ == "__main__":
