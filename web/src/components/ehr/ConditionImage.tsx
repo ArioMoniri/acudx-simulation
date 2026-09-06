@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/cn";
 import { Skeleton } from "@/components/ui";
 import {
-  searchConditionImage,
+  resolveStudyImage,
   type ConditionImage as ConditionImageData,
 } from "@/lib/openMedicalImages";
 
@@ -45,9 +45,11 @@ export function ConditionImage({
   caption,
   className,
 }: ConditionImageProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [phase, setPhase] = useState<Phase>("loading");
   const [image, setImage] = useState<ConditionImageData | null>(null);
+  /** Bilingual teaching label from a curated match (null for live results). */
+  const [curatedCaption, setCuratedCaption] = useState<string | null>(null);
 
   const searchText = [query, modality].filter(Boolean).join(" ").trim();
 
@@ -55,6 +57,7 @@ export function ConditionImage({
     if (!searchText) {
       setPhase("empty");
       setImage(null);
+      setCuratedCaption(null);
       return;
     }
 
@@ -62,11 +65,17 @@ export function ConditionImage({
     let active = true;
     setPhase("loading");
     setImage(null);
+    setCuratedCaption(null);
 
-    void searchConditionImage(searchText, controller.signal).then((result) => {
+    const lang = i18n.language?.toLowerCase().startsWith("tr") ? "tr" : "en";
+    // PREFER a curated, individually-verified image; only fall back to the
+    // free-text live Commons lookup when nothing curated matches. Accuracy
+    // matters for a teaching tool (see resolveStudyImage).
+    void resolveStudyImage(query, modality, lang, controller.signal).then((result) => {
       if (!active) return;
       if (result) {
         setImage(result);
+        setCuratedCaption(result.curated ? result.curatedCaption ?? null : null);
         setPhase("loaded");
       } else {
         setImage(null);
@@ -78,7 +87,7 @@ export function ConditionImage({
       active = false;
       controller.abort();
     };
-  }, [searchText]);
+  }, [searchText, query, modality, i18n.language]);
 
   const altText = modality
     ? t("imaging2.alt", { modality, query })
@@ -160,6 +169,14 @@ export function ConditionImage({
       <figcaption className="space-y-1.5 border-t border-monitor-border px-3 py-2">
         {caption ? (
           <p className="text-xs leading-snug text-monitor-fg">{caption}</p>
+        ) : null}
+
+        {/* Curated, verified teaching label — what this representative study
+            actually depicts (only present for a bundled curated match). */}
+        {phase === "loaded" && curatedCaption && curatedCaption !== caption ? (
+          <p className="font-mono text-[11px] leading-snug text-monitor-online">
+            {curatedCaption}
+          </p>
         ) : null}
 
         {/* Durable, non-overlay copy of the disclaimer so it stays visible in
