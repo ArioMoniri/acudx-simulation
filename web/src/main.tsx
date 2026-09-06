@@ -5,7 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import "./i18n";
 import "./index.css";
 import { ThemeProvider } from "@/lib/theme";
-import { DemoRoleProvider } from "@/lib/demoRole";
+import { ViewAsProvider } from "@/lib/viewAs";
 import { LiveBackendProvider } from "@/lib/liveBackend";
 import App from "./App";
 
@@ -17,13 +17,13 @@ if (!rootEl) {
 createRoot(rootEl).render(
   <StrictMode>
     <ThemeProvider>
-      <DemoRoleProvider>
+      <ViewAsProvider>
         <LiveBackendProvider>
           <BrowserRouter>
             <App />
           </BrowserRouter>
         </LiveBackendProvider>
-      </DemoRoleProvider>
+      </ViewAsProvider>
     </ThemeProvider>
   </StrictMode>,
 );

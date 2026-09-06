@@ -22,7 +22,7 @@
       "needsReview": "{{count}} aún espera a un clínico",
       "needsReview_other": "{{count}} aún esperan a un clínico",
       "allLocked": "Cada hecho redactado ya está fundamentado y fijado.",
-      "tierNote": "Redactado por un modelo abierto de gran tamaño, autoalojado y verificado entre familias. No se nombra a ningún proveedor comercial.",
+      "tierNote": "Redactado automáticamente y verificado para asegurar la consistencia. Ningún dato es definitivo hasta que un clínico lo confirma.",
       "toReview": "Continuar a la revisión experta"
     },
     "editor": {
@@ -671,7 +671,7 @@
         "andMore": "Y {{count}} estudiantes más.",
         "crosswalkHeading": "Equivalencia de dominios ({{framework}})",
         "download": "Descargar exportación",
-        "downloadNote": "Solo demostración. Ningún archivo sale de este dispositivo.",
+        "downloadNote": "Solo local. Ningún archivo sale de este dispositivo.",
         "selectFrameworks": "Selecciona al menos un marco para previsualizar."
       }
     }
@@ -742,8 +742,8 @@
           "body": "Competencia de la cohorte, refuerzo y una auditoría de equidad, agregados y con acceso según el rol."
         },
         "sovereign": {
-          "title": "Abierto y soberano",
-          "body": "Modelos de pesos abiertos, autoalojados, con autoría de casos bajo autoridad humana."
+          "title": "Privado y soberano",
+          "body": "Privado por diseño, con la autoría de casos siempre bajo autoridad humana."
         }
       }
     },
@@ -755,10 +755,10 @@
   },
   "liveBackend": {
     "toggle": "En vivo",
-    "tooltip": "Usa el backend de modelo abierto en vivo en el pod. Tu mensaje se protege primero y luego lo responde el modelo local.",
-    "offline": "backend sin conexión",
-    "badge": "En vivo · pod",
-    "fallback": "No se pudo contactar con el backend en vivo, por lo que la simulación sin conexión respondió este turno."
+    "tooltip": "Usa el asistente en tiempo real. Tu mensaje se protege primero y luego se responde.",
+    "offline": "sin conexión",
+    "badge": "En vivo",
+    "fallback": "No se pudo establecer la conexión en tiempo real, por lo que la simulación sin conexión respondió este turno."
   },
   "livegen": {
     "modeLegend": "Generación",
@@ -767,7 +767,7 @@
     "endlessSub": "Extrae de todas las especialidades y comprueba la consistencia de cada caso.",
     "engineAi": "IA · en tiempo real",
     "engineLocal": "Instantáneo · sin conexión",
-    "engineChecking": "Comprobando el pod…",
+    "engineChecking": "Comprobando disponibilidad…",
     "refine": "Refinar (opcional)",
     "pickEngine": "O elige un motor concreto",
     "orCurated": "O empieza a partir de un caso curado",
@@ -775,12 +775,12 @@
     "quick": "Generación rápida",
     "quickHint": "Instantánea, sin conexión. Construye un caso en el dispositivo a partir del motor de plantillas con semilla.",
     "ai": "Generar con IA",
-    "aiHint": "Se ejecuta en el pod: muestreado de ICD/DSM y fundamentado, con más detalle.",
-    "note": "La generación con IA ejecuta el modelo abierto en el pod y puede tardar un momento.",
+    "aiHint": "Muestreado de ICD/DSM y fundamentado, con más detalle.",
+    "note": "La generación con IA puede tardar un momento.",
     "generating": "Generando…",
-    "generatingHint": "Muestreando, fundamentando y verificando en el pod. Puedes cancelar.",
+    "generatingHint": "Muestreando, fundamentando y verificando. Puedes cancelar.",
     "cancel": "Cancelar",
-    "unavailable": "Backend de IA no disponible — generado localmente",
+    "unavailable": "IA no disponible — generado sin conexión",
     "degraded": "Fundamentación degradada — verifica los anclajes a las guías",
     "ready": "Caso listo",
     "sourceLabel": "Fuente",
@@ -1446,9 +1446,9 @@
   },
   "status": {
     "pill": {
-      "online": "Backend en vivo conectado",
-      "offline": "Backend en vivo desconectado",
-      "checking": "Comprobando el backend"
+      "online": "En línea",
+      "offline": "Sin conexión",
+      "checking": "Reconectando…"
     },
     "boundary": {
       "title": "Esta pantalla ha tenido un problema",

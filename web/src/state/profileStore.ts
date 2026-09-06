@@ -31,8 +31,8 @@ import { SUPPORTED_LANGUAGES, type Language } from "@/i18n";
 /* -------------------------------------------------------------------------- */
 
 /**
- * The learner/teacher standing of the person. Distinct from the demo "View as"
- * vantage (learner/educator/dean) — see `src/lib/demoRole.tsx`, which maps a
+ * The learner/teacher standing of the person. Distinct from the "View as"
+ * vantage (learner/educator/dean) — see `src/lib/viewAs.tsx`, which maps a
  * real role onto a nav surface.
  */
 export type ProfileRole = "student" | "resident" | "educator" | "dean";
@@ -325,7 +325,7 @@ export function useIsSignedIn(): boolean {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Selectors (non-hook — for demoRole seeding + the Home greeting)             */
+/* Selectors (non-hook — for viewAs seeding + the Home greeting)               */
 /* -------------------------------------------------------------------------- */
 
 /** Read the current state without subscribing (module consumers, tests). */

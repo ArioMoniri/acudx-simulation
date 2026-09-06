@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 #
-# deploy.sh — ship the AcuDx gateway (server/) to the GPU pod and (re)build its venv.
+# deploy.sh — ship the AcuDx gateway (server/) to the target host and (re)build its venv.
 #
 # What it does (idempotent, additive, NO destructive ops):
-#   1. rsync this server/ directory to the pod  (root@10.6.110.10:30405 -> /data/acudx-sim/src/server)
+#   1. rsync this server/ directory to the target host  (<user>@<host>:<ssh-port> -> <remote server path>)
 #   2. create the venv if missing, then refresh deps from requirements.txt
 #   3. PRINT the launch command — it does NOT start the server (the operator launches it)
 #
-# It never deletes anything on the pod: rsync runs WITHOUT --delete, so files the
+# It never deletes anything on the target: rsync runs WITHOUT --delete, so files the
 # gateway does not own (a sibling's app.py/config.py, an operator .env, model caches)
 # are left untouched. Secrets are never shipped (.env is excluded).
 #
-# Everything is overridable from the environment; the DEFAULTS match the build brief.
+# The deployment target (SSH_USER, REMOTE_HOST, SSH_PORT, REMOTE_BASE) is REQUIRED
+# from the environment — the script fails fast if any is unset (no baked-in defaults).
 #
 #   Usage:
 #     ./deploy.sh              # sync + venv refresh, then print launch command
@@ -20,12 +21,16 @@
 #
 set -euo pipefail
 
-# --- configuration (override via env) --------------------------------------
-SSH_USER="${SSH_USER:-root}"
-REMOTE_HOST="${REMOTE_HOST:-10.6.110.10}"
-SSH_PORT="${SSH_PORT:-30405}"
+# --- configuration (REQUIRED via env; no committed deployment defaults) -----
+# The deployment target is supplied entirely by the operator's environment, so no
+# real host, port, account or path is baked into the tracked source. Each of these
+# fails fast with a clear message if unset.
+: "${SSH_USER:?set SSH_USER (deploy account on the target host)}"
+: "${REMOTE_HOST:?set REMOTE_HOST (AcuDx gateway host)}"
+: "${SSH_PORT:?set SSH_PORT (target host ssh port)}"
+: "${REMOTE_BASE:?set REMOTE_BASE (remote install base path, e.g. /opt/acudx-sim)}"
 
-REMOTE_BASE="${REMOTE_BASE:-/data/acudx-sim}"
+# Derived from REMOTE_BASE unless explicitly overridden.
 REMOTE_SRC="${REMOTE_SRC:-${REMOTE_BASE}/src}"
 REMOTE_SERVER="${REMOTE_SERVER:-${REMOTE_SRC}/server}"
 VENV="${VENV:-${REMOTE_BASE}/.venv}"

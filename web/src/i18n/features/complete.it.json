@@ -22,7 +22,7 @@
       "needsReview": "{{count}} attende ancora un clinico",
       "needsReview_other": "{{count}} attendono ancora un clinico",
       "allLocked": "Ogni fatto in bozza è già documentato e bloccato.",
-      "tierNote": "Redatto da un grande modello aperto, self-hosted e verificato tra famiglie diverse. Nessun fornitore commerciale è indicato.",
+      "tierNote": "Redatto automaticamente e verificato per garantirne la coerenza. Nessun dato è definitivo finché un clinico non lo conferma.",
       "toReview": "Continua alla revisione esperta"
     },
     "editor": {
@@ -671,7 +671,7 @@
         "andMore": "Più altri {{count}} discenti.",
         "crosswalkHeading": "Corrispondenza dei domini ({{framework}})",
         "download": "Scarica l'esportazione",
-        "downloadNote": "Solo a scopo dimostrativo. Nessun file lascia questo dispositivo.",
+        "downloadNote": "Solo in locale. Nessun file lascia questo dispositivo.",
         "selectFrameworks": "Seleziona almeno un framework per l'anteprima."
       }
     }
@@ -742,8 +742,8 @@
           "body": "Competenza della coorte, recupero e un audit di equità, aggregati e con accesso per ruolo."
         },
         "sovereign": {
-          "title": "Aperto e sovrano",
-          "body": "Modelli a pesi aperti, self-hosted, con redazione dei casi sotto autorità umana."
+          "title": "Privato e sovrano",
+          "body": "Privato per progettazione, con la creazione dei casi sempre sotto autorità umana."
         }
       }
     },
@@ -755,10 +755,10 @@
   },
   "liveBackend": {
     "toggle": "In tempo reale",
-    "tooltip": "Usa il backend a modello aperto in tempo reale sul pod. Il tuo messaggio viene prima protetto, poi risposto dal modello locale.",
-    "offline": "backend offline",
-    "badge": "In tempo reale · pod",
-    "fallback": "Non è stato possibile raggiungere il backend in tempo reale, quindi la simulazione offline ha risposto a questo turno."
+    "tooltip": "Usa l'assistente in tempo reale. Il tuo messaggio viene prima protetto, poi riceve risposta.",
+    "offline": "offline",
+    "badge": "In tempo reale",
+    "fallback": "Non è stato possibile stabilire la connessione in tempo reale, quindi la simulazione offline ha risposto a questo turno."
   },
   "livegen": {
     "modeLegend": "Generazione",
@@ -767,7 +767,7 @@
     "endlessSub": "Pesca da ogni specialità e autoverifica la coerenza di ogni caso.",
     "engineAi": "IA · tempo reale",
     "engineLocal": "Istantaneo · offline",
-    "engineChecking": "Verifica del pod…",
+    "engineChecking": "Verifica della disponibilità…",
     "refine": "Affina (facoltativo)",
     "pickEngine": "Oppure scegli un motore specifico",
     "orCurated": "Oppure parti da un caso curato",
@@ -775,12 +775,12 @@
     "quick": "Generazione rapida",
     "quickHint": "Istantanea, offline. Costruisce un caso sul dispositivo dal motore di modelli precaricato.",
     "ai": "Generazione con IA",
-    "aiHint": "Gira sul pod: campionato da ICD/DSM e ancorato, con dettagli più ricchi.",
-    "note": "La generazione con IA esegue il modello aperto sul pod e può richiedere un momento.",
+    "aiHint": "Campionato da ICD/DSM e ancorato, con dettagli più ricchi.",
+    "note": "La generazione con IA può richiedere un momento.",
     "generating": "Generazione in corso…",
-    "generatingHint": "Campionamento, ancoraggio e verifica sul pod. Puoi annullare.",
+    "generatingHint": "Campionamento, ancoraggio e verifica. Puoi annullare.",
     "cancel": "Annulla",
-    "unavailable": "Backend IA non disponibile — generato in locale",
+    "unavailable": "IA non disponibile — generato offline",
     "degraded": "Ancoraggio degradato — verifica gli ancoraggi alle linee guida",
     "ready": "Caso pronto",
     "sourceLabel": "Fonte",
@@ -1446,9 +1446,9 @@
   },
   "status": {
     "pill": {
-      "online": "Backend in tempo reale online",
-      "offline": "Backend in tempo reale offline",
-      "checking": "Verifica del backend"
+      "online": "Online",
+      "offline": "Offline",
+      "checking": "Riconnessione…"
     },
     "boundary": {
       "title": "Questa schermata ha riscontrato un problema",

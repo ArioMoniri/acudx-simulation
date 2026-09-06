@@ -222,7 +222,7 @@
     "subtitle": "Birkaç seçim vakayı, rolünüzü ve uygulamanın ne kadar yardım edeceğini belirler. Her ayarı sonradan değiştirebilirsiniz.",
     "mode": {
       "heading": "Nasıl pratik yapmak istersiniz?",
-      "hint": "Tek başına modda her şeyi yapay zeka yürütür. Odalar ve izleme yakında geliyor."
+      "hint": "Tek başına modda her şeyi yapay zeka yürütür. Odalar ve izleme, görüşmeye başka kişileri katar."
     },
     "role": {
       "heading": "Hangi rolü üstleneceksiniz?",
@@ -636,7 +636,7 @@
       "create": "Oda oluştur",
       "openRooms": "Açık odalar",
       "empty": "Şu anda açık oda yok. Ekip provası başlatmak için bir oda oluşturun.",
-      "prodNote": "Bu, benzetilmiş katılımla bir önizlemedir. Canlı sürümde odalar kendi sunucumuzda barındırılan LiveKit gerçek zamanlı katmanında çalışır; yazılı ekip odaları erişilebilir tabandır, ses ve 3B ise ücretli özelliklerdir."
+      "prodNote": "Ekip odaları, birkaç kişiyi gerçek zamanlı olarak tek bir ortak görüşmede buluşturur. Yazılı odalar erişilebilir tabandır; ses ve 3B ise ücretli özelliklerdir."
     },
     "status": {
       "open": "Açık",
@@ -1161,7 +1161,7 @@
       "cosignLabel": "Kayıtlı belgeli hekim benim ve bu vakayı yayımlanmak üzere onaylıyorum.",
       "signedConfirmation": "{{name}} tarafından ortak imzalandı. Vaka ve rubrik donduruldu.",
       "groundedOn": "Dayanak",
-      "modelProvenance": "Kendi sunucumuzda barındırılan, büyük açık ağırlıklı bir modelce taslandı ve aileler arası çapraz doğrulandı. Ticari bir sağlayıcı adı belirtilmez.",
+      "modelProvenance": "Yapay zekayla taslandı ve tutarlılık için bağımsız olarak çapraz denetlendi. Ticari bir sağlayıcı adı belirtilmez.",
       "publish": "Vakayı yayımla",
       "unpublish": "Taslağa döndür",
       "blockedByFacts": "Her klinik olgu dayanaklandırılıp kilitlenene kadar yayın engellidir.",
@@ -1188,7 +1188,7 @@
     "hero": {
       "title": "Vaka sizi prova etmeden, vakayı prova edin.",
       "subtitle": "Metin öncelikli bir klinik simülatör: bir HBS içinde sentetik hasta çalışın, kanıta dayalı geri bildirim alın ve kalibrasyonunuzu görün.",
-      "primaryCta": "Demoya girin",
+      "primaryCta": "Görüşmeye başlayın",
       "secondaryCta": "Geri bildirim raporunu görün",
       "bilingualNote": "Türkçe ve İngilizcede, metin ve seste birinci sınıf.",
       "panelTitle": "Bir karşılaşma, üç aşama",
@@ -1208,7 +1208,7 @@
     },
     "phases": {
       "heading": "Ürünün her aşamasını gezin",
-      "headingSub": "Her aşama, canlı demo ekranını açar. Dilediğiniz yerden başlayın ya da üst çubuktan rehberli turu izleyin.",
+      "headingSub": "Her aşama kendi ekranını açar. Dilediğiniz yerden başlayın ya da üst çubuktan rehberli turu izleyin.",
       "roleplay": {
         "title": "Rol yapma ve HBS",
         "body": "Gerçek bir HBS kabuğu içinde sentetik hastayla anamnez alın, tetkik isteyin ve canlı vital monitörünü okuyun.",
@@ -1245,15 +1245,15 @@
         "link": "Panoyu aç"
       },
       "sovereign": {
-        "title": "Açık ve egemen",
-        "body": "Kendi sunucumuzda barındırılan açık ağırlıklı modeller ve insanın yetkili olduğu vaka hazırlama. Ticari bağımlılık yok.",
+        "title": "Egemen ve kendi sunucunuzda",
+        "body": "Kendi sunucunuzda barındırılır; insanın yetkili olduğu vaka hazırlama ve tam veri egemenliği. Ticari bağımlılık yok.",
         "link": "İçerik hazırlamayı gör"
       }
     },
     "closing": {
       "heading": "Rehberli turu izleyin",
       "body": "Her aşamayı görmek için dokuz ekranı sırayla gezin; ilk karşılaşmadan kalibrasyon geri bildirimine ve kurum panosuna kadar.",
-      "primaryCta": "Demoya girin",
+      "primaryCta": "Görüşmeye başlayın",
       "educatorCta": "Eğitmenler için",
       "note": "Şu an {{lang}} dilinde. Üst çubuktan dili istediğiniz zaman değiştirin."
     }
@@ -1261,7 +1261,7 @@
   "tour": {
     "button": "Rehberli tur",
     "buttonShort": "Tur",
-    "title": "Demoyu gezin",
+    "title": "Ürünü gezin",
     "description": "Her aşamayı sırayla adımlayın ya da herhangi bir ekrana geçin.",
     "here": "Buradasınız",
     "previous": "Önceki",
@@ -1270,7 +1270,7 @@
     "stops": {
       "welcome": {
         "title": "Karşılama",
-        "hint": "Ürün özeti ve demo girişi."
+        "hint": "Ürün özeti ve giriş noktası."
       },
       "start": {
         "title": "Başlangıç",

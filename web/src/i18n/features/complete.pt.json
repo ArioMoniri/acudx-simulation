@@ -22,7 +22,7 @@
       "needsReview": "{{count}} ainda aguarda revisão por um clínico",
       "needsReview_other": "{{count}} ainda aguardam revisão por um clínico",
       "allLocked": "Todos os factos rascunhados já estão fundamentados e fixados.",
-      "tierNote": "Rascunhado por um grande modelo aberto, com alojamento próprio e verificação entre famílias. Nenhum fornecedor comercial é nomeado.",
+      "tierNote": "Redigido automaticamente e verificado para assegurar a consistência. Nenhum dado é definitivo até um clínico o confirmar.",
       "toReview": "Continuar para a revisão por especialista"
     },
     "editor": {
@@ -671,7 +671,7 @@
         "andMore": "Mais {{count}} formandos.",
         "crosswalkHeading": "Correspondência de domínios ({{framework}})",
         "download": "Transferir exportação",
-        "downloadNote": "Apenas para demonstração. Nenhum ficheiro sai deste dispositivo.",
+        "downloadNote": "Apenas local. Nenhum ficheiro sai deste dispositivo.",
         "selectFrameworks": "Selecione pelo menos um referencial para pré-visualizar."
       }
     }
@@ -742,8 +742,8 @@
           "body": "Competência da coorte, recuperação e uma auditoria de equidade, agregadas e restritas por papel."
         },
         "sovereign": {
-          "title": "Aberto e soberano",
-          "body": "Modelos de pesos abertos, com alojamento próprio e criação de casos com autoridade humana."
+          "title": "Privado e soberano",
+          "body": "Privado por conceção, com a criação de casos sempre sob autoridade humana."
         }
       }
     },
@@ -755,10 +755,10 @@
   },
   "liveBackend": {
     "toggle": "Em tempo real",
-    "tooltip": "Usa o backend do modelo aberto em tempo real no pod. A sua mensagem é primeiro protegida e depois respondida pelo modelo local.",
-    "offline": "backend offline",
-    "badge": "Em tempo real · pod",
-    "fallback": "Não foi possível contactar o backend em tempo real, pelo que a simulação offline respondeu a esta ronda."
+    "tooltip": "Usa o assistente em tempo real. A sua mensagem é primeiro protegida e depois respondida.",
+    "offline": "offline",
+    "badge": "Em tempo real",
+    "fallback": "Não foi possível estabelecer a ligação em tempo real, pelo que a simulação offline respondeu a esta ronda."
   },
   "livegen": {
     "modeLegend": "Geração",
@@ -767,7 +767,7 @@
     "endlessSub": "Sorteia de todas as especialidades e verifica a consistência de cada caso.",
     "engineAi": "IA · tempo real",
     "engineLocal": "Instantâneo · offline",
-    "engineChecking": "A verificar o pod…",
+    "engineChecking": "A verificar a disponibilidade…",
     "refine": "Refinar (opcional)",
     "pickEngine": "Ou escolha um motor específico",
     "orCurated": "Ou comece a partir de um caso curado",
@@ -775,12 +775,12 @@
     "quick": "Geração rápida",
     "quickHint": "Instantâneo e offline. Constrói um caso no dispositivo a partir do motor de modelos pré-semeados.",
     "ai": "Geração por IA",
-    "aiHint": "Corre no pod: amostrado por ICD/DSM e fundamentado, com detalhe mais rico.",
-    "note": "A geração por IA corre o modelo aberto no pod e pode demorar um momento.",
+    "aiHint": "Amostrado por ICD/DSM e fundamentado, com detalhe mais rico.",
+    "note": "A geração por IA pode demorar um momento.",
     "generating": "A gerar…",
-    "generatingHint": "A amostrar, fundamentar e verificar no pod. Pode cancelar.",
+    "generatingHint": "A amostrar, fundamentar e verificar. Pode cancelar.",
     "cancel": "Cancelar",
-    "unavailable": "Backend de IA indisponível — gerado localmente",
+    "unavailable": "IA indisponível — gerado offline",
     "degraded": "Fundamentação degradada — verifique as âncoras das diretrizes",
     "ready": "Caso pronto",
     "sourceLabel": "Fonte",
@@ -1446,9 +1446,9 @@
   },
   "status": {
     "pill": {
-      "online": "Backend em tempo real online",
-      "offline": "Backend em tempo real offline",
-      "checking": "A verificar o backend"
+      "online": "Online",
+      "offline": "Offline",
+      "checking": "A reconectar…"
     },
     "boundary": {
       "title": "Este ecrã encontrou um problema",

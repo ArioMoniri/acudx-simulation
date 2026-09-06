@@ -22,7 +22,7 @@
       "needsReview": "{{count}} still awaits a clinician",
       "needsReview_other": "{{count}} still await a clinician",
       "allLocked": "Every drafted fact is already grounded and locked.",
-      "tierNote": "Drafted by a large open model, self-hosted and cross-family verified. No commercial vendor is named.",
+      "tierNote": "Automatically drafted and cross-checked for consistency. Nothing is final until a clinician confirms it.",
       "toReview": "Continue to expert review"
     },
     "editor": {

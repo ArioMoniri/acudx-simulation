@@ -8,9 +8,6 @@ import {
   LockKey,
   ShieldWarning,
   Lifebuoy,
-  Target,
-  Broadcast,
-  WifiSlash,
   Check,
   X,
   SpeakerHigh,
@@ -35,7 +32,6 @@ import {
   requestExam,
   recordDialogue,
   logGuardOutcome,
-  getOffTaskCount,
   getCurrentVitals,
   useEncounterState,
 } from "@/state/encounterStore";
@@ -250,9 +246,7 @@ export function InterviewTab({
   // The free-text / voice / live transcript now lives in the encounter store
   // (state.dialogue): it is logged as encounter events, survives tab-switch /
   // remount, and is visible to Chart Review, grading, debrief and progress —
-  // instead of the old ephemeral component state. `fallbackNotice` flags a turn
-  // that silently fell back to the offline path after a backend error.
-  const [fallbackNotice, setFallbackNotice] = useState(false);
+  // instead of the old ephemeral component state.
   useEffect(() => {
     return () => {
       if (typingTimer.current) window.clearTimeout(typingTimer.current);
@@ -348,7 +342,6 @@ export function InterviewTab({
   }, [state.dialogue]);
 
   // Merge the reveal-graph turns with the free-text / live exchanges for display.
-  // Live replies carry a "Live · pod" provenance caption.
   const allTurns = useMemo(
     () => [...turns, ...dialogueTurns],
     [turns, dialogueTurns],
@@ -577,9 +570,9 @@ export function InterviewTab({
    * Persist a doctor turn + patient reply to the store's dialogue log AND log it
    * as an encounter event (via recordDialogue), so this free-text / voice / live
    * history-taking flows into Chart Review's activity counts + timeline, grading,
-   * debrief and progress — not just an ephemeral local transcript. `affect` both
-   * labels the patient turn and, when it is the Live badge, marks the reply as
-   * model-sourced ("Live · pod"); canned offline replies pass affectLabel.
+   * debrief and progress — not just an ephemeral local transcript. `affect`
+   * labels the patient turn; `source` records the reply's provenance for metrics
+   * only and is never surfaced to the learner.
    */
   function appendExchange(
     doctorText: string,
@@ -590,9 +583,8 @@ export function InterviewTab({
     recordDialogue({ doctorText, patient, affect, source });
   }
 
-  /** Any backend failure lands here: note it, then run the offline path. */
+  /** Any backend failure lands here: degrade silently to the offline path. */
   function liveFallback(text: string) {
-    setFallbackNotice(true);
     routeClientVerdict(text);
   }
 
@@ -612,7 +604,9 @@ export function InterviewTab({
         return;
       }
       const reply = tres.data.utterance;
-      appendExchange(text, { en: reply, tr: reply }, t("liveBackend.badge"), "live");
+      // Neutral affect caption — the reply's live provenance stays internal
+      // (recorded as `source` for metrics) and is never shown to the learner.
+      appendExchange(text, { en: reply, tr: reply }, affectLabel, "live");
     } catch {
       // Belt and suspenders: the client never throws, but never trust the wire.
       liveFallback(text);
@@ -632,7 +626,6 @@ export function InterviewTab({
    */
   async function handleLiveSend(text: string) {
     setNotice(null);
-    setFallbackNotice(false);
     const verdict = classifyUtterance(text, caseInstance);
     const { score, rationale } = verdict;
     switch (verdict.class) {
@@ -680,7 +673,6 @@ export function InterviewTab({
   const examinedManeuvers = new Set(
     state.events.filter((e) => e.type === "exam").map((e) => e.ref),
   );
-  const offTask = getOffTaskCount(state);
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,300px)]">
@@ -705,9 +697,6 @@ export function InterviewTab({
         {/* Guard notice + free-text composer */}
         <div className="border-t border-border p-3 sm:p-4">
           <GuardNotice notice={notice} onDismiss={() => setNotice(null)} />
-          {fallbackNotice ? (
-            <LiveFallbackNotice onDismiss={() => setFallbackNotice(false)} />
-          ) : null}
 
           <form onSubmit={handleSend} className="mt-2 flex items-center gap-2">
             <label htmlFor="acudx-ask" className="sr-only">
@@ -773,7 +762,7 @@ export function InterviewTab({
             </Button>
           </form>
 
-          <div className="mt-2 flex items-center justify-between gap-3">
+          <div className="mt-2">
             <p className="text-[11px] text-muted">
               {micListening ? (
                 <span className="inline-flex items-center gap-1.5 text-brand">
@@ -789,18 +778,6 @@ export function InterviewTab({
                 t("scopeGuard.composer.hint")
               )}
             </p>
-            <div className="flex shrink-0 items-center gap-2">
-              {live.enabled ? (
-                <Badge
-                  tone="brand"
-                  icon={<Broadcast weight="bold" className="h-3.5 w-3.5" />}
-                  title={t("liveBackend.tooltip")}
-                >
-                  {t("liveBackend.badge")}
-                </Badge>
-              ) : null}
-              <FocusIndicator offTask={offTask} />
-            </div>
           </div>
         </div>
 
@@ -899,30 +876,6 @@ function GuardNotice({
   return (
     <div aria-live="polite" role="status">
       {notice ? <GuardNoticeBody notice={notice} onDismiss={onDismiss} /> : null}
-    </div>
-  );
-}
-
-/**
- * Subtle notice shown when a live-backend turn could not reach the pod and the
- * offline simulation answered instead. Non-blocking; the encounter continues.
- */
-function LiveFallbackNotice({ onDismiss }: { onDismiss: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <div
-      role="status"
-      className="mt-2 flex items-start justify-between gap-2 rounded-control border border-border bg-bg-subtle p-2.5"
-    >
-      <div className="flex min-w-0 items-start gap-2">
-        <WifiSlash
-          weight="bold"
-          className="mt-0.5 h-4 w-4 shrink-0 text-muted"
-          aria-hidden
-        />
-        <p className="min-w-0 text-xs text-muted">{t("liveBackend.fallback")}</p>
-      </div>
-      <DismissButton onDismiss={onDismiss} />
     </div>
   );
 }
@@ -1046,25 +999,6 @@ function GuardNoticeBody({
         <span className="text-[11px] text-muted">{note}</span>
       </div>
     </div>
-  );
-}
-
-/** Persistent staying-on-task indicator, driven by the guard event log. */
-function FocusIndicator({ offTask }: { offTask: number }) {
-  const { t } = useTranslation();
-  const clear = offTask === 0;
-  const label = clear
-    ? t("scopeGuard.focus.onTask")
-    : t("scopeGuard.focus.offTaskCount", { count: offTask });
-  return (
-    <Badge
-      tone={clear ? "neutral" : "caution"}
-      icon={<Target weight="bold" className="h-3.5 w-3.5" />}
-      title={t("scopeGuard.focus.tooltip")}
-      aria-label={label}
-    >
-      {label}
-    </Badge>
   );
 }
 

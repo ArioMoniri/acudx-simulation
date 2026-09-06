@@ -1,25 +1,23 @@
 /**
- * AcuDx — deterministic client-side case generator.
+ * AcuDx — deterministic, offline client-side case generator: the instant default
+ * and the fallback when AI generation is unavailable.
  *
- * Demonstrates the "unlimited, non-repeating cases" product claim
- * (docs/00-overview/04 §3) WITHOUT an LLM: a seeded RNG (mulberry32), a
- * prevalence x educational-value weighted ICD/DSM presentation table, and
- * templates that assemble a coherent CaseInstance. Same seed => same case.
+ * Produces "unlimited, non-repeating cases" WITHOUT an LLM: a seeded RNG
+ * (mulberry32), a prevalence x educational-value weighted ICD/DSM presentation
+ * table, and templates that assemble a coherent CaseInstance. Same seed => same
+ * case.
  *
  * The presentation catalogue spans every major organ system (cardiology,
  * respiratory, GI / surgical, neurology, infectious, endocrine, renal / urology,
  * vascular, allergy, OB-GYN, rheumatology, psychiatry) so that even fully offline
- * — with no pod backend — "Generate a fresh case" produces a genuinely endless,
- * varied stream rather than a handful of hard-coded complaints. When the pod
- * backend IS reachable, lib/liveCaseGen.ts is the default path (unlimited ICD-11 /
- * ICD-10 / DSM-5-TR synthesis) and this module is the instant offline safety net.
+ * "Generate a fresh case" produces a genuinely endless, varied stream rather than
+ * a handful of hard-coded complaints. When AI-backed generation is available,
+ * lib/liveCaseGen.ts is the default path (unlimited ICD-11 / ICD-10 / DSM-5-TR
+ * synthesis) and this module is the instant offline safety net.
  *
- * MVP client demo; production = CaseGenerationService behind the Model Gateway
- * (open-weight default) with the generate -> RAG-ground -> verify -> instantiate
- * pipeline and a cross-family verifier, per docs/00-overview/04 §3.2 and
- * docs/architecture. This module implements the deterministic checks
- * (vitals ranges, age/sex plausibility, internal consistency) locally and
- * regenerates on failure, which is the same "abstain > ship-wrong" loop.
+ * It runs deterministic checks (vitals ranges, age/sex plausibility, internal
+ * consistency) locally and regenerates on failure, the same "abstain >
+ * ship-wrong" loop.
  *
  * Education only. Synthetic patients. No real patient data.
  */

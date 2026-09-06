@@ -1,9 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { Student, ChalkboardTeacher, Buildings } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
-import { DEMO_ROLES, useDemoRole, type DemoRole } from "@/lib/demoRole";
+import { VIEW_AS_ROLES, useViewAs, type ViewAsRole } from "@/lib/viewAs";
 
-const roleIcon: Record<DemoRole, typeof Student> = {
+const roleIcon: Record<ViewAsRole, typeof Student> = {
   learner: Student,
   educator: ChalkboardTeacher,
   dean: Buildings,
@@ -18,7 +18,7 @@ const roleIcon: Record<DemoRole, typeof Student> = {
  */
 export function RoleSwitcher({ className }: { className?: string }) {
   const { t } = useTranslation();
-  const { role, setRole } = useDemoRole();
+  const { role, setRole } = useViewAs();
 
   return (
     <div className={cn("inline-flex items-center gap-1.5", className)}>
@@ -33,7 +33,7 @@ export function RoleSwitcher({ className }: { className?: string }) {
         aria-label={t("role.viewAs")}
         className="inline-flex items-center rounded-control border border-border bg-bg-subtle p-0.5"
       >
-        {DEMO_ROLES.map((r) => {
+        {VIEW_AS_ROLES.map((r) => {
           const active = role === r;
           const Icon = roleIcon[r];
           return (

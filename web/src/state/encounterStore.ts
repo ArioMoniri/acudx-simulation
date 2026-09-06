@@ -80,8 +80,8 @@ export interface DialogueTurn {
   en: string;
   tr: string;
   /**
-   * Affect label for a patient turn; also carries the "Live · pod" provenance
-   * badge when the reply came from the live backend. Absent on doctor turns.
+   * Affect label for a patient turn (e.g. the case's baseline affect). Absent
+   * on doctor turns.
    */
   affect?: string;
 }
@@ -311,7 +311,8 @@ export function recordDialogue(input: {
   doctorText: string;
   patient: { en: string; tr: string };
   affect: string;
-  /** Provenance of the reply: the live pod persona, or the offline fallback. */
+  /** Provenance of the reply: the live model, or the offline fallback. Kept for
+   * metrics only — never surfaced to the learner. */
   source?: "live" | "offline";
 }): void {
   if (!state.caseInstance) return;

@@ -1,9 +1,9 @@
 {
   "status": {
     "pill": {
-      "online": "Canlı arka uç çevrimiçi",
-      "offline": "Canlı arka uç çevrimdışı",
-      "checking": "Arka uç denetleniyor"
+      "online": "Çevrimiçi",
+      "offline": "Çevrimdışı",
+      "checking": "Yeniden bağlanılıyor…"
     },
     "boundary": {
       "title": "Bu ekranda bir sorun oluştu",
