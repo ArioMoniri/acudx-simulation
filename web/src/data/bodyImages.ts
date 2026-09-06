@@ -14,9 +14,11 @@
  * Synthetic patient.
  */
 
-import type { CaseInstance } from "@/domain/case";
+import type { CaseInstance, ExamFinding } from "@/domain/case";
 import { PATIENT_PHOTOS } from "@/data/patientPhotos";
 import { resolvePatientVisual } from "@/domain/patientIdentity";
+import type { BodyFinding } from "@/components/PatientBodyViewer";
+import type { Lang } from "@/data/mock";
 
 export interface BodyImageSet {
   id: string;
@@ -86,4 +88,53 @@ export function resolvePatientBody(
 ): BodyImageSet | null {
   const { photoId } = resolvePatientVisual(caseInstance);
   return BODY_SETS.find((s) => s.id === photoId) ?? null;
+}
+
+/**
+ * Anatomical anchor (spin frame + normalized position) for each exam maneuver,
+ * so a discovered abnormal finding pins onto the right part of the body. Front
+ * frame for most; the back frame (2) is used where the manoeuvre inspects the
+ * back. Positions are approximate — enough to read "this finding is here".
+ */
+const MANEUVER_ANCHOR: Record<string, { frame: number; x: number; y: number }> = {
+  "general-inspection": { frame: 0, x: 0.5, y: 0.16 },
+  "vitals-recheck": { frame: 0, x: 0.62, y: 0.26 },
+  cardiovascular: { frame: 0, x: 0.44, y: 0.34 },
+  respiratory: { frame: 2, x: 0.55, y: 0.32 },
+  abdominal: { frame: 0, x: 0.5, y: 0.5 },
+  neurological: { frame: 0, x: 0.5, y: 0.09 },
+  musculoskeletal: { frame: 0, x: 0.33, y: 0.72 },
+  skin: { frame: 0, x: 0.28, y: 0.55 },
+  ent: { frame: 0, x: 0.52, y: 0.08 },
+  "focused-special": { frame: 0, x: 0.5, y: 0.42 },
+};
+
+/**
+ * Map DISCOVERED abnormal exam findings onto body markers so the interactive
+ * patient becomes examinable — each finding the learner has elicited appears
+ * pinned at its anatomical site. Findings on the same region are staggered so
+ * they don't overlap. Normal findings are omitted (no marker clutter).
+ */
+export function bodyFindingsFromExam(
+  exam: ExamFinding[],
+  lang: Lang,
+): BodyFinding[] {
+  const perRegion = new Map<string, number>();
+  const out: BodyFinding[] = [];
+  for (const e of exam) {
+    if (!e.abnormal) continue;
+    const a = MANEUVER_ANCHOR[e.maneuver] ?? { frame: 0, x: 0.5, y: 0.3 };
+    const k = `${a.frame}:${a.x}:${a.y}`;
+    const idx = perRegion.get(k) ?? 0;
+    perRegion.set(k, idx + 1);
+    out.push({
+      id: e.id,
+      frame: a.frame,
+      x: a.x,
+      y: Math.min(0.95, a.y + idx * 0.06),
+      label: e.finding[lang],
+      tone: "finding",
+    });
+  }
+  return out;
 }
