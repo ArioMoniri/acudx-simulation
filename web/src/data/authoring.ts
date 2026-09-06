@@ -731,9 +731,28 @@ export const ROLE_LABELS: Record<ProfileRole, Bilingual> = {
   dean: { en: "Faculty dean", tr: "Fakülte dekanı" },
 };
 
-/** Build the co-signer identity from the authenticated profile, or null. */
+/**
+ * The roles that hold real teaching-faculty credentials and may co-sign +
+ * publish a case. Co-signing attests a case is safe for learners, so it is
+ * gated to educators and deans — a student or resident cannot sign off, even
+ * with a completed profile. This mirrors `profile.role` (the client-side
+ * permission source today; a Supabase wave later makes it server-verified).
+ */
+export function isCredentialedRole(role: ProfileRole): boolean {
+  return role === "educator" || role === "dean";
+}
+
+/**
+ * Build the co-signer identity from the authenticated profile, or null.
+ *
+ * Returns null unless the profile is onboarded, carries a real name, AND holds
+ * a credentialed teaching role (educator / dean). A non-credentialed account
+ * (student / resident) yields null so it can never co-sign or publish a case
+ * attributed to a fabricated credential.
+ */
 export function reviewerFromProfile(p: UserProfile | null): ReviewerIdentity | null {
   if (!p || !p.onboarded || p.fullName.trim() === "") return null;
+  if (!isCredentialedRole(p.role)) return null;
   return {
     name: p.fullName,
     roleKey: p.role,
@@ -992,7 +1011,14 @@ export type AuthoringAction =
   | { type: "ground"; id: string }
   | { type: "unlock"; id: string }
   | { type: "cosign"; value: boolean }
-  | { type: "publish"; publishedId: string; caseHash: string; rubricHash: string }
+  | {
+      type: "publish";
+      publishedId: string;
+      caseHash: string;
+      rubricHash: string;
+      /** The co-signer holds a credentialed teaching role (educator / dean). */
+      credentialed: boolean;
+    }
   | { type: "reset" };
 
 function clampStage(i: number): number {
@@ -1076,10 +1102,14 @@ export function authoringReducer(
     case "cosign":
       return { ...state, cosigned: action.value };
     case "publish": {
-      // Hard gate: a draft, co-signed, and no ungrounded/unlocked facts.
+      // Hard gate: a draft, co-signed by a CREDENTIALED clinician (educator /
+      // dean), and no ungrounded/unlocked facts. The credential check is
+      // enforced here, not just in the page, so a non-credentialed account can
+      // never publish even if it reaches this action.
       if (
         !state.draft ||
         !state.cosigned ||
+        !action.credentialed ||
         !factsClear(state.draft.facts, state.edits)
       ) {
         return state;

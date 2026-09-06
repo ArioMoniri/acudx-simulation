@@ -1,9 +1,11 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkle, CaretDown, Sliders, Stack } from "@phosphor-icons/react";
+import { Sparkle, CaretDown, Sliders, Stack, BookOpen } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui";
 import { seedCases } from "@/data/seedCases";
+import { usePublishedCases } from "@/data/authoring";
+import { startEncounter } from "@/state/encounterStore";
 import type { ChiefComplaintFamily } from "@/domain/caseGen";
 import type { CaseInstance } from "@/domain/case";
 import type { Lang } from "@/data/mock";
@@ -54,6 +56,22 @@ export function NewCaseMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
+
+  // Educator-authored, co-signed, PUBLISHED cases, surfaced as startable options
+  // alongside the generator and the curated seeds. Only non-flagged cases offered
+  // in the active locale are shown, so a mismatched-language case never appears.
+  // Clicking one loads its exact authored caseInstance into the shared encounter
+  // store — the same store the seed path drives — so it starts just like a seed.
+  const published = usePublishedCases();
+  const liveCases = useMemo(
+    () =>
+      published.filter(
+        (p) =>
+          p.status !== "flagged" &&
+          p.locales.some((l) => l.locale === lang && l.offered),
+      ),
+    [published, lang],
+  );
 
   // Close and return focus to the trigger (used for Escape + item selection so
   // keyboard users are never dropped at the top of the document).
@@ -186,7 +204,38 @@ export function NewCaseMenu({
             </Button>
           </div>
 
-          {/* Tertiary: start from a curated case */}
+          {/* Tertiary: start from an educator-published case (if any) */}
+          {liveCases.length > 0 ? (
+            <div className="mt-2 border-t border-border pt-2">
+              <p className="flex items-center gap-1.5 px-2.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                <BookOpen weight="bold" className="h-3.5 w-3.5" aria-hidden />
+                {t("livegen.orPublished", {
+                  defaultValue: "Or start from a published case",
+                })}
+              </p>
+              <ul className="mt-1 max-h-40 overflow-y-auto">
+                {liveCases.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        // Load the exact authored patient into the encounter
+                        // store — identical to how a seed case starts.
+                        startEncounter(p.caseInstance);
+                        close();
+                      }}
+                      className="w-full truncate rounded-control px-2.5 py-1.5 text-start text-sm text-fg hover:bg-bg-subtle focus-visible:outline-none"
+                    >
+                      {pick(p.chiefComplaint, lang)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {/* Quaternary: start from a curated case */}
           <div className="mt-2 border-t border-border pt-2">
             <p className="flex items-center gap-1.5 px-2.5 text-xs font-semibold uppercase tracking-wide text-muted">
               <Stack weight="bold" className="h-3.5 w-3.5" aria-hidden />

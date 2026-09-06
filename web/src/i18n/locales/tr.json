@@ -1,4 +1,7 @@
 {
+  "debrief": {
+    "viewFullReport": "Tam raporu gör"
+  },
   "app": {
     "name": "AcuDx",
     "tagline": "Klinik muhakeme, prova edildi.",

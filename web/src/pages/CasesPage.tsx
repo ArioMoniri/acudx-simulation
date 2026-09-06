@@ -52,6 +52,7 @@ import { cn } from "@/lib/cn";
 import { pick, esiToState } from "@/components/ehr/labels";
 import { stateMap } from "@/components/clinicalState";
 import { seedCases } from "@/data/seedCases";
+import { usePublishedCases } from "@/data/authoring";
 import {
   generateCase,
   CHIEF_COMPLAINT_FAMILIES,
@@ -579,7 +580,29 @@ export function CasesPage() {
   const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
   const [complaint, setComplaint] = useState<ChiefComplaintFamily | null>(null);
 
-  const allCases = useMemo(() => [...generated, ...seedCases], [generated]);
+  // Educator-authored, co-signed, PUBLISHED cases (persisted, cross-session).
+  // Only cases that are not flagged AND are offered in the active locale reach
+  // learners here — a Turkish-only case never surfaces in an English library,
+  // and vice-versa. The subscription keeps this live, so a case published in
+  // this session appears without a reload. Each maps to its exact caseInstance
+  // so "Start" hands over the authored patient, just like a seed case.
+  const published = usePublishedCases();
+  const publishedInstances = useMemo(
+    () =>
+      published
+        .filter(
+          (p) =>
+            p.status !== "flagged" &&
+            p.locales.some((l) => l.locale === lang && l.offered),
+        )
+        .map((p) => p.caseInstance),
+    [published, lang],
+  );
+
+  const allCases = useMemo(
+    () => [...generated, ...publishedInstances, ...seedCases],
+    [generated, publishedInstances],
+  );
 
   const visible = useMemo(() => {
     return allCases.filter((c) => {

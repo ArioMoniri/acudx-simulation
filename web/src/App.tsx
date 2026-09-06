@@ -7,7 +7,12 @@ import { AppFrame, PageContainer } from "@/components/shell";
 import { RouteFallback } from "@/components/shell/RouteFallback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui";
-import { useIsOnboarded, useIsSignedIn } from "@/state/profileStore";
+import {
+  useIsOnboarded,
+  useIsSignedIn,
+  useProfile,
+  type ProfileRole,
+} from "@/state/profileStore";
 
 /* -------------------------------------------------------------------------- */
 /* Lazily-loaded route pages                                                   */
@@ -113,6 +118,31 @@ function AuthGate({ children }: { children: ReactNode }) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Role gate                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Real ROLE permission guard (not "View as"). Reads the genuine `profile.role`
+ * from profileStore and admits only the listed roles; anyone else is bounced to
+ * Home. Composed INSIDE {@link AuthGate}, so a signed-in profile is guaranteed
+ * here. `profile.role` is the permission source today — a future Supabase wave
+ * swaps it for a server-verified claim without changing this boundary.
+ */
+function RoleGate({
+  roles,
+  children,
+}: {
+  roles: readonly ProfileRole[];
+  children: ReactNode;
+}) {
+  const profile = useProfile();
+  if (!profile || !roles.includes(profile.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
+
+/* -------------------------------------------------------------------------- */
 /* App                                                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -128,7 +158,14 @@ export default function App() {
               <Route path="/account" element={<ProfilePage />} />
               <Route path="/" element={<HomePage />} />
               <Route path="/welcome" element={<LandingPage />} />
-              <Route path="/authoring" element={<AuthoringPage />} />
+              <Route
+                path="/authoring"
+                element={
+                  <RoleGate roles={["educator", "dean"]}>
+                    <AuthoringPage />
+                  </RoleGate>
+                }
+              />
               <Route path="/start" element={<StartPage />} />
               <Route path="/cases" element={<CasesPage />} />
               <Route path="/rooms" element={<RoomPage />} />
@@ -137,7 +174,14 @@ export default function App() {
               <Route path="/feedback" element={<FeedbackPage />} />
               <Route path="/progress" element={<ProgressPage />} />
               <Route path="/exam" element={<ExamPage />} />
-              <Route path="/institution" element={<InstitutionPage />} />
+              <Route
+                path="/institution"
+                element={
+                  <RoleGate roles={["dean"]}>
+                    <InstitutionPage />
+                  </RoleGate>
+                }
+              />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </AuthGate>

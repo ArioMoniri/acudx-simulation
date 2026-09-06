@@ -296,11 +296,9 @@ const streakDayStyle: Record<StreakDay["state"], string> = {
   upcoming: "border border-dashed border-border bg-surface text-muted",
 };
 
-function StreakDayCell({ day, logged }: { day: StreakDay; logged: boolean }) {
+function StreakDayCell({ day }: { day: StreakDay }) {
   const { t } = useTranslation();
-  // When today's rep is logged, today reads as practised.
-  const state: StreakDay["state"] =
-    day.state === "today" && logged ? "practised" : day.state;
+  const state = day.state;
   const label = t(`progress.streak.dayState.${state}`);
 
   return (
@@ -335,8 +333,10 @@ function StreakDayCell({ day, logged }: { day: StreakDay; logged: boolean }) {
 function StreakCard() {
   const { t } = useTranslation();
   const streakState = useStreakState();
-  const [logged, setLogged] = useState(streakState.todayDone);
-  const current = streakState.currentDays + (logged && !streakState.todayDone ? 1 : 0);
+  // The streak is derived entirely from real recorded-encounter dates
+  // (progressStore.deriveStreak); there is no separate persisted "study day",
+  // so the surface only ever reflects earned encounter data.
+  const current = streakState.currentDays;
 
   return (
     <Card padding="md" className="flex h-full flex-col gap-4">
@@ -368,43 +368,9 @@ function StreakCard() {
         aria-label={t("progress.streak.weekLabel")}
       >
         {streakState.week.map((d) => (
-          <StreakDayCell key={d.key} day={d} logged={logged} />
+          <StreakDayCell key={d.key} day={d} />
         ))}
       </ul>
-
-      {/* Log today's single rep — a satisfying, low-pressure daily action */}
-      {logged ? (
-        <div className="flex items-start gap-2.5 rounded-control bg-[color-mix(in_srgb,var(--state-normal)_12%,transparent)] p-3">
-          <CheckCircle
-            weight="fill"
-            className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--state-normal)]"
-            aria-hidden
-          />
-          <div>
-            <p className="text-sm font-medium text-fg">
-              {t("progress2.streak.logged")}
-            </p>
-            <p className="text-xs text-muted">
-              {t("progress2.streak.protectedToday")}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-muted">{t("progress2.streak.logHint")}</p>
-          <Button
-            size="sm"
-            variant="secondary"
-            leadingIcon={<CheckCircle weight="bold" className="h-4 w-4" />}
-            onClick={() => setLogged(true)}
-          >
-            {t("progress2.streak.logRep")}
-          </Button>
-        </div>
-      )}
-      <span aria-live="polite" className="sr-only">
-        {logged ? t("progress2.streak.logAnnounce", { days: current }) : ""}
-      </span>
 
       {/* Freeze / grace — a rough week never breaks the streak */}
       <div className="flex flex-col gap-2.5">

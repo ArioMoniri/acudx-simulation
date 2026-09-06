@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Plus, Users, Robot } from "@phosphor-icons/react";
 
@@ -7,6 +7,8 @@ import { cn } from "@/lib/cn";
 import { ROLE_ICON } from "./roleMeta";
 import { CLINICAL_ROLE_ORDER, type ClinicalRole, type RoomLocale } from "@/data/rooms";
 import { seedCases } from "@/data/seedCases";
+import { usePublishedCases } from "@/data/authoring";
+import { complaintFamilyOf } from "@/data/caseLibrary";
 import type { Lang } from "@/data/mock";
 import type { ChiefComplaintFamily } from "@/domain/caseGen";
 import { familyForSeedCase } from "./roomStore";
@@ -50,6 +52,21 @@ export function CreateRoomDialog({
   const [aiBackfill, setAiBackfill] = useState(true);
   const [locale, setLocale] = useState<RoomLocale>(lang);
 
+  // Educator-authored, co-signed, PUBLISHED cases can also seed a room. Only
+  // non-flagged cases offered in the active locale are eligible, so a room is
+  // never built from a mismatched-language case. The subscription keeps this
+  // live, so a freshly published case is pickable without a reload.
+  const published = usePublishedCases();
+  const liveCases = useMemo(
+    () =>
+      published.filter(
+        (p) =>
+          p.status !== "flagged" &&
+          p.locales.some((l) => l.locale === lang && l.offered),
+      ),
+    [published, lang],
+  );
+
   // Reset the form each time the dialog opens.
   useEffect(() => {
     if (open) {
@@ -84,17 +101,20 @@ export function CreateRoomDialog({
 
   function submit() {
     // The picked case is a TEMPLATE: the room mints a fresh, unique patient in
-    // that presentation family, so no two rooms share the same case.
-    onCreate({
-      caseId,
-      humanRoles,
-      aiBackfill,
-      locale,
-      family: familyForSeedCase(caseId),
-    });
+    // that presentation family, so no two rooms share the same case. A published
+    // case is not in the seed-family map, so derive its family from its authored
+    // caseInstance; a seed case resolves via the seed-family map as before.
+    const pub = liveCases.find((p) => p.id === caseId);
+    const family = pub
+      ? (complaintFamilyOf(pub.caseInstance) ?? undefined)
+      : familyForSeedCase(caseId);
+    onCreate({ caseId, humanRoles, aiBackfill, locale, family });
   }
 
+  const selectedPublished = liveCases.find((p) => p.id === caseId);
   const selectedCase = seedCases.find((c) => c.id === caseId);
+  const selectedDifficulty =
+    selectedCase?.difficulty ?? selectedPublished?.difficulty;
   const locales: RoomLocale[] = ["tr", "en"];
 
   return (
@@ -140,8 +160,8 @@ export function CreateRoomDialog({
           <Field
             label={t("rooms.create.caseLabel")}
             hint={
-              selectedCase
-                ? t("rooms.create.difficulty", { level: selectedCase.difficulty })
+              selectedDifficulty
+                ? t("rooms.create.difficulty", { level: selectedDifficulty })
                 : undefined
             }
           >
@@ -151,11 +171,30 @@ export function CreateRoomDialog({
                 value={caseId}
                 onChange={(e) => setCaseId(e.target.value)}
               >
-                {seedCases.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {pick(c.chiefComplaint, lang)}
-                  </option>
-                ))}
+                {liveCases.length > 0 ? (
+                  <optgroup
+                    label={t("rooms.create.publishedGroup", {
+                      defaultValue: "Published cases",
+                    })}
+                  >
+                    {liveCases.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {pick(p.chiefComplaint, lang)}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                <optgroup
+                  label={t("rooms.create.curatedGroup", {
+                    defaultValue: "Curated cases",
+                  })}
+                >
+                  {seedCases.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {pick(c.chiefComplaint, lang)}
+                    </option>
+                  ))}
+                </optgroup>
               </Select>
             )}
           </Field>
