@@ -25,6 +25,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    * and the icon affordances are applied to the child.
    */
   asChild?: boolean;
+  /**
+   * Busy state. Shows a spinner in the leading slot, disables the control, and
+   * sets `aria-busy`. The label is kept so the button width stays stable.
+   */
+  loading?: boolean;
 }
 
 const base =
@@ -54,6 +59,38 @@ const circleSizes: Record<Size, string> = {
   md: "h-5 w-5 -me-1",
   lg: "h-6 w-6 -me-1.5",
 };
+
+const spinnerSizes: Record<Size, string> = {
+  sm: "h-3.5 w-3.5",
+  md: "h-4 w-4",
+  lg: "h-5 w-5",
+};
+
+/** Inline busy spinner. Inherits the button text color via currentColor. */
+function Spinner({ className }: { className?: string }) {
+  return (
+    <svg
+      className={cn("animate-spin", className)}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"
+      />
+    </svg>
+  );
+}
 
 function renderContent(
   variant: Variant,
@@ -96,6 +133,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     leadingIcon,
     fullWidth,
     asChild = false,
+    loading = false,
+    disabled,
     className,
     children,
     type = "button",
@@ -111,35 +150,38 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     className,
   );
 
-  const content = renderContent(
-    variant,
-    size,
-    leadingIcon,
-    trailingIcon,
-    children,
-  );
+  // While busy, the spinner takes over the leading slot (keeping the label).
+  const leading = loading ? <Spinner className={spinnerSizes[size]} /> : leadingIcon;
+
+  const content = renderContent(variant, size, leading, trailingIcon, children);
 
   if (asChild && isValidElement(children)) {
     // Clone the single child (e.g. a <Link>) and apply button styling + slots.
     const child = children as ReactElement<{
       className?: string;
       children?: ReactNode;
+      "aria-busy"?: boolean;
+      "aria-disabled"?: boolean;
     }>;
     return cloneElement(
       child,
-      { className: cn(classes, child.props.className) },
-      renderContent(
-        variant,
-        size,
-        leadingIcon,
-        trailingIcon,
-        child.props.children,
-      ),
+      {
+        className: cn(classes, loading && "pointer-events-none", child.props.className),
+        ...(loading ? { "aria-busy": true, "aria-disabled": true } : {}),
+      },
+      renderContent(variant, size, leading, trailingIcon, child.props.children),
     );
   }
 
   return (
-    <button ref={ref} type={type} className={classes} {...props}>
+    <button
+      ref={ref}
+      type={type}
+      className={classes}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      {...props}
+    >
       {content}
     </button>
   );

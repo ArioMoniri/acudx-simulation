@@ -38,7 +38,7 @@ export const BAND_CELL_TEXT: Record<Exclude<Band, "withheld">, string> = {
   developing: "var(--fg)",
   proficient: "var(--fg)",
   strong: "var(--fg)",
-  exemplary: "#ffffff",
+  exemplary: "white",
 };
 
 /** Short two-letter band code for the dense heatmap cell (e.g. "Pr"). */

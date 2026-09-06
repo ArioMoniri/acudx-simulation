@@ -215,7 +215,7 @@ export function DebriefReport({ debrief, caseInstance, onClose, onViewReport }: 
             type="button"
             onClick={close}
             aria-label={t("debrief.close", { defaultValue: "Close" })}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted hover:bg-bg-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand print:hidden"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted hover:bg-bg-subtle hover:text-fg print:hidden"
           >
             <X weight="bold" className="h-5 w-5" aria-hidden />
           </button>
@@ -432,10 +432,12 @@ function RedFlagColumn({
 }) {
   return (
     <div className="rounded-control border border-border bg-surface p-3">
-      <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
-        <StatusDot tone={tone} size="sm" aria-hidden />
+      <SectionLabel
+        className="mb-1.5"
+        icon={<StatusDot tone={tone} size="sm" aria-hidden />}
+      >
         {title}
-      </p>
+      </SectionLabel>
       {items.length === 0 ? (
         <p className="text-xs italic text-muted">{emptyLabel}</p>
       ) : (
@@ -467,10 +469,12 @@ function WorkupColumn({
 }) {
   return (
     <div className="rounded-control border border-border bg-surface p-3">
-      <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
-        <StatusDot tone={tone} size="sm" aria-hidden />
+      <SectionLabel
+        className="mb-1.5"
+        icon={<StatusDot tone={tone} size="sm" aria-hidden />}
+      >
         {title}
-      </p>
+      </SectionLabel>
       {items.length === 0 ? (
         <p className="text-xs italic text-muted">{emptyLabel}</p>
       ) : (

@@ -736,7 +736,7 @@ export function InterviewTab({
                 }
                 className={cn(
                   "relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-control border",
-                  "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+                  "transition-colors",
                   micListening
                     ? "border-transparent bg-brand-tint text-brand"
                     : "border-border bg-surface text-muted hover:text-fg",
@@ -890,7 +890,6 @@ function DismissButton({ onDismiss }: { onDismiss: () => void }) {
       className={cn(
         "-me-1 -mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-muted",
         "transition-colors hover:bg-bg-subtle hover:text-fg",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
       )}
     >
       <X weight="bold" className="h-3.5 w-3.5" aria-hidden />
@@ -1049,7 +1048,7 @@ function PatientPresence({
   return (
     <section className="rounded-card border border-border bg-surface p-3">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+        <h3 className="eyebrow">
           {t("ehr.interview.patient.heading", { defaultValue: "Patient" })}
         </h3>
         <button
@@ -1061,7 +1060,7 @@ function PatientPresence({
           })}
           className={cn(
             "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
-            "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+            "transition-colors",
             voiceOn
               ? "border-transparent bg-brand-tint text-brand"
               : "border-border bg-bg-subtle text-muted hover:text-fg",
@@ -1117,7 +1116,7 @@ function ChipPanel({
 }) {
   return (
     <section className="rounded-card border border-border bg-surface p-3">
-      <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+      <h3 className="flex items-center gap-1.5 eyebrow">
         {icon}
         {title}
       </h3>

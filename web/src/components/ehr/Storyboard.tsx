@@ -92,8 +92,8 @@ function Section({
 }) {
   return (
     <section className="border-t border-border px-4 py-3 first:border-t-0">
-      <h3 className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
-        <span aria-hidden className="text-muted">
+      <h3 className="mb-2 flex items-center gap-1.5 eyebrow">
+        <span aria-hidden className="text-subtle">
           {icon}
         </span>
         {title}
@@ -394,7 +394,7 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
         title={t("ehr.storyboard.vitalsSnapshot")}
         headerRight={
           vitalsAreLive ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">
+            <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
               <span
                 aria-hidden
                 className="h-1.5 w-1.5 rounded-full bg-[color:var(--state-normal)] motion-safe:animate-pulse"
@@ -495,7 +495,7 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
         title={t("ehr.storyboard.careTeam")}
         headerRight={
           inRoom ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted">
+            <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
               <span
                 aria-hidden
                 className="h-1.5 w-1.5 rounded-full bg-[color:var(--state-normal)] motion-safe:animate-pulse"

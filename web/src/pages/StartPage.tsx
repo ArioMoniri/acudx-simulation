@@ -171,7 +171,7 @@ function ChoiceCard({
       onClick={onSelect}
       className={cn(
         shell,
-        layout === "stack" && "flex min-h-[7.75rem] flex-col gap-3 p-4",
+        layout === "stack" && "flex min-h-31 flex-col gap-3 p-4",
         layout === "row" && "grid grid-cols-[auto_1fr_auto] items-start gap-3 p-3.5",
         layout === "tile" && "flex flex-col gap-1.5 p-3",
       )}
@@ -501,7 +501,7 @@ export function StartPage() {
                 level: difficulty,
                 label: difficultyLabel,
               })}
-              className="w-full accent-[color:var(--brand-600)]"
+              className="w-full accent-brand"
             />
             <div className="flex justify-between text-[11px] text-muted">
               <span>{DIFFICULTY_LABELS[1][lang]}</span>

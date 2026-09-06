@@ -42,7 +42,7 @@ export const TabsTrigger = forwardRef<
         "text-sm font-medium transition-colors duration-150 ease-out focus-visible:outline-none",
         variant === "segmented"
           ? [
-              "inline-flex min-h-8 items-center justify-center rounded-[6px] px-3 py-1.5",
+              "inline-flex min-h-8 items-center justify-center rounded-chip px-3 py-1.5",
               "text-muted hover:text-fg",
               "data-[state=active]:bg-surface data-[state=active]:text-fg data-[state=active]:shadow-soft",
             ]

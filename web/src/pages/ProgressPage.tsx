@@ -428,7 +428,7 @@ function BandHistoryMeter({
                 opacity: i === history.length - 1 ? 1 : 0.4,
               }}
             />
-            <span className="text-[9px] font-medium text-muted">
+            <span className="text-[10px] font-medium text-muted">
               {t(`bands.${band}`)}
             </span>
           </li>
@@ -591,7 +591,7 @@ function MasteryRow({ domain }: { domain: MasteryDomain }) {
                 />
                 <span
                   className={cn(
-                    "text-[9px] font-medium leading-tight",
+                    "text-[10px] font-medium leading-tight",
                     isAchieved ? "text-fg" : "text-muted",
                   )}
                 >
@@ -611,14 +611,14 @@ function MasteryRow({ domain }: { domain: MasteryDomain }) {
           className="mt-3.5 flex flex-col gap-3.5 border-t border-border pt-3.5"
         >
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <p className="eyebrow">
               {t("progress2.mastery.movedByHeading")}
             </p>
             <p className="mt-1 text-sm text-fg">{detail.movedBy[lang]}</p>
           </div>
 
           <div className="rounded-control bg-bg-subtle p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <p className="eyebrow">
               {nextBand
                 ? t("progress2.mastery.nextHeading", {
                     band: t(`bands.${nextBand}`),
@@ -634,7 +634,7 @@ function MasteryRow({ domain }: { domain: MasteryDomain }) {
 
           {detail.bandHistory.length > 0 ? (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <p className="eyebrow">
                 {t("progress2.mastery.historyHeading")}
               </p>
               <div className="mt-2">
@@ -645,7 +645,7 @@ function MasteryRow({ domain }: { domain: MasteryDomain }) {
 
           {detail.evidence.length > 0 ? (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <p className="eyebrow">
                 {t("progress2.mastery.evidenceHeading")}
               </p>
               <ul className="mt-2 flex flex-col gap-2.5">
@@ -1689,7 +1689,7 @@ function ReviewSessionCard({
           </span>
           <CitationPill citationId={card.citationId} lang={lang} />
         </div>
-        <p className="mt-2 text-[11px] font-semibold uppercase tracking-wide text-muted">
+        <p className="mt-2 eyebrow">
           {t("progress2.review.promptLabel")}
         </p>
         <p className="mt-1 text-base font-medium text-fg">

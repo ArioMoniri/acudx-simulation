@@ -14,7 +14,7 @@ export const Switch = forwardRef<
         "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full",
         "border border-transparent transition-colors duration-200 ease-out",
         "focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
-        "data-[state=checked]:bg-brand data-[state=unchecked]:bg-[color:var(--border)]",
+        "data-[state=checked]:bg-brand data-[state=unchecked]:bg-border",
         className,
       )}
       {...props}

@@ -19,7 +19,7 @@ import {
   GraduationCap,
 } from "@phosphor-icons/react";
 
-import { Badge, Button, Card, StatusDot } from "@/components/ui";
+import { Badge, Button, Card, SectionLabel, StatusDot, TextInput, Textarea } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useStagger } from "@/lib/motion";
 import { useLiveBackend } from "@/lib/liveBackend";
@@ -413,7 +413,6 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
                                 aria-pressed={active}
                                 className={cn(
                                   "px-2 py-0.5 text-[11px] font-medium transition-colors",
-                                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                                   active
                                     ? lk === "leading"
                                       ? "bg-brand text-white"
@@ -433,7 +432,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
                           aria-label={t("diagnosis2.commitAria", { name: d.display })}
                           className={cn(
                             "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium",
-                            "transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]",
+                            "transition-colors duration-200 ease-out active:scale-[0.98]",
                             isWorking
                               ? "bg-brand text-white"
                               : "border border-border bg-surface text-fg hover:bg-brand-tint hover:text-brand",
@@ -451,13 +450,13 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
                       </div>
 
                       {ann.noteOpen ? (
-                        <input
+                        <TextInput
                           type="text"
                           value={ann.note}
                           onChange={(e) => setAnnotation(code, { note: e.target.value })}
                           placeholder={t("diagnosis2.notePlaceholder")}
                           aria-label={t("diagnosis2.noteLabel")}
-                          className="mt-2 w-full rounded-control border border-border bg-surface px-2.5 py-1.5 text-xs text-fg placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                          className="mt-2"
                         />
                       ) : ann.note ? (
                         <p className="mt-2 flex items-start gap-1.5 text-xs text-muted">
@@ -515,10 +514,12 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
             </h3>
 
             {/* Disposition — the domain Disposition union */}
-            <p className="mb-1 flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted">
-              <Path weight="bold" className="h-3 w-3" aria-hidden />
+            <SectionLabel
+              className="mb-1"
+              icon={<Path weight="bold" className="h-3 w-3" aria-hidden />}
+            >
               {t("diagnosis2.dispositionHeading")}
-            </p>
+            </SectionLabel>
             <div className="mb-3 flex flex-wrap gap-1.5">
               {DISPOSITIONS.map((disp) => {
                 const active = disposition === disp;
@@ -530,7 +531,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
                     aria-pressed={active}
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
-                      "transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]",
+                      "transition-colors duration-200 ease-out active:scale-[0.98]",
                       active
                         ? "border-brand bg-brand text-white"
                         : "border-border bg-surface text-fg hover:bg-brand-tint hover:text-brand",
@@ -544,9 +545,9 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
             </div>
 
             {/* Quick-add building blocks */}
-            <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted">
+            <SectionLabel className="mb-1">
               {t("ehr2.ap.quickPlanHeading")}
-            </p>
+            </SectionLabel>
             <div className="mb-2 flex flex-wrap gap-1.5">
               {QUICK_PLAN.map((k) => (
                 <button
@@ -555,7 +556,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
                   onClick={() => insertPlan(t(`ehr2.ap.quick.${k}`))}
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-fg",
-                    "transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]",
+                    "transition-colors duration-200 ease-out active:scale-[0.98]",
                     "hover:bg-brand-tint hover:text-brand",
                   )}
                 >
@@ -568,13 +569,12 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
             <label htmlFor="ap-plan" className="sr-only">
               {t("ehr.ap.planPlaceholder")}
             </label>
-            <textarea
+            <Textarea
               id="ap-plan"
               rows={3}
               value={plan}
               onChange={(e) => setPlan(e.target.value)}
               placeholder={t("ehr.ap.planPlaceholder")}
-              className="w-full resize-y rounded-control border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             />
             <div className="mt-1.5 flex items-center justify-between gap-2">
               <span className="text-[11px] text-muted" aria-live="polite">
@@ -647,7 +647,7 @@ function IconBtn({
       title={label}
       className={cn(
         "grid h-6 w-6 place-items-center rounded-control text-muted",
-        "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        "transition-colors",
         active && "bg-brand-tint text-brand",
         disabled ? "cursor-default opacity-30" : "hover:bg-bg-subtle hover:text-fg",
       )}
@@ -998,9 +998,9 @@ function ProblemSummary({
       {/* Working diagnosis */}
       {committed && workingDisplay ? (
         <div className="mb-3">
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">
+          <SectionLabel className="mb-1">
             {t("diagnosis2.summaryWorkingLabel")}
-          </p>
+          </SectionLabel>
           <div className="flex items-center justify-between gap-2 rounded-control border border-brand/30 bg-brand-tint/40 px-2.5 py-2">
             <span className="flex min-w-0 items-center gap-2">
               <SealCheck weight="fill" className="h-4 w-4 shrink-0 text-brand" aria-hidden />
@@ -1023,9 +1023,9 @@ function ProblemSummary({
       {/* Differential */}
       {otherDifferentials.length > 0 ? (
         <div className="mb-3">
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">
+          <SectionLabel className="mb-1">
             {t("diagnosis2.summaryDifferentialLabel")}
-          </p>
+          </SectionLabel>
           <ul className="flex flex-col divide-y divide-border">
             {otherDifferentials.map((code, i) => {
               const d = differentialByCode.get(code);
@@ -1054,9 +1054,9 @@ function ProblemSummary({
       {/* Plan + disposition */}
       {disposition || planEntries.length > 0 ? (
         <div>
-          <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">
+          <SectionLabel className="mb-1">
             {t("diagnosis2.summaryPlanLabel")}
-          </p>
+          </SectionLabel>
           {disposition ? (
             <p className="mb-1.5 flex items-center gap-1.5 text-sm text-fg">
               <Path weight="bold" className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden />

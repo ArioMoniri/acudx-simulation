@@ -182,7 +182,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                 onClick={() => selectLanguage(lng)}
                 onMouseEnter={() => setActiveIndex(index)}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 rounded-[7px] px-2.5 py-1.5",
+                  "flex cursor-pointer items-center gap-2 rounded-chip px-2.5 py-1.5",
                   "text-sm transition-colors duration-150",
                   active ? "bg-bg-subtle text-fg" : "text-fg/90",
                 )}
@@ -196,7 +196,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                   )}
                 />
                 <span className="flex-1 truncate font-medium">{meta.nativeName}</span>
-                <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted">
+                <span className="shrink-0 eyebrow">
                   {lng}
                 </span>
               </li>
