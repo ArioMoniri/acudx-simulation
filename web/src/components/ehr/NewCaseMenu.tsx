@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkle, CaretDown, Sliders, Stack, BookOpen } from "@phosphor-icons/react";
 
-import { Button } from "@/components/ui";
+import { Button, SectionLabel, Select } from "@/components/ui";
 import { seedCases } from "@/data/seedCases";
 import { usePublishedCases } from "@/data/authoring";
 import { startEncounter } from "@/state/encounterStore";
@@ -151,26 +151,26 @@ export function NewCaseMenu({
 
           {/* Secondary: constrain the draw */}
           <div className="mt-2.5 rounded-control border border-border p-2.5">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              <Sliders weight="bold" className="h-3.5 w-3.5" aria-hidden />
+            <SectionLabel icon={<Sliders weight="bold" className="h-3.5 w-3.5" aria-hidden />}>
               {t("ehr.newCase.constrained")}
-            </p>
+            </SectionLabel>
 
             <label htmlFor={`${panelId}-cc`} className="mt-2 block text-xs font-medium text-fg">
               {t("ehr.newCase.chiefComplaint")}
             </label>
-            <select
-              id={`${panelId}-cc`}
-              value={complaint}
-              onChange={(e) => setComplaint(e.target.value as ChiefComplaintFamily)}
-              className="mt-1 w-full rounded-control border border-border bg-surface px-2.5 py-1.5 text-sm text-fg focus-visible:outline-none"
-            >
-              {CHIEF_COMPLAINTS.map((c) => (
-                <option key={c} value={c}>
-                  {t(`ehr.chiefComplaint.${camel(c)}`)}
-                </option>
-              ))}
-            </select>
+            <div className="mt-1">
+              <Select
+                id={`${panelId}-cc`}
+                value={complaint}
+                onChange={(e) => setComplaint(e.target.value as ChiefComplaintFamily)}
+              >
+                {CHIEF_COMPLAINTS.map((c) => (
+                  <option key={c} value={c}>
+                    {t(`ehr.chiefComplaint.${camel(c)}`)}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
             <label htmlFor={`${panelId}-diff`} className="mt-2 block text-xs font-medium text-fg">
               {t("ehr.newCase.difficulty")}: {difficulty}
@@ -207,12 +207,14 @@ export function NewCaseMenu({
           {/* Tertiary: start from an educator-published case (if any) */}
           {liveCases.length > 0 ? (
             <div className="mt-2 border-t border-border pt-2">
-              <p className="flex items-center gap-1.5 px-2.5 text-xs font-semibold uppercase tracking-wide text-muted">
-                <BookOpen weight="bold" className="h-3.5 w-3.5" aria-hidden />
+              <SectionLabel
+                className="px-2.5"
+                icon={<BookOpen weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+              >
                 {t("livegen.orPublished", {
                   defaultValue: "Or start from a published case",
                 })}
-              </p>
+              </SectionLabel>
               <ul className="mt-1 max-h-40 overflow-y-auto">
                 {liveCases.map((p) => (
                   <li key={p.id}>
@@ -237,10 +239,12 @@ export function NewCaseMenu({
 
           {/* Quaternary: start from a curated case */}
           <div className="mt-2 border-t border-border pt-2">
-            <p className="flex items-center gap-1.5 px-2.5 text-xs font-semibold uppercase tracking-wide text-muted">
-              <Stack weight="bold" className="h-3.5 w-3.5" aria-hidden />
+            <SectionLabel
+              className="px-2.5"
+              icon={<Stack weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+            >
               {t("livegen.orCurated")}
-            </p>
+            </SectionLabel>
             <ul className="mt-1 max-h-40 overflow-y-auto">
               {seedCases.map((c: CaseInstance) => (
                 <li key={c.id}>

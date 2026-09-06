@@ -15,10 +15,13 @@ import { cn } from "@/lib/cn";
  * focus-visible rule, and token-driven surfaces.
  */
 
+// Focus uses the canonical global focus-visible ring (index.css) plus a brand
+// border. No hover state: the resting border is already `border-border-strong`,
+// so the old `hover:border-border-strong` was a dead no-op and is removed.
 const controlBase =
   "w-full rounded-control border border-border-strong bg-surface text-fg " +
   "px-3 text-sm placeholder:text-subtle transition-colors duration-150 " +
-  "hover:border-border-strong focus:border-brand focus-visible:outline-none " +
+  "focus:border-brand focus-visible:outline-none " +
   "disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-[color:var(--state-critical)]";
 
 export const TextInput = forwardRef<

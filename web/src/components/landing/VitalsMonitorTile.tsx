@@ -164,14 +164,9 @@ export function VitalsMonitorTile({ className }: { className?: string }) {
       role="img"
       aria-label={t("landing2.monitor.aria")}
       className={cn(
-        "select-none rounded-card border p-4 shadow-soft-md sm:p-5",
+        "select-none rounded-card border border-monitor-border bg-monitor-bg p-4 text-monitor-fg shadow-soft-md sm:p-5",
         className,
       )}
-      style={{
-        backgroundColor: "var(--monitor-bg)",
-        borderColor: "var(--monitor-border)",
-        color: "var(--monitor-fg)",
-      }}
     >
       {/* Scoped keyframes for the ECG sweep; frozen under reduced motion. */}
       <style>{`
@@ -193,31 +188,18 @@ export function VitalsMonitorTile({ className }: { className?: string }) {
         <span className="inline-flex items-center gap-2">
           <Heartbeat
             weight="fill"
-            className="h-4 w-4 motion-safe:animate-pulse"
-            style={{ color: "var(--monitor-online)" }}
+            className="h-4 w-4 text-monitor-online motion-safe:animate-pulse"
           />
-          <span
-            className="text-[13px] font-semibold tracking-tight"
-            style={{ color: "var(--monitor-fg)" }}
-          >
+          <span className="text-[13px] font-semibold tracking-tight text-monitor-fg">
             {t("landing2.monitor.unit")}
           </span>
         </span>
         <span className="inline-flex items-center gap-2">
           <span className="relative flex h-2 w-2">
-            <span
-              className="absolute inline-flex h-full w-full rounded-full opacity-60 motion-safe:animate-ping"
-              style={{ backgroundColor: "var(--monitor-online)" }}
-            />
-            <span
-              className="relative inline-flex h-2 w-2 rounded-full"
-              style={{ backgroundColor: "var(--monitor-online)" }}
-            />
+            <span className="absolute inline-flex h-full w-full rounded-full bg-monitor-online opacity-60 motion-safe:animate-ping" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-monitor-online" />
           </span>
-          <span
-            className="text-[10px] font-semibold uppercase tracking-[0.14em]"
-            style={{ color: "var(--monitor-online)" }}
-          >
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-monitor-online">
             {t("landing2.monitor.status")}
           </span>
         </span>
@@ -253,10 +235,7 @@ export function VitalsMonitorTile({ className }: { className?: string }) {
             />
           </g>
         </svg>
-        <p
-          className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em]"
-          style={{ color: "var(--monitor-dim)" }}
-        >
+        <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.14em] text-monitor-dim">
           {t("landing2.monitor.trace")}
         </p>
       </div>
@@ -266,31 +245,23 @@ export function VitalsMonitorTile({ className }: { className?: string }) {
         {VITALS.map((v) => (
           <div
             key={v.key}
-            className="rounded-control border px-3 py-2.5"
+            className="rounded-control border border-monitor-border px-3 py-2.5"
             style={{
-              borderColor: "var(--monitor-border)",
               backgroundColor:
                 "color-mix(in srgb, var(--monitor-fg) 4%, transparent)",
             }}
           >
             <p
-              className="text-[10px] font-semibold uppercase tracking-[0.12em]"
-              style={{ color: "var(--monitor-dim)" }}
+              className="text-[10px] font-semibold uppercase tracking-[0.12em] text-monitor-dim"
               title={t(`landing2.monitor.${v.key}`)}
             >
               {v.abbr}
             </p>
             <p className="mt-1 flex items-baseline gap-1 font-mono leading-none">
-              <span
-                className="tnum text-2xl font-semibold"
-                style={{ color: "var(--monitor-fg)" }}
-              >
+              <span className="tnum text-2xl font-semibold text-monitor-fg">
                 {reduced ? v.value : liveVital(v.key, sec)}
               </span>
-              <span
-                className="text-[11px] font-medium"
-                style={{ color: "var(--monitor-dim)" }}
-              >
+              <span className="text-[11px] font-medium text-monitor-dim">
                 {v.unit}
               </span>
             </p>

@@ -45,13 +45,20 @@ const soft: Record<Tone, string> = {
     "border-transparent text-[color:var(--state-critical)] bg-[color-mix(in_srgb,var(--state-critical)_15%,transparent)]",
 };
 
+// Outline: hairline chip on surface. Clinical tones carry meaning through a
+// tone-colored border (not text color alone), so the outline variant no longer
+// fails WCAG 1.4.1 — every tone is distinguishable by its border, and the
+// leading `dot` remains available as a second, shape-based channel.
 const outline: Record<Tone, string> = {
   neutral: "bg-surface text-muted border-border",
   brand: "bg-surface text-brand border-brand-tint-2",
-  normal: "bg-surface text-[color:var(--state-normal)] border-border",
-  caution: "bg-surface text-[color:var(--state-caution)] border-border",
-  warning: "bg-surface text-[color:var(--state-warning)] border-border",
-  critical: "bg-surface text-[color:var(--state-critical)] border-border",
+  normal: "bg-surface text-[color:var(--state-normal)] border-[color:var(--state-normal)]",
+  caution:
+    "bg-surface text-[color:var(--state-caution)] border-[color:var(--state-caution)]",
+  warning:
+    "bg-surface text-[color:var(--state-warning)] border-[color:var(--state-warning)]",
+  critical:
+    "bg-surface text-[color:var(--state-critical)] border-[color:var(--state-critical)]",
 };
 
 /** Badge — small pill. Clinical tones pair an icon or dot with the label. */

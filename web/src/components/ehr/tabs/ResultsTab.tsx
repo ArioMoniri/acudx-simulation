@@ -12,7 +12,7 @@ import {
   Minus,
 } from "@phosphor-icons/react";
 
-import { Card, Switch } from "@/components/ui";
+import { Card, SectionLabel, Switch } from "@/components/ui";
 import { useReveal, useStagger } from "@/lib/motion";
 import { stateMap } from "@/components/clinicalState";
 import { ConditionImage } from "@/components/ehr/ConditionImage";
@@ -810,7 +810,7 @@ function SummaryStat({
   return (
     <div className="flex flex-col gap-0.5">
       {label ? (
-        <span className="text-[11px] font-medium uppercase tracking-wide text-muted">{label}</span>
+        <SectionLabel>{label}</SectionLabel>
       ) : null}
       <span
         className="text-sm font-semibold text-fg"

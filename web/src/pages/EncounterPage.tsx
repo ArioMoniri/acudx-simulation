@@ -7,6 +7,7 @@ import type { StartSelection } from "./StartPage";
 
 import { PageContainer } from "@/components/shell";
 import { ProgressStages } from "@/components";
+import { Skeleton } from "@/components/ui";
 import {
   PatientBanner,
   Storyboard,
@@ -292,8 +293,28 @@ export function EncounterPage() {
 
   if (!caseInstance) {
     return (
-      <PageContainer width="wide">
-        <p className="text-sm text-muted">{t("common.loading")}</p>
+      <PageContainer
+        width="wide"
+        role="status"
+        aria-busy="true"
+        aria-live="polite"
+      >
+        <span className="sr-only">{t("common.loading")}</span>
+        <div aria-hidden="true">
+          {/* Progress + patient-banner strip */}
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-40 rounded-control" />
+            <Skeleton className="h-16 w-full rounded-card" />
+          </div>
+          {/* Workspace split: storyboard rail + main tabs (matches the live grid) */}
+          <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,280px)_1fr]">
+            <Skeleton className="h-[520px] w-full rounded-card" />
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full rounded-card" />
+              <Skeleton className="h-[460px] w-full rounded-card" />
+            </div>
+          </div>
+        </div>
       </PageContainer>
     );
   }

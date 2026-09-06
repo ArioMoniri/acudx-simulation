@@ -37,7 +37,7 @@ export function RoleSwitcher({ className }: { className?: string }) {
   return (
     <div className={cn("inline-flex items-center gap-1.5", className)}>
       <span
-        className="hidden text-[11px] font-medium uppercase tracking-wide text-muted lg:inline"
+        className="hidden eyebrow lg:inline"
         aria-hidden="true"
       >
         {t("role.viewAs")}
@@ -59,7 +59,7 @@ export function RoleSwitcher({ className }: { className?: string }) {
               aria-label={t("role.viewAsRole", { role: t(`role.${r}`) })}
               title={t("role.viewAsRole", { role: t(`role.${r}`) })}
               className={cn(
-                "inline-flex min-h-8 items-center gap-1.5 rounded-[7px] px-2.5 text-xs font-semibold",
+                "inline-flex min-h-8 items-center gap-1.5 rounded-chip px-2.5 text-xs font-semibold",
                 "transition-colors duration-200 ease-out focus-visible:outline-none",
                 active
                   ? "bg-surface text-fg shadow-soft"

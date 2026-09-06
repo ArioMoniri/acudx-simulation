@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MagnifyingGlass, Plus, Check, Stethoscope, CaretDown } from "@phosphor-icons/react";
 
-import { Card } from "@/components/ui";
+import { Card, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import type { Lang } from "@/data/mock";
 import {
@@ -117,13 +117,13 @@ export function DiagnosisPicker({
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
             aria-hidden
           />
-          <input
+          <TextInput
             id="dx-search"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("ehr.ap.searchPlaceholder")}
-            className="w-full rounded-control border border-border bg-surface py-2 ps-9 pe-3 text-sm text-fg placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="ps-9"
           />
         </div>
         <p className="mt-1.5 text-[11px] text-muted">{t("diagnosis2.catalogHint")}</p>
@@ -162,7 +162,7 @@ export function DiagnosisPicker({
                   onClick={() => setVisibleCount((n) => n + RESULTS_PAGE_SIZE)}
                   className={cn(
                     "inline-flex shrink-0 items-center gap-1 rounded-control border border-border bg-surface px-2.5 py-1 text-xs font-medium text-brand",
-                    "transition-colors duration-200 ease-out hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]",
+                    "transition-colors duration-200 ease-out hover:bg-brand-tint active:scale-[0.98]",
                   )}
                 >
                   <CaretDown weight="bold" className="h-3.5 w-3.5" aria-hidden />
@@ -197,7 +197,7 @@ export function DiagnosisPicker({
                 aria-label={t("diagnosis2.addAria", { name: o.display })}
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
-                  "transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]",
+                  "transition-colors duration-200 ease-out active:scale-[0.98]",
                   added
                     ? "cursor-default border-transparent bg-bg-subtle text-muted"
                     : "border-border bg-surface text-fg hover:bg-brand-tint hover:text-brand",
@@ -268,7 +268,7 @@ function AddButton({
       aria-label={t("diagnosis2.addAria", { name: label })}
       className={cn(
         "inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
-        "transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]",
+        "transition-colors duration-200 ease-out active:scale-[0.98]",
         added
           ? "cursor-default border-transparent bg-bg-subtle text-muted"
           : "border-border bg-surface text-brand hover:bg-brand-tint",

@@ -478,7 +478,7 @@ function BlueprintPanel({
 
           {/* Learning objectives */}
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <p className="eyebrow">
               {t("authoring.blueprint.objectives")}
             </p>
             <ul className="mt-2 flex flex-col gap-1.5">
@@ -494,7 +494,7 @@ function BlueprintPanel({
           {/* Red flags */}
           {draft.blueprint.redFlags.length > 0 ? (
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <p className="eyebrow">
                 {t("authoringP9.blueprint.redFlags", { defaultValue: "Can't-miss red flags" })}
               </p>
               <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -809,7 +809,7 @@ function CoverageStrip({ draft }: { draft: DraftBundle }) {
   const complete = draft.coveredDomains >= 6;
   return (
     <div className="rounded-control border border-border bg-bg-subtle p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+      <p className="eyebrow">
         {t("authoring.editor.coverage")}
       </p>
       <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -932,7 +932,7 @@ function ReviewPanel({
             {liveHash}
           </span>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <p className="eyebrow">
               {t("authoring2.editor.liveHash")}
             </p>
             <p className="text-[11px] text-muted">{t("authoring2.editor.liveHashNote")}</p>
@@ -1226,7 +1226,7 @@ function SignOffPanel({
       <div className="rounded-control border border-border bg-bg-subtle p-3">
         <div className="flex items-center gap-1.5">
           <Hash weight="bold" className="h-3.5 w-3.5 text-muted" aria-hidden />
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          <p className="eyebrow">
             {t("authoring.signoff.versionHeading")}
           </p>
         </div>
@@ -1279,7 +1279,7 @@ function SignOffPanel({
                 type="checkbox"
                 checked={state.cosigned}
                 onChange={(e) => dispatch({ type: "cosign", value: e.target.checked })}
-                className="mt-0.5 h-5 w-5 shrink-0 accent-[color:var(--brand-600)]"
+                className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
               />
               <span className="flex items-center gap-1.5 text-sm text-fg">
                 <Signature weight="bold" className="h-4 w-4 shrink-0 text-brand" aria-hidden />
