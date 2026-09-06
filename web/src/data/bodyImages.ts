@@ -1,17 +1,22 @@
 /**
  * AcuDx — photoreal full-body image sets for the interactive exam viewer.
  *
- * Each set is a handful of CONSISTENT photoreal images of the same synthetic
- * patient at several angles (front / right / back / left), generated once and
- * bundled (air-gapped at runtime). `resolvePatientBody` returns the set that
- * matches a case's demographic, or null when no full-body set exists yet — in
- * which case the surfaces fall back to the realistic single portrait.
+ * Each set is four CONSISTENT photoreal images of the SAME synthetic patient at
+ * four angles (front / right / back / left), generated once from that patient's
+ * own portrait (identity-matched face, hair and skin tone) and bundled
+ * (air-gapped at runtime). There is now one set per portrait in the photo
+ * library, keyed by `photoId` so the full-body figure is the exact same person
+ * the rest of the UI shows — not merely a demographic look-alike.
  *
- * This is a growing bank (like the portraits): as more demographic sets are
- * generated they are registered here. Education only. Synthetic patient.
+ * `resolvePatientBody` resolves the case's unified visual identity to its
+ * `photoId` and returns the set with that id, or null when none exists (the
+ * surfaces then fall back to the realistic single portrait). Education only.
+ * Synthetic patient.
  */
 
 import type { CaseInstance } from "@/domain/case";
+import { PATIENT_PHOTOS } from "@/data/patientPhotos";
+import { resolvePatientVisual } from "@/domain/patientIdentity";
 
 export interface BodyImageSet {
   id: string;
@@ -34,33 +39,51 @@ const angleKeys = [
   "bodyviewer.angle.left",
 ];
 
-/** The first generated set: an adult man in a hospital gown (front/right/back/left). */
-const ADULT_MALE: BodyImageSet = {
-  id: "adult-male",
-  frames: [
-    `${BASE}patients/exam/am_0.jpg`,
-    `${BASE}patients/exam/am_1.jpg`,
-    `${BASE}patients/exam/am_2.jpg`,
-    `${BASE}patients/exam/am_3.jpg`,
-  ],
-  frameLabelKeys: angleKeys,
-  sex: "male",
-  ageMin: 35,
-  ageMax: 80,
-};
-
-const BODY_SETS: BodyImageSet[] = [ADULT_MALE];
+/**
+ * Build the four-frame full-body set for a portrait id. Frames follow the
+ * `<id>_<0..3>.jpg` convention under `patients/exam/` (0 front, 1 right, 2 back,
+ * 3 left). `ageMin`/`ageMax` are retained for the shape but matching is by
+ * `id === photoId`, so they carry the portrait's own age for documentation only.
+ */
+function makeBodySet(
+  id: string,
+  sex: "male" | "female",
+  age: number,
+): BodyImageSet {
+  return {
+    id,
+    frames: [
+      `${BASE}patients/exam/${id}_0.jpg`,
+      `${BASE}patients/exam/${id}_1.jpg`,
+      `${BASE}patients/exam/${id}_2.jpg`,
+      `${BASE}patients/exam/${id}_3.jpg`,
+    ],
+    frameLabelKeys: angleKeys,
+    sex,
+    ageMin: age,
+    ageMax: age,
+  };
+}
 
 /**
- * The full-body image set matching a case's patient, or null when none exists
- * yet (caller falls back to the portrait). Matches on sex + age band.
+ * One full-body set per portrait, keyed by photo id. Derived from the portrait
+ * library so the bank stays in lock-step with it: every id in `PATIENT_PHOTOS`
+ * ships a matching four-frame set under `patients/exam/`.
  */
-export function resolvePatientBody(caseInstance: CaseInstance): BodyImageSet | null {
-  const p = caseInstance.patient;
-  const sex = p.gender === "female" ? "female" : "male";
-  const age = p.ageYears;
-  return (
-    BODY_SETS.find((s) => s.sex === sex && age >= s.ageMin && age <= s.ageMax) ??
-    null
-  );
+const BODY_SETS: BodyImageSet[] = PATIENT_PHOTOS.map((p) =>
+  makeBodySet(p.id, p.sex === "female" ? "female" : "male", p.age),
+);
+
+/**
+ * The full-body image set for a case's patient, or null when none exists (caller
+ * falls back to the portrait). Resolves the case's UNIFIED visual identity to a
+ * `photoId` and returns the set whose `id` matches it — so the full-body figure
+ * is the exact same synthetic person shown everywhere else, never a demographic
+ * stand-in.
+ */
+export function resolvePatientBody(
+  caseInstance: CaseInstance,
+): BodyImageSet | null {
+  const { photoId } = resolvePatientVisual(caseInstance);
+  return BODY_SETS.find((s) => s.id === photoId) ?? null;
 }
