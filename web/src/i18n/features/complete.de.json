@@ -22,7 +22,7 @@
       "needsReview": "{{count}} wartet noch auf eine klinische Prüfung",
       "needsReview_other": "{{count}} warten noch auf eine klinische Prüfung",
       "allLocked": "Jeder entworfene Fakt ist bereits belegt und gesperrt.",
-      "tierNote": "Entworfen von einem großen offenen Modell, selbst gehostet und modellfamilienübergreifend verifiziert. Kein kommerzieller Anbieter wird genannt.",
+      "tierNote": "Automatisch entworfen und auf Konsistenz geprüft. Kein Fakt ist endgültig, bevor ihn eine Klinikerin oder ein Kliniker bestätigt.",
       "toReview": "Weiter zur Fachprüfung"
     },
     "editor": {
@@ -671,7 +671,7 @@
         "andMore": "Plus {{count}} weitere Lernende.",
         "crosswalkHeading": "Domänen-Zuordnung ({{framework}})",
         "download": "Export herunterladen",
-        "downloadNote": "Nur zur Demonstration. Keine Datei verlässt dieses Gerät.",
+        "downloadNote": "Nur lokal. Keine Datei verlässt dieses Gerät.",
         "selectFrameworks": "Wählen Sie mindestens ein Framework für die Vorschau aus."
       }
     }
@@ -742,8 +742,8 @@
           "body": "Kohortenkompetenz, Nachschulung und ein Fairness-Audit, aggregiert und rollenbasiert zugänglich."
         },
         "sovereign": {
-          "title": "Offen und souverän",
-          "body": "Modelle mit offenen Gewichten, selbst gehostet, mit menschlich verantworteter Fallerstellung."
+          "title": "Privat und souverän",
+          "body": "Privat konzipiert, mit stets menschlich verantworteter Fallerstellung."
         }
       }
     },
@@ -755,10 +755,10 @@
   },
   "liveBackend": {
     "toggle": "Live",
-    "tooltip": "Verwenden Sie das Live-Backend mit offenem Modell auf dem Pod. Ihre Nachricht wird zuerst geprüft und dann vom lokalen Modell beantwortet.",
-    "offline": "Backend offline",
-    "badge": "Live · Pod",
-    "fallback": "Das Live-Backend war nicht erreichbar, daher hat die Offline-Simulation diese Runde beantwortet."
+    "tooltip": "Verwenden Sie den Echtzeit-Assistenten. Ihre Nachricht wird zuerst geprüft und dann beantwortet.",
+    "offline": "offline",
+    "badge": "Live",
+    "fallback": "Die Echtzeitverbindung konnte nicht hergestellt werden, daher hat die Offline-Simulation diese Runde beantwortet."
   },
   "livegen": {
     "modeLegend": "Generierung",
@@ -767,7 +767,7 @@
     "endlessSub": "Zieht aus allen Fachgebieten und prüft jeden Fall selbst auf Konsistenz.",
     "engineAi": "KI · Echtzeit",
     "engineLocal": "Sofort · offline",
-    "engineChecking": "Pod wird geprüft…",
+    "engineChecking": "Verfügbarkeit wird geprüft…",
     "refine": "Verfeinern (optional)",
     "pickEngine": "Oder wählen Sie eine bestimmte Engine",
     "orCurated": "Oder starten Sie mit einem kuratierten Fall",
@@ -775,12 +775,12 @@
     "quick": "Schnellgenerierung",
     "quickHint": "Sofort, offline. Erstellt einen Fall auf dem Gerät mit der vorinitialisierten Template-Engine.",
     "ai": "KI-Generierung",
-    "aiHint": "Läuft auf dem Pod: aus ICD/DSM gezogen und belegt, mit reicheren Details.",
-    "note": "Die KI-Generierung führt das offene Modell auf dem Pod aus und kann einen Moment dauern.",
+    "aiHint": "Aus ICD/DSM gezogen und belegt, mit reicheren Details.",
+    "note": "Die KI-Generierung kann einen Moment dauern.",
     "generating": "Wird generiert…",
-    "generatingHint": "Auswahl, Belegung und Verifizierung auf dem Pod. Sie können abbrechen.",
+    "generatingHint": "Auswahl, Belegung und Verifizierung. Sie können abbrechen.",
     "cancel": "Abbrechen",
-    "unavailable": "KI-Backend nicht verfügbar — lokal generiert",
+    "unavailable": "KI nicht verfügbar — offline generiert",
     "degraded": "Belegung eingeschränkt — Leitlinienverankerung prüfen",
     "ready": "Fall bereit",
     "sourceLabel": "Quelle",
@@ -1446,9 +1446,9 @@
   },
   "status": {
     "pill": {
-      "online": "Live-Backend online",
-      "offline": "Live-Backend offline",
-      "checking": "Backend wird geprüft"
+      "online": "Online",
+      "offline": "Offline",
+      "checking": "Wird neu verbunden…"
     },
     "boundary": {
       "title": "Dieser Bildschirm ist auf ein Problem gestoßen",

@@ -1,9 +1,9 @@
 {
   "liveBackend": {
-    "toggle": "Canlı",
-    "tooltip": "Poddaki canlı açık model arka ucunu kullanın. Mesajınız önce denetlenir, ardından yerel model tarafından yanıtlanır.",
-    "offline": "arka uç çevrimdışı",
-    "badge": "Canlı · pod",
-    "fallback": "Canlı arka uca ulaşılamadı, bu nedenle bu turu çevrimdışı simülasyon yanıtladı."
+    "toggle": "Yapay zeka yanıtları",
+    "tooltip": "Yapay zeka yanıtlarını açın. Mesajınız önce güvenlik açısından denetlenir, ardından yapay zeka tarafından yanıtlanır.",
+    "offline": "Kullanılamıyor",
+    "badge": "Yapay zeka",
+    "fallback": "Yapay zekaya şu an ulaşılamadı, bu nedenle bu turu yerleşik bir yanıt karşıladı."
   }
 }

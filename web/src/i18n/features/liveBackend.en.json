@@ -1,9 +1,9 @@
 {
   "liveBackend": {
-    "toggle": "Live",
-    "tooltip": "Use the live open-model backend on the pod. Your message is guarded first, then answered by the local model.",
-    "offline": "backend offline",
-    "badge": "Live · pod",
-    "fallback": "The live backend could not be reached, so the offline simulation answered this turn."
+    "toggle": "AI replies",
+    "tooltip": "Turn on AI-generated replies. Your message is safety-checked first, then answered by the AI.",
+    "offline": "Unavailable",
+    "badge": "AI",
+    "fallback": "The AI couldn't be reached just now, so a built-in reply answered this turn."
   }
 }

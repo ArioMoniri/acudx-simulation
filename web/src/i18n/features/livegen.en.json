@@ -6,27 +6,27 @@
     "endlessSub": "Draws across every specialty and self-checks each case for consistency.",
     "engineAi": "AI · realtime",
     "engineLocal": "Instant · offline",
-    "engineChecking": "Checking pod…",
+    "engineChecking": "Checking availability…",
     "refine": "Refine (optional)",
-    "pickEngine": "Or choose a specific engine",
+    "pickEngine": "Or choose a specific mode",
     "orCurated": "Or start from a curated case",
     "curatedHint": "Fully authored teaching cases with guideline anchors.",
     "quick": "Quick generate",
-    "quickHint": "Instant, offline. Builds a case on-device from the seeded template engine.",
+    "quickHint": "Instant and offline. Builds a case on your device from a built-in template.",
     "ai": "AI generate",
-    "aiHint": "Runs on the pod: ICD/DSM-sampled and grounded, richer detail.",
-    "note": "AI generation runs the open model on the pod and may take a moment.",
+    "aiHint": "ICD/DSM-sampled and guideline-grounded, with richer detail.",
+    "note": "AI generation builds a richer, guideline-grounded case and may take a moment.",
     "generating": "Generating…",
-    "generatingHint": "Sampling, grounding and verifying on the pod. You can cancel.",
+    "generatingHint": "Sampling, grounding and verifying your case. You can cancel.",
     "cancel": "Cancel",
-    "unavailable": "AI backend unavailable — generated locally",
-    "degraded": "Grounding degraded — verify guideline anchors",
+    "unavailable": "Generated offline",
+    "degraded": "Guideline grounding limited — verify the anchors",
     "ready": "Case ready",
     "sourceLabel": "Source",
     "source": {
       "ai": "AI",
       "template": "Template",
-      "local": "Local"
+      "local": "Offline"
     }
   }
 }

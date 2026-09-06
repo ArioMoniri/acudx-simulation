@@ -1,12 +1,11 @@
 /**
- * AcuDx — typed client for the pod-side Model Gateway (server/app.py).
+ * AcuDx — typed client for the AcuDx API gateway (server/app.py).
  *
- * An OPTIONAL "Live backend" path for the web demo. When the learner turns Live
+ * An OPTIONAL "Live backend" path for the web app. When the learner turns Live
  * mode on (src/lib/liveBackend.tsx), the encounter routes real calls through the
- * air-gapped gateway that runs on the pod, reachable at
- * `import.meta.env.VITE_BACKEND_URL` (default http://localhost:8890 via the
- * already-open SSH tunnel). Every request is bounded by a short AbortController
- * timeout and every function returns a discriminated result
+ * AcuDx API gateway, configured via `VITE_BACKEND_URL` (same-origin `/api` by
+ * default). Every request is bounded by a short AbortController timeout and every
+ * function returns a discriminated result
  * (`{ ok: true, data } | { ok: false, error }`) so a call NEVER throws into the
  * UI. On any failure the caller falls back to the offline mock path.
  *
@@ -28,9 +27,20 @@
 // through a permissive record view to stay type-safe under `strict`.
 const ENV = import.meta.env as unknown as Record<string, string | undefined>;
 
-/** Resolved gateway origin. Override with VITE_BACKEND_URL at build time. */
-export const BACKEND_URL: string =
-  ENV.VITE_BACKEND_URL ?? "http://localhost:8890";
+/**
+ * Same-origin `/api` by default: talk to the AcuDx API gateway behind the same
+ * host the app was served from, so nothing hardcodes a host or port. Override
+ * with `VITE_BACKEND_URL` at build/deploy time to point at a different origin.
+ */
+function defaultBackendUrl(): string {
+  if (typeof window !== "undefined" && window.location && window.location.origin) {
+    return `${window.location.origin}/api`;
+  }
+  return "/api";
+}
+
+/** Resolved gateway origin. Override with `VITE_BACKEND_URL`. */
+export const BACKEND_URL: string = ENV.VITE_BACKEND_URL ?? defaultBackendUrl();
 
 /* -------------------------------------------------------------------------- */
 /* Discriminated result                                                        */
@@ -244,7 +254,7 @@ const DEFAULT_TIMEOUTS = {
   patientTurn: 22_000,
   ground: 15_000,
   // Grading fans out one model call per rubric item (24) at temperature 0; even
-  // batched it can run tens of seconds on the pod's local model — bounded, wide.
+  // batched it can run tens of seconds on the gateway's model — bounded, wide.
   grade: 45_000,
 } as const;
 
@@ -345,7 +355,7 @@ export function patientTurn(
 }
 
 /**
- * Decomposed rubric grading. Sends the encounter transcript to the pod's
+ * Decomposed rubric grading. Sends the encounter transcript to the gateway's
  * evidence-forced grader (server/rubric.py): each of the fixed rubric's items is
  * graded independently at temperature 0 and returns {met, evidence, confidence},
  * aggregated code-side into per-domain + overall competency BANDS (never raw

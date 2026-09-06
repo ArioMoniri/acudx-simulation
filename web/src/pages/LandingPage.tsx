@@ -30,8 +30,8 @@ import {
  * loop is a single dominant stepper; the surrounding platform is a compact
  * hairline-divided rail (not equal cards); a calm band closes with one CTA.
  *
- * One saturated primary button (the hero's "Enter the demo"); every other CTA
- * is secondary or a quiet link. Restrained, reduced-motion-safe entrances. Light
+ * One saturated primary button (the hero's primary call to action); every other
+ * CTA is secondary or a quiet link. Restrained, reduced-motion-safe entrances. Light
  * default and dark. Nothing here is real patient data; every case is synthetic
  * and for education only.
  */

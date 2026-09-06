@@ -22,7 +22,7 @@
       "needsReview": "{{count}} attend encore un clinicien",
       "needsReview_other": "{{count}} attendent encore un clinicien",
       "allLocked": "Chaque fait rédigé est déjà fondé et verrouillé.",
-      "tierNote": "Rédigé par un grand modèle ouvert, auto-hébergé et vérifié entre familles de modèles. Aucun fournisseur commercial n'est nommé.",
+      "tierNote": "Rédigé automatiquement et vérifié pour en assurer la cohérence. Aucune donnée n'est définitive tant qu'un clinicien ne l'a pas confirmée.",
       "toReview": "Continuer vers la revue par un expert"
     },
     "editor": {
@@ -671,7 +671,7 @@
         "andMore": "Plus {{count}} apprenants supplémentaires.",
         "crosswalkHeading": "Mise en correspondance des domaines ({{framework}})",
         "download": "Télécharger l'export",
-        "downloadNote": "Démonstration uniquement. Aucun fichier ne quitte cet appareil.",
+        "downloadNote": "Local uniquement. Aucun fichier ne quitte cet appareil.",
         "selectFrameworks": "Sélectionnez au moins un référentiel pour prévisualiser."
       }
     }
@@ -742,8 +742,8 @@
           "body": "Compétences de cohorte, remédiation et audit d'équité, agrégés et cloisonnés par rôle."
         },
         "sovereign": {
-          "title": "Ouvert et souverain",
-          "body": "Modèles à poids ouverts, auto-hébergés, avec une création de cas sous autorité humaine."
+          "title": "Privé et souverain",
+          "body": "Privé par conception, avec une création de cas toujours sous autorité humaine."
         }
       }
     },
@@ -755,10 +755,10 @@
   },
   "liveBackend": {
     "toggle": "En direct",
-    "tooltip": "Utiliser le backend en direct à modèle ouvert sur le pod. Votre message est d'abord filtré, puis traité par le modèle local.",
-    "offline": "backend hors ligne",
-    "badge": "En direct · pod",
-    "fallback": "Le backend en direct n'a pas pu être joint, la simulation hors ligne a donc traité ce tour."
+    "tooltip": "Utiliser l'assistant en temps réel. Votre message est d'abord filtré, puis traité.",
+    "offline": "hors ligne",
+    "badge": "En direct",
+    "fallback": "La connexion en temps réel n'a pas pu être établie, la simulation hors ligne a donc traité ce tour."
   },
   "livegen": {
     "modeLegend": "Génération",
@@ -767,7 +767,7 @@
     "endlessSub": "Tire parmi toutes les spécialités et vérifie la cohérence de chaque cas.",
     "engineAi": "IA · temps réel",
     "engineLocal": "Instantané · hors ligne",
-    "engineChecking": "Vérification du pod…",
+    "engineChecking": "Vérification de la disponibilité…",
     "refine": "Affiner (facultatif)",
     "pickEngine": "Ou choisir un moteur précis",
     "orCurated": "Ou partir d'un cas sélectionné",
@@ -775,12 +775,12 @@
     "quick": "Génération rapide",
     "quickHint": "Instantané, hors ligne. Construit un cas sur l'appareil à partir du moteur de modèles préamorcés.",
     "ai": "Génération IA",
-    "aiHint": "S'exécute sur le pod : échantillonné sur ICD/DSM et fondé, avec plus de détails.",
-    "note": "La génération IA exécute le modèle ouvert sur le pod et peut prendre un moment.",
+    "aiHint": "Échantillonné sur ICD/DSM et fondé, avec plus de détails.",
+    "note": "La génération IA peut prendre un moment.",
     "generating": "Génération…",
-    "generatingHint": "Échantillonnage, ancrage et vérification sur le pod. Vous pouvez annuler.",
+    "generatingHint": "Échantillonnage, ancrage et vérification. Vous pouvez annuler.",
     "cancel": "Annuler",
-    "unavailable": "Backend IA indisponible — généré localement",
+    "unavailable": "IA indisponible — généré hors ligne",
     "degraded": "Ancrage dégradé — vérifiez les ancrages aux recommandations",
     "ready": "Cas prêt",
     "sourceLabel": "Source",
@@ -1446,9 +1446,9 @@
   },
   "status": {
     "pill": {
-      "online": "Backend en direct en ligne",
-      "offline": "Backend en direct hors ligne",
-      "checking": "Vérification du backend"
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "checking": "Reconnexion…"
     },
     "boundary": {
       "title": "Cet écran a rencontré un problème",

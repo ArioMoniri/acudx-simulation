@@ -22,7 +22,7 @@
       "needsReview": "{{count}} tanesi hâlâ hekim bekliyor",
       "needsReview_other": "{{count}} tanesi hâlâ hekim bekliyor",
       "allLocked": "Taslak olguların tümü zaten dayanaklandırıldı ve kilitlendi.",
-      "tierNote": "Kendi sunucusunda barındırılan, aileler arası çapraz doğrulanmış büyük açık bir model tarafından hazırlandı. Ticari bir sağlayıcı adı verilmez.",
+      "tierNote": "Otomatik olarak hazırlandı ve tutarlılık açısından doğrulandı. Hiçbir bilgi, bir klinisyen onaylayana kadar kesinleşmez.",
       "toReview": "Uzman incelemesine devam et"
     },
     "editor": {

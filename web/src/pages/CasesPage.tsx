@@ -6,7 +6,6 @@ import {
   Sparkle,
   Lightning,
   CircleNotch,
-  CloudSlash,
   CheckCircle,
   FunnelSimple,
   Heartbeat,
@@ -196,8 +195,6 @@ function GeneratePanel({
   busy,
   note,
   lang,
-  available,
-  checking,
 }: {
   onEndless: (
     complaint: ChiefComplaintFamily | null,
@@ -215,16 +212,10 @@ function GeneratePanel({
   busy: boolean;
   note: GenNote | null;
   lang: "en" | "tr";
-  /** Pod backend availability — drives the "AI · realtime" vs "Instant" badge. */
-  available: boolean;
-  checking: boolean;
 }) {
   const { t } = useTranslation();
   const [complaint, setComplaint] = useState<ChiefComplaintFamily | null>(null);
   const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
-
-  // Which engine the headline "Generate a fresh case" button will use right now.
-  const engine = checking ? "checking" : available ? "ai" : "local";
 
   return (
     <Card padding="lg" className="flex flex-col gap-5">
@@ -241,34 +232,8 @@ function GeneratePanel({
         <p className="max-w-2xl text-sm text-muted">{t("cases.generate.hint")}</p>
       </div>
 
-      {/* Headline action: endless generation, backend-first when the pod is up. */}
+      {/* Headline action: generate a fresh, non-repeating synthetic case. */}
       <div className="flex flex-col gap-2.5 rounded-card border border-brand/30 bg-brand-tint/40 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm font-semibold text-fg">
-            {t("livegen.endless")}
-          </span>
-          <Badge
-            tone={engine === "ai" ? "brand" : "neutral"}
-            variant="outline"
-            icon={
-              engine === "ai" ? (
-                <Sparkle weight="fill" className="h-3 w-3" />
-              ) : engine === "checking" ? (
-                <CircleNotch weight="bold" className="h-3 w-3 animate-spin" />
-              ) : (
-                <Lightning weight="fill" className="h-3 w-3" />
-              )
-            }
-          >
-            {t(
-              engine === "ai"
-                ? "livegen.engineAi"
-                : engine === "checking"
-                  ? "livegen.engineChecking"
-                  : "livegen.engineLocal",
-            )}
-          </Badge>
-        </div>
         <Button
           size="lg"
           fullWidth
@@ -398,39 +363,23 @@ function GeneratePanel({
           aria-live="polite"
           className="flex items-start gap-2 rounded-control border border-border bg-bg-subtle px-3 py-2.5 text-xs text-muted"
         >
-          {note.fellBack ? (
-            <CloudSlash
-              weight="bold"
-              className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--state-caution)]"
-              aria-hidden
-            />
-          ) : (
-            <CheckCircle
-              weight="fill"
-              className="mt-0.5 h-4 w-4 shrink-0 text-brand"
-              aria-hidden
-            />
-          )}
+          <CheckCircle
+            weight="fill"
+            className="mt-0.5 h-4 w-4 shrink-0 text-brand"
+            aria-hidden
+          />
           <div className="flex min-w-0 flex-col gap-1">
             <span className="inline-flex flex-wrap items-center gap-1.5">
               <span className="font-medium text-fg">
                 {t("livegen.sourceLabel")}
               </span>
               <Badge
-                tone={
-                  note.fellBack
-                    ? "caution"
-                    : note.source === "local"
-                      ? "neutral"
-                      : "brand"
-                }
+                tone={note.source === "local" ? "neutral" : "brand"}
                 variant="outline"
               >
                 {t(`livegen.source.${note.source}`)}
               </Badge>
             </span>
-            {note.fellBack ? <span>{t("livegen.unavailable")}</span> : null}
-            {note.degraded ? <span>{t("livegen.degraded")}</span> : null}
           </div>
         </div>
       ) : null}
@@ -763,8 +712,6 @@ export function CasesPage() {
           busy={aiBusy}
           note={genNote}
           lang={lang}
-          available={available}
-          checking={checking}
         />
       </motion.section>
 

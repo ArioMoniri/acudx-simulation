@@ -63,7 +63,7 @@
         "andMore": "Plus {{count}} more learners.",
         "crosswalkHeading": "Domain crosswalk ({{framework}})",
         "download": "Download export",
-        "downloadNote": "Demonstration only. No file leaves this device.",
+        "downloadNote": "Local only. No file leaves this device.",
         "selectFrameworks": "Select at least one framework to preview."
       }
     }

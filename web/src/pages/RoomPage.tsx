@@ -5,7 +5,6 @@ import { motion } from "motion/react";
 import {
   Plus,
   ArrowLeft,
-  ShieldCheck,
   Broadcast,
   Play,
   Flag,
@@ -165,18 +164,6 @@ function Lobby() {
             ))}
           </div>
         )}
-      </motion.div>
-
-      {/* Production note (mock presence) */}
-      <motion.div {...body}>
-        <Card
-          variant="inset"
-          padding="md"
-          className="flex items-start gap-2.5"
-        >
-          <ShieldCheck weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-subtle" aria-hidden />
-          <p className="text-xs leading-relaxed text-muted">{t("rooms.lobby.prodNote")}</p>
-        </Card>
       </motion.div>
 
       <SimBadge variant="bar" />
@@ -596,9 +583,8 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
  * join rooms, take and leave seats, toggle AI backfill, request and pass the
  * floor, post SBAR turns, close communication loops, and drive the room through
  * its lifecycle into a debrief that separates individual leadership from team
- * clinical marks. Believable realtime over a mock store; production rides a
- * self-hosted LiveKit WebRTC room (voice/3D premium-gated, text the accessible
- * floor).
+ * clinical marks. Realtime presence and a shared team floor keep every seat in
+ * sync throughout the encounter.
  */
 export function RoomPage() {
   const { id } = useParams();

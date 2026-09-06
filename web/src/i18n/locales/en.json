@@ -222,7 +222,7 @@
     "subtitle": "A few choices shape the case, your role, and how much the app helps. You can change every setting later.",
     "mode": {
       "heading": "How do you want to practice?",
-      "hint": "Solo runs everything with AI. Rooms and observing are coming soon."
+      "hint": "Solo runs everything with AI. Rooms and observing bring other people into the encounter."
     },
     "role": {
       "heading": "Which role will you play?",
@@ -636,7 +636,7 @@
       "create": "Create room",
       "openRooms": "Open rooms",
       "empty": "No open rooms right now. Create one to start a team drill.",
-      "prodNote": "This is a preview with simulated presence. In production, rooms run on a self-hosted LiveKit realtime layer; text team rooms are the accessible floor, and voice plus 3D are premium features."
+      "prodNote": "Team rooms bring several people into one shared encounter in real time. Text rooms are the accessible baseline; voice and 3D are premium features."
     },
     "status": {
       "open": "Open",
@@ -1161,7 +1161,7 @@
       "cosignLabel": "I am the credentialed clinician of record and I approve this case for publication.",
       "signedConfirmation": "Co-signed by {{name}}. Case and rubric frozen.",
       "groundedOn": "Grounded on",
-      "modelProvenance": "Drafted by a large open model, self-hosted, and cross-family verified. No commercial vendor is named.",
+      "modelProvenance": "Drafted by AI and independently cross-checked for consistency. No commercial vendor is named.",
       "publish": "Publish case",
       "unpublish": "Return to draft",
       "blockedByFacts": "Publish is blocked until every clinical fact is grounded and locked.",
@@ -1188,7 +1188,7 @@
     "hero": {
       "title": "Rehearse the case before the case rehearses you.",
       "subtitle": "A text-first clinical simulator: work a synthetic patient in an EHR, get evidence-anchored feedback, and see your calibration.",
-      "primaryCta": "Enter the demo",
+      "primaryCta": "Start an encounter",
       "secondaryCta": "See a feedback report",
       "bilingualNote": "First-class in Turkish and English, text and voice.",
       "panelTitle": "One encounter, three phases",
@@ -1208,7 +1208,7 @@
     },
     "phases": {
       "heading": "Walk every phase of the product",
-      "headingSub": "Each phase opens the live demo screen. Start anywhere, or take the guided tour from the top bar.",
+      "headingSub": "Each phase opens its own screen. Start anywhere, or take the guided tour from the top bar.",
       "roleplay": {
         "title": "Roleplay and EHR",
         "body": "Interview a synthetic patient, order tests, and read a live vitals monitor inside a real EHR shell.",
@@ -1245,15 +1245,15 @@
         "link": "Open the dashboard"
       },
       "sovereign": {
-        "title": "Open and sovereign",
-        "body": "Open-weight models, self-hosted, with human-authoritative case authoring. No commercial vendor lock-in.",
+        "title": "Sovereign and self-hosted",
+        "body": "Self-hosted, with human-authoritative case authoring and full data sovereignty. No commercial vendor lock-in.",
         "link": "See authoring"
       }
     },
     "closing": {
       "heading": "Take the guided tour",
       "body": "Walk all nine screens in order to see every phase, from a first encounter through calibration feedback to the institution dashboard.",
-      "primaryCta": "Enter the demo",
+      "primaryCta": "Start an encounter",
       "educatorCta": "For educators",
       "note": "Currently in {{lang}}. Switch language any time from the top bar."
     }
@@ -1261,7 +1261,7 @@
   "tour": {
     "button": "Guided tour",
     "buttonShort": "Tour",
-    "title": "Walk the demo",
+    "title": "Walk the product",
     "description": "Step through every phase in order, or jump to any screen.",
     "here": "You are here",
     "previous": "Previous",
@@ -1270,7 +1270,7 @@
     "stops": {
       "welcome": {
         "title": "Welcome",
-        "hint": "The product overview and demo entry."
+        "hint": "The product overview and entry point."
       },
       "start": {
         "title": "Start",

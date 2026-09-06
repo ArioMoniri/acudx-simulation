@@ -6,27 +6,27 @@
     "endlessSub": "Tüm branşlardan örnekler ve her vakayı tutarlılık için kendi kontrol eder.",
     "engineAi": "Yapay zeka · gerçek zamanlı",
     "engineLocal": "Anında · çevrimdışı",
-    "engineChecking": "Pod kontrol ediliyor…",
+    "engineChecking": "Kullanılabilirlik kontrol ediliyor…",
     "refine": "İnce ayar (isteğe bağlı)",
-    "pickEngine": "Ya da belirli bir motor seçin",
+    "pickEngine": "Ya da belirli bir mod seçin",
     "orCurated": "Ya da hazır bir vakayla başlayın",
     "curatedHint": "Kılavuz dayanaklı, tam olarak yazılmış öğretim vakaları.",
     "quick": "Hızlı üret",
-    "quickHint": "Anında, çevrimdışı. Tohumlu şablon motoruyla cihazda vaka oluşturur.",
+    "quickHint": "Anında ve çevrimdışı. Yerleşik bir şablondan cihazınızda vaka oluşturur.",
     "ai": "Yapay zeka ile üret",
-    "aiHint": "Pod üzerinde çalışır: ICD/DSM örneklemeli, dayanaklı ve daha zengin.",
-    "note": "Yapay zeka üretimi açık modeli pod üzerinde çalıştırır ve biraz sürebilir.",
+    "aiHint": "ICD/DSM örneklemeli, kılavuz dayanaklı ve daha zengin.",
+    "note": "Yapay zeka üretimi daha zengin, kılavuz dayanaklı bir vaka oluşturur ve biraz sürebilir.",
     "generating": "Üretiliyor…",
-    "generatingHint": "Pod üzerinde örnekleme, dayanaklandırma ve doğrulama yapılıyor. İptal edebilirsiniz.",
+    "generatingHint": "Vakanız örnekleniyor, dayanaklandırılıyor ve doğrulanıyor. İptal edebilirsiniz.",
     "cancel": "İptal",
-    "unavailable": "Yapay zeka arka ucuna ulaşılamadı — yerel olarak üretildi",
-    "degraded": "Dayanaklandırma sınırlı — kılavuz dayanaklarını doğrulayın",
+    "unavailable": "Çevrimdışı üretildi",
+    "degraded": "Kılavuz dayanaklandırması sınırlı — dayanakları doğrulayın",
     "ready": "Vaka hazır",
     "sourceLabel": "Kaynak",
     "source": {
       "ai": "Yapay zeka",
       "template": "Şablon",
-      "local": "Yerel"
+      "local": "Çevrimdışı"
     }
   }
 }

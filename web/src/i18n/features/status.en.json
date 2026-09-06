@@ -1,9 +1,9 @@
 {
   "status": {
     "pill": {
-      "online": "Live backend online",
-      "offline": "Live backend offline",
-      "checking": "Checking backend"
+      "online": "Online",
+      "offline": "Offline",
+      "checking": "Reconnecting…"
     },
     "boundary": {
       "title": "This screen ran into a problem",

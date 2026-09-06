@@ -222,7 +222,7 @@
     "subtitle": "Unas pocas opciones definen el caso, tu rol y cuánta ayuda ofrece la app. Puedes cambiar cada ajuste después.",
     "mode": {
       "heading": "¿Cómo quieres practicar?",
-      "hint": "El modo individual ejecuta todo con IA. Las salas y la observación llegarán pronto."
+      "hint": "El modo individual ejecuta todo con IA. Las salas y la observación suman a otras personas al encuentro."
     },
     "role": {
       "heading": "¿Qué rol interpretarás?",
@@ -636,7 +636,7 @@
       "create": "Crear sala",
       "openRooms": "Salas abiertas",
       "empty": "No hay salas abiertas ahora mismo. Crea una para iniciar una simulación en equipo.",
-      "prodNote": "Esta es una vista previa con presencia simulada. En producción, las salas funcionan sobre una capa en tiempo real LiveKit autoalojada; las salas de equipo de texto son la base accesible, y la voz más el 3D son funciones premium."
+      "prodNote": "Las salas de equipo reúnen a varias personas en un mismo encuentro en tiempo real. Las salas de texto son la base accesible; la voz y el 3D son funciones premium."
     },
     "status": {
       "open": "Abierta",
@@ -1161,7 +1161,7 @@
       "cosignLabel": "Soy el clínico acreditado de referencia y apruebo este caso para su publicación.",
       "signedConfirmation": "Cofirmado por {{name}}. Caso y rúbrica congelados.",
       "groundedOn": "Fundamentado en",
-      "modelProvenance": "Redactado por un gran modelo abierto, autoalojado y verificado entre familias. No se nombra ningún proveedor comercial.",
+      "modelProvenance": "Redactado por IA y verificado de forma independiente para garantizar la coherencia. No se nombra ningún proveedor comercial.",
       "publish": "Publicar caso",
       "unpublish": "Volver a borrador",
       "blockedByFacts": "La publicación está bloqueada hasta que cada dato clínico esté fundamentado y bloqueado.",
@@ -1188,7 +1188,7 @@
     "hero": {
       "title": "Ensaya el caso antes de que el caso te ensaye a ti.",
       "subtitle": "Un simulador clínico basado en texto: trabaja un paciente sintético en un HCE, recibe retroalimentación anclada en evidencia y observa tu calibración.",
-      "primaryCta": "Entrar a la demo",
+      "primaryCta": "Comenzar un encuentro",
       "secondaryCta": "Ver un informe de retroalimentación",
       "bilingualNote": "De primer nivel en turco e inglés, texto y voz.",
       "panelTitle": "Un encuentro, tres fases",
@@ -1208,7 +1208,7 @@
     },
     "phases": {
       "heading": "Recorre cada fase del producto",
-      "headingSub": "Cada fase abre la pantalla de demo en vivo. Empieza donde quieras o haz el recorrido guiado desde la barra superior.",
+      "headingSub": "Cada fase abre su propia pantalla. Empieza donde quieras o haz el recorrido guiado desde la barra superior.",
       "roleplay": {
         "title": "Juego de roles y HCE",
         "body": "Entrevista a un paciente sintético, solicita pruebas y lee un monitor de constantes en vivo dentro de un entorno de HCE real.",
@@ -1245,15 +1245,15 @@
         "link": "Abrir el panel"
       },
       "sovereign": {
-        "title": "Abierto y soberano",
-        "body": "Modelos de pesos abiertos, autoalojados, con creación de casos con autoridad humana. Sin dependencia de proveedor comercial.",
+        "title": "Soberano y autoalojado",
+        "body": "Autoalojado, con creación de casos con autoridad humana y plena soberanía de los datos. Sin dependencia de proveedor comercial.",
         "link": "Ver creación"
       }
     },
     "closing": {
       "heading": "Haz el recorrido guiado",
       "body": "Recorre las nueve pantallas en orden para ver cada fase, desde un primer encuentro pasando por la retroalimentación de calibración hasta el panel de la institución.",
-      "primaryCta": "Entrar a la demo",
+      "primaryCta": "Comenzar un encuentro",
       "educatorCta": "Para educadores",
       "note": "Actualmente en {{lang}}. Cambia de idioma cuando quieras desde la barra superior."
     }
@@ -1261,7 +1261,7 @@
   "tour": {
     "button": "Recorrido guiado",
     "buttonShort": "Recorrido",
-    "title": "Recorre la demo",
+    "title": "Recorre el producto",
     "description": "Avanza por cada fase en orden o salta a cualquier pantalla.",
     "here": "Estás aquí",
     "previous": "Anterior",
@@ -1270,7 +1270,7 @@
     "stops": {
       "welcome": {
         "title": "Bienvenida",
-        "hint": "La visión general del producto y la entrada a la demo."
+        "hint": "La visión general del producto y el punto de entrada."
       },
       "start": {
         "title": "Comenzar",

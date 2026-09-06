@@ -22,7 +22,7 @@
       "needsReview": "仍有 {{count}} 条等待临床医生审核",
       "needsReview_other": "仍有 {{count}} 条等待临床医生审核",
       "allLocked": "每一条起草的事实都已落地并锁定。",
-      "tierNote": "由大型开放模型起草，自托管并经跨模型族验证。未指明任何商业供应商。",
+      "tierNote": "由系统自动起草并经一致性校验。任何内容在临床医生确认前均非最终结论。",
       "toReview": "继续进行专家审核"
     },
     "editor": {
@@ -671,7 +671,7 @@
         "andMore": "另有 {{count}} 名学员。",
         "crosswalkHeading": "领域对照映射（{{framework}}）",
         "download": "下载导出",
-        "downloadNote": "仅供演示。没有文件离开此设备。",
+        "downloadNote": "仅限本地。没有文件离开此设备。",
         "selectFrameworks": "请至少选择一个框架以进行预览。"
       }
     }
@@ -742,8 +742,8 @@
           "body": "队列能力、补救和公平性审计，均为聚合并按角色分级授权。"
         },
         "sovereign": {
-          "title": "开放且自主可控",
-          "body": "开放权重模型、自托管，病例编写以人为最终权威。"
+          "title": "私密且自主可控",
+          "body": "以隐私为设计前提，病例编写始终以人为最终权威。"
         }
       }
     },
@@ -755,10 +755,10 @@
   },
   "liveBackend": {
     "toggle": "实时",
-    "tooltip": "使用运行在计算节点上的实时开放模型后端。你的消息会先经过防护，再由本地模型作答。",
-    "offline": "后端离线",
-    "badge": "实时 · 节点",
-    "fallback": "无法连接到实时后端，因此本轮由离线模拟作答。"
+    "tooltip": "使用实时助手。你的消息会先经过防护，再作答。",
+    "offline": "离线",
+    "badge": "实时",
+    "fallback": "无法建立实时连接，因此本轮由离线模拟作答。"
   },
   "livegen": {
     "modeLegend": "生成",
@@ -767,7 +767,7 @@
     "endlessSub": "从各个专科抽取，并对每个病例自检一致性。",
     "engineAi": "AI · 实时",
     "engineLocal": "即时 · 离线",
-    "engineChecking": "正在检查节点…",
+    "engineChecking": "正在检查可用性…",
     "refine": "细化（可选）",
     "pickEngine": "或选择特定引擎",
     "orCurated": "或从精选病例开始",
@@ -775,12 +775,12 @@
     "quick": "快速生成",
     "quickHint": "即时、离线。由种子模板引擎在设备端构建病例。",
     "ai": "AI 生成",
-    "aiHint": "在节点上运行：按 ICD/DSM 抽样并落地，细节更丰富。",
-    "note": "AI 生成会在节点上运行开放模型，可能需要片刻。",
+    "aiHint": "按 ICD/DSM 抽样并落地，细节更丰富。",
+    "note": "AI 生成可能需要片刻。",
     "generating": "正在生成…",
-    "generatingHint": "正在节点上抽样、落地并验证。你可以取消。",
+    "generatingHint": "正在抽样、落地并验证。你可以取消。",
     "cancel": "取消",
-    "unavailable": "AI 后端不可用 — 已在本地生成",
+    "unavailable": "AI 不可用 — 已离线生成",
     "degraded": "落地降级 — 请核实指南锚点",
     "ready": "病例已就绪",
     "sourceLabel": "来源",
@@ -1446,9 +1446,9 @@
   },
   "status": {
     "pill": {
-      "online": "实时后端在线",
-      "offline": "实时后端离线",
-      "checking": "正在检查后端"
+      "online": "在线",
+      "offline": "离线",
+      "checking": "正在重新连接…"
     },
     "boundary": {
       "title": "此页面遇到了问题",
