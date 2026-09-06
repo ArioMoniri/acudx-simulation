@@ -29,11 +29,12 @@ import { X, Pulse } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import { PatientPhoto, type ClinicalSignHint } from "@/components/PatientPhoto";
 import { PatientBodyViewer } from "@/components/PatientBodyViewer";
-import { resolvePatientBody } from "@/data/bodyImages";
+import { resolvePatientBody, bodyFindingsFromExam } from "@/data/bodyImages";
 import { resolvePatientVisual } from "@/domain/patientIdentity";
 import { signsFromVitals } from "@/components/ehr/PatientAvatar";
 import {
   getCurrentVitals,
+  getDiscoveredExam,
   useEncounterState,
 } from "@/state/encounterStore";
 import type { CaseInstance, TriageVitals } from "@/domain/case";
@@ -288,7 +289,7 @@ export function PatientViewer({
   caseInstance,
   affectLabel,
 }: PatientViewerProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -308,6 +309,15 @@ export function PatientViewer({
   // A photoreal full-body image set for this patient's demographic, if one exists
   // — the interactive turn/zoom/examine surface. Falls back to the portrait.
   const body = resolvePatientBody(caseInstance);
+  // Discovered abnormal exam findings, pinned onto the body so the learner can
+  // examine the patient — only for the active encounter (progressive disclosure).
+  const bodyFindings =
+    body && state.caseInstance?.id === caseInstance.id
+      ? bodyFindingsFromExam(
+          getDiscoveredExam(state),
+          i18n.language.startsWith("tr") ? "tr" : "en",
+        )
+      : [];
 
   // Focus trap + Escape + scroll lock; restore focus to the trigger on close.
   useEffect(() => {
@@ -419,6 +429,7 @@ export function PatientViewer({
                   t(k, { defaultValue: ["Front", "Right", "Back", "Left"][i] ?? "" }),
                 )}
                 signs={signs}
+                findings={bodyFindings}
                 alt={t("patientviewer.syntheticNote")}
                 caption={patient.name}
                 className="aspect-[3/5] w-full ring-1 ring-border"
