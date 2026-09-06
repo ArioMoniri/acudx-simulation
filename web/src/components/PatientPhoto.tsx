@@ -17,6 +17,7 @@ import {
   patientVideoUrl,
   type PhotoSex,
 } from "@/data/patientPhotos";
+import { hasTalkVideo, talkVideoUrl } from "@/data/talkVideos";
 
 /** Whether the viewer prefers reduced motion (SSR-safe, live-updating). */
 function usePrefersReducedMotion(): boolean {
@@ -239,11 +240,16 @@ export function PatientPhoto({
 
   const isSpeaking = speaking || Boolean(utterance && utterance.trim().length > 0);
 
+  // While the patient is speaking, play the photoreal talking-head loop (mouth
+  // moves as if talking) when one exists for this face and motion is ok — it wins
+  // over the idle loop and the still so the patient visibly talks. Reduced-motion
+  // viewers keep the still with the speaking pill + shimmer instead of a clip.
+  const useTalkVideo = isSpeaking && hasTalkVideo(photo.id) && !reduced;
   // Play the "alive" idle loop when one exists for this face and motion is ok;
   // otherwise the still photo (also the video poster) stands in.
-  const useVideo = hasPatientVideo(photo.id) && !reduced;
+  const useVideo = !useTalkVideo && hasPatientVideo(photo.id) && !reduced;
   // A still face breathes gently so it reads as alive rather than frozen.
-  const breathe = !useVideo && !reduced;
+  const breathe = !useTalkVideo && !useVideo && !reduced;
   const labored = distress > 0.35;
   const breatheAnim = breathe
     ? `${labored ? "acudx-patient-breathe-labored" : "acudx-patient-breathe"} ${breathePeriod(rr).toFixed(2)}s ease-in-out infinite`
@@ -270,13 +276,14 @@ export function PatientPhoto({
   const anyKeyframes = breathe || (isSpeaking && !reduced) || sheenAnimate;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  // Autoplay policies can leave a muted <video> paused after mount; nudge it.
+  // Autoplay policies can leave a muted <video> paused after mount; nudge it
+  // (for either the idle loop or the speaking talking-head loop).
   useEffect(() => {
     const v = videoRef.current;
-    if (!useVideo || !v) return;
+    if ((!useVideo && !useTalkVideo) || !v) return;
     const play = v.play();
     if (play && typeof play.catch === "function") play.catch(() => {});
-  }, [useVideo, photo.id, isSpeaking]);
+  }, [useVideo, useTalkVideo, photo.id, isSpeaking]);
 
   const interactive = typeof onClick === "function";
   const showExpand = interactive && expandable !== false;
@@ -303,8 +310,24 @@ export function PatientPhoto({
             : undefined
         }
       >
-        {useVideo ? (
+        {useTalkVideo ? (
           <video
+            key={`talk-${photo.id}`}
+            ref={videoRef}
+            src={talkVideoUrl(photo.id)}
+            poster={patientPhotoUrl(photo.id)}
+            aria-label={alt ?? "Synthetic patient — not a real individual"}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="h-full w-full object-cover"
+            style={filter ? { filter } : undefined}
+          />
+        ) : useVideo ? (
+          <video
+            key={`idle-${photo.id}`}
             ref={videoRef}
             src={patientVideoUrl(photo.id)}
             poster={patientPhotoUrl(photo.id)}
