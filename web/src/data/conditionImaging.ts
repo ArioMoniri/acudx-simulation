@@ -413,9 +413,27 @@ interface MatchInput {
  * so "stemi" does NOT match inside "nstemi", while staying Turkish-suffix
  * friendly (no trailing boundary, so "ödem" still matches "ödemi").
  */
+/**
+ * Negation cues that flip a finding immediately after them: "no ST elevation",
+ * "without effusion", "denies …". Deliberately EXCLUDES "non" so positive keys
+ * like "non-st" (NSTEMI) still match. Matched when the cue sits right before the
+ * key (`…$`), so a report's negated finding does not score the positive image.
+ */
+const NEGATION_CUE =
+  /(?:^|[^a-z])(no|without|denies|denied|negative|neg|absent|resolved|ruled?\sout|yok|olmayan|saptanmadı|görülmedi|izlenmedi)[\s-]+$/i;
+
 function keywordHit(haystack: string, key: string): boolean {
   const esc = key.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(^|[^a-z])${esc}`, "i").test(haystack);
+  const re = new RegExp(`(^|[^a-z])${esc}`, "gi");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(haystack)) !== null) {
+    const start = m.index + m[1].length;
+    // Count only a NON-negated occurrence: "st depression" scores, but the
+    // "st elevation" inside "No ST elevation" must not resolve a STEMI image.
+    if (!NEGATION_CUE.test(haystack.slice(Math.max(0, start - 20), start))) return true;
+    if (re.lastIndex <= m.index) re.lastIndex = m.index + 1; // guard against stalls
+  }
+  return false;
 }
 
 function scoreEntry(entry: CuratedImaging, input: MatchInput): number {
