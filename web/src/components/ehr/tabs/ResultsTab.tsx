@@ -258,9 +258,15 @@ export function ResultsTab({ lang }: ResultsTabProps) {
       const times = resultsByCode.get(code) ?? [];
       const resultedAtAt = (i: number): number => times[i] ?? draws[i].resultsReadyAt;
 
-      // Imaging — real representative image (ground truth handled separately).
+      // Imaging — a synthetic within-normal-limits study ONLY when the case
+      // carries no ground-truth imaging for this order. Ground truth is rendered
+      // separately (groundImagingEntries); `ground` above is ground LABS, so
+      // without this imaging-specific guard an ordered study that HAS ground
+      // truth would ALSO get a contradictory synthetic-normal entry (e.g. a real
+      // ischaemia ECG shown next to a spurious "normal sinus rhythm" ECG).
       if (orderIsImaging(draws[0])) {
-        if (!ground.length) {
+        const hasGroundImaging = groundImaging.some((im) => im.orderCode === code);
+        if (!hasGroundImaging) {
           const syn = syntheticResultAt(orderable, caseInstance, { dynamic: true });
           imaging.push(
             buildSyntheticImaging(last, orderable, syn.report?.conclusion, lang, resultedAtAt(draws.length - 1)),
@@ -736,7 +742,14 @@ function buildGroundImaging(
   const resolved = results.find((r) => r.datumIds.includes(im.id));
   const dxEn = conceptText(caseInstance.correctDiagnosis.code, "en");
   const modalityEn = im.modality.en;
-  const query = im.imageQuery ? pick(im.imageQuery, lang) : `${dxEn} ${modalityEn}`;
+  // Match the representative image to what the REPORT concludes (the impression
+  // the learner actually reads), so the picture can never contradict it — e.g. a
+  // "No ST elevation" ischaemia read must not resolve to a STEMI tracing. Fall
+  // back to an authored image query / the diagnosis only when there is no
+  // conclusion to match on.
+  const conclusion = im.report.conclusion ? pick(im.report.conclusion, lang) : "";
+  const authored = im.imageQuery ? pick(im.imageQuery, lang) : dxEn;
+  const query = `${conclusion || authored} ${modalityEn}`.trim();
   return {
     id: im.id,
     modality: im.modality,
