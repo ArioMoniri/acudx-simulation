@@ -481,109 +481,13 @@ export interface AccreditationFramework {
 }
 
 /**
- * The frameworks the export can tag to (IN-3 / IN-6). A crosswalk of the SAME
- * evidence onto LCME / ACGME / CanMEDS 2025 / AAMC Core EPAs / TEPDAD-UÇEP,
- * never a re-grade. These are catalog definitions (element counts describe the
- * crosswalk coverage of the six domains), not per-learner data.
- */
-export const accreditationFrameworks: AccreditationFramework[] = [
-  {
-    id: "acgme",
-    label: "ACGME",
-    name: {
-      en: "ACGME Milestones (6 core competencies)",
-      tr: "ACGME Milestones (6 temel yetkinlik)",
-    },
-    mappedElements: 6,
-    totalElements: 6,
-    crosswalkVersion: "v2025.1",
-  },
-  {
-    id: "canmeds",
-    label: "CanMEDS",
-    name: {
-      en: "CanMEDS 2025 (7 physician roles)",
-      tr: "CanMEDS 2025 (7 hekim rolü)",
-    },
-    mappedElements: 3,
-    totalElements: 7,
-    crosswalkVersion: "v2025.0",
-  },
-  {
-    id: "epa",
-    label: "AAMC EPA",
-    name: {
-      en: "AAMC Core Entrustable Professional Activities",
-      tr: "AAMC Temel Emanet Edilebilir Profesyonel Faaliyetler",
-    },
-    mappedElements: 6,
-    totalElements: 13,
-    crosswalkVersion: "v2024.2",
-  },
-  {
-    id: "lcme",
-    label: "LCME",
-    name: {
-      en: "LCME accreditation elements",
-      tr: "LCME akreditasyon unsurları",
-    },
-    mappedElements: 6,
-    totalElements: 12,
-    crosswalkVersion: "v2025.1",
-  },
-  {
-    id: "tepdad",
-    label: "TEPDAD",
-    name: {
-      en: "TEPDAD / UÇEP national core outcomes",
-      tr: "TEPDAD / UÇEP ulusal çekirdek çıktıları",
-    },
-    mappedElements: 6,
-    totalElements: 21,
-    crosswalkVersion: "v2024.1",
-  },
-];
-
-/** Options for the export scope selector. */
-export interface ExportScopeOption {
-  id: string;
-  labelKey: string;
-  /** Fallback label (used via t(labelKey, { defaultValue })). */
-  labelDefault: string;
-  /** Preselected in the builder. */
-  selected: boolean;
-}
-
-export const exportScopeOptions: ExportScopeOption[] = [
-  {
-    id: "own",
-    labelKey: "institution.export.scope.own",
-    labelDefault: "Your recorded encounters",
-    selected: true,
-  },
-  {
-    id: "window",
-    labelKey: "institution.export.scope.window",
-    labelDefault: "This assessment window",
-    selected: true,
-  },
-  {
-    id: "deidentified",
-    labelKey: "institution.export.scope.deidentified",
-    labelDefault: "De-identified",
-    selected: true,
-  },
-  {
-    id: "fairness",
-    labelKey: "institution.export.scope.fairness",
-    labelDefault: "Include fairness audit",
-    selected: false,
-  },
-];
-
-/**
  * A representative crosswalk: which element of each framework a competency
  * domain maps to. Crosswalk of the SAME evidence, never a re-grade (IN-6).
+ *
+ * This is the single source of truth for crosswalk COVERAGE: the framework
+ * catalog below derives its `mappedElements` count straight from this map, so
+ * the "measured coverage" numerator shown in the UI can never drift from the
+ * real crosswalk.
  */
 export const FRAMEWORK_DOMAIN_TAG: Record<
   string,
@@ -631,6 +535,128 @@ export const FRAMEWORK_DOMAIN_TAG: Record<
   },
 };
 
+/**
+ * Count the DISTINCT framework elements the crosswalk covers for a framework,
+ * derived from {@link FRAMEWORK_DOMAIN_TAG}. Distinct because several competency
+ * domains can map onto the same element (e.g. CanMEDS "Medical Expert" covers
+ * four domains but is one element). Empty tags never count.
+ */
+export function mappedElementCount(frameworkId: string): number {
+  const tags = FRAMEWORK_DOMAIN_TAG[frameworkId];
+  if (!tags) return 0;
+  return new Set(Object.values(tags).filter((v) => v.trim() !== "")).size;
+}
+
+/** Catalog metadata for a framework, minus the derived coverage numerator. */
+type FrameworkCatalogEntry = Omit<AccreditationFramework, "mappedElements">;
+
+/**
+ * The frameworks the export can tag to (IN-3 / IN-6). A crosswalk of the SAME
+ * evidence onto LCME / ACGME / CanMEDS 2025 / AAMC Core EPAs / TEPDAD-UÇEP,
+ * never a re-grade. `totalElements` is static catalog metadata — the framework's
+ * own full element count, external to AcuDx, not a per-learner measurement.
+ */
+const FRAMEWORK_CATALOG: FrameworkCatalogEntry[] = [
+  {
+    id: "acgme",
+    label: "ACGME",
+    name: {
+      en: "ACGME Milestones (6 core competencies)",
+      tr: "ACGME Milestones (6 temel yetkinlik)",
+    },
+    totalElements: 6,
+    crosswalkVersion: "v2025.1",
+  },
+  {
+    id: "canmeds",
+    label: "CanMEDS",
+    name: {
+      en: "CanMEDS 2025 (7 physician roles)",
+      tr: "CanMEDS 2025 (7 hekim rolü)",
+    },
+    totalElements: 7,
+    crosswalkVersion: "v2025.0",
+  },
+  {
+    id: "epa",
+    label: "AAMC EPA",
+    name: {
+      en: "AAMC Core Entrustable Professional Activities",
+      tr: "AAMC Temel Emanet Edilebilir Profesyonel Faaliyetler",
+    },
+    totalElements: 13,
+    crosswalkVersion: "v2024.2",
+  },
+  {
+    id: "lcme",
+    label: "LCME",
+    name: {
+      en: "LCME accreditation elements",
+      tr: "LCME akreditasyon unsurları",
+    },
+    totalElements: 12,
+    crosswalkVersion: "v2025.1",
+  },
+  {
+    id: "tepdad",
+    label: "TEPDAD",
+    name: {
+      en: "TEPDAD / UÇEP national core outcomes",
+      tr: "TEPDAD / UÇEP ulusal çekirdek çıktıları",
+    },
+    totalElements: 21,
+    crosswalkVersion: "v2024.1",
+  },
+];
+
+/**
+ * The framework rows shown in the export builder. `mappedElements` is DERIVED
+ * from {@link FRAMEWORK_DOMAIN_TAG} (distinct crosswalk elements) so it stays in
+ * lock-step with the real crosswalk and can never be a stale hardcoded value.
+ */
+export const accreditationFrameworks: AccreditationFramework[] =
+  FRAMEWORK_CATALOG.map((f) => ({
+    ...f,
+    mappedElements: mappedElementCount(f.id),
+  }));
+
+/** Options for the export scope selector. */
+export interface ExportScopeOption {
+  id: string;
+  labelKey: string;
+  /** Fallback label (used via t(labelKey, { defaultValue })). */
+  labelDefault: string;
+  /** Preselected in the builder. */
+  selected: boolean;
+}
+
+export const exportScopeOptions: ExportScopeOption[] = [
+  {
+    id: "own",
+    labelKey: "institution.export.scope.own",
+    labelDefault: "Your recorded encounters",
+    selected: true,
+  },
+  {
+    id: "window",
+    labelKey: "institution.export.scope.window",
+    labelDefault: "This assessment window",
+    selected: true,
+  },
+  {
+    id: "deidentified",
+    labelKey: "institution.export.scope.deidentified",
+    labelDefault: "De-identified",
+    selected: true,
+  },
+  {
+    id: "fairness",
+    labelKey: "institution.export.scope.fairness",
+    labelDefault: "Include fairness audit",
+    selected: false,
+  },
+];
+
 /* -------------------------------------------------------------------------- */
 /* Accreditation export builder (IN-3) — real, de-identified, downloadable     */
 /* -------------------------------------------------------------------------- */
@@ -657,12 +683,61 @@ function csvCell(value: string | number): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
+/** The "assessment window" scope id — time-scopes the export to a recent block. */
+export const WINDOW_SCOPE_ID = "window";
+
+/**
+ * Length of "this assessment window" in days. The window is a recent block of
+ * practice — a rotation / OSCE block analogue — so the export can be scoped to
+ * it rather than the learner's entire history.
+ */
+export const ASSESSMENT_WINDOW_DAYS = 30;
+
+/**
+ * The assessment-window `[start, end]` epoch-ms range for a record set. It is
+ * anchored to the NEWEST recorded encounter (not wall-clock "now"), so a fixed
+ * record set always yields the same window: `end` = the latest encounter,
+ * `start` = end − {@link ASSESSMENT_WINDOW_DAYS}. Returns null when there are no
+ * records (nothing to window).
+ */
+export function assessmentWindowRange(
+  records: EncounterRecord[],
+): { start: number; end: number } | null {
+  if (records.length === 0) return null;
+  let end = records[0].at;
+  for (const r of records) if (r.at > end) end = r.at;
+  const start = end - ASSESSMENT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return { start, end };
+}
+
+/**
+ * Apply the "assessment window" scope: when the `window` toggle is active, keep
+ * only the encounters that fall inside {@link assessmentWindowRange}; otherwise
+ * pass records through untouched. This is what makes the window toggle real —
+ * the filtered set flows into every downstream derivation, so `rowCount`, the
+ * rows, and the calibration all actually change when it is on.
+ */
+export function applyExportScope(
+  records: EncounterRecord[],
+  scopeIds: string[],
+): EncounterRecord[] {
+  if (!scopeIds.includes(WINDOW_SCOPE_ID)) return records;
+  const range = assessmentWindowRange(records);
+  if (!range) return records;
+  return records.filter((r) => r.at >= range.start && r.at <= range.end);
+}
+
 /**
  * Build a genuine, de-identified, framework-tagged export from the learner's
  * OWN real records. Serializes to both JSON (structured) and CSV (one tidy row
  * per encounter x scored domain). Calibration is derived from the same real
  * data; the fairness section, when requested, is an honest "insufficient data"
  * note because a single local learner has no language subgroups to compare.
+ *
+ * When the "assessment window" scope is active the records are time-scoped to
+ * the recent window BEFORE any derivation, so the row count genuinely reflects
+ * the window (not the whole history). The "own" scope is definitional here —
+ * the export is always single-user own-data, there is no other source to add.
  *
  * Pure and deterministic apart from the `generatedAt` stamp on the export
  * envelope (expected metadata for an export artifact).
@@ -674,8 +749,12 @@ export function buildAccreditationExport(
   const frameworks = accreditationFrameworks.filter((f) =>
     options.frameworkIds.includes(f.id),
   );
-  const rows = deriveEncounterRows(records);
-  const calibration = deriveCalibrationByDomain(records);
+  // Time-scope the records first, so rows + calibration reflect the window.
+  const scopedRecords = applyExportScope(records, options.scopeIds);
+  const windowActive = options.scopeIds.includes(WINDOW_SCOPE_ID);
+  const windowRange = windowActive ? assessmentWindowRange(records) : null;
+  const rows = deriveEncounterRows(scopedRecords);
+  const calibration = deriveCalibrationByDomain(scopedRecords);
 
   const meta = {
     product: "AcuDx",
@@ -685,6 +764,14 @@ export function buildAccreditationExport(
     generatedAt: new Date().toISOString(),
     deidentified: options.deidentified,
     scopes: options.scopeIds,
+    // The applied assessment window, when the window scope is on (else null).
+    window: windowRange
+      ? {
+          days: ASSESSMENT_WINDOW_DAYS,
+          start: new Date(windowRange.start).toISOString(),
+          end: new Date(windowRange.end).toISOString(),
+        }
+      : null,
     frameworks: frameworks.map((f) => ({
       id: f.id,
       label: f.label,

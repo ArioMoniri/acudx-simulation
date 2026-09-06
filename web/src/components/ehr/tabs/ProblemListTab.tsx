@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
@@ -94,6 +95,7 @@ interface Annotation {
  */
 export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const state = useEncounterState();
   // Effective Live-mode state: reachable AND not opted out (backend-preferring).
   const { enabled: liveEnabled } = useLiveBackend();
@@ -609,6 +611,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
           debrief={debrief}
           caseInstance={caseInstance}
           onClose={() => setDebriefOpen(false)}
+          onViewReport={() => navigate("/feedback")}
         />
       ) : null}
     </div>

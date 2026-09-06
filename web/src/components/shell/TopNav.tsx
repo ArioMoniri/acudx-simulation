@@ -16,14 +16,15 @@ interface NavItem {
 }
 
 /**
- * Nav surfaces per demo vantage point (docs/design/01):
- *   learner  → the solo learning loop (Journeys 1-5)
- *   educator → the learner loop PLUS authoring + review (Journey 7)
+ * Nav surfaces per PERMITTED vantage point (docs/design/01). The vantage is
+ * permission-clamped upstream in `lib/viewAs` (see `permittedVantages`), so this
+ * map is only ever indexed by a vantage the real profile role actually permits:
+ *   learner  → the solo learning loop (Journeys 1-5), incl. formative feedback
+ *   educator → the learner loop PLUS authoring (Journey 7)
  *   dean     → the institution dashboard (Journey 8)
  *
  * Every label resolves to a real, reachable route so the nav never dead-ends;
- * the existing Home / Encounter / Feedback screens stay reachable (Cases and
- * Progress are their learner-facing names).
+ * the encounter → feedback → progress path is reachable from the learner set.
  */
 const NAV_BY_ROLE: Record<ViewAsRole, NavItem[]> = {
   learner: [
@@ -32,13 +33,13 @@ const NAV_BY_ROLE: Record<ViewAsRole, NavItem[]> = {
     { to: "/cases", key: "nav.cases" },
     { to: "/rooms", key: "nav.rooms" },
     { to: "/exam", key: "nav.exam" },
+    { to: "/feedback", key: "nav.feedback" },
     { to: "/progress", key: "nav.progress" },
   ],
   educator: [
     { to: "/", key: "nav.home", end: true },
     { to: "/cases", key: "nav.cases" },
     { to: "/authoring", key: "nav.authoring" },
-    { to: "/feedback", key: "nav.review" },
   ],
   dean: [
     { to: "/", key: "nav.home", end: true },

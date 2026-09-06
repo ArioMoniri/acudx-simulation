@@ -33,6 +33,7 @@ import {
   Flag,
   Flask,
   Target,
+  ArrowRight,
 } from "@phosphor-icons/react";
 
 import { Badge, Button, Card, Divider, SectionLabel, Stat, StatusDot } from "@/components/ui";
@@ -88,6 +89,8 @@ export interface DebriefReportProps {
   debrief: Debrief;
   caseInstance: CaseInstance;
   onClose?: () => void;
+  /** Optional: hand the learner off to the full feedback report (kept alongside onClose). */
+  onViewReport?: () => void;
 }
 
 /** Render an ICD-10 (+ICD-11) code line for a committed diagnosis code. */
@@ -97,7 +100,7 @@ function codeLine(code: string): string {
   return `${entry.icd10}${entry.icd11 ? ` · ${entry.icd11}` : ""}`;
 }
 
-export function DebriefReport({ debrief, caseInstance, onClose }: DebriefReportProps) {
+export function DebriefReport({ debrief, caseInstance, onClose, onViewReport }: DebriefReportProps) {
   const { t, i18n } = useTranslation();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -387,9 +390,23 @@ export function DebriefReport({ debrief, caseInstance, onClose }: DebriefReportP
           >
             {t("debrief.print", { defaultValue: "Print / export" })}
           </Button>
-          <Button size="sm" variant="primary" onClick={close}>
+          <Button
+            size="sm"
+            variant={onViewReport ? "secondary" : "primary"}
+            onClick={close}
+          >
             {t("debrief.close", { defaultValue: "Close" })}
           </Button>
+          {onViewReport ? (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={onViewReport}
+              trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" aria-hidden />}
+            >
+              {t("debrief.viewFullReport", { defaultValue: "View full report" })}
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

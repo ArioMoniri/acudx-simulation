@@ -18,7 +18,6 @@ import {
   Card,
   SectionLabel,
   Stat,
-  StatusDot,
   type StatTrend,
 } from "@/components/ui";
 import { CalibrationPlot } from "@/components";
@@ -283,16 +282,13 @@ export function HomePage() {
               size="lg"
               trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
             >
-              <Link to="/encounter">{t("home.primaryCtaContinue")}</Link>
+              <Link to="/encounter">{t("home.primaryCta")}</Link>
             </Button>
           }
           meta={
-            <>
-              <StatusDot tone="brand" pulse label={t("home.resumeChip")} />
-              <span className="hidden text-xs text-subtle sm:inline">
-                {t("home.noPublicLeaderboard")}
-              </span>
-            </>
+            <span className="hidden text-xs text-subtle sm:inline">
+              {t("home.noPublicLeaderboard")}
+            </span>
           }
         />
       </motion.div>
@@ -363,7 +359,7 @@ export function HomePage() {
                 {t("home.showDifferent", { defaultValue: "Show different cases" })}
               </button>
               <Link
-                to="/encounter"
+                to="/cases"
                 className="text-sm font-medium text-brand hover:underline focus-visible:outline-none"
               >
                 {t("home.viewAllCases")}

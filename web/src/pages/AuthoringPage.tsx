@@ -86,6 +86,7 @@ import {
   isFactLocked,
   stageDisplayState,
   reviewerFromProfile,
+  isCredentialedRole,
   readinessSignals,
   publishCase,
   removePublishedCase,
@@ -1084,6 +1085,36 @@ function SignInToCoSign() {
   );
 }
 
+function RoleNotCredentialed({ role }: { role: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-control border border-dashed border-[color:var(--state-warning)] bg-[color-mix(in_srgb,var(--state-warning)_8%,transparent)] p-4">
+      <div className="flex items-start gap-3">
+        <span
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-[color-mix(in_srgb,var(--state-warning)_16%,transparent)] text-[color:var(--state-warning)]"
+          aria-hidden
+        >
+          <LockSimple weight="bold" className="h-5 w-5" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-fg">
+            {t("authoringP9.signoff.needCredential", {
+              defaultValue: "Co-signing needs a credentialed clinician",
+            })}
+          </p>
+          <p className="mt-0.5 max-w-md text-xs text-muted">
+            {t("authoringP9.signoff.needCredentialSub", {
+              role,
+              defaultValue:
+                "Only an educator or dean can co-sign and publish a case for learners. Your account role ({{role}}) cannot sign off — ask a credentialed clinician to review and co-sign.",
+            })}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SignOffPanel({
   state,
   dispatch,
@@ -1097,8 +1128,19 @@ function SignOffPanel({
 }) {
   const { t } = useTranslation();
   const lang = useLang();
+  const profile = useProfile();
   if (!state.draft) return <NeedsDraft dispatch={dispatch} />;
   const draft = state.draft;
+
+  // Onboarded, named, but lacking a credentialed teaching role (student /
+  // resident): the co-sign box + publish stay disabled, with a clear note.
+  const roleBlocked =
+    !reviewer &&
+    !!profile &&
+    profile.onboarded &&
+    profile.fullName.trim() !== "" &&
+    !isCredentialedRole(profile.role);
+  const roleLabel = profile ? profile.role : "";
 
   const blockers = publishBlockers(draft.facts, state.edits);
   const clear = blockers.length === 0;
@@ -1257,6 +1299,8 @@ function SignOffPanel({
             </div>
           )}
         </div>
+      ) : roleBlocked ? (
+        <RoleNotCredentialed role={roleLabel} />
       ) : (
         <SignInToCoSign />
       )}
@@ -1315,9 +1359,14 @@ function SignOffPanel({
       {!canPublish && !state.published ? (
         <p role="status" className="text-[11px] text-[color:var(--state-warning)]">
           {!reviewer
-            ? t("authoringP9.signoff.blockedByIdentity", {
-                defaultValue: "Publish is blocked until an authenticated clinician can co-sign.",
-              })
+            ? roleBlocked
+              ? t("authoringP9.signoff.blockedByRole", {
+                  defaultValue:
+                    "Publish is blocked: only a credentialed clinician (educator or dean) can co-sign.",
+                })
+              : t("authoringP9.signoff.blockedByIdentity", {
+                  defaultValue: "Publish is blocked until an authenticated clinician can co-sign.",
+                })
             : !clear
               ? t("authoring.signoff.blockedByFacts")
               : t("authoring.signoff.blockedByCosign")}
@@ -1722,7 +1771,15 @@ export function AuthoringPage() {
       caseHash,
       rubricHash,
     });
-    dispatch({ type: "publish", publishedId: saved.id, caseHash, rubricHash });
+    dispatch({
+      type: "publish",
+      publishedId: saved.id,
+      caseHash,
+      rubricHash,
+      // A non-null reviewer already implies a credentialed role, but the
+      // reducer re-checks so the gate holds independently of this call site.
+      credentialed: reviewer !== null,
+    });
   }, [state.draft, state.edits, state.cosigned, reviewer, lang]);
 
   return (

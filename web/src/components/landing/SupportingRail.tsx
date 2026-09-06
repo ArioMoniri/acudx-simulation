@@ -13,6 +13,8 @@ import {
 
 import { cn } from "@/lib/cn";
 import { useStagger } from "@/lib/motion";
+import { useProfile } from "@/state/profileStore";
+import { permittedVantages } from "@/lib/viewAs";
 
 interface RailItem {
   key: "cases" | "rooms" | "progress" | "institution" | "sovereign";
@@ -38,6 +40,17 @@ const ITEMS: readonly RailItem[] = [
 export function SupportingRail({ className }: { className?: string }) {
   const { t } = useTranslation();
   const stagger = useStagger();
+  const profile = useProfile();
+
+  // The authoring tile leads into a role-gated surface, so only show it to users
+  // whose real role permits the educator vantage (educator / dean). Learners
+  // never get invited into a screen they can't enter.
+  const canAuthor =
+    profile?.onboarded === true &&
+    permittedVantages(profile.role).includes("educator");
+  const items = canAuthor
+    ? ITEMS
+    : ITEMS.filter((item) => item.key !== "sovereign");
 
   return (
     <motion.ul
@@ -47,7 +60,7 @@ export function SupportingRail({ className }: { className?: string }) {
         className,
       )}
     >
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const ItemIcon = item.icon;
         return (
           <motion.li key={item.key} {...stagger.item}>

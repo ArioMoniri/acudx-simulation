@@ -1,4 +1,7 @@
 {
+  "debrief": {
+    "viewFullReport": "View full report"
+  },
   "app": {
     "name": "AcuDx",
     "tagline": "Clinical reasoning, rehearsed.",

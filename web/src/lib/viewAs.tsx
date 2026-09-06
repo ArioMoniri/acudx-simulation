@@ -52,6 +52,43 @@ export function profileRoleToViewAs(role: ProfileRole): ViewAsRole {
   }
 }
 
+/**
+ * SINGLE SOURCE OF TRUTH for ROLE → PERMITTED VANTAGES. `profile.role` is the
+ * permission source today; a future Supabase wave replaces the argument with a
+ * server-verified claim without touching a single consumer. Lists are ordered
+ * ascending (learner < educator < dean) so the LAST element is the highest
+ * permitted vantage:
+ *
+ *   student / resident → learner
+ *   educator           → learner, educator
+ *   dean               → learner, educator, dean
+ */
+export function permittedVantages(role: ProfileRole): ViewAsRole[] {
+  switch (role) {
+    case "dean":
+      return ["learner", "educator", "dean"];
+    case "educator":
+      return ["learner", "educator"];
+    case "student":
+    case "resident":
+    default:
+      return ["learner"];
+  }
+}
+
+/**
+ * Clamp a candidate vantage to what is permitted: pass it through when allowed,
+ * otherwise fall back to the HIGHEST permitted vantage (last in the list). This
+ * keeps "View as" a preview WITHIN permission — it can never elevate access.
+ */
+function clampVantage(
+  candidate: ViewAsRole,
+  permitted: readonly ViewAsRole[],
+): ViewAsRole {
+  if (permitted.includes(candidate)) return candidate;
+  return permitted[permitted.length - 1] ?? "learner";
+}
+
 interface ViewAsContextValue {
   role: ViewAsRole;
   setRole: (r: ViewAsRole) => void;
@@ -73,10 +110,21 @@ function readStored(): ViewAsRole {
 export function ViewAsProvider({ children }: { children: ReactNode }) {
   const profile = useProfile();
 
-  // Base vantage: the REAL role when onboarded, else the persisted choice.
-  const baseRole: ViewAsRole = profile?.onboarded
-    ? profileRoleToViewAs(profile.role)
-    : readStored();
+  // The permitted vantages for the REAL profile role — the one permission
+  // source (profile.role today, a server claim later). Anyone not yet onboarded
+  // is learner-only. Memoised on the role so `setRole` stays referentially stable.
+  const roleKey: ProfileRole | null = profile?.onboarded ? profile.role : null;
+  const permitted = useMemo<ViewAsRole[]>(
+    () => (roleKey ? permittedVantages(roleKey) : ["learner"]),
+    [roleKey],
+  );
+
+  // Base vantage: the REAL role when onboarded, else the persisted choice —
+  // clamped so it can never exceed what the profile role permits.
+  const baseRole: ViewAsRole = clampVantage(
+    roleKey ? profileRoleToViewAs(roleKey) : readStored(),
+    permitted,
+  );
 
   // Session-only "View as" override. Cleared whenever the real base changes
   // (onboarding completes, or the account role is edited) so the nav reflects
@@ -90,16 +138,22 @@ export function ViewAsProvider({ children }: { children: ReactNode }) {
     }
   }, [baseRole]);
 
-  const role = override ?? baseRole;
+  // Clamp the effective vantage as well: a stale or out-of-range stored override
+  // can never yield a vantage the profile role doesn't permit.
+  const role = clampVantage(override ?? baseRole, permitted);
 
-  const setRole = useCallback((r: ViewAsRole) => {
-    setOverride(r);
-    try {
-      localStorage.setItem(STORAGE_KEY, r);
-    } catch {
-      /* apply in-memory only when storage is unavailable */
-    }
-  }, []);
+  const setRole = useCallback(
+    (r: ViewAsRole) => {
+      const next = clampVantage(r, permitted);
+      setOverride(next);
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {
+        /* apply in-memory only when storage is unavailable */
+      }
+    },
+    [permitted],
+  );
 
   const value = useMemo<ViewAsContextValue>(
     () => ({ role, setRole }),

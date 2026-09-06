@@ -1,7 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { Student, ChalkboardTeacher, Buildings } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
-import { VIEW_AS_ROLES, useViewAs, type ViewAsRole } from "@/lib/viewAs";
+import { useProfile } from "@/state/profileStore";
+import { permittedVantages, useViewAs, type ViewAsRole } from "@/lib/viewAs";
 
 const roleIcon: Record<ViewAsRole, typeof Student> = {
   learner: Student,
@@ -10,15 +11,28 @@ const roleIcon: Record<ViewAsRole, typeof Student> = {
 };
 
 /**
- * RoleSwitcher — the "View as" demo control. A compact segmented control that
- * changes which nav surfaces are shown (learner / educator / dean), mirroring
- * the LanguageSwitcher pattern: one row, medkit tokens, keyboard + SR friendly.
- * The icon is decorative; the visible role name carries the meaning (never
- * icon-only), and the label is hidden on the narrowest widths but announced.
+ * RoleSwitcher — the "View as" preview control. A compact segmented control that
+ * previews which nav surfaces are shown, WITHIN permission: it renders only the
+ * vantages the real profile role permits (see `permittedVantages`), so a student
+ * or resident sees no educator/dean options and a dean can preview all three
+ * downward. Mirrors the LanguageSwitcher pattern: one row, medkit tokens,
+ * keyboard + SR friendly. The icon is decorative; the visible role name carries
+ * the meaning (never icon-only), and the label is hidden on the narrowest widths
+ * but announced.
  */
 export function RoleSwitcher({ className }: { className?: string }) {
   const { t } = useTranslation();
   const { role, setRole } = useViewAs();
+  const profile = useProfile();
+
+  // Only the vantages the REAL profile role permits (single source of truth).
+  const vantages: ViewAsRole[] = profile?.onboarded
+    ? permittedVantages(profile.role)
+    : ["learner"];
+
+  // A single permitted vantage is nothing to switch between — hide the control
+  // entirely (a student/resident gets no "View as" affordance at all).
+  if (vantages.length <= 1) return null;
 
   return (
     <div className={cn("inline-flex items-center gap-1.5", className)}>
@@ -33,7 +47,7 @@ export function RoleSwitcher({ className }: { className?: string }) {
         aria-label={t("role.viewAs")}
         className="inline-flex items-center rounded-control border border-border bg-bg-subtle p-0.5"
       >
-        {VIEW_AS_ROLES.map((r) => {
+        {vantages.map((r) => {
           const active = role === r;
           const Icon = roleIcon[r];
           return (

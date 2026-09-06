@@ -33,6 +33,7 @@ import {
   exportScopeOptions,
   deriveEncounterRows,
   buildAccreditationExport,
+  applyExportScope,
   HEATMAP_DOMAINS,
   FRAMEWORK_DOMAIN_TAG,
   type AccreditationFramework,
@@ -348,7 +349,6 @@ function PreviewPanel({
 export function AccreditationExport() {
   const { t } = useTranslation();
   const records = useProgressRecords();
-  const rows = deriveEncounterRows(records);
 
   const [selectedFw, setSelectedFw] = useState<Set<string>>(
     () => new Set(["acgme", "epa", "tepdad"]),
@@ -386,6 +386,10 @@ export function AccreditationExport() {
   const selectedScopes = exportScopeOptions
     .filter((o) => scopes.has(o.id))
     .map((o) => o.id);
+
+  // Preview reflects the SAME scope filtering as the download (e.g. the
+  // assessment window), so the badge count always matches the exported file.
+  const rows = deriveEncounterRows(applyExportScope(records, selectedScopes));
 
   function handleDownload(format: "json" | "csv") {
     if (!canBuild) return;
