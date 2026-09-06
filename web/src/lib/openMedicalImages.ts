@@ -18,6 +18,8 @@
  *     HTML that Commons embeds in its metadata.
  */
 
+import { resolveCuratedImagingByText } from "@/data/conditionImaging";
+
 const COMMONS_ENDPOINT = "https://commons.wikimedia.org/w/api.php";
 const THUMB_WIDTH = 1024;
 const REQUEST_TIMEOUT_MS = 8000;
@@ -306,6 +308,59 @@ export async function searchConditionImage(
     // to allow a later retry, and fail soft.
     return null;
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Curated-first resolution                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** A resolved study image, tagged with whether it came from the curated bundle. */
+export interface ResolvedConditionImage extends ConditionImage {
+  /** True when served from the curated, individually-verified bundle. */
+  curated: boolean;
+  /** Curated teaching caption (already resolved to `lang`), when curated. */
+  curatedCaption?: string;
+}
+
+/**
+ * resolveStudyImage — the single entry point the UI should use: PREFER a
+ * curated, individually-verified image for this condition + modality, and fall
+ * back to the free-text live Commons lookup only when nothing curated matches.
+ *
+ * Accuracy is why curated wins: a teaching tool must show the *correct* study
+ * (an anterior-STEMI ECG for an anterior-STEMI case), which a free-text search
+ * cannot guarantee. Curated hits resolve without any network request.
+ *
+ * @param query    Free-text condition (+ optional modality), as ConditionImage receives it.
+ * @param modality Short modality label, e.g. "ECG" / "CT" / "X-ray".
+ * @param lang     Active language for the curated caption.
+ * @param signal   Optional AbortSignal for the live-lookup fallback.
+ */
+export async function resolveStudyImage(
+  query: string,
+  modality: string | undefined,
+  lang: "en" | "tr",
+  signal?: AbortSignal,
+): Promise<ResolvedConditionImage | null> {
+  const curated = resolveCuratedImagingByText(query, modality);
+  if (curated) {
+    const caption = curated.caption[lang];
+    return {
+      url: curated.src,
+      thumbUrl: curated.src,
+      title: caption,
+      attribution: curated.attribution.author,
+      license: curated.attribution.license,
+      pageUrl: curated.attribution.sourceUrl,
+      curated: true,
+      curatedCaption: caption,
+    };
+  }
+
+  const searchText = [query, modality].filter(Boolean).join(" ").trim();
+  if (!searchText) return null;
+  const live = await searchConditionImage(searchText, signal);
+  return live ? { ...live, curated: false } : null;
 }
 
 /** Clear the in-process cache. Exposed mainly for tests. */
