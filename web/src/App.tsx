@@ -21,45 +21,76 @@ import {
 /* chunk per route. Pages export named components, so we adapt each to the     */
 /* default-export shape React.lazy expects.                                    */
 
-const HomePage = lazy(() =>
-  import("@/pages/HomePage").then((m) => ({ default: m.HomePage })),
-);
-const LandingPage = lazy(() =>
-  import("@/pages/LandingPage").then((m) => ({ default: m.LandingPage })),
-);
-const AuthoringPage = lazy(() =>
-  import("@/pages/AuthoringPage").then((m) => ({ default: m.AuthoringPage })),
-);
-const StartPage = lazy(() =>
-  import("@/pages/StartPage").then((m) => ({ default: m.StartPage })),
-);
-const CasesPage = lazy(() =>
-  import("@/pages/CasesPage").then((m) => ({ default: m.CasesPage })),
-);
-const EncounterPage = lazy(() =>
-  import("@/pages/EncounterPage").then((m) => ({ default: m.EncounterPage })),
-);
-const FeedbackPage = lazy(() =>
-  import("@/pages/FeedbackPage").then((m) => ({ default: m.FeedbackPage })),
-);
-const ProgressPage = lazy(() =>
-  import("@/pages/ProgressPage").then((m) => ({ default: m.ProgressPage })),
-);
-const RoomPage = lazy(() =>
-  import("@/pages/RoomPage").then((m) => ({ default: m.RoomPage })),
-);
-const InstitutionPage = lazy(() =>
-  import("@/pages/InstitutionPage").then((m) => ({ default: m.InstitutionPage })),
-);
-const SignInPage = lazy(() =>
-  import("@/pages/SignInPage").then((m) => ({ default: m.SignInPage })),
-);
-const ProfilePage = lazy(() =>
-  import("@/pages/ProfilePage").then((m) => ({ default: m.ProfilePage })),
-);
-const ExamPage = lazy(() =>
-  import("@/pages/ExamPage").then((m) => ({ default: m.ExamPage })),
-);
+/* Per-route dynamic-import thunks — the single source of truth shared by both  */
+/* React.lazy (below) and the hover/focus prefetch map (further down). `import()`*/
+/* is idempotent: the module registry dedupes, so warming a chunk on hover and   */
+/* then rendering its route never double-fetches or double-mounts.               */
+const load = {
+  home: () => import("@/pages/HomePage"),
+  landing: () => import("@/pages/LandingPage"),
+  authoring: () => import("@/pages/AuthoringPage"),
+  start: () => import("@/pages/StartPage"),
+  cases: () => import("@/pages/CasesPage"),
+  encounter: () => import("@/pages/EncounterPage"),
+  feedback: () => import("@/pages/FeedbackPage"),
+  progress: () => import("@/pages/ProgressPage"),
+  room: () => import("@/pages/RoomPage"),
+  institution: () => import("@/pages/InstitutionPage"),
+  signin: () => import("@/pages/SignInPage"),
+  profile: () => import("@/pages/ProfilePage"),
+  exam: () => import("@/pages/ExamPage"),
+} as const;
+
+const HomePage = lazy(() => load.home().then((m) => ({ default: m.HomePage })));
+const LandingPage = lazy(() => load.landing().then((m) => ({ default: m.LandingPage })));
+const AuthoringPage = lazy(() => load.authoring().then((m) => ({ default: m.AuthoringPage })));
+const StartPage = lazy(() => load.start().then((m) => ({ default: m.StartPage })));
+const CasesPage = lazy(() => load.cases().then((m) => ({ default: m.CasesPage })));
+const EncounterPage = lazy(() => load.encounter().then((m) => ({ default: m.EncounterPage })));
+const FeedbackPage = lazy(() => load.feedback().then((m) => ({ default: m.FeedbackPage })));
+const ProgressPage = lazy(() => load.progress().then((m) => ({ default: m.ProgressPage })));
+const RoomPage = lazy(() => load.room().then((m) => ({ default: m.RoomPage })));
+const InstitutionPage = lazy(() => load.institution().then((m) => ({ default: m.InstitutionPage })));
+const SignInPage = lazy(() => load.signin().then((m) => ({ default: m.SignInPage })));
+const ProfilePage = lazy(() => load.profile().then((m) => ({ default: m.ProfilePage })));
+const ExamPage = lazy(() => load.exam().then((m) => ({ default: m.ExamPage })));
+
+/* -------------------------------------------------------------------------- */
+/* Intent preload                                                              */
+/* -------------------------------------------------------------------------- */
+/* Nav destination path -> the thunk that warms its route chunk. TopNav wires  */
+/* these to onMouseEnter / onFocus so the chunk is already downloading before   */
+/* the click, removing the first-navigation "slow switch". Read at runtime      */
+/* only (never at module eval), so the App <-> TopNav import cycle is safe.      */
+
+const ROUTE_LOADERS: Record<string, () => Promise<unknown>> = {
+  "/": load.home,
+  "/start": load.start,
+  "/cases": load.cases,
+  "/rooms": load.room,
+  "/exam": load.exam,
+  "/feedback": load.feedback,
+  "/progress": load.progress,
+  "/authoring": load.authoring,
+  "/institution": load.institution,
+  "/account": load.profile,
+};
+
+/** Routes already warmed, so repeated hovers fire the import at most once. */
+const warmedRoutes = new Set<string>();
+
+/**
+ * Warm the lazy chunk for a nav destination. Safe to call repeatedly (guarded +
+ * `import()` dedupe) and on unknown paths (no-op). Failures are swallowed: a
+ * preload is best-effort; the real navigation surfaces any load error.
+ */
+export function prefetchRoute(to: string): void {
+  if (warmedRoutes.has(to)) return;
+  const loader = ROUTE_LOADERS[to];
+  if (!loader) return;
+  warmedRoutes.add(to);
+  void loader().catch(() => warmedRoutes.delete(to));
+}
 
 /* -------------------------------------------------------------------------- */
 /* 404                                                                         */

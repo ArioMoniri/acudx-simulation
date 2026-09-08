@@ -369,7 +369,7 @@ const sahCase: CaseInstance = {
   },
   expectedWorkup: [
     order("w-sah-ct", "imaging", { system: LOINC.ecg12.system, code: "ct-head-noncon", display: "CT head" },
-      { en: "Noncontrast CT head", tr: "Kontrastsız beyin BT" }, 30, true, "nice-ng185"),
+      { en: "Noncontrast CT head", tr: "Kontrastsız beyin BT" }, 30, true, "nice-ng228"),
     order("w-sah-bp", "laboratory", LOINC.creatinine, { en: "Baseline bloods and renal function", tr: "Bazal kan tetkikleri ve böbrek fonksiyonu" }, 45, false, "tepdad-em"),
   ],
   disposition: "admit-icu",
@@ -597,6 +597,6 @@ export function getSeedCase(id: string): CaseInstance | undefined {
 /** Additional case-specific citation ids used by seed workups. */
 export const seedCitationIds = [
   "esc-acs-2023",
-  "nice-ng185",
+  "nice-ng228",
   "tepdad-em",
 ] as const;

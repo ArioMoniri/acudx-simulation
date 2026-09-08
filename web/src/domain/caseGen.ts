@@ -239,7 +239,9 @@ const lc = (code: string, display: string): Coding => ({ system: CODE_SYSTEMS.lo
 
 const TENSION_H: Bilingual = { en: "Tension-type headache", tr: "Gerilim tipi baş ağrısı" };
 const CITE_ACS = "esc-acs-2023";
-const CITE_SAH = "nice-ng185";
+// Non-contrast CT head for a suspected subarachnoid haemorrhage is grounded in
+// the NICE SAH guideline (NG228), NOT the NICE ACS guideline (NG185).
+const CITE_SAH = "nice-ng228";
 const CITE_EM = "tepdad-em";
 
 const PRESENTATIONS: PresentationTemplate[] = [

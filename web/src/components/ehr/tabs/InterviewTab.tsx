@@ -383,6 +383,10 @@ export function InterviewTab({
     () => Array.from(new Set(caseInstance.expectedWorkup.map((w) => w.citationId))),
     [caseInstance],
   );
+  const workupOrderCodes = useMemo(
+    () => caseInstance.expectedWorkup.map((w) => w.code.coding[0]?.code ?? ""),
+    [caseInstance],
+  );
   const guidanceQuery = guidanceOn
     ? [caseInstance.chiefComplaint[lang], nbaPhrase(nba, lang, t)]
         .filter(Boolean)
@@ -392,6 +396,7 @@ export function InterviewTab({
     query: guidanceQuery,
     locale: lang,
     citationIds: workupCitationIds,
+    orderCodes: workupOrderCodes,
   });
   const leadPassage = grounding.passages[0];
 

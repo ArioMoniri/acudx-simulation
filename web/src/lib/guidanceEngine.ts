@@ -387,6 +387,13 @@ export interface GroundingFocus {
    * expectedWorkup citations, so the local reference stays case-relevant.
    */
   citationIds?: string[];
+  /**
+   * Expected-order codes (e.g. from the case's expectedWorkup). Offline only:
+   * used to pick a condition-appropriate lead passage when the case is grounded
+   * in the generic emergency-competency framework, so a non-cardiac case does
+   * not open on generic or ACS prose. Never sent to the gateway.
+   */
+  orderCodes?: string[];
 }
 
 export interface GroundingResult {
@@ -411,6 +418,10 @@ const LOCAL_GUIDELINES: Record<string, Bilingual> = {
     en: "Take a focused history early: characterise the pain (onset, radiation, character) and screen cardiac risk factors and red flags before narrowing.",
     tr: "Erken odaklı anamnez alın: ağrıyı karakterize edin (başlangıç, yayılım, nitelik) ve daraltmadan önce kardiyak risk faktörlerini ve kırmızı bayrakları tarayın.",
   },
+  "nice-ng228": {
+    en: "For a sudden, severe (thunderclap) headache, obtain an immediate non-contrast CT head; a scan within 6 hours of onset reported by a radiologist reliably excludes subarachnoid haemorrhage, and if it is performed later or is negative, consider a lumbar puncture at least 12 hours after symptom onset.",
+    tr: "Ani, şiddetli (gök gürültüsü tarzı) baş ağrısında hemen kontrastsız beyin BT çekin; başlangıçtan sonraki 6 saat içinde çekilip radyolog tarafından raporlanan BT, subaraknoid kanamayı güvenilir şekilde dışlar; BT daha geç çekildiyse veya negatifse, semptom başlangıcından en az 12 saat sonra lomber ponksiyon düşünün.",
+  },
   "tepdad-em": {
     en: "Structure the emergency work-up: stabilise first, then a focused history and examination, targeted investigations, and timely analgesia.",
     tr: "Acil iş akışını yapılandırın: önce stabilize edin, ardından odaklı anamnez ve muayene, hedefe yönelik tetkikler ve zamanında analjezi.",
@@ -425,15 +436,96 @@ const DEFAULT_FALLBACK_CITATIONS = ["tepdad-em"];
 const MAX_PASSAGES = 4;
 const GROUND_DEBOUNCE_MS = 400;
 
-function localPassages(citationIds: string[], lang: Lang): GuidancePassage[] {
+/** The generic emergency-competency citation whose lead we upgrade by family. */
+const GENERIC_EM_CITATION = "tepdad-em";
+
+/**
+ * Broad presentation domains used ONLY to pick a condition-appropriate offline
+ * lead passage. The base pool (LOCAL_GUIDELINES) is ACS-centric, so a non-cardiac
+ * case whose critical order is grounded in the generic emergency-competency
+ * framework would otherwise open on generic (or ACS-flavoured) prose. These leads
+ * stay at the emergency-competency level and are attributed to the same TEPDAD
+ * framework — no new or fabricated citation ids — so the attribution stays honest.
+ */
+type PresentationDomain = "respiratory" | "neuro" | "abdominal" | "metabolic";
+
+const FAMILY_LEADS: Record<PresentationDomain, Bilingual> = {
+  respiratory: {
+    en: "For acute breathlessness, secure oxygenation first, then structure a focused cardiorespiratory work-up — targeted history and examination, early chest imaging, and a blood gas to grade severity before narrowing the cause.",
+    tr: "Akut nefes darlığında önce oksijenizasyonu sağlayın, ardından odaklı bir kardiyorespiratuar iş akışı kurun — hedefe yönelik anamnez ve muayene, erken akciğer görüntülemesi ve nedeni daraltmadan önce şiddeti derecelendirmek için kan gazı.",
+  },
+  neuro: {
+    en: "For a sudden severe headache or new neurological deficit, exclude the time-critical causes first: obtain urgent non-contrast brain imaging and check a bedside glucose before narrowing the differential.",
+    tr: "Ani şiddetli baş ağrısı veya yeni nörolojik defisitte önce zaman-kritik nedenleri dışlayın: acil kontrastsız beyin görüntülemesi alın ve ayırıcı tanıyı daraltmadan önce yatak başı glukoza bakın.",
+  },
+  abdominal: {
+    en: "For the acute abdomen or suspected sepsis, resuscitate first, then work the problem up in parallel — early bloods including lactate, cultures before antibiotics, a pregnancy test where relevant, and imaging directed by the examination.",
+    tr: "Akut karın veya şüpheli sepsiste önce resüsite edin, ardından sorunu paralel olarak değerlendirin — laktat dâhil erken kan tetkikleri, antibiyotikten önce kültürler, uygun olduğunda gebelik testi ve muayeneye yönelik görüntüleme.",
+  },
+  metabolic: {
+    en: "For a metabolic emergency such as diabetic ketoacidosis, obtain an early venous gas with glucose and ketones, start fluid resuscitation and fixed-rate insulin per protocol, and reassess frequently against the biochemistry and potassium.",
+    tr: "Diyabetik ketoasidoz gibi bir metabolik acilde erken venöz kan gazı ile glukoz ve ketona bakın, protokole göre sıvı resüsitasyonu ve sabit hızlı insülin başlayın ve biyokimya ile potasyuma göre sık sık yeniden değerlendirin.",
+  },
+};
+
+/**
+ * Map the case's expected-order codes to a presentation domain. Deliberately
+ * conservative: only codes that unambiguously belong to one non-cardiac domain
+ * are listed, and codes shared with cardiac presentations (e.g. ct-aortogram,
+ * a bare glucose) are left out so an ambiguous case keeps the neutral lead.
+ * Priority is fixed (metabolic → neuro → respiratory → abdominal) to resolve the
+ * rare case that carries codes from more than one domain.
+ */
+const DOMAIN_ORDER_CODES: Array<[PresentationDomain, ReadonlySet<string>]> = [
+  ["metabolic", new Set(["fluids-insulin"])],
+  ["neuro", new Set(["ct-head-noncon"])],
+  ["respiratory", new Set(["cxr", "ctpa", "vbg"])],
+  [
+    "abdominal",
+    new Set([
+      "us-abdomen",
+      "ct-abdomen",
+      "ct-kub",
+      "us-tv",
+      "iv-antibiotics",
+      "3040-3", // lipase
+      "5811-5", // urinalysis
+      "19080-1", // beta-hCG
+    ]),
+  ],
+];
+
+function domainFromOrderCodes(orderCodes: readonly string[]): PresentationDomain | undefined {
+  if (orderCodes.length === 0) return undefined;
+  const codes = new Set(orderCodes);
+  for (const [domain, domainCodes] of DOMAIN_ORDER_CODES) {
+    for (const c of codes) {
+      if (domainCodes.has(c)) return domain;
+    }
+  }
+  return undefined;
+}
+
+function localPassages(
+  citationIds: string[],
+  lang: Lang,
+  orderCodes: readonly string[] = [],
+): GuidancePassage[] {
   const ids = citationIds.length > 0 ? citationIds : DEFAULT_FALLBACK_CITATIONS;
+  const domain = domainFromOrderCodes(orderCodes);
   const seen = new Set<string>();
   const out: GuidancePassage[] = [];
   for (const id of ids) {
     if (seen.has(id)) continue;
     seen.add(id);
     const citation = getCitation(id);
-    const text = LOCAL_GUIDELINES[id]?.[lang] ?? citation?.source[lang];
+    let text = LOCAL_GUIDELINES[id]?.[lang] ?? citation?.source[lang];
+    // Upgrade the generic emergency-framework LEAD to a condition-appropriate
+    // passage for non-cardiac presentations, keeping the TEPDAD attribution.
+    // Cases that already lead with a specific guideline (ACS, SAH) are untouched.
+    if (out.length === 0 && id === GENERIC_EM_CITATION && domain) {
+      text = FAMILY_LEADS[domain][lang];
+    }
     if (!text) continue;
     out.push({
       text,
@@ -491,8 +583,10 @@ export function useLiveGrounding(focus: GroundingFocus): GroundingResult {
   const { enabled } = useLiveBackend();
   const lang: Lang = focus.locale ?? "en";
   const citationIds = focus.citationIds ?? [];
+  const orderCodes = focus.orderCodes ?? [];
   const citationKey = citationIds.join(",");
-  const fallback = (): GuidancePassage[] => localPassages(citationIds, lang);
+  const orderCodeKey = orderCodes.join(",");
+  const fallback = (): GuidancePassage[] => localPassages(citationIds, lang, orderCodes);
 
   const [result, setResult] = useState<GroundingResult>(() => ({
     passages: fallback(),
@@ -539,7 +633,7 @@ export function useLiveGrounding(focus: GroundingFocus): GroundingResult {
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, query, focus.country, lang, citationKey]);
+  }, [enabled, query, focus.country, lang, citationKey, orderCodeKey]);
 
   return result;
 }
