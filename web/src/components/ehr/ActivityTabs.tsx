@@ -241,7 +241,10 @@ export function ActivityTabs({
       onValueChange={handleValueChange}
       className="flex flex-col gap-4"
     >
-      <div className="relative">
+      {/* Chart nav bar — a framed EHR tab strip (Epic activity tabs): a surface
+          toolbar, dense icon+label tabs, a clear brand active state on the
+          baseline, and soft scroll fades when the strip overflows. */}
+      <div className="relative rounded-card border border-border bg-surface px-3 pt-1.5">
         <div
           ref={scrollRef}
           onScroll={syncEdges}
@@ -250,7 +253,7 @@ export function ActivityTabs({
           <TabsList
             aria-label={t("ehr.tabs.navLabel")}
             variant="underline"
-            className="w-max min-w-full"
+            className="w-max min-w-full gap-1 border-b-0"
           >
             {TABS.map(({ key, icon: TabIcon }) => {
               const count = (counts as Record<string, number>)[key];
@@ -260,16 +263,16 @@ export function ActivityTabs({
                   key={key}
                   value={key}
                   aria-current={isActive ? "page" : undefined}
-                  className="group whitespace-nowrap"
+                  className="group relative whitespace-nowrap rounded-t-control px-3 py-2.5 text-muted data-[state=inactive]:hover:bg-bg-subtle data-[state=active]:text-brand"
                 >
                   <TabIcon
                     weight="bold"
-                    className="h-4 w-4 text-muted transition-colors duration-200 ease-out group-data-[state=active]:text-brand"
+                    className="h-4 w-4 text-subtle transition-colors duration-200 ease-out group-data-[state=active]:text-brand"
                     aria-hidden
                   />
                   {t(`ehr.tabs.${camel(key)}`)}
                   {typeof count === "number" && count > 0 ? (
-                    <span className="ms-0.5 rounded-full bg-brand-tint px-1.5 text-[10px] font-semibold tabular-nums text-brand">
+                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-full bg-brand-tint px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-brand">
                       {count}
                     </span>
                   ) : null}
@@ -281,14 +284,14 @@ export function ActivityTabs({
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-bg to-transparent transition-opacity duration-200",
+            "pointer-events-none absolute inset-y-px left-px w-8 rounded-l-card bg-gradient-to-r from-surface to-transparent transition-opacity duration-200",
             edges.start ? "opacity-100" : "opacity-0",
           )}
         />
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-bg to-transparent transition-opacity duration-200",
+            "pointer-events-none absolute inset-y-px right-px w-8 rounded-r-card bg-gradient-to-l from-surface to-transparent transition-opacity duration-200",
             edges.end ? "opacity-100" : "opacity-0",
           )}
         />

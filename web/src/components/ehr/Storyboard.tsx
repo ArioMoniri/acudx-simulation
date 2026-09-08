@@ -136,10 +136,8 @@ function MiniVital({
 }) {
   return (
     <div className="rounded-control border border-border bg-bg-subtle px-2 py-1.5">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted">
-        {label}
-      </p>
-      <p className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-fg">
+      <p className="eyebrow text-[10px] leading-none">{label}</p>
+      <p className="mt-1 font-mono text-base font-semibold leading-none tabular-nums text-fg">
         {value}
         {unit ? <span className="ms-0.5 text-[10px] font-medium text-muted">{unit}</span> : null}
       </p>
@@ -273,7 +271,7 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
           alt={t("ehr.storyboard.avatarAlt", {
             defaultValue: "Synthetic patient portrait — not a real individual",
           })}
-          className="h-16 w-16 shrink-0 ring-1 ring-white/10"
+          className="h-16 w-16 shrink-0 rounded-control ring-1 ring-white/10"
           onClick={() => setViewerOpen(true)}
           expandLabel={t("patientviewer.expand")}
         />

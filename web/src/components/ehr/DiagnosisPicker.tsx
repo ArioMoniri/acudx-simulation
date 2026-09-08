@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MagnifyingGlass, Plus, Check, Stethoscope, CaretDown } from "@phosphor-icons/react";
 
-import { Card, TextInput } from "@/components/ui";
+import { Divider, SectionLabel, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import type { Lang } from "@/data/mock";
 import {
@@ -94,19 +94,22 @@ export function DiagnosisPicker({
   }
 
   return (
-    <>
-      <Card padding="md">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
-            <MagnifyingGlass weight="bold" className="h-4 w-4 text-muted" aria-hidden />
-            {t("ehr.ap.pickerHeading")}
-          </h3>
-          {query.trim() ? (
-            <span className="font-mono text-[11px] tabular-nums text-muted">
-              {t("diagnosis2.resultsCount", { count: results.length })}
-            </span>
-          ) : null}
-        </div>
+    <div className="flex flex-col gap-5">
+      {/* ---- Search the catalogue --------------------------------------- */}
+      <div>
+        <SectionLabel
+          className="mb-2"
+          icon={<MagnifyingGlass weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+          trailing={
+            query.trim() ? (
+              <span className="font-mono text-[11px] tabular-nums text-muted">
+                {t("diagnosis2.resultsCount", { count: results.length })}
+              </span>
+            ) : null
+          }
+        >
+          {t("diagnosis2.searchSubhead", { defaultValue: "Search the catalogue" })}
+        </SectionLabel>
 
         <label htmlFor="dx-search" className="sr-only">
           {t("ehr.ap.searchPlaceholder")}
@@ -176,15 +179,19 @@ export function DiagnosisPicker({
             {t("diagnosis2.searchEmptyHint")}
           </p>
         )}
-      </Card>
+      </div>
 
-      {/* Suggested — case differentials + correct dx, unlabelled (no spoiler). */}
-      <Card padding="md">
-        <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
-          <Stethoscope weight="bold" className="h-4 w-4 text-muted" aria-hidden />
+      <Divider />
+
+      {/* ---- Suggested — case differentials + correct dx, unlabelled ----- */}
+      <div>
+        <SectionLabel
+          className="mb-1"
+          icon={<Stethoscope weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+        >
           {t("diagnosis2.suggestedHeading")}
-        </h3>
-        <p className="mt-1 mb-2 text-[11px] text-muted">{t("diagnosis2.suggestedHint")}</p>
+        </SectionLabel>
+        <p className="mb-2 text-[11px] text-muted">{t("diagnosis2.suggestedHint")}</p>
         <div className="flex flex-wrap gap-1.5">
           {caseOptions.map((o) => {
             const added = visibleSet.has(o.code);
@@ -213,8 +220,8 @@ export function DiagnosisPicker({
             );
           })}
         </div>
-      </Card>
-    </>
+      </div>
+    </div>
   );
 }
 
