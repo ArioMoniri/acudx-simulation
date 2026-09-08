@@ -19,6 +19,7 @@ import { EncounterChat } from "@/components/EncounterChat";
 import { GuidanceCard } from "@/components/GuidanceCard";
 import { PatientPhoto } from "@/components/PatientPhoto";
 import { useSpeech } from "@/lib/lipsync";
+import { speakAsPatient, stopTts } from "@/lib/tts";
 import {
   SymptomSummary,
   photoSignsFromVitals,
@@ -1044,11 +1045,30 @@ function PatientPresence({
   speakRef.current = speak;
   const voiceRef = useRef(voiceOn);
   voiceRef.current = voiceOn;
+  // Patient identity for voice selection, in a ref so the per-utterance effect
+  // fires exactly once per new reply (a mid-reply toggle applies to the next).
+  const voiceMetaRef = useRef({ sex: visual.sexAtBirth, age: visual.age });
+  voiceMetaRef.current = { sex: visual.sexAtBirth, age: visual.age };
   const speechLang = i18n.language?.startsWith("tr") ? "tr" : "en";
   useEffect(() => {
     const text = utterance?.trim();
-    if (text) speakRef.current(text, { voice: voiceRef.current, lang: speechLang });
+    if (!text) return;
+    // The photo/video "speaking" treatment always runs; the actual VOICE, when
+    // the learner enabled it, is the real ElevenLabs patient voice (via /tts),
+    // sex/age-matched — not the robotic Web Speech fallback.
+    speakRef.current(text, { voice: false, lang: speechLang });
+    if (voiceRef.current) {
+      void speakAsPatient(text, {
+        sex: voiceMetaRef.current.sex,
+        age: voiceMetaRef.current.age,
+      });
+    }
+    return () => stopTts();
   }, [utterance, speechLang]);
+  // Stop any patient audio the instant the learner turns voice off.
+  useEffect(() => {
+    if (!voiceOn) stopTts();
+  }, [voiceOn]);
 
   return (
     <section className="rounded-card border border-border bg-surface p-3">
