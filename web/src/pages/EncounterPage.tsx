@@ -355,18 +355,21 @@ export function EncounterPage() {
         <PatientBanner caseInstance={caseInstance} lang={lang} toolbar={toolbar} />
       </motion.div>
 
-      {/* Progress stages (wired to the store stage) + case meta line */}
+      {/* Workflow ribbon — the stage stepper (wired to the store stage) + the
+          case-meta line, framed as one dense chrome bar under the banner. */}
       <motion.div
         {...top}
-        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-3 rounded-card border border-border bg-surface px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between"
       >
-        <ProgressStages
-          stages={PROGRESS_META}
-          currentIndex={currentIndex}
-          lang={lang}
-          ariaLabel={t("encounter.stageLabel")}
-        />
-        <p className="text-xs text-muted">
+        <div className="min-w-0 sm:flex-1">
+          <ProgressStages
+            stages={PROGRESS_META}
+            currentIndex={currentIndex}
+            lang={lang}
+            ariaLabel={t("encounter.stageLabel")}
+          />
+        </div>
+        <p className="shrink-0 text-xs text-muted">
           {t("ehr.workspace.caseMeta", {
             difficulty: caseInstance.difficulty,
             provenance: t(`ehr.provenance.${caseInstance.provenance}`),

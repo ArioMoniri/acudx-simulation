@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
   Plus,
-  Check,
   ListChecks,
   CheckCircle,
   WarningCircle,
@@ -14,6 +13,7 @@ import {
   ArrowUUpLeft,
   ClipboardText,
   SealCheck,
+  Stethoscope,
   Note,
   Path,
   GraduationCap,
@@ -324,9 +324,18 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        {/* ================= Differential builder (left) ==================== */}
-        <div className="flex flex-col gap-4">
+      {/* ===================== Stage 1 — Differential ===================== */}
+      <Stage
+        n={1}
+        icon={<Stethoscope weight="bold" className="h-4 w-4" aria-hidden />}
+        title={t("ehr.ap.differentialHeading")}
+        helper={t("diagnosis2.stage.differential", {
+          defaultValue:
+            "Search the catalogue, add candidates, then rank each by likelihood and note your reasoning.",
+        })}
+      >
+        <div className="grid gap-5 lg:grid-cols-2">
+          {/* Search + suggested (the builder) */}
           <DiagnosisPicker
             lang={lang}
             caseOptions={caseOptions}
@@ -334,26 +343,34 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
             visibleSet={visibleSet}
             onAdd={addDifferential}
           />
-        </div>
 
-        {/* ================= Differential + working + plan (right) ========== */}
-        <div className="flex flex-col gap-4">
-          {/* Differential list */}
-          <Card padding="md">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
-                <ListChecks weight="bold" className="h-4 w-4 text-muted" aria-hidden />
-                {t("ehr.ap.differentialHeading")}
-              </h3>
-              {rankedCodes.length > 0 ? (
-                <span className="font-mono text-[11px] tabular-nums text-muted">
-                  {t("ehr2.ap.differentialCount", { count: rankedCodes.length })}
-                </span>
-              ) : null}
-            </div>
+          {/* The learner's own differential — ranked + annotated */}
+          <div className="border-t border-border pt-5 lg:border-s lg:border-t-0 lg:ps-5 lg:pt-0">
+            <SectionLabel
+              className="mb-2"
+              icon={<ListChecks weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+              trailing={
+                rankedCodes.length > 0 ? (
+                  <Badge tone="brand" variant="outline">
+                    {t("ehr2.ap.differentialCount", { count: rankedCodes.length })}
+                  </Badge>
+                ) : null
+              }
+            >
+              {t("diagnosis2.yourDifferential", { defaultValue: "Your differential" })}
+            </SectionLabel>
 
             {rankedCodes.length === 0 ? (
-              <p className="text-xs italic text-muted">{t("ehr.ap.differentialEmpty")}</p>
+              <EmptyState
+                icon={<ListChecks weight="duotone" className="h-5 w-5" aria-hidden />}
+                title={t("diagnosis2.differentialEmptyTitle", {
+                  defaultValue: "No candidates yet",
+                })}
+                hint={t("diagnosis2.differentialEmptyHint", {
+                  defaultValue:
+                    "Search the catalogue or tap a suggested condition to start building your differential.",
+                })}
+              />
             ) : (
               <motion.ol {...dxContainer} className="flex flex-col gap-1.5">
                 {rankedCodes.map((code, i) => {
@@ -488,126 +505,145 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
                 })}
               </motion.ol>
             )}
-          </Card>
-
-          {/* Working diagnosis + verdict */}
-          <Card padding="md">
-            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-fg">
-              <SealCheck weight="bold" className="h-4 w-4 text-muted" aria-hidden />
-              {t("diagnosis2.workingHeading")}
-            </h3>
-            {committed && workingEntry ? (
-              <>
-                <VerdictPanel
-                  assessment={assessment}
-                  display={workingEntry.display}
-                  code={committed}
-                  correctDisplay={correctDisplay}
-                  grading={grading}
-                  t={t}
-                  lang={lang}
-                />
-                {debrief ? (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    fullWidth
-                    className="mt-3"
-                    onClick={() => setDebriefOpen(true)}
-                    leadingIcon={<GraduationCap weight="bold" className="h-4 w-4" aria-hidden />}
-                  >
-                    {t("debrief.open", { defaultValue: "View attending debrief" })}
-                  </Button>
-                ) : null}
-              </>
-            ) : (
-              <p className="text-xs italic text-muted">{t("diagnosis2.workingEmpty")}</p>
-            )}
-          </Card>
-
-          {/* Plan */}
-          <Card padding="md">
-            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-fg">
-              <ClipboardText weight="bold" className="h-4 w-4 text-muted" aria-hidden />
-              {t("ehr.ap.planHeading")}
-            </h3>
-
-            {/* Disposition — the domain Disposition union */}
-            <SectionLabel
-              className="mb-1"
-              icon={<Path weight="bold" className="h-3 w-3" aria-hidden />}
-            >
-              {t("diagnosis2.dispositionHeading")}
-            </SectionLabel>
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              {DISPOSITIONS.map((disp) => {
-                const active = disposition === disp;
-                return (
-                  <button
-                    key={disp}
-                    type="button"
-                    onClick={() => chooseDisposition(disp)}
-                    aria-pressed={active}
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium",
-                      "transition-colors duration-200 ease-out active:scale-[0.98]",
-                      active
-                        ? "border-brand bg-brand text-white"
-                        : "border-border bg-surface text-fg hover:bg-brand-tint hover:text-brand",
-                    )}
-                  >
-                    {active ? <Check weight="bold" className="h-3 w-3" aria-hidden /> : null}
-                    {t(`diagnosis2.dispo.${disp}`)}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Quick-add building blocks */}
-            <SectionLabel className="mb-1">
-              {t("ehr2.ap.quickPlanHeading")}
-            </SectionLabel>
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              {QUICK_PLAN.map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => insertPlan(t(`ehr2.ap.quick.${k}`))}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-fg",
-                    "transition-colors duration-200 ease-out active:scale-[0.98]",
-                    "hover:bg-brand-tint hover:text-brand",
-                  )}
-                >
-                  <Plus weight="bold" className="h-3 w-3" aria-hidden />
-                  {t(`ehr2.ap.quick.${k}`)}
-                </button>
-              ))}
-            </div>
-
-            <label htmlFor="ap-plan" className="sr-only">
-              {t("ehr.ap.planPlaceholder")}
-            </label>
-            <Textarea
-              id="ap-plan"
-              rows={3}
-              value={plan}
-              onChange={(e) => setPlan(e.target.value)}
-              placeholder={t("ehr.ap.planPlaceholder")}
-            />
-            <div className="mt-1.5 flex items-center justify-between gap-2">
-              <span className="text-[11px] text-muted" aria-live="polite">
-                {plan.trim()
-                  ? t("ehr2.ap.planCharCount", { count: plan.trim().length })
-                  : t("ehr2.ap.insertHint")}
-              </span>
-              <Button size="sm" variant="secondary" onClick={savePlan} disabled={!plan.trim()}>
-                {t("ehr.ap.savePlan")}
-              </Button>
-            </div>
-          </Card>
+          </div>
         </div>
-      </div>
+      </Stage>
+
+      {/* ==================== Stage 2 — Working diagnosis ================= */}
+      <Stage
+        n={2}
+        icon={<SealCheck weight="bold" className="h-4 w-4" aria-hidden />}
+        title={t("diagnosis2.workingHeading")}
+        helper={t("diagnosis2.stage.working", {
+          defaultValue:
+            "Commit the single most likely diagnosis to get instant, scored feedback.",
+        })}
+      >
+        {committed && workingEntry ? (
+          <>
+            <VerdictPanel
+              assessment={assessment}
+              display={workingEntry.display}
+              code={committed}
+              correctDisplay={correctDisplay}
+              grading={grading}
+              t={t}
+              lang={lang}
+            />
+            {debrief ? (
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth
+                className="mt-3"
+                onClick={() => setDebriefOpen(true)}
+                leadingIcon={<GraduationCap weight="bold" className="h-4 w-4" aria-hidden />}
+              >
+                {t("debrief.open", { defaultValue: "View attending debrief" })}
+              </Button>
+            ) : null}
+          </>
+        ) : (
+          <EmptyState
+            icon={<SealCheck weight="duotone" className="h-5 w-5" aria-hidden />}
+            title={t("diagnosis2.workingEmptyTitle", {
+              defaultValue: "No working diagnosis yet",
+            })}
+            hint={t("diagnosis2.workingEmpty")}
+          />
+        )}
+      </Stage>
+
+      {/* ======================= Stage 3 — Disposition =================== */}
+      <Stage
+        n={3}
+        icon={<Path weight="bold" className="h-4 w-4" aria-hidden />}
+        title={t("diagnosis2.dispositionHeading")}
+        helper={t("diagnosis2.dispositionHint")}
+      >
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+          {DISPOSITIONS.map((disp) => {
+            const active = disposition === disp;
+            return (
+              <button
+                key={disp}
+                type="button"
+                onClick={() => chooseDisposition(disp)}
+                aria-pressed={active}
+                className={cn(
+                  "flex w-full items-center justify-between gap-2 rounded-control border px-3 py-2 text-left text-sm font-medium",
+                  "transition-colors duration-200 ease-out active:scale-[0.99]",
+                  active
+                    ? "border-brand bg-brand-tint text-brand"
+                    : "border-border bg-surface text-fg hover:border-border-strong hover:bg-bg-subtle",
+                )}
+              >
+                <span className="min-w-0 truncate">{t(`diagnosis2.dispo.${disp}`)}</span>
+                {active ? (
+                  <CheckCircle weight="fill" className="h-4 w-4 shrink-0 text-brand" aria-hidden />
+                ) : (
+                  <span
+                    className="h-4 w-4 shrink-0 rounded-full border border-border-strong"
+                    aria-hidden
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </Stage>
+
+      {/* ========================== Stage 4 — Plan ======================= */}
+      <Stage
+        n={4}
+        icon={<ClipboardText weight="bold" className="h-4 w-4" aria-hidden />}
+        title={t("ehr.ap.planHeading")}
+        helper={t("diagnosis2.stage.plan", {
+          defaultValue:
+            "Add the immediate steps, then refine the free-text plan before saving.",
+        })}
+      >
+        {/* Quick-add building blocks */}
+        <SectionLabel className="mb-1.5">{t("ehr2.ap.quickPlanHeading")}</SectionLabel>
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {QUICK_PLAN.map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => insertPlan(t(`ehr2.ap.quick.${k}`))}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-1 text-xs font-medium text-fg",
+                "transition-colors duration-200 ease-out active:scale-[0.98]",
+                "hover:bg-brand-tint hover:text-brand",
+              )}
+            >
+              <Plus weight="bold" className="h-3 w-3" aria-hidden />
+              {t(`ehr2.ap.quick.${k}`)}
+            </button>
+          ))}
+        </div>
+
+        <label htmlFor="ap-plan" className="sr-only">
+          {t("ehr.ap.planPlaceholder")}
+        </label>
+        <Textarea
+          id="ap-plan"
+          rows={3}
+          value={plan}
+          onChange={(e) => setPlan(e.target.value)}
+          placeholder={t("ehr.ap.planPlaceholder")}
+        />
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span className="text-[11px] text-muted" aria-live="polite">
+            {plan.trim()
+              ? t("ehr2.ap.planCharCount", { count: plan.trim().length })
+              : t("ehr2.ap.insertHint")}
+          </span>
+          <Button size="sm" variant="secondary" onClick={savePlan} disabled={!plan.trim()}>
+            {t("ehr.ap.savePlan")}
+          </Button>
+        </div>
+      </Stage>
 
       {/* ===================== Problem list summary ======================== */}
       {hasSummary ? (
@@ -642,6 +678,77 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
 /* -------------------------------------------------------------------------- */
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
+
+/**
+ * Stage — one numbered step in the A&P reasoning flow (AMBOSS-style). A teal
+ * numbered marker plus a titled header with instructive helper copy gives the
+ * four stages (differential → working dx → disposition → plan) a clear,
+ * guided sequence rather than a loose stack of panels.
+ */
+function Stage({
+  n,
+  icon,
+  title,
+  helper,
+  children,
+}: {
+  n: number;
+  icon: ReactNode;
+  title: string;
+  helper?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card padding="md">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden
+          className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand font-mono text-[13px] font-semibold tabular-nums text-white"
+        >
+          {n}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+            <span className="text-muted" aria-hidden>
+              {icon}
+            </span>
+            {title}
+          </h3>
+          {helper ? <p className="mt-0.5 text-xs text-muted">{helper}</p> : null}
+        </div>
+      </div>
+      <div className="mt-4">{children}</div>
+    </Card>
+  );
+}
+
+/**
+ * EmptyState — an intentional, inviting empty panel: a soft icon, a short title
+ * and a guiding line, so an unstarted stage reads as a prompt to act rather
+ * than an unfinished gap.
+ */
+function EmptyState({
+  icon,
+  title,
+  hint,
+}: {
+  icon: ReactNode;
+  title: string;
+  hint: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 rounded-control border border-dashed border-border bg-bg-subtle px-4 py-6 text-center">
+      <span
+        className="grid h-10 w-10 place-items-center rounded-full bg-surface text-brand"
+        aria-hidden
+      >
+        {icon}
+      </span>
+      <p className="text-sm font-medium text-fg">{title}</p>
+      <p className="max-w-[34ch] text-xs text-muted">{hint}</p>
+    </div>
+  );
+}
 
 /** A small square icon button used for reorder / note / retract. */
 function IconBtn({
