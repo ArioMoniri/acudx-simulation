@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { VitalCard } from "@/components/VitalCard";
@@ -10,7 +10,11 @@ import {
   photoSignsFromVitals,
 } from "@/components/PatientViewer";
 import { resolvePatientVisual } from "@/domain/patientIdentity";
-import { getCurrentVitals, useEncounterState } from "@/state/encounterStore";
+import {
+  getCurrentVitals,
+  getVitalsSeries,
+  useEncounterState,
+} from "@/state/encounterStore";
 import { EncounterClock } from "../EncounterClock";
 import { minutesOf } from "../labels";
 import type {
@@ -19,11 +23,11 @@ import type {
   VitalReading,
   Lang,
 } from "@/data/mock";
-import type {
-  CaseInstance,
-  TriageVitals,
-  VitalsTrajectoryPoint,
-} from "@/domain/case";
+import type { CaseInstance } from "@/domain/case";
+import type { CurrentVitals } from "@/domain/clinicalCourse";
+
+/** A sampled effective-vitals point (matches getVitalsSeries' element shape). */
+type SeriesPoint = { atMs: number } & CurrentVitals;
 
 export interface FlowsheetTabProps {
   caseInstance: CaseInstance;
@@ -73,68 +77,89 @@ function trendOf(series: number[]): Trend {
   return delta > 0 ? "rising" : "falling";
 }
 
-/** Build the five monitor VitalReadings from triage + trajectory history. */
+/**
+ * Build the five monitor VitalReadings from the LIVE current vitals (value +
+ * status) and the sampled effective course (sparkline history + trend). The
+ * numbers therefore match the Monitor tab / Storyboard rail exactly and evolve
+ * with the clock + administered treatments.
+ */
 function buildReadings(
-  triage: TriageVitals,
-  trajectory: VitalsTrajectoryPoint[],
+  current: CurrentVitals,
+  series: SeriesPoint[],
 ): VitalReading[] {
-  const hrHist = trajectory.map((p) => p.hr);
-  const sysHist = trajectory.map((p) => p.systolic);
-  const rrHist = trajectory.map((p) => p.rr);
-  const spo2Hist = trajectory.map((p) => p.spo2);
-  const tempHist = trajectory.map((p) => p.tempC);
+  const hist = (accessor: (p: SeriesPoint) => number, fallback: number): number[] => {
+    const h = series.map(accessor);
+    return h.length ? h : [fallback];
+  };
+  const hrHist = hist((p) => p.hr, current.hr);
+  const sysHist = hist((p) => p.systolic, current.systolic);
+  const rrHist = hist((p) => p.rr, current.rr);
+  const spo2Hist = hist((p) => p.spo2, current.spo2);
+  const tempHist = hist((p) => p.tempC, current.tempC);
 
   return [
     {
       key: "hr",
       labelKey: "hr",
       shortKey: "hrShort",
-      value: String(triage.hr),
+      value: String(current.hr),
       unitKey: "bpm",
-      history: hrHist.length ? hrHist : [triage.hr],
-      state: hrState(triage.hr),
+      history: hrHist,
+      state: hrState(current.hr),
       trend: trendOf(hrHist),
     },
     {
       key: "bp",
       labelKey: "bp",
       shortKey: "bpShort",
-      value: `${triage.systolic}/${triage.diastolic}`,
-      history: sysHist.length ? sysHist : [triage.systolic],
-      state: bpState(triage.systolic),
+      value: `${current.systolic}/${current.diastolic}`,
+      history: sysHist,
+      state: bpState(current.systolic),
       trend: trendOf(sysHist),
     },
     {
       key: "rr",
       labelKey: "rr",
       shortKey: "rrShort",
-      value: String(triage.rr),
+      value: String(current.rr),
       unitKey: "brpm",
-      history: rrHist.length ? rrHist : [triage.rr],
-      state: rrState(triage.rr),
+      history: rrHist,
+      state: rrState(current.rr),
       trend: trendOf(rrHist),
     },
     {
       key: "spo2",
       labelKey: "spo2",
       shortKey: "spo2Short",
-      value: String(triage.spo2),
+      value: String(current.spo2),
       unitKey: "percent",
-      history: spo2Hist.length ? spo2Hist : [triage.spo2],
-      state: spo2State(triage.spo2),
+      history: spo2Hist,
+      state: spo2State(current.spo2),
       trend: trendOf(spo2Hist),
     },
     {
       key: "temp",
       labelKey: "temp",
       shortKey: "tempShort",
-      value: triage.tempC.toFixed(1),
+      value: current.tempC.toFixed(1),
       unitKey: "celsius",
-      history: tempHist.length ? tempHist : [triage.tempC],
-      state: tempState(triage.tempC),
+      history: tempHist,
+      state: tempState(current.tempC),
       trend: trendOf(tempHist),
     },
   ];
+}
+
+/**
+ * Decimate the sampled course to one flowsheet row per whole minute (keeping the
+ * latest sample within each minute). Because the series only spans 0..now, the
+ * last row is the current reading — never a future baseline point. Insertion
+ * order preserves chronology and the final "now" sample lands in the last row.
+ */
+function sampleFlowsheetRows(series: SeriesPoint[]): SeriesPoint[] {
+  const byMinute = new Map<number, SeriesPoint>();
+  for (const p of series) byMinute.set(minutesOf(p.atMs), p);
+  return [...byMinute.values()];
 }
 
 const LEGEND_STATES: ClinicalState[] = ["normal", "caution", "warning", "critical"];
@@ -150,8 +175,7 @@ const LEGEND_STATES: ClinicalState[] = ["normal", "caution", "warning", "critica
  */
 export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
   const { t } = useTranslation();
-  const { triageVitals, groundTruth, patient } = caseInstance;
-  const trajectory = groundTruth.vitalsTrajectory;
+  const { triageVitals, patient } = caseInstance;
 
   const state = useEncounterState();
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -164,21 +188,33 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
     return () => window.clearInterval(id);
   }, []);
 
-  // Live current vitals from the SAME store the bedside monitor reads (guarded on
-  // the case id); falls back to the triage numbers before the clock starts.
-  const liveVitals =
-    state.caseInstance?.id === caseInstance.id ? getCurrentVitals(state) : null;
+  // Live single source of truth: the encounter store. The bedside monitor, the
+  // "Latest vitals" strip and the vitals-over-time table ALL read the same live
+  // selectors the Monitor tab + Storyboard rail use, so nothing here diverges.
+  // Guarded on the case id; falls back to triage before the clock has started.
+  const encounterActive = state.caseInstance?.id === caseInstance.id;
+  const started = encounterActive && state.startTs != null;
+  const liveVitals = encounterActive ? getCurrentVitals(state) : null;
   const currentVitals = liveVitals ?? triageVitals;
+
+  // Effective course sampled from 0..now (treatment-adjusted) — never the future.
+  // Before the clock starts, a single triage baseline row stands in.
+  const rawSeries = encounterActive ? getVitalsSeries(state) : [];
+  const series: SeriesPoint[] = rawSeries.length
+    ? rawSeries
+    : [{ atMs: 0, ...triageVitals }];
+
   // The ONE unified visual identity — same distinct face + case name everywhere.
   const visual = resolvePatientVisual(caseInstance);
   const clinicalSigns = photoSignsFromVitals(currentVitals);
 
-  const readings = useMemo(
-    () => buildReadings(triageVitals, trajectory),
-    [triageVitals, trajectory],
-  );
+  // Bedside monitor + "Latest vitals" strip: values/status from the LIVE current
+  // vitals; sparkline + trend from the sampled live course.
+  const readings = buildReadings(currentVitals, series);
 
-  const lastIndex = trajectory.length - 1;
+  // Vitals over time: one row per elapsed minute; the last row is genuinely now.
+  const rows = sampleFlowsheetRows(series);
+  const lastIndex = rows.length - 1;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
@@ -192,24 +228,40 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
         }}
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5" aria-hidden>
+          {started ? (
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5" aria-hidden>
+                <span
+                  className="absolute inline-flex h-full w-full rounded-full opacity-75 motion-safe:animate-ping"
+                  style={{ backgroundColor: "var(--monitor-online)" }}
+                />
+                <span
+                  className="relative inline-flex h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: "var(--monitor-online)" }}
+                />
+              </span>
               <span
-                className="absolute inline-flex h-full w-full rounded-full opacity-75 motion-safe:animate-ping"
-                style={{ backgroundColor: "var(--monitor-online)" }}
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: "var(--monitor-online)" }}
+              >
+                {t("vitals.online")}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: "var(--monitor-dim)" }}
+                aria-hidden
               />
               <span
-                className="relative inline-flex h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: "var(--monitor-online)" }}
-              />
-            </span>
-            <span
-              className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: "var(--monitor-online)" }}
-            >
-              {t("vitals.online")}
-            </span>
-          </div>
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: "var(--monitor-dim)" }}
+              >
+                {t("vitals.paused")}
+              </span>
+            </div>
+          )}
           <EncounterClock variant="inline" onDark />
         </div>
 
@@ -347,9 +399,9 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
                 </tr>
               </thead>
               <tbody>
-                {trajectory.map((p, i) => (
+                {rows.map((p, i) => (
                   <FlowsheetRow
-                    key={i}
+                    key={p.atMs}
                     point={p}
                     minLabel={t("ehr.flowsheet.minute", { min: minutesOf(p.atMs) })}
                     isLatest={i === lastIndex}
@@ -402,7 +454,7 @@ function FlowsheetRow({
   isLatest,
   zebra,
 }: {
-  point: VitalsTrajectoryPoint;
+  point: SeriesPoint;
   minLabel: string;
   isLatest: boolean;
   zebra: boolean;

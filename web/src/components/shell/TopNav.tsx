@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { UserCircle } from "@phosphor-icons/react";
+import { prefetchRoute } from "@/App";
 import { cn } from "@/lib/cn";
 import { useViewAs, type ViewAsRole } from "@/lib/viewAs";
 import { Wordmark } from "./Wordmark";
@@ -86,6 +87,8 @@ export function TopNav() {
               <NavLink
                 to={l.to}
                 end={l.end}
+                onMouseEnter={() => prefetchRoute(l.to)}
+                onFocus={() => prefetchRoute(l.to)}
                 className={({ isActive }) => linkClasses(isActive)}
               >
                 {t(l.key)}
@@ -102,6 +105,8 @@ export function TopNav() {
           <NavLink
             to="/account"
             aria-label={t("nav.account")}
+            onMouseEnter={() => prefetchRoute("/account")}
+            onFocus={() => prefetchRoute("/account")}
             className={cn(
               "grid h-9 w-9 place-items-center rounded-control border border-border",
               "bg-surface text-fg transition-colors duration-200 ease-out",
@@ -123,6 +128,8 @@ export function TopNav() {
               <NavLink
                 to={l.to}
                 end={l.end}
+                onMouseEnter={() => prefetchRoute(l.to)}
+                onFocus={() => prefetchRoute(l.to)}
                 className={({ isActive }) =>
                   cn(
                     "inline-flex min-h-9 items-center rounded-control px-3 text-sm font-medium",

@@ -83,6 +83,19 @@ interface Annotation {
 }
 
 /**
+ * Session-scoped persistence for the per-differential annotations (likelihood +
+ * note). Keyed on the CaseInstance IDENTITY so the ranking + reasoning survive
+ * this tab's unmount/remount — Radix Tabs unmounts inactive panels — yet reset
+ * automatically for a fresh encounter (a new CaseInstance object). Deliberately
+ * kept OUT of the shared `problemList`: the Storyboard rail and the tab badge
+ * render every problem-list entry, so persisting there would duplicate rows and
+ * inflate counts. The store has no per-differential update action, so this
+ * case-scoped cache is the non-invasive home; `buildGradeTranscript` reads the
+ * same annotations so the learner's ranking + notes reach the grader.
+ */
+const annotationCache = new WeakMap<CaseInstance, Record<string, Annotation>>();
+
+/**
  * ProblemListTab — Assessment & Plan (docs §2.2), rebuilt as a real A&P surface.
  *
  * The student searches a broad ICD-10 / ICD-11 catalogue (src/domain/
@@ -103,7 +116,9 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
   const [plan, setPlan] = useState("");
   const [order, setOrder] = useState<string[]>([]);
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
-  const [annotations, setAnnotations] = useState<Record<string, Annotation>>({});
+  const [annotations, setAnnotations] = useState<Record<string, Annotation>>(
+    () => annotationCache.get(caseInstance) ?? {},
+  );
   const [debriefOpen, setDebriefOpen] = useState(false);
 
   /* ---- Case ground truth as suggested (unlabelled) candidates ------------- */
@@ -215,7 +230,11 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
   function setAnnotation(code: string, patch: Partial<Annotation>) {
     setAnnotations((prev) => {
       const base: Annotation = prev[code] ?? { note: "", noteOpen: false };
-      return { ...prev, [code]: { ...base, ...patch } };
+      const next = { ...prev, [code]: { ...base, ...patch } };
+      // Persist so the ranking + notes survive a tab unmount/remount and feed
+      // the grader (buildGradeTranscript reads the same annotations).
+      annotationCache.set(caseInstance, next);
+      return next;
     });
   }
 
@@ -258,7 +277,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
       return;
     }
     // Snapshot the transcript at commit time (a fresh commit re-runs this effect).
-    const transcript = buildGradeTranscript(state, caseInstance, lang);
+    const transcript = buildGradeTranscript(state, caseInstance, lang, annotations);
     if (transcript.length === 0) {
       setGrading(false);
       return;
@@ -895,6 +914,7 @@ function buildGradeTranscript(
   state: EncounterState,
   caseInstance: CaseInstance,
   lang: Lang,
+  annotations: Record<string, Annotation>,
 ): GradeTurn[] {
   const turns: GradeTurn[] = [];
   const cc = pick(caseInstance.chiefComplaint, lang);
@@ -941,10 +961,22 @@ function buildGradeTranscript(
     }
   }
 
-  // Assessment & plan — the reasoning surface the grader most needs.
-  const differentials = state.problemList
-    .filter((p) => p.role === "differential")
-    .map((p) => p.display);
+  // Assessment & plan — the reasoning surface the grader most needs. Dedupe the
+  // differential by code (first seen) and weave in the learner's own likelihood
+  // rating + note per candidate, so the grader sees the RANKED, annotated
+  // differential rather than a bare list.
+  const seenDx = new Set<string>();
+  const differentials: string[] = [];
+  for (const p of state.problemList) {
+    if (p.role !== "differential" || seenDx.has(p.code)) continue;
+    seenDx.add(p.code);
+    const ann = annotations[p.code];
+    const bits: string[] = [];
+    if (ann?.likelihood) bits.push(ann.likelihood);
+    const note = ann?.note.trim();
+    if (note) bits.push(`“${note}”`);
+    differentials.push(bits.length ? `${p.display} (${bits.join(" — ")})` : p.display);
+  }
   if (differentials.length > 0) {
     turns.push({ role: "clinician", content: `My differential includes ${differentials.join(", ")}.` });
   }
@@ -952,9 +984,21 @@ function buildGradeTranscript(
   if (working) {
     turns.push({ role: "clinician", content: `My working diagnosis is ${working.display}.` });
   }
-  const planNotes = state.problemList
-    .filter((p) => p.role === "plan")
-    .map((p) => p.note ?? p.display);
+  // Plan — free-text steps in order, but only the CURRENT disposition. Selecting
+  // a new disposition appends a fresh `plan` entry without retiring the previous
+  // one, so feeding every plan entry would tell the grader the learner chose
+  // several conflicting dispositions. Keep the latest disposition only.
+  const planNotes: string[] = [];
+  let latestDisposition: string | null = null;
+  for (const p of state.problemList) {
+    if (p.role !== "plan") continue;
+    if (p.code.startsWith(DISPOSITION_PREFIX)) {
+      latestDisposition = p.note ?? p.display; // later entries overwrite → latest wins
+    } else {
+      planNotes.push(p.note ?? p.display);
+    }
+  }
+  if (latestDisposition) planNotes.push(latestDisposition);
   if (planNotes.length > 0) {
     turns.push({ role: "clinician", content: `Plan: ${planNotes.join("; ")}.` });
   }

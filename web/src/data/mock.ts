@@ -144,6 +144,15 @@ export const citations: Citation[] = [
     lastReviewed: "2024-09-18",
   },
   {
+    id: "nice-ng228",
+    label: "NICE NG228",
+    source: {
+      en: "NICE NG228: Subarachnoid haemorrhage caused by a ruptured aneurysm, diagnosis and management.",
+      tr: "NICE NG228: Rüptüre anevrizmaya bağlı subaraknoid kanama, tanı ve yönetim.",
+    },
+    lastReviewed: "2025-01-20",
+  },
+  {
     id: "tepdad-em",
     label: "TEPDAD",
     source: {

@@ -136,8 +136,15 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
         : [],
     [caseInstance],
   );
+  const orderCodes = useMemo(
+    () =>
+      caseInstance
+        ? caseInstance.expectedWorkup.map((w) => w.code.coding[0]?.code ?? "")
+        : [],
+    [caseInstance],
+  );
   const query = [chief, lastLabel].filter(Boolean).join(" · ");
-  const grounding = useLiveGrounding({ query, locale: lang, citationIds });
+  const grounding = useLiveGrounding({ query, locale: lang, citationIds, orderCodes });
 
   // Number the citations in appearance order for the footnotes block.
   const noted = useMemo(() => {

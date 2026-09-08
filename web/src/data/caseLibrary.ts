@@ -123,6 +123,7 @@ export function codeChipOf(c: CaseInstance): CaseCodeChip {
 const CITATION_TAG: Record<string, string> = {
   "esc-acs-2023": "ESC ACS 2023",
   "nice-ng185": "NICE NG185",
+  "nice-ng228": "NICE NG228",
   "tepdad-em": "TEPDAD",
 };
 

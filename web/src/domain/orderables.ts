@@ -131,6 +131,7 @@ const A = (
 
 const NEG: Bilingual = { en: "Negative", tr: "Negatif" };
 const NONE_SEEN: Bilingual = { en: "None seen", tr: "Görülmedi" };
+const NONE_DETECTED: Bilingual = { en: "None detected", tr: "Saptanmadı" };
 
 /** A qualitative analyte (dipstick, tox screen) whose normal value is a word. */
 const Q = (code: string, label: Bilingual, value: Bilingual, ref = "Negative"): AnalyteSpec =>
@@ -142,7 +143,7 @@ const NA = A("2951-2", { en: "Sodium", tr: "Sodyum" }, "135 - 145", [136, 143], 
 const K = A("2823-3", { en: "Potassium", tr: "Potasyum" }, "3.5 - 5.1", [3.7, 4.9], "mmol/L", { decimals: 1 });
 const CL = A("2075-0", { en: "Chloride", tr: "Klorür" }, "98 - 107", [99, 106], "mmol/L");
 const HCO3 = A("1963-8", { en: "Bicarbonate", tr: "Bikarbonat" }, "22 - 29", [23, 28], "mmol/L");
-const BUN = A("3094-0", { en: "Urea nitrogen (BUN)", tr: "Üre azotu (BUN)" }, "15 - 45", [18, 42], "mg/dL");
+const BUN = A("3094-0", { en: "Urea nitrogen (BUN)", tr: "Üre azotu (BUN)" }, "7 - 20", [8, 18], "mg/dL");
 const CR = A("2160-0", { en: "Creatinine", tr: "Kreatinin" }, "0.7 - 1.3", [0.8, 1.2], "mg/dL", { decimals: 2 });
 const GLU = A("2345-7", { en: "Glucose", tr: "Glukoz" }, "70 - 110", [78, 106], "mg/dL");
 const CA = A("17861-6", { en: "Calcium", tr: "Kalsiyum" }, "8.5 - 10.2", [8.7, 10.0], "mg/dL", { decimals: 1 });
@@ -225,6 +226,16 @@ const PANELS: Record<string, AnalyteSpec[]> = {
   ck: [A("2157-6", { en: "Creatine kinase (CK)", tr: "Kreatin kinaz (CK)" }, "30 - 200", [45, 180], "U/L")],
   // CK-MB.
   ckmb: [A("13969-1", { en: "CK-MB", tr: "CK-MB" }, "0 - 5", [0.5, 4.5], "ng/mL", { decimals: 1 })],
+  // Serum β-hydroxybutyrate (ketone); rises markedly in DKA (tuned up for DKA).
+  bhb: [A("6873-4", { en: "β-hydroxybutyrate", tr: "β-hidroksibutirat" }, "< 0.6", [0.0, 0.4], "mmol/L", { decimals: 1 })],
+  // Serum osmolality.
+  osmo: [A("2692-2", { en: "Osmolality, serum", tr: "Ozmolalite, serum" }, "275 - 295", [278, 293], "mOsm/kg")],
+  // Ammonia (venous/arterial plasma).
+  ammonia: [A("16362-6", { en: "Ammonia", tr: "Amonyak" }, "11 - 45", [14, 42], "µmol/L")],
+  // Ferritin.
+  ferritin: [A("2276-4", { en: "Ferritin", tr: "Ferritin" }, "30 - 300", [45, 280], "ng/mL")],
+  // Lactate dehydrogenase.
+  ldh: [A("14804-9", { en: "LDH", tr: "LDH" }, "140 - 280", [160, 260], "U/L")],
 
   /* ---- Cardiac markers -------------------------------------------------- */
   // High-sensitivity troponin (code aligns to ground-truth reveals).
@@ -311,6 +322,8 @@ const PANELS: Record<string, AnalyteSpec[]> = {
   // Pregnancy test (qualitative β-hCG).
   bhcg: [Q("2106-3", { en: "β-hCG (serum)", tr: "β-hCG (serum)" }, NEG)],
   "urine-hcg": [Q("2110-5", { en: "β-hCG (urine)", tr: "β-hCG (idrar)" }, NEG)],
+  // Quantitative serum β-hCG (non-pregnant baseline).
+  "bhcg-quant": [A("21198-7", { en: "β-hCG, quantitative", tr: "β-hCG, kantitatif" }, "< 5", [0.0, 3.0], "mIU/mL", { decimals: 1 })],
   // Urine toxicology screen.
   utox: [
     Q("19343-7", { en: "Amphetamines", tr: "Amfetaminler" }, NEG),
@@ -319,6 +332,22 @@ const PANELS: Record<string, AnalyteSpec[]> = {
     Q("19295-9", { en: "Opiates", tr: "Opiyatlar" }, NEG),
     Q("18282-8", { en: "Cannabinoids (THC)", tr: "Kannabinoidler (THC)" }, NEG),
     Q("18365-1", { en: "Barbiturates", tr: "Barbitüratlar" }, NEG),
+  ],
+
+  /* ---- Serum toxicology / therapeutic levels ---------------------------- */
+  // Serum acetaminophen (therapeutic 10-30 mg/L; hepatotoxicity per Rumack-Matthew).
+  acetaminophen: [Q("3297-9", { en: "Acetaminophen (serum)", tr: "Asetaminofen (serum)" }, NONE_DETECTED, "Not detected (therapeutic 10 - 30 mg/L)")],
+  // Serum salicylate (therapeutic 15-30 mg/dL; toxic > 40-50 mg/dL).
+  salicylate: [Q("4024-6", { en: "Salicylate (serum)", tr: "Salisilat (serum)" }, NONE_DETECTED, "Not detected (therapeutic 15 - 30 mg/dL)")],
+  // Serum ethanol (sober baseline: none detected).
+  ethanol: [Q("20470-1", { en: "Ethanol (serum)", tr: "Etanol (serum)" }, NONE_DETECTED, "Not detected")],
+
+  /* ---- Blood bank ------------------------------------------------------- */
+  // Type & screen: ABO/Rh typing + antibody screen (narrative/qualitative).
+  "type-screen": [
+    Q("883-9", { en: "ABO group", tr: "ABO grubu" }, { en: "Group O", tr: "0 grubu" }, "—"),
+    Q("10331-7", { en: "Rh(D) type", tr: "Rh(D) tipi" }, { en: "Positive", tr: "Pozitif" }, "—"),
+    Q("890-4", { en: "Antibody screen", tr: "Antikor taraması" }, NEG),
   ],
 
   /* ---- Point-of-care ---------------------------------------------------- */
@@ -387,6 +416,11 @@ export const ORDERABLES_BY_GROUP: Record<OrderCategory, Orderable[]> = {
     lab("ca", { en: "Calcium (total + ionised)", tr: "Kalsiyum (total + iyonize)" }),
     lab("ck", { en: "Creatine kinase (CK)", tr: "Kreatin kinaz (CK)" }),
     lab("ckmb", { en: "CK-MB", tr: "CK-MB" }),
+    lab("bhb", { en: "β-hydroxybutyrate (serum ketone)", tr: "β-hidroksibutirat (serum keton)" }),
+    lab("osmo", { en: "Serum osmolality", tr: "Serum ozmolalitesi" }),
+    lab("ammonia", { en: "Ammonia", tr: "Amonyak" }),
+    lab("ferritin", { en: "Ferritin", tr: "Ferritin" }),
+    lab("ldh", { en: "Lactate dehydrogenase (LDH)", tr: "Laktat dehidrogenaz (LDH)" }),
     // Cardiac
     lab("67151-1", { en: "High-sensitivity troponin (serial)", tr: "Yüksek duyarlıklı troponin (seri)" }),
     lab("bnp", { en: "BNP", tr: "BNP" }),
@@ -405,8 +439,15 @@ export const ORDERABLES_BY_GROUP: Record<OrderCategory, Orderable[]> = {
     // Urine
     lab("ua", { en: "Urinalysis with microscopy", tr: "İdrar tahlili + mikroskopi" }),
     lab("bhcg", { en: "β-hCG, serum (pregnancy)", tr: "β-hCG, serum (gebelik)" }),
+    lab("bhcg-quant", { en: "β-hCG, quantitative (serum)", tr: "β-hCG, kantitatif (serum)" }),
     lab("urine-hcg", { en: "β-hCG, urine (pregnancy)", tr: "β-hCG, idrar (gebelik)" }),
     lab("utox", { en: "Urine toxicology screen", tr: "İdrar toksikoloji taraması" }),
+    // Serum toxicology / therapeutic levels
+    lab("acetaminophen", { en: "Acetaminophen level (serum)", tr: "Asetaminofen düzeyi (serum)" }),
+    lab("salicylate", { en: "Salicylate level (serum)", tr: "Salisilat düzeyi (serum)" }),
+    lab("ethanol", { en: "Ethanol level (serum)", tr: "Etanol düzeyi (serum)" }),
+    // Blood bank
+    lab("type-screen", { en: "Type & screen (ABO/Rh + antibody screen)", tr: "Kan grubu tayini + antikor taraması" }),
   ],
   bloodgas: [
     gas("vbg", { en: "Venous blood gas (VBG)", tr: "Venöz kan gazı (VKG)" }),
@@ -430,6 +471,8 @@ export const ORDERABLES_BY_GROUP: Record<OrderCategory, Orderable[]> = {
     img("ct-head-noncon", { en: "CT head (non-contrast)", tr: "Beyin BT (kontrastsız)" }),
     img("ct-cspine", { en: "CT cervical spine", tr: "Servikal vertebra BT" }),
     img("ctpa", { en: "CT chest / pulmonary angiogram (CTPA)", tr: "Toraks BT / pulmoner anjiyografi (BTPA)" }),
+    img("cta-chest", { en: "CT angiogram chest (CTA)", tr: "Toraks BT anjiyografi (CTA)" }),
+    img("ct-aorta", { en: "CT aorta (dissection protocol)", tr: "Aort BT (diseksiyon protokolü)" }),
     img("ct-abdo-pelvis", { en: "CT abdomen / pelvis (contrast)", tr: "Batın / pelvis BT (kontrastlı)" }),
     img("us-abdomen", { en: "Ultrasound abdomen", tr: "Batın ultrasonu" }),
     img("us-pelvis", { en: "Ultrasound pelvis (± Doppler)", tr: "Pelvik ultrason (± Doppler)" }),
@@ -685,6 +728,7 @@ const KINETICS_BY_CODE: Record<string, Kinetics> = {
   "4537-7": "inflammatory",
   "2345-7": "glucose",
   "2339-0": "glucose",
+  "6873-4": "glucose",
 };
 function kineticsOf(code: string): Kinetics {
   return KINETICS_BY_CODE[code] ?? "static";
@@ -732,7 +776,7 @@ const CONDITION_TARGETS: Record<ConditionTag, AnalyteTarget[]> = {
   pancreatitis: [nT("3040-3", 920, "H"), nT("1798-8", 340, "H"), nT("6690-2", 13.5, "H")],
   hepatic: [nT("1920-8", 180, "H"), nT("1742-6", 210, "H"), nT("6768-6", 160, "H"), nT("1975-2", 3.2, "H"), nT("2324-2", 120, "H")],
   renal: [nT("2160-0", 2.8, "H"), nT("3094-0", 52, "H"), nT("2823-3", 5.4, "H"), nT("1963-8", 18, "L")],
-  dka: [nT("2345-7", 440, "H"), nT("2339-0", 440, "H"), nT("1963-8", 12, "L"), nT("1863-0", 24, "H"), nT("2823-3", 5.2, "H"), nT("2744-1", 7.22, "L"), qT("5797-6", POS), qT("5792-7", POS)],
+  dka: [nT("2345-7", 440, "H"), nT("2339-0", 440, "H"), nT("6873-4", 4.8, "HH"), nT("1963-8", 12, "L"), nT("1863-0", 24, "H"), nT("2823-3", 5.2, "H"), nT("2744-1", 7.22, "L"), qT("5797-6", POS), qT("5792-7", POS)],
   uti: [qT("5799-2", POS), qT("5802-4", POS), nT("5821-4", 40, "H"), qT("25145-4", MANY_BACT)],
   anemia: [nT("718-7", 8.5, "L"), nT("4544-3", 27, "L"), nT("789-8", 3.1, "L")],
   thyrotoxic: [nT("3016-3", 0.02, "L"), nT("3024-7", 3.2, "H")],

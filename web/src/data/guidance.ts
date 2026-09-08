@@ -40,6 +40,7 @@ export interface GuidanceProvenance {
 export type GuidanceScopeKey =
   | "acs-triage"
   | "acs-diagnosis"
+  | "sah-diagnosis"
   | "emergency-competency"
   | "drug-safety";
 
@@ -72,6 +73,21 @@ const PROVENANCE: Record<string, GuidanceProvenance> = {
     scopeLabel: {
       en: "acute coronary syndrome triage",
       tr: "akut koroner sendrom triyajı",
+    },
+  },
+  "nice-ng228": {
+    citationId: "nice-ng228",
+    organization: {
+      en: "National Institute for Health and Care Excellence",
+      tr: "Ulusal Sağlık ve Bakım Mükemmeliyet Enstitüsü (NICE)",
+    },
+    edition: "NG228 · 2022",
+    evidenceGrade: { en: "Strong recommendation", tr: "Güçlü öneri" },
+    reviewCadenceMonths: 24,
+    scope: "sah-diagnosis",
+    scopeLabel: {
+      en: "subarachnoid haemorrhage diagnosis and imaging",
+      tr: "subaraknoid kanama tanısı ve görüntülemesi",
     },
   },
   "tepdad-em": {
