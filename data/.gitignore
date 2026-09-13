@@ -1,0 +1,6 @@
+# Atlas pipeline: keep the reproducible build script, exclude heavy inputs and
+# the local Python venv. The generated outputs live in web/ and ARE committed
+# (web/src/data/anatomyAtlas.ts + web/public/atlas/*.png).
+atlas-pipeline/venv/
+atlas-pipeline/raw/
+atlas-pipeline/__pycache__/
