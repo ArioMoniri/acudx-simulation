@@ -80,6 +80,12 @@ export interface DialogueTurn {
   en: string;
   tr: string;
   /**
+   * The encounter's monotonic event `seq` for this exchange, so free-text/live
+   * turns interleave with the intent-chip transcript in true chronological
+   * order (the doctor + patient turn of one exchange share the same seq).
+   */
+  seq: number;
+  /**
    * Affect label for a patient turn (e.g. the case's baseline affect). Absent
    * on doctor turns.
    */
@@ -327,12 +333,14 @@ export function recordDialogue(input: {
     role: "doctor",
     en: input.doctorText,
     tr: input.doctorText,
+    seq: ev.seq,
   };
   const patientTurn: DialogueTurn = {
     id: `dlg-${ev.seq}-p`,
     role: "patient",
     en: input.patient.en,
     tr: input.patient.tr,
+    seq: ev.seq,
     affect: input.affect,
   };
   setState({
