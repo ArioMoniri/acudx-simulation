@@ -124,6 +124,13 @@ interface GuardNoticeState {
   utterance: string;
 }
 
+/**
+ * A transcript turn carrying the encounter's monotonic event `seq`, so the
+ * intent-chip and free-text/live sources can be merged in true chronological
+ * order rather than one source always before the other.
+ */
+type OrderedTurn = TranscriptTurn & { seq: number };
+
 /** Question-intent chips offered to the student (history extraction). */
 const QUESTION_INTENTS: QuestionIntent[] = [
   "onset",
@@ -281,7 +288,10 @@ export function InterviewTab({
     const historyById = new Map(
       caseInstance.groundTruth.history.map((h) => [h.id, h]),
     );
-    const turnsAcc: TranscriptTurn[] = [];
+    // `seq` (the encounter's monotonic event sequence) is carried so the two
+    // transcript sources — intent-chip questions and free-text/live exchanges —
+    // interleave in true chronological order (see allTurns below).
+    const turnsAcc: OrderedTurn[] = [];
     const affect: Record<string, string> = {};
 
     // Only the intent-chip reveal-graph questions build these turns; free-text /
@@ -303,6 +313,7 @@ export function InterviewTab({
         stage: "history",
         en: intentKey,
         tr: intentKey,
+        seq: ev.seq,
       });
 
       const revealed = (ev.meta?.revealed as string[] | undefined) ?? [];
@@ -319,6 +330,7 @@ export function InterviewTab({
             stage: "history",
             en: a.answer.en,
             tr: a.answer.tr,
+            seq: ev.seq,
           });
           affect[patId] = affectLabel;
         }
@@ -334,6 +346,7 @@ export function InterviewTab({
           stage: "history",
           en: miss.en,
           tr: miss.tr,
+          seq: ev.seq,
         });
         affect[patId] = affectLabel;
       }
@@ -343,7 +356,7 @@ export function InterviewTab({
 
   // The free-text / voice / live exchanges, read from the persisted store log so
   // they survive remounts and stay in sync with the event-sourced transcript.
-  const dialogueTurns = useMemo<TranscriptTurn[]>(
+  const dialogueTurns = useMemo<OrderedTurn[]>(
     () =>
       state.dialogue.map((d) => ({
         id: d.id,
@@ -351,6 +364,7 @@ export function InterviewTab({
         stage: "history",
         en: d.en,
         tr: d.tr,
+        seq: d.seq,
       })),
     [state.dialogue],
   );
@@ -362,9 +376,13 @@ export function InterviewTab({
     return m;
   }, [state.dialogue]);
 
-  // Merge the reveal-graph turns with the free-text / live exchanges for display.
+  // Merge the reveal-graph turns with the free-text / live exchanges IN TRUE
+  // CHRONOLOGICAL ORDER. Both sources share the encounter's monotonic event
+  // `seq`, so sorting by it interleaves them correctly — an intent chip clicked
+  // after a typed question now appears after it, not pinned to the top. The sort
+  // is stable, so a doctor turn stays before its patient reply within one seq.
   const allTurns = useMemo(
-    () => [...turns, ...dialogueTurns],
+    () => [...turns, ...dialogueTurns].sort((a, b) => a.seq - b.seq),
     [turns, dialogueTurns],
   );
   const allAffect = useMemo(
