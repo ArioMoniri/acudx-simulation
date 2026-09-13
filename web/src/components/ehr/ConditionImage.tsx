@@ -21,6 +21,13 @@ export interface ConditionImageProps {
   modality?: string;
   /** Optional caption shown under the image (clinician-authored context). */
   caption?: string;
+  /**
+   * When false, suppress the INTERPRETIVE text (the caption + the curated
+   * teaching label) so a learner reading the study themselves is not handed the
+   * read. The image, safety disclaimer, license and attribution stay visible.
+   * Defaults to true — the previous behaviour — so callers are unaffected.
+   */
+  showInterpretation?: boolean;
   className?: string;
 }
 
@@ -43,6 +50,7 @@ export function ConditionImage({
   query,
   modality,
   caption,
+  showInterpretation = true,
   className,
 }: ConditionImageProps) {
   const { t, i18n } = useTranslation();
@@ -167,13 +175,16 @@ export function ConditionImage({
 
       {/* Metadata footer: caption, disclaimer (again as durable text), source */}
       <figcaption className="space-y-1.5 border-t border-monitor-border px-3 py-2">
-        {caption ? (
+        {/* Interpretive text (caption + curated teaching label) is suppressed
+            when showInterpretation is false; the disclaimer + license/attribution
+            below are NOT interpretive and always render. */}
+        {showInterpretation && caption ? (
           <p className="text-xs leading-snug text-monitor-fg">{caption}</p>
         ) : null}
 
         {/* Curated, verified teaching label — what this representative study
             actually depicts (only present for a bundled curated match). */}
-        {phase === "loaded" && curatedCaption && curatedCaption !== caption ? (
+        {showInterpretation && phase === "loaded" && curatedCaption && curatedCaption !== caption ? (
           <p className="font-mono text-[11px] leading-snug text-monitor-online">
             {curatedCaption}
           </p>

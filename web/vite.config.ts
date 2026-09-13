@@ -103,6 +103,44 @@ function ttsProxyPlugin(): Plugin {
           res.end();
         }
       });
+
+      // Speech-to-text: the browser POSTs multipart audio (file + model_id);
+      // we forward it to ElevenLabs and return { text }. Key stays server-side.
+      server.middlewares.use("/stt", async (req, res) => {
+        if (req.method !== "POST") {
+          res.statusCode = 405;
+          return res.end();
+        }
+        if (!apiKey) {
+          res.statusCode = 503;
+          res.setHeader("Content-Type", "application/json");
+          return res.end(JSON.stringify({ error: "stt-not-configured" }));
+        }
+        try {
+          const parts: Buffer[] = [];
+          for await (const c of req) parts.push(c as Buffer);
+          const upstream = await fetch(
+            "https://api.elevenlabs.io/v1/speech-to-text",
+            {
+              method: "POST",
+              headers: {
+                "xi-api-key": apiKey,
+                "content-type": String(
+                  req.headers["content-type"] ?? "application/octet-stream",
+                ),
+              },
+              body: Buffer.concat(parts),
+            },
+          );
+          const bodyText = await upstream.text();
+          res.statusCode = upstream.ok ? 200 : 502;
+          res.setHeader("Content-Type", "application/json");
+          res.end(bodyText);
+        } catch {
+          res.statusCode = 500;
+          res.end();
+        }
+      });
     },
   };
 }

@@ -48,7 +48,12 @@ import {
 } from "@/domain/scopeGuard";
 import type { QuestionIntent, ExamManeuver, CaseInstance } from "@/domain/case";
 import { useLiveBackend } from "@/lib/liveBackend";
-import { useSpeechInput } from "@/lib/speechInput";
+import {
+  sttSupported,
+  startRecording,
+  stopAndTranscribe,
+  cancelRecording,
+} from "@/lib/stt";
 import {
   patientTurn as backendPatientTurn,
   type PatientTurnRequest,
@@ -227,20 +232,27 @@ export function InterviewTab({
   const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState("");
 
-  // Push-to-talk voice DICTATION (GitHub #107): the learner may speak a question
-  // aloud and it fills the composer, where they can edit it before Send. Purely
-  // client-side (browser Web Speech API), opt-in per press, and unrelated to the
-  // air-gapped pod path — interim + final transcripts just feed `draft`. The mic
-  // control renders only when the browser exposes the API (`micSupported`).
-  const {
-    supported: micSupported,
-    listening: micListening,
-    toggle: toggleMic,
-  } = useSpeechInput({
-    lang: i18n.language,
-    onInterim: (text) => setDraft(text),
-    onFinal: (text) => setDraft(text),
-  });
+  // Push-to-talk DICTATION via ElevenLabs speech-to-text: the learner presses
+  // the mic, speaks a question, presses again — the audio is transcribed by the
+  // /stt proxy (key server-side) and fills the composer, where they edit before
+  // Send. Replaces the flaky browser Web Speech API. Renders only when the
+  // browser can record (`micSupported`).
+  const micSupported = sttSupported;
+  const [micListening, setMicListening] = useState(false);
+  const toggleMic = useCallback(async () => {
+    if (micListening) {
+      setMicListening(false);
+      const text = await stopAndTranscribe(
+        i18n.language?.startsWith("tr") ? "tr" : "en",
+      );
+      if (text) setDraft((d) => (d.trim() ? `${d.trim()} ${text}` : text));
+    } else {
+      const ok = await startRecording();
+      if (ok) setMicListening(true);
+    }
+  }, [micListening, i18n.language]);
+  // Release the mic if the panel unmounts mid-recording.
+  useEffect(() => () => cancelRecording(), []);
   const [notice, setNotice] = useState<GuardNoticeState | null>(null);
   const typingTimer = useRef<number | null>(null);
 
