@@ -42,16 +42,30 @@ app (routes/nav/authoring/institution). This also retires the local
 
 These work now; the note says what unlocks the next level.
 
-- **Anatomy atlas (the Japanese-reference cross-section viewer).** v1 ships a
-  **real, expert-segmented CT** (TotalSegmentator example, CC-BY-4.0): 14 organs
-  with toggleable SVG segmentation overlays, axial/coronal/sagittal, level
-  scrubber, abdomen/bone windows, R/L/A/P/S/I markers, guided lessons.
-  - *Needs more data to grow:* more subjects + full-body coverage (only ~90 mm
-    of one subject now), an **MRI** lesson (source: AMOS22, CC-BY), and the
-    **3D organ model** with a cutting plane synced to the slice (source: HuBMAP
-    CCF GLBs, CC-BY-4.0) — this is the 3D part of the reference, deferred to a
-    later phase. Pipeline lives in `data/atlas-pipeline/` (`build_atlas.py`);
-    edit `ORGANS`/`LEVELS_PER_PLANE` and re-run to expand.
+- **Anatomy atlas (the Japanese-reference tool) — `/atlas`, reachable from every
+  role.** Two views on the SAME real, expert-segmented CT (TotalSegmentator,
+  CC-BY-4.0), switched by a "Cross-section / 3D organs" toggle:
+  - **Cross-section (2D):** 14 organs with toggleable SVG overlays,
+    axial/coronal/sagittal, level scrubber, abdomen/bone windows, R/L/A/P/S/I
+    markers, guided lessons.
+  - **3D organs (navigable):** a real GLB built by marching cubes from the same
+    masks (`data/atlas-pipeline/build_organs_glb.py` → `web/public/atlas/organs.glb`,
+    14 organs, 382 KB). Orbit/zoom/pan, the shared legend toggles organs in both
+    views, and an **axial cutting plane** reveals the cross-section in 3D. three.js
+    is lazy-loaded (own chunk, no main-bundle cost).
+  - *Needs more data to grow:* more subjects + full-body coverage (only ~90 mm of
+    one subject now), an **MRI** lesson (source: AMOS22, CC-BY), and **syncing the
+    3D cut level to the 2D slice scrubber** (lock-step). Pipelines live in
+    `data/atlas-pipeline/`; edit + re-run to expand.
+
+- **Ordered-imaging viewer (under Results) — a DICOM-style sequence viewer.**
+  Ordered studies render richer than a single still: an **echocardiogram plays a
+  beating-heart cine loop**, an **abdominal CT scrolls as a multi-slice series**
+  (built from the atlas's real CT — slice scrubber, wheel/keys, soft-tissue/bone
+  windows), and everything else keeps the representative still.
+  - *Could improve:* cines/stacks for more modalities (a US/FAST cine, MRI stacks)
+    and region-specific CT stacks (head/chest) — the CT series is abdomen-only
+    today (the volume the atlas ships).
 
 - **Model-driven / dynamic test results.** Results respond to the patient's
   status, elapsed time, and what the student does (treat in time → improves;
