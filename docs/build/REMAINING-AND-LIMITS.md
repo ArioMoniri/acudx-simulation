@@ -82,9 +82,10 @@ These work now; the note says what unlocks the next level.
 
 - **True per-word lip-sync on the patient video** needs a real-time talking-head
   avatar model — it can't come from a fixed pre-generated clip and can't run on
-  the (CPU, air-gapped) pod. What we can/should do: **sync the clip's play
-  duration to the actual spoken (ElevenLabs) audio** so the patient "talks" for
-  as long as the reply lasts. (Planned.)
+  the (CPU, air-gapped) pod. What we do instead (shipped, #165): **sync the
+  clip's play duration to the actual spoken (ElevenLabs) audio** so the patient
+  "talks" for exactly as long as the reply lasts, and no longer loops. Per-word
+  sync remains the genuine limit.
 
 - **Symptoms baked into the still photo.** The generated portrait is a fixed
   image and can't be re-rendered per-symptom. Live symptoms are shown instead
@@ -115,3 +116,9 @@ animation · orderable catalog fixes · real curated ECG/CXR/CT imaging ·
 full **AMBOSS/Epic redesign** (shell, A&P, all encounter tabs, nav preload) ·
 real role permissions + publish→learner wiring · dev/prototype "tells" removed ·
 de-hardcoded config. See git history / PRs #135–#156.
+
+Latest arc (#158–#165): **anatomy atlas** — real segmented-CT cross-section
+viewer at `/atlas` (#161) · **catalog completeness + action/time-responsive
+dynamic results** (#162) · **interview panel UX** — scrolling Q&A, chat bubbles,
+portrait (#163) · **patient voice ↔ talking-head sync** — the talk clip matches
+the real audio length instead of looping (#165).
