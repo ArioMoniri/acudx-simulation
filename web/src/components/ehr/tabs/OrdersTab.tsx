@@ -14,6 +14,7 @@ import {
   ArrowClockwise,
   MagnifyingGlass,
   X,
+  ClipboardText,
   type Icon,
 } from "@phosphor-icons/react";
 
@@ -21,6 +22,7 @@ import { useReveal, useStagger } from "@/lib/motion";
 import {
   Badge,
   Button,
+  Card,
   SectionLabel,
   StatusDot,
   Tabs,
@@ -218,10 +220,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
               if (items.length === 0) return null;
               const GroupIcon = GROUP_ICON[group];
               return (
-                <section
-                  key={group}
-                  className="rounded-card border border-border bg-surface p-3"
-                >
+                <Card key={group} padding="sm">
                   <SectionLabel
                     icon={<GroupIcon weight="bold" className="h-4 w-4" aria-hidden />}
                     trailing={
@@ -245,7 +244,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
                       />
                     ))}
                   </ul>
-                </section>
+                </Card>
               );
             })}
           </TabsContent>
@@ -254,10 +253,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
           <TabsContent value="treatments" className="flex flex-col gap-4">
             <p className="text-xs text-muted">{t("orders2.treatments.subtitle")}</p>
             {treatmentGroups.map(({ klass, items }) => (
-              <section
-                key={klass.en}
-                className="rounded-card border border-border bg-surface p-3"
-              >
+              <Card key={klass.en} padding="sm">
                 <SectionLabel
                   icon={<Syringe weight="bold" className="h-4 w-4" aria-hidden />}
                   className="mb-2"
@@ -274,7 +270,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
                     />
                   ))}
                 </ul>
-              </section>
+              </Card>
             ))}
           </TabsContent>
         </Tabs>
@@ -283,10 +279,13 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
       {/* Live order tracker */}
       <motion.aside
         {...summaryReveal}
-        className="flex h-max flex-col gap-3 rounded-card border border-border bg-surface p-3"
+        className="flex h-max flex-col gap-3 rounded-card border border-border bg-surface p-4"
       >
         <div>
-          <h3 className="text-sm font-semibold text-fg">{t("orders2.tracker.heading")}</h3>
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+            <ClipboardText weight="bold" className="h-4 w-4 text-muted" aria-hidden />
+            {t("orders2.tracker.heading")}
+          </h3>
           {state.orders.length > 0 ? (
             <p className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
               {t("orders2.tracker.summary", {
@@ -530,10 +529,13 @@ function TrackerRow({
         {done ? (
           <StatusDot tone="normal" label={t("orders2.tracker.resultedTag")} size="sm" />
         ) : (
-          <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-[color:var(--state-caution)]">
-            <Timer weight="bold" className="h-3.5 w-3.5 motion-safe:animate-pulse" aria-hidden />
+          <Badge
+            tone="caution"
+            icon={<Timer weight="fill" className="h-3.5 w-3.5 motion-safe:animate-pulse" aria-hidden />}
+            className="shrink-0"
+          >
             {t("orders2.tracker.pending")}
-          </span>
+          </Badge>
         )}
       </div>
 
