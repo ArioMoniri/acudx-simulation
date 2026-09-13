@@ -39,6 +39,7 @@ const load = {
   signin: () => import("@/pages/SignInPage"),
   profile: () => import("@/pages/ProfilePage"),
   exam: () => import("@/pages/ExamPage"),
+  atlas: () => import("@/pages/AtlasPage"),
 } as const;
 
 const HomePage = lazy(() => load.home().then((m) => ({ default: m.HomePage })));
@@ -54,6 +55,7 @@ const InstitutionPage = lazy(() => load.institution().then((m) => ({ default: m.
 const SignInPage = lazy(() => load.signin().then((m) => ({ default: m.SignInPage })));
 const ProfilePage = lazy(() => load.profile().then((m) => ({ default: m.ProfilePage })));
 const ExamPage = lazy(() => load.exam().then((m) => ({ default: m.ExamPage })));
+const AtlasPage = lazy(() => load.atlas().then((m) => ({ default: m.AtlasPage })));
 
 /* -------------------------------------------------------------------------- */
 /* Intent preload                                                              */
@@ -69,6 +71,7 @@ const ROUTE_LOADERS: Record<string, () => Promise<unknown>> = {
   "/cases": load.cases,
   "/rooms": load.room,
   "/exam": load.exam,
+  "/atlas": load.atlas,
   "/feedback": load.feedback,
   "/progress": load.progress,
   "/authoring": load.authoring,
@@ -205,6 +208,7 @@ export default function App() {
               <Route path="/feedback" element={<FeedbackPage />} />
               <Route path="/progress" element={<ProgressPage />} />
               <Route path="/exam" element={<ExamPage />} />
+              <Route path="/atlas" element={<AtlasPage />} />
               <Route
                 path="/institution"
                 element={

@@ -14,6 +14,8 @@ interface NavItem {
   to: string;
   key: string;
   end?: boolean;
+  /** English fallback for a key not yet in the locale bundles (e.g. nav.atlas). */
+  defaultLabel?: string;
 }
 
 /**
@@ -34,6 +36,7 @@ const NAV_BY_ROLE: Record<ViewAsRole, NavItem[]> = {
     { to: "/cases", key: "nav.cases" },
     { to: "/rooms", key: "nav.rooms" },
     { to: "/exam", key: "nav.exam" },
+    { to: "/atlas", key: "nav.atlas", defaultLabel: "Atlas" },
     { to: "/feedback", key: "nav.feedback" },
     { to: "/progress", key: "nav.progress" },
   ],
@@ -91,7 +94,7 @@ export function TopNav() {
                 onFocus={() => prefetchRoute(l.to)}
                 className={({ isActive }) => linkClasses(isActive)}
               >
-                {t(l.key)}
+                {t(l.key, { defaultValue: l.defaultLabel })}
               </NavLink>
             </li>
           ))}
@@ -140,7 +143,7 @@ export function TopNav() {
                   )
                 }
               >
-                {t(l.key)}
+                {t(l.key, { defaultValue: l.defaultLabel })}
               </NavLink>
             </li>
           ))}
