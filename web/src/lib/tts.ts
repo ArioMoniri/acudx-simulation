@@ -88,13 +88,20 @@ export function stopTts(): void {
 
 /**
  * Speak `text` in the patient's voice on the shared (unlocked) element. A new
- * call cancels the previous one. `onEnded` fires when playback finishes so the
- * caller can drive a speaking state that matches the actual audio length.
- * Returns whether audio began.
+ * call cancels the previous one. `onStart` fires once the clip's real duration
+ * is known (metadata loaded), and `onEnded` when playback finishes — together
+ * they let the caller drive a "speaking" treatment that matches the actual
+ * audio length instead of a text estimate. Returns whether audio began.
  */
 export async function speakAsPatient(
   text: string,
-  opts: { sex: Sex; age: number; onEnded?: () => void; signal?: AbortSignal },
+  opts: {
+    sex: Sex;
+    age: number;
+    onStart?: (durationMs: number) => void;
+    onEnded?: () => void;
+    signal?: AbortSignal;
+  },
 ): Promise<boolean> {
   const clean = text?.trim();
   const a = element();
@@ -121,14 +128,26 @@ export async function speakAsPatient(
       URL.revokeObjectURL(url);
       opts.onEnded?.();
     };
+    // Fire onStart once, as soon as the real clip duration is known, so the
+    // caller can size the "speaking" animation to the voice (0 = still unknown).
+    let started = false;
+    const fireStart = () => {
+      if (started || opts.signal?.aborted) return;
+      started = true;
+      const d = a.duration;
+      opts.onStart?.(Number.isFinite(d) && d > 0 ? Math.round(d * 1000) : 0);
+    };
     a.onended = onDone;
     a.onerror = () => URL.revokeObjectURL(url);
+    a.onloadedmetadata = fireStart;
     a.muted = false;
     a.src = url;
     a.currentTime = 0;
     await a.play().catch(() => {
       /* blocked despite unlock — stay silent */
     });
+    // Metadata is often already available by the time play() resolves.
+    if (a.readyState >= 1) fireStart();
     return true;
   } catch {
     return false;
