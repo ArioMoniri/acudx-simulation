@@ -112,13 +112,191 @@ function effectsFor(c: CaseInstance, code: string, baseline: CurrentVitals) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Untreated-deterioration overlay (time-critical cases only)                 */
+/* -------------------------------------------------------------------------- */
+
+const MIN = 60_000;
+
+/** Reference midpoints used to decide which direction is "getting worse". */
+const NORMAL_MID: Record<keyof CurrentVitals, number> = {
+  hr: 75,
+  systolic: 118,
+  diastolic: 76,
+  rr: 15,
+  spo2: 98,
+  tempC: 36.8,
+};
+
+/** Max extra excursion (magnitude) an untreated crash may add per vital. */
+const OVERLAY_CAP: Record<keyof CurrentVitals, number> = {
+  hr: 28,
+  systolic: 34,
+  diastolic: 16,
+  rr: 10,
+  spo2: 8,
+  tempC: 1.2,
+};
+
+/** How much the case's own authored drift is amplified at full decompensation. */
+const DRIFT_AMPLIFY = 1.25;
+
+/** Codes that always count as resuscitative (oxygen, IV fluids). */
+const UNIVERSAL_RESCUE = ["7806", "313002"];
+
+/**
+ * Condition-appropriate rescue treatment codes, derived from the case's
+ * diagnosis + presentation keywords (mirrors the treatment catalog's RxNorm
+ * ids). Oxygen + IV fluids always count as supportive resuscitation. A rescue
+ * treatment is what halts the untreated-deterioration clock — the specific
+ * pharmacologic appropriateness is scored elsewhere; here it only decides
+ * whether the student "acted" on the crashing patient.
+ */
+function rescueCodesFor(c: CaseInstance): Set<string> {
+  const dxCode = c.correctDiagnosis?.code.coding[0]?.code ?? "";
+  const hay = [
+    dxCode,
+    c.correctDiagnosis?.code.coding[0]?.display,
+    c.correctDiagnosis?.code.text?.en,
+    c.correctDiagnosis?.code.text?.tr,
+    c.chiefComplaint?.en,
+    c.chiefComplaint?.tr,
+    ...(c.redFlags ?? []).flatMap((r) => [r.en, r.tr]),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const kw = (...ks: string[]) => ks.some((k) => hay.includes(k));
+  const s = new Set<string>(UNIVERSAL_RESCUE);
+  if (/^i2[01]/.test(dxCode) || kw("myocardial", "coronary", "nstemi", "stemi", "angina", "miyokart", "koroner")) {
+    s.add("1191"); // aspirin
+    s.add("4917"); // nitroglycerin
+  }
+  if (/^i50/.test(dxCode) || kw("heart failure", "pulmonary oedema", "pulmonary edema", "kalp yetmez"))
+    s.add("4917"); // nitroglycerin (preload reduction)
+  if (kw("subarachnoid", "haemorrhage", "hemorrhage", "subaraknoid", "kanama", "stroke", "inme"))
+    s.add("4917"); // vasodilator proxy for blood-pressure control
+  if (kw("sepsis", "septic", "sepsi", "septik", "pneumonia", "pnömoni", "pnomoni", "meningitis", "menenjit", "urinary", "pyelonephritis", "idrar", "piyelonefrit", "cholangitis", "kolanjit"))
+    s.add("2193"); // ceftriaxone
+  if (kw("ketoacidosis", "ketoasidoz", "diabetic keto", "hyperglyc")) s.add("5856"); // insulin
+  if (kw("asthma", "astım", "astim", "copd", "koah", "bronchospasm", "bronkospazm", "wheeze")) s.add("435"); // salbutamol
+  if (kw("anaphyla", "anafilaks")) s.add("3992"); // adrenaline
+  if (kw("opioid", "overdose", "aşırı doz", "asiri doz", "naloxone")) s.add("7242"); // naloxone
+  if (kw("supraventricular", "tachyarrhythmia", "taşiaritmi", "tasiaritmi") || / svt|^svt/.test(hay)) s.add("448"); // adenosine
+  if (kw("seizure", "epilepticus", "nöbet", "nobet", "status epilep")) s.add("6470"); // lorazepam
+  return s;
+}
+
+export interface DeteriorationProfile {
+  /** Grace period (from the case's ideal critical-action window) before drift. */
+  graceMs: number;
+  /** Time from grace to full (level = 1) decompensation. */
+  rampMs: number;
+  /** Time over which a rescue reverses the accrued deterioration. */
+  recoverMs: number;
+  /** Fraction of the accrued level a full recovery removes (residual injury). */
+  recoverFraction: number;
+  /** Treatment codes that halt the deterioration clock. */
+  rescueCodes: Set<string>;
+  /** Signed max delta per vital at full untreated decompensation. */
+  overlay: Partial<Record<keyof CurrentVitals, number>>;
+}
+
+const PROFILE_CACHE = new Map<string, DeteriorationProfile | null>();
+
+/**
+ * A time-critical case's untreated-deterioration profile, or null when the case
+ * has no defined deterioration path (it then stays exactly on its authored
+ * trajectory + treatment ramps). Gate: ESI acuity ≤ 2 AND at least one
+ * safety-critical expected-workup item — i.e. a genuine "minutes matter" case.
+ *
+ * The decompensation DIRECTION is the case's own authored trajectory drift
+ * (amplified, capped), applied only to vitals that end abnormal AND are still
+ * moving away from normal — so the overlay follows how THIS patient is authored
+ * to worsen (e.g. rising BP in SAH, falling SpO2 in PE) and can never
+ * accelerate a spontaneous recovery. All excursions stay physiologically
+ * bounded via OVERLAY_CAP + the clampVital bounds applied downstream.
+ */
+export function deteriorationProfile(c: CaseInstance): DeteriorationProfile | null {
+  const cached = typeof c.id === "string" ? PROFILE_CACHE.get(c.id) : undefined;
+  if (cached !== undefined) return cached;
+
+  const compute = (): DeteriorationProfile | null => {
+    const workup = c.expectedWorkup;
+    if (c.acuityESI == null || c.acuityESI > 2 || !workup) return null;
+    const criticalWindows = workup.filter((w) => w.critical).map((w) => w.idealWindowMs);
+    if (criticalWindows.length === 0) return null;
+
+    const first = baselineAt(c, 0);
+    const last = baselineAt(c, Number.MAX_SAFE_INTEGER);
+    const overlay: Partial<Record<keyof CurrentVitals, number>> = {};
+    let anyWorsening = false;
+    for (const key of Object.keys(NORMAL_MID) as (keyof CurrentVitals)[]) {
+      const drift = last[key] - first[key];
+      if (drift === 0) continue;
+      // Only amplify a vital that ends abnormal and is drifting further from normal.
+      if (Math.sign(last[key] - NORMAL_MID[key]) !== Math.sign(drift)) continue;
+      overlay[key] = Math.sign(drift) * Math.min(Math.abs(drift) * DRIFT_AMPLIFY, OVERLAY_CAP[key]);
+      anyWorsening = true;
+    }
+    if (!anyWorsening) return null;
+
+    const graceMs = Math.min(Math.max(Math.min(...criticalWindows), 5 * MIN), 20 * MIN);
+    return {
+      graceMs,
+      rampMs: 25 * MIN,
+      recoverMs: 20 * MIN,
+      recoverFraction: 0.8,
+      rescueCodes: rescueCodesFor(c),
+      overlay,
+    };
+  };
+
+  const profile = compute();
+  if (typeof c.id === "string") PROFILE_CACHE.set(c.id, profile);
+  return profile;
+}
+
+/** Earliest administration time of any rescue treatment, or null. */
+function earliestRescueAt(profile: DeteriorationProfile, treatments: AdministeredTreatment[]): number | null {
+  let at: number | null = null;
+  for (const t of treatments) {
+    if (!profile.rescueCodes.has(t.code)) continue;
+    at = at == null ? t.at : Math.min(at, t.at);
+  }
+  return at;
+}
+
+/**
+ * The 0..1 severity of untreated decompensation at `elapsedMs`. Zero until the
+ * grace window (anchored to the case's ideal critical-action window) elapses,
+ * then ramps toward 1. A rescue treatment freezes the level at the value it had
+ * reached by then and decays it toward a residual floor — so acting BEFORE the
+ * window prevents deterioration entirely, while a late rescue only partly
+ * reverses it. Never acting lets the level climb (and hold) at its ceiling.
+ */
+export function deteriorationLevel(
+  profile: DeteriorationProfile,
+  elapsedMs: number,
+  treatments: AdministeredTreatment[],
+): number {
+  const t = Math.max(0, elapsedMs);
+  const ramp = (x: number) => Math.min(1, Math.max(0, (x - profile.graceMs) / profile.rampMs));
+  const rescueAt = earliestRescueAt(profile, treatments);
+  if (rescueAt == null || t <= rescueAt) return ramp(t);
+  const peak = ramp(rescueAt);
+  const recovered = Math.min(1, Math.max(0, (t - rescueAt) / profile.recoverMs));
+  return peak * (1 - profile.recoverFraction * recovered);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Public API                                                                 */
 /* -------------------------------------------------------------------------- */
 
 /**
  * The patient's effective vitals at `elapsedMs`: baseline trajectory plus every
  * treatment's ramped effect (linear from its administration time over onsetMs),
- * clamped to physiologic bounds and rounded for display.
+ * then any untreated-deterioration overlay for a time-critical case, clamped to
+ * physiologic bounds and rounded for display.
  */
 export function currentVitals(
   c: CaseInstance,
@@ -135,6 +313,19 @@ export function currentVitals(
       const onset = e.onsetMs > 0 ? e.onsetMs : 1;
       const frac = Math.min(1, Math.max(0, (elapsedMs - t.at) / onset));
       acc[e.key] = acc[e.key] + e.delta * frac;
+    }
+  }
+
+  // Untreated time-critical illness drifts further from normal once its ideal
+  // action window has passed; a timely rescue treatment halts (and partly
+  // reverses) that drift. Cases with no deterioration path skip this entirely.
+  const profile = deteriorationProfile(c);
+  if (profile) {
+    const level = deteriorationLevel(profile, elapsedMs, treatments);
+    if (level > 0) {
+      for (const key of Object.keys(profile.overlay) as (keyof CurrentVitals)[]) {
+        acc[key] += (profile.overlay[key] ?? 0) * level;
+      }
     }
   }
 

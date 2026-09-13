@@ -236,6 +236,8 @@ const PANELS: Record<string, AnalyteSpec[]> = {
   ferritin: [A("2276-4", { en: "Ferritin", tr: "Ferritin" }, "30 - 300", [45, 280], "ng/mL")],
   // Lactate dehydrogenase.
   ldh: [A("14804-9", { en: "LDH", tr: "LDH" }, "140 - 280", [160, 260], "U/L")],
+  // Uric acid (urate). Adult reference ~3.5-7.2 mg/dL (sex-pooled band).
+  "uric-acid": [A("3084-1", { en: "Uric acid (urate)", tr: "Ürik asit (ürat)" }, "3.5 - 7.2", [3.9, 6.8], "mg/dL", { decimals: 1 })],
 
   /* ---- Cardiac markers -------------------------------------------------- */
   // High-sensitivity troponin (code aligns to ground-truth reveals).
@@ -421,6 +423,7 @@ export const ORDERABLES_BY_GROUP: Record<OrderCategory, Orderable[]> = {
     lab("ammonia", { en: "Ammonia", tr: "Amonyak" }),
     lab("ferritin", { en: "Ferritin", tr: "Ferritin" }),
     lab("ldh", { en: "Lactate dehydrogenase (LDH)", tr: "Laktat dehidrogenaz (LDH)" }),
+    lab("uric-acid", { en: "Uric acid (urate)", tr: "Ürik asit (ürat)" }),
     // Cardiac
     lab("67151-1", { en: "High-sensitivity troponin (serial)", tr: "Yüksek duyarlıklı troponin (seri)" }),
     lab("bnp", { en: "BNP", tr: "BNP" }),
@@ -470,16 +473,23 @@ export const ORDERABLES_BY_GROUP: Record<OrderCategory, Orderable[]> = {
     img("xr-extremity", { en: "Extremity X-ray", tr: "Ekstremite grafisi" }),
     img("ct-head-noncon", { en: "CT head (non-contrast)", tr: "Beyin BT (kontrastsız)" }),
     img("ct-cspine", { en: "CT cervical spine", tr: "Servikal vertebra BT" }),
+    img("ct-chest", { en: "CT chest (contrast)", tr: "Toraks BT (kontrastlı)" }),
     img("ctpa", { en: "CT chest / pulmonary angiogram (CTPA)", tr: "Toraks BT / pulmoner anjiyografi (BTPA)" }),
     img("cta-chest", { en: "CT angiogram chest (CTA)", tr: "Toraks BT anjiyografi (CTA)" }),
     img("ct-aorta", { en: "CT aorta (dissection protocol)", tr: "Aort BT (diseksiyon protokolü)" }),
     img("ct-abdo-pelvis", { en: "CT abdomen / pelvis (contrast)", tr: "Batın / pelvis BT (kontrastlı)" }),
+    img("ct-kub", { en: "CT KUB (non-contrast, renal colic / stone protocol)", tr: "BT KUB (kontrastsız, taş protokolü)" }),
     img("us-abdomen", { en: "Ultrasound abdomen", tr: "Batın ultrasonu" }),
-    img("us-pelvis", { en: "Ultrasound pelvis (± Doppler)", tr: "Pelvik ultrason (± Doppler)" }),
+    img("us-ruq", { en: "Ultrasound RUQ (biliary)", tr: "Sağ üst kadran ultrasonu (bilier)" }),
+    img("us-pelvis", { en: "Ultrasound pelvis / transvaginal (± Doppler)", tr: "Pelvik / transvajinal ultrason (± Doppler)" }),
     img("us-renal", { en: "Renal / bladder ultrasound", tr: "Renal / mesane ultrasonu" }),
     img("us-dvt", { en: "Lower-limb venous Doppler (DVT)", tr: "Alt ekstremite venöz Doppler (DVT)" }),
-    img("echo", { en: "Echocardiogram / POCUS", tr: "Ekokardiyografi / POCUS" }),
+    img("us-fast", { en: "FAST ultrasound (trauma)", tr: "FAST ultrason (travma)" }),
+    img("echo", { en: "Echocardiogram (TTE) / POCUS", tr: "Ekokardiyografi (TTE) / POCUS" }),
     img("mri-brain", { en: "MRI brain", tr: "Beyin MR" }),
+    img("mri-cspine", { en: "MRI cervical spine", tr: "Servikal vertebra MR" }),
+    img("mri-lspine", { en: "MRI lumbar spine", tr: "Lomber vertebra MR" }),
+    img("mri-mrcp", { en: "MRI abdomen / MRCP", tr: "Batın MR / MRCP" }),
   ],
   poc: [
     { code: "poc-glucose", label: { en: "Point-of-care glucose", tr: "Yatak başı glukoz" }, kind: "laboratory", category: "poc" },
