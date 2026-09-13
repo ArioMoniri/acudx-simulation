@@ -29,7 +29,7 @@ import {
 } from "@/components/ui";
 import { useReveal, useStagger } from "@/lib/motion";
 import { stateMap } from "@/components/clinicalState";
-import { ConditionImage } from "@/components/ehr/ConditionImage";
+import { StudyViewer } from "@/components/ehr/StudyViewer";
 import {
   conceptText,
   interpretationKey,
@@ -1242,7 +1242,7 @@ function ImagingList({
             </p>
           )}
 
-          <ConditionImage
+          <StudyViewer
             className="mt-3"
             query={e.query}
             modality={e.modalityShort}
