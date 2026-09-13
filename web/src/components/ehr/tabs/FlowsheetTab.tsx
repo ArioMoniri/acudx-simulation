@@ -1,6 +1,8 @@
 import { useEffect, useReducer, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ChartLine, Pulse } from "@phosphor-icons/react";
 
+import { Card, Table, TBody, Td, Th, THead, Tr } from "@/components/ui";
 import { VitalCard } from "@/components/VitalCard";
 import { stateMap, trendGlyph } from "@/components/clinicalState";
 import { PatientPhoto } from "@/components/PatientPhoto";
@@ -333,8 +335,9 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
       {/* Flowsheet — latest summary + vitals over time */}
       <section className="flex flex-col gap-4">
         {/* Latest vitals summary (value + trend vs baseline) */}
-        <div className="rounded-card border border-border bg-surface p-4">
-          <h3 className="mb-3 text-sm font-semibold text-fg">
+        <Card padding="sm">
+          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-fg">
+            <Pulse weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("ehr2.flowsheet.summaryHeading")}
           </h3>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
@@ -369,36 +372,29 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
               );
             })}
           </dl>
-        </div>
+        </Card>
 
         {/* Vitals over time */}
-        <div className="overflow-hidden rounded-card border border-border bg-surface">
+        <Card padding="none" className="overflow-hidden">
           <div className="border-b border-border px-4 py-3">
-            <h3 className="text-sm font-semibold text-fg">
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+              <ChartLine weight="bold" className="h-4 w-4 text-muted" aria-hidden />
               {t("ehr.flowsheet.title")}
             </h3>
             <p className="text-xs text-muted">{t("ehr.flowsheet.subtitle")}</p>
           </div>
           <div className="max-h-[420px] overflow-auto">
-            <table className="w-full min-w-[520px] border-collapse text-sm">
+            <Table className="min-w-[520px]">
               <caption className="sr-only">{t("ehr.flowsheet.caption")}</caption>
-              <thead className="sticky top-0 z-10 bg-surface">
-                <tr className="border-b border-border text-start">
-                  <th scope="col" className="bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                    {t("ehr.flowsheet.time")}
-                  </th>
+              <THead>
+                <Tr>
+                  <Th>{t("ehr.flowsheet.time")}</Th>
                   {["hrShort", "bpShort", "rrShort", "spo2Short", "tempShort"].map((k) => (
-                    <th
-                      key={k}
-                      scope="col"
-                      className="bg-surface px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted"
-                    >
-                      {t(`vitals.${k}`)}
-                    </th>
+                    <Th key={k}>{t(`vitals.${k}`)}</Th>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
+                </Tr>
+              </THead>
+              <TBody>
                 {rows.map((p, i) => (
                   <FlowsheetRow
                     key={p.atMs}
@@ -408,13 +404,13 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
                     zebra={i % 2 === 1}
                   />
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
 
           {/* Status key */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-border px-4 py-2.5">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
+            <span className="eyebrow">
               {t("ehr2.flowsheet.legendHeading")}
             </span>
             {LEGEND_STATES.map((s) => {
@@ -433,7 +429,7 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
               );
             })}
           </div>
-        </div>
+        </Card>
       </section>
 
       {/* Enlarged, symptom-aware patient view (photo + live 3D signs) */}
@@ -470,15 +466,12 @@ function FlowsheetRow({
   ];
 
   return (
-    <tr
-      className={
-        "border-b border-border last:border-b-0 " +
-        (isLatest ? "bg-brand-tint/40" : zebra ? "bg-bg-subtle/40" : "")
-      }
+    <Tr
+      className={isLatest ? "bg-brand-tint/40" : zebra ? "bg-bg-subtle/40" : ""}
     >
       <th
         scope="row"
-        className="whitespace-nowrap px-3 py-2 text-start font-mono text-xs tabular-nums text-muted"
+        className="whitespace-nowrap px-3 py-2.5 text-start align-middle font-mono text-xs tabular-nums text-muted"
       >
         <span className="flex items-center gap-1.5">
           {isLatest ? (
@@ -499,7 +492,7 @@ function FlowsheetRow({
         const present = stateMap[c.state];
         const Icon = present.icon;
         return (
-          <td key={i} className="px-3 py-2">
+          <Td key={i}>
             <span className="inline-flex items-center gap-1.5 font-mono tabular-nums text-fg">
               {c.value}
               <Icon
@@ -510,9 +503,9 @@ function FlowsheetRow({
               />
               <span className="sr-only">{t(present.labelKey)}</span>
             </span>
-          </td>
+          </Td>
         );
       })}
-    </tr>
+    </Tr>
   );
 }

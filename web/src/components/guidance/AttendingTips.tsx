@@ -5,6 +5,7 @@ import {
   ChalkboardTeacher,
   CheckCircle,
   Circle,
+  ShieldCheck,
   Timer,
   WarningCircle,
   X,
@@ -91,13 +92,14 @@ function nextActionText(nba: NextBestAction, lang: Lang, t: TFunc): string {
 /* -------------------------------------------------------------------------- */
 
 /**
- * AttendingTips — a compact "attending physician" coach. It surfaces the single
- * next best action, a LIVE reading of how far the learner's work-up has come
- * (history / exam / orders covered + red-flag screening), and an on-demand
- * outline of what a strong work-up covers (DO / consider with timing nudges like
- * "ECG within 10 min"). Everything reacts to the real encounter log via
- * `computeCoverage`. Dismissible to a small reopen chip. It coaches PROCESS
- * ONLY and never names, ranks, or hints at the diagnosis.
+ * AttendingTips — an AMBOSS-style "attending physician" teaching card. It leads
+ * with the single next best action, then gives a LIVE reading of how far the
+ * learner's work-up has come (history / exam / orders covered + red-flag
+ * screening), and an on-demand outline of what a strong work-up covers (DO /
+ * consider with timing nudges like "ECG within 10 min") — every finding cited to
+ * its guideline. Everything reacts to the real encounter log via
+ * `computeCoverage`. Dismissible to a small reopen chip. It coaches PROCESS ONLY
+ * and never names, ranks, or hints at the diagnosis.
  *
  * The panel does NOT own a second guidance on/off switch. When the shared
  * `guidanceOn` is passed it mirrors that master switch; its own toggle instead
@@ -157,7 +159,7 @@ export function AttendingTips({
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5">
+        <div className="flex min-w-0 items-start gap-2.5">
           <span
             aria-hidden="true"
             className="grid h-8 w-8 shrink-0 place-items-center rounded-chip bg-brand-tint text-brand"
@@ -165,13 +167,18 @@ export function AttendingTips({
             <ChalkboardTeacher weight="fill" className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold tracking-tight text-fg">
-              {t("guidance3.guide.title")}
-            </h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-semibold tracking-tight text-fg">
+                {t("guidance3.guide.title")}
+              </h3>
+              <span className="rounded-pill bg-brand-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+                {t("guidance3.panel.education")}
+              </span>
+            </div>
             <p className="text-xs text-muted">{t("guidance3.guide.subtitle")}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {!coachingOff ? (
             <label className="flex items-center gap-1.5">
               <span className="eyebrow">
@@ -203,57 +210,60 @@ export function AttendingTips({
         </p>
       ) : (
         <>
-          {/* Live coverage — reactive to what the learner has / hasn't done. */}
-          <CoverageProgress coverage={coverage} t={t} />
-
-          {/* Next best action */}
+          {/* Next best action — the lead of the teaching card. */}
           {nba ? (
             <div
               className={cn(
-                "mt-3 flex items-start gap-2.5 rounded-control border p-3",
+                "mt-4 rounded-control border p-3",
                 nba.urgent
                   ? "border-[color:var(--state-critical)]/30 bg-[color-mix(in_srgb,var(--state-critical)_8%,transparent)]"
                   : "border-brand/25 bg-brand-tint/50",
               )}
             >
-              <ArrowRight
-                weight="bold"
-                className={cn(
-                  "mt-0.5 h-4 w-4 shrink-0",
-                  nba.urgent ? "text-[color:var(--state-critical)]" : "text-brand",
-                )}
-                aria-hidden
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="eyebrow">{t("guidance3.nba.title")}</span>
-                  {nba.urgent ? (
-                    <Badge tone="critical" dot className="py-0">
-                      {t("guidance3.nba.urgent")}
-                    </Badge>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-sm font-semibold leading-snug text-fg">
-                  {nextActionText(nba, lang, t)}
-                </p>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  {nba.kind === "workup" && nba.idealWindowMs != null ? (
-                    <span className="inline-flex items-center gap-1 text-xs text-muted">
-                      <Timer weight="bold" className="h-3.5 w-3.5" aria-hidden />
-                      {t("guidance3.nba.within", { minutes: minutesOf(nba.idealWindowMs) })}
-                    </span>
-                  ) : null}
-                  {nba.citationId ? (
-                    <CitationPill citationId={nba.citationId} lang={lang} />
-                  ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="eyebrow">{t("guidance3.nba.title")}</span>
+                {nba.urgent ? (
+                  <Badge tone="critical" dot className="py-0">
+                    {t("guidance3.nba.urgent")}
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="mt-2 flex items-start gap-2.5">
+                <span
+                  aria-hidden
+                  className={cn(
+                    "mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full text-white",
+                    nba.urgent ? "bg-[color:var(--state-critical)]" : "bg-brand",
+                  )}
+                >
+                  <ArrowRight weight="bold" className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold leading-snug text-fg">
+                    {nextActionText(nba, lang, t)}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    {nba.kind === "workup" && nba.idealWindowMs != null ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted">
+                        <Timer weight="bold" className="h-3.5 w-3.5" aria-hidden />
+                        {t("guidance3.nba.within", { minutes: minutesOf(nba.idealWindowMs) })}
+                      </span>
+                    ) : null}
+                    {nba.citationId ? (
+                      <CitationPill citationId={nba.citationId} lang={lang} />
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </div>
           ) : null}
 
+          {/* Live coverage — reactive to what the learner has / hasn't done. */}
+          <CoverageProgress coverage={coverage} t={t} />
+
           {/* What a strong work-up covers — only in "Full outline" detail mode. */}
           {detailOpen && coverage.workup.items.length > 0 ? (
-            <div className="mt-3">
+            <div className="mt-4">
               <SectionLabel>{t("guidance3.workup.title")}</SectionLabel>
               {critical.length > 0 ? (
                 <OutlineGroup heading={t("guidance3.workup.do")} tone="do">
@@ -272,8 +282,10 @@ export function AttendingTips({
             </div>
           ) : null}
 
-          <p className="mt-3 border-t border-border pt-2.5 text-[11px] leading-relaxed text-subtle">
-            {t("guidance3.guide.processOnly")}
+          {/* Standing safety framing — process only, never the diagnosis. */}
+          <p className="mt-4 flex items-start gap-1.5 border-t border-border pt-3 text-[11px] leading-relaxed text-subtle">
+            <ShieldCheck weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>{t("guidance3.guide.processOnly")}</span>
           </p>
         </>
       )}
@@ -316,7 +328,7 @@ function CoverageProgress({ coverage, t }: { coverage: Coverage; t: TFunc }) {
 
       {/* Meter — reflects overall completeness. */}
       <div
-        className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-border"
+        className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-bg-inset"
         role="presentation"
       >
         <div
@@ -325,9 +337,12 @@ function CoverageProgress({ coverage, t }: { coverage: Coverage; t: TFunc }) {
         />
       </div>
 
-      <div className="mt-2.5 grid grid-cols-3 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2">
         {groups.map((g) => (
-          <div key={g.key} className="min-w-0">
+          <div
+            key={g.key}
+            className="min-w-0 rounded-control border border-border bg-surface px-2.5 py-1.5"
+          >
             <p className="truncate text-[11px] font-medium text-muted">
               {t(`guidance3.coverage.${g.key}`)}
             </p>
@@ -339,7 +354,7 @@ function CoverageProgress({ coverage, t }: { coverage: Coverage; t: TFunc }) {
         ))}
       </div>
 
-      <p className="mt-2 text-[11px] text-subtle">
+      <p className="mt-2.5 text-[11px] text-subtle">
         {t("guidance3.guide.progressSummary", {
           defaultValue: "{{done}} of {{expected}} expected steps covered",
           done: totalDone,
@@ -374,7 +389,7 @@ function OutlineGroup({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-2">
+    <div className="mt-2.5">
       <span
         className={cn(
           "text-[11px] font-semibold uppercase tracking-wide",
@@ -402,7 +417,7 @@ function WorkupRow({
   const label = lang === "tr" ? item.labelTr : item.labelEn;
   const tone = timingTone[item.timing];
   return (
-    <li className="flex items-start gap-2">
+    <li className="flex items-start gap-2 rounded-control border border-border bg-surface px-2.5 py-2">
       {item.ordered ? (
         <CheckCircle
           weight="fill"

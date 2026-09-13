@@ -7,12 +7,26 @@ import {
   Scan,
   Virus,
   ShieldWarning,
+  WarningCircle,
   TrendUp,
   TrendDown,
   Minus,
 } from "@phosphor-icons/react";
 
-import { Card, SectionLabel, Switch } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  SectionLabel,
+  StatusDot,
+  Switch,
+  Table,
+  TableWrap,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from "@/components/ui";
 import { useReveal, useStagger } from "@/lib/motion";
 import { stateMap } from "@/components/clinicalState";
 import { ConditionImage } from "@/components/ehr/ConditionImage";
@@ -402,7 +416,7 @@ export function ResultsTab({ lang }: ResultsTabProps) {
         <motion.div {...summaryReveal}>
           <Card padding="md">
             <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <SummaryStat
                   label={t("ehr2.results.summaryHeading")}
                   value={t("ehr2.results.resultedOf", {
@@ -410,23 +424,24 @@ export function ResultsTab({ lang }: ResultsTabProps) {
                     total: state.orders.length,
                   })}
                 />
-                {pending.length > 0 ? (
-                  <SummaryStat
-                    value={t("ehr2.results.pendingCount", { count: pending.length })}
-                    tone="caution"
-                  />
-                ) : null}
-                {abnormalLabs.length > 0 ? (
-                  <SummaryStat
-                    value={t("ehr2.results.abnormalCount", { count: abnormalLabs.length })}
-                    tone="warning"
-                  />
-                ) : null}
-                {criticalLabs.length > 0 ? (
-                  <SummaryStat
-                    value={t("ehr2.results.criticalCount", { count: criticalLabs.length })}
-                    tone="critical"
-                  />
+                {pending.length > 0 || abnormalLabs.length > 0 || criticalLabs.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {pending.length > 0 ? (
+                      <Badge tone="caution" icon={<Timer weight="fill" className="h-3.5 w-3.5" aria-hidden />}>
+                        {t("ehr2.results.pendingCount", { count: pending.length })}
+                      </Badge>
+                    ) : null}
+                    {abnormalLabs.length > 0 ? (
+                      <Badge tone="warning" icon={<WarningCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />}>
+                        {t("ehr2.results.abnormalCount", { count: abnormalLabs.length })}
+                      </Badge>
+                    ) : null}
+                    {criticalLabs.length > 0 ? (
+                      <Badge tone="critical" icon={<ShieldWarning weight="fill" className="h-3.5 w-3.5" aria-hidden />}>
+                        {t("ehr2.results.criticalCount", { count: criticalLabs.length })}
+                      </Badge>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
               {groundLabs.length > 0 ? (
@@ -489,7 +504,8 @@ export function ResultsTab({ lang }: ResultsTabProps) {
       {/* Pending orders — in progress · ETA */}
       {pending.length > 0 ? (
         <Card padding="md">
-          <h3 className="mb-2 text-sm font-semibold text-fg">
+          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-fg">
+            <Timer weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("ehr.results.pendingHeading")}
           </h3>
           <ul className="flex flex-col gap-2">
@@ -843,26 +859,26 @@ function PanelTable({ group, lang }: { group: PanelGroup; lang: Lang }) {
             : t("ehr.results.reportedAt", { min: minutesOf(group.resultedAt) })}
         </span>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[460px] border-collapse text-sm">
+      <TableWrap>
+        <Table className="min-w-[460px]">
           <caption className="sr-only">
             {pick(group.title, lang)} — {t("ehr.results.labsCaption")}
           </caption>
-          <thead>
-            <tr className="border-b border-border text-start">
-              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.analyte")}</th>
-              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.value")}</th>
-              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.reference")}</th>
-              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.flag")}</th>
-            </tr>
-          </thead>
-          <tbody>
+          <THead>
+            <Tr>
+              <Th>{t("ehr.results.analyte")}</Th>
+              <Th>{t("ehr.results.value")}</Th>
+              <Th>{t("ehr.results.reference")}</Th>
+              <Th>{t("ehr.results.flag")}</Th>
+            </Tr>
+          </THead>
+          <TBody>
             {group.rows.map((r) => (
               <LabResultRow key={r.id} row={r} lang={lang} />
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TBody>
+        </Table>
+      </TableWrap>
     </section>
   );
 }
@@ -883,8 +899,8 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
       : t(`ehr.results.interp.${interpretationKey(obs.interpretation)}`);
 
   return (
-    <tr className="border-b border-border last:border-b-0">
-      <th scope="row" className="px-2 py-2 text-start font-medium text-fg">
+    <Tr>
+      <th scope="row" className="px-3 py-2.5 text-start align-middle font-medium text-fg">
         <span className="flex items-center gap-2">
           <span
             aria-hidden
@@ -894,7 +910,7 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
           {conceptText(obs.code, lang)}
         </span>
       </th>
-      <td className="px-2 py-2 font-mono tabular-nums text-fg">
+      <Td className="font-mono tabular-nums">
         {obs.valueQuantity ? (
           <>
             {obs.valueQuantity.value}
@@ -912,20 +928,20 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
             {t("orders2.results.estimated", { defaultValue: "est." })}
           </span>
         ) : null}
-      </td>
-      <td className="px-2 py-2 font-mono text-xs tabular-nums text-muted">
+      </Td>
+      <Td className="font-mono text-xs tabular-nums text-muted">
         {obs.referenceRange ?? "—"}
-      </td>
-      <td className="px-2 py-2">
-        <span
-          className="inline-flex items-center gap-1 text-xs font-medium"
-          style={{ color: present.colorVar }}
-        >
-          <Icon weight="fill" className="h-3.5 w-3.5" aria-hidden />
-          {flagText}
-        </span>
-      </td>
-    </tr>
+      </Td>
+      <Td>
+        {abnormal ? (
+          <Badge tone={present.tone} icon={<Icon weight="fill" className="h-3.5 w-3.5" aria-hidden />}>
+            {flagText}
+          </Badge>
+        ) : (
+          <StatusDot tone="normal" size="sm" label={flagText} />
+        )}
+      </Td>
+    </Tr>
   );
 }
 
@@ -970,27 +986,27 @@ function TrendPanel({ group, lang }: { group: TrendGroup; lang: Lang }) {
           })}
         </span>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[520px] border-collapse text-sm">
+      <TableWrap>
+        <Table className="min-w-[520px]">
           <caption className="sr-only">
             {pick(group.title, lang)} — {t("labs2.results.trendCaption", { defaultValue: "serial trend" })}
           </caption>
-          <thead>
-            <tr className="border-b border-border text-start">
-              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.analyte")}</th>
-              <th scope="col" className="px-2 py-1.5 eyebrow">{t("labs2.results.latest", { defaultValue: "Latest" })}</th>
-              <th scope="col" className="px-2 py-1.5 eyebrow">{t("labs2.results.trend", { defaultValue: "Trend" })}</th>
-              <th scope="col" className="px-2 py-1.5 eyebrow">{t("labs2.results.change", { defaultValue: "Change" })}</th>
-              <th scope="col" className="px-2 py-1.5 eyebrow">{t("ehr.results.flag")}</th>
-            </tr>
-          </thead>
-          <tbody>
+          <THead>
+            <Tr>
+              <Th>{t("ehr.results.analyte")}</Th>
+              <Th>{t("labs2.results.latest", { defaultValue: "Latest" })}</Th>
+              <Th>{t("labs2.results.trend", { defaultValue: "Trend" })}</Th>
+              <Th>{t("labs2.results.change", { defaultValue: "Change" })}</Th>
+              <Th>{t("ehr.results.flag")}</Th>
+            </Tr>
+          </THead>
+          <TBody>
             {group.analytes.map((a) => (
               <TrendRow key={a.code} analyte={a} lang={lang} />
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TBody>
+        </Table>
+      </TableWrap>
     </section>
   );
 }
@@ -1020,8 +1036,8 @@ function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
       : "—";
 
   return (
-    <tr className="border-b border-border last:border-b-0">
-      <th scope="row" className="px-2 py-2 text-start font-medium text-fg">
+    <Tr>
+      <th scope="row" className="px-3 py-2.5 text-start align-middle font-medium text-fg">
         <span className="flex items-center gap-2">
           <span
             aria-hidden
@@ -1031,7 +1047,7 @@ function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
           {conceptText(latest.code, lang)}
         </span>
       </th>
-      <td className="px-2 py-2 font-mono tabular-nums text-fg">
+      <Td className="font-mono tabular-nums">
         {latest.valueQuantity ? (
           <>
             {latest.valueQuantity.value}
@@ -1047,8 +1063,8 @@ function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
             {t("orders2.results.estimated", { defaultValue: "est." })}
           </span>
         ) : null}
-      </td>
-      <td className="px-2 py-2">
+      </Td>
+      <Td>
         {analyte.numeric && values.length >= 2 ? (
           <Sparkline values={values} color={present.colorVar} />
         ) : (
@@ -1064,8 +1080,8 @@ function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
               .join(" → ")}
           </span>
         )}
-      </td>
-      <td className="px-2 py-2">
+      </Td>
+      <Td>
         <span
           className="inline-flex items-center gap-1 font-mono text-xs tabular-nums"
           style={{ color: present.colorVar }}
@@ -1076,14 +1092,17 @@ function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
             <span className="ms-0.5 text-[10px] text-muted">{analyte.unit}</span>
           ) : null}
         </span>
-      </td>
-      <td className="px-2 py-2">
-        <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: present.colorVar }}>
-          <Icon weight="fill" className="h-3.5 w-3.5" aria-hidden />
-          {flagText}
-        </span>
-      </td>
-    </tr>
+      </Td>
+      <Td>
+        {abnormal ? (
+          <Badge tone={present.tone} icon={<Icon weight="fill" className="h-3.5 w-3.5" aria-hidden />}>
+            {flagText}
+          </Badge>
+        ) : (
+          <StatusDot tone="normal" size="sm" label={flagText} />
+        )}
+      </Td>
+    </Tr>
   );
 }
 

@@ -94,7 +94,7 @@ function MeterRow({
       <div className="h-1.5 flex-1 overflow-hidden rounded-pill bg-bg-inset">
         <div
           className={cn(
-            "h-full rounded-pill transition-[width] duration-500 ease-out",
+            "h-full rounded-pill transition-[width] duration-500 ease-out motion-reduce:transition-none",
             complete ? "bg-[color:var(--state-normal)]" : "bg-brand",
           )}
           style={{ width: `${pct}%` }}
@@ -112,13 +112,14 @@ function MeterRow({
 /* -------------------------------------------------------------------------- */
 
 /**
- * RealtimeGuidance — an AMBOSS-style clinical reference panel that updates live
- * as the learner works. A lead cited guideline card for the current focus,
+ * RealtimeGuidance — an AMBOSS-style clinical reference card that updates live
+ * as the learner works. A strong teaching header, a lead cited guideline card
+ * for the current focus (with the EDUCATION ONLY · REFERENCE framing),
  * expandable guideline detail, inline superscript citations that link to a
- * numbered sources block, a history/exam/work-up coverage meter, and a red-flag
- * checklist. Grounds against the live pod backend when available and degrades to
- * the case's cited guideline reference offline. PROCESS ONLY — it never renders,
- * derives from, or hints at the diagnosis.
+ * numbered references block, a history/exam/work-up coverage meter, and a
+ * red-flag checklist. Grounds against the live pod backend when available and
+ * degrades to the case's cited guideline reference offline. PROCESS ONLY — it
+ * never renders, derives from, or hints at the diagnosis.
  */
 export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
   const { t } = useTranslation();
@@ -176,35 +177,44 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
 
   const coverage: Coverage = computeCoverage(state, caseInstance);
   const [lead, ...rest] = noted.withNote;
+  const coveragePct = Math.round(coverage.overallPct * 100);
 
   return (
     <section
       aria-label={t("guidance3.panel.title")}
       className={cn("flex flex-col gap-3", className)}
     >
-      {/* Header */}
+      {/* Teaching-card header — authoritative title + live reference status. */}
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <SectionLabel icon={<BookOpen weight="bold" className="h-3.5 w-3.5" />}>
-            {t("guidance3.panel.title")}
-          </SectionLabel>
-          <p className="mt-1 text-xs text-muted">{t("guidance3.panel.subtitle")}</p>
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span
+            aria-hidden
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-chip bg-brand-tint text-brand"
+          >
+            <BookOpen weight="fill" className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold tracking-tight text-fg">
+              {t("guidance3.panel.title")}
+            </h3>
+            <p className="text-xs text-muted">{t("guidance3.panel.subtitle")}</p>
+          </div>
         </div>
         <ReferencePill degraded={grounding.degraded} loading={grounding.loading} />
       </div>
 
-      {/* Lead cited guideline card */}
+      {/* Lead cited guideline card — the focus of the moment. */}
       <Card variant="surface" padding="md">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="eyebrow text-brand">{t("guidance3.focus")}</span>
-          <span className="rounded-pill bg-brand-tint px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand">
+          <span className="rounded-pill bg-brand-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
             {t("guidance3.panel.education")}
           </span>
         </div>
-        <p className="mt-1 text-sm font-semibold tracking-tight text-fg">
+        <p className="mt-1.5 text-base font-semibold leading-snug tracking-tight text-fg">
           {chief}
           {lastLabel ? (
-            <span className="font-normal text-muted"> · {lastLabel}</span>
+            <span className="text-sm font-normal text-muted"> · {lastLabel}</span>
           ) : null}
         </p>
 
@@ -240,12 +250,12 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
               type="button"
               onClick={() => setExpanded((v) => !v)}
               aria-expanded={expanded}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded-control"
+              className="inline-flex items-center gap-1.5 rounded-control text-xs font-medium text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
               <CaretDown
                 weight="bold"
                 className={cn(
-                  "h-3 w-3 transition-transform",
+                  "h-3 w-3 transition-transform motion-reduce:transition-none",
                   expanded && "rotate-180",
                 )}
                 aria-hidden
@@ -276,8 +286,8 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
         <SectionLabel
           icon={<ListChecks weight="bold" className="h-3.5 w-3.5" />}
           trailing={
-            <span className="font-mono text-xs tabular-nums text-muted">
-              {Math.round(coverage.overallPct * 100)}%
+            <span className="rounded-pill bg-bg-subtle px-2 py-0.5 font-mono text-xs tabular-nums text-fg">
+              {coveragePct}%
             </span>
           }
         >
@@ -303,7 +313,7 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
           <SectionLabel
             icon={<FlagBanner weight="bold" className="h-3.5 w-3.5" />}
             trailing={
-              <span className="font-mono text-xs tabular-nums text-muted">
+              <span className="rounded-pill bg-bg-subtle px-2 py-0.5 font-mono text-xs tabular-nums text-muted">
                 {coverage.redFlags.screened}/{coverage.redFlags.total}
               </span>
             }
@@ -346,22 +356,29 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
         </Card>
       ) : null}
 
-      {/* Sources / footnotes */}
+      {/* Sources / references — provenance for every cited passage. */}
       {noted.notes.length > 0 ? (
-        <div>
-          <SectionLabel>{t("guidance3.sources.title")}</SectionLabel>
-          <ol className="mt-2 flex flex-col gap-1.5">
+        <Card variant="inset" padding="md">
+          <SectionLabel icon={<BookOpen weight="bold" className="h-3.5 w-3.5" />}>
+            {t("guidance3.sources.title")}
+          </SectionLabel>
+          <ol className="mt-3 flex flex-col gap-2.5">
             {noted.notes.map((fn) => (
               <li
                 key={fn.n}
                 id={`gd-fn-${fn.n}`}
-                className="flex gap-2 text-xs leading-relaxed text-muted"
+                className="flex gap-2.5 text-xs leading-relaxed text-muted"
               >
-                <span className="font-mono font-semibold text-brand">{fn.n}.</span>
+                <span
+                  aria-hidden
+                  className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-tint font-mono text-[11px] font-semibold tabular-nums text-brand"
+                >
+                  {fn.n}
+                </span>
                 <span className="min-w-0">
-                  <span className="font-medium text-fg">{fn.citation}</span>
+                  <span className="font-semibold text-fg">{fn.citation}</span>
                   {fn.source && fn.source !== fn.citation ? (
-                    <span> — {fn.source}</span>
+                    <span className="text-muted"> — {fn.source}</span>
                   ) : null}
                   {fn.url ? (
                     <>
@@ -381,8 +398,16 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
               </li>
             ))}
           </ol>
-        </div>
+        </Card>
       ) : null}
+
+      {/* Standing framing — a reference to structure the work-up, never advice. */}
+      <p className="px-1 text-[11px] leading-relaxed text-subtle">
+        {t("guidance3.panel.disclaimer", {
+          defaultValue:
+            "Education only — a guideline reference to structure the work-up, not medical advice or a diagnosis.",
+        })}
+      </p>
     </section>
   );
 }
@@ -397,7 +422,7 @@ function FootnoteRef({ n }: { n: number }) {
     <a
       href={`#gd-fn-${n}`}
       aria-label={`Source ${n}`}
-      className="ms-0.5 align-super text-[0.65rem] font-semibold text-brand no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
+      className="ms-0.5 align-super rounded text-[0.65rem] font-semibold text-brand no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
     >
       {n}
     </a>
