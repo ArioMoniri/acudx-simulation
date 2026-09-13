@@ -8,10 +8,17 @@ import {
   hasGroundTruthResult,
   isPanelOrder,
   syntheticNormalResult,
+  syntheticResultAt,
   type OrderCategory,
   type Orderable,
 } from "@/domain/orderables";
-import { chestPainNstemiCase } from "@/data/seedCases";
+import {
+  chestPainNstemiCase,
+  pulmonaryEmbolismCase,
+  appendicitisCase,
+  panicDisorderCase,
+} from "@/data/seedCases";
+import { currentVitals, type AdministeredTreatment } from "@/domain/clinicalCourse";
 import type { Observation } from "@/domain/fhir";
 
 /** The set of analyte LOINC codes a synthetic panel expands to. */
@@ -251,5 +258,98 @@ describe("orderables — micro & imaging narrative reports", () => {
       expect(observations).toHaveLength(0);
       expect(report?.conclusion?.en).toMatch(/no acute abnormality/i);
     }
+  });
+});
+
+describe("orderables — expanded catalog (imaging + labs)", () => {
+  it("adds the commonly-ordered ED studies the search was missing", () => {
+    const codes = new Set(ORDERABLES.map((o) => o.code));
+    for (const c of [
+      // CT: plain chest + non-contrast stone protocol
+      "ct-chest", "ct-kub",
+      // MRI (the search that only surfaced 'MRI brain')
+      "mri-cspine", "mri-lspine", "mri-mrcp",
+      // Ultrasound: RUQ (biliary) + FAST
+      "us-ruq", "us-fast",
+      // Labs
+      "uric-acid",
+    ]) {
+      expect(codes.has(c), `missing ${c}`).toBe(true);
+    }
+  });
+
+  it("marks the new CT/MRI/US studies as imaging kind", () => {
+    for (const c of ["ct-chest", "ct-kub", "mri-cspine", "mri-lspine", "mri-mrcp", "us-ruq", "us-fast"]) {
+      expect(getOrderableByCode(c)?.kind).toBe("imaging");
+    }
+  });
+
+  it("resolves uric acid to a single within-normal analyte", () => {
+    const o = getOrderableByCode("uric-acid")!;
+    const { observations, report } = syntheticNormalResult(o, chestPainNstemiCase);
+    expect(report).toBeUndefined();
+    expect(observations).toHaveLength(1);
+    expectWithinNormal(observations[0]);
+    expect(isPanelOrder("uric-acid")).toBe(true);
+  });
+
+  it("returns a normal impression for each new imaging order", () => {
+    for (const c of ["ct-chest", "ct-kub", "mri-cspine", "mri-lspine", "mri-mrcp", "us-ruq", "us-fast"]) {
+      const { observations, report } = syntheticNormalResult(getOrderableByCode(c)!, chestPainNstemiCase);
+      expect(observations).toHaveLength(0);
+      expect(report?.conclusion?.en).toMatch(/no acute abnormality/i);
+    }
+  });
+});
+
+/**
+ * Job B — results/vitals respond to what the student does + elapsed time,
+ * deterministically. The clinical-course engine is the source of truth: an
+ * untreated time-critical case drifts past its ideal action window, and a
+ * timely rescue keeps it better. All numbers stay bounded + reproducible; none
+ * are model/LLM-generated.
+ */
+describe("orderables/course — status- + timing-responsive results (Job B)", () => {
+  const MIN = 60_000;
+  const acs = chestPainNstemiCase;
+
+  it("deteriorates an untreated time-critical case past its ideal window", () => {
+    const none = currentVitals(acs, 45 * MIN, []);
+    const early = currentVitals(acs, 45 * MIN, [{ code: "1191", at: 5 * MIN }]);
+    // Untreated tachycardia + hypoxia are worse than when the key drug was on time.
+    expect(none.hr).toBeGreaterThan(early.hr);
+    expect(none.spo2).toBeLessThanOrEqual(early.spo2);
+  });
+
+  it("orders the trajectory by treatment timing: early < late < never", () => {
+    const at = 45 * MIN;
+    const hrEarly = currentVitals(acs, at, [{ code: "1191", at: 5 * MIN }]).hr;
+    const hrLate = currentVitals(acs, at, [{ code: "1191", at: 40 * MIN }]).hr;
+    const hrNone = currentVitals(acs, at, []).hr;
+    expect(hrEarly).toBeLessThan(hrLate);
+    expect(hrLate).toBeLessThanOrEqual(hrNone);
+  });
+
+  it("leaves low-acuity cases without a deterioration path stable", () => {
+    for (const c of [panicDisorderCase, appendicitisCase]) {
+      const plain = currentVitals(c, 45 * MIN, []);
+      const withTx = currentVitals(c, 45 * MIN, [{ code: "unrelated-000", at: 0 }]);
+      expect(plain).toEqual(withTx); // no deterioration overlay engaged
+    }
+  });
+
+  it("rises a serial synthetic troponin with draw time (rise kinetics)", () => {
+    const trop = getOrderableByCode("67151-1")!;
+    const value = (t: number) =>
+      syntheticResultAt(trop, acs, { dynamic: true, drawMs: t, drawIndex: 1 }).observations[0]?.valueQuantity?.value ?? 0;
+    expect(value(2 * 60 * MIN)).toBeGreaterThan(value(0));
+  });
+
+  it("keeps the dynamic synthetic path deterministic under the overlay", () => {
+    const lactate = getOrderableByCode("2524-7")!;
+    const ctx = { dynamic: true, drawMs: 40 * MIN, treatments: [] as AdministeredTreatment[], drawIndex: 1 };
+    const a = syntheticResultAt(lactate, pulmonaryEmbolismCase, ctx).observations.map((o) => o.valueQuantity?.value);
+    const b = syntheticResultAt(lactate, pulmonaryEmbolismCase, ctx).observations.map((o) => o.valueQuantity?.value);
+    expect(a).toEqual(b);
   });
 });
