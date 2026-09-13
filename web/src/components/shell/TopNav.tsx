@@ -44,11 +44,13 @@ const NAV_BY_ROLE: Record<ViewAsRole, NavItem[]> = {
     { to: "/", key: "nav.home", end: true },
     { to: "/cases", key: "nav.cases" },
     { to: "/authoring", key: "nav.authoring" },
+    { to: "/atlas", key: "nav.atlas", defaultLabel: "Atlas" },
   ],
   dean: [
     { to: "/", key: "nav.home", end: true },
     { to: "/institution", key: "nav.institution" },
     { to: "/authoring", key: "nav.authoring" },
+    { to: "/atlas", key: "nav.atlas", defaultLabel: "Atlas" },
   ],
 };
 
