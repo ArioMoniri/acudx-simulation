@@ -5,9 +5,11 @@ import { PageContainer, PageHeader } from "@/components/shell";
 import {
   CrossSectionViewer,
   LessonPanel,
+  Organ3DViewer,
   OrganLegend,
   type AtlasPlane,
 } from "@/components/atlas";
+import { cn } from "@/lib/cn";
 import {
   ATLAS_ORGANS,
   ATLAS_PRESETS,
@@ -35,6 +37,7 @@ export function AtlasPage() {
     sagittal: 0,
   });
   const [preset, setPreset] = useState<string>(ATLAS_PRESETS[0] ?? "abdomen");
+  const [mode, setMode] = useState<"slices" | "3d">("slices");
   const [visibleOrgans, setVisibleOrgans] = useState<Set<string>>(
     () => new Set(ATLAS_ORGANS.map((o) => o.id)),
   );
@@ -146,23 +149,62 @@ export function AtlasPage() {
           />
         </div>
 
-        <div className="order-1 min-w-0 lg:order-2">
-          <CrossSectionViewer
-            slice={slice}
-            plane={plane}
-            levelIndex={levelIndex}
-            sliceCount={planeSlices.length}
-            preset={preset}
-            presets={ATLAS_PRESETS}
-            organs={ATLAS_ORGANS}
-            visibleOrgans={visibleOrgans}
-            activeOrgan={activeOrgan}
-            onPlaneChange={setPlane}
-            onLevelChange={handleLevelChange}
-            onPresetChange={setPreset}
-            onHoverOrgan={setHoverOrgan}
-            onSelectOrgan={selectOrgan}
-          />
+        <div className="order-1 min-w-0 space-y-3 lg:order-2">
+          {/* View mode — 2D cross-sections vs the navigable 3D organ model
+              (both driven by the SAME segmented CT + the shared organ legend). */}
+          <div
+            role="tablist"
+            aria-label={t("atlas.mode.label", { defaultValue: "Atlas view" })}
+            className="inline-flex rounded-control border border-border bg-surface p-0.5"
+          >
+            {(
+              [
+                ["slices", t("atlas.mode.slices", { defaultValue: "Cross-section" })],
+                ["3d", t("atlas.mode.threeD", { defaultValue: "3D organs" })],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={mode === key}
+                onClick={() => setMode(key)}
+                className={cn(
+                  "rounded-[calc(var(--radius-control)-2px)] px-3 py-1.5 text-sm font-medium transition-colors",
+                  mode === key
+                    ? "bg-brand-tint text-brand"
+                    : "text-muted hover:text-fg",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {mode === "slices" ? (
+            <CrossSectionViewer
+              slice={slice}
+              plane={plane}
+              levelIndex={levelIndex}
+              sliceCount={planeSlices.length}
+              preset={preset}
+              presets={ATLAS_PRESETS}
+              organs={ATLAS_ORGANS}
+              visibleOrgans={visibleOrgans}
+              activeOrgan={activeOrgan}
+              onPlaneChange={setPlane}
+              onLevelChange={handleLevelChange}
+              onPresetChange={setPreset}
+              onHoverOrgan={setHoverOrgan}
+              onSelectOrgan={selectOrgan}
+            />
+          ) : (
+            <Organ3DViewer
+              organs={ATLAS_ORGANS}
+              visibleOrgans={visibleOrgans}
+              activeOrgan={activeOrgan}
+            />
+          )}
         </div>
 
         <div className="order-2 lg:order-3 lg:self-start">
