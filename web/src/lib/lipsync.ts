@@ -299,6 +299,13 @@ export interface SpeakOptions {
   rate?: number;
   /** BCP-47 language hint for the optional TTS voice, e.g. "tr" / "en". */
   lang?: string;
+  /**
+   * Force the animation (and the `speaking` flag) to last exactly this many
+   * milliseconds, overriding the text-length estimate. Pass the real spoken
+   * audio's duration so the "talking" treatment matches the voice clip instead
+   * of drifting from it. The viseme timeline is held/looped to fill the window.
+   */
+  durationMs?: number;
   /** Fired once when the utterance finishes (or is stopped). */
   onEnd?: () => void;
 }
@@ -373,6 +380,9 @@ export function useSpeech(options: UseSpeechOptions = {}): SpeechController {
   const stepRef = useRef(0);
 
   const timelineRef = useRef<Timeline | null>(null);
+  // When set (from SpeakOptions.durationMs), the animation runs for exactly this
+  // long — the spoken audio's real length — instead of the text estimate.
+  const durationRef = useRef<number | null>(null);
   const onEndRef = useRef<(() => void) | undefined>(undefined);
   const endedRef = useRef(true);
   const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -469,11 +479,15 @@ export function useSpeech(options: UseSpeechOptions = {}): SpeechController {
       elapsedRef.current += dt;
 
       const tl = timelineRef.current;
-      if (!tl || elapsedRef.current >= tl.totalMs) {
+      const endMs = durationRef.current ?? tl?.totalMs ?? 0;
+      if (!tl || elapsedRef.current >= endMs) {
         finish();
         return;
       }
-      const idx = frameIndexAt(tl.frames, elapsedRef.current, hintRef.current);
+      // If the real audio outlasts the text-derived timeline, hold near its end
+      // (a gentle closing mouth) rather than reading past it.
+      const at = Math.min(elapsedRef.current, tl.totalMs - 1);
+      const idx = frameIndexAt(tl.frames, at, hintRef.current);
       hintRef.current = idx;
       const f = tl.frames[idx];
       emit(f.jaw, f.shape, false);
@@ -489,7 +503,8 @@ export function useSpeech(options: UseSpeechOptions = {}): SpeechController {
       if (!activeRef.current) return; // paused offscreen/hidden
       elapsedRef.current += SIMPLE_STEP_MS;
       const tl = timelineRef.current;
-      if (!tl || elapsedRef.current >= tl.totalMs) {
+      const endMs = durationRef.current ?? tl?.totalMs ?? 0;
+      if (!tl || elapsedRef.current >= endMs) {
         finish();
         return;
       }
@@ -540,6 +555,8 @@ export function useSpeech(options: UseSpeechOptions = {}): SpeechController {
         return;
       }
       timelineRef.current = buildTimeline(trimmed, opts.rate ?? 1);
+      durationRef.current =
+        opts.durationMs && opts.durationMs > 0 ? opts.durationMs : null;
       elapsedRef.current = 0;
       hintRef.current = 0;
       lastTsRef.current = null;

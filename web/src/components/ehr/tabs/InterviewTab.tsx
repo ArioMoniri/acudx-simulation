@@ -1251,9 +1251,11 @@ function PatientPresence({
   // speaking treatment plays for the duration of the reply, and — when the voice
   // toggle is on — voices it via the Web Speech API. voiceOn is read from a ref so
   // the effect fires once per new reply (a mid-reply toggle applies to the next).
-  const { speak, speaking } = useSpeech();
+  const { speak, stop, speaking } = useSpeech();
   const speakRef = useRef(speak);
   speakRef.current = speak;
+  const stopRef = useRef(stop);
+  stopRef.current = stop;
   const voiceRef = useRef(voiceOn);
   voiceRef.current = voiceOn;
   // Patient identity for voice selection, in a ref so the per-utterance effect
@@ -1261,20 +1263,47 @@ function PatientPresence({
   const voiceMetaRef = useRef({ sex: visual.sexAtBirth, age: visual.age });
   voiceMetaRef.current = { sex: visual.sexAtBirth, age: visual.age };
   const speechLang = i18n.language?.startsWith("tr") ? "tr" : "en";
+  // Each new reply plays the "speaking" treatment on the patient. When the
+  // learner enabled voice, the talking animation is sized to the REAL ElevenLabs
+  // audio — its duration drives the clip (onStart) and its end stops it (onEnded)
+  // — so the patient talks for exactly as long as the voice lasts instead of
+  // looping. With voice off, the reply's text length estimates the duration.
   useEffect(() => {
     const text = utterance?.trim();
     if (!text) return;
-    // The photo/video "speaking" treatment always runs; the actual VOICE, when
-    // the learner enabled it, is the real ElevenLabs patient voice (via /tts),
-    // sex/age-matched — not the robotic Web Speech fallback.
-    speakRef.current(text, { voice: false, lang: speechLang });
+    const { sex, age } = voiceMetaRef.current;
     if (voiceRef.current) {
+      let cancelled = false;
       void speakAsPatient(text, {
-        sex: voiceMetaRef.current.sex,
-        age: voiceMetaRef.current.age,
+        sex,
+        age,
+        onStart: (durationMs) => {
+          if (cancelled) return;
+          speakRef.current(text, {
+            voice: false,
+            lang: speechLang,
+            durationMs: durationMs > 0 ? durationMs : undefined,
+          });
+        },
+        onEnded: () => {
+          if (!cancelled) stopRef.current();
+        },
+      }).then((ok) => {
+        // No audio (no key / blocked / error): fall back to the text estimate so
+        // the patient still visibly talks.
+        if (!ok && !cancelled) {
+          speakRef.current(text, { voice: false, lang: speechLang });
+        }
       });
+      return () => {
+        cancelled = true;
+        stopTts();
+        stopRef.current();
+      };
     }
-    return () => stopTts();
+    // Voice off — estimate the talking duration from the reply text.
+    speakRef.current(text, { voice: false, lang: speechLang });
+    return () => stopRef.current();
   }, [utterance, speechLang]);
   // Stop any patient audio the instant the learner turns voice off.
   useEffect(() => {
@@ -1325,7 +1354,6 @@ function PatientPresence({
           signs={signs}
           rr={vitals.rr}
           speaking={speaking}
-          utterance={utterance}
           alt={t("patientviewer.syntheticNote")}
           caption={caseInstance.patient.name}
           className="aspect-[4/5] w-full rounded-control"
