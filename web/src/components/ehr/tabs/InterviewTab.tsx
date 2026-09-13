@@ -19,7 +19,7 @@ import { EncounterChat } from "@/components/EncounterChat";
 import { GuidanceCard } from "@/components/GuidanceCard";
 import { PatientPhoto } from "@/components/PatientPhoto";
 import { useSpeech } from "@/lib/lipsync";
-import { speakAsPatient, stopTts } from "@/lib/tts";
+import { speakAsPatient, stopTts, unlockTts } from "@/lib/tts";
 import {
   SymptomSummary,
   photoSignsFromVitals,
@@ -827,7 +827,16 @@ export function InterviewTab({
           vitals={vitals}
           utterance={lastPatientUtterance}
           voiceOn={voiceOn}
-          onToggleVoice={() => setVoiceOn((v) => !v)}
+          onToggleVoice={() =>
+            setVoiceOn((v) => {
+              const next = !v;
+              // Unlock audio inside this click so the async ElevenLabs replies
+              // can actually play; stop any audio when turning voice off.
+              if (next) unlockTts();
+              else stopTts();
+              return next;
+            })
+          }
         />
 
         <ChipPanel
