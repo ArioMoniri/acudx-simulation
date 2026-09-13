@@ -322,7 +322,7 @@ export function ActivityTabs({
         <OrdersTab caseInstance={caseInstance} lang={lang} />
       </TabsContent>
       <TabsContent value="results">
-        <ResultsTab lang={lang} />
+        <ResultsTab lang={lang} guidanceOn={guidanceOn} />
       </TabsContent>
       <TabsContent value="guidance">
         <div className="grid gap-4 lg:grid-cols-2">

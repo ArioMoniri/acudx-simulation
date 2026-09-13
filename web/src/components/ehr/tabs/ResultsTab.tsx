@@ -58,6 +58,14 @@ import type { Bilingual, Lang } from "@/data/mock";
 
 export interface ResultsTabProps {
   lang: Lang;
+  /**
+   * When Guidance is OFF the learner must read each imaging/ECG study
+   * themselves: the interpretive read (report impression + curated teaching
+   * caption) is hidden in favour of a neutral prompt. The image, modality,
+   * timing, safety disclaimer, and license/attribution stay visible either way.
+   * Lab values/ranges are the data the student reads and are never gated.
+   */
+  guidanceOn: boolean;
 }
 
 /** Local 1 Hz tick so pending countdowns advance + synthetic orders finalise. */
@@ -205,7 +213,7 @@ function isAbnormal(obs: Observation): boolean {
  * representative image via ConditionImage. Any order the case carries no ground
  * truth for still resolves — as a plausible within-normal-limits result.
  */
-export function ResultsTab({ lang }: ResultsTabProps) {
+export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
   const { t } = useTranslation();
   const state = useEncounterState();
   const [abnormalOnly, setAbnormalOnly] = useState(false);
@@ -571,7 +579,7 @@ export function ResultsTab({ lang }: ResultsTabProps) {
             <Scan weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("ehr.results.imagingHeading")}
           </h3>
-          <ImagingList entries={shownImaging} lang={lang} />
+          <ImagingList entries={shownImaging} lang={lang} guidanceOn={guidanceOn} />
         </Card>
       ) : null}
 
@@ -1169,7 +1177,15 @@ function MicroList({ entries, lang }: { entries: MicroEntry[]; lang: Lang }) {
 }
 
 /** Imaging reports, each with a real representative image + ordered→resulted times. */
-function ImagingList({ entries, lang }: { entries: ImagingEntry[]; lang: Lang }) {
+function ImagingList({
+  entries,
+  lang,
+  guidanceOn,
+}: {
+  entries: ImagingEntry[];
+  lang: Lang;
+  guidanceOn: boolean;
+}) {
   const { t } = useTranslation();
   const { container, item } = useStagger();
 
@@ -1202,23 +1218,36 @@ function ImagingList({ entries, lang }: { entries: ImagingEntry[]; lang: Lang })
             </p>
           ) : null}
 
-          {e.conclusion ? (
-            <p className="mt-1.5 text-sm leading-relaxed text-fg">
-              <span className="font-medium text-muted">{t("ehr.results.impression")}: </span>
-              {pick(e.conclusion, lang)}
-              {e.synthetic ? (
-                <span className="ms-1 text-xs italic text-muted">
-                  ({t("orders2.results.wnl")})
-                </span>
-              ) : null}
+          {/* Interpretive read — gated on Guidance. With Guidance OFF the learner
+              reads the study themselves, so the report impression is replaced by
+              a neutral prompt; the image, modality, timing, safety disclaimer and
+              license/attribution below stay visible either way. */}
+          {guidanceOn ? (
+            e.conclusion ? (
+              <p className="mt-1.5 text-sm leading-relaxed text-fg">
+                <span className="font-medium text-muted">{t("ehr.results.impression")}: </span>
+                {pick(e.conclusion, lang)}
+                {e.synthetic ? (
+                  <span className="ms-1 text-xs italic text-muted">
+                    ({t("orders2.results.wnl")})
+                  </span>
+                ) : null}
+              </p>
+            ) : null
+          ) : (
+            <p className="mt-1.5 text-sm italic leading-relaxed text-muted">
+              {t("ehr.results.interpretYourself", {
+                defaultValue: "Interpret this study — enable Guidance for the read.",
+              })}
             </p>
-          ) : null}
+          )}
 
           <ConditionImage
             className="mt-3"
             query={e.query}
             modality={e.modalityShort}
             caption={e.conclusion ? pick(e.conclusion, lang) : undefined}
+            showInterpretation={guidanceOn}
           />
         </motion.li>
       ))}

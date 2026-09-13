@@ -22,6 +22,7 @@
  */
 
 import {
+  memo,
   useEffect,
   useReducer,
   useRef,
@@ -68,6 +69,9 @@ import {
 
 const WAVE_W = 260;
 const WAVE_H = 60;
+
+/** Fixed phase for the reduced-motion static trace (so it never re-renders per tick). */
+const STATIC_TRACE_SEC = 2;
 
 type LaneId = "hr" | "spo2" | "bp" | "rr" | "temp";
 type Level = "normal" | "warning" | "critical";
@@ -208,10 +212,15 @@ export interface LiveVitalsMonitorProps {
   className?: string;
 }
 
-const FLASH_KEYFRAMES = `
-@keyframes acudx-lane-flash {
-  0%, 100% { background-color: transparent; }
-  50% { background-color: color-mix(in srgb, var(--acudx-flash) 22%, transparent); }
+/**
+ * Out-of-range lanes pulse gently between two faint tints — never a hard on/off
+ * strobe. The steady colored left border (set per-lane inline) carries the
+ * primary alarm signal; this only adds a slow, calm breathing tint.
+ */
+const ALARM_KEYFRAMES = `
+@keyframes acudx-lane-pulse {
+  0%, 100% { background-color: color-mix(in srgb, var(--acudx-flash) 6%, transparent); }
+  50% { background-color: color-mix(in srgb, var(--acudx-flash) 16%, transparent); }
 }`;
 
 export function LiveVitalsMonitor({ label, className }: LiveVitalsMonitorProps) {
@@ -228,6 +237,21 @@ export function LiveVitalsMonitor({ label, className }: LiveVitalsMonitorProps) 
   vitalsRef.current = vitals;
 
   const pathRefs = useRef<Partial<Record<LaneId, SVGPathElement | null>>>({});
+
+  // Stable per-lane ref setters. A fresh callback ref on every render would make
+  // React detach + re-attach each waveform path on the 1 Hz tick (ref churn that
+  // stutters the trace) and would also defeat React.memo on <Lane>. Build once.
+  const registerRefsRef = useRef<Record<LaneId, (el: SVGPathElement | null) => void> | null>(null);
+  if (registerRefsRef.current === null) {
+    const setters = {} as Record<LaneId, (el: SVGPathElement | null) => void>;
+    for (const laneId of LANE_ORDER) {
+      setters[laneId] = (el: SVGPathElement | null) => {
+        pathRefs.current[laneId] = el;
+      };
+    }
+    registerRefsRef.current = setters;
+  }
+  const registerRefs = registerRefsRef.current;
 
   const hasVitals = vitals != null;
   const animate = !reduced && hasVitals;
@@ -323,7 +347,7 @@ export function LiveVitalsMonitor({ label, className }: LiveVitalsMonitorProps) 
       className={cn("overflow-hidden rounded-card border", className)}
       style={{ backgroundColor: "var(--monitor-bg)", borderColor: "var(--monitor-border)" }}
     >
-      <style>{FLASH_KEYFRAMES}</style>
+      <style>{ALARM_KEYFRAMES}</style>
 
       <div className="p-4">
         <TopStrip label={label} online clock={clock} t={t} />
@@ -378,12 +402,10 @@ export function LiveVitalsMonitor({ label, className }: LiveVitalsMonitorProps) 
             reduced={reduced}
             initialD={
               reduced && WAVE_LANES.has(id)
-                ? pathForLane(id, vitals, clockMs / 1000)
+                ? pathForLane(id, vitals, STATIC_TRACE_SEC)
                 : undefined
             }
-            registerRef={(el) => {
-              pathRefs.current[id] = el;
-            }}
+            registerRef={registerRefs[id]}
           />
         ))}
       </div>
@@ -474,7 +496,7 @@ interface LaneProps {
   registerRef: (el: SVGPathElement | null) => void;
 }
 
-function Lane({
+const Lane = memo(function Lane({
   id,
   level,
   value,
@@ -497,14 +519,17 @@ function Lane({
 
   const IconCmp = ICONS[id];
 
-  // Lane flashes when the parameter is out of range. Reduced motion is honored
-  // globally (the app's CSS collapses animation duration), leaving a static tint.
+  // Out-of-range lanes carry a steady colored left border plus a gentle ~1.8s
+  // breathing pulse — never a fast full-lane strobe. Under reduced motion the
+  // pulse collapses to a static tint. In-range lanes get no animation at all.
   const laneStyle: CSSProperties = flashing
     ? ({
         borderColor: "var(--monitor-border)",
-        animation: "acudx-lane-flash 1.1s var(--ease-out) infinite",
         boxShadow: `inset 3px 0 0 0 ${valueColor}`,
         "--acudx-flash": valueColor,
+        ...(reduced
+          ? { backgroundColor: `color-mix(in srgb, ${valueColor} 12%, transparent)` }
+          : { animation: "acudx-lane-pulse 1.8s ease-in-out infinite" }),
       } as unknown as CSSProperties)
     : { borderColor: "var(--monitor-border)" };
 
@@ -599,7 +624,7 @@ function Lane({
       </div>
     </div>
   );
-}
+});
 
 /* -------------------------------------------------------------------------- */
 /* Utils                                                                      */

@@ -1,3 +1,6 @@
+// speechInput.ts — legacy Web Speech dictation. The Interview composer now uses
+// ElevenLabs speech-to-text (src/lib/stt.ts); this remains for any other caller.
+// (Original header below.)
 // speechInput.ts — push-to-talk voice DICTATION for the learner's composer.
 //
 // Web Speech STT is BROWSER-PROVIDED (the engine may use the browser vendor's
