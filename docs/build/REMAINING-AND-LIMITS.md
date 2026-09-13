@@ -61,10 +61,17 @@ These work now; the note says what unlocks the next level.
     numbers stay bounded) for richer, question-aware read-outs.
 
 - **Catalog completeness (tests + imaging).** Expanded to the common ED studies.
-  - *Could improve:* **curated real images** for the new modalities
-    (US / MRI / echo) the way ECG/CXR/CT already are (open-license, verified),
-    so every ordered study shows an accurate representative image instead of a
-    live web-search fallback.
+  Ordered **US / echo / MRI** (and normal-read CT head) now show **real,
+  curated, open-licensed** representative images — 11 verified Commons studies
+  (normal echo, normal abdominal US, cholelithiasis, hydronephrosis, AAA, normal
+  brain MRI, DWI stroke, lumbar-spine MRI, cervical-spine MRI, MRCP, normal head
+  CT), matching the ECG/CXR/CT bank; the key fix is that a **NORMAL read** now
+  resolves (it is queried as literally `"normal <study>"`), which is what left
+  the echo blank before.
+  - *Residual imaging gaps (next):* curated **normal chest / abdominal CT**,
+    **normal AXR**, and an **extremity X-ray / fracture** set; and US/MRI
+    *pathology* beyond the curated stills (DVT clot, FAST free fluid, ectopic,
+    cord compression, ductal stone) still fall to the live web-search fallback.
 
 - **Interview panel UX.** Scrolling, Q&A layout, and profile-photo panel
   polished to the AMBOSS/Epic language.

@@ -26,7 +26,7 @@
 
 import type { CaseInstance } from "@/domain/case";
 
-export type ImagingModality = "ecg" | "cxr" | "ct" | "axr";
+export type ImagingModality = "ecg" | "cxr" | "ct" | "axr" | "us" | "mri";
 
 export interface CuratedImagingAttribution {
   /** Author / uploader, as credited on the Commons file page. */
@@ -392,6 +392,189 @@ export const CURATED_IMAGING: readonly CuratedImaging[] = [
       sourceUrl: "https://commons.wikimedia.org/wiki/File:1._Bowel-obstruction-x-ray.jpg",
     },
   },
+
+  /* ----------------------- Ultrasound / echo ---------------------------- */
+  {
+    // Generic normal ultrasound — the default for a NORMAL/WNL ultrasound read
+    // (abdomen / RUQ / FAST / renal / pelvis / DVT), keyed broadly on
+    // "ultrasound"/"doppler"/"normal" so an ordered study that reads WNL shows
+    // a real normal study rather than the empty state.
+    id: "us-abdomen-normal",
+    modality: "us",
+    conditionKeys: [
+      "ultrasound", "us", "sonograph", "doppler", "normal", "no acute", "no free fluid",
+      "abdominal ultrasound", "abdomen", "ruq", "right upper quadrant", "biliary", "hepatobiliary",
+      "liver", "fast", "trauma", "renal ultrasound", "bladder", "pelvis", "pelvic ultrasound",
+    ],
+    src: img("us-abdomen-normal"),
+    caption: { en: "Abdominal ultrasound — normal (representative)", tr: "Abdominal ultrason — normal (temsili)" },
+    attribution: {
+      author: "Mikael Häggström",
+      license: "CC0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Ultrasonography_of_a_normal_liver.jpg",
+    },
+  },
+  {
+    id: "echo-normal",
+    modality: "us",
+    conditionKeys: [
+      "echocardiogram", "echocardiography", "echo", "tte", "pocus", "transthoracic echo",
+      "cardiac ultrasound", "apical four chamber", "ejection fraction", "four chamber",
+    ],
+    src: img("echo-normal"),
+    caption: { en: "Transthoracic echocardiogram — apical 4-chamber (representative)", tr: "Transtorasik ekokardiyogram — apikal 4 boşluk (temsili)" },
+    attribution: {
+      author: "Wikimedia Commons",
+      license: "Public domain",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Echocardiogram_4chambers.jpg",
+    },
+  },
+  {
+    id: "us-cholelithiasis",
+    modality: "us",
+    conditionKeys: [
+      "K80", "gallstone", "gallstones", "cholelithiasis", "gallbladder stone", "cholelith",
+      "biliary colic", "cholecystitis", "safra taşı", "kolelitiazis", "kolesistit",
+    ],
+    src: img("us-cholelithiasis"),
+    caption: { en: "Gallbladder ultrasound — gallstone with acoustic shadow", tr: "Safra kesesi ultrasonu — akustik gölgeli safra taşı" },
+    attribution: {
+      author: "Nevit Dilmen",
+      license: "CC BY-SA 3.0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Ultrasound_image_of_gallbladder_stone_Gallstone_091937515.jpg",
+    },
+  },
+  {
+    id: "us-hydronephrosis",
+    modality: "us",
+    conditionKeys: [
+      "N13", "hydronephrosis", "hydroureter", "pelvicalyceal dilatation", "dilated calyces",
+      "obstructive uropathy", "ureteric obstruction", "hidronefroz", "hidroüreter",
+    ],
+    src: img("us-hydronephrosis"),
+    caption: { en: "Renal ultrasound — moderate hydronephrosis (dilated calyces)", tr: "Renal ultrason — orta derecede hidronefroz (genişlemiş kalisler)" },
+    attribution: {
+      author: "Cerevisae",
+      license: "CC BY-SA 4.0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Ultrasound_of_right_kidney_moderate_hydronephrosis.jpg",
+    },
+  },
+  {
+    id: "us-aaa",
+    modality: "us",
+    conditionKeys: [
+      "I71", "abdominal aortic aneurysm", "aortic aneurysm", "aaa", "aneurysmal aorta",
+      "aneurysm", "abdominal aorta", "aort anevrizması", "anevrizma",
+    ],
+    src: img("us-aaa"),
+    caption: { en: "Aortic ultrasound — abdominal aortic aneurysm (sagittal)", tr: "Aort ultrasonu — abdominal aort anevrizması (sagital)" },
+    attribution: {
+      author: "Mikael Häggström",
+      license: "CC0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Ultrasonography_of_abdominal_aortic_aneurysm_in_sagittal_plane.jpg",
+    },
+  },
+
+  /* -------------------------------- MRI --------------------------------- */
+  {
+    // Generic normal MRI + normal brain (spine / MRCP reads route to their own
+    // region entries below, which outscore this on the region keyword).
+    id: "mri-brain-normal",
+    modality: "mri",
+    conditionKeys: [
+      "mri brain", "brain mri", "normal brain", "cranial mri", "intracranial", "cerebral",
+      "mri head", "normal", "no acute", "no restricted diffusion", "no acute intracranial",
+    ],
+    src: img("mri-brain-normal"),
+    caption: { en: "Brain MRI — normal, axial T2 (representative)", tr: "Beyin MRG — normal, aksiyel T2 (temsili)" },
+    attribution: {
+      author: "Novaksean",
+      license: "CC BY-SA 4.0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Normal_axial_T2-weighted_MR_image_of_the_brain.jpg",
+    },
+  },
+  {
+    id: "mri-brain-infarct",
+    modality: "mri",
+    conditionKeys: [
+      "I63", "infarct", "infarction", "ischemic stroke", "ischaemic stroke", "acute stroke",
+      "cva", "restricted diffusion", "diffusion restriction", "dwi", "cerebral infarction",
+      "middle cerebral artery", "mca infarct", "inme", "iskemik inme", "difüzyon kısıtlılığı",
+    ],
+    src: img("mri-brain-infarct"),
+    caption: { en: "Brain MRI (DWI) — acute infarct, restricted diffusion", tr: "Beyin MRG (DWI) — akut enfarkt, difüzyon kısıtlılığı" },
+    attribution: {
+      author: "Shazia Mirza and Sankalp Gokhale",
+      license: "CC BY 4.0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:DWE_MRI_of_cerebral_infarction.png",
+    },
+  },
+  {
+    id: "mri-lspine",
+    modality: "mri",
+    conditionKeys: [
+      "M51", "lumbar spine", "mri lumbar", "lumbar", "l-spine", "lumbosacral", "cauda equina",
+      "disc herniation", "lumbar disc", "disc prolapse", "sciatica", "lomber", "disk hernisi",
+    ],
+    src: img("mri-lspine"),
+    caption: { en: "Lumbar spine MRI — sagittal T2 (representative)", tr: "Lomber spinal MRG — sagital T2 (temsili)" },
+    attribution: {
+      author: "Stillwaterising",
+      license: "CC0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Lumbar_MRI_t2-tse-rst-sagittal_05.jpg",
+    },
+  },
+  {
+    id: "mri-cspine",
+    modality: "mri",
+    conditionKeys: [
+      "M50", "cervical spine", "mri cervical", "cervical", "c-spine", "cervical disc",
+      "degenerative disc", "spondylosis", "osteophyte", "cord compression", "myelopathy",
+      "servikal", "boyun", "dejeneratif disk",
+    ],
+    src: img("mri-cspine"),
+    caption: { en: "Cervical spine MRI — degenerative disc disease, sagittal (representative)", tr: "Servikal spinal MRG — dejeneratif disk hastalığı, sagital (temsili)" },
+    attribution: {
+      author: "Stillwaterising",
+      license: "CC BY-SA 3.0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:Cervical_Spine_MRI_showing_disc_herniation.jpg",
+    },
+  },
+  {
+    id: "mri-mrcp",
+    modality: "mri",
+    conditionKeys: [
+      "mrcp", "cholangiopancreatography", "mri abdomen", "biliary tree", "pancreatic duct",
+      "common bile duct", "choledocholithiasis", "biliary mri", "koledok", "safra yolları",
+    ],
+    src: img("mri-mrcp"),
+    caption: { en: "MRCP — biliary and pancreatic ducts (representative)", tr: "MRCP — safra ve pankreas kanalları (temsili)" },
+    attribution: {
+      author: "Hellerhoff",
+      license: "CC BY-SA 4.0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:MRCP_Normalbefund_66M_-_MR_-_001.jpg",
+    },
+  },
+
+  /* -------------------------- CT (normal head) -------------------------- */
+  {
+    // Normal non-contrast head CT — resolves a WNL head-CT read (e.g. r/o
+    // haemorrhage → normal). Region-keyed so it never displaces the CT
+    // pathology entries (stroke / ICH / SAH) on an abnormal read.
+    id: "ct-head-normal",
+    modality: "ct",
+    conditionKeys: [
+      "ct head", "head ct", "cranial ct", "non-contrast head", "noncontrast head", "normal ct head",
+      "no acute intracranial", "no intracranial", "no haemorrhage", "no hemorrhage", "kraniyal bt",
+    ],
+    src: img("ct-head-normal"),
+    caption: { en: "Non-contrast head CT — no acute intracranial abnormality (representative)", tr: "Kontrastsız kraniyal BT — akut intrakraniyal anormallik yok (temsili)" },
+    attribution: {
+      author: "Mikael Häggström",
+      license: "CC0",
+      sourceUrl: "https://commons.wikimedia.org/wiki/File:CT_of_a_normal_brain,_axial_18.png",
+    },
+  },
 ] as const;
 
 /* -------------------------------------------------------------------------- */
@@ -495,14 +678,18 @@ export function resolveConditionImaging(
   return pickBest(isAllowed, input);
 }
 
-/** Map a short modality label (e.g. "ECG", "CT", "X-ray") + query text to the
- *  curated modality buckets it may resolve to. `null` → allow every modality
- *  (unknown label); `[]` → a modality we do not curate (US / MRI) → no match. */
+/** Map a short modality label (e.g. "ECG", "CT", "US", "MRI", "X-ray") + query
+ *  text to the curated modality buckets it may resolve to. `null` → allow every
+ *  modality (unknown label). Every modality we classify is now curated. */
 function bucketsForLabel(label: string, text: string): ImagingModality[] | null {
   const l = label.toLowerCase();
   if (/ecg|ekg|electrocardio|elektrokardi/.test(l)) return ["ecg"];
   if (/\bct\b|ctpa|tomograph|angiogram|angiography|bt\b/.test(l)) return ["ct"];
-  if (/mri|magnetic|ultrasound|\bus\b|doppler|echo|sonograph/.test(l)) return [];
+  // MRI + ultrasound/echo must be classified BEFORE the x-ray branch: labels
+  // like "MRI abdomen / MRCP" and "Ultrasound abdomen" contain "abdom", which
+  // the x-ray branch would otherwise mis-route to AXR.
+  if (/mri|magnetic|mrcp/.test(l)) return ["mri"];
+  if (/ultrasound|\bus\b|doppler|echo|sonograph|pocus/.test(l)) return ["us"];
   if (/x-?ray|radiograph|cxr|axr|kub|grafi|röntgen|roentgen|chest|abdom|akciğer|karın/.test(l)) {
     return /abdom|bowel|ileus|obstruction|obstrüksiyon|kub|karın|bağırsak|barsak|tıkan/.test(text)
       ? ["axr"]
@@ -525,7 +712,7 @@ export function resolveCuratedImagingByText(
   const text = (query ?? "").toLowerCase();
   if (!text.trim()) return null;
   const buckets = bucketsForLabel((modalityLabel ?? "").toLowerCase() + " " + text, text);
-  if (buckets && buckets.length === 0) return null; // US / MRI — not curated
+  if (buckets && buckets.length === 0) return null; // defensive — no empty buckets today
   const isAllowed = buckets ? (m: ImagingModality) => buckets.includes(m) : () => true;
   return pickBest(isAllowed, { text });
 }
