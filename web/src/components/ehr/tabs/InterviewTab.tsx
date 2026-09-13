@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Stethoscope,
@@ -13,9 +13,9 @@ import {
   SpeakerHigh,
   SpeakerSlash,
   Microphone,
+  User,
 } from "@phosphor-icons/react";
 
-import { EncounterChat } from "@/components/EncounterChat";
 import { GuidanceCard } from "@/components/GuidanceCard";
 import { PatientPhoto } from "@/components/PatientPhoto";
 import { useSpeech } from "@/lib/lipsync";
@@ -26,7 +26,7 @@ import {
   type VitalsLike,
 } from "@/components/PatientViewer";
 import { resolvePatientVisual } from "@/domain/patientIdentity";
-import { Badge, Button, Switch, TextInput } from "@/components/ui";
+import { Badge, Button, SectionLabel, Switch, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
   askQuestion,
@@ -58,7 +58,12 @@ import {
   patientTurn as backendPatientTurn,
   type PatientTurnRequest,
 } from "@/lib/backend";
-import type { GuidanceHint, Lang, TranscriptTurn } from "@/data/mock";
+import type {
+  GuidanceHint,
+  Lang,
+  TranscriptRole,
+  TranscriptTurn,
+} from "@/data/mock";
 
 export interface InterviewTabProps {
   caseInstance: CaseInstance;
@@ -255,6 +260,9 @@ export function InterviewTab({
   useEffect(() => () => cancelRecording(), []);
   const [notice, setNotice] = useState<GuardNoticeState | null>(null);
   const typingTimer = useRef<number | null>(null);
+  // The Q&A transcript's own scroll container — auto-scrolled to the newest turn
+  // as replies land (and after the learner sends) so the composer stays put.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // The free-text / voice / live transcript now lives in the encounter store
   // (state.dialogue): it is logged as encounter events, survives tab-switch /
@@ -363,6 +371,20 @@ export function InterviewTab({
     () => ({ ...affectByTurn, ...dialogueAffect }),
     [affectByTurn, dialogueAffect],
   );
+
+  // Keep the newest exchange in view: scroll the transcript to the bottom when a
+  // turn is appended and when the patient starts / stops "typing". Honors
+  // prefers-reduced-motion (jumps instead of animating). Purely visual — it reads
+  // the derived transcript length, never the store wiring.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const reduce =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollTo({ top: el.scrollHeight, behavior: reduce ? "auto" : "smooth" });
+  }, [allTurns.length, typing]);
 
   // The patient's most recent spoken line (in the encounter's content language),
   // fed to the 3D avatar so its mouth lip-syncs the reply as it lands. Changing
@@ -693,24 +715,68 @@ export function InterviewTab({
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,300px)]">
+    <div className="grid items-start gap-4 lg:grid-cols-[1fr_minmax(0,300px)]">
       {/* Dialogue column */}
-      <div className="flex min-h-[420px] flex-col rounded-card border border-border bg-bg-subtle">
-        {allTurns.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center p-8 text-center">
-            <p className="max-w-xs text-sm text-muted">
-              {t("ehr.interview.empty")}
-            </p>
-          </div>
-        ) : (
-          <EncounterChat
-            turns={allTurns}
-            lang={lang}
-            patientTyping={typing}
-            affectByTurn={allAffect}
-            className="max-h-[46vh] flex-1 px-3 sm:px-4"
-          />
-        )}
+      <div className="flex min-h-[420px] min-w-0 flex-col overflow-hidden rounded-card border border-border bg-surface">
+        {/* Q&A transcript — its OWN scroll region (bounded height), so the composer
+            below stays pinned and visible while the exchange grows. Auto-scrolls
+            to the newest turn via the effect above. */}
+        <div
+          ref={scrollRef}
+          role="log"
+          aria-live="polite"
+          aria-label={t("encounter.transcriptLabel")}
+          className="min-h-[15rem] max-h-[46vh] flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-4"
+        >
+          {allTurns.length === 0 && !typing ? (
+            <div className="flex h-full min-h-[13rem] items-center justify-center px-4 text-center">
+              <p className="max-w-xs text-sm text-muted">
+                {t("ehr.interview.empty")}
+              </p>
+            </div>
+          ) : (
+            <ol className="flex flex-col gap-2">
+              {allTurns.map((turn, i) => {
+                const prevRole = i > 0 ? allTurns[i - 1].role : null;
+                const nextRole =
+                  i < allTurns.length - 1 ? allTurns[i + 1].role : null;
+                const startsGroup = turn.role !== prevRole;
+                const endsGroup = turn.role !== nextRole;
+                const isPatient = turn.role === "patient";
+                return (
+                  <ChatTurn
+                    key={turn.id}
+                    role={turn.role}
+                    text={turn[lang]}
+                    speaker={
+                      isPatient ? t("encounter.patient") : t("encounter.you")
+                    }
+                    affect={
+                      isPatient && endsGroup
+                        ? allAffect[turn.id] ?? t("encounter.affect.distress")
+                        : undefined
+                    }
+                    showMeta={startsGroup}
+                    spaced={startsGroup && i > 0}
+                  />
+                );
+              })}
+              {typing ? (
+                <TypingRow
+                  showAvatar={
+                    allTurns.length === 0 ||
+                    allTurns[allTurns.length - 1].role !== "patient"
+                  }
+                  spaced={
+                    allTurns.length > 0 &&
+                    allTurns[allTurns.length - 1].role !== "patient"
+                  }
+                  label={t("encounter.aiTyping")}
+                />
+              ) : null}
+            </ol>
+          )}
+        </div>
 
         {/* Guard notice + free-text composer */}
         <div className="border-t border-border p-3 sm:p-4">
@@ -881,6 +947,130 @@ export function InterviewTab({
         </ChipPanel>
       </div>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Q&A transcript — the chat exchange                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * PatientAvatar — the person glyph on the patient side of the transcript. Kept
+ * mounted-but-invisible for grouped follow-on turns so stacked bubbles stay
+ * aligned under a single avatar.
+ */
+function PatientAvatar({ hidden }: { hidden?: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-bg-subtle text-muted",
+        hidden && "invisible",
+      )}
+    >
+      <User weight="bold" className="h-4 w-4" />
+    </span>
+  );
+}
+
+/**
+ * ChatTurn — one line of the exchange as a clean chat bubble. The learner ("You")
+ * is right-aligned in the brand accent; the patient is left-aligned on a
+ * hairline-bordered surface with a person avatar and a subtle affect caption.
+ * Consecutive turns from the same speaker group under one label + avatar
+ * (`showMeta`), and the affect line shows once at the end of a patient group, so
+ * a multi-part reply reads as one calm block. AMBOSS card language throughout
+ * (tokens, radius, hairlines); long text wraps rather than scrolling sideways.
+ */
+function ChatTurn({
+  role,
+  text,
+  speaker,
+  affect,
+  showMeta,
+  spaced,
+}: {
+  role: TranscriptRole;
+  text: string;
+  speaker: string;
+  affect?: string;
+  showMeta: boolean;
+  spaced: boolean;
+}) {
+  const isDoctor = role === "doctor";
+  return (
+    <li
+      className={cn(
+        "flex w-full items-end gap-2.5",
+        isDoctor ? "flex-row-reverse" : "flex-row",
+        spaced && "mt-2",
+      )}
+    >
+      {!isDoctor ? <PatientAvatar hidden={!showMeta} /> : null}
+      <div
+        className={cn(
+          "flex min-w-0 max-w-[86%] flex-col sm:max-w-[76%]",
+          isDoctor && "items-end",
+        )}
+      >
+        {showMeta ? (
+          <span className="mb-1 px-0.5 text-[11px] font-semibold uppercase tracking-wide text-subtle">
+            {speaker}
+          </span>
+        ) : null}
+        <div
+          className={cn(
+            "rounded-card px-3.5 py-2.5 text-sm leading-relaxed [overflow-wrap:anywhere]",
+            isDoctor
+              ? "rounded-br-md bg-brand text-white"
+              : "rounded-bl-md border border-border bg-bg-subtle text-fg",
+          )}
+        >
+          {text}
+        </div>
+        {!isDoctor && affect ? (
+          <span className="mt-1 px-0.5 text-[11px] italic text-muted">
+            {affect}
+          </span>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+/**
+ * TypingRow — the patient "typing…" indicator shown while a reply is in flight,
+ * styled to match the patient bubble. The animated dots collapse under
+ * prefers-reduced-motion; the label is announced to assistive tech.
+ */
+function TypingRow({
+  showAvatar,
+  spaced,
+  label,
+}: {
+  showAvatar: boolean;
+  spaced: boolean;
+  label: string;
+}) {
+  return (
+    <li
+      className={cn("flex w-full items-end gap-2.5", spaced && "mt-2")}
+      aria-live="polite"
+    >
+      <PatientAvatar hidden={!showAvatar} />
+      <div className="rounded-card rounded-bl-md border border-border bg-bg-subtle px-3.5 py-3">
+        <span className="sr-only">{label}</span>
+        <span className="flex items-center gap-1" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="h-1.5 w-1.5 rounded-full bg-muted/60 motion-safe:animate-[fade-up_1s_ease-in-out_infinite]"
+              style={{ animationDelay: `${i * 160}ms` }}
+            />
+          ))}
+        </span>
+      </div>
+    </li>
   );
 }
 
@@ -1092,7 +1282,7 @@ function PatientPresence({
   }, [voiceOn]);
 
   return (
-    <section className="rounded-card border border-border bg-surface p-3">
+    <section className="rounded-card border border-border bg-surface p-4">
       <div className="flex items-center justify-between gap-2">
         <h3 className="eyebrow">
           {t("ehr.interview.patient.heading", { defaultValue: "Patient" })}
@@ -1124,8 +1314,10 @@ function PatientPresence({
       </div>
 
       {/* Primary: the realistic, symptom-tinted patient, matched to the case
-          name; the speaking treatment plays as each reply lands. */}
-      <div className="mt-2">
+          name; the speaking treatment plays as each reply lands. Presented in a
+          matted, hairline-framed portrait consistent with the banner — the
+          talk-video / still + physiology animation + Speaking pill are intact. */}
+      <div className="mt-3 overflow-hidden rounded-card border border-border bg-bg-subtle p-1">
         <PatientPhoto
           sex={visual.sexAtBirth}
           age={visual.age}
@@ -1136,11 +1328,19 @@ function PatientPresence({
           utterance={utterance}
           alt={t("patientviewer.syntheticNote")}
           caption={caseInstance.patient.name}
-          className="aspect-[4/5] w-full ring-1 ring-border"
+          className="aspect-[4/5] w-full rounded-control"
         />
       </div>
 
-      <SymptomSummary vitals={vitals} className="mt-2 text-muted" />
+      {/* Live presentation — the concise clinical-sign summary as calm chips. */}
+      <div className="mt-3">
+        <SectionLabel className="mb-1.5">
+          {t("ehr.interview.patient.presentation", {
+            defaultValue: "Presentation",
+          })}
+        </SectionLabel>
+        <SymptomSummary vitals={vitals} variant="pills" />
+      </div>
     </section>
   );
 }
