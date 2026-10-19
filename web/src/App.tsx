@@ -40,6 +40,7 @@ const load = {
   profile: () => import("@/pages/ProfilePage"),
   exam: () => import("@/pages/ExamPage"),
   atlas: () => import("@/pages/AtlasPage"),
+  admin: () => import("@/pages/AdminPage"),
 } as const;
 
 const HomePage = lazy(() => load.home().then((m) => ({ default: m.HomePage })));
@@ -56,6 +57,7 @@ const SignInPage = lazy(() => load.signin().then((m) => ({ default: m.SignInPage
 const ProfilePage = lazy(() => load.profile().then((m) => ({ default: m.ProfilePage })));
 const ExamPage = lazy(() => load.exam().then((m) => ({ default: m.ExamPage })));
 const AtlasPage = lazy(() => load.atlas().then((m) => ({ default: m.AtlasPage })));
+const AdminPage = lazy(() => load.admin().then((m) => ({ default: m.AdminPage })));
 
 /* -------------------------------------------------------------------------- */
 /* Intent preload                                                              */
@@ -77,6 +79,7 @@ const ROUTE_LOADERS: Record<string, () => Promise<unknown>> = {
   "/authoring": load.authoring,
   "/institution": load.institution,
   "/account": load.profile,
+  "/admin": load.admin,
 };
 
 /** Routes already warmed, so repeated hovers fire the import at most once. */
@@ -214,6 +217,14 @@ export default function App() {
                 element={
                   <RoleGate roles={["dean"]}>
                     <InstitutionPage />
+                  </RoleGate>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <RoleGate roles={["admin"]}>
+                    <AdminPage />
                   </RoleGate>
                 }
               />

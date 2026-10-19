@@ -729,6 +729,7 @@ export const ROLE_LABELS: Record<ProfileRole, Bilingual> = {
   resident: { en: "Resident physician", tr: "Asistan hekim" },
   educator: { en: "Clinician educator", tr: "Klinisyen eğitici" },
   dean: { en: "Faculty dean", tr: "Fakülte dekanı" },
+  admin: { en: "Platform administrator", tr: "Platform yöneticisi" },
 };
 
 /**
