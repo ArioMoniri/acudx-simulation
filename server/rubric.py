@@ -430,7 +430,7 @@ async def grade_transcript(transcript: Any, gateway: ChatGateway, *,
 
 
 # --------------------------------------------------------------------------- #
-# Self-test — `python -m server.rubric` (fully offline; a fake gateway)        #
+# Self-test — `python -m server.rubric` (fully offline; a test-double gateway)        #
 # --------------------------------------------------------------------------- #
 @dataclass
 class _FakeResult:
@@ -504,7 +504,7 @@ def _selftest() -> None:
     check("normalize labels clinician+patient",
           "CLINICIAN: Any chest pain?" in norm and "PATIENT: Yes, since morning." in norm)
 
-    # end-to-end with a fake gateway: all history items met, everything else unmet
+    # end-to-end with a test-double gateway: all history items met, everything else unmet
     hx_quote = "When did the chest pain start"
     script = {it.id: ({"met": True, "evidence_span": hx_quote, "confidence": 0.9}
                       if it.id.startswith("hx_") else

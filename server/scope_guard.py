@@ -348,7 +348,7 @@ def _selftest() -> None:
         mark = "ok " if ok else "FAIL"
         print(f"[{mark}] {expected:<14} <- {got['cls']:<14} :: {text[:52]!r}")
 
-    # Safety Interceptor: real locale-mapped crisis resources, no placeholder.
+    # Safety Interceptor: real locale-mapped crisis resources, no stand-in.
     safety_cases: list[tuple[str, str]] = [
         ("en", "988"), ("tr", "112"), ("ar", "112"),
         ("en-GB", "116 123"), ("de", "112"),  # unmapped -> EN default
@@ -357,7 +357,7 @@ def _selftest() -> None:
         msg = crisis_resources(loc)
         ok = bool(msg) and must_contain in msg and "in production" not in msg.lower()
         failures += 0 if ok else 1
-        print(f"[{'ok ' if ok else 'FAIL'}] crisis[{loc:<5}] contains {must_contain!r}, no placeholder")
+        print(f"[{'ok ' if ok else 'FAIL'}] crisis[{loc:<5}] contains {must_contain!r}, no stand-in")
     # Turkish disclosure should be answerable in Turkish resources.
     tr_ok = "112" in crisis_resources("tr") and "ALO 183" in crisis_resources("tr")
     failures += 0 if tr_ok else 1
