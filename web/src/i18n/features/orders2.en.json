@@ -57,9 +57,40 @@
       "administerAria": "Administer {{name}}",
       "administeredAria": "{{name}} administered",
       "route": "Route",
+      "dose": "Dose",
+      "indication": "Indication",
+      "highAlert": "High-alert",
+      "confirm": "Give",
+      "confirmAria": "Confirm and administer {{name}}",
+      "doseAria": "Dose of {{name}} in {{unit}}",
+      "routeAria": "Route for {{name}}",
+      "indicationAria": "Indication for {{name}}",
+      "range": "Adult range {{min}}-{{max}} {{unit}}",
+      "maxDay": "max {{max}} {{unit}} / 24 h",
       "givenAt": "given {{min}} min",
       "givenCount": "{{count}} given",
       "empty": "No treatments given yet."
+    },
+    "mar": {
+      "timeline": "MAR: {{name}} {{dose}} {{route}} — {{outcome}}",
+      "outcome": {
+        "given": "Given — five rights verified",
+        "flagged": "Given with a flag",
+        "blocked": "Not given — blocked by the safety check"
+      },
+      "failure": {
+        "missing-dose": "a dose is required",
+        "missing-route": "a route is required",
+        "unknown-drug": "not in the formulary",
+        "wrong-patient": "wrong patient",
+        "allergy-conflict": "documented allergy to this drug or its class",
+        "route-not-permitted": "route not in the formulary for this drug",
+        "dose-below-range": "dose below the usual range",
+        "dose-above-max": "dose above the maximum single dose",
+        "dose-exceeds-daily-max": "cumulative dose exceeds the 24 h maximum",
+        "repeat-too-soon": "repeated before the minimum interval",
+        "unit-mismatch": "dose unit does not match the formulary"
+      }
     },
     "results": {
       "wnl": "Within normal limits",

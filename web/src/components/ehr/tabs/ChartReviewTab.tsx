@@ -35,6 +35,7 @@ const EVENT_ICON: Record<EncounterEventType, React.ReactNode> = {
   order: <Flask weight="bold" className="h-3.5 w-3.5" />,
   result: <FileText weight="bold" className="h-3.5 w-3.5" />,
   treatment: <Pill weight="bold" className="h-3.5 w-3.5" />,
+  mar: <Pill weight="bold" className="h-3.5 w-3.5" />,
   diagnosis: <ListChecks weight="bold" className="h-3.5 w-3.5" />,
   note: <ClipboardText weight="bold" className="h-3.5 w-3.5" />,
   stage: <ClipboardText weight="bold" className="h-3.5 w-3.5" />,
@@ -336,6 +337,14 @@ function describeEvent(
     case "treatment":
       return t("treatments.timeline", {
         name: (ev.meta?.display as string) ?? ref,
+      });
+    case "mar":
+      return t("orders2.mar.timeline", {
+        name: (ev.meta?.display as string) ?? ref,
+        dose: `${ev.meta?.dose ?? ""} ${ev.meta?.unit ?? ""}`.trim(),
+        route: (ev.meta?.route as string) ?? "",
+        outcome: t(`orders2.mar.outcome.${(ev.meta?.outcome as string) ?? "given"}`),
+        defaultValue: "MAR: {{name}} {{dose}} {{route}} — {{outcome}}",
       });
     case "diagnosis":
       return t("ehr.timeline.diagnosis", {

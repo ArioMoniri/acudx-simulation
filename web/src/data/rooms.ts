@@ -17,6 +17,7 @@
 import type { Bilingual } from "@/data/mock";
 import type { CaseInstance } from "@/domain/case";
 import { getSeedCase } from "@/data/seedCases";
+import { NURSE_PROTOCOL_ORDERS, PARAMEDIC_INTERVENTIONS } from "@/domain/scopeOfPractice";
 
 /* -------------------------------------------------------------------------- */
 /* Roles                                                                       */
@@ -37,8 +38,18 @@ export interface RoleScope {
   scope: Bilingual;
   /** What the human is scored on in this seat (assessment preview). */
   scoredOn: Bilingual;
-  /** Whether this seat can place orders (server-enforced in production). */
+  /** Whether this seat can place ANY order (server-enforced in production). */
   canOrder: boolean;
+  /**
+   * Standing-protocol / scope-of-practice orders this seat may initiate even
+   * when `canOrder` is false (review 02 findings 24 and 25). Nurse: 12-lead
+   * ECG, POC glucose, IV access, oxygen, urine hCG, standard bloods, monitoring
+   * (nurse-driven triage ECG protocols, AJEM 2018
+   * https://www.ajemjournal.com/article/S0735-6757(18)30097-4/fulltext).
+   * Paramedic: the NHTSA 2019 national scope of practice interventions
+   * (https://www.ems.gov/assets/National_EMS_Scope_of_Practice_Model_2019.pdf).
+   */
+  protocolOrders: readonly string[];
 }
 
 /**
@@ -57,6 +68,7 @@ export const ROLE_SCOPES: Record<ClinicalRole, RoleScope> = {
       tr: "Tanısal muhakeme, akılcı istem kullanımı, güvenli sevk kararı.",
     },
     canOrder: true,
+    protocolOrders: [],
   },
   nurse: {
     role: "nurse",
@@ -69,6 +81,7 @@ export const ROLE_SCOPES: Record<ClinicalRole, RoleScope> = {
       tr: "Monitörizasyon, SBAR devir, zamanında yükseltme, kapalı döngü yanıt.",
     },
     canOrder: false,
+    protocolOrders: [...NURSE_PROTOCOL_ORDERS],
   },
   paramedic: {
     role: "paramedic",
@@ -81,6 +94,7 @@ export const ROLE_SCOPES: Record<ClinicalRole, RoleScope> = {
       tr: "ATMIST/SBAR devir netliği, olay yeri bulguları, eksiksizlik.",
     },
     canOrder: false,
+    protocolOrders: [...PARAMEDIC_INTERVENTIONS],
   },
 };
 

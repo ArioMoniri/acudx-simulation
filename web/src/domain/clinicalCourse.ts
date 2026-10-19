@@ -15,7 +15,8 @@
  */
 
 import type { CaseInstance } from "@/domain/case";
-import { genericEffect } from "@/domain/treatments";
+import { adverseEffectForContraindicated, classify, genericEffect } from "@/domain/treatments";
+import { fluidsGate, gateFor, isAnaphylaxis, isOpioidToxidrome } from "@/domain/treatmentRules";
 
 export interface CurrentVitals {
   hr: number;
@@ -104,11 +105,45 @@ function baselineAt(c: CaseInstance, t: number): CurrentVitals {
   return pick(last);
 }
 
-/** Effects for one administered treatment: bespoke response or generic fallback. */
-function effectsFor(c: CaseInstance, code: string, baseline: CurrentVitals) {
+/**
+ * Effects for one administered treatment: the case's bespoke response, else the
+ * gated generic fallback.
+ *
+ * Review 02 finding 28: a treatment the case authored as CONTRAINDICATED with no
+ * explicit effects acts ADVERSELY (fluids in pulmonary oedema: SpO2 falls, RR
+ * rises) rather than neutrally. Review 02 finding 8 / 36: nitrates and naloxone
+ * are gated on the case and the vitals at the moment of administration.
+ */
+function effectsFor(
+  c: CaseInstance,
+  code: string,
+  baseline: CurrentVitals,
+  treatments: AdministeredTreatment[],
+  at: number,
+) {
   const bespoke = c.treatmentResponses?.find((r) => r.treatmentCode === code);
-  if (bespoke) return bespoke.effects;
-  return genericEffect(code, baseline);
+  if (bespoke) {
+    if (bespoke.appropriateness === "contraindicated" && bespoke.effects.length === 0) {
+      return adverseEffectForContraindicated(code);
+    }
+    return bespoke.effects;
+  }
+  const gate = gateFor(code, c, baseline, treatments, at);
+  if (gate && !gate.allowed) {
+    // A gate-blocked nitrate / naloxone / insulin has NO effect (the error is
+    // scored on the event); fluids given against the pulmonary-oedema gate act
+    // adversely, as the review asks (finding 28).
+    return classify(code) === "fluids" && gate.appropriateness === "contraindicated"
+      ? adverseEffectForContraindicated(code)
+      : [];
+  }
+  const opioidOnBoard =
+    isOpioidToxidrome(c) || treatments.some((t) => t.at <= at && classify(t.code) === "opioid");
+  return genericEffect(code, baseline, {
+    nitrateAllowed: gate?.allowed,
+    opioidOnBoard,
+    anaphylaxis: isAnaphylaxis(c),
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -140,18 +175,39 @@ const OVERLAY_CAP: Record<keyof CurrentVitals, number> = {
 /** How much the case's own authored drift is amplified at full decompensation. */
 const DRIFT_AMPLIFY = 1.25;
 
-/** Codes that always count as resuscitative (oxygen, IV fluids). */
-const UNIVERSAL_RESCUE = ["7806", "313002"];
+/** Codes that count as supportive resuscitation (oxygen, IV fluids) when not contraindicated. */
+const SUPPORTIVE_RESCUE = ["7806", "313002"];
 
 /**
- * Condition-appropriate rescue treatment codes, derived from the case's
+ * Condition-appropriate rescue treatment codes. When the case carries authored
+ * treatment responses, the rescue set is exactly its `indicated` codes
+ * (review 02 finding 28: derive rescue from the authored treatments, never let
+ * a contraindicated item act as a rescue). Otherwise it is derived from the
  * diagnosis + presentation keywords (mirrors the treatment catalog's RxNorm
- * ids). Oxygen + IV fluids always count as supportive resuscitation. A rescue
+ * ids), with oxygen and IV fluids counted as supportive resuscitation only
+ * where the fluids gate allows them (not in pulmonary oedema). A rescue
  * treatment is what halts the untreated-deterioration clock — the specific
  * pharmacologic appropriateness is scored elsewhere; here it only decides
  * whether the student "acted" on the crashing patient.
+ *
+ * Review 02 finding 8: nitroglycerin is NOT a rescue for haemorrhage or stroke
+ * (SAH/ICH BP control uses titratable agents; GI bleed and PPH need haemorrhage
+ * control). Review 02 finding 7: anaphylaxis rescue is IM adrenaline (3992-im).
+ * Review 02 finding 28: naloxone is a rescue only for an opioid toxidrome, not
+ * for "overdose" in general (paracetamol, TCA).
  */
-function rescueCodesFor(c: CaseInstance): Set<string> {
+export function rescueCodesFor(c: CaseInstance): Set<string> {
+  const authored = c.treatmentResponses ?? [];
+  if (authored.length > 0) {
+    const s = new Set<string>(authored.filter((r) => r.appropriateness === "indicated").map((r) => r.treatmentCode));
+    const contraindicated = new Set(authored.filter((r) => r.appropriateness === "contraindicated").map((r) => r.treatmentCode));
+    for (const code of SUPPORTIVE_RESCUE) {
+      if (contraindicated.has(code)) continue;
+      if (code === "313002" && !fluidsGate(c).allowed) continue;
+      s.add(code);
+    }
+    return s;
+  }
   const dxCode = c.correctDiagnosis?.code.coding[0]?.code ?? "";
   const hay = [
     dxCode,
@@ -166,21 +222,21 @@ function rescueCodesFor(c: CaseInstance): Set<string> {
     .join(" ")
     .toLowerCase();
   const kw = (...ks: string[]) => ks.some((k) => hay.includes(k));
-  const s = new Set<string>(UNIVERSAL_RESCUE);
+  const s = new Set<string>();
+  s.add("7806"); // oxygen
+  if (fluidsGate(c).allowed) s.add("313002"); // IV fluids (not in pulmonary oedema)
   if (/^i2[01]/.test(dxCode) || kw("myocardial", "coronary", "nstemi", "stemi", "angina", "miyokart", "koroner")) {
     s.add("1191"); // aspirin
-    s.add("4917"); // nitroglycerin
+    s.add("4917"); // nitroglycerin (ischaemic chest pain; gated on vitals at administration)
   }
   if (/^i50/.test(dxCode) || kw("heart failure", "pulmonary oedema", "pulmonary edema", "kalp yetmez"))
-    s.add("4917"); // nitroglycerin (preload reduction)
-  if (kw("subarachnoid", "haemorrhage", "hemorrhage", "subaraknoid", "kanama", "stroke", "inme"))
-    s.add("4917"); // vasodilator proxy for blood-pressure control
+    s.add("4917"); // nitroglycerin (preload reduction in acute pulmonary oedema)
   if (kw("sepsis", "septic", "sepsi", "septik", "pneumonia", "pnömoni", "pnomoni", "meningitis", "menenjit", "urinary", "pyelonephritis", "idrar", "piyelonefrit", "cholangitis", "kolanjit"))
     s.add("2193"); // ceftriaxone
   if (kw("ketoacidosis", "ketoasidoz", "diabetic keto", "hyperglyc")) s.add("5856"); // insulin
   if (kw("asthma", "astım", "astim", "copd", "koah", "bronchospasm", "bronkospazm", "wheeze")) s.add("435"); // salbutamol
-  if (kw("anaphyla", "anafilaks")) s.add("3992"); // adrenaline
-  if (kw("opioid", "overdose", "aşırı doz", "asiri doz", "naloxone")) s.add("7242"); // naloxone
+  if (kw("anaphyla", "anafilaks")) s.add("3992-im"); // IM adrenaline 0.5 mg (first line)
+  if (isOpioidToxidrome(c)) s.add("7242"); // naloxone (opioid toxidrome only)
   if (kw("supraventricular", "tachyarrhythmia", "taşiaritmi", "tasiaritmi") || / svt|^svt/.test(hay)) s.add("448"); // adenosine
   if (kw("seizure", "epilepticus", "nöbet", "nobet", "status epilep")) s.add("6470"); // lorazepam
   return s;
@@ -308,7 +364,10 @@ export function currentVitals(
 
   for (const t of treatments) {
     if (t.at > elapsedMs) continue;
-    const effects = effectsFor(c, t.code, base);
+    // Gate on the vitals at the moment of administration (the baseline at t.at
+    // plus whatever earlier treatments had already changed is approximated by
+    // the baseline at t.at — pure and cheap).
+    const effects = effectsFor(c, t.code, baselineAt(c, t.at), treatments, t.at);
     for (const e of effects) {
       const onset = e.onsetMs > 0 ? e.onsetMs : 1;
       const frac = Math.min(1, Math.max(0, (elapsedMs - t.at) / onset));
@@ -339,15 +398,26 @@ export function currentVitals(
   };
 }
 
-/** A coarse abnormality score — higher is sicker. */
-function severity(v: CurrentVitals): number {
+/**
+ * A coarse abnormality score — higher is sicker. Review 02 finding 41:
+ * symmetric penalties for hypertension (SBP > 180, DBP > 120), hypothermia
+ * (< 35C), hyperthermia (> 40C) and bradypnoea (RR < 10), so a hypertensive
+ * emergency at 230/130 no longer reads "stable" (ACC/AHA 2017,
+ * https://doi.org/10.1161/HYP.0000000000000065).
+ */
+export function severity(v: CurrentVitals): number {
   let s = 0;
   if (v.spo2 < 94) s += 94 - v.spo2;
   if (v.systolic < 100) s += (100 - v.systolic) * 0.5;
+  if (v.systolic > 180) s += (v.systolic - 180) * 0.3;
+  if (v.diastolic > 120) s += (v.diastolic - 120) * 0.3;
   if (v.hr > 100) s += (v.hr - 100) * 0.3;
   if (v.hr < 50) s += (50 - v.hr) * 0.3;
   if (v.rr > 20) s += (v.rr - 20) * 0.5;
+  if (v.rr < 10) s += (10 - v.rr) * 1.0;
   if (v.tempC > 38) s += (v.tempC - 38) * 2;
+  if (v.tempC > 40) s += (v.tempC - 40) * 3;
+  if (v.tempC < 35) s += (35 - v.tempC) * 2;
   return s;
 }
 
@@ -363,9 +433,13 @@ export function courseStatus(
   const cur = currentVitals(c, elapsedMs, treatments);
   const base = currentVitals(c, 0, []);
 
-  const critical = cur.spo2 < 85 || cur.systolic < 80 || cur.hr > 150 || cur.rr > 34 || cur.rr < 8;
+  const critical =
+    cur.spo2 < 85 || cur.systolic < 80 || cur.hr > 150 || cur.rr > 34 || cur.rr < 8 ||
+    cur.systolic > 220 || cur.tempC < 32 || cur.tempC > 41;
   if (critical) return "critical";
-  const danger = cur.spo2 < 90 || cur.systolic < 90 || cur.hr > 130;
+  const danger =
+    cur.spo2 < 90 || cur.systolic < 90 || cur.hr > 130 || cur.hr < 40 ||
+    cur.systolic > 180 || cur.diastolic > 120 || cur.tempC < 35 || cur.tempC > 40 || cur.rr < 10;
   if (danger) return "deteriorating";
 
   const dv = severity(cur) - severity(base);

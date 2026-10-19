@@ -117,12 +117,23 @@ export interface SpecLab {
   code: string;
   label_en: string;
   label_tr: string;
-  value: number;
+  value: number | string;
   unit: string;
-  ref_low?: number;
-  ref_high?: number;
+  ref_low?: number | null;
+  ref_high?: number | null;
   flag?: string;
   category?: string;
+  /** Qualitative result word (dipstick, xanthochromia) — review 02 finding 39. */
+  qualitative?: string | null;
+  /** Hours since ingestion for nomogram-interpreted levels — review 02 finding 38. */
+  hours_post_ingestion?: number | null;
+}
+
+/** A structured red flag: who can know it (review 02 finding 3). */
+export interface SpecRedFlag {
+  en: string;
+  tr: string;
+  channel?: "patient" | "clinician" | string;
 }
 
 export interface SpecImaging {
@@ -190,6 +201,7 @@ export interface GeneratedCaseSpec {
   treatments?: SpecTreatment[];
   disposition?: string;
   guideline_anchors?: SpecGuidelineAnchor[];
+  red_flags?: SpecRedFlag[];
   meta?: SpecMeta;
 }
 
@@ -658,7 +670,7 @@ function buildLabs(pid: string, spec: GeneratedCaseSpec): LabResult[] {
     const code = (l.code ?? `lab-${i}`).trim() || `lab-${i}`;
     const label = bi(l.label_en, l.label_tr);
     const interpretation = asInterpretation(l.flag);
-    const range = refRange(l.ref_low, l.ref_high);
+    const range = refRange(l.ref_low ?? undefined, l.ref_high ?? undefined);
     const observation: Observation = {
       resourceType: "Observation",
       id: `obs-${pid}-${i}`,
@@ -670,9 +682,18 @@ function buildLabs(pid: string, spec: GeneratedCaseSpec): LabResult[] {
       ),
       subject: pid,
       effectiveTime: 0,
-      valueQuantity: { value: safeNumber(l.value), unit: (l.unit ?? "").trim() },
+      // Review 02 finding 39: a qualitative result (dipstick "2+", "positive")
+      // renders as a word, not a number with the word as its unit.
+      ...(l.qualitative || typeof l.value === "string"
+        ? { valueString: bi(String(l.qualitative ?? l.value), String(l.qualitative ?? l.value)) }
+        : { valueQuantity: { value: safeNumber(l.value), unit: (l.unit ?? "").trim() } }),
       ...(interpretation ? { interpretation } : {}),
       ...(range ? { referenceRange: range } : {}),
+      // Review 02 finding 38: keep the time since ingestion on the reference line
+      // so the learner can plot a timed level against the nomogram.
+      ...(typeof l.hours_post_ingestion === "number"
+        ? { referenceRange: `${range ?? ""}${range ? " · " : ""}${l.hours_post_ingestion} h post-ingestion` }
+        : {}),
     };
     return { id: `l-${pid}-${i}`, orderCode: code, observation };
   });
@@ -802,6 +823,12 @@ function buildTreatmentResponses(
 
 function buildRedFlags(spec: GeneratedCaseSpec): Bilingual[] {
   const flags: Bilingual[] = [];
+  // Review 02 finding 3: structured red flags (clinician-observed signs/results
+  // + the lay patient symptom) are the source of truth when the server sends them.
+  (spec.red_flags ?? []).forEach((rf) => {
+    if (rf && typeof rf.en === "string" && rf.en.trim()) flags.push(bi(rf.en, rf.tr));
+  });
+  if (flags.length > 0) return flags;
   (spec.hpi ?? []).forEach((h) => {
     if (h.red_flag) flags.push(bi(h.answer_en, h.answer_tr));
   });

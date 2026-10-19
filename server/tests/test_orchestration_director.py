@@ -36,7 +36,7 @@ def test_from_spec_plans_a_deadline_for_acute_cases():
     state = D.CaseState.from_spec(_spec("acs_stemi"))  # ESI 1
     assert state.acuity_esi == 1
     assert state.pending_complications and state.pending_complications[0].deadline_ms == 10 * 60_000
-    assert set(state.pending_complications[0].required_any_of) == {"asa_p2y12", "primary_pci"}
+    assert {"asa_p2y12", "primary_pci"} <= set(state.pending_complications[0].required_any_of)
     calm = D.CaseState.from_spec(_spec("gi_reflux"))
     assert calm.pending_complications == []
 

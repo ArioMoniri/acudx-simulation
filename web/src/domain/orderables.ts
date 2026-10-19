@@ -145,7 +145,11 @@ const CL = A("2075-0", { en: "Chloride", tr: "Klorür" }, "98 - 107", [99, 106],
 const HCO3 = A("1963-8", { en: "Bicarbonate", tr: "Bikarbonat" }, "22 - 29", [23, 28], "mmol/L");
 const BUN = A("3094-0", { en: "Urea nitrogen (BUN)", tr: "Üre azotu (BUN)" }, "7 - 20", [8, 18], "mg/dL");
 const CR = A("2160-0", { en: "Creatinine", tr: "Kreatinin" }, "0.7 - 1.3", [0.8, 1.2], "mg/dL", { decimals: 2 });
-const GLU = A("2345-7", { en: "Glucose", tr: "Glukoz" }, "70 - 110", [78, 106], "mg/dL");
+// Review 02 finding 22: ONE unit system for glucose project-wide. The server
+// fixtures and the client case generator report glucose in mmol/L, so the
+// synthetic panels do too (70-110 mg/dL = 3.9-6.1 mmol/L).
+const GLU = A("2345-7", { en: "Glucose", tr: "Glukoz" }, "3.9 - 6.1", [4.3, 5.9], "mmol/L", { decimals: 1 });
+const GLU_POC = A("2339-0", { en: "Glucose (POC)", tr: "Glukoz (yatak başı)" }, "3.9 - 6.1", [4.3, 5.9], "mmol/L", { decimals: 1 });
 const CA = A("17861-6", { en: "Calcium", tr: "Kalsiyum" }, "8.5 - 10.2", [8.7, 10.0], "mg/dL", { decimals: 1 });
 const AGAP = A("1863-0", { en: "Anion gap", tr: "Anyon açığı" }, "8 - 16", [9, 14], "mmol/L");
 
@@ -353,15 +357,13 @@ const PANELS: Record<string, AnalyteSpec[]> = {
   ],
 
   /* ---- Point-of-care ---------------------------------------------------- */
-  "poc-glucose": [
-    A("2339-0", { en: "Glucose (POC)", tr: "Glukoz (yatak başı)" }, "70 - 110", [78, 106], "mg/dL"),
-  ],
+  "poc-glucose": [GLU_POC],
   // iSTAT bedside chemistry / gas panel.
   istat: [
     NA,
     K,
     A("1994-3", { en: "Calcium, ionised", tr: "İyonize kalsiyum" }, "1.12 - 1.32", [1.15, 1.30], "mmol/L", { decimals: 2 }),
-    A("2339-0", { en: "Glucose (POC)", tr: "Glukoz (yatak başı)" }, "70 - 110", [78, 106], "mg/dL"),
+    GLU_POC,
     A("4544-3", { en: "Haematocrit", tr: "Hematokrit" }, "36 - 48", [38, 46], "%"),
     PH_ART,
     LACTATE,
@@ -786,7 +788,7 @@ const CONDITION_TARGETS: Record<ConditionTag, AnalyteTarget[]> = {
   pancreatitis: [nT("3040-3", 920, "H"), nT("1798-8", 340, "H"), nT("6690-2", 13.5, "H")],
   hepatic: [nT("1920-8", 180, "H"), nT("1742-6", 210, "H"), nT("6768-6", 160, "H"), nT("1975-2", 3.2, "H"), nT("2324-2", 120, "H")],
   renal: [nT("2160-0", 2.8, "H"), nT("3094-0", 52, "H"), nT("2823-3", 5.4, "H"), nT("1963-8", 18, "L")],
-  dka: [nT("2345-7", 440, "H"), nT("2339-0", 440, "H"), nT("6873-4", 4.8, "HH"), nT("1963-8", 12, "L"), nT("1863-0", 24, "H"), nT("2823-3", 5.2, "H"), nT("2744-1", 7.22, "L"), qT("5797-6", POS), qT("5792-7", POS)],
+  dka: [nT("2345-7", 24.4, "H"), nT("2339-0", 24.4, "H"), nT("6873-4", 4.8, "HH"), nT("1963-8", 12, "L"), nT("1863-0", 24, "H"), nT("2823-3", 5.2, "H"), nT("2744-1", 7.22, "L"), qT("5797-6", POS), qT("5792-7", POS)],
   uti: [qT("5799-2", POS), qT("5802-4", POS), nT("5821-4", 40, "H"), qT("25145-4", MANY_BACT)],
   anemia: [nT("718-7", 8.5, "L"), nT("4544-3", 27, "L"), nT("789-8", 3.1, "L")],
   thyrotoxic: [nT("3016-3", 0.02, "L"), nT("3024-7", 3.2, "H")],
@@ -998,6 +1000,25 @@ function dynamicObservation(
   return { ...base, valueQuantity: { value, unit: spec.unit ?? "" } };
 }
 
+/**
+ * Sex-specific haemoglobin / haematocrit reference intervals. Review 02
+ * finding 21 (major): one pooled 12.0-16.0 g/dL interval flagged a man with Hb
+ * 12.6 as normal. Men ~13.5-17.5 g/dL (Hct 41-50%), women ~12.0-15.5 g/dL
+ * (Hct 36-44%): MedlinePlus https://medlineplus.gov/ency/article/003645.htm
+ */
+export function sexSpecificSpec(spec: AnalyteSpec, gender: string | undefined): AnalyteSpec {
+  const male = gender === "male";
+  if (spec.code === "718-7") {
+    return male
+      ? { ...spec, ref: "13.5 - 17.5", band: [14.0, 17.0] }
+      : { ...spec, ref: "12.0 - 15.5", band: [12.4, 15.2] };
+  }
+  if (spec.code === "4544-3") {
+    return male ? { ...spec, ref: "41 - 50", band: [42, 49] } : { ...spec, ref: "36 - 44", band: [37, 43] };
+  }
+  return spec;
+}
+
 function decimalsOf(v: number): number {
   const s = String(v);
   const i = s.indexOf(".");
@@ -1157,8 +1178,10 @@ export function syntheticResultAt(
     return { observations: [], report: report(orderable.code, subject, "laboratory", orderable.label, conclusion), abnormal };
   }
 
-  // Labs / blood gas / POC — the full analyte panel.
-  const panel = PANELS[orderable.code];
+  // Labs / blood gas / POC — the full analyte panel (Hb / Hct reference
+  // intervals are sex-specific — review 02 finding 21).
+  const rawPanel = PANELS[orderable.code];
+  const panel = rawPanel ? rawPanel.map((spec) => sexSpecificSpec(spec, caseInstance.patient.gender)) : undefined;
   if (panel && panel.length > 0) {
     if (!dynamic) {
       return { observations: panel.map((spec) => normalObservation(spec, subject, `${seedBase}::${spec.code}`)) };
