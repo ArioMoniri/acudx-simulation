@@ -428,7 +428,7 @@ Icon button, light ⇄ dark, persisted (`acudx-theme`).
 
 ### 4.19 App shell — AppFrame / Wordmark / TopNav (`web/src/components/shell/`)
 - **AppFrame:** the medkit signature — a thin `gradient-frame` (teal→blue→pink) around a 20px-radius white shell; a skip-to-content link (`nav.skipToContent`); `TopNav` pinned inside; a persistent footer with the education-only disclaimer (`app.eduDisclaimer`). Wrapped in `TooltipProvider`.
-- **Wordmark:** the gradient logo tile (`gradient-mark`) + a clinical pulse glyph + "Acu**Dx**" where "Dx" uses `gradient-text` — the *only* other gradient use besides the frame.
+- **Wordmark:** the "acute trace" mark (an A drawn as one 60 degree deflection on a baseline, inline SVG in `currentColor`) + "Acu**Dx**" in Manrope ExtraBold, "Dx" and the mark in `--axis-clinical` (brand blue on light, lightened blue on dark). The gradient appears only on the app-icon tile. Full spec: `02-brand-identity.md`; files: `web/public/brand/`.
 - **TopNav / PageContainer:** neutral chrome, generous whitespace, `LanguageSwitcher` + `ThemeToggle` in the bar.
 
 ### 4.20 DataTable (v1) & shared primitives

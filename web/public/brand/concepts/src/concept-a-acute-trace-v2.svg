@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">Concept A: Acute trace (v2, heavier stroke to match the wordmark stems)</title>
+  <!-- Grid unit 4. Stroke 32. Apex (128,44); legs at exactly 60 degrees to the baseline y=212. Trace y=158. -->
+  <g fill="none" stroke="#000000" stroke-width="32" stroke-linecap="round">
+    <path d="M31 212 L128 44 L225 212" stroke-linejoin="miter" stroke-miterlimit="4"/>
+    <path d="M14 158 H242"/>
+  </g>
+</svg>

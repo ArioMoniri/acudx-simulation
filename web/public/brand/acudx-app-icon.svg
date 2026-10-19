@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">AcuDx app icon</title>
+  <defs>
+    <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="256" y2="256">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="0.5" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#f472b6"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="url(#g)"/>
+  <g transform="translate(39.68 38.01) scale(0.69)">
+  <g fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round">
+    <path d="M34.5 214 L128 52 L221.5 214" stroke-linejoin="miter" stroke-miterlimit="4"/>
+    <path d="M26 164 H230"/>
+  </g>
+  </g>
+</svg>
