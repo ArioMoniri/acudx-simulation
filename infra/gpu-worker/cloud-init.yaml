@@ -1,0 +1,78 @@
+#cloud-config
+# AcuDx on-demand GPU worker (Lambda Cloud, Lambda Stack 24.04 image).
+# Launched by server/providers/gpu_worker.py and terminated when idle.
+# Serves, behind Caddy with automatic TLS on <ip>.sslip.io:
+#   /v1/*        vLLM OpenAI-compatible LLM (model from WORKER_LLM_MODEL)
+#   /tts/*       Kokoro FastAPI (OpenAI-compatible /v1/audio/speech)
+#   /stt/*       speaches (faster-whisper, OpenAI-compatible /v1/audio/transcriptions)
+#   /healthz     aggregate health
+# Every route requires: Authorization: Bearer ${WORKER_TOKEN}
+write_files:
+  - path: /opt/acudx/.env
+    permissions: "0600"
+    content: |
+      WORKER_TOKEN=__WORKER_TOKEN__
+      WORKER_LLM_MODEL=__WORKER_LLM_MODEL__
+      WORKER_DOMAIN=__WORKER_DOMAIN__
+      HF_HOME=/opt/acudx/hf
+  - path: /opt/acudx/Caddyfile
+    content: |
+      {$WORKER_DOMAIN} {
+        @unauth not header Authorization "Bearer {$WORKER_TOKEN}"
+        respond @unauth 401
+        handle_path /tts/* { reverse_proxy kokoro:8880 }
+        handle_path /stt/* { reverse_proxy speaches:8000 }
+        handle /healthz { respond "ok" 200 }
+        handle { reverse_proxy vllm:8000 }
+      }
+  - path: /opt/acudx/docker-compose.yml
+    content: |
+      services:
+        vllm:
+          image: vllm/vllm-openai:v0.11.0
+          runtime: nvidia
+          ipc: host
+          environment: [ "HF_HOME=/hf" ]
+          volumes: [ "/opt/acudx/hf:/hf" ]
+          command: >
+            --model ${WORKER_LLM_MODEL} --max-model-len 16384
+            --gpu-memory-utilization 0.72 --enable-prefix-caching
+            --enable-auto-tool-choice --tool-call-parser hermes
+            --served-model-name acudx-llm
+          healthcheck:
+            test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+            interval: 20s
+            retries: 90
+        kokoro:
+          image: ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4
+          runtime: nvidia
+          environment: [ "NVIDIA_VISIBLE_DEVICES=all" ]
+        speaches:
+          image: ghcr.io/speaches-ai/speaches:latest-cuda
+          runtime: nvidia
+          environment:
+            - WHISPER__MODEL=Systran/faster-whisper-large-v3
+            - HF_HOME=/hf
+          volumes: [ "/opt/acudx/hf:/hf" ]
+        caddy:
+          image: caddy:2.9
+          ports: [ "80:80", "443:443" ]
+          env_file: /opt/acudx/.env
+          volumes:
+            - /opt/acudx/Caddyfile:/etc/caddy/Caddyfile:ro
+            - /opt/acudx/caddy:/data
+runcmd:
+  - mkdir -p /opt/acudx/hf /opt/acudx/caddy
+  # The public IP is not known before launch, so the manager renders
+  # WORKER_DOMAIN=auto and the worker derives <ip-with-dashes>.sslip.io itself
+  # (the manager derives the identical name from the API-reported IP).
+  - |
+    if grep -q '^WORKER_DOMAIN=auto$' /opt/acudx/.env; then
+      ip=""
+      for src in https://api.ipify.org https://checkip.amazonaws.com https://ifconfig.me/ip; do
+        ip=$(curl -fsS --max-time 10 --retry 5 --retry-delay 3 "$src" | tr -d '[:space:]') && [ -n "$ip" ] && break
+      done
+      [ -n "$ip" ] || { echo "acudx: could not resolve public IP" >&2; exit 1; }
+      sed -i "s|^WORKER_DOMAIN=auto$|WORKER_DOMAIN=$(echo "$ip" | tr . -).sslip.io|" /opt/acudx/.env
+    fi
+  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d
