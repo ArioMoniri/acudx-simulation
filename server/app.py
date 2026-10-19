@@ -39,6 +39,7 @@ from server.case_generator import generate_case_spec
 from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
 from server.model_gateway import GatewayError, ModelGateway
+from server.orchestration.routes import router as orchestration_v2_router
 from server.persona import build_patient_turn, fact_assertion_gate
 from server.providers.gpu_worker import WorkerManager
 from server.rubric import grade_transcript
@@ -108,6 +109,8 @@ app = FastAPI(
     summary="Air-gapped Phase-0 gateway: scope guard, patient roleplay, grounding.",
     lifespan=lifespan,
 )
+
+app.include_router(orchestration_v2_router)  # /v2 case generator + Clinical Director
 
 # CORS — localhost/127.0.0.1 on any port for the (tunnelled) web demo, plus any
 # explicitly configured origins. Credentials stay off so a regex origin is safe.

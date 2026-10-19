@@ -114,6 +114,19 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str | None = None
 
+    # --- Case generator v2 + judge council (server/orchestration) ---------- #
+    # Both default to the active LLM endpoint above; override the model (and
+    # optionally the base URL / key) to run authoring and judging on different
+    # models. The AIRGAPPED guard applies to every resolved URL.
+    casegen_base_url: str | None = None
+    casegen_model: str | None = None
+    casegen_api_key: str | None = None
+    judge_base_url: str | None = None
+    judge_model: str | None = None
+    judge_api_key: str | None = None
+    # SQLite file for LangGraph checkpoints + the per-learner memory store.
+    acudx_db_path: str = "server/data/acudx.db"
+
     # --- Retrieval side-cars (already running on the pod; adapters are thin
     #     and defensive — see model_gateway.embed()/rerank()). --------------- #
     embed_url: str = "http://127.0.0.1:8003"
@@ -205,6 +218,25 @@ class Settings(BaseSettings):
             base_url=base.rstrip("/"), model=model, api_key=key,
             provider=self.llm_provider,
         )
+
+    def _derived(self, base_url: str | None, model: str | None, api_key: str | None) -> LlmEndpoint:
+        """An endpoint that inherits from the active LLM unless overridden."""
+        default = self.resolve_llm()
+        url = (base_url or default.base_url).rstrip("/")
+        self.guard_egress(url)
+        provider = "local" if is_local_endpoint(url, self.local_allowlist) else "api"
+        return LlmEndpoint(
+            base_url=url, model=model or default.model,
+            api_key=api_key or default.api_key, provider=provider,
+        )
+
+    def resolve_casegen(self) -> LlmEndpoint:
+        """Endpoint for the case *author* and *repair* nodes (CASEGEN_*)."""
+        return self._derived(self.casegen_base_url, self.casegen_model, self.casegen_api_key)
+
+    def resolve_judge(self) -> LlmEndpoint:
+        """Endpoint for the judge council and the Director narrator (JUDGE_*)."""
+        return self._derived(self.judge_base_url, self.judge_model, self.judge_api_key)
 
 
 @lru_cache(maxsize=1)
