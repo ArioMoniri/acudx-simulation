@@ -3,7 +3,7 @@
 Reviewers: board-certified emergency physician and critical-care nurse educator (dual-persona review).
 Scope: `server/case_fixtures.py`, `server/condition_catalog.py`, `server/case_generator.py` (lines 375 to 900), `web/src/domain/treatments.ts`, `web/src/domain/clinicalCourse.ts`, `web/src/domain/orderCatalog.ts`, `web/src/domain/orderables.ts`, `web/src/domain/diagnosisCatalog.ts`, `web/src/domain/scopeGuard.ts`, `web/src/data/seedCases.ts`, `web/src/data/rooms.ts`, `web/src/components/room/*`, `web/src/lib/guidanceEngine.ts`.
 Rules enforced: `docs/process/AGENT-PROTOCOL.md` section 2, in particular rule 2 (every clinical fact shown to a learner carries a citation that resolves and was verified against the source text) and rule 5 (education only, synthetic patients).
-Source was read only; nothing was edited. Line numbers refer to the working tree at the time of review.
+Source was read only at review time; line numbers refer to the working tree at the time of review. Section 1a records the remediation (commits, status, tests) applied in October 2026.
 
 Severity scale:
 - critical: would mis-educate a learner on a safety-relevant point, or models an unsafe action as acceptable
@@ -64,6 +64,70 @@ Summary counts: 11 critical, 19 major, 14 minor (44 findings).
 | 44 | web/src/domain/treatments.ts:123-128 | minor | Paracetamol default route is IV. In the ED the oral route is standard when the patient can swallow; IV paracetamol is reserved for nil-by-mouth or vomiting patients. Teaching IV as default is a cost and stewardship error. | Default route PO with IV as an alternative tied to NBM status in the case. | NICE CKS analgesia (oral paracetamol first line): https://cks.nice.org.uk/topics/analgesia-mild-to-moderate-pain/ |
 
 Positive observations (no action needed): COPD controlled oxygen target 88 to 92% (fixtures:423); meningitis "do not delay antibiotics for LP/CT" (529-531); tension pneumothorax "clinical diagnosis, decompress before imaging" (447-454); hypertensive emergency "lower MAP by about 20-25% in the first hour" (316-318); thyroid storm antithyroid drug before iodine (700-701); febrile neutropenia antibiotics within 1 hour (946); sickle analgesia without delay (975); UGIB restrictive transfusion and endoscopy within 24 h (591-592); SAH NICE NG228 statement in `LOCAL_GUIDELINES` (6-hour CT, LP after 12 h) is accurate; ESC 10-minute ECG statement is accurate; `scopeGuard.ts` keeps second-person suicide-risk screening in scope while catching first-person disclosure, which is the right safety behaviour.
+
+---
+
+## 1a. Resolution record (October 2026 remediation)
+
+Branch: `worktree-agent-a39421142101f2637` (merges `claude/clever-mendel-dtbc1n`). Every fix carries the finding number and citation in a code comment or test docstring. Tests named here would have caught the defect.
+
+Commits:
+- `e32db21` fix(server): vitals envelopes, PMH/meds/allergies, structured red flags, real exam findings, treatment and coding fixes
+- `ad15ca9` fix(web): treatment gates, rescue derivation, adult formulary and medication safety core
+- `5921758` feat(web): medication administration record with five-rights and allergy checks; role-scoped protocol ordering
+- `bc2098f` fix(web): seed-case rule-out timing and PE workup, glucose unit, sex-specific Hb/Hct, structured red flags and qualitative labs on the wire
+- `6797344` fix(web): attribute offline guidance leads to their true guideline with resolving URLs
+
+| # | Severity | Status | Commit | Resolution | Test |
+|---|----------|--------|--------|------------|------|
+| 1 | critical | fixed | e32db21 | `case_fixtures.CONDITION_VITALS` per-condition envelopes (56 conditions) overlaid on the ESI band in `case_generator._triage_vitals` | `test_clinical_content.py::test_complete_heart_block_is_bradycardic`, `::test_hypertensive_emergency_exceeds_180_over_120`, `::test_thermal_envelopes_and_opioid_bradypnoea` |
+| 2 | critical | fixed | e32db21 | `CONDITION_BACKGROUND` (59 conditions) + `SYSTEM_BACKGROUND` pools; seeded PMH / meds / allergy draw written to both spec fields and HPI; penicillin, aspirin, morphine, codeine, sulfonamide, contrast allergies appear | `::test_background_is_condition_coherent_not_generic`, `::test_some_cases_carry_a_real_allergy_to_a_catalog_agent` |
+| 3 | critical | fixed | e32db21, bc2098f | Catalog red flags travel as `spec.red_flags[{en,tr,channel}]` (clinician); `PATIENT_RED_FLAG_SPEECH` gives the lay patient answer; client `liveCaseGen.buildRedFlags` consumes the structured list | `::test_patient_never_speaks_lab_or_ecg_findings` (all 163 conditions), `::test_red_flags_are_structured_with_channels` |
+| 4 | critical | fixed | e32db21 | `CONDITION_EXAM` (63 conditions, 2 real findings each) + non-revealing system defaults; `_exam` never emits "Findings consistent with" | `::test_exam_never_hands_over_the_diagnosis` (all conditions) |
+| 5 | critical | fixed | e32db21 | VT fixture split: unsynchronised defibrillation + CPR (pulseless), synchronised cardioversion (unstable with pulse), synchronising on pulseless VT contraindicated | `::test_pulseless_vt_is_defibrillated_not_synchronised` |
+| 6 | critical | fixed | e32db21 | Moderate goal-directed fluids (10 mL/kg bolus if hypovolaemic, 1.5 mL/kg/h LR, 3 h reassessment) indicated; aggressive fluids contraindicated | `::test_pancreatitis_fluids_follow_waterfall` |
+| 7 | critical | fixed | ad15ca9 | `3992-im` Adrenaline IM 0.5 mg (route IM, dose fields) first line; `3992` IV entry restricted to arrest / monitored refractory anaphylaxis and scored contraindicated otherwise | `treatmentRules.test.ts` "adrenaline IM is the anaphylaxis first line" |
+| 8 | critical | fixed | ad15ca9 | `treatmentRules.nitrateGate` (ischaemic pain / APO only; SBP >= 90; HR 50-100; no RV infarct; no PDE-5i); no GTN in haemorrhage / stroke rescue; blocked nitrate has no effect and is scored contraindicated | `treatmentRules.test.ts` "nitrate gate", `clinicalCourseRules.test.ts` "never a haemorrhage / stroke rescue" |
+| 9 | critical | fixed | ad15ca9, 5921758 | `MedicationOrder{drug,dose,unit,route,frequency,indication}`; `formulary.ts` adult doses / ranges / ceilings / intervals / sources; `fiveRightsCheck` + `allergyCrossCheck`; `encounterStore.administerMedication` writes a `mar` event before any effect; OrdersTab dose/route form; room tasks carry dose + route and the executing role's allergy check withholds a conflicting dose | `medicationSafety.test.ts`, `medicationAdministration.test.ts` |
+| 10 | critical | fixed | bc2098f | Panic seed case onset moved to 4 h before presentation so the single very low hs-cTn rule-out satisfies the ESC 2023 > 3 h condition; diagnosis note states it | `seedCases.test.ts` "panic seed case ACS rule-out timing" |
+| 11 | critical | fixed | e32db21 | "Glucose before thiamine" removed; "Withhold glucose in hypoglycaemia until thiamine is given" contraindicated; early thiamine indicated | `::test_glucose_is_never_withheld_for_thiamine` |
+| 12 | major | fixed | e32db21 | Tamponade fluids reworded to a small bolus only if hypovolaemic, `neutral`, no effect | `::test_tamponade_fluids_are_neutral_bridge_only` |
+| 13 | major | fixed | e32db21 | Thrombolysis indicated for high-risk PE, contraindicated for intermediate-risk PE without deterioration | `::test_pe_thrombolysis_is_risk_stratified` |
+| 14 | major | fixed | e32db21 | All 30-minute antibiotic tempC effects removed (fixtures and profiles) | `::test_antibiotics_do_not_change_temperature_within_the_session` |
+| 15 | major | fixed | e32db21 | Aspirin pain deltas removed; PCI relief at 90 min; nitrate / opioid items carry the analgesia | `::test_aspirin_has_no_analgesic_effect_and_pci_relief_is_delayed` |
+| 16 | major | fixed | e32db21 | 16 conditions reassigned ESI 1 -> 2 | `::test_esi_1_is_reserved_for_immediate_lifesaving_intervention` |
+| 17 | major | fixed | e32db21 | E05.91 in both catalogues | `::test_icd_codes_are_valid_leaves_and_icd11_matches_who`, `::test_diagnosis_catalog_ts_agrees_with_server_catalog` |
+| 18 | major | fixed | e32db21 | T65.91XA replaces T78.40XA in `diagnosisCatalog.ts` | `::test_diagnosis_catalog_ts_agrees_with_server_catalog` |
+| 19 | major | fixed | e32db21 | `condition_catalog._META` carries disposition per condition; `_disposition` prefers it (appendicitis / torsion / ectopic / perforation -> operating-room, stroke -> refer-specialty) | `::test_disposition_is_condition_specific` |
+| 20 | major | fixed | e32db21 | `_META` carries `sex` and `age`; bronchiolitis 1-2 y with infant vitals, hip fracture 65+, myocarditis 18-40, priapism / prostatitis / epididymo-orchitis male | `::test_demographics_respect_condition_constraints`, `::test_bronchiolitis_has_paediatric_vitals` |
+| 21 | major | fixed | e32db21, bc2098f | Server `_labs` re-derives Hb / Hct interval and flag from `demographics.sex`; client `orderables.sexSpecificSpec` on CBC / iSTAT | `::test_haemoglobin_reference_is_sex_specific`, `orderablesUnits.test.ts` |
+| 22 | major | fixed | e32db21, bc2098f | Urea 22664-7 mmol/L, CK 2157-6, LDH 14804-9, fibrinogen mg/dL; client glucose mmol/L (BMP, CMP, POC, iSTAT, DKA targets) | `::test_loinc_codes_match_analyte_and_unit`, `orderablesUnits.test.ts` |
+| 23 | major | fixed | bc2098f | PE seed: D-dimer `lowValue`, CTPA first critical order, disposition `admit-ccu` (monitored bed) | `seedCases.test.ts` "PE seed case" |
+| 24 | major | fixed | ad15ca9, 5921758 | `scopeOfPractice.NURSE_PROTOCOL_ORDERS` + `ROLE_SCOPES.nurse.protocolOrders`; `OrderHandoffPanel` filters chips by `canPlaceOrder` and posts "Nurse-initiated per protocol" | `scopeOfPractice.test.ts` |
+| 25 | major | partial | ad15ca9, 5921758 | `PARAMEDIC_INTERVENTIONS` (NHTSA 2019 set incl. 12-lead, oxygen, aspirin, GTN, naloxone, IM adrenaline, salbutamol, glucose, IV fluids, CPR/defib) orderable from the paramedic seat and recorded as tasks with dose + route. **Open:** case-populated ATMIST form, prehospital vitals series and scene clock (`PrehospitalPanel.tsx`, `roomStore.starterFloor` still post the fixed handover sentence) | `scopeOfPractice.test.ts` |
+| 26 | major | open | — | Structured SBAR / I-PASS composer not built in this pass (room UI feature outside the files owned by this remediation); canned escalation sentences remain in `roomStore.ts` | — |
+| 27 | major | fixed | 6797344 | Family leads attributed to BTS 2017, NICE NG228, SSC 2021, ADA/EASD 2024 with URLs; ESC / NICE local statements carry deep links; generic lead uncited and degraded | `guidanceEngine.test.ts` |
+| 28 | major | fixed | ad15ca9 | `rescueCodesFor` uses authored `indicated` codes; fluids excluded in pulmonary oedema; naloxone only for opioid toxidrome; contraindicated fluids act adversely (SpO2 down, RR up) | `clinicalCourseRules.test.ts` "rescue derives from authored treatments" |
+| 29 | major | fixed | e32db21 | ICD-11 BB23 tamponade, BB40 endocarditis, BC42 myocarditis, BC63 complete AV block, 5A02 thyrotoxicosis in both tables; pytest cross-checks `diagnosisCatalog.ts` against the server catalog | `::test_diagnosis_catalog_ts_agrees_with_server_catalog` |
+| 30 | major | fixed | e32db21 | `CONDITION_VITALS[...].drift` gives per-condition 30-minute direction (compensated then decompensated); septic temperature rises, hypothermia falls, SAH BP rises with bradycardia, GI bleed SpO2 steady | `::test_trajectories_are_condition_shaped` |
+| 31 | minor | fixed | e32db21, ad15ca9 | DKA "insulin with K < 3.3" contraindicated; client `insulinGate` | `::test_minor_treatment_items_present`, `treatmentRules.test.ts` |
+| 32 | minor | fixed | e32db21 | Sickle oxygen only when SpO2 <= 95%, euvolaemia | `::test_minor_treatment_items_present` |
+| 33 | minor | fixed | e32db21 | BPPV red flag no longer invokes HINTS | `::test_bppv_red_flag_does_not_misapply_hints` |
+| 34 | minor | fixed | e32db21 | I71.01, I16.1, K85.90, K83.09 leaf codes in both tables | `::test_icd_codes_are_valid_leaves_and_icd11_matches_who` |
+| 35 | minor | open | — | Turnaround labels in `orderCatalog.ts` unchanged (intentionally left; needs a measurement-endpoint label redesign) | — |
+| 36 | minor | fixed | ad15ca9 | Opioid doses stack (RR, SpO2); naloxone gated on opioid exposure; repeat inside 5 min flagged on the MAR | `treatmentRules.test.ts`, `medicationSafety.test.ts` |
+| 37 | minor | fixed | e32db21, ad15ca9 | Stroke "lower BP below 185/110 before thrombolysis" item; client `thrombolysisGate` (BP + glucose 2.8-22) | `::test_minor_treatment_items_present`, `treatmentRules.test.ts` |
+| 38 | minor | fixed | e32db21, bc2098f | `hours_post_ingestion` on the paracetamol level (4 h) through the schema and onto the client reference line | `::test_paracetamol_level_is_timed` |
+| 39 | minor | fixed | e32db21, bc2098f | Server lab tuple takes a string value + `qualitative`; client maps to `valueString` | `::test_qualitative_results_are_qualitative` |
+| 40 | minor | fixed | e32db21 | Routine antibiotics `contraindicated` with stewardship narrative | `::test_minor_treatment_items_present` |
+| 41 | minor | fixed | ad15ca9 | `severity()` / `courseStatus()` penalise SBP > 180, DBP > 120, temp < 35 / > 40, RR < 10 | `clinicalCourseRules.test.ts` "severity is symmetric" |
+| 42 | minor | fixed | e32db21 | Thyroid storm beta-blocker caveat (esmolol in HF / bronchospasm) + unmonitored beta-blockade contraindicated | `::test_minor_treatment_items_present` |
+| 43 | minor | fixed | e32db21 | Dialysis / nephrology referral and 1 h recheck items | `::test_minor_treatment_items_present` |
+| 44 | minor | fixed | ad15ca9 | Paracetamol default route PO in catalogue and formulary | `treatmentRules.test.ts` "paracetamol defaults to the oral route" |
+
+Counts: critical 11/11 fixed; major 19 -> 17 fixed, 1 partial (#25), 1 open (#26); minor 14 -> 13 fixed, 1 open (#35).
+
+Known residue outside this review's scope: `scripts/watchdog.sh` still reports the `@/data/mock` import path across `web/src` (the shared module name predates this work and is listed in the AGENT-PROTOCOL as an Orchestrator-owned rename).
 
 ---
 
