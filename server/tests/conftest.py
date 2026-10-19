@@ -141,3 +141,17 @@ def isolated_db(tmp_path, monkeypatch):
 
 def skip_live() -> bool:
     return os.environ.get("ACUDX_SKIP_LIVE", "") in ("1", "true", "yes")
+
+
+# ---- App-level TestClient against the real server.app (health/guard routes) ----
+from collections.abc import Iterator  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+os.environ.setdefault("STATUS_DISK_PATH", "/")
+
+
+@pytest.fixture(scope="session")
+def client() -> Iterator[TestClient]:
+    from server.app import app  # noqa: PLC0415 — after env is set
+
+    with TestClient(app) as c:
+        yield c

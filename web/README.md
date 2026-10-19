@@ -25,7 +25,36 @@ Then open the printed local URL (default http://localhost:5173).
 | `npm run build`   | Typecheck (`tsc --noEmit`) then production build |
 | `npm run preview` | Serve the production build locally            |
 | `npm run typecheck` | Type-check only                             |
-| `npm run lint`    | ESLint over `.ts`/`.tsx`                       |
+| `npm run lint`    | ESLint 9 flat config (`eslint.config.js`): typescript-eslint, react-hooks, react-refresh |
+| `npm test`        | Vitest unit suite (`src/**/*.test.ts`)          |
+| `npm run test:e2e` | Playwright end-to-end suite (`e2e/*.spec.ts`), 4 viewports |
+| `npm run test:e2e:report` | Open the last Playwright HTML report     |
+
+## Testing
+
+Unit tests are Vitest (`npm test`). End-to-end tests are Playwright
+(`npm run test:e2e`, config in `playwright.config.ts`):
+
+- Four projects, one per protocol viewport: `mobile` 390x844, `tablet`
+  768x1024, `laptop` 1280x800, `desktop` 1920x1080.
+- Playwright starts the Vite dev server on http://localhost:4173 and the
+  multiplayer relay (`../multiplayer/server.mjs`) on ws://localhost:8899; both
+  are reused when already running. `E2E_PREVIEW=1` runs the production bundle
+  (`npm run build && npm run preview`) instead of the dev server.
+- Sessions are created through the real UI (`e2e/helpers/session.ts`:
+  SignInPage -> Create your profile -> role); no localStorage injection.
+- Specs: `routes` (every route renders with no console errors and no
+  horizontal overflow), `a11y` (axe-core; serious/critical fail, the rest are
+  logged), `buttons` (click every enabled button on every route),
+  `encounter` (start -> interview -> exam -> lab + imaging orders -> results
+  -> treatment -> diagnosis -> feedback), `rooms` (create, join by code from
+  a second browser context, role switch), `authoring`, `atlas`, `stress`
+  (25 rapid orders + 50 rapid questions in one encounter), `screenshots`
+  (every route at desktop + mobile into `e2e/__screenshots__/`).
+- Browser: Chromium. In the sandbox the preinstalled build under
+  `PLAYWRIGHT_BROWSERS_PATH` is used via `launchOptions.executablePath`
+  (never run `playwright install` there); CI installs the matching revision
+  with `npx playwright install --with-deps chromium`.
 
 ## Stack
 

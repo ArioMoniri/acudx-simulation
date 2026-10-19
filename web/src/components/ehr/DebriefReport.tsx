@@ -159,7 +159,6 @@ export function DebriefReport({ debrief, caseInstance, onClose, onViewReport }: 
       window.clearTimeout(focusId);
       previouslyFocused?.focus?.();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const meta = VERDICT_META[debrief.dxVerdict];

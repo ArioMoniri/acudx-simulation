@@ -372,7 +372,6 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
     return groundImaging.map((im) =>
       buildGroundImaging(im, caseInstance, state.orders, state.results, nowMs, lang),
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseInstance, groundImaging, state.orders, state.results, nowMs, lang]);
 
   const imagingEntries = [...groundImagingEntries, ...syntheticImaging].sort(
