@@ -159,7 +159,16 @@ class Settings(BaseSettings):
     ])
     gpu_region_preference: CsvList = Field(default_factory=list)
     admin_token: str | None = None               # guards /admin/*; 503 when unset
-    acudx_db_path: str = "server/data/acudx.db"  # SQLite: worker state + cost ledger
+    acudx_db_path: str = "server/data/acudx.db"  # SQLite: worker state + cost ledger + registry + telemetry
+
+    # --- Provider registry + telemetry (server/registry, server/telemetry) --- #
+    # Fernet key sealing provider API keys at rest. Unset => keys cannot be stored
+    # (the registry refuses, it never falls back to plaintext). Generate with
+    # `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+    acudx_secret_key: str | None = None
+    # When set, every gateway call also emits an OpenTelemetry gen_ai.* span over
+    # OTLP/HTTP (optional dependency, see server/requirements-telemetry.txt).
+    otel_exporter_otlp_endpoint: str | None = None
 
     @field_validator(
         "local_allowlist", "cors_origins", "gpu_instance_allowlist", "gpu_region_preference",

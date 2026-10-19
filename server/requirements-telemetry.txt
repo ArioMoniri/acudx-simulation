@@ -1,0 +1,5 @@
+# AcuDx backend gateway: optional OpenTelemetry export of gen_ai.* spans.
+# Only needed when OTEL_EXPORTER_OTLP_ENDPOINT is set (Langfuse /api/public/otel,
+# an OTel Collector, Grafana Tempo). The gateway runs without these packages.
+opentelemetry-sdk>=1.27,<2.0
+opentelemetry-exporter-otlp-proto-http>=1.27,<2.0
