@@ -495,13 +495,20 @@ const pulmonaryEmbolismCase: CaseInstance = {
     ],
     vitalsTrajectory: trajectory(peTriage, { hr: 10, spo2: -4, rr: 4 }),
   },
+  // Review 02 finding 23 (major): active cancer, unilateral calf swelling, HR
+  // > 100 and recent immobilisation give a Wells score >= 7 ("PE likely"). In
+  // high clinical probability D-dimer is not recommended and must not delay
+  // CTPA, which is the first critical order (ESC 2019 acute PE,
+  // https://doi.org/10.1093/eurheartj/ehz405). Bilateral main-artery emboli
+  // with RV strain and troponin 22 ng/L are intermediate-high risk, which needs
+  // a monitored bed, not a general ward.
   expectedWorkup: [
-    order("w-pe-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 15, false, "esc-acs-2023"),
-    order("w-pe-ddimer", "laboratory", LOINC.dDimer, { en: "D-dimer (age-adjusted)", tr: "D-dimer (yaşa göre ayarlı)" }, 30, false, "tepdad-em"),
     order("w-pe-ctpa", "imaging", { system: LOINC.ecg12.system, code: "ctpa", display: "CTPA" },
-      { en: "CT pulmonary angiogram", tr: "BT pulmoner anjiyografi" }, 90, true, "tepdad-em"),
+      { en: "CT pulmonary angiogram (first-line in PE-likely)", tr: "BT pulmoner anjiyografi (PE olası ise birinci basamak)" }, 60, true, "tepdad-em"),
+    order("w-pe-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 15, false, "esc-acs-2023"),
+    order("w-pe-ddimer", "laboratory", LOINC.dDimer, { en: "D-dimer (not indicated when PE likely)", tr: "D-dimer (PE olası ise endike değil)" }, 30, false, "tepdad-em", true),
   ],
-  disposition: "admit-ward",
+  disposition: "admit-ccu",
   provenance: "seed",
 };
 
@@ -518,14 +525,18 @@ const panicDisorderCase: CaseInstance = {
   locale: "en",
   chiefComplaint: { en: "Chest tightness with palpitations and fear", tr: "Çarpıntı ve korkuyla birlikte göğüste sıkışma" },
   patient: p5,
-  encounter: encounter("panic-005", p5.id, { en: "Recurrent chest tightness, 40 minutes", tr: "Tekrarlayan göğüste sıkışma, 40 dakika" }),
+  // Review 02 finding 10 (critical): a single very low hs-troponin rules out
+  // NSTEMI only when chest-pain onset was > 3 h before the draw (ESC 2023 ACS,
+  // 0 h/1 h algorithm; https://doi.org/10.1093/eurheartj/ehad191). Onset is
+  // therefore 4 hours before presentation so the single-draw rule-out is valid.
+  encounter: encounter("panic-005", p5.id, { en: "Recurrent chest tightness, 4 hours", tr: "Tekrarlayan göğüste sıkışma, 4 saat" }),
   allergies: allergyNKDA(p5.id),
   triageVitals: panicTriage,
   difficulty: 3,
   acuityESI: 3,
   correctDiagnosis: dx("dx-panic-005", DSM5TR.panicDisorder,
     { en: "Panic disorder", tr: "Panik bozukluğu" },
-    { subject: p5.id, note: { en: "Recurrent unexpected panic attacks; ACS ruled out with normal ECG and troponin.", tr: "Tekrarlayan beklenmedik panik atakları; normal EKG ve troponinle ACS dışlandı." } }),
+    { subject: p5.id, note: { en: "Recurrent unexpected panic attacks; ACS ruled out with a normal ECG and a single very low hs-troponin drawn more than 3 h after symptom onset (ESC 2023).", tr: "Tekrarlayan beklenmedik panik atakları; normal EKG ve semptom başlangıcından 3 saatten sonra alınan tek çok düşük hs-troponinle ACS dışlandı (ESC 2023)." } }),
   differentials: [
     dx("ddx-panic-acs", ICD10.acsNstemi, { en: "Acute coronary syndrome", tr: "Akut koroner sendrom" }, { category: "differential", verification: "differential", subject: p5.id }),
     dx("ddx-panic-gad", DSM5TR.gad, { en: "Generalized anxiety disorder", tr: "Yaygın anksiyete bozukluğu" }, { category: "differential", verification: "differential", subject: p5.id }),
@@ -537,7 +548,7 @@ const panicDisorderCase: CaseInstance = {
   ],
   groundTruth: {
     history: [
-      hx("h-panic-onset", "onset", { en: "It came on suddenly while I was sitting, peaking in minutes.", tr: "Otururken aniden geldi, dakikalar içinde en şiddetli hale ulaştı." }),
+      hx("h-panic-onset", "onset", { en: "It came on suddenly about four hours ago while I was sitting, peaking in minutes, and has waxed and waned since.", tr: "Yaklaşık dört saat önce otururken aniden geldi, dakikalar içinde en şiddetli hale ulaştı ve o zamandan beri azalıp artıyor." }),
       hx("h-panic-char", "character", { en: "My chest feels tight and my heart is racing.", tr: "Göğsüm sıkışıyor ve kalbim hızlı atıyor." }),
       hx("h-panic-assoc", "associated-symptoms", { en: "My hands tingle and I feel like I cannot breathe.", tr: "Ellerim karıncalanıyor ve nefes alamıyormuş gibi hissediyorum." }),
       hx("h-panic-rad", "radiation", { en: "No, it does not spread to my arm or jaw.", tr: "Hayır, koluma veya çeneme yayılmıyor." }),
