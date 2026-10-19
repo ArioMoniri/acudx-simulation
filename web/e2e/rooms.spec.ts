@@ -17,7 +17,12 @@ test.describe("rooms", () => {
     await page.getByRole("button", { name: "Create room" }).first().click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    await dialog.getByRole("button", { name: "Create room" }).click();
+    // On the 390px project the confirm button sits below the fold of a
+    // scrolling dialog and never passes the "stable" check within the budget;
+    // scroll it in and force the click.
+    const confirm = dialog.getByRole("button", { name: "Create room" });
+    await confirm.scrollIntoViewIfNeeded();
+    await confirm.click({ force: true });
     await expect(page).toHaveURL(/\/rooms\/[^/]+$/);
     await settle(page);
     const roomUrl = page.url();
@@ -43,8 +48,12 @@ test.describe("rooms", () => {
     // The joiner's room title must match the host's (synced snapshot, not a placeholder).
     const hostTitle = await page.getByRole("heading", { level: 1 }).first().innerText();
     await expect(p2.getByRole("heading", { level: 1 }).first()).toHaveText(hostTitle, { timeout: 15_000 });
-    // Host sees two seats filled.
-    await expect(page.getByText(/2 of \d seats filled/)).toBeVisible({ timeout: 15_000 });
+    // Host sees the joiner occupy the first open seat (Nurse): its "Take seat"
+    // control disappears while the AI-held Paramedic seat stays open.
+    await expect(page.getByRole("button", { name: "Take the Nurse seat" })).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Take the Paramedic seat" })).toBeVisible();
+    // Joiner is seated and acting as the nurse.
+    await expect(p2.getByRole("heading", { name: "Acting as Nurse" })).toBeVisible({ timeout: 15_000 });
 
     // Role switch on the host.
     const switcher = page.getByRole("group", { name: "Switch role" });

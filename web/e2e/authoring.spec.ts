@@ -38,16 +38,24 @@ test.describe("authoring", () => {
     await expect(lockButtons).toHaveCount(0);
     await expect(page.getByText(/Every clinical fact is grounded and locked/)).toBeVisible();
 
-    // Walk forward to sign-off and publish.
-    for (let i = 0; i < 4; i++) {
-      const publish = page.getByRole("button", { name: /Publish/ });
-      if ((await publish.count()) > 0 && (await publish.first().isVisible())) break;
-      await page.getByRole("button", { name: "Next stage" }).click();
-    }
-    const publish = page.getByRole("button", { name: /^Publish/ }).first();
+    // Jump to the sign-off stage via the stepper. Publish is gated on the
+    // credentialed clinician's co-sign (the educator profile created above).
+    await page.getByRole("button", { name: /^Go to the Publish and version stage/ }).click();
+    const publish = page.getByRole("button", { name: "Publish case" });
+    await expect(publish).toBeDisabled();
+    await expect(page.getByText("Publish is blocked until the credentialed clinician co-signs.")).toBeVisible();
+    await page
+      .getByLabel("I am the credentialed clinician of record and I approve this case for publication.")
+      .check();
     await expect(publish).toBeEnabled();
     await publish.click();
-    await expect(page.getByRole("button", { name: /Monitor|monitor/ }).first()).toBeVisible({ timeout: 15_000 });
+    // Publishing freezes the case and advances the pipeline to Monitor, where the
+    // new case is listed as published in this session.
+    await expect(page.getByRole("button", { name: /^Go to the Monitor stage, Complete/ })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole("table", { name: "Published and monitored cases" })).toBeVisible();
+    await expect(page.getByText("Just published in this session")).toBeVisible();
 
     expect(await boundaryTripped(page)).toBe(false);
     expect(report.pageErrors).toEqual([]);

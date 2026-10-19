@@ -12,10 +12,14 @@ import { watchConsole, boundaryTripped } from "./helpers/console";
  * The crawl is bounded (MAX_CLICKS) so a route with hundreds of chips (Orders,
  * Interview) stays inside the test budget; the count clicked is attached.
  */
-const MAX_CLICKS = 120;
+// Capped per the coordinator's request so the crawl never dominates the run:
+// at most 40 clicks and 60 s per route. Raising MAX_CLICKS (the Orders and
+// Interview surfaces have >100 chips) is an open item in the tester handoff.
+const MAX_CLICKS = 40;
 const SELECTOR = 'button:enabled, [role="button"]:not([aria-disabled="true"])';
 
 test.describe("buttons", () => {
+  test.describe.configure({ timeout: 60_000 });
   test.beforeEach(async ({ page }) => {
     await createProfile(page, { role: "dean" });
   });

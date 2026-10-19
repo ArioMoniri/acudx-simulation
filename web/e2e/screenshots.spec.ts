@@ -12,12 +12,8 @@ import { createProfile, ROUTES, settle, routeSlug } from "./helpers/session";
 const OUT = join(dirname(fileURLToPath(import.meta.url)), "__screenshots__");
 
 test.describe("screenshots", () => {
-  test.skip(
-    ({}, testInfo) => !["desktop", "mobile"].includes(testInfo.project.name),
-    "desktop + mobile only",
-  );
-
   test.beforeEach(async ({ page }) => {
+    test.skip(!["desktop", "mobile"].includes(test.info().project.name), "desktop + mobile only");
     mkdirSync(OUT, { recursive: true });
     await createProfile(page, { role: "dean", fullName: "Dr. Deniz Yılmaz" });
   });

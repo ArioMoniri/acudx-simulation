@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 export type Role = "student" | "resident" | "educator" | "dean";
 
@@ -78,4 +78,30 @@ export async function settle(page: Page): Promise<void> {
 export async function openTab(page: Page, name: string | RegExp): Promise<void> {
   const strip = page.getByRole("tablist", { name: "Chart sections" });
   await strip.getByRole("tab", { name }).click();
+}
+
+/**
+ * Assert `target` becomes visible on the given EHR tab, re-opening that tab
+ * between attempts. Needed because a landing result advances the store stage
+ * and the tab strip follows it to Results, pulling the learner off the tab they
+ * were working in (recorded as a product finding in the tester handoff).
+ */
+export async function expectOnTab(
+  page: Page,
+  tab: string | RegExp,
+  target: Locator,
+  timeout: number,
+): Promise<void> {
+  const deadline = Date.now() + timeout;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    await openTab(page, tab);
+    try {
+      await expect(target).toBeVisible({ timeout: Math.min(3_000, Math.max(500, deadline - Date.now())) });
+      return;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError ?? new Error(`expectOnTab: ${String(target)} not visible on ${String(tab)} within ${timeout}ms`);
 }

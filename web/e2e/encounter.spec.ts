@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { createProfile, openTab, settle } from "./helpers/session";
+import { createProfile, expectOnTab, openTab, settle } from "./helpers/session";
 import { watchConsole, boundaryTripped } from "./helpers/console";
 
 /**
@@ -29,20 +29,18 @@ test.describe("encounter", () => {
 
     // Interview: three typed questions + one intent chip, each produces a reply.
     await openTab(page, "Interview");
-    const transcript = page.getByRole("log", { name: "Encounter transcript" }).or(
-      page.locator('[aria-label="Encounter transcript"]'),
-    );
+    const transcript = page.getByRole("log", { name: "Encounter transcript" });
+    await expect(transcript).toBeVisible();
     await askFreeText(page, "When did the pain start?");
     await askFreeText(page, "Where exactly is the pain and does it move anywhere?");
     await askFreeText(page, "Do you take any regular medications?");
-    await expect(transcript.first().getByText("When did the pain start?")).toBeVisible();
-    await expect(transcript.first().getByText("Do you take any regular medications?")).toBeVisible();
-    // Patient replies arrive after the typing indicator.
-    await expect
-      .poll(async () => (await transcript.first().locator("p, li, div[role=listitem]").allInnerTexts()).length, {
-        timeout: 15_000,
-      })
-      .toBeGreaterThanOrEqual(6);
+    // Offline path: each typed question is classified to an intent and rendered
+    // as a doctor turn ("You") followed by the patient's reply ("Patient"), so
+    // the transcript holds 3 doctor turns + 3 patient turns.
+    const doctorTurns = transcript.getByRole("listitem").filter({ hasText: /^You/ });
+    const patientTurns = transcript.getByRole("listitem").filter({ hasText: /^Patient/ });
+    await expect(doctorTurns).toHaveCount(3);
+    await expect(patientTurns).toHaveCount(3, { timeout: 15_000 });
 
     // Exam maneuver chip.
     await page.getByRole("button", { name: "Auscultate heart" }).click();
@@ -54,21 +52,26 @@ test.describe("encounter", () => {
     await search.fill("troponin");
     const troponin = page.getByRole("button", { name: /^Order .*troponin/i }).first();
     await expect(troponin).toBeVisible();
-    const labName = (await troponin.getAttribute("aria-label"))!.replace(/^Order /, "");
+    const labLabel = (await troponin.getAttribute("aria-label"))!;
     await troponin.click();
-    await expect(page.getByRole("button", { name: `${labName} already ordered` })).toBeVisible();
+    // Placed: the "Order X" control is replaced by "Repeat X" (serial tests) or
+    // "X already ordered" (single-draw tests).
+    await expect(page.getByRole("button", { name: labLabel, exact: true })).toHaveCount(0);
+    await expect(page.getByText(/1 placed · \d+ pending · \d+ resulted/)).toBeVisible();
 
     await search.fill("chest");
     const cxr = page.getByRole("button", { name: /^Order .*(X-ray|radiograph|chest)/i }).first();
     await expect(cxr).toBeVisible();
-    const imgName = (await cxr.getAttribute("aria-label"))!.replace(/^Order /, "");
+    const imgLabel = (await cxr.getAttribute("aria-label"))!;
     await cxr.click();
-    await expect(page.getByRole("button", { name: `${imgName} already ordered` })).toBeVisible();
+    await expect(page.getByRole("button", { name: imgLabel, exact: true })).toHaveCount(0);
     await search.fill("");
 
     // Order tracker: 2 placed; wait until both have resulted (real timers).
-    await expect(page.getByText(/2 placed · \d+ pending · \d+ resulted/)).toBeVisible();
-    await expect(page.getByText("2 placed · 0 pending · 2 resulted")).toBeVisible({ timeout: 90_000 });
+    // A landing result advances the store stage and the tab strip follows it to
+    // Results (see handoff finding), so re-open Orders before each check.
+    await expectOnTab(page, "Orders", page.getByText(/2 placed · \d+ pending · \d+ resulted/), 15_000);
+    await expectOnTab(page, "Orders", page.getByText("2 placed · 0 pending · 2 resulted"), 90_000);
 
     // Results tab shows both.
     await openTab(page, "Results");
@@ -81,10 +84,10 @@ test.describe("encounter", () => {
     await page.getByRole("tab", { name: "Treatments" }).click();
     const administer = page.getByRole("button", { name: /^Administer / }).first();
     await expect(administer).toBeVisible();
-    const txName = (await administer.getAttribute("aria-label"))!.replace(/^Administer /, "");
     await administer.click();
+    // Treatments are repeatable, so the control keeps its "Administer" label
+    // and the given-count badge + timestamp record the dose.
     await expect(page.getByText("1 given")).toBeVisible();
-    await expect(page.getByRole("button", { name: `${txName} administered` })).toBeVisible();
 
     // Diagnosis: add a candidate to the differential and commit it.
     await openTab(page, /Problem List/);
