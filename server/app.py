@@ -106,7 +106,8 @@ async def lifespan(app: FastAPI):
     registry.seed_from_env(settings)
     telemetry = TelemetryRecorder(settings.acudx_db_path)
     # On-demand GPU worker manager + idle reaper (never always-on; see providers/gpu_worker.py).
-    worker_manager = WorkerManager(settings)
+    worker_manager = WorkerManager(settings, boot_timeout_s=settings.gpu_boot_timeout_s,
+                                   ready_timeout_s=settings.gpu_ready_timeout_s)
     resolver = RegistryResolver(registry, settings, worker_manager=worker_manager)
     gateway = ModelGateway(settings, resolver=resolver, telemetry=telemetry)  # may raise EgressBlocked under AIRGAPPED+api
     await gateway.start()

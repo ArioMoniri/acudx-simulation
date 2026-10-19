@@ -165,6 +165,9 @@ class Settings(BaseSettings):
     )
     lambda_ssh_key_name: str | None = None       # exactly one key name per launch
     gpu_idle_minutes: int = 20
+    # Cold boot of a worker pulls the vLLM image plus ~19 GB of weights; 45 min by default.
+    gpu_ready_timeout_s: float = 2700.0
+    gpu_boot_timeout_s: float = 900.0
     gpu_daily_budget_usd: float = 25.0
     gpu_llm_model: str = "Qwen/Qwen3-32B-AWQ"
     gpu_instance_allowlist: CsvList = Field(default_factory=lambda: [
