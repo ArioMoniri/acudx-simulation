@@ -1,0 +1,92 @@
+{
+ "data": [
+  {
+   "id": "9c4e985c16af4c67ad380b43dcdd9339",
+   "name": "acudx-wm",
+   "mount_point": "/lambda/nfs/acudx-wm",
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4",
+   "created": "2026-10-18T21:40:41Z",
+   "created_by": {
+    "id": "7c685b2825054042b518fe541313f987",
+    "email": "owner@example.invalid",
+    "status": "active"
+   },
+   "is_in_use": true,
+   "region": {
+    "name": "us-east-1",
+    "description": "Virginia, USA"
+   },
+   "bytes_used": 10796120459
+  },
+  {
+   "id": "3c047e15a9154a16b5dfbc567d2c759a",
+   "name": "mgpu-study-fs",
+   "mount_point": "/lambda/nfs/mgpu-study-fs",
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4",
+   "created": "2026-09-23T13:41:52Z",
+   "created_by": {
+    "id": "7e3892fc7a974a7d9a6a41fd5ebfdfe6",
+    "email": "owner@example.invalid",
+    "status": "active"
+   },
+   "is_in_use": false,
+   "region": {
+    "name": "us-east-1",
+    "description": "Virginia, USA"
+   },
+   "bytes_used": 17351169169
+  },
+  {
+   "id": "a957653c55464d1c81ba93a49c634fcf",
+   "name": "oktayliver",
+   "mount_point": "/lambda/nfs/oktayliver",
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4",
+   "created": "2026-09-21T16:37:39Z",
+   "created_by": {
+    "id": "e24610b7cd20499e9c1a3c126d5a6af5",
+    "email": "owner@example.invalid",
+    "status": "active"
+   },
+   "is_in_use": false,
+   "region": {
+    "name": "us-east-3",
+    "description": "Washington DC, USA"
+   }
+  },
+  {
+   "id": "e2bf681b4ced46e4ac50ac7c5db36ab6",
+   "name": "OktayLiver",
+   "mount_point": "/lambda/nfs/OktayLiver",
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4",
+   "created": "2026-09-21T15:06:55Z",
+   "created_by": {
+    "id": "e24610b7cd20499e9c1a3c126d5a6af5",
+    "email": "owner@example.invalid",
+    "status": "active"
+   },
+   "is_in_use": false,
+   "region": {
+    "name": "us-west-3",
+    "description": "Utah, USA"
+   }
+  },
+  {
+   "id": "dec9a9895383468aa93dd7e78cbf8896",
+   "name": "Liver",
+   "mount_point": "/lambda/nfs/Liver",
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4",
+   "created": "2026-09-20T09:38:38Z",
+   "created_by": {
+    "id": "45ca7c48190b4a29819894acd8560287",
+    "email": "owner@example.invalid",
+    "status": "active"
+   },
+   "is_in_use": true,
+   "region": {
+    "name": "us-west-3",
+    "description": "Utah, USA"
+   },
+   "bytes_used": 192155366702
+  }
+ ]
+}

@@ -1,0 +1,103 @@
+{
+ "data": [
+  {
+   "protocol": "tcp",
+   "port_range": [
+    22,
+    22
+   ],
+   "source_network": "0.0.0.0/0",
+   "description": "mgpu-study: ssh from owner"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    8787,
+    8787
+   ],
+   "source_network": "129.80.195.0/32",
+   "description": "mgpu-study: coordinator 8787 from study node 129.80.195.0/32"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    8787,
+    8787
+   ],
+   "source_network": "129.153.150.135/32",
+   "description": "mgpu-study: coordinator 8787 from study node 129.153.150.135/32"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    8787,
+    8787
+   ],
+   "source_network": "129.158.255.145/32",
+   "description": "mgpu-study: coordinator 8787 from study node 129.158.255.145/32"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    8787,
+    8787
+   ],
+   "source_network": "129.159.68.142/32",
+   "description": "mgpu-study: coordinator 8787 from study node 129.159.68.142/32"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    8787,
+    8787
+   ],
+   "source_network": "150.136.57.16/32",
+   "description": "mgpu-study: coordinator 8787 from study node 150.136.57.16/32"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    1,
+    65535
+   ],
+   "source_network": "129.80.195.0/32",
+   "description": "mgpu-study: all tcp from study node 129.80.195.0/32 (DDP/NCCL)"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    1,
+    65535
+   ],
+   "source_network": "129.153.150.135/32",
+   "description": "mgpu-study: all tcp from study node 129.153.150.135/32 (DDP/NCCL)"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    1,
+    65535
+   ],
+   "source_network": "129.158.255.145/32",
+   "description": "mgpu-study: all tcp from study node 129.158.255.145/32 (DDP/NCCL)"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    1,
+    65535
+   ],
+   "source_network": "129.159.68.142/32",
+   "description": "mgpu-study: all tcp from study node 129.159.68.142/32 (DDP/NCCL)"
+  },
+  {
+   "protocol": "tcp",
+   "port_range": [
+    1,
+    65535
+   ],
+   "source_network": "150.136.57.16/32",
+   "description": "mgpu-study: all tcp from study node 150.136.57.16/32 (DDP/NCCL)"
+  }
+ ]
+}
