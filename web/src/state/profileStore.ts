@@ -35,13 +35,14 @@ import { SUPPORTED_LANGUAGES, type Language } from "@/i18n";
  * vantage (learner/educator/dean) — see `src/lib/viewAs.tsx`, which maps a
  * real role onto a nav surface.
  */
-export type ProfileRole = "student" | "resident" | "educator" | "dean";
+export type ProfileRole = "student" | "resident" | "educator" | "dean" | "admin";
 
 export const PROFILE_ROLES: readonly ProfileRole[] = [
   "student",
   "resident",
   "educator",
   "dean",
+  "admin",
 ] as const;
 
 /**

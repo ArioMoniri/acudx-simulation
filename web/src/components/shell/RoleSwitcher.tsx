@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Student, ChalkboardTeacher, Buildings } from "@phosphor-icons/react";
+import { Student, ChalkboardTeacher, Buildings, Wrench } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import { useProfile } from "@/state/profileStore";
 import { permittedVantages, useViewAs, type ViewAsRole } from "@/lib/viewAs";
@@ -8,6 +8,7 @@ const roleIcon: Record<ViewAsRole, typeof Student> = {
   learner: Student,
   educator: ChalkboardTeacher,
   dean: Buildings,
+  admin: Wrench,
 };
 
 /**

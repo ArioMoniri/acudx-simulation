@@ -25,12 +25,13 @@ import { useProfile, type ProfileRole } from "@/state/profileStore";
  * stale vantage.
  */
 
-export type ViewAsRole = "learner" | "educator" | "dean";
+export type ViewAsRole = "learner" | "educator" | "dean" | "admin";
 
 export const VIEW_AS_ROLES: readonly ViewAsRole[] = [
   "learner",
   "educator",
   "dean",
+  "admin",
 ] as const;
 
 const STORAGE_KEY = "acudx-view-as";
@@ -45,6 +46,8 @@ export function profileRoleToViewAs(role: ProfileRole): ViewAsRole {
       return "educator";
     case "dean":
       return "dean";
+    case "admin":
+      return "admin";
     case "student":
     case "resident":
     default:
@@ -62,9 +65,12 @@ export function profileRoleToViewAs(role: ProfileRole): ViewAsRole {
  *   student / resident → learner
  *   educator           → learner, educator
  *   dean               → learner, educator, dean
+ *   admin              → learner, educator, dean, admin (operator console at /admin)
  */
 export function permittedVantages(role: ProfileRole): ViewAsRole[] {
   switch (role) {
+    case "admin":
+      return ["learner", "educator", "dean", "admin"];
     case "dean":
       return ["learner", "educator", "dean"];
     case "educator":
@@ -99,7 +105,7 @@ const ViewAsContext = createContext<ViewAsContextValue | null>(null);
 function readStored(): ViewAsRole {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "learner" || v === "educator" || v === "dean") return v;
+    if (v === "learner" || v === "educator" || v === "dean" || v === "admin") return v;
   } catch {
     /* storage may be unavailable (private mode) — fall back to the default */
   }

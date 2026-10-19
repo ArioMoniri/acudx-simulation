@@ -31,6 +31,9 @@ import httpx
 from pydantic import BaseModel
 
 from server.config import LlmEndpoint, Settings
+from server.registry.resolve import ProviderEndpoint, RegistryResolver
+from server.telemetry import prices
+from server.telemetry.events import TelemetryRecorder
 
 # Matches a complete <think>…</think> reasoning block (some local models, incl.
 # Qwen "thinking" variants, wrap chain-of-thought this way). DOTALL for newlines.
@@ -88,13 +91,62 @@ class ChatResult(BaseModel):
 class ModelGateway:
     """Async facade over the pod's model endpoints. One instance per process."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, *, resolver: RegistryResolver | None = None,
+                 telemetry: TelemetryRecorder | None = None) -> None:
         self.settings = settings
         # Resolve + guard once at construction so a bad/egressing config fails
         # closed at startup, not mid-encounter.
         self.endpoint: LlmEndpoint = settings.resolve_llm()
         self.tiers: dict[str, TierConfig] = self._build_tiers(self.endpoint)
         self._client: httpx.AsyncClient | None = None
+        # Runtime provider registry (docs/architecture/17). When wired, every call
+        # resolves its endpoint from the registry (priority, air-gap, GPU worker
+        # fallback); without it the env-seeded endpoint above is used.
+        self.resolver = resolver
+        self.telemetry = telemetry
+
+    # -- endpoint resolution (registry first, env as the seed) -------------- #
+    async def resolve_endpoint(self, kind: str) -> ProviderEndpoint:
+        """Best endpoint for ``kind`` (llm | embed | rerank) or :class:`GatewayError`."""
+        if self.resolver is not None:
+            ep = await self.resolver.resolve(kind)
+            if ep is None:
+                raise GatewayError(
+                    f"no enabled {kind} provider is available (configure one under /admin/providers"
+                    + (", or allow the GPU worker" if kind == "llm" else "") + ")")
+            return ep
+        s = self.settings
+        if kind == "llm":
+            return ProviderEndpoint(kind="llm", name=self.endpoint.provider, base_url=self.endpoint.base_url,
+                                    model=self.endpoint.model, api_key=self.endpoint.api_key, source="env")
+        if kind == "embed":
+            return ProviderEndpoint(kind="embed", name="local", base_url=s.embed_url.rstrip("/"), model=s.embed_model,
+                                    api_key=s.llm_api_key, source="env")
+        if kind == "rerank":
+            return ProviderEndpoint(kind="rerank", name="local", base_url=s.rerank_url.rstrip("/"),
+                                    model=s.rerank_model, api_key=s.llm_api_key, source="env")
+        raise GatewayError(f"unknown endpoint kind {kind!r}")
+
+    def _record(self, ep: ProviderEndpoint, *, kind: str, model: str | None, usage: dict[str, Any] | None,
+                latency_ms: float, ok: bool, error: str | None = None) -> None:
+        """One telemetry row per attempt; never lets telemetry break the call."""
+        if self.resolver is not None:
+            self.resolver.touch(ep)
+        if self.telemetry is None:
+            return
+        u = usage or {}
+        details = u.get("prompt_tokens_details") or {}
+        try:
+            self.telemetry.record(
+                kind=kind, provider=ep.name, model=model or ep.model or "",
+                billing_provider=prices.provider_from_url(ep.base_url) or ep.name,
+                tokens_in=int(u.get("prompt_tokens") or u.get("input_tokens") or 0),
+                tokens_out=int(u.get("completion_tokens") or u.get("output_tokens") or 0),
+                cached_tokens=int(details.get("cached_tokens") or u.get("cached_tokens") or 0),
+                latency_ms=round(latency_ms, 3), ok=ok, error=error, requested_model=ep.model,
+            )
+        except Exception:  # noqa: BLE001 - telemetry is best-effort
+            pass
 
     # -- tier map (structured for future routing) --------------------------- #
     @staticmethod
@@ -142,12 +194,12 @@ class ModelGateway:
     ) -> ChatResult:
         """Call ``/chat/completions`` for a task tier and parse robustly."""
         tier = self.tiers.get(task) or self.tiers["patient"]
-        ep = tier.endpoint
-        # Per-call guard: even if the tier map were mis-wired to egress, block it.
+        ep = await self.resolve_endpoint("llm")
+        # Per-call guard: even if the registry were mis-wired to egress, block it.
         self.settings.guard_egress(ep.base_url)
 
         payload: dict[str, Any] = {
-            "model": ep.model,
+            "model": ep.model or tier.endpoint.model,
             "messages": messages,
             "temperature": tier.temperature if temperature is None else temperature,
             "max_tokens": max_tokens or tier.max_tokens,
@@ -157,12 +209,20 @@ class ModelGateway:
             payload["stop"] = stop
 
         t0 = time.monotonic()
-        data = await self._post_json(f"{ep.base_url}/chat/completions", payload, ep.api_key)
+        try:
+            data = await self._post_json(f"{ep.base_url}/chat/completions", payload, ep.api_key)
+        except GatewayError as exc:
+            self._record(ep, kind="llm", model=ep.model, usage=None, latency_ms=(time.monotonic() - t0) * 1000.0,
+                         ok=False, error=type(exc).__name__)
+            raise
         latency_ms = (time.monotonic() - t0) * 1000.0
-        return self._parse_chat(data, tier, latency_ms)
+        result = self._parse_chat(data, tier, latency_ms, ep)
+        self._record(ep, kind="llm", model=result.model, usage=result.usage, latency_ms=latency_ms, ok=True)
+        return result
 
     @staticmethod
-    def _parse_chat(data: dict[str, Any], tier: TierConfig, latency_ms: float) -> ChatResult:
+    def _parse_chat(data: dict[str, Any], tier: TierConfig, latency_ms: float,
+                    ep: ProviderEndpoint | None = None) -> ChatResult:
         choices = data.get("choices") or [{}]
         choice = choices[0] if choices else {}
         msg = choice.get("message") or {}
@@ -176,8 +236,8 @@ class ModelGateway:
             text=clean,
             raw=raw,
             finish_reason=choice.get("finish_reason"),
-            model=data.get("model", tier.endpoint.model),
-            provider=tier.endpoint.provider,
+            model=data.get("model") or (ep.model if ep and ep.model else tier.endpoint.model),
+            provider=ep.name if ep is not None else tier.endpoint.provider,
             task=tier.task,
             had_reasoning=bool(reasoning) or had_think,
             usage=data.get("usage"),
@@ -218,42 +278,58 @@ class ModelGateway:
         be confirmed at deploy time; we try the common shapes so the fix, if
         any, is one line. ``AIRGAPPED`` guard applies (the URL is local).
         """
-        self.settings.guard_egress(self.settings.embed_url)
-        base = self.settings.embed_url.rstrip("/")
-        model = getattr(self.settings, "embed_model", "ytu-ce-cosmos/modernbert-tr-embed")
+        ep = await self.resolve_endpoint("embed")
+        self.settings.guard_egress(ep.base_url)
+        base = ep.base_url
+        model = ep.model or self.settings.embed_model
+        api_key = ep.api_key or self.settings.llm_api_key
         # The on-pod embed service is OpenAI-compatible: POST /v1/embeddings
         # {"input": [...], "model": ...} -> {"data": [{"embedding": [...]}, ...]}.
         last_exc: Exception | None = None
+        t0 = time.monotonic()
         for url in (f"{base}/v1/embeddings", f"{base}/embeddings", base):
             for body in ({"input": texts, "model": model}, {"input": texts}, {"texts": texts}):
                 try:
-                    data = await self._post_json(url, body, self.settings.llm_api_key)
+                    data = await self._post_json(url, body, api_key)
                     vecs = _parse_embeddings(data)
                     if vecs and len(vecs) == len(texts):
+                        usage = data.get("usage") if isinstance(data, dict) else None
+                        self._record(ep, kind="embed", model=model, usage=usage,
+                                     latency_ms=(time.monotonic() - t0) * 1000.0, ok=True)
                         return vecs
                 except GatewayError as exc:
                     last_exc = exc
+        self._record(ep, kind="embed", model=model, usage=None, latency_ms=(time.monotonic() - t0) * 1000.0,
+                     ok=False, error="GatewayError")
         raise GatewayError(f"embed() could not reach {base}: {last_exc}")
 
     # -- rerank adapter (thin, defensive) ----------------------------------- #
     async def rerank(self, query: str, documents: list[str]) -> list[float]:
         """POST (query, documents) to ``RERANK_URL`` → one score per document."""
-        self.settings.guard_egress(self.settings.rerank_url)
-        base = self.settings.rerank_url.rstrip("/")
-        model = getattr(self.settings, "rerank_model", "ytu-ce-cosmos/modernbert-tr-reranker")
+        ep = await self.resolve_endpoint("rerank")
+        self.settings.guard_egress(ep.base_url)
+        base = ep.base_url
+        model = ep.model or self.settings.rerank_model
+        api_key = ep.api_key or self.settings.llm_api_key
         # OpenAI/Cohere-style: POST /v1/rerank {"query", "documents", "model"}
         # -> {"results": [{"index", "relevance_score"}, ...]}.
         last_exc: Exception | None = None
+        t0 = time.monotonic()
         for url in (f"{base}/v1/rerank", f"{base}/rerank", base):
             for body in ({"query": query, "documents": documents, "model": model},
                          {"query": query, "documents": documents}):
                 try:
-                    data = await self._post_json(url, body, self.settings.llm_api_key)
+                    data = await self._post_json(url, body, api_key)
                     scores = _parse_rerank(data, len(documents))
                     if scores is not None:
+                        usage = data.get("usage") if isinstance(data, dict) else None
+                        self._record(ep, kind="rerank", model=model, usage=usage,
+                                     latency_ms=(time.monotonic() - t0) * 1000.0, ok=True)
                         return scores
                 except GatewayError as exc:
                     last_exc = exc
+        self._record(ep, kind="rerank", model=model, usage=None, latency_ms=(time.monotonic() - t0) * 1000.0,
+                     ok=False, error="GatewayError")
         raise GatewayError(f"rerank() could not reach {base}: {last_exc}")
 
     # -- reachability probes (for /status) ---------------------------------- #

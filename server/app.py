@@ -24,12 +24,13 @@ Education only. No real patient-data path.
 
 from __future__ import annotations
 
+import hashlib
 import inspect
-import os
+import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import AliasChoices, BaseModel, Field
@@ -42,9 +43,16 @@ from server.model_gateway import GatewayError, ModelGateway
 from server.orchestration.routes import router as orchestration_v2_router
 from server.persona import build_patient_turn, fact_assertion_gate
 from server.providers.gpu_worker import WorkerManager
+from server.registry.resolve import RegistryResolver
+from server.registry.routes import disk_usage
+from server.registry.routes import router as registry_router
+from server.registry.store import RegistryStore, secret_key_instructions
 from server.rubric import grade_transcript
 from server.scope_guard import classify, crisis_resources
 from server.results_routes import router as results_router
+from server.telemetry.events import TelemetryRecorder, call_context
+
+log = logging.getLogger("acudx.app")
 
 # Guard-class -> persona directive (docs/architecture/13 §3.1 routing).
 _DIRECTIVE_BY_CLASS = {"in-scope": "normal", "off-topic": "off_topic", "answer-seeking": "decline"}
@@ -89,13 +97,23 @@ def _resolve_locale(req: "PatientTurnRequest", verdict: dict[str, Any]) -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    gateway = ModelGateway(settings)   # may raise EgressBlocked under AIRGAPPED+api
-    await gateway.start()
-    app.state.settings = settings
-    app.state.gateway = gateway
+    # Provider registry (docs/architecture/17): env config is imported once as the
+    # seed rows; from then on the admin panel is the source of truth.
+    registry = RegistryStore(settings.acudx_db_path, secret_key=settings.acudx_secret_key)
+    if not registry.secrets_configured:
+        log.warning(secret_key_instructions())
+    registry.seed_from_env(settings)
+    telemetry = TelemetryRecorder(settings.acudx_db_path)
     # On-demand GPU worker manager + idle reaper (never always-on; see providers/gpu_worker.py).
     worker_manager = WorkerManager(settings)
+    resolver = RegistryResolver(registry, settings, worker_manager=worker_manager)
+    gateway = ModelGateway(settings, resolver=resolver, telemetry=telemetry)  # may raise EgressBlocked under AIRGAPPED+api
+    await gateway.start()
     worker_manager.start_reaper()
+    app.state.settings = settings
+    app.state.gateway = gateway
+    app.state.registry = registry
+    app.state.telemetry = telemetry
     app.state.worker_manager = worker_manager
     try:
         yield
@@ -126,6 +144,22 @@ app.add_middleware(
 )
 app.include_router(admin_router)
 app.include_router(results_router)  # /v1/results/* and /v1/imaging/resolve (server/results_routes.py)
+app.include_router(registry_router)
+
+
+# Telemetry context: every model call made while serving a request is tagged
+# with its route and, when the caller sends them, the tenant / user / encounter
+# (user ids are hashed before they are stored; no PHI path, education only).
+@app.middleware("http")
+async def _telemetry_context(request: Request, call_next):  # type: ignore[no-untyped-def]
+    user = request.headers.get("x-user-id")
+    with call_context(
+        route=request.url.path,
+        tenant=request.headers.get("x-tenant") or None,
+        user_hash=hashlib.sha256(user.encode("utf-8")).hexdigest()[:16] if user else None,
+        encounter_id=request.headers.get("x-encounter-id") or None,
+    ):
+        return await call_next(request)
 
 
 # --------------------------------------------------------------------------- #
@@ -233,21 +267,7 @@ async def health() -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 # /status  — {disk, ram} + endpoint reachability                              #
 # --------------------------------------------------------------------------- #
-def _disk(path: str) -> dict[str, Any]:
-    target = path if os.path.exists(path) else "/"
-    try:
-        st = os.statvfs(target)
-        total = st.f_blocks * st.f_frsize
-        free = st.f_bavail * st.f_frsize
-        return {
-            "path": target,
-            "total_bytes": total,
-            "free_bytes": free,
-            "used_bytes": total - free,
-            "used_pct": round((total - free) / total * 100, 1) if total else None,
-        }
-    except OSError as exc:
-        return {"path": target, "error": type(exc).__name__, "detail": str(exc)}
+_disk = disk_usage   # shared with /admin/health (server/registry/routes.py)
 
 
 def _ram() -> dict[str, Any]:

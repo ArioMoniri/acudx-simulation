@@ -9,3 +9,4 @@ export { ProgressPage } from "./ProgressPage";
 export { RoomPage } from "./RoomPage";
 export { InstitutionPage } from "./InstitutionPage";
 export { AtlasPage } from "./AtlasPage";
+export { AdminPage } from "./AdminPage";

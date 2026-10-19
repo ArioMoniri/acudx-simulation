@@ -52,6 +52,14 @@ const NAV_BY_ROLE: Record<ViewAsRole, NavItem[]> = {
     { to: "/authoring", key: "nav.authoring" },
     { to: "/atlas", key: "nav.atlas", defaultLabel: "Atlas" },
   ],
+  // The operator console is reachable only from the admin vantage, which only
+  // the real `admin` profile role can select (see lib/viewAs permittedVantages).
+  admin: [
+    { to: "/", key: "nav.home", end: true },
+    { to: "/admin", key: "nav.admin", defaultLabel: "Admin" },
+    { to: "/institution", key: "nav.institution" },
+    { to: "/authoring", key: "nav.authoring" },
+  ],
 };
 
 const linkClasses = (isActive: boolean) =>
