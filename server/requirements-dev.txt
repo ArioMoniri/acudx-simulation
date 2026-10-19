@@ -1,4 +1,7 @@
-# AcuDx backend gateway — dev/test deps.
-pytest>=8.0,<9.0
+# AcuDx backend gateway: test and development dependencies.
+#   python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -r server/requirements-dev.txt
+#   .venv/bin/python -m pytest server/tests -q
+-r requirements.txt
+pytest>=8.0,<10.0
 pytest-asyncio>=0.23,<1.0
 respx>=0.21,<1.0

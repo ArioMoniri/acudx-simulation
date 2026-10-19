@@ -44,6 +44,7 @@ from server.persona import build_patient_turn, fact_assertion_gate
 from server.providers.gpu_worker import WorkerManager
 from server.rubric import grade_transcript
 from server.scope_guard import classify, crisis_resources
+from server.results_routes import router as results_router
 
 # Guard-class -> persona directive (docs/architecture/13 §3.1 routing).
 _DIRECTIVE_BY_CLASS = {"in-scope": "normal", "off-topic": "off_topic", "answer-seeking": "decline"}
@@ -124,6 +125,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(admin_router)
+app.include_router(results_router)  # /v1/results/* and /v1/imaging/resolve (server/results_routes.py)
 
 
 # --------------------------------------------------------------------------- #
