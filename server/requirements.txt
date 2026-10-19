@@ -9,3 +9,7 @@ pydantic-settings>=2.1,<3.0
 # numpy backs the optional embedding scope-similarity helper (lazy-imported in
 # model_gateway.scope_similarity); the core app runs without touching it.
 numpy>=1.26,<3.0
+# Guideline verifier (server/guidelines/verifier.py): fetch + extract the source documents.
+trafilatura>=1.8,<3.0
+lxml>=5.0,<7.0
+pypdf>=4.0,<7.0

@@ -1,13 +1,12 @@
 import { useTranslation } from "react-i18next";
 import {
   Quotes,
-  BookOpen,
   Target,
   ShieldWarning,
   Repeat,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
-import { getCitation } from "@/data/mock";
+import { CitationPill } from "@/components/CitationPill";
 import type { FeedbackGap, Lang } from "@/data/mock";
 
 export interface GapCardProps {
@@ -23,7 +22,6 @@ export interface GapCardProps {
  */
 export function GapCard({ gap, lang }: GapCardProps) {
   const { t } = useTranslation();
-  const citation = getCitation(gap.citationId);
   const critical = gap.safetyCritical;
 
   return (
@@ -99,12 +97,9 @@ export function GapCard({ gap, lang }: GapCardProps) {
           <p className="mt-1 text-sm leading-relaxed text-fg">
             {gap.remediation[lang]}
           </p>
-          {citation ? (
-            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-bg-subtle px-2.5 py-0.5 text-xs font-medium text-muted">
-              <BookOpen weight="bold" className="h-3 w-3" aria-hidden />
-              {citation.label}
-            </span>
-          ) : null}
+          <div className="mt-2">
+            <CitationPill citationId={gap.citationId} lang={lang} />
+          </div>
         </div>
       </div>
     </article>

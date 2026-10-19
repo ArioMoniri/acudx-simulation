@@ -41,7 +41,7 @@
 import { useSyncExternalStore } from "react";
 
 import type { Bilingual, FeedbackDomainKey, Lang } from "@/data/mock";
-import { getCitation } from "@/data/mock";
+import { cachedCitation } from "@/lib/guidelinesApi";
 import { CODE_SYSTEMS } from "@/domain/fhir";
 import type { CaseInstance } from "@/domain/case";
 import {
@@ -495,8 +495,10 @@ function distinctCitationIds(facts: LockedFact[], rubric: RubricItem[]): string[
 }
 
 function guidelineSetOf(citationIds: string[]): string {
+  // Labels come from the verified statement cache (populated by the API); an
+  // unverified id contributes nothing rather than an invented label.
   const labels = citationIds
-    .map((id) => getCitation(id)?.label)
+    .map((id) => cachedCitation(id)?.label)
     .filter((l): l is string => Boolean(l));
   return Array.from(new Set(labels)).join(" · ");
 }
@@ -1184,8 +1186,8 @@ export const lockedFacts: LockedFact[] = [
       en: "12-lead ECG shows 1.5 mm ST depression in leads V4 to V6 with T-wave inversion; no ST elevation.",
       tr: "12 derivasyonlu EKG'de V4-V6'da 1,5 mm ST çökmesi ve T dalga inversiyonu; ST yükselmesi yok.",
     },
-    citationId: "esc-acs-2023",
-    section: "5.1",
+    citationId: "gs_nice_ng185_nstemi_assessment",
+    section: "1.2.8",
     status: "locked",
     humanEdited: false,
     safetyCritical: true,
@@ -1197,8 +1199,8 @@ export const lockedFacts: LockedFact[] = [
       en: "Expected first-dose management: aspirin 300 mg orally after allergy check, plus analgesia titrated to pain.",
       tr: "Beklenen ilk doz yönetimi: alerji kontrolünden sonra 300 mg oral aspirin ve ağrıya göre titre edilen analjezi.",
     },
-    citationId: "esc-acs-2023",
-    section: "6.2",
+    citationId: "gs_nice_ng185_aspirin300",
+    section: "1.1.4",
     status: "edited-locked",
     humanEdited: true,
     safetyCritical: true,

@@ -192,7 +192,7 @@ export const epaCatalog: EpaCatalogEntry[] = [
       en: "Recommend and interpret common diagnostic tests",
       tr: "Sık kullanılan tanısal testleri önerme ve yorumlama",
     },
-    citationId: "esc-acs-2023",
+    citationId: "gs_nice_ng185_nstemi_assessment",
     domains: ["reasoning", "exam"],
   },
   {

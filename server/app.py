@@ -37,6 +37,7 @@ from pydantic import AliasChoices, BaseModel, Field
 from server.case_generator import generate_case_spec
 from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
+from server.guidelines.routes import router as guidelines_router
 from server.model_gateway import GatewayError, ModelGateway
 from server.persona import build_patient_turn, fact_assertion_gate
 from server.rubric import grade_transcript
@@ -113,6 +114,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(guidelines_router)  # /v1/guidelines/* + /admin/guidelines/verify
 
 
 # --------------------------------------------------------------------------- #

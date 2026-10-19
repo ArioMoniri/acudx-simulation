@@ -1380,7 +1380,7 @@ export function deriveFeedbackGaps(rec: EncounterRecord): FeedbackGap[] {
         tr: `Bu vakada endike olmayan ${steward.lowValue} istem.`,
       },
       remediation: GAP_LOWVALUE_REMEDIATION,
-      citationId: "esc-acs-2023",
+      citationId: "gs_nice_ng185_nstemi_assessment",
       safetyCritical: false,
       recurrence: 0,
     });
@@ -1403,7 +1403,7 @@ export function deriveTreatmentBehaviors(rec: EncounterRecord): TreatmentBehavio
         ? { en: "Elicited red-flag features during the history.", tr: "Anamnezde alarm bulgularını sorguladı." }
         : { en: "Red-flag features were not screened during the history.", tr: "Anamnezde alarm bulguları taranmadı." },
       met: flags.screenedRedFlags,
-      citationId: "nice-ng185",
+      citationId: "gs_nice_ng185_reperfusion_eligibility",
       critical: false,
     },
     {
@@ -1414,7 +1414,7 @@ export function deriveTreatmentBehaviors(rec: EncounterRecord): TreatmentBehavio
         ? { en: "Confirmed allergy status before treatment.", tr: "Tedaviden önce alerji durumu doğrulandı." }
         : { en: "Allergy status was not confirmed before treatment.", tr: "Tedaviden önce alerji durumu doğrulanmadı." },
       met: flags.checkedAllergies,
-      citationId: "esc-acs-2023",
+      citationId: "gs_nice_ng185_nstemi_assessment",
       critical: true,
     },
     {
