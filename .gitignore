@@ -32,3 +32,5 @@ coverage/
 # Python bytecode
 __pycache__/
 *.pyc
+server/data/*.db
+server/data/*.db-*
