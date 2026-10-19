@@ -98,7 +98,6 @@ export function NewCaseMenu({
       document.removeEventListener("keydown", onKey);
     };
     // `close` is stable enough for this handler; open toggling re-binds it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Move focus into the menu when it opens so the popover is keyboard-usable.

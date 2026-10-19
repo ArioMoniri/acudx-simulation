@@ -632,7 +632,6 @@ export function useLiveGrounding(focus: GroundingFocus): GroundingResult {
       controller.abort();
       clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, query, focus.country, lang, citationKey, orderCodeKey]);
 
   return result;

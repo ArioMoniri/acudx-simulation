@@ -32,3 +32,10 @@ coverage/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Python venv
+.venv/
+
+# Playwright
+web/playwright-report/
+web/test-results/

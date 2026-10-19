@@ -181,7 +181,6 @@ export function ActivityTabs({
       setStage(tab.stage);
     }
     // Runs on external tab changes only; store-stage sync is handled above.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controlledTab, isControlled]);
 
   // Small live counts for the nav (results returned, orders placed, problems).

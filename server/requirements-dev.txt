@@ -1,0 +1,7 @@
+# AcuDx backend gateway — test/dev deps. Install on top of requirements.txt:
+#   python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -r server/requirements-dev.txt
+#   .venv/bin/python -m pytest server/tests -q
+pytest>=8.3,<9.0
+pytest-asyncio>=0.24,<2.0
+httpx>=0.27,<1.0
+respx>=0.21,<1.0
