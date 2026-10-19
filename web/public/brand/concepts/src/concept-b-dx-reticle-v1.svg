@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">Concept B: Dx reticle</title>
+  <!-- D letterform; the x of Dx sits in the counter as a 45 degree reticle. -->
+  <g fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="28" d="M54 40 H124 A88 88 0 0 1 124 216 H54 Z"/>
+    <path stroke-width="20" d="M86 100 L142 156 M142 100 L86 156"/>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
+  <title id="t">Concept A: Acute trace, small-size cut (favicon 16 to 32 px)</title>
+  <!-- Same construction, stroke 40, wider counter, trace a little lower so the counter stays open at 16 px. -->
+  <g fill="none" stroke="#000000" stroke-width="40" stroke-linecap="round">
+    <path d="M28 216 L128 43 L228 216" stroke-linejoin="miter" stroke-miterlimit="4"/>
+    <path d="M12 166 H244"/>
+  </g>
+</svg>
