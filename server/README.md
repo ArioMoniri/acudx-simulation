@@ -88,6 +88,67 @@ python -m server.scope_guard
 `run.sh` respects `HOST` / `PORT` and forwards extra args to uvicorn
 (e.g. `bash server/run.sh --reload` in dev).
 
+## On-demand GPU worker (Lambda Cloud)
+
+`server/providers/gpu_worker.py` launches a single GPU worker **only when a
+request needs one and no healthy worker exists**, and the idle reaper (an
+asyncio task started in the app lifespan) terminates it after
+`GPU_IDLE_MINUTES` without a request. There is never an always-on instance.
+
+* Provider client: `server/providers/lambda_cloud.py` (typed `httpx` client for
+  `https://cloud.lambda.ai/api/v1`, basic auth with the key as username).
+  Response models match live captures in `server/tests/fixtures/lambda/`.
+* Instance choice: cheapest allow-listed type that has capacity now
+  (default allowlist `gpu_1x_a100_sxm4, gpu_1x_a10, gpu_1x_a100, gpu_1x_h100_pcie`),
+  optionally restricted/ranked by `region_preference`.
+* Budget: a launch is refused when `spent_today + one projected hour` would
+  exceed `daily_budget_usd` (UTC day). Spend is computed from the ledger.
+* Worker image: `infra/gpu-worker/cloud-init.yaml` (vLLM + Kokoro TTS +
+  speaches STT behind Caddy on `<ip-with-dashes>.sslip.io`, every route needs
+  `Authorization: Bearer <token>`; the token is `secrets.token_urlsafe(32)`,
+  generated per launch and stored server-side only). The manager appends
+  tcp/80 and tcp/443 from `0.0.0.0/0` to the account firewall if missing
+  (`PUT /firewall-rules` replaces everything, so existing rules are kept).
+  Because the public IP exists only after launch, the manager renders
+  `WORKER_DOMAIN=auto` and the worker derives its own sslip.io name at boot.
+* Readiness: poll `GET /instances/{id}` until `active` with an IP, then
+  `GET https://<domain>/healthz` until 200. Worker endpoints:
+  `/v1` (OpenAI-compatible, served model `acudx-llm`), `/tts/v1/audio/speech`,
+  `/stt/v1/audio/transcriptions`.
+* Persistence: SQLite at `ACUDX_DB_PATH` (default `server/data/acudx.db`):
+  tables `gpu_workers`, `gpu_ledger` (cost per run, reason: `idle`, `admin`,
+  `boot_timeout`, …) and `gpu_policy` (admin overrides).
+* **AIRGAPPED=true (default) fails closed**: `ensure_worker()` raises
+  `AirgappedRefused` and `/admin/gpu/status` reports `can_launch: false` with
+  the reason. Set `AIRGAPPED=false` explicitly to allow Lambda Cloud egress.
+
+### Env
+
+| Var | Default | Meaning |
+|---|---|---|
+| `LAMBDA_KEY` (alias `LAMBDA_API_KEY`) | unset | Lambda Cloud API key |
+| `LAMBDA_SSH_KEY_NAME` | unset | name of exactly one registered ssh key |
+| `GPU_IDLE_MINUTES` | `20` | idle window before termination |
+| `GPU_DAILY_BUDGET_USD` | `25.0` | hard daily cap |
+| `GPU_LLM_MODEL` | `Qwen/Qwen3-32B-AWQ` | model vLLM loads on the worker |
+| `GPU_INSTANCE_ALLOWLIST` | see above | CSV or JSON list |
+| `GPU_REGION_PREFERENCE` | empty | CSV or JSON list, ordered |
+| `ADMIN_TOKEN` | unset | guards `/admin/*`; unset → `503` |
+| `ACUDX_DB_PATH` | `server/data/acudx.db` | SQLite path |
+
+### Admin API (`X-Admin-Token: $ADMIN_TOKEN`)
+
+| Route | Purpose |
+|---|---|
+| `GET /admin/gpu/status` | worker (no token), policy, spend today, `can_launch` + refusal reason |
+| `POST /admin/gpu/start` | `ensure_worker()`; `409 {reason: airgapped|not_configured|budget_exceeded|no_capacity|worker_failed}` |
+| `POST /admin/gpu/stop` | terminate the active worker (ledger reason `admin`) |
+| `GET /admin/gpu/ledger?limit=` | cost ledger entries + `spent_today_usd` |
+| `GET/PUT /admin/gpu/policy` | `idle_minutes`, `daily_budget_usd`, `allowlist`, `llm_model`, `region_preference` |
+
+Tests: `python -m pytest server/tests -q` (deps in `server/requirements-dev.txt`;
+network is intercepted with `respx`, nothing is launched).
+
 ## Air-gap behaviour
 
 `AIRGAPPED=true` (the default) makes the gateway the single enforcement point:
