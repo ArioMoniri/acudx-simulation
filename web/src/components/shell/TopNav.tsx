@@ -86,7 +86,7 @@ export function TopNav() {
           <Wordmark />
         </NavLink>
 
-        <ul className="ms-1 hidden items-center gap-1 md:flex">
+        <ul className="ms-1 hidden items-center gap-1 lg:flex">
           {links.map((l) => (
             <li key={l.key}>
               <NavLink
@@ -103,7 +103,7 @@ export function TopNav() {
         </ul>
 
         <div className="ms-auto flex items-center gap-2">
-          <GuidedTour className="hidden md:inline-flex" />
+          <GuidedTour className="hidden lg:inline-flex" />
           <RoleSwitcher className="hidden sm:flex" />
           <LanguageSwitcher className="hidden sm:inline-flex" />
           <ThemeToggle />
@@ -124,7 +124,7 @@ export function TopNav() {
       </nav>
 
       {/* Compact nav for small screens — kept on one row, scrolls if needed */}
-      <div className="flex items-center gap-2 overflow-x-auto border-t border-border px-4 py-1.5 md:hidden">
+      <div className="flex items-center gap-2 overflow-x-auto border-t border-border px-4 py-1.5 lg:hidden">
         <GuidedTour className="shrink-0" />
         <RoleSwitcher className="shrink-0 sm:hidden" />
         <ul className="flex items-center gap-1">

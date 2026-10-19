@@ -1,0 +1,30 @@
+{
+  "name": "acudx-launch-video",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AcuDx launch video, teaser and poster, rendered with Remotion",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "capture": "node scripts/capture-screens.mjs",
+    "render": "remotion render src/index.ts Launch out/launch.mp4 --codec h264 --browser-executable /opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell",
+    "render:teaser": "remotion render src/index.ts Teaser out/teaser.mp4 --codec h264 --browser-executable /opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell",
+    "render:poster": "remotion still src/index.ts Poster out/poster.png --browser-executable /opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell",
+    "render:all": "npm run render && npm run render:teaser && npm run render:poster",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.537",
+    "@remotion/fonts": "4.0.537",
+    "@remotion/lottie": "4.0.537",
+    "lottie-web": "5.13.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.537"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "playwright-core": "1.56.1",
+    "typescript": "5.7.3"
+  }
+}

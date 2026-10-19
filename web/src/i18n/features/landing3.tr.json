@@ -1,0 +1,17 @@
+{
+  "landing3": {
+    "hero": {
+      "markTitle": "AcuDx işareti çiziliyor"
+    },
+    "film": {
+      "eyebrow": "On saniye",
+      "heading": "Döngüyü çalıştırmadan önce izleyin",
+      "sub": "Kısa bir tanıtım: işaret, vaat ve EHR çalışma alanında gerçek bir karşılaşma.",
+      "label": "AcuDx tanıtımı, on saniye, sessiz",
+      "unsupported": "Tarayıcınız bu videoyu oynatamıyor.",
+      "posterAlt": "AcuDx afişi: Simüle hastalar. Gerçek kararlar. EHR çalışma alanında bir dosya incelemesi.",
+      "repo": "Kaynak kodu ve tam lansman filmi GitHub'da",
+      "muteNote": "Tasarım gereği sessiz. Altyazılar karenin içinde, İngilizce ve Türkçe."
+    }
+  }
+}

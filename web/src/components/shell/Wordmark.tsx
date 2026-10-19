@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /**
@@ -16,9 +17,12 @@ import { cn } from "@/lib/cn";
 export function Wordmark({
   className,
   size = "md",
+  mark,
 }: {
   className?: string;
   size?: "sm" | "md" | "lg";
+  /** Replaces the static symbol (the landing hero passes the Lottie mark). */
+  mark?: ReactNode;
 }) {
   const sz =
     size === "lg"
@@ -34,7 +38,7 @@ export function Wordmark({
         className,
       )}
     >
-      <AcuDxMark className="h-[1.15em] w-[1.15em] text-axis-clinical" />
+      {mark ?? <AcuDxMark className="h-[1.15em] w-[1.15em] text-axis-clinical" />}
       <span>
         <span className="text-fg">Acu</span>
         <span className="text-axis-clinical">Dx</span>

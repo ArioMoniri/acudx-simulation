@@ -13,6 +13,8 @@ import {
   CoreLoop,
   SupportingRail,
   CredibilityStrip,
+  HeroMark,
+  LaunchTeaser,
 } from "@/components/landing";
 
 /* -------------------------------------------------------------------------- */
@@ -30,6 +32,11 @@ import {
  * loop is a single dominant stepper; the surrounding platform is a compact
  * hairline-divided rail (not equal cards); a calm band closes with one CTA.
  *
+ * The brand moment: the hero lockup carries the mark drawing itself in
+ * (HeroMark, code-split and mounted after idle so it never competes with LCP;
+ * static under reduced motion). A ten-second silent teaser sits after the
+ * credibility strip as a lazy inline video with a poster.
+ *
  * One saturated primary button (the hero's primary call to action); every other
  * CTA is secondary or a quiet link. Restrained, reduced-motion-safe entrances. Light
  * default and dark. Nothing here is real patient data; every case is synthetic
@@ -42,6 +49,7 @@ export function LandingPage() {
   const hero = useReveal();
   const heroArtifact = useReveal(0.08);
   const cred = useReveal(0.04);
+  const film = useReveal(0.04);
   const loopHead = useReveal();
   const platformHead = useReveal();
   const closing = useReveal(0.04);
@@ -52,7 +60,7 @@ export function LandingPage() {
       <section className="grid items-center gap-10 pt-2 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:pt-6">
         <motion.div {...hero}>
           <div className="flex flex-wrap items-center gap-3">
-            <Wordmark />
+            <Wordmark size="lg" mark={<HeroMark />} />
             <SimBadge variant="chip" />
           </div>
 
@@ -83,7 +91,7 @@ export function LandingPage() {
           </p>
         </motion.div>
 
-        {/* Right column — a genuine instrument readout, not a fake screenshot */}
+        {/* Right column: a genuine instrument readout, not a staged screenshot */}
         <motion.div {...heroArtifact} className="lg:ps-2">
           <VitalsMonitorTile className="mx-auto w-full max-w-sm lg:max-w-none" />
         </motion.div>
@@ -92,6 +100,11 @@ export function LandingPage() {
       {/* Credibility strip — monochrome, sourced */}
       <motion.div {...cred}>
         <CredibilityStrip />
+      </motion.div>
+
+      {/* Ten-second teaser: lazy, silent, with a poster and native controls */}
+      <motion.div {...film}>
+        <LaunchTeaser />
       </motion.div>
 
       {/* Core loop — the dominant stepper */}
