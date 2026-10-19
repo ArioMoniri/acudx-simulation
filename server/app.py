@@ -34,11 +34,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import AliasChoices, BaseModel, Field
 
+from server.admin_routes import router as admin_router
 from server.case_generator import generate_case_spec
 from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
 from server.model_gateway import GatewayError, ModelGateway
 from server.persona import build_patient_turn, fact_assertion_gate
+from server.providers.gpu_worker import WorkerManager
 from server.rubric import grade_transcript
 from server.scope_guard import classify, crisis_resources
 
@@ -89,9 +91,14 @@ async def lifespan(app: FastAPI):
     await gateway.start()
     app.state.settings = settings
     app.state.gateway = gateway
+    # On-demand GPU worker manager + idle reaper (never always-on; see providers/gpu_worker.py).
+    worker_manager = WorkerManager(settings)
+    worker_manager.start_reaper()
+    app.state.worker_manager = worker_manager
     try:
         yield
     finally:
+        await worker_manager.aclose()
         await gateway.aclose()
 
 
@@ -113,6 +120,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(admin_router)
 
 
 # --------------------------------------------------------------------------- #

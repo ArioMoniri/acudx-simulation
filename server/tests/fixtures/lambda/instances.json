@@ -1,0 +1,141 @@
+{
+ "data": [
+  {
+   "id": "5d6306624f8f4087b5432079f547b174",
+   "name": "Liver",
+   "ip": "209.20.159.178",
+   "private_ip": "172.29.150.205",
+   "status": "active",
+   "ssh_key_names": [
+    "Liver"
+   ],
+   "file_system_names": [
+    "Liver"
+   ],
+   "file_system_mounts": [
+    {
+     "mount_point": "/lambda/nfs/Liver",
+     "file_system_id": "dec9a9895383468aa93dd7e78cbf8896"
+    }
+   ],
+   "region": {
+    "name": "us-west-3",
+    "description": "Utah, USA"
+   },
+   "instance_type": {
+    "name": "gpu_1x_h100_pcie",
+    "description": "1x H100 (80 GB PCIe)",
+    "gpu_description": "H100 (80 GB PCIe)",
+    "price_cents_per_hour": 329,
+    "specs": {
+     "vcpus": 26,
+     "memory_gib": 200,
+     "storage_gib": 1024,
+     "gpus": 1
+    },
+    "architecture": "x86_64"
+   },
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4",
+   "image": {
+    "id": "f9a628b7-1df6-4f41-9da2-e5b560a1ec96",
+    "family": "lambda-stack-22-04"
+   },
+   "hostname": "209-20-159-178",
+   "jupyter_token": "redacted-jupyter-token",
+   "jupyter_url": "https://redacted.lambdaspaces.com/?token=redacted",
+   "is_reserved": false,
+   "first_healthy": "2026-10-13T09:03:24.679465Z",
+   "actions": {
+    "migrate": {
+     "available": true
+    },
+    "rebuild": {
+     "available": true
+    },
+    "restart": {
+     "available": true
+    },
+    "cold_reboot": {
+     "available": true
+    },
+    "power_cycle": {
+     "available": true
+    },
+    "terminate": {
+     "available": true
+    }
+   },
+   "tags": [],
+   "firewall_rulesets": []
+  },
+  {
+   "id": "ea19e031f2c7406c821a88f077d96d9b",
+   "name": "acudx-wm-a10",
+   "ip": "150.136.117.213",
+   "private_ip": "10.19.87.23",
+   "status": "active",
+   "ssh_key_names": [
+    "acudx-claude-mac"
+   ],
+   "file_system_names": [
+    "acudx-wm"
+   ],
+   "file_system_mounts": [
+    {
+     "mount_point": "/lambda/nfs/acudx-wm",
+     "file_system_id": "9c4e985c16af4c67ad380b43dcdd9339"
+    }
+   ],
+   "region": {
+    "name": "us-east-1",
+    "description": "Virginia, USA"
+   },
+   "instance_type": {
+    "name": "gpu_1x_a10",
+    "description": "1x A10 (24 GB PCIe)",
+    "gpu_description": "A10 (24 GB PCIe)",
+    "price_cents_per_hour": 129,
+    "specs": {
+     "vcpus": 30,
+     "memory_gib": 200,
+     "storage_gib": 1400,
+     "gpus": 1
+    },
+    "architecture": "x86_64"
+   },
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4",
+   "image": {
+    "id": "4ff21799-3c5e-4448-963e-046700d652c0",
+    "family": "lambda-stack-22-04"
+   },
+   "hostname": "150-136-117-213",
+   "jupyter_token": "redacted-jupyter-token",
+   "jupyter_url": "https://redacted.lambdaspaces.com/?token=redacted",
+   "is_reserved": false,
+   "first_healthy": "2026-10-19T16:46:32.291954Z",
+   "actions": {
+    "migrate": {
+     "available": true
+    },
+    "rebuild": {
+     "available": true
+    },
+    "restart": {
+     "available": true
+    },
+    "cold_reboot": {
+     "available": true
+    },
+    "power_cycle": {
+     "available": true
+    },
+    "terminate": {
+     "available": true
+    }
+   },
+   "tags": [],
+   "firewall_rulesets": []
+  }
+ ],
+ "page_token": null
+}

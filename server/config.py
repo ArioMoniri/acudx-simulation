@@ -24,11 +24,15 @@ from __future__ import annotations
 import ipaddress
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 from urllib.parse import urlparse
 
-from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+# A list field read from the env as a raw string, so the CSV-or-JSON validator
+# below sees it (pydantic-settings would otherwise insist on JSON).
+CsvList = Annotated[list[str], NoDecode]
 
 
 class EgressBlocked(RuntimeError):
@@ -94,6 +98,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        populate_by_name=True,
     )
 
     # --- LLM (OpenAI-compatible chat/completions) --------------------------- #
@@ -120,14 +125,14 @@ class Settings(BaseSettings):
     # --- Air-gap ------------------------------------------------------------ #
     airgapped: bool = True
     # Extra hosts / CIDRs treated as "local" (e.g. in-VPC GPU-pool subnets).
-    local_allowlist: list[str] = Field(default_factory=list)
+    local_allowlist: CsvList = Field(default_factory=list)
 
     # --- HTTP serving ------------------------------------------------------- #
     host: str = "127.0.0.1"
     port: int = 8890
     # Origins allowed by CORS in addition to the localhost/127.0.0.1 regex
     # (e.g. a tunnel domain fronting the web demo).
-    cors_origins: list[str] = Field(default_factory=list)
+    cors_origins: CsvList = Field(default_factory=list)
 
     # --- httpx tuning ------------------------------------------------------- #
     request_timeout_s: float = 60.0
@@ -138,7 +143,28 @@ class Settings(BaseSettings):
     # --- /status introspection ---------------------------------------------- #
     status_disk_path: str = "/data"      # pod data volume; falls back to "/"
 
-    @field_validator("local_allowlist", "cors_origins", mode="before")
+    # --- On-demand GPU worker (Lambda Cloud) --------------------------------- #
+    # See server/providers/gpu_worker.py. Never always-on: a worker is launched
+    # only when a request needs a GPU and reaped after GPU_IDLE_MINUTES.
+    # LAMBDA_API_KEY is accepted as an alias of LAMBDA_KEY.
+    lambda_key: str | None = Field(
+        default=None, validation_alias=AliasChoices("lambda_key", "lambda_api_key"),
+    )
+    lambda_ssh_key_name: str | None = None       # exactly one key name per launch
+    gpu_idle_minutes: int = 20
+    gpu_daily_budget_usd: float = 25.0
+    gpu_llm_model: str = "Qwen/Qwen3-32B-AWQ"
+    gpu_instance_allowlist: CsvList = Field(default_factory=lambda: [
+        "gpu_1x_a100_sxm4", "gpu_1x_a10", "gpu_1x_a100", "gpu_1x_h100_pcie",
+    ])
+    gpu_region_preference: CsvList = Field(default_factory=list)
+    admin_token: str | None = None               # guards /admin/*; 503 when unset
+    acudx_db_path: str = "server/data/acudx.db"  # SQLite: worker state + cost ledger
+
+    @field_validator(
+        "local_allowlist", "cors_origins", "gpu_instance_allowlist", "gpu_region_preference",
+        mode="before",
+    )
     @classmethod
     def _split_csv(cls, v: object) -> object:
         """Accept a comma-separated string as well as a JSON list from env."""
@@ -147,7 +173,8 @@ class Settings(BaseSettings):
             if not s:
                 return []
             if s.startswith("["):
-                return v  # defer to pydantic's JSON list parsing
+                import json  # noqa: PLC0415 — only for the JSON-list env form
+                return json.loads(s)
             return [p.strip() for p in s.split(",") if p.strip()]
         return v
 

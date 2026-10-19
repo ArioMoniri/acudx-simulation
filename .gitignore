@@ -32,3 +32,10 @@ coverage/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+server/data/*.db
+server/data/*.db-journal

@@ -1,0 +1,28 @@
+{
+ "data": [
+  {
+   "id": "440b970e24be46c892c7e71cc06af0b6",
+   "name": "acudx-claude-mac",
+   "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIREDACTEDREDACTEDREDACTEDREDACTEDREDACTED",
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4"
+  },
+  {
+   "id": "52cc561c65dc4b91b0c14179eefd76bb",
+   "name": "mgpu-study-key",
+   "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIREDACTEDREDACTEDREDACTEDREDACTEDREDACTED",
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4"
+  },
+  {
+   "id": "54150834517b4c8eb11e6fe282676dcf",
+   "name": "liver-ctoktay",
+   "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIREDACTEDREDACTEDREDACTEDREDACTEDREDACTED",
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4"
+  },
+  {
+   "id": "9f344764bd2141aaa48b0f2f6f261a7f",
+   "name": "Liver",
+   "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIREDACTEDREDACTEDREDACTEDREDACTEDREDACTED",
+   "workspace_id": "315d3335d13b4182bd67a90f65fcb6e4"
+  }
+ ]
+}

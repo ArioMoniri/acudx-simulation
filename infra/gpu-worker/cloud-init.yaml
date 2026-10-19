@@ -1,6 +1,6 @@
 #cloud-config
 # AcuDx on-demand GPU worker (Lambda Cloud, Lambda Stack 24.04 image).
-# Launched by server/providers/lambda_worker.py and terminated when idle.
+# Launched by server/providers/gpu_worker.py and terminated when idle.
 # Serves, behind Caddy with automatic TLS on <ip>.sslip.io:
 #   /v1/*        vLLM OpenAI-compatible LLM (model from WORKER_LLM_MODEL)
 #   /tts/*       Kokoro FastAPI (OpenAI-compatible /v1/audio/speech)
@@ -63,4 +63,16 @@ write_files:
             - /opt/acudx/caddy:/data
 runcmd:
   - mkdir -p /opt/acudx/hf /opt/acudx/caddy
+  # The public IP is not known before launch, so the manager renders
+  # WORKER_DOMAIN=auto and the worker derives <ip-with-dashes>.sslip.io itself
+  # (the manager derives the identical name from the API-reported IP).
+  - |
+    if grep -q '^WORKER_DOMAIN=auto$' /opt/acudx/.env; then
+      ip=""
+      for src in https://api.ipify.org https://checkip.amazonaws.com https://ifconfig.me/ip; do
+        ip=$(curl -fsS --max-time 10 --retry 5 --retry-delay 3 "$src" | tr -d '[:space:]') && [ -n "$ip" ] && break
+      done
+      [ -n "$ip" ] || { echo "acudx: could not resolve public IP" >&2; exit 1; }
+      sed -i "s|^WORKER_DOMAIN=auto$|WORKER_DOMAIN=$(echo "$ip" | tr . -).sslip.io|" /opt/acudx/.env
+    fi
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d
