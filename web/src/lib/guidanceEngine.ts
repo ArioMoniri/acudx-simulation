@@ -432,6 +432,19 @@ const LOCAL_GUIDELINES: Record<string, Bilingual> = {
   },
 };
 
+/**
+ * Resolving deep links for the local statements above (review 02 finding 27:
+ * protocol rule 2 requires every learner-visible clinical fact to carry a
+ * citation that resolves). Ids without a public source text (the generic
+ * competency-framework and formulary leads) carry no URL and are rendered by
+ * the UI as the degraded offline reference.
+ */
+const LOCAL_GUIDELINE_URLS: Record<string, string> = {
+  "esc-acs-2023": "https://doi.org/10.1093/eurheartj/ehad191",
+  "nice-ng185": "https://www.nice.org.uk/guidance/ng185",
+  "nice-ng228": "https://www.nice.org.uk/guidance/ng228",
+};
+
 const DEFAULT_FALLBACK_CITATIONS = ["tepdad-em"];
 const MAX_PASSAGES = 4;
 const GROUND_DEBOUNCE_MS = 400;
@@ -443,28 +456,58 @@ const GENERIC_EM_CITATION = "tepdad-em";
  * Broad presentation domains used ONLY to pick a condition-appropriate offline
  * lead passage. The base pool (LOCAL_GUIDELINES) is ACS-centric, so a non-cardiac
  * case whose critical order is grounded in the generic emergency-competency
- * framework would otherwise open on generic (or ACS-flavoured) prose. These leads
- * stay at the emergency-competency level and are attributed to the same TEPDAD
- * framework — no new or fabricated citation ids — so the attribution stays honest.
+ * framework would otherwise open on generic (or ACS-flavoured) prose.
+ *
+ * Review 02 finding 27 (major): each lead is attributed to the guideline whose
+ * text it summarises, with a resolving URL — never to the TEPDAD framework,
+ * which did not author these statements. The offline path is still flagged
+ * `degraded` by the hook so the UI shows it is running on the local reference.
  */
 type PresentationDomain = "respiratory" | "neuro" | "abdominal" | "metabolic";
 
-const FAMILY_LEADS: Record<PresentationDomain, Bilingual> = {
+interface FamilyLead {
+  text: Bilingual;
+  source: Bilingual;
+  citation: string;
+  url: string;
+}
+
+const FAMILY_LEADS: Record<PresentationDomain, FamilyLead> = {
   respiratory: {
-    en: "For acute breathlessness, secure oxygenation first, then structure a focused cardiorespiratory work-up — targeted history and examination, early chest imaging, and a blood gas to grade severity before narrowing the cause.",
-    tr: "Akut nefes darlığında önce oksijenizasyonu sağlayın, ardından odaklı bir kardiyorespiratuar iş akışı kurun — hedefe yönelik anamnez ve muayene, erken akciğer görüntülemesi ve nedeni daraltmadan önce şiddeti derecelendirmek için kan gazı.",
+    text: {
+      en: "For acute breathlessness, secure oxygenation first (target SpO2 94-98%, or 88-92% if at risk of hypercapnic failure), then structure a focused cardiorespiratory work-up — targeted history and examination, early chest imaging, and a blood gas to grade severity before narrowing the cause.",
+      tr: "Akut nefes darlığında önce oksijenizasyonu sağlayın (hedef SpO2 %94-98, hiperkapnik yetmezlik riski varsa %88-92), ardından odaklı bir kardiyorespiratuar iş akışı kurun — hedefe yönelik anamnez ve muayene, erken akciğer görüntülemesi ve nedeni daraltmadan önce şiddeti derecelendirmek için kan gazı.",
+    },
+    source: { en: "British Thoracic Society, oxygen use in adults (2017)", tr: "British Thoracic Society, erişkinlerde oksijen kullanımı (2017)" },
+    citation: "BTS oxygen 2017",
+    url: "https://doi.org/10.1136/thoraxjnl-2016-209729",
   },
   neuro: {
-    en: "For a sudden severe headache or new neurological deficit, exclude the time-critical causes first: obtain urgent non-contrast brain imaging and check a bedside glucose before narrowing the differential.",
-    tr: "Ani şiddetli baş ağrısı veya yeni nörolojik defisitte önce zaman-kritik nedenleri dışlayın: acil kontrastsız beyin görüntülemesi alın ve ayırıcı tanıyı daraltmadan önce yatak başı glukoza bakın.",
+    text: {
+      en: "For a sudden severe headache, obtain an immediate non-contrast CT head (a scan within 6 hours of onset reliably excludes subarachnoid haemorrhage); for a new neurological deficit, check a bedside glucose and image urgently before narrowing the differential.",
+      tr: "Ani şiddetli baş ağrısında hemen kontrastsız beyin BT çekin (başlangıçtan sonraki 6 saat içindeki BT subaraknoid kanamayı güvenilir şekilde dışlar); yeni nörolojik defisitte ayırıcı tanıyı daraltmadan önce yatak başı glukoza bakın ve acil görüntüleyin.",
+    },
+    source: { en: "NICE NG228, suspected neurological conditions / subarachnoid haemorrhage (2022)", tr: "NICE NG228, şüpheli nörolojik durumlar / subaraknoid kanama (2022)" },
+    citation: "NICE NG228",
+    url: "https://www.nice.org.uk/guidance/ng228",
   },
   abdominal: {
-    en: "For the acute abdomen or suspected sepsis, resuscitate first, then work the problem up in parallel — early bloods including lactate, cultures before antibiotics, a pregnancy test where relevant, and imaging directed by the examination.",
-    tr: "Akut karın veya şüpheli sepsiste önce resüsite edin, ardından sorunu paralel olarak değerlendirin — laktat dâhil erken kan tetkikleri, antibiyotikten önce kültürler, uygun olduğunda gebelik testi ve muayeneye yönelik görüntüleme.",
+    text: {
+      en: "For suspected sepsis, measure lactate, take blood cultures before antibiotics without delaying them, give antimicrobials within the first hour of recognition, and begin 30 mL/kg crystalloid for hypotension or lactate >= 4 mmol/L; add a pregnancy test and examination-directed imaging for the acute abdomen.",
+      tr: "Şüpheli sepsiste laktat ölçün, antibiyotiği geciktirmeden önce kan kültürü alın, tanıdan sonraki ilk saat içinde antimikrobiyal verin ve hipotansiyon veya laktat >= 4 mmol/L için 30 mL/kg kristaloid başlayın; akut karında gebelik testi ve muayeneye yönelik görüntüleme ekleyin.",
+    },
+    source: { en: "Surviving Sepsis Campaign, international guidelines 2021", tr: "Surviving Sepsis Campaign, uluslararası kılavuz 2021" },
+    citation: "SSC 2021",
+    url: "https://doi.org/10.1007/s00134-021-06506-y",
   },
   metabolic: {
-    en: "For a metabolic emergency such as diabetic ketoacidosis, obtain an early venous gas with glucose and ketones, start fluid resuscitation and fixed-rate insulin per protocol, and reassess frequently against the biochemistry and potassium.",
-    tr: "Diyabetik ketoasidoz gibi bir metabolik acilde erken venöz kan gazı ile glukoz ve ketona bakın, protokole göre sıvı resüsitasyonu ve sabit hızlı insülin başlayın ve biyokimya ile potasyuma göre sık sık yeniden değerlendirin.",
+    text: {
+      en: "For diabetic ketoacidosis, obtain an early venous gas with glucose and ketones, start isotonic fluid resuscitation, replace potassium and begin fixed-rate insulin only once potassium is at least 3.3 mmol/L, then reassess hourly against the biochemistry.",
+      tr: "Diyabetik ketoasidozda erken venöz kan gazı ile glukoz ve ketona bakın, izotonik sıvı resüsitasyonu başlayın, potasyumu yerine koyun ve sabit hızlı insülini yalnızca potasyum en az 3.3 mmol/L iken başlayın, ardından biyokimyaya göre saatlik yeniden değerlendirin.",
+    },
+    source: { en: "ADA/EASD consensus report, hyperglycaemic crises in adults (2024)", tr: "ADA/EASD uzlaşı raporu, erişkinlerde hiperglisemik krizler (2024)" },
+    citation: "ADA/EASD 2024",
+    url: "https://doi.org/10.2337/dci24-0032",
   },
 };
 
@@ -506,7 +549,7 @@ function domainFromOrderCodes(orderCodes: readonly string[]): PresentationDomain
   return undefined;
 }
 
-function localPassages(
+export function localPassages(
   citationIds: string[],
   lang: Lang,
   orderCodes: readonly string[] = [],
@@ -519,18 +562,24 @@ function localPassages(
     if (seen.has(id)) continue;
     seen.add(id);
     const citation = getCitation(id);
-    let text = LOCAL_GUIDELINES[id]?.[lang] ?? citation?.source[lang];
+    const text = LOCAL_GUIDELINES[id]?.[lang] ?? citation?.source[lang];
     // Upgrade the generic emergency-framework LEAD to a condition-appropriate
-    // passage for non-cardiac presentations, keeping the TEPDAD attribution.
-    // Cases that already lead with a specific guideline (ACS, SAH) are untouched.
+    // passage for non-cardiac presentations, attributed to the guideline whose
+    // text it summarises (review 02 finding 27). Cases that already lead with a
+    // specific guideline (ACS, SAH) are untouched.
     if (out.length === 0 && id === GENERIC_EM_CITATION && domain) {
-      text = FAMILY_LEADS[domain][lang];
+      const lead = FAMILY_LEADS[domain];
+      out.push({ text: lead.text[lang], source: lead.source[lang], citation: lead.citation, url: lead.url });
+      if (out.length >= MAX_PASSAGES) break;
+      continue;
     }
     if (!text) continue;
+    const url = LOCAL_GUIDELINE_URLS[id];
     out.push({
       text,
       source: citation?.source[lang] ?? id,
       citation: citation?.label ?? id,
+      ...(url ? { url } : {}),
     });
     if (out.length >= MAX_PASSAGES) break;
   }
