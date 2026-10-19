@@ -1,0 +1,17 @@
+{
+  "landing3": {
+    "hero": {
+      "markTitle": "AcuDx mark drawing in"
+    },
+    "film": {
+      "eyebrow": "Ten seconds",
+      "heading": "See the loop before you run it",
+      "sub": "A short teaser: the mark, the promise, and a real encounter inside the EHR workspace.",
+      "label": "AcuDx teaser, ten seconds, no sound",
+      "unsupported": "Your browser cannot play this video.",
+      "posterAlt": "AcuDx poster: Simulated patients. Real decisions. A chart review inside the EHR workspace.",
+      "repo": "Source and the full launch film on GitHub",
+      "muteNote": "Silent by design. Captions are in the frame, in English and Turkish."
+    }
+  }
+}

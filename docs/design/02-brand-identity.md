@@ -119,3 +119,12 @@ Final sheet: `web/public/brand/concepts/test-sheet-final.png`.
 2. A stacked lockup (symbol over wordmark) for square social avatars, if marketing wants one.
 3. Expanding strokes to filled outlines in a vector editor for embroidery and vinyl masters.
 4. Decide whether the landing page hero should use `BrandLottie` once on first load (the component is ready; nothing uses it yet).
+
+## 9. Motion: the brand moment and the launch film
+
+Owner: Motion designer. Source: `video/` (Remotion 4.0.537, pinned) and `web/src/components/landing/`.
+
+- **Landing hero.** `HeroMark` wraps `BrandLottie` inside the `Wordmark` lockup (`mark` slot). The component is code-split (lottie-web ships as its own chunk, about 49 KB gzipped) and mounts only after the browser goes idle, so the hero headline is painted first and LCP is unaffected. Under `prefers-reduced-motion` the static inline mark is shown and the Lottie JSON is never fetched.
+- **Teaser.** `LaunchTeaser` places the ten-second film as an inline `<video>` with native controls, a poster and `preload="none"`. The element mounts only when the section scrolls within 320 px of the viewport. The film is silent by design; captions are in the frame in English and Turkish. Strings live in `web/src/i18n/features/landing3.{en,tr}.json`.
+- **Launch film.** 51 s, 1920 x 1080, 30 fps, no audio track. Scenes: mark draws in (the same Lottie file as the hero), promise in EN and TR, four real captures of the running app with slow pan and zoom, five feature cards, the open-source and sovereign line, end card with the repository URL. Every transition uses `cubic-bezier(0.16, 1, 0.3, 1)` and the `fade-up` entrance. Render and capture commands: `video/README.md`.
+- **Poster.** `video/out/poster.png`, 1200 x 630, doubles as the teaser poster at `web/public/media/launch-poster.png`.
