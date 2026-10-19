@@ -1,0 +1,7 @@
+# AcuDx backend gateway: test and development dependencies.
+# Install into the runtime venv after requirements.txt:
+#   python -m venv .venv && .venv/bin/pip install -r server/requirements.txt -r server/requirements-dev.txt
+#   .venv/bin/python -m pytest server/tests -q
+-r requirements.txt
+pytest>=8.0,<10.0
+# httpx is already a runtime dependency; FastAPI's TestClient uses it for route tests.
