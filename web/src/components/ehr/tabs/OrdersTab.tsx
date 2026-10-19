@@ -30,9 +30,12 @@ import {
   TabsList,
   TabsTrigger,
   TextInput,
+  Select,
 } from "@/components/ui";
 import { orderTiming, serialInfo } from "@/domain/orderCatalog";
 import { TREATMENT_CATALOG, type TreatmentOption } from "@/domain/treatments";
+import { formularyFor, ROUTE_LABEL, type Route } from "@/domain/formulary";
+import type { MedicationAdministrationRecord } from "@/domain/medicationSafety";
 import {
   ORDERABLES_BY_GROUP,
   ORDER_GROUPS,
@@ -41,7 +44,7 @@ import {
   type OrderCategory,
 } from "@/domain/orderables";
 import {
-  administerTreatment,
+  administerMedication,
   getEncounterClockMs,
   placeOrder,
   useEncounterState,
@@ -267,6 +270,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
                       option={tx}
                       lang={lang}
                       given={givenCounts.get(tx.code) ?? 0}
+                      weightKg={caseInstance.patient.weightKg}
                     />
                   ))}
                 </ul>
@@ -431,46 +435,170 @@ function OrderRow({
   );
 }
 
-/** One treatment: name, route, Administer button (repeatable — serial doses). */
+/**
+ * One treatment: name, default dose + route, and an Administer control that
+ * opens a small dose / route / indication form prefilled from the formulary.
+ *
+ * Review 02 finding 9 (critical): a medication is never given by a bare click.
+ * Submitting runs the five-rights + allergy check in the encounter store; the
+ * resulting MAR line (given / flagged / blocked) is shown inline so the learner
+ * sees WHY an order was refused (documented allergy, dose above the ceiling,
+ * missing route) and can practise the nurse's core safety behaviour.
+ */
 function TreatmentRow({
   option,
   lang,
   given,
+  weightKg,
 }: {
   option: TreatmentOption;
   lang: Lang;
   given: number;
+  weightKg?: number;
 }) {
   const { t } = useTranslation();
   const name = pick(option.label, lang);
+  const entry = formularyFor(option.code);
+  const [open, setOpen] = useState(false);
+  const [dose, setDose] = useState<string>(entry ? String(entry.dose.default) : "");
+  const [route, setRoute] = useState<Route>(entry?.defaultRoute ?? option.routeCode ?? "IV");
+  const [indication, setIndication] = useState<string>(entry ? pick(entry.indication, lang) : "");
+  const [last, setLast] = useState<MedicationAdministrationRecord | null>(null);
+
+  const submit = () => {
+    const amount = Number(dose);
+    const rec = administerMedication(
+      {
+        drug: option.code,
+        dose: amount,
+        unit: entry?.dose.unit ?? option.defaultDose?.unit ?? "",
+        route,
+        frequency: entry ? entry.frequency.en : "",
+        indication,
+        ...(weightKg != null ? { weightKg } : {}),
+      },
+      { label: { en: option.label.en, tr: option.label.tr } },
+    );
+    setLast(rec);
+    if (rec && rec.outcome !== "blocked") setOpen(false);
+  };
+
+  const unit = entry?.dose.unit ?? option.defaultDose?.unit ?? "";
+  const formId = `med-${option.code}`;
 
   return (
-    <li className="flex items-center justify-between gap-3 py-2">
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="min-w-0 text-sm text-fg">{name}</span>
-        <span className="flex flex-wrap items-center gap-1.5">
-          {option.route ? (
-            <Badge tone="neutral" variant="outline">
-              {t("orders2.treatments.route")}: {pick(option.route, lang)}
-            </Badge>
-          ) : null}
-          {given > 0 ? (
-            <Badge tone="brand" dot>
-              {t("orders2.treatments.givenCount", { count: given })}
-            </Badge>
-          ) : null}
-        </span>
+    <li className="flex flex-col gap-2 py-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="min-w-0 text-sm text-fg">{name}</span>
+          <span className="flex flex-wrap items-center gap-1.5">
+            {option.defaultDose ? (
+              <Badge tone="neutral" variant="outline">
+                {t("orders2.treatments.dose")}: {option.defaultDose.amount} {option.defaultDose.unit}
+              </Badge>
+            ) : null}
+            {option.route ? (
+              <Badge tone="neutral" variant="outline">
+                {t("orders2.treatments.route")}: {pick(option.route, lang)}
+              </Badge>
+            ) : null}
+            {entry?.highAlert ? (
+              <Badge tone="caution" dot>
+                {t("orders2.treatments.highAlert")}
+              </Badge>
+            ) : null}
+            {given > 0 ? (
+              <Badge tone="brand" dot>
+                {t("orders2.treatments.givenCount", { count: given })}
+              </Badge>
+            ) : null}
+          </span>
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => setOpen((o) => !o)}
+          leadingIcon={<Syringe weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+          aria-label={t("orders2.treatments.administerAria", { name })}
+          aria-expanded={open}
+          aria-controls={formId}
+          className="shrink-0"
+        >
+          {t("orders2.treatments.administer")}
+        </Button>
       </div>
-      <Button
-        size="sm"
-        variant="secondary"
-        onClick={() => administerTreatment(option.code, { en: option.label.en, tr: option.label.tr })}
-        leadingIcon={<Syringe weight="bold" className="h-3.5 w-3.5" aria-hidden />}
-        aria-label={t("orders2.treatments.administerAria", { name })}
-        className="shrink-0"
-      >
-        {t("orders2.treatments.administer")}
-      </Button>
+
+      {open ? (
+        <form
+          id={formId}
+          className="grid gap-2 rounded-control border border-border bg-bg-subtle p-3 sm:grid-cols-[1fr_1fr_2fr_auto]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            {t("orders2.treatments.dose")} ({unit})
+            <TextInput
+              type="number"
+              inputMode="decimal"
+              step="any"
+              min={0}
+              value={dose}
+              onChange={(e) => setDose(e.target.value)}
+              aria-label={t("orders2.treatments.doseAria", { name, unit })}
+              required
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            {t("orders2.treatments.route")}
+            <Select value={route} onChange={(e) => setRoute(e.target.value as Route)} aria-label={t("orders2.treatments.routeAria", { name })}>
+              {(entry?.routes ?? [route]).map((r) => (
+                <option key={r} value={r}>
+                  {pick(ROUTE_LABEL[r], lang)}
+                </option>
+              ))}
+            </Select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-muted">
+            {t("orders2.treatments.indication")}
+            <TextInput value={indication} onChange={(e) => setIndication(e.target.value)} aria-label={t("orders2.treatments.indicationAria", { name })} />
+          </label>
+          <div className="flex items-end">
+            <Button size="sm" type="submit" aria-label={t("orders2.treatments.confirmAria", { name })}>
+              {t("orders2.treatments.confirm")}
+            </Button>
+          </div>
+          {entry ? (
+            <p className="text-[11px] text-muted sm:col-span-4">
+              {t("orders2.treatments.range", { min: entry.dose.min, max: entry.dose.max, unit: entry.dose.unit })}
+              {entry.maxPerDay != null ? ` · ${t("orders2.treatments.maxDay", { max: entry.maxPerDay, unit: entry.dose.unit })}` : ""}
+              {" · "}
+              <a href={entry.sources[0]?.url} target="_blank" rel="noreferrer" className="underline">
+                {entry.sources[0]?.title}
+              </a>
+            </p>
+          ) : null}
+        </form>
+      ) : null}
+
+      {last ? (
+        <p
+          role="status"
+          className={
+            last.outcome === "blocked"
+              ? "text-xs text-[color:var(--state-critical)]"
+              : last.outcome === "flagged"
+                ? "text-xs text-[color:var(--state-caution)]"
+                : "text-xs text-[color:var(--state-normal)]"
+          }
+        >
+          {t(`orders2.mar.outcome.${last.outcome}`)}
+          {last.checks.failures.length > 0
+            ? `: ${last.checks.failures.map((f) => t(`orders2.mar.failure.${f.code}`, { defaultValue: f.detail })).join("; ")}`
+            : ""}
+        </p>
+      ) : null}
     </li>
   );
 }

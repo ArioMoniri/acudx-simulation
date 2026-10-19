@@ -209,12 +209,17 @@ describe("encounterStore — administerTreatment", () => {
     const base = getCurrentVitals(snapshot)!;
 
     // Nitroglycerin (RxNorm 4917): generic effect lowers systolic over ~90s.
+    // Seed 121 is an NSTEMI with SBP 135 / HR 91, so the nitrate gate
+    // (review 02 finding 8) allows it and scores the choice as indicated.
     run(() => administerTreatment("4917", { en: "Nitroglycerin", tr: "Nitrogliserin" }));
 
     const ev = snapshot.events.find((e) => e.type === "treatment" && e.ref === "4917");
     expect(ev).toBeDefined();
-    expect(ev?.meta?.appropriateness).toBe("neutral"); // no case-specific response
+    expect(ev?.meta?.appropriateness).toBe("indicated"); // gate-derived (ischaemic pain, SBP >= 90)
     expect(getTreatments(snapshot).some((t) => t.code === "4917")).toBe(true);
+    // The administration is recorded on the MAR with its five-rights checks.
+    const mar = snapshot.events.find((e) => e.type === "mar" && e.ref === "4917");
+    expect(mar?.meta?.outcome).toBe("given");
 
     // Past the effect onset, the systolic pressure has fallen from baseline.
     now = 120_000;

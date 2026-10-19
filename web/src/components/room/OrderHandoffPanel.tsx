@@ -17,6 +17,8 @@ import {
 import { Badge, Button, SectionLabel, type BadgeProps } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { TREATMENT_CATALOG } from "@/domain/treatments";
+import { ROLE_SCOPES } from "@/data/rooms";
+import { canPlaceOrder, PROTOCOL_ITEM_LABELS, protocolDetailFor } from "@/domain/scopeOfPractice";
 import { primaryCode } from "@/domain/case";
 import type { Lang } from "@/data/mock";
 import type { ClinicalRole } from "@/data/rooms";
@@ -57,16 +59,37 @@ const STATUS_META: Record<
  */
 export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHandoffPanelProps) {
   const { t } = useTranslation();
-  const canOrder = actingRole === "doctor";
+  // Review 02 findings 24 and 25: the doctor orders anything; the nurse may
+  // initiate standing-protocol items (12-lead ECG, POC glucose, IV access,
+  // oxygen, urine hCG, standard bloods) and the paramedic the prehospital
+  // intervention set. Each chip is filtered by scopeOfPractice.canPlaceOrder.
+  const medications = useMemo(
+    () => TREATMENT_CATALOG.filter((tx) => canPlaceOrder(actingRole, tx.code)),
+    [actingRole],
+  );
+  const protocolExtras = useMemo(
+    () =>
+      actingRole === "doctor"
+        ? []
+        : ROLE_SCOPES[actingRole].protocolOrders
+            .filter((code) => PROTOCOL_ITEM_LABELS[code])
+            .map((code) => ({ code, label: PROTOCOL_ITEM_LABELS[code] })),
+    [actingRole],
+  );
+  const protocolDetail = protocolDetailFor(actingRole);
 
   const diagnostics = useMemo(
     () =>
-      state.caseInstance.expectedWorkup.map((w) => ({
-        code: primaryCode(w.code),
-        label: w.label,
-      })),
-    [state.caseInstance],
+      state.caseInstance.expectedWorkup
+        .map((w) => ({
+          code: primaryCode(w.code),
+          label: w.label,
+        }))
+        .filter((d) => canPlaceOrder(actingRole, d.code))
+        .concat(protocolExtras),
+    [state.caseInstance, actingRole, protocolExtras],
   );
+  const canOrder = medications.length > 0 || diagnostics.length > 0;
 
   // Newest first so a just-placed order is immediately visible.
   const tasks = useMemo(() => [...state.tasks].reverse(), [state.tasks]);
@@ -98,11 +121,13 @@ export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHand
                 {t("roomscollab.orders.medications")}
               </SectionLabel>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {TREATMENT_CATALOG.map((tx) => (
+                {medications.map((tx) => (
                   <button
                     key={tx.code}
                     type="button"
-                    onClick={() => placeOrderAs(roomId, "doctor", tx.code)}
+                    onClick={() =>
+                      placeOrderAs(roomId, actingRole, tx.code, protocolDetail ? { detail: protocolDetail } : undefined)
+                    }
                     aria-label={t("roomscollab.orders.placeAria", { name: tx.label[lang] })}
                     className={cn(
                       "inline-flex min-h-9 items-center gap-1.5 rounded-control border border-border bg-bg-subtle px-2.5 text-xs font-medium text-fg",
@@ -127,7 +152,12 @@ export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHand
                     <button
                       key={d.code}
                       type="button"
-                      onClick={() => placeOrderAs(roomId, "doctor", d.code, { label: d.label })}
+                      onClick={() =>
+                        placeOrderAs(roomId, actingRole, d.code, {
+                          label: d.label,
+                          ...(protocolDetail ? { detail: protocolDetail } : {}),
+                        })
+                      }
                       aria-label={t("roomscollab.orders.placeAria", { name: d.label[lang] })}
                       className={cn(
                         "inline-flex min-h-9 items-center gap-1.5 rounded-control border border-border bg-bg-subtle px-2.5 text-xs font-medium text-fg",
