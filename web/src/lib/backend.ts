@@ -138,11 +138,24 @@ export interface PatientTurnResult {
   meta: PatientTurnMeta | null;
 }
 
+/** Citation block on a grounded passage (server/grounding.py Citation). */
+export interface GroundCitation {
+  body?: string;
+  title?: string;
+  reference?: string;
+  url?: string;
+  pub_date?: string;
+  doi?: string;
+  edition?: string;
+  verified_at?: string;
+  [key: string]: unknown;
+}
+
 /** A single grounded guideline passage returned by /v1/ground. */
 export interface GroundPassage {
   id?: string;
   statement?: string;
-  citation?: Record<string, unknown>;
+  citation?: GroundCitation;
   url?: string;
   council?: string;
   country?: string;
@@ -301,6 +314,23 @@ async function request<T>(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Generic bounded GET for sibling clients (src/lib/guidelinesApi.ts). Same
+ * never-throw contract as every endpoint here.
+ */
+export function apiGet<T>(
+  path: string,
+  opts: RequestOptions = {},
+  timeoutMs = 8_000,
+): Promise<BackendResult<T>> {
+  return request<T>(
+    path,
+    { method: "GET", headers: { accept: "application/json" } },
+    opts.timeoutMs ?? timeoutMs,
+    opts.signal,
+  );
 }
 
 /* -------------------------------------------------------------------------- */

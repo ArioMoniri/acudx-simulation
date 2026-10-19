@@ -39,6 +39,7 @@ from server.admin_routes import router as admin_router
 from server.case_generator import generate_case_spec
 from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
+from server.guidelines.routes import router as guidelines_router
 from server.model_gateway import GatewayError, ModelGateway
 from server.orchestration.routes import router as orchestration_v2_router
 from server.persona import build_patient_turn, fact_assertion_gate
@@ -145,6 +146,7 @@ app.add_middleware(
 app.include_router(admin_router)
 app.include_router(results_router)  # /v1/results/* and /v1/imaging/resolve (server/results_routes.py)
 app.include_router(registry_router)
+app.include_router(guidelines_router)  # /v1/guidelines/* + /admin/guidelines/verify
 
 
 # Telemetry context: every model call made while serving a request is tagged

@@ -306,9 +306,9 @@ const chestPainNstemiCase: CaseInstance = {
     vitalsTrajectory: trajectory(acsTriage, { hr: 12, spo2: -2 }),
   },
   expectedWorkup: [
-    order("w-acs-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 10, true, "esc-acs-2023"),
-    order("w-acs-trop", "laboratory", LOINC.troponinHs, { en: "High-sensitivity troponin (0/1 h)", tr: "Yüksek duyarlıklı troponin (0/1 s)" }, 15, true, "esc-acs-2023"),
-    order("w-acs-cr", "laboratory", LOINC.creatinine, { en: "Renal function", tr: "Böbrek fonksiyonu" }, 30, false, "esc-acs-2023"),
+    order("w-acs-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 10, true, "gs_nice_ng185_nstemi_assessment"),
+    order("w-acs-trop", "laboratory", LOINC.troponinHs, { en: "High-sensitivity troponin (0/1 h)", tr: "Yüksek duyarlıklı troponin (0/1 s)" }, 15, true, "gs_nice_ng185_nstemi_assessment"),
+    order("w-acs-cr", "laboratory", LOINC.creatinine, { en: "Renal function", tr: "Böbrek fonksiyonu" }, 30, false, "gs_nice_ng185_nstemi_assessment"),
   ],
   disposition: "admit-ccu",
   provenance: "seed",
@@ -369,7 +369,7 @@ const sahCase: CaseInstance = {
   },
   expectedWorkup: [
     order("w-sah-ct", "imaging", { system: LOINC.ecg12.system, code: "ct-head-noncon", display: "CT head" },
-      { en: "Noncontrast CT head", tr: "Kontrastsız beyin BT" }, 30, true, "nice-ng228"),
+      { en: "Noncontrast CT head", tr: "Kontrastsız beyin BT" }, 30, true, "gs_nice_ng228_thunderclap"),
     order("w-sah-bp", "laboratory", LOINC.creatinine, { en: "Baseline bloods and renal function", tr: "Bazal kan tetkikleri ve böbrek fonksiyonu" }, 45, false, "tepdad-em"),
   ],
   disposition: "admit-icu",
@@ -429,9 +429,9 @@ const appendicitisCase: CaseInstance = {
     vitalsTrajectory: trajectory(appyTriage, { hr: 8, tempC: 0.4 }),
   },
   expectedWorkup: [
-    order("w-appy-bloods", "laboratory", LOINC.wbc, { en: "FBC and CRP", tr: "Tam kan sayımı ve CRP" }, 30, false, "tepdad-em"),
+    order("w-appy-bloods", "laboratory", LOINC.wbc, { en: "FBC and CRP", tr: "Tam kan sayımı ve CRP" }, 30, false, "gs_wses2020_appy_scores"),
     order("w-appy-us", "imaging", { system: LOINC.ecg12.system, code: "us-abdomen", display: "US abdomen" },
-      { en: "Abdominal ultrasound", tr: "Karın ultrasonu" }, 60, false, "tepdad-em"),
+      { en: "Abdominal ultrasound", tr: "Karın ultrasonu" }, 60, false, "gs_wses2020_appy_tailored"),
     order("w-appy-analgesia", "procedure", { system: LOINC.ecg12.system, code: "analgesia", display: "Analgesia" },
       { en: "Timely analgesia", tr: "Zamanında analjezi" }, 30, false, "tepdad-em"),
   ],
@@ -496,10 +496,10 @@ const pulmonaryEmbolismCase: CaseInstance = {
     vitalsTrajectory: trajectory(peTriage, { hr: 10, spo2: -4, rr: 4 }),
   },
   expectedWorkup: [
-    order("w-pe-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 15, false, "esc-acs-2023"),
-    order("w-pe-ddimer", "laboratory", LOINC.dDimer, { en: "D-dimer (age-adjusted)", tr: "D-dimer (yaşa göre ayarlı)" }, 30, false, "tepdad-em"),
+    order("w-pe-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 15, false, "gs_nice_ng185_nstemi_assessment"),
+    order("w-pe-ddimer", "laboratory", LOINC.dDimer, { en: "D-dimer (age-adjusted)", tr: "D-dimer (yaşa göre ayarlı)" }, 30, false, "gs_nice_ng158_pe_unlikely_ddimer"),
     order("w-pe-ctpa", "imaging", { system: LOINC.ecg12.system, code: "ctpa", display: "CTPA" },
-      { en: "CT pulmonary angiogram", tr: "BT pulmoner anjiyografi" }, 90, true, "tepdad-em"),
+      { en: "CT pulmonary angiogram", tr: "BT pulmoner anjiyografi" }, 90, true, "gs_nice_ng158_pe_ctpa"),
   ],
   disposition: "admit-ward",
   provenance: "seed",
@@ -561,8 +561,8 @@ const panicDisorderCase: CaseInstance = {
     vitalsTrajectory: trajectory(panicTriage, { hr: -18, rr: -4 }),
   },
   expectedWorkup: [
-    order("w-panic-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 10, true, "esc-acs-2023"),
-    order("w-panic-trop", "laboratory", LOINC.troponinHs, { en: "High-sensitivity troponin", tr: "Yüksek duyarlıklı troponin" }, 15, true, "esc-acs-2023"),
+    order("w-panic-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 10, true, "gs_nice_ng185_nstemi_assessment"),
+    order("w-panic-trop", "laboratory", LOINC.troponinHs, { en: "High-sensitivity troponin", tr: "Yüksek duyarlıklı troponin" }, 15, true, "gs_nice_ng185_nstemi_assessment"),
     order("w-panic-ddimer", "laboratory", LOINC.dDimer, { en: "D-dimer", tr: "D-dimer" }, 30, false, "tepdad-em", true),
   ],
   disposition: "discharge",
@@ -596,7 +596,11 @@ export function getSeedCase(id: string): CaseInstance | undefined {
 
 /** Additional case-specific citation ids used by seed workups. */
 export const seedCitationIds = [
-  "esc-acs-2023",
-  "nice-ng228",
+  "gs_nice_ng185_nstemi_assessment",
+  "gs_nice_ng228_thunderclap",
+  "gs_nice_ng158_pe_ctpa",
+  "gs_nice_ng158_pe_unlikely_ddimer",
+  "gs_wses2020_appy_scores",
+  "gs_wses2020_appy_tailored",
   "tepdad-em",
 ] as const;

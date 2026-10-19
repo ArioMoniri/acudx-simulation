@@ -332,9 +332,9 @@ export function SignOffGate() {
         <span className="text-[11px] font-medium uppercase tracking-wide text-muted">
           {t("authoring.signoff.groundedOn")}
         </span>
-        <CitationPill citationId="esc-acs-2023" lang={lang} />
-        <CitationPill citationId="nice-ng185" lang={lang} />
-        <CitationPill citationId="tepdad-em" lang={lang} />
+        <CitationPill citationId="gs_nice_ng185_nstemi_assessment" lang={lang} />
+        <CitationPill citationId="gs_nice_ng185_aspirin300" lang={lang} />
+        <CitationPill citationId="gs_nice_ng185_ppci_120min" lang={lang} />
       </div>
 
       {/* Publish action — hard-gated */}
