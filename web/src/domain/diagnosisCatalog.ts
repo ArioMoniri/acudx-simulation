@@ -135,9 +135,14 @@ const ENTRIES: DiagnosisEntry[] = [
   d("I20.0", "BA40", "cardiovascular", "Unstable angina", "Kararsız angina", ["acs", "anjina"]),
   d("I20.9", "BA40", "cardiovascular", "Stable angina pectoris", "Kararlı angina pektoris", ["angina", "anjina"]),
   d("I30.9", "BB20", "cardiovascular", "Acute pericarditis", "Akut perikardit", ["pericarditis", "perikardit"]),
-  d("I31.4", "BB2Y", "cardiovascular", "Cardiac tamponade", "Kardiyak tamponad", ["tamponade", "tamponad", "effusion"]),
-  d("I40.9", "BB40", "cardiovascular", "Acute myocarditis", "Akut miyokardit", ["myocarditis", "miyokardit"]),
-  d("I33.0", "BB70.0", "cardiovascular", "Infective endocarditis", "İnfektif endokardit", ["endocarditis", "endokardit"]),
+  // Review 02 finding 29: ICD-11 MMS crosswalks reconciled with the WHO browser
+  // (BB23 cardiac tamponade, BB40 infective endocarditis, BC42 myocarditis, BC63
+  // complete AV block) and kept identical to server/condition_catalog.py, which
+  // server/tests/test_clinical_content.py cross-checks.
+  // https://icd.who.int/browse/2025-01/mms/en
+  d("I31.4", "BB23", "cardiovascular", "Cardiac tamponade", "Kardiyak tamponad", ["tamponade", "tamponad", "effusion"]),
+  d("I40.9", "BC42", "cardiovascular", "Acute myocarditis", "Akut miyokardit", ["myocarditis", "miyokardit"]),
+  d("I33.0", "BB40", "cardiovascular", "Infective endocarditis", "İnfektif endokardit", ["endocarditis", "endokardit"]),
   d("I50.9", "BD10", "cardiovascular", "Heart failure, unspecified", "Kalp yetmezliği", ["chf", "kalp yetmezliği", "heart failure"]),
   d("I50.1", "BD11", "cardiovascular", "Acute pulmonary oedema / decompensated heart failure", "Akut akciğer ödemi / dekompanse kalp yetmezliği", ["pulmonary edema", "akciğer ödemi", "aphf"]),
   d("I48.91", "BC81.3", "cardiovascular", "Atrial fibrillation", "Atriyal fibrilasyon", ["af", "afib", "aritmi", "arrhythmia"]),
@@ -171,8 +176,9 @@ const ENTRIES: DiagnosisEntry[] = [
   d("K35.80", "DC10", "gastrointestinal", "Acute appendicitis", "Akut apandisit", ["appendicitis", "apandisit"]),
   d("K81.0", "DC12.0", "gastrointestinal", "Acute cholecystitis", "Akut kolesistit", ["cholecystitis", "kolesistit", "gallbladder"]),
   d("K80.20", "DC11.0", "gastrointestinal", "Calculus of gallbladder (biliary colic)", "Safra kesesi taşı (bilier kolik)", ["gallstone", "safra taşı", "biliary colic", "bilier kolik"]),
-  d("K83.0", "DC15", "gastrointestinal", "Ascending cholangitis", "Kolanjit", ["cholangitis", "kolanjit"]),
-  d("K85.90", "DC31.Z", "gastrointestinal", "Acute pancreatitis", "Akut pankreatit", ["pancreatitis", "pankreatit"]),
+  // Review 02 finding 34: ICD-10-CM leaf code K83.09 (matches the server catalog).
+  d("K83.09", "DC13", "gastrointestinal", "Ascending cholangitis", "Kolanjit", ["cholangitis", "kolanjit"]),
+  d("K85.90", "DC31", "gastrointestinal", "Acute pancreatitis", "Akut pankreatit", ["pancreatitis", "pankreatit"]),
   d("K27.9", "DA60.Z", "gastrointestinal", "Peptic ulcer disease", "Peptik ülser", ["peptic ulcer", "peptik ülser", "gastric ulcer", "duodenal ulcer"]),
   d("K21.9", "DA22.Z", "gastrointestinal", "Gastro-oesophageal reflux disease (GERD)", "Gastroözofageal reflü hastalığı (GÖRH)", ["gerd", "reflü", "reflux", "heartburn"]),
   d("K52.9", "DA94.Z", "gastrointestinal", "Gastroenteritis / colitis, noninfective", "Gastroenterit / kolit", ["gastroenteritis", "gastroenterit", "ishal"]),
@@ -196,7 +202,7 @@ const ENTRIES: DiagnosisEntry[] = [
   /* ===== Neurology ===== */
   d("I60.9", "8B00", "neurology", "Subarachnoid haemorrhage", "Subaraknoid kanama", ["sah", "subaraknoid", "thunderclap"]),
   d("I61.9", "8B01", "neurology", "Intracerebral haemorrhage", "İntraserebral kanama", ["ich", "beyin kanaması", "hemorrhagic stroke"]),
-  d("I63.9", "8B11.Z", "neurology", "Acute ischaemic stroke", "Akut iskemik inme", ["stroke", "inme", "cva", "cerebral infarction"]),
+  d("I63.9", "8B11", "neurology", "Acute ischaemic stroke", "Akut iskemik inme", ["stroke", "inme", "cva", "cerebral infarction"]),
   d("G45.9", "8B10", "neurology", "Transient ischaemic attack (TIA)", "Geçici iskemik atak (GİA)", ["tia", "gia", "mini stroke"]),
   d("G43.909", "8A80.Z", "neurology", "Migraine, unspecified", "Migren", ["migraine", "migren"]),
   d("G44.209", "8A81.0", "neurology", "Tension-type headache", "Gerilim tipi baş ağrısı", ["tension headache", "gerilim baş ağrısı"]),
@@ -232,7 +238,10 @@ const ENTRIES: DiagnosisEntry[] = [
   d("E11.00", "5A22", "endocrine", "Hyperosmolar hyperglycaemic state (HHS)", "Hiperozmolar hiperglisemik durum (HHS)", ["hhs", "hyperosmolar"]),
   d("E16.2", "5A41", "endocrine", "Hypoglycaemia", "Hipoglisemi", ["hypoglycemia", "hipoglisemi", "low sugar"]),
   d("E11.65", "5A11", "endocrine", "Type 2 diabetes with hyperglycaemia", "Hiperglisemili tip 2 diyabet", ["hyperglycemia", "hiperglisemi", "diabetes", "diyabet"]),
-  d("E05.5X1", "5A02", "endocrine", "Thyroid storm (thyrotoxic crisis)", "Tiroid fırtınası", ["thyroid storm", "tiroid fırtınası", "thyrotoxicosis", "tirotoksikoz"]),
+  // Review 02 finding 17: E05.5X1 is not a valid ICD-10-CM code; E05.91 is
+  // "Thyrotoxicosis, unspecified, with thyrotoxic crisis or storm".
+  // https://www.aapc.com/codes/icd-10-codes/E05.91
+  d("E05.91", "5A02", "endocrine", "Thyroid storm (thyrotoxic crisis)", "Tiroid fırtınası", ["thyroid storm", "tiroid fırtınası", "thyrotoxicosis", "tirotoksikoz"]),
   d("E03.5", "5A00.1", "endocrine", "Myxoedema coma / severe hypothyroidism", "Miksödem koması / ağır hipotiroidi", ["myxedema", "hypothyroid", "hipotiroidi"]),
   d("E27.2", "5A74", "endocrine", "Addisonian (adrenal) crisis", "Adrenal kriz", ["adrenal crisis", "addisonian", "adrenal yetmezlik"]),
   d("E87.5", "5C77", "endocrine", "Hyperkalaemia", "Hiperkalemi", ["hyperkalemia", "hiperkalemi", "high potassium"]),
@@ -316,7 +325,10 @@ const ENTRIES: DiagnosisEntry[] = [
   d("T42.4X1A", "NE60", "toxicology", "Benzodiazepine overdose", "Benzodiazepin aşırı dozu", ["benzo", "benzodiazepin"]),
   d("T67.0XXA", "NF01.Z", "toxicology", "Heat stroke", "Sıcak çarpması", ["heat stroke", "sıcak çarpması", "hyperthermia"]),
   d("T68.XXXA", "NF02", "toxicology", "Hypothermia", "Hipotermi", ["hypothermia", "hipotermi"]),
-  d("T78.40XA", "NE61", "toxicology", "Poisoning / toxic ingestion, unspecified", "Zehirlenme (belirsiz)", ["poisoning", "zehirlenme", "ingestion"]),
+  // Review 02 finding 18: T78.40XA is "Allergy, unspecified"; a poisoning commit
+  // must be graded against T65.91XA (toxic effect of unspecified substance,
+  // accidental, initial encounter). https://www.aapc.com/codes/icd-10-codes/T65.91
+  d("T65.91XA", "NE61", "toxicology", "Poisoning / toxic ingestion, unspecified", "Zehirlenme (belirsiz)", ["poisoning", "zehirlenme", "ingestion"]),
 
   /* ===== Dermatology ===== */
   d("B02.9", "1E91.Z", "dermatology", "Herpes zoster (shingles)", "Herpes zoster (zona)", ["shingles", "zona", "herpes zoster"]),

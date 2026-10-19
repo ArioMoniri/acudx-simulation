@@ -20,7 +20,8 @@ Data only — no logic. ``case_generator`` merges a fixture over the system prof
 
 Tuple shapes (mirroring ``case_generator``'s templated assembly)::
 
-    lab       = (code, en, tr, value, unit, ref_low, ref_high, flag, category[, jitter])
+    lab       = (code, en, tr, value, unit, ref_low, ref_high, flag, category[, jitter[, hours_post_ingestion]])
+                # a str ``value`` marks a QUALITATIVE result (dipstick / positive)
     imaging   = (code, modality_en, modality_tr, findings_en, findings_tr,
                  image_query_en, image_query_tr)
     treatment = (code, label_en, label_tr, appropriateness,
@@ -146,8 +147,13 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Ardışık derivasyonlarda ST yükselmesi ve resiprok değişiklik.",
                     "STEMI ECG ST elevation anterior leads", "STEMI EKG anterior ST yükselmesi"),
         "treatments": [
-            ("asa_p2y12", "Aspirin + P2Y12 loading", "Aspirin + P2Y12 yükleme", "indicated", [("pain", -1.5, 600000)], "Dual antiplatelet loading for STEMI.", "STEMI'de ikili antiplatelet yükleme."),
-            ("primary_pci", "Activate primary PCI", "Primer PKG aktivasyonu", "indicated", [("pain", -3.0, 900000)], "Primary PCI is first-line reperfusion when timely.", "Zamanında ise primer PKG birinci basamak reperfüzyondur."),
+            # Review 02 finding 15 (major): aspirin is an antiplatelet with no acute
+            # analgesic effect; reperfusion pain relief follows balloon inflation
+            # (90-120 min door-to-balloon), not PCI activation. ESC 2023 ACS
+            # https://doi.org/10.1093/eurheartj/ehad191
+            ("asa_p2y12", "Aspirin + P2Y12 loading", "Aspirin + P2Y12 yükleme", "indicated", [], "Dual antiplatelet loading for STEMI (no analgesic effect).", "STEMI'de ikili antiplatelet yükleme (analjezik etkisi yoktur)."),
+            ("primary_pci", "Activate primary PCI", "Primer PKG aktivasyonu", "indicated", [("pain", -3.0, 5400000)], "Primary PCI is first-line reperfusion; pain relief follows reperfusion at ~90 min.", "Primer PKG birinci basamak reperfüzyondur; ağrı ~90. dakikadaki reperfüzyonla geçer."),
+            ("iv_opioid", "IV opioid titrated for ongoing ischaemic pain", "Süren iskemik ağrı için titre IV opioid", "indicated", [("pain", -3.0, 300000)], "Titrated opioid for refractory ischaemic pain.", "Dirençli iskemik ağrı için titre opioid."),
             ("routine_o2", "Routine high-flow oxygen", "Rutin yüksek akım oksijen", "contraindicated", [], "Oxygen only if SpO2 < 90%.", "Oksijen yalnızca SpO2 < %90 ise."),
         ],
         "guide": ("ESC", "2023 ESC ACS Guidelines (summary)", "In STEMI, deliver primary PCI within 120 minutes of diagnosis; otherwise give fibrinolysis within 10 minutes.", "STEMI'de tanıdan sonra 120 dakika içinde primer PKG uygulayın; aksi halde 10 dakika içinde fibrinolitik verin."),
@@ -162,7 +168,8 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Dinamik ST çökmesi / T negatifliği, ST yükselmesi yok.",
                     "NSTEMI ECG ST depression", "NSTEMI EKG ST çökmesi"),
         "treatments": [
-            ("asa_p2y12", "Aspirin + P2Y12 inhibitor", "Aspirin + P2Y12 inhibitörü", "indicated", [("pain", -1.5, 600000)], "Dual antiplatelet therapy for NSTE-ACS.", "NSTE-AKS'de ikili antiplatelet tedavi."),
+            ("asa_p2y12", "Aspirin + P2Y12 inhibitor", "Aspirin + P2Y12 inhibitörü", "indicated", [], "Dual antiplatelet therapy for NSTE-ACS (no analgesic effect; review 02 finding 15).", "NSTE-AKS'de ikili antiplatelet tedavi (analjezik etkisi yoktur)."),
+            ("gtn_opioid", "Sublingual GTN, then IV opioid if pain persists", "Dilaltı GTN, ağrı sürerse IV opioid", "indicated", [("pain", -2.5, 300000)], "Nitrate and opioid relieve ischaemic pain (SBP >= 90, no PDE-5 inhibitor).", "Nitrat ve opioid iskemik ağrıyı giderir (SKB >= 90, PDE-5 inhibitörü yok)."),
             ("anticoag", "Parenteral anticoagulation", "Parenteral antikoagülasyon", "indicated", [], "Anticoagulate and risk-stratify for early angiography.", "Antikoagüle edip erken anjiyografi için risk sınıflayın."),
             ("thrombolysis", "Empiric thrombolysis", "Ampirik tromboliz", "contraindicated", [], "Thrombolysis is not indicated without STEMI.", "STEMI olmadan tromboliz endike değildir."),
         ],
@@ -177,7 +184,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Ağrı sırasında geçici ST/T değişimi, normal troponin.",
                     "unstable angina ECG transient ST", "kararsız angina EKG geçici ST"),
         "treatments": [
-            ("antiplatelet", "Aspirin + anti-ischaemic therapy", "Aspirin + anti-iskemik tedavi", "indicated", [("pain", -2.0, 600000)], "Antiplatelet and anti-ischaemic treatment.", "Antiplatelet ve anti-iskemik tedavi."),
+            ("antiplatelet", "Aspirin + anti-ischaemic therapy (nitrate, beta-blocker)", "Aspirin + anti-iskemik tedavi (nitrat, beta-bloker)", "indicated", [("pain", -2.0, 300000)], "Antiplatelet plus anti-ischaemic treatment; the nitrate, not the aspirin, eases the pain.", "Antiplatelet artı anti-iskemik tedavi; ağrıyı aspirin değil nitrat azaltır."),
             ("serial_trop", "Serial troponin + monitoring", "Seri troponin + monitörizasyon", "indicated", [], "Serial troponin to exclude evolving infarction.", "Gelişen enfarktüsü dışlamak için seri troponin."),
             ("thrombolysis", "Empiric thrombolysis", "Ampirik tromboliz", "contraindicated", [], "No role for thrombolysis in unstable angina.", "Kararsız anginada trombolizin yeri yoktur."),
         ],
@@ -253,7 +260,13 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "AV disosiyasyonla geniş QRS düzenli taşikardi.",
                     "ventricular tachycardia ECG broad complex", "ventriküler taşikardi EKG geniş QRS"),
         "treatments": [
-            ("dc_shock", "Synchronised DC cardioversion if unstable", "İnstabilse senkron DC kardiyoversiyon", "indicated", [("hr", -60.0, 60000)], "Immediate cardioversion for pulseless/unstable VT.", "Nabızsız/instabil VT'de hemen kardiyoversiyon."),
+            # Review 02 finding 5 (critical): pulseless VT is a cardiac-arrest rhythm
+            # treated with UNSYNCHRONISED defibrillation + CPR; synchronised
+            # cardioversion is for VT WITH a pulse that is unstable. AHA 2020 ACLS
+            # https://www.ahajournals.org/doi/10.1161/CIR.0000000000000916
+            ("defib_pulseless", "Pulseless VT: unsynchronised defibrillation + CPR", "Nabızsız VT: senkronize olmayan defibrilasyon + KPR", "indicated", [("hr", -60.0, 60000)], "Pulseless VT follows the cardiac-arrest algorithm: defibrillate, do not synchronise.", "Nabızsız VT kardiyak arrest algoritmasını izler: defibrile edin, senkronize etmeyin."),
+            ("sync_cardioversion", "Unstable VT with a pulse: synchronised cardioversion", "Nabızlı instabil VT: senkron kardiyoversiyon", "indicated", [("hr", -60.0, 60000)], "Synchronised cardioversion for VT with a pulse and instability.", "Nabızlı ve instabil VT'de senkron kardiyoversiyon."),
+            ("sync_on_pulseless", "Attempt synchronised shock on pulseless VT", "Nabızsız VT'de senkron şok denemesi", "contraindicated", [], "Synchronising on pulseless VT delays or prevents the shock.", "Nabızsız VT'de senkronizasyon şoku geciktirir veya engeller."),
             ("amiodarone", "IV amiodarone + correct electrolytes", "IV amiodaron + elektrolit düzeltme", "indicated", [], "Amiodarone and electrolyte correction for stable VT.", "Stabil VT'de amiodaron ve elektrolit düzeltme."),
             ("verapamil", "IV verapamil", "IV verapamil", "contraindicated", [], "Verapamil is dangerous in VT.", "Verapamil VT'de tehlikelidir."),
         ],
@@ -299,14 +312,19 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "cardiac tamponade echo pericardial effusion", "tamponad eko perikardiyal efüzyon"),
         "treatments": [
             ("pericardiocentesis", "Urgent pericardiocentesis", "Acil perikardiyosentez", "indicated", [("systolic", 20.0, 300000)], "Drain the effusion to relieve tamponade.", "Tamponadı gidermek için efüzyonu boşaltın."),
-            ("fluid_support", "IV fluids to support filling", "Dolumu desteklemek için IV sıvı", "indicated", [("systolic", 8.0, 300000)], "Fluids temporise while preparing to drain.", "Boşaltmaya hazırlanırken sıvı zaman kazandırır."),
+            # Review 02 finding 12 (major): fluid loading helps only hypovolaemic
+            # tamponade and can worsen filling otherwise. ESC 2015 pericardial
+            # diseases https://doi.org/10.1093/eurheartj/ehv318
+            ("fluid_support", "Small fluid bolus only if hypovolaemic (bridge to drainage)", "Yalnızca hipovolemikse küçük sıvı bolusu (drenaja köprü)", "neutral", [], "A small bolus may bridge a hypovolaemic patient to drainage; it is not a treatment for tamponade.", "Küçük bolus hipovolemik hastayı drenaja köprüleyebilir; tamponad tedavisi değildir."),
             ("aggressive_diuresis", "Aggressive diuresis / vasodilators", "Agresif diürez / vazodilatör", "contraindicated", [], "Reducing preload worsens tamponade.", "Ön yükü azaltmak tamponadı kötüleştirir."),
         ],
     },
     "hypertensive_emergency": {
         "labs": [
             ("2160-0", "Creatinine", "Kreatinin", 1.7, "mg/dL", 0.6, 1.3, "H", "chemistry", 0.15),
-            ("2888-6", "Urine protein", "İdrar proteini", 2.0, "+", 0, 0, "H", "urinalysis"),
+            # Review 02 finding 39: qualitative results carry a string value (LOINC
+            # 5804-0 urine protein dipstick, ordinal) instead of a numeric stand-in.
+            ("5804-0", "Urine protein (dipstick)", "İdrar proteini (strip)", "2+", "", None, None, "H", "urinalysis"),
         ],
         "imaging": ("11524-6", "12-lead ECG", "12 derivasyonlu EKG",
                     "Left ventricular hypertrophy with strain pattern.",
@@ -329,7 +347,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "endocarditis echo vegetation", "endokardit eko vejetasyon"),
         "treatments": [
             ("cultures_x3", "Three sets of blood cultures before antibiotics", "Antibiyotik öncesi üç set kan kültürü", "indicated", [], "Take three culture sets before antibiotics.", "Antibiyotikten önce üç set kültür alın."),
-            ("prolonged_abx", "Prolonged IV antibiotics", "Uzun süreli IV antibiyotik", "indicated", [("tempC", -0.6, 1800000)], "Extended targeted IV antibiotic course.", "Uzun süreli hedefli IV antibiyotik kürü."),
+            ("prolonged_abx", "Prolonged IV antibiotics", "Uzun süreli IV antibiyotik", "indicated", [], "Extended targeted IV antibiotic course (no vital-sign change within the session; review 02 finding 14).", "Uzun süreli hedefli IV antibiyotik kürü."),
             ("single_oral_discharge", "Single oral dose then discharge", "Tek oral doz sonrası taburcu", "contraindicated", [], "Endocarditis needs admission, not discharge.", "Endokardit yatış gerektirir, taburcu değil."),
         ],
     },
@@ -391,7 +409,12 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "pulmonary embolism CTPA filling defect", "pulmoner emboli BTPA dolum defekti"),
         "treatments": [
             ("anticoag", "Therapeutic anticoagulation", "Terapötik antikoagülasyon", "indicated", [], "Anticoagulate once PE is confirmed or highly likely.", "PE doğrulanınca/çok olası ise antikoagüle edin."),
-            ("thrombolysis_massive", "Thrombolysis if massive PE with shock", "Şoklu masif PE'de tromboliz", "neutral", [], "Reserve thrombolysis for haemodynamic instability.", "Trombolizi hemodinamik instabilite için saklayın."),
+            # Review 02 finding 13 (major): systemic thrombolysis is class I for
+            # high-risk PE (shock / persistent hypotension) and class III for
+            # intermediate-risk PE without deterioration. ESC 2019 acute PE
+            # https://doi.org/10.1093/eurheartj/ehz405
+            ("thrombolysis_high_risk", "Systemic thrombolysis for high-risk PE (shock or persistent hypotension) without contraindication", "Kontrendikasyon yoksa yüksek riskli PE'de (şok veya kalıcı hipotansiyon) sistemik tromboliz", "indicated", [("systolic", 12.0, 1800000)], "Class I: thrombolyse haemodynamically unstable PE.", "Sınıf I: hemodinamik instabil PE'de tromboliz."),
+            ("thrombolysis_intermediate", "Thrombolysis in intermediate-risk PE without deterioration", "Kötüleşme olmayan orta riskli PE'de tromboliz", "contraindicated", [], "Class III: routine thrombolysis is not recommended in intermediate-risk PE.", "Sınıf III: orta riskli PE'de rutin tromboliz önerilmez."),
             ("oxygen", "Supplemental oxygen", "Ek oksijen", "indicated", [("spo2", 4.0, 300000)], "Correct hypoxia with oxygen.", "Hipoksiyi oksijenle düzeltin."),
         ],
     },
@@ -428,14 +451,21 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     "pneumonia_cap": {
         "labs": [
             ("1988-5", "C-reactive protein", "CRP", 180, "mg/L", 0, 5, "H", "chemistry", 15),
-            ("3094-0", "Urea", "Üre", 9.2, "mmol/L", 2.5, 7.1, "H", "chemistry", 0.5),
+            # Review 02 finding 22: 3094-0 is urea NITROGEN in mg/dL; urea in mmol/L is
+            # LOINC 22664-7 https://loinc.org/22664-7
+            ("22664-7", "Urea", "Üre", 9.2, "mmol/L", 2.5, 7.1, "H", "chemistry", 0.5),
         ],
         "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
                     "Lobar consolidation with an air bronchogram.",
                     "Hava bronkogramıyla lober konsolidasyon.",
                     "pneumonia chest x-ray consolidation", "pnömoni akciğer grafisi konsolidasyon"),
         "treatments": [
-            ("severity_abx", "Antibiotics guided by severity (CURB-65)", "Ağırlığa göre antibiyotik (CURB-65)", "indicated", [("tempC", -0.6, 1800000)], "Choose antibiotics by severity score.", "Antibiyotiği ağırlık skoruna göre seçin."),
+            # Review 02 finding 14 (major): antibiotics do not defervesce a patient in
+            # 30 minutes; median time to clinical stability in CAP is ~3 days (Halm
+            # et al., JAMA 1998 https://jamanetwork.com/journals/jama/fullarticle/187516).
+            # Antibiotic benefit is modelled as halting further deterioration, not a
+            # vital-sign change inside the session.
+            ("severity_abx", "Antibiotics guided by severity (CURB-65)", "Ağırlığa göre antibiyotik (CURB-65)", "indicated", [], "Choose antibiotics by severity score; expect defervescence over days, not minutes.", "Antibiyotiği ağırlık skoruna göre seçin; ateş dakikalar değil günler içinde düşer."),
             ("oxygen_fluids", "Oxygen + fluids as needed", "Gerektiğinde oksijen + sıvı", "indicated", [("spo2", 3.0, 300000)], "Support oxygenation and hydration.", "Oksijenizasyon ve hidrasyonu destekleyin."),
             ("delay_abx", "Delay antibiotics pending cultures", "Kültür için antibiyotiği ertele", "contraindicated", [], "Do not delay antibiotics in pneumonia.", "Pnömonide antibiyotiği geciktirmeyin."),
         ],
@@ -484,6 +514,10 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("thrombolysis_window", "IV thrombolysis if within window", "Pencere içindeyse IV tromboliz", "indicated", [], "Thrombolyse eligible patients within the time window.", "Uygun hastalara zaman penceresinde tromboliz."),
             ("thrombectomy", "Thrombectomy referral for LVO", "Büyük damar oklüzyonunda trombektomi sevki", "indicated", [], "Refer large-vessel occlusion for thrombectomy.", "Büyük damar oklüzyonunu trombektomiye sevk edin."),
             ("early_antihtn", "Aggressive BP lowering before imaging", "Görüntüleme öncesi agresif TA düşürme", "contraindicated", [], "Do not lower BP aggressively before imaging.", "Görüntüleme öncesi TA'yı agresif düşürmeyin."),
+            # Review 02 finding 37: thrombolysis BP gate <185/110 before and <180/105
+            # after alteplase/tenecteplase; glucose exclusion <2.8 or >22 mmol/L.
+            # AHA/ASA 2019 https://doi.org/10.1161/STR.0000000000000211
+            ("bp_gate_lysis", "Lower BP to below 185/110 before thrombolysis (then keep below 180/105)", "Tromboliz öncesi TA'yı 185/110 altına düşür (sonra 180/105 altında tut)", "indicated", [("systolic", -15.0, 600000)], "Thrombolysis is allowed only with BP below 185/110 and glucose between 2.8 and 22 mmol/L.", "Tromboliz yalnızca TA 185/110 altında ve glukoz 2.8-22 mmol/L arasında iken verilir."),
         ],
     },
     "intracerebral_hemorrhage": {
@@ -504,7 +538,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     "subarachnoid_hemorrhage": {
         "labs": [
             ("2345-7", "Capillary glucose", "Kapiller glukoz", 6.9, "mmol/L", 4.0, 7.8, "N", "chemistry", 0.4),
-            ("13969-1", "CSF xanthochromia (if CT negative)", "BOS ksantokromi (BT negatifse)", 1.0, "positive", 0, 0, "H", "csf"),
+            ("14426-1", "CSF xanthochromia (if CT negative)", "BOS ksantokromi (BT negatifse)", "positive", "", None, None, "H", "csf"),
         ],
         "imaging": ("30799-1", "Non-contrast CT head", "Kontrastsız beyin BT",
                     "Blood in the basal cisterns.",
@@ -526,7 +560,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Endike ise lomber ponksiyon öncesi kitle lezyonu dışlanır.",
                     "meningitis CT before lumbar puncture", "menenjit LP öncesi BT"),
         "treatments": [
-            ("immediate_ceftriaxone", "Immediate IV ceftriaxone + dexamethasone", "Hemen IV seftriakson + deksametazon", "indicated", [("tempC", -0.6, 1800000)], "Do not wait for LP/CT to give antibiotics.", "Antibiyotik için LP/BT beklemeyin."),
+            ("immediate_ceftriaxone", "Immediate IV ceftriaxone + dexamethasone", "Hemen IV seftriakson + deksametazon", "indicated", [], "Do not wait for LP/CT to give antibiotics.", "Antibiyotik için LP/BT beklemeyin."),
             ("blood_cultures", "Blood cultures", "Kan kültürü", "indicated", [], "Cultures without delaying antibiotics.", "Antibiyotiği geciktirmeden kültür."),
             ("delay_abx_imaging", "Delay antibiotics for imaging", "Görüntüleme için antibiyotiği ertele", "contraindicated", [], "Never delay antibiotics for imaging.", "Antibiyotiği görüntüleme için asla geciktirmeyin."),
         ],
@@ -573,7 +607,11 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Neden olarak safra taşı değerlendirilir; ağırsa BT.",
                     "pancreatitis ultrasound gallstones", "pankreatit ultrason safra taşı"),
         "treatments": [
-            ("aggressive_fluids", "Aggressive IV fluid resuscitation", "Agresif IV sıvı resüsitasyonu", "indicated", [("hr", -10.0, 600000), ("systolic", 8.0, 600000)], "Early goal-directed fluids.", "Erken hedefe yönelik sıvı."),
+            # Review 02 finding 6 (critical): WATERFALL (de-Madaria et al., NEJM 2022,
+            # https://www.nejm.org/doi/full/10.1056/NEJMoa2202884) stopped early because
+            # aggressive resuscitation caused fluid overload (20.5% vs 6.3%) with no benefit.
+            ("moderate_fluids", "Moderate goal-directed IV fluids (10 mL/kg bolus only if hypovolaemic, then 1.5 mL/kg/h lactated Ringer's, reassess at 3 h)", "Ilımlı hedefe yönelik IV sıvı (yalnızca hipovolemikse 10 mL/kg bolus, sonra 1.5 mL/kg/sa laktatlı Ringer, 3. saatte yeniden değerlendir)", "indicated", [("hr", -8.0, 600000), ("systolic", 6.0, 600000)], "Moderate resuscitation per WATERFALL; reassess volume status at 3 hours.", "WATERFALL'a göre ılımlı resüsitasyon; 3. saatte volüm durumunu yeniden değerlendirin."),
+            ("aggressive_fluids", "Aggressive IV fluids (20 mL/kg bolus then 3 mL/kg/h)", "Agresif IV sıvı (20 mL/kg bolus, sonra 3 mL/kg/sa)", "contraindicated", [], "Aggressive resuscitation caused fluid overload without benefit in WATERFALL.", "WATERFALL'da agresif resüsitasyon yarar sağlamadan sıvı yüklenmesine yol açtı."),
             ("analgesia_nbm", "Analgesia + NBM", "Analjezi + ağızdan kapalı", "indicated", [("pain", -3.0, 300000)], "Pain control and bowel rest.", "Ağrı kontrolü ve bağırsak istirahati."),
             ("prophylactic_abx", "Routine prophylactic antibiotics", "Rutin profilaktik antibiyotik", "contraindicated", [], "No prophylactic antibiotics in mild pancreatitis.", "Hafif pankreatitte profilaktik antibiyotik yok."),
         ],
@@ -581,7 +619,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     "upper_gi_bleed": {
         "labs": [
             ("718-7", "Haemoglobin", "Hemoglobin", 7.6, "g/dL", 12.0, 16.0, "L", "haematology", 0.4),
-            ("3094-0", "Urea", "Üre", 12.5, "mmol/L", 2.5, 7.1, "H", "chemistry", 0.6),
+            ("22664-7", "Urea", "Üre", 12.5, "mmol/L", 2.5, 7.1, "H", "chemistry", 0.6),
         ],
         "imaging": ("29893-5", "Upper GI endoscopy", "Üst GİS endoskopisi",
                     "Identify and treat the bleeding source (ulcer / varix).",
@@ -618,7 +656,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Tıkayıcı taşla genişlemiş safra yolları.",
                     "cholangitis MRCP dilated ducts", "kolanjit MRCP genişlemiş kanal"),
         "treatments": [
-            ("abx_fluids", "IV antibiotics + fluids", "IV antibiyotik + sıvı", "indicated", [("tempC", -0.6, 1800000)], "Broad-spectrum antibiotics and resuscitation.", "Geniş spektrumlu antibiyotik ve resüsitasyon."),
+            ("abx_fluids", "IV antibiotics + fluids", "IV antibiyotik + sıvı", "indicated", [("systolic", 8.0, 600000)], "Broad-spectrum antibiotics and resuscitation (fluids, not antibiotics, move the vitals this hour).", "Geniş spektrumlu antibiyotik ve resüsitasyon."),
             ("biliary_drainage", "Urgent biliary drainage (ERCP)", "Acil biliyer drenaj (ERCP)", "indicated", [], "Decompress the obstructed duct urgently.", "Tıkalı kanalı acilen dekomprese edin."),
             ("delay_drainage", "Delay drainage in septic patient", "Septik hastada drenajı ertele", "contraindicated", [], "Do not delay drainage in cholangitis sepsis.", "Kolanjit sepsisinde drenajı geciktirmeyin."),
         ],
@@ -654,6 +692,9 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("fluids_first", "IV fluids first", "Önce IV sıvı", "indicated", [("hr", -8.0, 600000)], "Fluid resuscitation before insulin.", "İnsülinden önce sıvı resüsitasyonu."),
             ("fixed_insulin", "Fixed-rate insulin infusion + K replacement", "Sabit hızlı insülin infüzyonu + K replasmanı", "indicated", [], "Insulin with potassium monitoring.", "Potasyum izlemiyle insülin."),
             ("insulin_bolus_first", "IV insulin bolus before fluids", "Sıvı öncesi IV insülin bolusu", "contraindicated", [], "Do not bolus insulin before fluids/potassium.", "Sıvı/potasyum öncesi insülin bolusu vermeyin."),
+            # Review 02 finding 31: potassium gate. ADA/EASD 2024 hyperglycaemic crises
+            # https://doi.org/10.2337/dci24-0032
+            ("insulin_low_k", "Start insulin with K below 3.3 mmol/L", "K 3.3 mmol/L altındayken insülin başlama", "contraindicated", [], "Hold insulin until potassium is replaced above 3.3 mmol/L.", "Potasyum 3.3 mmol/L üzerine çıkarılana kadar insülini bekletin."),
         ],
     },
     "hhs": {
@@ -683,6 +724,10 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
         "treatments": [
             ("calcium", "IV calcium gluconate", "IV kalsiyum glukonat", "indicated", [], "Calcium stabilises the myocardium.", "Kalsiyum miyokardı stabilize eder."),
             ("insulin_dextrose", "Insulin-dextrose + salbutamol", "İnsülin-dekstroz + salbutamol", "indicated", [], "Shift potassium intracellularly.", "Potasyumu hücre içine kaydırın."),
+            # Review 02 finding 43: UK Kidney Association 2023 — definitive removal
+            # and a 1 h recheck. https://ukkidney.org/health-professionals/guidelines/treatment-acute-hyperkalaemia-adults
+            ("dialysis_referral", "Urgent dialysis / nephrology for ESRD or refractory hyperkalaemia", "SDBH veya dirençli hiperkalemide acil diyaliz / nefroloji", "indicated", [], "Shift therapies buy time; remove potassium definitively.", "Kaydırma tedavileri zaman kazandırır; potasyumu kesin olarak uzaklaştırın."),
+            ("recheck_1h", "Repeat ECG and potassium at 1 hour", "1. saatte EKG ve potasyum tekrarı", "indicated", [], "Recheck potassium and ECG after treatment.", "Tedavi sonrası potasyum ve EKG'yi tekrar kontrol edin."),
             ("k_fluids", "Potassium-containing IV fluids", "Potasyum içeren IV sıvı", "contraindicated", [], "Avoid potassium-containing fluids.", "Potasyum içeren sıvılardan kaçının."),
         ],
     },
@@ -696,7 +741,11 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Sinüs taşikardisi veya atriyal fibrilasyon.",
                     "thyroid storm ECG tachyarrhythmia", "tiroid fırtınası EKG taşiaritmi"),
         "treatments": [
-            ("beta_blocker", "IV beta-blocker (propranolol)", "IV beta-bloker (propranolol)", "indicated", [("hr", -25.0, 600000)], "Control adrenergic symptoms.", "Adrenerjik semptomları kontrol edin."),
+            # Review 02 finding 42: ATA 2016 https://doi.org/10.1089/thy.2016.0229 —
+            # propranolol is relatively contraindicated with decompensated heart
+            # failure or bronchospasm; esmolol or cautious monitored dosing there.
+            ("beta_blocker", "Beta-blocker with cardiac monitoring (propranolol; esmolol if heart failure or bronchospasm)", "Kardiyak monitörle beta-bloker (propranolol; kalp yetmezliği veya bronkospazmda esmolol)", "indicated", [("hr", -25.0, 600000)], "Control adrenergic symptoms; use esmolol or cautious dosing in decompensated heart failure or bronchospasm.", "Adrenerjik semptomları kontrol edin; dekompanse kalp yetmezliği veya bronkospazmda esmolol veya dikkatli doz."),
+            ("unmonitored_bb_hf", "Unmonitored full-dose beta-blockade in decompensated heart failure", "Dekompanse kalp yetmezliğinde monitörsüz tam doz beta-blokaj", "contraindicated", [], "Beta-blockade can precipitate cardiovascular collapse in thyrotoxic heart failure.", "Beta-blokaj tirotoksik kalp yetmezliğinde kardiyovasküler kollapsa yol açabilir."),
             ("antithyroid_then_iodine", "Antithyroid drug, then iodine", "Antitiroid ilaç, sonra iyot", "indicated", [], "Give antithyroid drug before iodine.", "İyottan önce antitiroid ilaç verin."),
             ("iodine_first", "Iodine before antithyroid drug", "Antitiroidden önce iyot", "contraindicated", [], "Iodine first can worsen the storm.", "Önce iyot fırtınayı kötüleştirebilir."),
         ],
@@ -735,7 +784,8 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     "nec_fasciitis": {
         "labs": [
             ("1988-5", "C-reactive protein", "CRP", 260, "mg/L", 0, 5, "HH", "chemistry", 20),
-            ("2532-0", "Creatine kinase", "Kreatin kinaz", 900, "U/L", 30, 200, "H", "chemistry", 80),
+            # Review 02 finding 22: 2532-0 is LDH (discouraged); CK is 2157-6 https://loinc.org/2157-6
+            ("2157-6", "Creatine kinase", "Kreatin kinaz", 900, "U/L", 30, 200, "H", "chemistry", 80),
         ],
         "imaging": ("36643-5", "Imaging must not delay surgery", "Görüntüleme cerrahiyi geciktirmemeli",
                     "Soft-tissue gas may be seen but must not delay debridement.",
@@ -743,13 +793,13 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "necrotising fasciitis soft tissue gas", "nekrotizan fasiit yumuşak doku gazı"),
         "treatments": [
             ("surgical_debridement", "Urgent surgical debridement", "Acil cerrahi debridman", "indicated", [], "Source control by early debridement.", "Erken debridmanla kaynak kontrolü."),
-            ("broad_abx", "Broad-spectrum antibiotics + clindamycin", "Geniş spektrumlu antibiyotik + klindamisin", "indicated", [("tempC", -0.5, 1800000)], "Add clindamycin for toxin suppression.", "Toksin baskılaması için klindamisin ekleyin."),
+            ("broad_abx", "Broad-spectrum antibiotics + clindamycin", "Geniş spektrumlu antibiyotik + klindamisin", "indicated", [], "Add clindamycin for toxin suppression.", "Toksin baskılaması için klindamisin ekleyin."),
             ("watchful_waiting", "Watchful waiting", "İzlemle bekleme", "contraindicated", [], "Delay is fatal; operate early.", "Gecikme öldürücüdür; erken opere edin."),
         ],
     },
     "pyelonephritis": {
         "labs": [
-            ("5799-2", "Urinalysis (leucocytes/nitrites)", "İdrar (lökosit/nitrit)", 1.0, "positive", 0, 0, "H", "urinalysis"),
+            ("5799-2", "Urinalysis (leucocytes/nitrites)", "İdrar (lökosit/nitrit)", "positive", "", None, None, "H", "urinalysis"),
             ("1988-5", "C-reactive protein", "CRP", 110, "mg/L", 0, 5, "H", "chemistry", 10),
         ],
         "imaging": ("24558-9", "Renal ultrasound", "Renal ultrason",
@@ -757,7 +807,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Obstrüksiyon / piyonefroz dışlanır.",
                     "pyelonephritis ultrasound obstruction", "piyelonefrit ultrason obstrüksiyon"),
         "treatments": [
-            ("iv_abx_fluids", "IV antibiotics + fluids", "IV antibiyotik + sıvı", "indicated", [("tempC", -0.6, 1800000)], "Empirical antibiotics and rehydration.", "Ampirik antibiyotik ve rehidrasyon."),
+            ("iv_abx_fluids", "IV antibiotics + fluids", "IV antibiyotik + sıvı", "indicated", [("hr", -6.0, 600000)], "Empirical antibiotics and rehydration.", "Ampirik antibiyotik ve rehidrasyon."),
             ("drain_obstruction", "Drain if obstructed + infected", "Tıkalı + enfekte ise drenaj", "indicated", [], "Decompress an obstructed infected system.", "Tıkalı enfekte sistemi dekomprese edin."),
             ("delay_obstructed", "Delay in obstructed pyonephrosis", "Tıkalı piyonefrozda gecikme", "contraindicated", [], "Obstructed infection needs urgent drainage.", "Tıkalı enfeksiyon acil drenaj gerektirir."),
         ],
@@ -772,7 +822,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Klinik tanı; tedaviyi testler için geciktirmeyin.",
                     "meningococcaemia purpuric rash", "meningokoksemi purpurik döküntü"),
         "treatments": [
-            ("immediate_ceftriaxone", "Immediate IV ceftriaxone", "Hemen IV seftriakson", "indicated", [("tempC", -0.6, 1800000)], "Antibiotics at first suspicion.", "İlk şüphede antibiyotik."),
+            ("immediate_ceftriaxone", "Immediate IV ceftriaxone", "Hemen IV seftriakson", "indicated", [], "Antibiotics at first suspicion.", "İlk şüphede antibiyotik."),
             ("fluid_resus", "Aggressive fluid resuscitation", "Agresif sıvı resüsitasyonu", "indicated", [("systolic", 12.0, 600000)], "Treat shock aggressively.", "Şoku agresif tedavi edin."),
             ("lp_before_abx", "LP before antibiotics in shock", "Şokta antibiyotik öncesi LP", "contraindicated", [], "Do not delay antibiotics for LP in shock.", "Şokta LP için antibiyotiği geciktirmeyin."),
         ],
@@ -796,7 +846,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     },
     "renal_colic": {
         "labs": [
-            ("5794-3", "Urine blood", "İdrar kanı", 1.0, "positive", 0, 0, "H", "urinalysis"),
+            ("5794-3", "Urine blood", "İdrar kanı", "positive", "", None, None, "H", "urinalysis"),
             ("2160-0", "Creatinine", "Kreatinin", 1.2, "mg/dL", 0.6, 1.3, "N", "chemistry", 0.1),
         ],
         "imaging": ("42274-1", "Non-contrast CT KUB", "Kontrastsız BT KUB",
@@ -822,8 +872,12 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "alcohol withdrawal ECG baseline", "alkol yoksunluğu EKG bazal"),
         "treatments": [
             ("benzodiazepine", "Benzodiazepine (symptom-triggered)", "Benzodiazepin (semptom tetiklemeli)", "indicated", [], "Benzodiazepines control withdrawal.", "Benzodiazepinler yoksunluğu kontrol eder."),
-            ("thiamine_first", "IV thiamine before glucose", "Glukozdan önce IV tiamin", "indicated", [], "Give thiamine before any glucose load.", "Herhangi glukoz yüklemesinden önce tiamin verin."),
-            ("glucose_before_thiamine", "Glucose before thiamine", "Tiaminden önce glukoz", "contraindicated", [], "Glucose before thiamine risks Wernicke's.", "Tiaminden önce glukoz Wernicke riski taşır."),
+            # Review 02 finding 11 (critical): "glucose before thiamine precipitates
+            # Wernicke's" has no controlled evidence; the real hazard is delaying
+            # glucose in hypoglycaemia. Schabelman & Kuo, J Emerg Med 2012
+            # https://doi.org/10.1016/j.jemermed.2011.05.076
+            ("thiamine_early", "High-dose IV thiamine as soon as practical (before or with glucose)", "Mümkün olan en kısa sürede yüksek doz IV tiamin (glukozdan önce veya birlikte)", "indicated", [], "Give thiamine early; never use it as a reason to delay glucose.", "Tiamini erken verin; glukozu geciktirmek için gerekçe yapmayın."),
+            ("withhold_glucose_for_thiamine", "Withhold glucose in hypoglycaemia until thiamine is given", "Hipoglisemide tiamin verilene kadar glukozu bekletme", "contraindicated", [], "Treat hypoglycaemia immediately; thiamine sequencing must not delay glucose.", "Hipoglisemiyi hemen tedavi edin; tiamin sıralaması glukozu geciktirmemeli."),
         ],
     },
     "opioid_overdose": {
@@ -843,7 +897,11 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     },
     "paracetamol_od": {
         "labs": [
-            ("3298-4", "Paracetamol level (timed)", "Parasetamol düzeyi (zamanlı)", 180, "mg/L", 0, 10, "H", "toxicology", 15),
+            # Review 02 finding 38: the nomogram needs time since ingestion; 11th tuple
+            # slot = hours_post_ingestion (4 h: compare with the 150 mg/L US / 100 mg/L
+            # UK treatment line). MHRA guidance
+            # https://www.gov.uk/government/publications/paracetamol-overdose-new-guidance-on-treatment-with-intravenous-acetylcysteine
+            ("3298-4", "Paracetamol level (4 h post-ingestion)", "Parasetamol düzeyi (alımdan 4 saat sonra)", 180, "mg/L", 0, 10, "H", "toxicology", 15, 4.0),
             ("6301-6", "INR", "INR", 1.4, "", 0.8, 1.2, "H", "coagulation", 0.1),
         ],
         "imaging": ("11524-6", "No imaging required (biochemical)", "Görüntüleme gerekmez (biyokimyasal)",
@@ -875,7 +933,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     },
     "preeclampsia": {
         "labs": [
-            ("2888-6", "Urine protein", "İdrar proteini", 3.0, "+", 0, 0, "H", "urinalysis"),
+            ("5804-0", "Urine protein (dipstick)", "İdrar proteini (strip)", "3+", "", None, None, "H", "urinalysis"),
             ("777-3", "Platelets", "Trombosit", 90, "10^9/L", 150, 400, "L", "haematology", 8),
         ],
         "imaging": ("11524-6", "Maternal + fetal monitoring", "Maternal + fetal monitörizasyon",
@@ -891,7 +949,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     "pph": {
         "labs": [
             ("718-7", "Haemoglobin", "Hemoglobin", 7.2, "g/dL", 12.0, 16.0, "L", "haematology", 0.4),
-            ("3255-7", "Fibrinogen", "Fibrinojen", 1.4, "g/L", 2.0, 4.0, "L", "coagulation", 0.15),
+            ("3255-7", "Fibrinogen", "Fibrinojen", 140, "mg/dL", 200, 400, "L", "coagulation", 15),  # review 02 finding 22: one unit project-wide (client coag panel is mg/dL)
         ],
         "imaging": ("11524-6", "No imaging — act on the '4 Ts'", "Görüntüleme yok — '4T'ye göre hareket",
                     "Identify tone/trauma/tissue/thrombin as the cause.",
@@ -921,7 +979,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     },
     "compartment_syndrome": {
         "labs": [
-            ("2532-0", "Creatine kinase", "Kreatin kinaz", 1500, "U/L", 30, 200, "HH", "chemistry", 150),
+            ("2157-6", "Creatine kinase", "Kreatin kinaz", 1500, "U/L", 30, 200, "HH", "chemistry", 150),
         ],
         "imaging": ("43468-8", "Compartment pressure (clinical)", "Kompartman basıncı (klinik)",
                     "Clinical diagnosis; pain on passive stretch is key.",
@@ -943,7 +1001,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Gizli enfeksiyon kaynağı taranır.",
                     "febrile neutropenia chest x-ray source", "febril nötropeni akciğer grafisi kaynak"),
         "treatments": [
-            ("immediate_abx", "Broad-spectrum antibiotics within 1 hour", "1 saat içinde geniş spektrumlu antibiyotik", "indicated", [("tempC", -0.5, 1800000)], "Antibiotics within the hour, before cultures return.", "Kültür sonucundan önce, ilk saatte antibiyotik."),
+            ("immediate_abx", "Broad-spectrum antibiotics within 1 hour", "1 saat içinde geniş spektrumlu antibiyotik", "indicated", [], "Antibiotics within the hour, before cultures return.", "Kültür sonucundan önce, ilk saatte antibiyotik."),
             ("cultures", "Blood cultures", "Kan kültürü", "indicated", [], "Culture without delaying antibiotics.", "Antibiyotiği geciktirmeden kültür."),
             ("delay_abx", "Delay antibiotics for investigations", "Tetkik için antibiyotiği ertele", "contraindicated", [], "Never delay antibiotics in neutropenic fever.", "Nötropenik ateşte antibiyotiği geciktirmeyin."),
         ],
@@ -965,7 +1023,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     "sickle_crisis": {
         "labs": [
             ("718-7", "Haemoglobin", "Hemoglobin", 6.9, "g/dL", 12.0, 16.0, "L", "haematology", 0.4),
-            ("2532-0", "Lactate dehydrogenase", "Laktat dehidrogenaz", 480, "U/L", 120, 250, "H", "chemistry", 40),
+            ("14804-9", "Lactate dehydrogenase", "Laktat dehidrogenaz", 480, "U/L", 120, 250, "H", "chemistry", 40),  # review 02 finding 22: https://loinc.org/14804-9
         ],
         "imaging": ("36643-5", "Chest X-ray (if chest symptoms)", "Göğüs semptomu varsa akciğer grafisi",
                     "Screen for acute chest syndrome.",
@@ -973,8 +1031,621 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "sickle cell acute chest syndrome x-ray", "orak hücre akut göğüs sendromu grafi"),
         "treatments": [
             ("analgesia", "Prompt opioid analgesia", "Hızlı opioid analjezi", "indicated", [("pain", -4.0, 300000)], "Treat crisis pain without delay.", "Kriz ağrısını gecikmeden tedavi edin."),
-            ("fluids_oxygen", "IV fluids + oxygen", "IV sıvı + oksijen", "indicated", [("spo2", 3.0, 300000)], "Hydration and oxygenation.", "Hidrasyon ve oksijenizasyon."),
+            # Review 02 finding 32: NICE CG143 — oxygen only when SpO2 <= 95%; avoid
+            # over-hydration (acute chest syndrome risk).
+            # https://www.nice.org.uk/guidance/cg143/chapter/Recommendations
+            ("fluids_oxygen", "Oxygen if SpO2 at or below 95%; maintain euvolaemia (avoid over-hydration)", "SpO2 %95 veya altındaysa oksijen; övolemiyi koru (aşırı hidrasyondan kaçın)", "indicated", [("spo2", 2.0, 300000)], "Oxygen only for hypoxia; euvolaemia, not aggressive fluids.", "Yalnızca hipokside oksijen; agresif sıvı değil, övolemi."),
             ("withhold_analgesia", "Withhold opioids for observation", "Gözlem için opioidi geciktir", "contraindicated", [], "Do not withhold analgesia in crisis.", "Krizde analjeziyi geciktirmeyin."),
         ],
     },
+}
+
+
+# --------------------------------------------------------------------------- #
+# Per-condition triage-vitals envelopes + trajectory drift.                     #
+#                                                                              #
+# Review 02 (docs/review/02-clinical-content-review-2026-10.md) finding 1      #
+# (critical): vitals were drawn from ESI-only bands, so complete heart block   #
+# presented with HR 98-128 and hypertensive emergency with SBP 100-160. Each   #
+# entry here gives the direction AND band per vital; keys absent from an entry #
+# inherit the ESI band in ``case_generator._ACUITY_BANDS``. ``drift`` is the   #
+# signed 30-minute untreated change per vital (finding 30: a tension           #
+# pneumothorax, an anaphylaxis and a GI bleed must not deteriorate             #
+# identically; a septic patient's temperature must move).                      #
+#                                                                              #
+# Thresholds: ACC/AHA 2017 hypertension guideline (hypertensive emergency      #
+# >180/120 with target-organ damage) https://doi.org/10.1161/HYP.0000000000000065 #
+# AHA 2020 ACLS bradycardia algorithm (HR <50 with symptoms)                    #
+# https://www.ahajournals.org/doi/10.1161/CIR.0000000000000916 ; ESI handbook  #
+# danger-zone vitals https://www.ena.org/enau/education/esi ; AAP bronchiolitis #
+# (infant vitals) https://doi.org/10.1542/peds.2014-2742                        #
+# --------------------------------------------------------------------------- #
+CONDITION_VITALS: dict[str, dict[str, Any]] = {
+    # --- bradyarrhythmia / conduction ------------------------------------ #
+    "complete_heart_block": {"hr": (28, 44), "systolic": (82, 108), "diastolic": (48, 66), "rr": (16, 22), "spo2": (93, 97), "tempC": (36.2, 37.0), "drift": {"hr": -4, "systolic": -10}},
+    "hyperkalemia": {"hr": (44, 62), "systolic": (100, 132), "diastolic": (58, 80), "rr": (16, 24), "spo2": (93, 97), "tempC": (36.2, 37.0), "drift": {"hr": -5, "systolic": -6}},
+    "hyperkalemia_esrd": {"hr": (44, 62), "systolic": (102, 138), "diastolic": (60, 84), "rr": (18, 26), "spo2": (91, 96), "tempC": (36.2, 37.0), "drift": {"hr": -5, "spo2": -2}},
+    "organophosphate_poisoning": {"hr": (42, 60), "systolic": (84, 108), "diastolic": (48, 66), "rr": (24, 34), "spo2": (84, 92), "tempC": (36.2, 37.0), "drift": {"spo2": -6, "hr": -4}},
+    "anorexia_nervosa": {"hr": (36, 50), "systolic": (80, 98), "diastolic": (46, 60), "rr": (12, 16), "spo2": (97, 100), "tempC": (35.0, 36.0), "drift": {}},
+    # --- hypertensive ---------------------------------------------------- #
+    "hypertensive_emergency": {"hr": (84, 104), "systolic": (196, 236), "diastolic": (122, 140), "rr": (16, 22), "spo2": (94, 98), "tempC": (36.4, 37.2), "drift": {"systolic": 10, "diastolic": 6}},
+    "pheochromocytoma": {"hr": (112, 142), "systolic": (192, 240), "diastolic": (110, 134), "rr": (18, 24), "spo2": (95, 99), "tempC": (36.8, 37.6), "drift": {"systolic": 8, "hr": 6}},
+    "preeclampsia": {"hr": (80, 100), "systolic": (162, 186), "diastolic": (104, 118), "rr": (16, 22), "spo2": (95, 99), "tempC": (36.5, 37.2), "drift": {"systolic": 8, "diastolic": 4}},
+    "eclampsia": {"hr": (96, 120), "systolic": (166, 196), "diastolic": (108, 124), "rr": (18, 26), "spo2": (90, 96), "tempC": (36.6, 37.4), "drift": {"systolic": 6, "spo2": -3}},
+    "subarachnoid_hemorrhage": {"hr": (60, 84), "systolic": (158, 196), "diastolic": (90, 110), "rr": (14, 20), "spo2": (95, 99), "tempC": (36.6, 37.4), "drift": {"systolic": 8, "hr": -4}},
+    "intracerebral_hemorrhage": {"hr": (58, 82), "systolic": (176, 216), "diastolic": (96, 118), "rr": (12, 20), "spo2": (94, 98), "tempC": (36.6, 37.4), "drift": {"systolic": 8, "hr": -4, "rr": -2}},
+    "ischemic_stroke": {"hr": (72, 96), "systolic": (152, 190), "diastolic": (86, 104), "rr": (14, 20), "spo2": (95, 99), "tempC": (36.5, 37.3), "drift": {"systolic": 4}},
+    "aortic_dissection": {"hr": (92, 114), "systolic": (164, 204), "diastolic": (92, 114), "rr": (18, 26), "spo2": (94, 98), "tempC": (36.4, 37.2), "drift": {"hr": 6}},
+    "heart_failure_acute": {"hr": (100, 124), "systolic": (146, 186), "diastolic": (86, 106), "rr": (26, 34), "spo2": (84, 91), "tempC": (36.4, 37.2), "drift": {"spo2": -3, "rr": 3, "hr": 4}},
+    # --- hypothermia / hyperthermia ------------------------------------- #
+    "hypothermia": {"hr": (38, 56), "systolic": (84, 108), "diastolic": (50, 68), "rr": (8, 14), "spo2": (90, 96), "tempC": (28.5, 31.8), "drift": {"hr": -4, "tempC": -0.4}},
+    "myxedema_coma": {"hr": (40, 56), "systolic": (82, 104), "diastolic": (50, 66), "rr": (8, 12), "spo2": (88, 94), "tempC": (32.5, 34.8), "drift": {"hr": -3, "tempC": -0.2, "rr": -1}},
+    "heat_stroke": {"hr": (118, 142), "systolic": (86, 112), "diastolic": (50, 70), "rr": (24, 34), "spo2": (92, 97), "tempC": (40.4, 42.0), "drift": {"hr": 8, "systolic": -8, "tempC": 0.3}},
+    "thyroid_storm": {"hr": (136, 164), "systolic": (128, 160), "diastolic": (60, 80), "rr": (22, 30), "spo2": (94, 98), "tempC": (39.2, 40.8), "drift": {"hr": 6, "tempC": 0.3}},
+    "serotonin_syndrome": {"hr": (116, 140), "systolic": (140, 170), "diastolic": (84, 100), "rr": (20, 28), "spo2": (95, 99), "tempC": (38.8, 40.6), "drift": {"tempC": 0.4, "hr": 6}},
+    "nms": {"hr": (110, 134), "systolic": (136, 170), "diastolic": (80, 98), "rr": (20, 26), "spo2": (94, 98), "tempC": (39.0, 40.8), "drift": {"tempC": 0.3, "hr": 4}},
+    "anticholinergic_tox": {"hr": (118, 142), "systolic": (130, 158), "diastolic": (76, 92), "rr": (18, 24), "spo2": (95, 99), "tempC": (38.2, 39.6), "drift": {"tempC": 0.2, "hr": 4}},
+    "acute_agitation": {"hr": (104, 128), "systolic": (134, 164), "diastolic": (78, 96), "rr": (18, 26), "spo2": (96, 99), "tempC": (37.4, 38.6), "drift": {"tempC": 0.2}},
+    # --- respiratory depression / hypoxia -------------------------------- #
+    "opioid_overdose": {"hr": (52, 72), "systolic": (92, 118), "diastolic": (56, 76), "rr": (4, 10), "spo2": (74, 88), "tempC": (35.6, 36.6), "drift": {"rr": -2, "spo2": -6}},
+    "poisoning_unknown": {"hr": (56, 80), "systolic": (90, 118), "diastolic": (54, 74), "rr": (8, 13), "spo2": (86, 93), "tempC": (35.8, 36.8), "drift": {"rr": -2, "spo2": -4}},
+    "tca_overdose": {"hr": (118, 146), "systolic": (74, 96), "diastolic": (42, 60), "rr": (10, 16), "spo2": (90, 95), "tempC": (36.6, 37.6), "drift": {"systolic": -12, "hr": 6}},
+    "tension_pneumothorax": {"hr": (118, 140), "systolic": (76, 96), "diastolic": (44, 60), "rr": (30, 40), "spo2": (78, 88), "tempC": (36.4, 37.2), "drift": {"systolic": -12, "spo2": -6, "hr": 8}},
+    "asthma_exacerbation": {"hr": (108, 128), "systolic": (118, 142), "diastolic": (70, 88), "rr": (26, 34), "spo2": (89, 93), "tempC": (36.6, 37.4), "drift": {"spo2": -3, "rr": 3}},
+    "copd_exacerbation": {"hr": (98, 118), "systolic": (122, 150), "diastolic": (70, 90), "rr": (24, 30), "spo2": (84, 90), "tempC": (36.8, 38.0), "drift": {"spo2": -2, "rr": 2}},
+    "pneumonia_cap": {"hr": (96, 118), "systolic": (104, 132), "diastolic": (60, 80), "rr": (22, 28), "spo2": (90, 94), "tempC": (38.4, 39.6), "drift": {"tempC": 0.2, "hr": 4}},
+    "pulmonary_embolism": {"hr": (104, 126), "systolic": (104, 130), "diastolic": (64, 82), "rr": (22, 30), "spo2": (88, 93), "tempC": (36.6, 37.4), "drift": {"spo2": -3, "hr": 6, "systolic": -6}},
+    "bronchiolitis": {"hr": (150, 176), "systolic": (82, 98), "diastolic": (46, 60), "rr": (54, 70), "spo2": (89, 94), "tempC": (37.8, 38.9), "drift": {"spo2": -3, "rr": 4}},
+    "status_epilepticus": {"hr": (116, 140), "systolic": (134, 168), "diastolic": (80, 98), "rr": (22, 30), "spo2": (86, 93), "tempC": (37.4, 38.4), "drift": {"spo2": -4, "tempC": 0.3}},
+    # --- shock states ---------------------------------------------------- #
+    "anaphylaxis": {"hr": (112, 138), "systolic": (72, 92), "diastolic": (40, 58), "rr": (26, 34), "spo2": (86, 93), "tempC": (36.5, 37.3), "drift": {"systolic": -14, "spo2": -5, "hr": 8}},
+    "septic_shock": {"hr": (112, 136), "systolic": (72, 88), "diastolic": (40, 56), "rr": (24, 32), "spo2": (90, 95), "tempC": (38.6, 40.2), "drift": {"systolic": -8, "hr": 6, "tempC": 0.3}},
+    "sepsis_uncomplicated": {"hr": (100, 120), "systolic": (100, 124), "diastolic": (58, 76), "rr": (20, 26), "spo2": (93, 97), "tempC": (38.3, 39.6), "drift": {"tempC": 0.3, "hr": 5, "systolic": -6}},
+    "meningococcemia": {"hr": (118, 142), "systolic": (76, 94), "diastolic": (42, 58), "rr": (24, 32), "spo2": (91, 96), "tempC": (38.9, 40.3), "drift": {"systolic": -10, "hr": 6, "tempC": 0.2}},
+    "cardiac_tamponade": {"hr": (112, 134), "systolic": (78, 94), "diastolic": (58, 72), "rr": (22, 30), "spo2": (91, 96), "tempC": (36.4, 37.2), "drift": {"systolic": -10, "hr": 6}},
+    "upper_gi_bleed": {"hr": (108, 130), "systolic": (82, 102), "diastolic": (48, 64), "rr": (20, 26), "spo2": (94, 98), "tempC": (36.2, 37.0), "drift": {"systolic": -14, "hr": 10}},
+    "pph": {"hr": (116, 140), "systolic": (76, 96), "diastolic": (42, 60), "rr": (22, 30), "spo2": (94, 98), "tempC": (36.2, 37.0), "drift": {"systolic": -14, "hr": 10}},
+    "ectopic_pregnancy": {"hr": (104, 126), "systolic": (86, 108), "diastolic": (50, 68), "rr": (18, 24), "spo2": (96, 99), "tempC": (36.4, 37.2), "drift": {"systolic": -10, "hr": 8}},
+    "adrenal_crisis": {"hr": (104, 126), "systolic": (74, 92), "diastolic": (42, 58), "rr": (18, 26), "spo2": (94, 98), "tempC": (36.6, 38.0), "drift": {"systolic": -8, "hr": 4}},
+    "major_trauma": {"hr": (112, 140), "systolic": (78, 100), "diastolic": (44, 62), "rr": (22, 32), "spo2": (90, 96), "tempC": (35.8, 36.8), "drift": {"systolic": -12, "hr": 8, "tempC": -0.3}},
+    # --- tachyarrhythmia ------------------------------------------------- #
+    "afib_rvr": {"hr": (132, 164), "systolic": (96, 128), "diastolic": (58, 80), "rr": (18, 24), "spo2": (93, 97), "tempC": (36.4, 37.2), "drift": {"systolic": -8}},
+    "svt": {"hr": (160, 200), "systolic": (98, 126), "diastolic": (60, 80), "rr": (18, 24), "spo2": (95, 99), "tempC": (36.4, 37.2), "drift": {}},
+    "vt": {"hr": (150, 190), "systolic": (76, 100), "diastolic": (44, 62), "rr": (22, 30), "spo2": (88, 94), "tempC": (36.4, 37.2), "drift": {"systolic": -12, "spo2": -3}},
+    # --- metabolic ------------------------------------------------------- #
+    "dka": {"hr": (104, 126), "systolic": (94, 116), "diastolic": (56, 74), "rr": (24, 32), "spo2": (96, 99), "tempC": (36.4, 37.4), "drift": {"hr": 6, "systolic": -6}},
+    "hhs": {"hr": (100, 122), "systolic": (90, 112), "diastolic": (54, 72), "rr": (18, 24), "spo2": (95, 98), "tempC": (36.4, 37.6), "drift": {"systolic": -6, "hr": 4}},
+    "hypoglycemia": {"hr": (98, 120), "systolic": (118, 148), "diastolic": (70, 90), "rr": (16, 22), "spo2": (96, 99), "tempC": (36.0, 36.8), "drift": {"hr": 4}},
+    # --- ischaemic chest pain ------------------------------------------- #
+    "acs_stemi": {"hr": (88, 112), "systolic": (118, 160), "diastolic": (70, 96), "rr": (18, 24), "spo2": (93, 97), "tempC": (36.4, 37.2), "drift": {"hr": 6, "systolic": -8}},
+    "acs_nstemi": {"hr": (84, 108), "systolic": (124, 164), "diastolic": (74, 98), "rr": (16, 22), "spo2": (94, 98), "tempC": (36.4, 37.2), "drift": {"hr": 4}},
+    # --- abdominal / other ----------------------------------------------- #
+    "pancreatitis": {"hr": (102, 124), "systolic": (100, 126), "diastolic": (58, 78), "rr": (20, 26), "spo2": (93, 97), "tempC": (37.6, 38.6), "drift": {"hr": 5, "systolic": -6}},
+    "appendicitis": {"hr": (86, 104), "systolic": (112, 138), "diastolic": (68, 86), "rr": (16, 20), "spo2": (96, 99), "tempC": (37.6, 38.4), "drift": {"tempC": 0.2}},
+    "ascending_cholangitis": {"hr": (104, 124), "systolic": (92, 116), "diastolic": (54, 72), "rr": (20, 26), "spo2": (93, 97), "tempC": (38.6, 39.8), "drift": {"systolic": -8, "tempC": 0.2}},
+    "sickle_crisis": {"hr": (96, 116), "systolic": (112, 138), "diastolic": (66, 84), "rr": (18, 24), "spo2": (93, 97), "tempC": (37.2, 38.2), "drift": {}},
+    "hip_fracture": {"hr": (84, 102), "systolic": (118, 160), "diastolic": (70, 92), "rr": (16, 20), "spo2": (94, 98), "tempC": (36.3, 37.0), "drift": {}},
+    "panic_disorder": {"hr": (100, 122), "systolic": (122, 146), "diastolic": (74, 90), "rr": (20, 26), "spo2": (98, 100), "tempC": (36.5, 37.0), "drift": {"hr": -12, "rr": -4}},
+}
+
+
+# --------------------------------------------------------------------------- #
+# Condition-coherent background: PMH / medications / allergies pools.          #
+#                                                                              #
+# Review 02 finding 2 (critical): every templated case said "Otherwise I am     #
+# generally well / I do not take any regular medicines / No known drug          #
+# allergies" even for ESRD with missed dialysis, COPD, sickle crisis, febrile   #
+# neutropenia or an anticoagulated ICH with INR 2.6. Each pool is sampled with  #
+# the seeded RNG; at least one allergy option in most pools names an agent in   #
+# the client treatment catalogue (penicillin -> ceftriaxone cross-check,        #
+# aspirin, morphine, ondansetron, salbutamol) so the five-rights / allergy      #
+# check can actually fail. Medication reconciliation is a National Patient      #
+# Safety Goal: Joint Commission NPSG.03.06.01                                   #
+# https://www.jointcommission.org/-/media/tjc/documents/standards/national-patient-safety-goals/2023/npsg_chapter_ahc_jul2023.pdf #
+#                                                                              #
+# Shape: {"pmh": [(en, tr), ...], "meds": [(en, tr), ...], "allergies": [(en, tr), ...]} #
+# Each list is sampled independently; the generator writes BOTH the free-text   #
+# spec fields (pmh_en …) and the matching patient-voiced HPI answers.           #
+# --------------------------------------------------------------------------- #
+NKDA: tuple[str, str] = ("No known drug allergies.", "Bilinen ilaç alerjim yok.")
+ALLERGY_PENICILLIN: tuple[str, str] = ("Penicillin — anaphylaxis as a child (carries a card).", "Penisilin — çocukken anafilaksi (kart taşıyor).")
+ALLERGY_ASPIRIN: tuple[str, str] = ("Aspirin and ibuprofen — wheeze and facial swelling.", "Aspirin ve ibuprofen — hırıltı ve yüzde şişlik.")
+ALLERGY_MORPHINE: tuple[str, str] = ("Morphine — severe itching and vomiting.", "Morfin — şiddetli kaşıntı ve kusma.")
+ALLERGY_CODEINE: tuple[str, str] = ("Codeine — rash and hallucinations.", "Kodein — döküntü ve halüsinasyon.")
+ALLERGY_CONTRAST: tuple[str, str] = ("Iodinated contrast — hives during a previous CT.", "İyotlu kontrast — önceki BT sırasında kurdeşen.")
+ALLERGY_SULFA: tuple[str, str] = ("Sulfonamide antibiotics — widespread rash.", "Sülfonamid antibiyotikler — yaygın döküntü.")
+ALLERGY_METOCLOPRAMIDE: tuple[str, str] = ("Metoclopramide — oculogyric reaction.", "Metoklopramid — okülojirik reaksiyon.")
+
+CONDITION_BACKGROUND: dict[str, dict[str, list[tuple[str, str]]]] = {
+    "acs_stemi": {
+        "pmh": [("High blood pressure and high cholesterol; I smoke twenty a day.", "Yüksek tansiyon ve yüksek kolesterol; günde yirmi sigara içiyorum."), ("Type 2 diabetes for ten years and I am overweight.", "On yıldır tip 2 diyabet, kiloluyum.")],
+        "meds": [("Amlodipine 5 mg and atorvastatin 20 mg at night.", "Amlodipin 5 mg ve gece atorvastatin 20 mg."), ("Metformin 1 g twice a day; nothing else.", "Günde iki kez metformin 1 g; başka ilaç yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_ASPIRIN, ALLERGY_CONTRAST],
+    },
+    "acs_nstemi": {
+        "pmh": [("Angina for two years, a stent in 2021.", "İki yıldır angina, 2021'de stent."), ("High blood pressure and kidney trouble, my GP watches my creatinine.", "Yüksek tansiyon ve böbrek sorunu, aile hekimim kreatininimi izliyor.")],
+        "meds": [("Aspirin 75 mg, bisoprolol 2.5 mg, atorvastatin 80 mg.", "Aspirin 75 mg, bisoprolol 2.5 mg, atorvastatin 80 mg."), ("Ramipril 5 mg and a water tablet in the morning.", "Ramipril 5 mg ve sabah idrar söktürücü.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN, ALLERGY_MORPHINE],
+    },
+    "unstable_angina": {
+        "pmh": [("Stable angina for a year, uses a spray when walking uphill.", "Bir yıldır kararlı angina, yokuş çıkarken sprey kullanıyor.")],
+        "meds": [("Aspirin 75 mg, GTN spray as needed, atorvastatin 40 mg.", "Aspirin 75 mg, gerektiğinde GTN sprey, atorvastatin 40 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CONTRAST],
+    },
+    "aortic_dissection": {
+        "pmh": [("Long-standing high blood pressure that I do not always treat.", "Uzun süreli yüksek tansiyon, her zaman tedavi etmiyorum."), ("Marfan syndrome diagnosed as a teenager.", "Gençken tanı konan Marfan sendromu.")],
+        "meds": [("Amlodipine 10 mg, but I often forget it.", "Amlodipin 10 mg, ama sık sık unutuyorum."), ("No regular medicines; I stopped my blood-pressure tablet last year.", "Düzenli ilaç yok; geçen yıl tansiyon ilacımı bıraktım.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CONTRAST],
+    },
+    "heart_failure_acute": {
+        "pmh": [("Heart failure after a heart attack three years ago; two admissions with fluid.", "Üç yıl önce kalp krizi sonrası kalp yetmezliği; sıvıyla iki yatış."), ("Weak heart on the scan, high blood pressure and atrial fibrillation.", "Ekoda zayıf kalp, yüksek tansiyon ve atriyal fibrilasyon.")],
+        "meds": [("Furosemide 40 mg, bisoprolol 5 mg, ramipril 5 mg, spironolactone 25 mg.", "Furosemid 40 mg, bisoprolol 5 mg, ramipril 5 mg, spironolakton 25 mg."), ("Furosemide, apixaban and a heart tablet whose name I forget.", "Furosemid, apiksaban ve adını unuttuğum bir kalp ilacı.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "afib_rvr": {
+        "pmh": [("Atrial fibrillation that comes and goes; thyroid checked last year.", "Gelip giden atriyal fibrilasyon; geçen yıl tiroid bakıldı."), ("High blood pressure; I drank heavily at a wedding yesterday.", "Yüksek tansiyon; dün bir düğünde çok içtim.")],
+        "meds": [("Apixaban 5 mg twice a day and bisoprolol 2.5 mg.", "Günde iki kez apiksaban 5 mg ve bisoprolol 2.5 mg."), ("Only amlodipine 5 mg.", "Yalnızca amlodipin 5 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CODEINE],
+    },
+    "svt": {
+        "pmh": [("I have had racing episodes before that stopped on their own.", "Daha önce kendiliğinden geçen çarpıntı atakları oldu."), ("Fit and well; a lot of energy drinks this week.", "Sağlıklı; bu hafta çok enerji içeceği içtim.")],
+        "meds": [("No regular medicines.", "Düzenli ilaç yok."), ("The contraceptive pill only.", "Yalnızca doğum kontrol hapı.")],
+        "allergies": [NKDA, NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "vt": {
+        "pmh": [("A big heart attack five years ago with a weak heart since.", "Beş yıl önce büyük bir kalp krizi, o zamandan beri zayıf kalp."), ("Cardiomyopathy; I was meant to see the device clinic.", "Kardiyomiyopati; cihaz polikliniğine gitmem gerekiyordu.")],
+        "meds": [("Bisoprolol 5 mg, ramipril 2.5 mg, furosemide 40 mg, atorvastatin 80 mg.", "Bisoprolol 5 mg, ramipril 2.5 mg, furosemid 40 mg, atorvastatin 80 mg."), ("Amiodarone 200 mg and aspirin 75 mg.", "Amiodaron 200 mg ve aspirin 75 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CONTRAST],
+    },
+    "complete_heart_block": {
+        "pmh": [("High blood pressure; the GP added a new heart tablet last month.", "Yüksek tansiyon; aile hekimi geçen ay yeni bir kalp ilacı ekledi."), ("Ischaemic heart disease and type 2 diabetes.", "İskemik kalp hastalığı ve tip 2 diyabet.")],
+        "meds": [("Bisoprolol 10 mg and diltiazem 240 mg — both started recently.", "Bisoprolol 10 mg ve diltiazem 240 mg — ikisi de yeni başlandı."), ("Metformin, ramipril and digoxin 125 micrograms.", "Metformin, ramipril ve digoksin 125 mikrogram.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "pericarditis": {
+        "pmh": [("A cold with fever two weeks ago; otherwise well.", "İki hafta önce ateşli bir soğuk algınlığı; aksi halde iyi.")],
+        "meds": [("No regular medicines.", "Düzenli ilaç yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_ASPIRIN],
+    },
+    "cardiac_tamponade": {
+        "pmh": [("Kidney failure on dialysis; a pericardial effusion was seen last month.", "Diyalizde böbrek yetmezliği; geçen ay perikardiyal efüzyon görüldü."), ("Lung cancer under treatment; a chest scan showed fluid round the heart.", "Tedavi altında akciğer kanseri; göğüs tomografisinde kalp çevresinde sıvı.")],
+        "meds": [("Amlodipine 10 mg, sevelamer, erythropoietin at dialysis.", "Amlodipin 10 mg, sevelamer, diyalizde eritropoietin."), ("Paracetamol and morphine liquid for pain; chemotherapy fortnightly.", "Ağrı için parasetamol ve morfin şurubu; iki haftada bir kemoterapi.")],
+        "allergies": [NKDA, ALLERGY_PENICILLIN, ALLERGY_MORPHINE],
+    },
+    "hypertensive_emergency": {
+        "pmh": [("High blood pressure for fifteen years; I stopped my tablets two weeks ago.", "On beş yıldır yüksek tansiyon; iki hafta önce ilaçlarımı bıraktım."), ("Chronic kidney disease and high blood pressure.", "Kronik böbrek hastalığı ve yüksek tansiyon.")],
+        "meds": [("Amlodipine 10 mg, ramipril 10 mg and indapamide — not taken for two weeks.", "Amlodipin 10 mg, ramipril 10 mg ve indapamid — iki haftadır alınmadı."), ("Losartan 100 mg, doxazosin 4 mg.", "Losartan 100 mg, doksazosin 4 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_SULFA],
+    },
+    "infective_endocarditis": {
+        "pmh": [("I inject heroin; a heart murmur was mentioned years ago.", "Eroin enjekte ediyorum; yıllar önce kalp üfürümünden bahsedildi."), ("A mechanical aortic valve replaced in 2019; dental work last month.", "2019'da takılan mekanik aort kapağı; geçen ay diş tedavisi.")],
+        "meds": [("Methadone 60 mg daily.", "Günde metadon 60 mg."), ("Warfarin, target INR 2.5 to 3.5, and bisoprolol.", "Warfarin, hedef INR 2.5-3.5, ve bisoprolol.")],
+        "allergies": [NKDA, ALLERGY_PENICILLIN, ALLERGY_PENICILLIN],
+    },
+    "myocarditis": {
+        "pmh": [("Fit and well; a flu-like illness ten days ago.", "Sağlıklı; on gün önce grip benzeri bir hastalık.")],
+        "meds": [("No regular medicines.", "Düzenli ilaç yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_ASPIRIN],
+    },
+    "aortic_stenosis": {
+        "pmh": [("A murmur known for years; high blood pressure.", "Yıllardır bilinen üfürüm; yüksek tansiyon.")],
+        "meds": [("Amlodipine 5 mg and atorvastatin 20 mg.", "Amlodipin 5 mg ve atorvastatin 20 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CONTRAST],
+    },
+    "stable_angina": {
+        "pmh": [("High cholesterol and type 2 diabetes; my father had angina.", "Yüksek kolesterol ve tip 2 diyabet; babamda angina vardı.")],
+        "meds": [("Metformin, atorvastatin 40 mg and aspirin 75 mg.", "Metformin, atorvastatin 40 mg ve aspirin 75 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_SULFA],
+    },
+    "pulmonary_embolism": {
+        "pmh": [("Breast cancer treated two years ago; a long flight last week.", "İki yıl önce tedavi edilen meme kanseri; geçen hafta uzun bir uçuş."), ("A knee replacement three weeks ago; I stopped the injections early.", "Üç hafta önce diz protezi; iğneleri erken bıraktım.")],
+        "meds": [("Letrozole 2.5 mg daily.", "Günde letrozol 2.5 mg."), ("Paracetamol for the knee; no blood thinner now.", "Diz için parasetamol; şimdi kan sulandırıcı yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CONTRAST, ALLERGY_MORPHINE],
+    },
+    "asthma_exacerbation": {
+        "pmh": [("Asthma since childhood; one ICU admission as a teenager.", "Çocukluktan beri astım; gençken bir yoğun bakım yatışı."), ("Asthma and hay fever; I ran out of my preventer inhaler.", "Astım ve saman nezlesi; koruyucu inhalerim bitti.")],
+        "meds": [("Salbutamol inhaler, used ten times today; beclometasone inhaler.", "Salbutamol inhaler, bugün on kez kullandım; beklometazon inhaler."), ("Symbicort twice a day and a salbutamol inhaler.", "Günde iki kez Symbicort ve salbutamol inhaler.")],
+        "allergies": [NKDA, NKDA, ALLERGY_ASPIRIN, ALLERGY_PENICILLIN],
+    },
+    "copd_exacerbation": {
+        "pmh": [("COPD, forty pack-years; home oxygen was mentioned at my last clinic.", "KOAH, kırk paket-yıl; son poliklinikte ev oksijeninden bahsedildi."), ("COPD with two admissions last winter; I still smoke.", "Geçen kış iki yatışla KOAH; hâlâ sigara içiyorum.")],
+        "meds": [("Tiotropium, Fostair inhaler, salbutamol as needed.", "Tiotropium, Fostair inhaler, gerektiğinde salbutamol."), ("Inhalers and prednisolone 30 mg from a course last month.", "İnhalerler ve geçen ayki kürden prednizolon 30 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "pneumonia_cap": {
+        "pmh": [("Type 2 diabetes; otherwise well.", "Tip 2 diyabet; aksi halde iyi."), ("COPD, mild; I had my flu jab.", "Hafif KOAH; grip aşımı yaptırdım.")],
+        "meds": [("Metformin 500 mg twice a day.", "Günde iki kez metformin 500 mg."), ("A tiotropium inhaler.", "Tiotropium inhaler.")],
+        "allergies": [NKDA, ALLERGY_PENICILLIN, ALLERGY_PENICILLIN, ALLERGY_SULFA],
+    },
+    "tension_pneumothorax": {
+        "pmh": [("Tall and thin; a collapsed lung on the other side two years ago.", "Uzun ve ince; iki yıl önce diğer tarafta akciğer sönmesi."), ("COPD with emphysema.", "Amfizemli KOAH.")],
+        "meds": [("No regular medicines.", "Düzenli ilaç yok."), ("Tiotropium and salbutamol inhalers.", "Tiotropium ve salbutamol inhalerleri.")],
+        "allergies": [NKDA, NKDA, ALLERGY_MORPHINE],
+    },
+    "carbon_monoxide": {
+        "pmh": [("Well; the whole household has had headaches this week.", "Sağlıklı; bu hafta evdeki herkesin başı ağrıdı.")],
+        "meds": [("No regular medicines.", "Düzenli ilaç yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "ischemic_stroke": {
+        "pmh": [("Atrial fibrillation; I stopped the blood thinner because of nosebleeds.", "Atriyal fibrilasyon; burun kanamaları nedeniyle kan sulandırıcıyı bıraktım."), ("High blood pressure, high cholesterol and a mini-stroke last year.", "Yüksek tansiyon, yüksek kolesterol ve geçen yıl geçici inme.")],
+        "meds": [("Bisoprolol 5 mg; no anticoagulant for six months.", "Bisoprolol 5 mg; altı aydır antikoagülan yok."), ("Clopidogrel 75 mg, atorvastatin 80 mg, amlodipine 10 mg.", "Klopidogrel 75 mg, atorvastatin 80 mg, amlodipin 10 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CONTRAST],
+    },
+    "intracerebral_hemorrhage": {
+        "pmh": [("Atrial fibrillation and high blood pressure; on a blood thinner for years.", "Atriyal fibrilasyon ve yüksek tansiyon; yıllardır kan sulandırıcı kullanıyor."), ("A heart valve replacement; the INR clinic said it was high last week.", "Kalp kapağı replasmanı; INR kliniği geçen hafta yüksek dedi.")],
+        "meds": [("Warfarin 5 mg, amlodipine 10 mg.", "Warfarin 5 mg, amlodipin 10 mg."), ("Warfarin and bisoprolol.", "Warfarin ve bisoprolol.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "subarachnoid_hemorrhage": {
+        "pmh": [("High blood pressure; I smoke; my mother had a brain aneurysm.", "Yüksek tansiyon; sigara içiyorum; annemde beyin anevrizması vardı."), ("Polycystic kidney disease.", "Polikistik böbrek hastalığı.")],
+        "meds": [("Ramipril 5 mg.", "Ramipril 5 mg."), ("Amlodipine 5 mg and the contraceptive pill.", "Amlodipin 5 mg ve doğum kontrol hapı.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CODEINE],
+    },
+    "bacterial_meningitis": {
+        "pmh": [("A university student; sinus infection last week.", "Üniversite öğrencisi; geçen hafta sinüs enfeksiyonu."), ("My spleen was removed after a car crash.", "Trafik kazasından sonra dalağım alındı.")],
+        "meds": [("The contraceptive pill.", "Doğum kontrol hapı."), ("Penicillin V 250 mg twice a day, which I rarely take.", "Günde iki kez penisilin V 250 mg, nadiren alıyorum.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "status_epilepticus": {
+        "pmh": [("Epilepsy since a head injury; I missed my tablets for three days.", "Kafa travmasından beri epilepsi; üç gün ilaçlarımı kaçırdım."), ("Epilepsy and heavy drinking; I stopped alcohol two days ago.", "Epilepsi ve ağır içicilik; iki gün önce alkolü bıraktım.")],
+        "meds": [("Levetiracetam 1 g twice a day.", "Günde iki kez levetirasetam 1 g."), ("Sodium valproate 800 mg twice a day.", "Günde iki kez sodyum valproat 800 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "appendicitis": {
+        "pmh": [("Fit and well.", "Sağlıklı."), ("Mild asthma as a child.", "Çocukken hafif astım.")],
+        "meds": [("No regular medicines.", "Düzenli ilaç yok."), ("The contraceptive pill.", "Doğum kontrol hapı.")],
+        "allergies": [NKDA, NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "pancreatitis": {
+        "pmh": [("Gallstones seen on a scan last year; I drink most evenings.", "Geçen yıl ultrasonda safra taşı; çoğu akşam içki içiyorum."), ("High triglycerides and type 2 diabetes.", "Yüksek trigliserid ve tip 2 diyabet.")],
+        "meds": [("Omeprazole 20 mg.", "Omeprazol 20 mg."), ("Metformin and fenofibrate.", "Metformin ve fenofibrat.")],
+        "allergies": [NKDA, NKDA, ALLERGY_MORPHINE],
+    },
+    "upper_gi_bleed": {
+        "pmh": [("Arthritis — I take ibuprofen most days; a duodenal ulcer years ago.", "Artrit — çoğu gün ibuprofen alıyorum; yıllar önce duodenum ülseri."), ("Alcohol-related liver disease with varices banded last year.", "Geçen yıl varis bantlanan alkole bağlı karaciğer hastalığı.")],
+        "meds": [("Ibuprofen 400 mg three times a day and aspirin 75 mg.", "Günde üç kez ibuprofen 400 mg ve aspirin 75 mg."), ("Propranolol 40 mg, spironolactone, lactulose.", "Propranolol 40 mg, spironolakton, laktuloz.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "cholecystitis": {
+        "pmh": [("Gallstones found two years ago; overweight; type 2 diabetes.", "İki yıl önce bulunan safra taşı; kilolu; tip 2 diyabet.")],
+        "meds": [("Metformin 1 g twice a day.", "Günde iki kez metformin 1 g.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN, ALLERGY_MORPHINE],
+    },
+    "ascending_cholangitis": {
+        "pmh": [("Gallstones; a biliary stent placed last year.", "Safra taşı; geçen yıl safra yoluna stent."), ("Gallbladder removed, bile duct stones found at that time.", "Safra kesesi alındı, o sırada safra kanalında taş bulundu.")],
+        "meds": [("Ursodeoxycholic acid.", "Ursodeoksikolik asit."), ("Omeprazole 20 mg.", "Omeprazol 20 mg.")],
+        "allergies": [NKDA, ALLERGY_PENICILLIN, NKDA],
+    },
+    "bowel_obstruction": {
+        "pmh": [("Two abdominal operations for bowel cancer.", "Bağırsak kanseri için iki karın ameliyatı."), ("A hernia in the groin that gets bigger when I cough.", "Öksürünce büyüyen kasık fıtığı.")],
+        "meds": [("Codeine for pain and lansoprazole.", "Ağrı için kodein ve lansoprazol."), ("No regular medicines.", "Düzenli ilaç yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_METOCLOPRAMIDE],
+    },
+    "dka": {
+        "pmh": [("Type 1 diabetes since age twelve; my pump failed yesterday.", "On iki yaşından beri tip 1 diyabet; pompam dün bozuldu."), ("Type 1 diabetes; I have been vomiting with a stomach bug and skipped insulin.", "Tip 1 diyabet; mide enfeksiyonuyla kusuyorum ve insülini atladım.")],
+        "meds": [("Insulin pump (aspart), none for 18 hours.", "İnsülin pompası (aspart), 18 saattir yok."), ("Insulin glargine 24 units at night and aspart with meals.", "Gece insülin glarjin 24 ünite ve yemeklerle aspart.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "hhs": {
+        "pmh": [("Type 2 diabetes, poorly controlled; a chest infection this week.", "Kötü kontrollü tip 2 diyabet; bu hafta akciğer enfeksiyonu."), ("Diabetes and dementia; lives in a care home.", "Diyabet ve demans; bakım evinde yaşıyor.")],
+        "meds": [("Metformin 1 g twice a day, gliclazide 80 mg.", "Günde iki kez metformin 1 g, gliklazid 80 mg."), ("Metformin, amlodipine, donepezil.", "Metformin, amlodipin, donepezil.")],
+        "allergies": [NKDA, NKDA, ALLERGY_SULFA],
+    },
+    "hyperkalemia": {
+        "pmh": [("Chronic kidney disease stage 4 and heart failure.", "Evre 4 kronik böbrek hastalığı ve kalp yetmezliği."), ("Diabetes with kidney damage; a new blood-pressure tablet last week.", "Böbrek hasarı yapan diyabet; geçen hafta yeni tansiyon ilacı.")],
+        "meds": [("Spironolactone 25 mg, ramipril 10 mg, furosemide 80 mg.", "Spironolakton 25 mg, ramipril 10 mg, furosemid 80 mg."), ("Ramipril 10 mg started last week, metformin, a potassium supplement.", "Geçen hafta başlanan ramipril 10 mg, metformin, potasyum takviyesi.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "hyperkalemia_esrd": {
+        "pmh": [("Kidney failure on dialysis three times a week; I missed the last two sessions.", "Haftada üç gün diyalizde böbrek yetmezliği; son iki seansı kaçırdım.")],
+        "meds": [("Amlodipine 10 mg, sevelamer, alfacalcidol, erythropoietin at dialysis.", "Amlodipin 10 mg, sevelamer, alfakalsidol, diyalizde eritropoietin.")],
+        "allergies": [NKDA, ALLERGY_PENICILLIN, ALLERGY_CONTRAST],
+    },
+    "thyroid_storm": {
+        "pmh": [("Graves disease; I stopped carbimazole two months ago.", "Graves hastalığı; iki ay önce karbimazolü bıraktım."), ("An overactive thyroid diagnosed recently; a chest infection this week.", "Yakın zamanda tanı konan hipertiroidi; bu hafta akciğer enfeksiyonu.")],
+        "meds": [("None now; carbimazole was 20 mg.", "Şimdi yok; karbimazol 20 mg idi."), ("Propranolol 40 mg when I remember.", "Hatırladığımda propranolol 40 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_ASPIRIN],
+    },
+    "hypoglycemia": {
+        "pmh": [("Type 1 diabetes; I took my insulin and then skipped lunch.", "Tip 1 diyabet; insülinimi aldım sonra öğle yemeğini atladım."), ("Type 2 diabetes on a sulfonylurea; poor appetite this week.", "Sülfonilüre kullanan tip 2 diyabet; bu hafta iştah az.")],
+        "meds": [("Insulin glargine and aspart.", "İnsülin glarjin ve aspart."), ("Gliclazide 160 mg twice a day and metformin.", "Günde iki kez gliklazid 160 mg ve metformin.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "adrenal_crisis": {
+        "pmh": [("Addison disease; I have had vomiting and could not keep my tablets down.", "Addison hastalığı; kusuyorum ve ilaçlarımı tutamadım."), ("Long-term prednisolone for rheumatoid arthritis, stopped abruptly a week ago.", "Romatoid artrit için uzun süreli prednizolon, bir hafta önce aniden kesildi.")],
+        "meds": [("Hydrocortisone 10/5/5 mg and fludrocortisone 100 micrograms.", "Hidrokortizon 10/5/5 mg ve fludrokortizon 100 mikrogram."), ("Methotrexate weekly; prednisolone until last week.", "Haftalık metotreksat; geçen haftaya kadar prednizolon.")],
+        "allergies": [NKDA, NKDA, ALLERGY_SULFA],
+    },
+    "nec_fasciitis": {
+        "pmh": [("Type 2 diabetes and I inject drugs into my leg.", "Tip 2 diyabet ve bacağımdan madde enjekte ediyorum."), ("Diabetes; a small graze on the shin last week.", "Diyabet; geçen hafta bacakta küçük bir sıyrık.")],
+        "meds": [("Metformin.", "Metformin."), ("Insulin twice a day.", "Günde iki kez insülin.")],
+        "allergies": [NKDA, ALLERGY_PENICILLIN, NKDA],
+    },
+    "pyelonephritis": {
+        "pmh": [("Recurrent urine infections; a kidney stone two years ago.", "Tekrarlayan idrar enfeksiyonu; iki yıl önce böbrek taşı."), ("Type 2 diabetes; twenty weeks pregnant.", "Tip 2 diyabet; yirmi haftalık gebe.")],
+        "meds": [("Trimethoprim prophylaxis, which I stopped.", "Bıraktığım trimetoprim profilaksisi."), ("Metformin and folic acid.", "Metformin ve folik asit.")],
+        "allergies": [NKDA, ALLERGY_PENICILLIN, ALLERGY_SULFA],
+    },
+    "meningococcemia": {
+        "pmh": [("A student in halls; a friend was unwell last week.", "Yurtta öğrenci; geçen hafta bir arkadaşı hastaydı.")],
+        "meds": [("No regular medicines.", "Düzenli ilaç yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "aki": {
+        "pmh": [("Vomiting and diarrhoea for three days; high blood pressure.", "Üç gündür kusma ve ishal; yüksek tansiyon."), ("Prostate trouble; I have passed almost no urine for two days.", "Prostat sorunu; iki gündür neredeyse hiç idrar yapmadım.")],
+        "meds": [("Ramipril 10 mg, ibuprofen for a bad back, bendroflumethiazide.", "Ramipril 10 mg, bel ağrısı için ibuprofen, bendroflumetiyazid."), ("Tamsulosin 400 micrograms.", "Tamsulosin 400 mikrogram.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CONTRAST],
+    },
+    "renal_colic": {
+        "pmh": [("A kidney stone passed five years ago.", "Beş yıl önce düşürülen böbrek taşı."), ("Gout; otherwise well.", "Gut; aksi halde iyi.")],
+        "meds": [("No regular medicines.", "Düzenli ilaç yok."), ("Allopurinol 300 mg.", "Allopurinol 300 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_ASPIRIN, ALLERGY_CONTRAST],
+    },
+    "alcohol_withdrawal": {
+        "pmh": [("I drink a bottle of spirits a day; a withdrawal seizure two years ago.", "Günde bir şişe sert içki; iki yıl önce yoksunluk nöbeti."), ("Heavy drinking for ten years; liver tests were abnormal.", "On yıldır ağır içicilik; karaciğer testleri bozuktu.")],
+        "meds": [("Thiamine tablets that I do not take.", "Almadığım tiamin tabletleri."), ("None.", "Yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "opioid_overdose": {
+        "pmh": [("Heroin use; I was in prison until last week so my tolerance is down.", "Eroin kullanımı; geçen haftaya kadar cezaevindeydim, toleransım düşük."), ("Chronic back pain on strong painkillers; I took extra tonight.", "Güçlü ağrı kesicilerle kronik bel ağrısı; bu gece fazladan aldım.")],
+        "meds": [("Methadone 40 mg daily.", "Günde metadon 40 mg."), ("Oxycodone modified-release 40 mg twice a day, pregabalin 300 mg.", "Günde iki kez oksikodon MR 40 mg, pregabalin 300 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "paracetamol_od": {
+        "pmh": [("Depression; a previous overdose two years ago.", "Depresyon; iki yıl önce bir aşırı doz."), ("No medical problems; an argument tonight.", "Tıbbi sorun yok; bu gece bir tartışma.")],
+        "meds": [("Sertraline 100 mg.", "Sertralin 100 mg."), ("None.", "Yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "ectopic_pregnancy": {
+        "pmh": [("A previous ectopic treated with methotrexate; I have a coil.", "Metotreksatla tedavi edilen önceki ektopik; spiralim var."), ("Pelvic infection three years ago; six weeks since my last period.", "Üç yıl önce pelvik enfeksiyon; son adetimden altı hafta geçti.")],
+        "meds": [("Folic acid.", "Folik asit."), ("None.", "Yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "preeclampsia": {
+        "pmh": [("First pregnancy, 34 weeks; blood pressure was high at the last visit.", "İlk gebelik, 34 hafta; son kontrolde tansiyon yüksekti."), ("Second pregnancy, 36 weeks; pre-eclampsia in the first.", "İkinci gebelik, 36 hafta; ilkinde preeklampsi.")],
+        "meds": [("Pregnancy vitamins and aspirin 150 mg at night.", "Gebelik vitaminleri ve gece aspirin 150 mg."), ("Labetalol 200 mg twice a day.", "Günde iki kez labetalol 200 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "pph": {
+        "pmh": [("Delivered twins forty minutes ago after a long labour.", "Kırk dakika önce uzun bir doğumdan sonra ikiz doğurdu."), ("A vaginal delivery an hour ago; the placenta came out in pieces.", "Bir saat önce vajinal doğum; plasenta parçalı çıktı.")],
+        "meds": [("Iron tablets; oxytocin was given at delivery.", "Demir tabletleri; doğumda oksitosin verildi.")],
+        "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN],
+    },
+    "cauda_equina": {
+        "pmh": [("Years of low back pain; a disc problem on an old scan.", "Yıllardır bel ağrısı; eski bir MR'da disk sorunu.")],
+        "meds": [("Naproxen 500 mg and codeine 30 mg.", "Naproksen 500 mg ve kodein 30 mg.")],
+        "allergies": [NKDA, NKDA, ALLERGY_MORPHINE],
+    },
+    "compartment_syndrome": {
+        "pmh": [("A tibial fracture plastered this morning after a motorbike crash.", "Bu sabah motosiklet kazasından sonra alçılanan tibia kırığı.")],
+        "meds": [("No regular medicines.", "Düzenli ilaç yok.")],
+        "allergies": [NKDA, NKDA, ALLERGY_MORPHINE],
+    },
+    "febrile_neutropenia": {
+        "pmh": [("Breast cancer; chemotherapy eight days ago.", "Meme kanseri; sekiz gün önce kemoterapi."), ("Lymphoma; the last cycle of chemotherapy was ten days ago; I have a PICC line.", "Lenfoma; son kemoterapi kürü on gün önce; PICC kateterim var.")],
+        "meds": [("Ondansetron and dexamethasone from the chemo pack.", "Kemoterapi paketinden ondansetron ve deksametazon."), ("Co-trimoxazole prophylaxis, aciclovir.", "Ko-trimoksazol profilaksisi, asiklovir.")],
+        "allergies": [NKDA, ALLERGY_PENICILLIN, NKDA],
+    },
+    "dvt": {
+        "pmh": [("A long-haul flight last week; I take the contraceptive pill.", "Geçen hafta uzun uçuş; doğum kontrol hapı alıyorum."), ("Hip surgery a month ago.", "Bir ay önce kalça ameliyatı.")],
+        "meds": [("Combined oral contraceptive.", "Kombine oral kontraseptif."), ("Paracetamol; I finished the injections after surgery.", "Parasetamol; ameliyat sonrası iğneleri bitirdim.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CONTRAST],
+    },
+    "sickle_crisis": {
+        "pmh": [("Sickle cell disease since birth; about four crises a year.", "Doğumdan beri orak hücre hastalığı; yılda yaklaşık dört kriz.")],
+        "meds": [("Hydroxycarbamide 1 g, folic acid, penicillin V.", "Hidroksikarbamid 1 g, folik asit, penisilin V."), ("Folic acid and morphine liquid at home, which has not worked today.", "Folik asit ve evde morfin şurubu, bugün işe yaramadı.")],
+        "allergies": [NKDA, NKDA, ALLERGY_CODEINE],
+    },
+    "bronchiolitis": {
+        "pmh": [("Born at 35 weeks; otherwise a well baby.", "35 haftalık doğdu; aksi halde sağlıklı bebek.")],
+        "meds": [("Vitamin D drops only.", "Yalnızca D vitamini damlası.")],
+        "allergies": [NKDA],
+    },
+    "anaphylaxis": {
+        "pmh": [("Peanut allergy since childhood; I carry an adrenaline pen but did not bring it.", "Çocukluktan beri fıstık alerjisi; adrenalin kalemi taşıyorum ama yanımda değil."), ("Asthma; stung by a wasp twenty minutes ago.", "Astım; yirmi dakika önce eşek arısı soktu.")],
+        "meds": [("Cetirizine as needed.", "Gerektiğinde setirizin."), ("Salbutamol and beclometasone inhalers.", "Salbutamol ve beklometazon inhalerleri.")],
+        "allergies": [("Peanuts — anaphylaxis; also penicillin rash.", "Fıstık — anafilaksi; ayrıca penisilin döküntüsü."), ("Wasp venom (today's trigger).", "Eşek arısı zehri (bugünkü tetikleyici).")],
+    },
+    "septic_shock": {
+        "pmh": [("Type 2 diabetes; a urine infection treated last week.", "Tip 2 diyabet; geçen hafta tedavi edilen idrar enfeksiyonu."), ("Chemotherapy for bowel cancer; a central line.", "Bağırsak kanseri için kemoterapi; santral kateter.")],
+        "meds": [("Metformin, atorvastatin, trimethoprim from last week.", "Metformin, atorvastatin, geçen haftadan trimetoprim."), ("Capecitabine; omeprazole.", "Kapesitabin; omeprazol.")],
+        "allergies": [NKDA, ALLERGY_PENICILLIN, NKDA],
+    },
+}
+
+# System-level fallback pools for the long tail (conditions without a specific entry).
+SYSTEM_BACKGROUND: dict[str, dict[str, list[tuple[str, str]]]] = {
+    "cardiology": {"pmh": [("High blood pressure and high cholesterol.", "Yüksek tansiyon ve yüksek kolesterol."), ("Type 2 diabetes; I smoke.", "Tip 2 diyabet; sigara içiyorum.")], "meds": [("Amlodipine 5 mg and atorvastatin 20 mg.", "Amlodipin 5 mg ve atorvastatin 20 mg."), ("Metformin 500 mg twice a day.", "Günde iki kez metformin 500 mg.")], "allergies": [NKDA, NKDA, ALLERGY_ASPIRIN]},
+    "pulmonology": {"pmh": [("Asthma as a child; I smoke ten a day.", "Çocukken astım; günde on sigara içiyorum."), ("No lung problems before this.", "Bundan önce akciğer sorunu yok.")], "meds": [("A salbutamol inhaler, rarely used.", "Nadiren kullanılan salbutamol inhaler."), ("No regular medicines.", "Düzenli ilaç yok.")], "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN]},
+    "gastroenterology": {"pmh": [("Reflux; otherwise well.", "Reflü; aksi halde iyi."), ("Gallstones mentioned on a scan.", "Ultrasonda safra taşından bahsedildi.")], "meds": [("Omeprazole 20 mg.", "Omeprazol 20 mg."), ("No regular medicines.", "Düzenli ilaç yok.")], "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN, ALLERGY_MORPHINE]},
+    "neurology": {"pmh": [("High blood pressure.", "Yüksek tansiyon."), ("Migraines since my twenties.", "Yirmili yaşlardan beri migren.")], "meds": [("Ramipril 5 mg.", "Ramipril 5 mg."), ("Sumatriptan when needed.", "Gerektiğinde sumatriptan.")], "allergies": [NKDA, NKDA, ALLERGY_CODEINE]},
+    "infectious": {"pmh": [("Type 2 diabetes.", "Tip 2 diyabet."), ("Nothing of note.", "Kayda değer bir şey yok.")], "meds": [("Metformin.", "Metformin."), ("No regular medicines.", "Düzenli ilaç yok.")], "allergies": [NKDA, ALLERGY_PENICILLIN, NKDA]},
+    "endocrine": {"pmh": [("Type 2 diabetes for eight years.", "Sekiz yıldır tip 2 diyabet."), ("An underactive thyroid.", "Hipotiroidi.")], "meds": [("Metformin and gliclazide.", "Metformin ve gliklazid."), ("Levothyroxine 100 micrograms.", "Levotiroksin 100 mikrogram.")], "allergies": [NKDA, NKDA, ALLERGY_SULFA]},
+    "renal": {"pmh": [("Chronic kidney disease stage 3 and high blood pressure.", "Evre 3 kronik böbrek hastalığı ve yüksek tansiyon."), ("Prostate trouble.", "Prostat sorunu.")], "meds": [("Ramipril 10 mg, amlodipine 5 mg.", "Ramipril 10 mg, amlodipin 5 mg."), ("Tamsulosin.", "Tamsulosin.")], "allergies": [NKDA, NKDA, ALLERGY_CONTRAST]},
+    "psychiatry": {"pmh": [("Depression and anxiety for years.", "Yıllardır depresyon ve anksiyete."), ("No medical problems.", "Tıbbi sorun yok.")], "meds": [("Sertraline 100 mg.", "Sertralin 100 mg."), ("No regular medicines.", "Düzenli ilaç yok.")], "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN]},
+    "hematology": {"pmh": [("Cancer under treatment with chemotherapy.", "Kemoterapiyle tedavi altında kanser."), ("Anaemia for months.", "Aylardır anemi.")], "meds": [("Ondansetron and dexamethasone with chemotherapy.", "Kemoterapiyle ondansetron ve deksametazon."), ("Ferrous sulfate.", "Demir sülfat.")], "allergies": [NKDA, ALLERGY_PENICILLIN, NKDA]},
+    "obstetrics-gynecology": {"pmh": [("One normal delivery; otherwise well.", "Bir normal doğum; aksi halde iyi."), ("Endometriosis.", "Endometriozis.")], "meds": [("Folic acid.", "Folik asit."), ("The contraceptive pill.", "Doğum kontrol hapı.")], "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN]},
+    "musculoskeletal": {"pmh": [("Arthritis in the knees.", "Dizlerde artrit."), ("Fit and well.", "Sağlıklı.")], "meds": [("Naproxen and omeprazole.", "Naproksen ve omeprazol."), ("No regular medicines.", "Düzenli ilaç yok.")], "allergies": [NKDA, NKDA, ALLERGY_MORPHINE]},
+    "emergency": {"pmh": [("High blood pressure.", "Yüksek tansiyon."), ("Nothing of note.", "Kayda değer bir şey yok.")], "meds": [("Amlodipine 5 mg.", "Amlodipin 5 mg."), ("No regular medicines.", "Düzenli ilaç yok.")], "allergies": [NKDA, NKDA, ALLERGY_PENICILLIN]},
+}
+
+
+def background_pool(cond_id: str, system: str) -> dict[str, list[tuple[str, str]]]:
+    """The PMH / meds / allergies pool for a condition (condition-specific first,
+    then the system default, then the emergency default)."""
+    return (CONDITION_BACKGROUND.get(cond_id)
+            or SYSTEM_BACKGROUND.get(system)
+            or SYSTEM_BACKGROUND["emergency"])
+
+
+# --------------------------------------------------------------------------- #
+# Patient-voiced red flags (lay language, only what the patient could know).  #
+#                                                                              #
+# Review 02 finding 3 (critical): catalog red flags ("ST elevation on ECG",     #
+# "lactate above 2 mmol/L") were pasted into patient speech. The catalog's red  #
+# flags are clinician-observed signs or results and now travel as structured    #
+# ``red_flags`` data (channel "clinician"); the patient's own red-flag answer   #
+# comes from this table, in the patient's voice. ASPE Standards of Best         #
+# Practice, Domain 3: https://doi.org/10.1186/s41077-017-0043-4                 #
+# --------------------------------------------------------------------------- #
+PATIENT_RED_FLAG_SPEECH: dict[str, tuple[str, str]] = {
+    "acs_stemi": ("The pain is crushing, I am sweating and it has not eased at all.", "Ağrı ezici, terliyorum ve hiç hafiflemedi."),
+    "acs_nstemi": ("It keeps coming back at rest and goes into my left arm.", "İstirahatte tekrar geliyor ve sol koluma yayılıyor."),
+    "unstable_angina": ("It used to come only on walking; now it comes when I sit still.", "Eskiden sadece yürürken gelirdi; şimdi otururken de geliyor."),
+    "aortic_dissection": ("It tore through to my back, worst pain of my life, and my left arm feels odd.", "Sırtıma yırtılır gibi vurdu, hayatımın en kötü ağrısı, sol kolum tuhaf."),
+    "heart_failure_acute": ("I cannot lie flat, I wake up gasping and my ankles are huge.", "Düz yatamıyorum, nefes nefese uyanıyorum ve ayak bileklerim çok şiş."),
+    "afib_rvr": ("My heart is racing and fluttering and I feel faint when I stand.", "Kalbim çok hızlı ve çırpınıyor, ayağa kalkınca bayılacak gibi oluyorum."),
+    "svt": ("It started like a switch, very fast, and I feel light-headed.", "Düğme gibi aniden başladı, çok hızlı ve başım dönüyor."),
+    "vt": ("I nearly blacked out and my chest hurts with the pounding.", "Neredeyse bayıldım ve çarpıntıyla göğsüm ağrıyor."),
+    "complete_heart_block": ("I have fainted twice today and feel my pulse is very slow.", "Bugün iki kez bayıldım ve nabzımın çok yavaş olduğunu hissediyorum."),
+    "pericarditis": ("Sitting forward helps; lying back makes it stab.", "Öne eğilmek rahatlatıyor; arkaya yaslanınca bıçak gibi batıyor."),
+    "cardiac_tamponade": ("I feel faint and breathless even sitting still, and it is getting worse.", "Otururken bile baygın ve nefessizim, giderek kötüleşiyor."),
+    "hypertensive_emergency": ("My vision is blurred and the headache is pounding behind my eyes.", "Görmem bulanık ve baş ağrısı gözlerimin arkasında zonkluyor."),
+    "infective_endocarditis": ("Night sweats for weeks and a painful spot on my finger.", "Haftalardır gece terlemesi ve parmağımda ağrılı bir leke."),
+    "myocarditis": ("I am breathless climbing stairs and my heart skips.", "Merdiven çıkarken nefesim kesiliyor ve kalbim tekliyor."),
+    "aortic_stenosis": ("I blacked out while carrying shopping upstairs.", "Alışveriş torbalarını üst kata taşırken bayıldım."),
+    "stable_angina": ("No, it always eases within minutes when I stop and rest.", "Hayır, durup dinlenince her zaman birkaç dakikada geçiyor."),
+    "pulmonary_embolism": ("My right calf has been swollen and I flew long-haul last week.", "Sağ baldırım şiş ve geçen hafta uzun bir uçuş yaptım."),
+    "asthma_exacerbation": ("I cannot finish a sentence and my inhaler is not working.", "Bir cümleyi bitiremiyorum ve inhalerim işe yaramıyor."),
+    "copd_exacerbation": ("I feel drowsy and my sputum has turned green.", "Uykulu hissediyorum ve balgamım yeşile döndü."),
+    "pneumonia_cap": ("Shaking chills and I have been confused, my wife says.", "Titremeyle üşüme ve eşim konfüze olduğumu söylüyor."),
+    "tension_pneumothorax": ("I suddenly cannot get any air in and I feel I am going to pass out.", "Aniden hiç nefes alamıyorum ve bayılacak gibiyim."),
+    "carbon_monoxide": ("Everyone at home has a headache and the dog has been sick.", "Evdeki herkesin başı ağrıyor ve köpek kustu."),
+    "ischemic_stroke": ("My face dropped and my arm went weak less than two hours ago.", "Yüzüm düştü ve kolum iki saatten kısa süre önce güçsüzleşti."),
+    "intracerebral_hemorrhage": ("A sudden terrible headache, then vomiting and my arm went weak.", "Aniden korkunç baş ağrısı, sonra kusma ve kolum güçsüzleşti."),
+    "subarachnoid_hemorrhage": ("It hit like a hammer in a second, worst headache of my life.", "Bir saniyede balyoz gibi vurdu, hayatımın en kötü baş ağrısı."),
+    "bacterial_meningitis": ("The light hurts my eyes and I cannot bend my neck; I noticed spots on my legs.", "Işık gözlerimi acıtıyor, boynumu bükemiyorum; bacaklarımda lekeler fark ettim."),
+    "status_epilepticus": ("(Relative) He has been fitting continuously for more than five minutes.", "(Yakını) Beş dakikadan uzun süredir aralıksız kasılıyor."),
+    "appendicitis": ("It started round my belly button and moved to the right; coughing makes it worse.", "Göbeğimin etrafında başladı ve sağa kaydı; öksürünce kötüleşiyor."),
+    "pancreatitis": ("It bores through to my back and I cannot stop vomiting.", "Sırtıma doğru oyar gibi ve kusmam durmuyor."),
+    "upper_gi_bleed": ("I vomited something like coffee grounds and my stools are black and tarry.", "Kahve telvesi gibi kustum ve dışkım siyah ve katran gibi."),
+    "cholecystitis": ("Fever and it hurts under my right ribs when I breathe in.", "Ateş var ve nefes alırken sağ kaburgalarımın altı ağrıyor."),
+    "ascending_cholangitis": ("I am yellow, shivering and my urine is dark.", "Sarıyım, titriyorum ve idrarım koyu."),
+    "bowel_obstruction": ("I have not passed wind or stool for two days and the vomit smells awful.", "İki gündür gaz ya da dışkı çıkaramadım ve kusmuk çok kötü kokuyor."),
+    "dka": ("I am very thirsty, vomiting and breathing deeply; my sugar meter just says HI.", "Çok susuyorum, kusuyorum ve derin nefes alıyorum; şeker ölçerim sadece HI diyor."),
+    "hhs": ("(Relative) She has been drinking litres and is now barely making sense.", "(Yakını) Litrelerce içiyordu ve şimdi neredeyse anlamsız konuşuyor."),
+    "hyperkalemia": ("My legs feel heavy and weak and my heart is doing odd things.", "Bacaklarım ağır ve güçsüz, kalbim tuhaf şeyler yapıyor."),
+    "hyperkalemia_esrd": ("I missed dialysis twice and now I am weak and breathless.", "Diyalizi iki kez kaçırdım, şimdi güçsüz ve nefessizim."),
+    "thyroid_storm": ("I am burning up, my heart is racing and I cannot sit still.", "Yanıyorum, kalbim deli gibi atıyor ve yerimde duramıyorum."),
+    "hypoglycemia": ("Sweaty, shaky and I cannot think straight.", "Terli, titrek ve düşünemiyorum."),
+    "adrenal_crisis": ("Vomiting all day, dizzy standing up and I could not take my steroids.", "Bütün gün kusma, ayakta baş dönmesi ve steroidlerimi alamadım."),
+    "nec_fasciitis": ("The pain is far worse than the leg looks and it is spreading by the hour.", "Ağrı bacağın görünüşünden çok daha kötü ve saatler içinde yayılıyor."),
+    "pyelonephritis": ("Shivering, fever and pain in my side that is getting worse.", "Titreme, ateş ve giderek artan yan ağrısı."),
+    "meningococcemia": ("A rash that does not fade when I press a glass on it and I feel terrible.", "Üzerine bardak bastırınca solmayan bir döküntü ve çok kötüyüm."),
+    "aki": ("I have hardly passed urine in two days and my legs are swelling.", "İki gündür neredeyse hiç idrar yapmadım ve bacaklarım şişiyor."),
+    "renal_colic": ("No fever, but the pain comes in waves to my groin and I cannot keep still.", "Ateş yok ama ağrı dalga dalga kasığıma geliyor ve yerimde duramıyorum."),
+    "alcohol_withdrawal": ("I am shaking, sweating and seeing things that are not there.", "Titriyorum, terliyorum ve olmayan şeyler görüyorum."),
+    "opioid_overdose": ("(Friend) He used after a break and now he is barely breathing.", "(Arkadaşı) Aradan sonra kullandı ve şimdi zar zor nefes alıyor."),
+    "paracetamol_od": ("I took the whole pack about four hours ago.", "Yaklaşık dört saat önce bütün kutuyu aldım."),
+    "ectopic_pregnancy": ("My period is late, I have spotting and the pain is on one side; I felt faint.", "Adetim gecikti, lekelenme var ve ağrı tek tarafta; bayılacak gibi oldum."),
+    "preeclampsia": ("Headache, flashing lights and my hands and face are puffy.", "Baş ağrısı, ışık çakmaları ve ellerim ve yüzüm şiş."),
+    "pph": ("The bleeding has soaked through two pads in twenty minutes and I feel faint.", "Kanama yirmi dakikada iki pedi ıslattı ve bayılacak gibiyim."),
+    "cauda_equina": ("I cannot feel when I need to pass urine and my saddle area is numb.", "İdrarımın geldiğini hissedemiyorum ve eyer bölgem uyuşuk."),
+    "compartment_syndrome": ("The pain is unbearable under the cast, and stretching my toes is agony.", "Alçının altında ağrı dayanılmaz, parmaklarımı germek işkence."),
+    "febrile_neutropenia": ("I had chemotherapy eight days ago and now I have a fever and chills.", "Sekiz gün önce kemoterapi aldım ve şimdi ateş ve titreme var."),
+    "dvt": ("Only the one calf is swollen and hot, and I get a twinge in my chest when I breathe in.", "Yalnızca bir baldır şiş ve sıcak, nefes alırken göğsümde batma oluyor."),
+    "sickle_crisis": ("This feels like my usual crisis but worse, and I am a bit breathless.", "Her zamanki krizim gibi ama daha kötü, biraz da nefesim daralıyor."),
+    "bronchiolitis": ("(Parent) She is feeding half what she usually does and paused breathing once.", "(Ebeveyn) Her zamankinin yarısı kadar emiyor ve bir kez nefesi durdu."),
+    "anaphylaxis": ("My throat feels tight, my lips are swelling and I feel faint.", "Boğazım sıkışıyor, dudaklarım şişiyor ve bayılacak gibiyim."),
+    "septic_shock": ("(Relative) He is confused, burning hot and his hands are cold and mottled.", "(Yakını) Konfüze, ateşi çok yüksek ve elleri soğuk ve alacalı."),
+    "heat_stroke": ("(Bystander) He collapsed at the marathon and is confused and not sweating.", "(Tanık) Maratonda yere yığıldı, konfüze ve terlemiyor."),
+    "hypothermia": ("(Rescuer) Found outdoors overnight, very drowsy and no longer shivering.", "(Kurtarıcı) Gece dışarıda bulundu, çok uykulu ve artık titremiyor."),
+    "testicular_torsion": ("It came on suddenly two hours ago and I have been sick with the pain.", "İki saat önce aniden başladı ve ağrıdan kustum."),
+    "panic_disorder": ("No, it does not go into my arm or jaw, and it is not worse when I walk.", "Hayır, koluma veya çeneme yayılmıyor ve yürürken kötüleşmiyor."),
+}
+GENERIC_RED_FLAG_SPEECH: tuple[str, str] = (
+    "I cannot think of anything else, but I have never felt this unwell.",
+    "Başka bir şey aklıma gelmiyor ama hiç bu kadar kötü hissetmemiştim.",
+)
+
+
+# --------------------------------------------------------------------------- #
+# Condition-specific physical examination findings.                            #
+#                                                                              #
+# Review 02 finding 4 (critical): every templated case examined as "Findings    #
+# consistent with <diagnosis label>", handing the learner the answer. Findings  #
+# here are real signs that require interpretation (ASPE Domain 3 principle 3.2  #
+# https://doi.org/10.1186/s41077-017-0043-4). Conditions absent from this table #
+# receive the system-level non-revealing findings in ``case_generator._PROFILES``. #
+#                                                                              #
+# Shape: (maneuver, system_en, system_tr, finding_en, finding_tr, abnormal)     #
+# --------------------------------------------------------------------------- #
+_CV = ("Cardiovascular", "Kardiyovasküler")
+_RESP = ("Respiratory", "Solunum")
+_ABD = ("Abdominal", "Karın")
+_NEURO = ("Neurological", "Nörolojik")
+_GEN = ("General", "Genel")
+_SKIN = ("Skin", "Cilt")
+_MSK = ("Musculoskeletal", "Kas-iskelet")
+
+
+def _ex(maneuver: str, sys_: tuple[str, str], en: str, tr: str, abnormal: bool = True) -> tuple:
+    return (maneuver, sys_[0], sys_[1], en, tr, abnormal)
+
+
+CONDITION_EXAM: dict[str, list[tuple]] = {
+    "acs_stemi": [_ex("cardiovascular", _CV, "Pale, clammy and diaphoretic; regular pulse, no murmur, JVP not raised.", "Soluk, nemli ve terli; düzenli nabız, üfürüm yok, JVP yüksek değil."), _ex("respiratory", _RESP, "Fine bibasal crackles.", "Bibazal ince raller.")],
+    "acs_nstemi": [_ex("cardiovascular", _CV, "Regular pulse, normal heart sounds, no murmur; chest wall non-tender.", "Düzenli nabız, normal kalp sesleri, üfürüm yok; göğüs duvarı hassas değil."), _ex("respiratory", _RESP, "Clear chest.", "Akciğerler temiz.", False)],
+    "unstable_angina": [_ex("cardiovascular", _CV, "Regular pulse, soft fourth heart sound during pain, no murmur.", "Düzenli nabız, ağrı sırasında yumuşak dördüncü kalp sesi, üfürüm yok."), _ex("general-inspection", _GEN, "Anxious, hand pressed to the sternum.", "Anksiyöz, elini sternuma bastırıyor.")],
+    "aortic_dissection": [_ex("cardiovascular", _CV, "Pulse deficit at the left radial; early diastolic murmur at the left sternal edge; BP 168/92 right arm, 128/70 left arm.", "Sol radialde nabız defisiti; sol sternal kenarda erken diyastolik üfürüm; TA sağ kol 168/92, sol kol 128/70."), _ex("neurological", _NEURO, "Mild left-arm weakness, no facial droop.", "Hafif sol kol güçsüzlüğü, yüz düşüklüğü yok.")],
+    "heart_failure_acute": [_ex("cardiovascular", _CV, "Raised JVP, displaced apex, third heart sound; pitting oedema to the knees.", "Yüksek JVP, yer değiştirmiş apeks, üçüncü kalp sesi; dizlere kadar gode bırakan ödem."), _ex("respiratory", _RESP, "Bilateral coarse crackles to the mid-zones, sitting bolt upright.", "Orta zonlara kadar bilateral kaba raller, dik oturuyor.")],
+    "afib_rvr": [_ex("cardiovascular", _CV, "Irregularly irregular pulse with a variable first heart sound; apical rate higher than the radial.", "Düzensiz düzensiz nabız, değişken birinci kalp sesi; apikal hız radialden yüksek."), _ex("general-inspection", _GEN, "Alert, mildly anxious, no thyroid eye signs.", "Uyanık, hafif anksiyöz, tiroid göz bulgusu yok.", False)],
+    "svt": [_ex("cardiovascular", _CV, "Regular, very rapid pulse too fast to count; prominent neck pulsation ('frog sign').", "Düzenli, sayılamayacak kadar hızlı nabız; boyunda belirgin pulsasyon ('kurbağa bulgusu')."), _ex("respiratory", _RESP, "Clear chest.", "Akciğerler temiz.", False)],
+    "vt": [_ex("cardiovascular", _CV, "Rapid regular pulse of poor volume; cannon A waves in the neck; cool peripheries.", "Zayıf dolgunlukta hızlı düzenli nabız; boyunda cannon A dalgaları; soğuk ekstremiteler."), _ex("general-inspection", _GEN, "Grey, sweaty, anxious.", "Gri, terli, anksiyöz.")],
+    "complete_heart_block": [_ex("cardiovascular", _CV, "Slow regular pulse around 36/min, large-volume; intermittent cannon waves at the neck; variable first heart sound.", "Yaklaşık 36/dk yavaş düzenli nabız, geniş dolgunluk; boyunda aralıklı cannon dalgaları; değişken birinci kalp sesi."), _ex("neurological", _NEURO, "Alert between episodes; no focal deficit.", "Ataklar arasında uyanık; fokal defisit yok.", False)],
+    "pericarditis": [_ex("cardiovascular", _CV, "Scratchy triphasic rub at the left sternal edge, loudest leaning forward.", "Sol sternal kenarda öne eğilince en belirgin, sürtünme sesi (frotman)."), _ex("respiratory", _RESP, "Clear chest, pain on deep inspiration.", "Akciğerler temiz, derin inspiryumda ağrı.")],
+    "cardiac_tamponade": [_ex("cardiovascular", _CV, "Raised JVP that rises on inspiration, muffled heart sounds, narrow pulse pressure, pulsus paradoxus.", "İnspiryumda yükselen yüksek JVP, boğuk kalp sesleri, dar nabız basıncı, pulsus paradoksus."), _ex("respiratory", _RESP, "Clear lung fields despite breathlessness.", "Nefes darlığına rağmen temiz akciğer alanları.")],
+    "hypertensive_emergency": [_ex("neurological", _NEURO, "Fundoscopy: flame haemorrhages, cotton-wool spots and disc swelling.", "Fundoskopi: alev şeklinde hemorajiler, pamuk-yün lekeleri ve disk şişliği."), _ex("cardiovascular", _CV, "Heaving apex, loud second heart sound; no radio-femoral delay.", "Kuvvetli apeks, gür ikinci kalp sesi; radyo-femoral gecikme yok.")],
+    "infective_endocarditis": [_ex("cardiovascular", _CV, "New pansystolic murmur at the apex; splinter haemorrhages and a tender nodule on a finger pulp.", "Apekste yeni pansistolik üfürüm; splinter hemorajiler ve parmak ucunda hassas nodül."), _ex("skin", _SKIN, "Needle track marks in the antecubital fossae.", "Antekübital çukurlarda iğne izleri.")],
+    "myocarditis": [_ex("cardiovascular", _CV, "Tachycardia out of proportion to fever; soft third heart sound; JVP mildly raised.", "Ateşle orantısız taşikardi; yumuşak üçüncü kalp sesi; JVP hafif yüksek."), _ex("respiratory", _RESP, "Few basal crackles.", "Birkaç bazal ral.")],
+    "aortic_stenosis": [_ex("cardiovascular", _CV, "Slow-rising, low-volume pulse; harsh crescendo-decrescendo systolic murmur radiating to the carotids; quiet second sound.", "Yavaş yükselen düşük dolgunlukta nabız; karotislere yayılan sert kreşendo-dekreşendo sistolik üfürüm; hafif ikinci ses."), _ex("respiratory", _RESP, "Clear chest.", "Akciğerler temiz.", False)],
+    "stable_angina": [_ex("cardiovascular", _CV, "Pain-free at rest; regular pulse, no murmur, no oedema.", "İstirahatte ağrısız; düzenli nabız, üfürüm yok, ödem yok.", False), _ex("general-inspection", _GEN, "Corneal arcus and xanthelasma.", "Korneal arkus ve ksantelazma.")],
+    "pulmonary_embolism": [_ex("respiratory", _RESP, "Tachypnoeic with clear lung fields; no wheeze or crackles.", "Takipneik, akciğer alanları temiz; hırıltı veya ral yok."), _ex("musculoskeletal", _MSK, "Right calf 3 cm larger than the left, warm and tender along the deep veins.", "Sağ baldır soldan 3 cm geniş, derin venler boyunca sıcak ve hassas.")],
+    "asthma_exacerbation": [_ex("respiratory", _RESP, "Speaking in single words, accessory muscle use, widespread polyphonic wheeze with prolonged expiration.", "Tek kelimelerle konuşuyor, yardımcı solunum kasları kullanımı, yaygın polifonik hırıltı ve uzamış ekspiryum."), _ex("general-inspection", _GEN, "Sitting forward, tripod position, unable to lie flat.", "Öne eğilmiş, tripod pozisyonu, düz yatamıyor.")],
+    "copd_exacerbation": [_ex("respiratory", _RESP, "Barrel chest, pursed-lip breathing, hyperresonant percussion, scattered wheeze and reduced air entry.", "Fıçı göğüs, büzük dudak solunumu, hipersonor perküsyon, dağınık hırıltı ve azalmış hava girişi."), _ex("neurological", _NEURO, "Drowsy but rousable; fine flapping tremor of the outstretched hands.", "Uykulu ama uyandırılabilir; ellerde ince çırpıntı tremoru.")],
+    "pneumonia_cap": [_ex("respiratory", _RESP, "Dull percussion, bronchial breathing and coarse crackles at the right base with increased vocal resonance.", "Sağ bazalde mat perküsyon, bronşiyal solunum ve kaba raller, artmış vokal rezonans."), _ex("general-inspection", _GEN, "Flushed, rigors, new confusion (AMT 6/10).", "Kızarık, titreme, yeni konfüzyon (AMT 6/10).")],
+    "tension_pneumothorax": [_ex("respiratory", _RESP, "Absent breath sounds and hyperresonance on the left with reduced expansion; trachea deviated to the right.", "Solda solunum sesi yok ve hipersonor, ekspansiyon azalmış; trakea sağa kaymış."), _ex("cardiovascular", _CV, "Distended neck veins, thready tachycardia, hypotension.", "Dolgun boyun venleri, filiform taşikardi, hipotansiyon.")],
+    "carbon_monoxide": [_ex("neurological", _NEURO, "Confused, ataxic gait, no focal deficit.", "Konfüze, ataksik yürüyüş, fokal defisit yok."), _ex("general-inspection", _GEN, "Pulse oximetry reads 99% despite symptoms; no cyanosis.", "Semptomlara rağmen pulse oksimetre %99; siyanoz yok.")],
+    "ischemic_stroke": [_ex("neurological", _NEURO, "Right facial droop, right arm drift with 2/5 power, expressive dysphasia; NIHSS 11.", "Sağ yüz düşüklüğü, sağ kolda 2/5 güçle düşme, ekspresif disfazi; NIHSS 11."), _ex("cardiovascular", _CV, "Irregularly irregular pulse; no carotid bruit.", "Düzensiz düzensiz nabız; karotis üfürümü yok.")],
+    "intracerebral_hemorrhage": [_ex("neurological", _NEURO, "GCS 12 (E3 V4 M5), left hemiparesis, left-sided neglect, right gaze preference.", "GKS 12 (E3 V4 M5), sol hemiparezi, sol taraf ihmali, sağa bakış tercihi."), _ex("general-inspection", _GEN, "Vomited twice; bruising on the forearms.", "İki kez kustu; ön kollarda morluklar.")],
+    "subarachnoid_hemorrhage": [_ex("neurological", _NEURO, "Neck stiffness with positive Kernig sign, photophobia; no focal limb deficit; GCS 15.", "Pozitif Kernig bulgusuyla ense sertliği, fotofobi; fokal ekstremite defisiti yok; GKS 15."), _ex("general-inspection", _GEN, "Lying still with eyes shut, vomiting.", "Gözleri kapalı hareketsiz yatıyor, kusuyor.")],
+    "bacterial_meningitis": [_ex("neurological", _NEURO, "Marked neck stiffness, positive Kernig and Brudzinski signs, photophobia, GCS 14.", "Belirgin ense sertliği, pozitif Kernig ve Brudzinski, fotofobi, GKS 14."), _ex("skin", _SKIN, "Scattered non-blanching petechiae on the shins and trunk.", "Bacak ön yüzlerinde ve gövdede dağınık basmakla solmayan peteşiler.")],
+    "status_epilepticus": [_ex("neurological", _NEURO, "Ongoing generalised tonic-clonic activity, eyes deviated upward, tongue bitten; pupils equal.", "Devam eden jeneralize tonik-klonik aktivite, gözler yukarı deviye, dil ısırılmış; pupiller eşit."), _ex("general-inspection", _GEN, "Cyanosed lips, frothy saliva, incontinent.", "Siyanoze dudaklar, köpüklü salya, inkontinans.")],
+    "appendicitis": [_ex("abdominal", _ABD, "Tenderness and guarding at McBurney point, positive Rovsing sign, rebound present; bowel sounds reduced.", "McBurney noktasında hassasiyet ve defans, pozitif Rovsing, rebound var; bağırsak sesleri azalmış."), _ex("general-inspection", _GEN, "Lying still, flushed, prefers the right hip flexed.", "Hareketsiz yatıyor, kızarık, sağ kalçayı fleksiyonda tutmayı tercih ediyor.")],
+    "pancreatitis": [_ex("abdominal", _ABD, "Epigastric tenderness with voluntary guarding, no peritonism; bowel sounds sparse; no Cullen or Grey Turner sign.", "Epigastrik hassasiyet ve istemli defans, peritonizm yok; bağırsak sesleri seyrek; Cullen veya Grey Turner yok."), _ex("general-inspection", _GEN, "Restless, dehydrated mucosae, mild scleral icterus.", "Huzursuz, kuru mukozalar, hafif skleral ikter.")],
+    "upper_gi_bleed": [_ex("abdominal", _ABD, "Mild epigastric tenderness, no peritonism; melaena on rectal examination.", "Hafif epigastrik hassasiyet, peritonizm yok; rektal muayenede melena."), _ex("general-inspection", _GEN, "Pale conjunctivae, cool peripheries, capillary refill 4 s; postural dizziness.", "Soluk konjonktivalar, soğuk ekstremiteler, kapiller dolum 4 s; postural baş dönmesi.")],
+    "cholecystitis": [_ex("abdominal", _ABD, "Right upper quadrant tenderness with inspiratory arrest on palpation (Murphy positive); no jaundice.", "Palpasyonda inspiratuar duraklamayla sağ üst kadran hassasiyeti (Murphy pozitif); sarılık yok."), _ex("general-inspection", _GEN, "Febrile, flushed, obese.", "Ateşli, kızarık, obez.")],
+    "ascending_cholangitis": [_ex("abdominal", _ABD, "Right upper quadrant tenderness, no mass; liver edge not palpable.", "Sağ üst kadran hassasiyeti, kitle yok; karaciğer kenarı ele gelmiyor."), _ex("general-inspection", _GEN, "Jaundiced sclerae, rigors, confused.", "İkterik skleralar, titreme, konfüze.")],
+    "bowel_obstruction": [_ex("abdominal", _ABD, "Distended tympanic abdomen with visible peristalsis, high-pitched tinkling bowel sounds; old midline scar; empty rectum.", "Görünür peristaltizmle distandü timpanik karın, tiz çınlayan bağırsak sesleri; eski orta hat skarı; rektum boş."), _ex("general-inspection", _GEN, "Dry mucous membranes, faeculent vomitus at the bedside.", "Kuru mukozalar, yatak başında fekaloid kusmuk.")],
+    "dka": [_ex("general-inspection", _GEN, "Deep sighing (Kussmaul) respirations, ketotic breath, dry mucosae, reduced skin turgor.", "Derin iç çekme (Kussmaul) solunumu, ketotik nefes kokusu, kuru mukozalar, azalmış turgor."), _ex("abdominal", _ABD, "Diffuse mild tenderness without guarding.", "Defans olmadan yaygın hafif hassasiyet.")],
+    "hhs": [_ex("neurological", _NEURO, "Drowsy, GCS 13, slow to respond; no focal deficit.", "Uykulu, GKS 13, yanıtı yavaş; fokal defisit yok."), _ex("general-inspection", _GEN, "Profoundly dry mucosae, sunken eyes, capillary refill 4 s.", "Çok kuru mukozalar, çökük gözler, kapiller dolum 4 s.")],
+    "hyperkalemia": [_ex("neurological", _NEURO, "Symmetrical proximal weakness 4/5, reduced reflexes.", "Simetrik proksimal güçsüzlük 4/5, azalmış refleksler."), _ex("cardiovascular", _CV, "Slow irregular pulse around 50/min.", "Yaklaşık 50/dk yavaş düzensiz nabız.")],
+    "hyperkalemia_esrd": [_ex("cardiovascular", _CV, "Slow pulse, raised JVP, bibasal crackles; working arteriovenous fistula at the left forearm.", "Yavaş nabız, yüksek JVP, bibazal raller; sol ön kolda çalışan arteriyovenöz fistül."), _ex("neurological", _NEURO, "Generalised weakness, reflexes reduced.", "Yaygın güçsüzlük, refleksler azalmış.")],
+    "thyroid_storm": [_ex("general-inspection", _GEN, "Agitated, sweating, warm peripheries, fine tremor; diffuse goitre with bruit; lid lag.", "Ajite, terli, sıcak ekstremiteler, ince tremor; üfürümlü diffüz guatr; göz kapağı gecikmesi."), _ex("cardiovascular", _CV, "Irregular rapid pulse, bounding; bibasal crackles.", "Düzensiz hızlı dolgun nabız; bibazal raller.")],
+    "hypoglycemia": [_ex("neurological", _NEURO, "Confused and tremulous, slurred speech, no focal deficit.", "Konfüze ve titrek, peltek konuşma, fokal defisit yok."), _ex("general-inspection", _GEN, "Cold and clammy, pale.", "Soğuk ve nemli, soluk.")],
+    "adrenal_crisis": [_ex("general-inspection", _GEN, "Hyperpigmented palmar creases and buccal mucosa; dry mucosae; postural drop of 30 mmHg.", "Hiperpigmente avuç içi çizgileri ve bukkal mukoza; kuru mukozalar; 30 mmHg postural düşüş."), _ex("abdominal", _ABD, "Diffuse tenderness, no guarding.", "Yaygın hassasiyet, defans yok.")],
+    "nec_fasciitis": [_ex("skin", _SKIN, "Tense, woody induration of the thigh with pain far beyond the erythema; dusky patches, crepitus and a haemorrhagic bulla.", "Uylukta gergin, odunsu endürasyon, eritemin çok ötesinde ağrı; koyu alanlar, krepitasyon ve hemorajik bül."), _ex("general-inspection", _GEN, "Toxic, tachycardic, confused.", "Toksik görünüm, taşikardik, konfüze.")],
+    "pyelonephritis": [_ex("abdominal", _ABD, "Right renal angle tenderness; suprapubic tenderness; no peritonism.", "Sağ renal açı hassasiyeti; suprapubik hassasiyet; peritonizm yok."), _ex("general-inspection", _GEN, "Rigors, flushed, febrile.", "Titreme, kızarık, ateşli.")],
+    "meningococcemia": [_ex("skin", _SKIN, "Rapidly spreading purpuric rash on the trunk and limbs that does not blanch under a glass.", "Gövde ve ekstremitelerde hızla yayılan, bardak altında solmayan purpurik döküntü."), _ex("general-inspection", _GEN, "Cold mottled extremities, capillary refill 5 s, drowsy.", "Soğuk alacalı ekstremiteler, kapiller dolum 5 s, uykulu.")],
+    "aki": [_ex("abdominal", _ABD, "Palpable, tender bladder to the umbilicus; enlarged smooth prostate on rectal examination.", "Göbeğe kadar ele gelen hassas mesane; rektal muayenede büyük düzgün prostat."), _ex("general-inspection", _GEN, "Mild bilateral ankle oedema; dry mucosae.", "Hafif bilateral ayak bileği ödemi; kuru mukozalar.")],
+    "renal_colic": [_ex("abdominal", _ABD, "Left loin tenderness, soft abdomen, no peritonism; writhing, unable to lie still.", "Sol lomber hassasiyet, yumuşak karın, peritonizm yok; kıvranıyor, hareketsiz yatamıyor."), _ex("general-inspection", _GEN, "Pale, sweaty, afebrile.", "Soluk, terli, ateşsiz.")],
+    "alcohol_withdrawal": [_ex("neurological", _NEURO, "Coarse tremor, sweating, agitated, visual hallucinations; no focal deficit.", "Kaba tremor, terleme, ajite, görsel halüsinasyonlar; fokal defisit yok."), _ex("abdominal", _ABD, "Hepatomegaly 3 cm, spider naevi on the chest.", "3 cm hepatomegali, göğüste spider nevüsler.")],
+    "opioid_overdose": [_ex("neurological", _NEURO, "GCS 7 (E1 V2 M4), pinpoint pupils, hyporeflexic.", "GKS 7 (E1 V2 M4), iğne başı pupiller, hiporefleksik."), _ex("respiratory", _RESP, "Slow shallow breaths 6/min, cyanosed, snoring respiration.", "Dakikada 6 yavaş yüzeysel solunum, siyanoze, horultulu solunum.")],
+    "paracetamol_od": [_ex("abdominal", _ABD, "Mild right upper quadrant tenderness, no jaundice yet.", "Hafif sağ üst kadran hassasiyeti, henüz sarılık yok."), _ex("general-inspection", _GEN, "Tearful but alert, GCS 15; no signs of other ingestion.", "Ağlamaklı ama uyanık, GKS 15; başka alım bulgusu yok.")],
+    "ectopic_pregnancy": [_ex("abdominal", _ABD, "Left iliac fossa tenderness with guarding; cervical motion tenderness; closed os, dark spotting.", "Sol iliyak fossa hassasiyeti ve defans; servikal hareket hassasiyeti; kapalı os, koyu lekelenme."), _ex("general-inspection", _GEN, "Pale, tachycardic, postural dizziness.", "Soluk, taşikardik, postural baş dönmesi.")],
+    "preeclampsia": [_ex("neurological", _NEURO, "Brisk reflexes with three beats of ankle clonus; visual fields full.", "Üç vuru ayak bileği klonusuyla canlı refleksler; görme alanları tam."), _ex("abdominal", _ABD, "Right upper quadrant tenderness; fundus appropriate for dates; non-dependent oedema of hands and face.", "Sağ üst kadran hassasiyeti; fundus gebelik haftasına uygun; el ve yüzde ödem.")],
+    "pph": [_ex("abdominal", _ABD, "Uterus soft and boggy above the umbilicus, not contracting with massage; ongoing bright red loss.", "Göbek üstünde yumuşak, gevşek uterus, masajla kasılmıyor; devam eden parlak kırmızı kanama."), _ex("general-inspection", _GEN, "Pale, clammy, anxious, capillary refill 4 s.", "Soluk, nemli, anksiyöz, kapiller dolum 4 s.")],
+    "cauda_equina": [_ex("neurological", _NEURO, "Reduced perianal sensation, lax anal tone, absent ankle reflexes, bilateral leg weakness 3/5; palpable bladder.", "Azalmış perianal duyu, gevşek anal tonus, ayak bileği refleksleri yok, bilateral bacak güçsüzlüğü 3/5; ele gelen mesane."), _ex("musculoskeletal", _MSK, "Lumbar paraspinal tenderness, straight-leg raise positive bilaterally.", "Lomber paraspinal hassasiyet, bilateral pozitif düz bacak kaldırma.")],
+    "compartment_syndrome": [_ex("musculoskeletal", _MSK, "Tense, swollen anterior compartment under the split cast; severe pain on passive toe extension; paraesthesia in the first web space; pulses present.", "Açılmış alçı altında gergin, şiş anterior kompartman; pasif parmak ekstansiyonunda şiddetli ağrı; birinci web aralığında parestezi; nabızlar var."), _ex("general-inspection", _GEN, "Distressed, pain unrelieved by opioid.", "Sıkıntılı, opioidle geçmeyen ağrı.")],
+    "febrile_neutropenia": [_ex("general-inspection", _GEN, "Febrile 38.9C, rigors, PICC line site clean; no mucositis; no localising source.", "Ateş 38.9C, titreme, PICC giriş yeri temiz; mukozit yok; lokalize kaynak yok."), _ex("respiratory", _RESP, "Clear chest.", "Akciğerler temiz.", False)],
+    "dvt": [_ex("musculoskeletal", _MSK, "Left calf swollen 4 cm more than the right, warm, tender along the popliteal vein; pitting oedema to the knee.", "Sol baldır sağdan 4 cm geniş, sıcak, popliteal ven boyunca hassas; dize kadar gode bırakan ödem."), _ex("respiratory", _RESP, "Clear chest, not tachypnoeic.", "Akciğerler temiz, takipne yok.", False)],
+    "sickle_crisis": [_ex("musculoskeletal", _MSK, "Tenderness over both femurs and the lumbar spine without swelling or erythema.", "Her iki femur ve lomber omurgada şişlik veya eritem olmadan hassasiyet."), _ex("respiratory", _RESP, "Clear chest, no crackles; SpO2 96% on air.", "Akciğerler temiz, ral yok; oda havasında SpO2 %96.", False)],
+    "bronchiolitis": [_ex("respiratory", _RESP, "Subcostal and intercostal recession, nasal flaring, widespread fine crackles and wheeze; RR 62.", "Subkostal ve interkostal çekilmeler, burun kanadı solunumu, yaygın ince raller ve hırıltı; SS 62."), _ex("general-inspection", _GEN, "Coryzal, feeding poorly, capillary refill 2 s, fontanelle normal.", "Nezleli, kötü besleniyor, kapiller dolum 2 s, fontanel normal.")],
+    "anaphylaxis": [_ex("skin", _SKIN, "Generalised urticaria, swelling of the lips and periorbital tissues.", "Yaygın ürtiker, dudaklarda ve periorbital dokuda şişlik."), _ex("respiratory", _RESP, "Audible stridor, hoarse voice, widespread wheeze.", "İşitilebilir stridor, boğuk ses, yaygın hırıltı.")],
+    "septic_shock": [_ex("general-inspection", _GEN, "Mottled cool peripheries, capillary refill 5 s, confused (GCS 13), rigors.", "Alacalı soğuk ekstremiteler, kapiller dolum 5 s, konfüze (GKS 13), titreme."), _ex("abdominal", _ABD, "Suprapubic tenderness and left renal angle tenderness.", "Suprapubik hassasiyet ve sol renal açı hassasiyeti.")],
+    "heat_stroke": [_ex("neurological", _NEURO, "Confused, ataxic, GCS 13; no focal deficit.", "Konfüze, ataksik, GKS 13; fokal defisit yok."), _ex("skin", _SKIN, "Hot flushed skin, dry despite exertion.", "Sıcak kızarık cilt, efora rağmen kuru.")],
+    "hypothermia": [_ex("general-inspection", _GEN, "Cold to the core, no shivering, slow speech; GCS 12.", "Merkezi soğuk, titreme yok, yavaş konuşma; GKS 12."), _ex("cardiovascular", _CV, "Slow, barely palpable pulse; cold peripheries.", "Yavaş, zar zor hissedilen nabız; soğuk ekstremiteler.")],
+    "testicular_torsion": [_ex("focused-special", ("Genitourinary", "Genitoüriner"), "High-riding, horizontally lying tender left testis; absent cremasteric reflex; no relief on elevation.", "Yüksek yerleşimli, yatay duran hassas sol testis; kremaster refleksi yok; elevasyonla rahatlama yok."), _ex("abdominal", _ABD, "Soft abdomen, no hernia.", "Yumuşak karın, fıtık yok.", False)],
+    "panic_disorder": [_ex("cardiovascular", _CV, "Regular tachycardia, no murmur, chest wall non-tender.", "Düzenli taşikardi, üfürüm yok, göğüs duvarı hassas değil.", False), _ex("general-inspection", _GEN, "Hyperventilating, tremulous, carpopedal spasm.", "Hiperventile, titrek, karpopedal spazm.")],
 }

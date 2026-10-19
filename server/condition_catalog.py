@@ -25,7 +25,10 @@ Each entry::
       "typical_complaint_tr": "Kola yayılan orta hat göğüs baskısı",
       "typical_acuity": 2,                    # ESI 1 (most acute) .. 5 (least)
       "difficulty":     3,                    # 1 (foundation) .. 5 (expert)
-      "red_flags": [{"en": "...", "tr": "..."}, ...],
+      "red_flags": [{"en": "...", "tr": "..."}, ...],   # clinician-observed signs/results
+      "sex":         "male" | "female" | "any",          # demographic constraint (_META)
+      "age":         (lo, hi),                            # OPTIONAL age band (_META)
+      "disposition": "operating-room" | ...,             # OPTIONAL authored disposition (_META)
     }
 
 Codes are best-effort educational mappings for a *synthetic* simulator; they are
@@ -55,11 +58,86 @@ from typing import Any, Optional
 # --------------------------------------------------------------------------- #
 _Row = tuple
 
+# --------------------------------------------------------------------------- #
+# Per-condition demographics + disposition (merged into every entry by _mk).  #
+#                                                                              #
+# Review 02 finding 20 (major): sex was random for priapism / prostatitis /    #
+# epididymo-orchitis and age came from the body-system band, so bronchiolitis  #
+# ("wheezy infant") drew age 30-78 and hip fracture drew 18-75. Finding 19     #
+# (major): disposition was a pure function of ESI, sending appendicitis to     #
+# observation and torsion / ectopic / perforation to ICU instead of theatre.   #
+# Entries absent here keep ``sex: "any"`` and the system age band; the         #
+# disposition falls back to the ESI default in case_generator._disposition.    #
+# Citations: AAP bronchiolitis guideline (1-23 months)                          #
+# https://doi.org/10.1542/peds.2014-2742 ; WSES Jerusalem 2020 (appendectomy   #
+# is the treatment of choice) https://doi.org/10.1186/s13017-020-00306-3       #
+# Shape: id -> {"sex": "male"|"female"|"any", "age": (lo, hi), "disposition"}  #
+# --------------------------------------------------------------------------- #
+_META: dict[str, dict[str, Any]] = {
+    # sex-constrained
+    "testicular_torsion": {"sex": "male", "age": (12, 25), "disposition": "operating-room"},
+    "bph_retention": {"sex": "male", "age": (60, 88), "disposition": "discharge"},
+    "priapism": {"sex": "male", "age": (18, 55), "disposition": "refer-specialty"},
+    "acute_prostatitis": {"sex": "male", "age": (30, 70), "disposition": "admit-ward"},
+    "epididymo_orchitis": {"sex": "male", "age": (16, 45), "disposition": "discharge"},
+    # paediatric / age-banded
+    "bronchiolitis": {"sex": "any", "age": (1, 2), "disposition": "admit-ward"},
+    "hip_fracture": {"sex": "any", "age": (65, 95), "disposition": "operating-room"},
+    "myocarditis": {"sex": "any", "age": (18, 40), "disposition": "admit-ccu"},
+    "pericarditis": {"sex": "any", "age": (20, 50), "disposition": "discharge"},
+    "svt": {"sex": "any", "age": (18, 50), "disposition": "discharge"},
+    "panic_disorder": {"sex": "any", "age": (18, 45), "disposition": "discharge"},
+    "meningococcemia": {"sex": "any", "age": (16, 30), "disposition": "admit-icu"},
+    "bacterial_meningitis": {"sex": "any", "age": (17, 60), "disposition": "admit-icu"},
+    "spontaneous_pneumothorax": {"sex": "any", "age": (18, 40), "disposition": "observation"},
+    "aortic_stenosis": {"sex": "any", "age": (65, 90), "disposition": "refer-specialty"},
+    "complete_heart_block": {"sex": "any", "age": (62, 90), "disposition": "admit-ccu"},
+    "aortic_dissection": {"sex": "any", "age": (50, 80), "disposition": "operating-room"},
+    # surgical dispositions
+    "appendicitis": {"sex": "any", "age": (8, 45), "disposition": "operating-room"},
+    "perforated_ulcer": {"sex": "any", "age": (35, 80), "disposition": "operating-room"},
+    "ectopic_pregnancy": {"sex": "female", "age": (18, 42), "disposition": "operating-room"},
+    "ovarian_torsion": {"sex": "female", "age": (15, 40), "disposition": "operating-room"},
+    "mesenteric_ischemia": {"sex": "any", "age": (60, 88), "disposition": "operating-room"},
+    "nec_fasciitis": {"sex": "any", "age": (35, 75), "disposition": "operating-room"},
+    "compartment_syndrome": {"sex": "any", "age": (16, 50), "disposition": "operating-room"},
+    "cauda_equina": {"sex": "any", "age": (30, 65), "disposition": "operating-room"},
+    "bowel_obstruction": {"sex": "any", "age": (40, 85), "disposition": "admit-ward"},
+    "cholecystitis": {"sex": "any", "age": (30, 75), "disposition": "admit-ward"},
+    "septic_arthritis": {"sex": "any", "age": (20, 80), "disposition": "operating-room"},
+    "open_fracture": {"sex": "any", "age": (16, 60), "disposition": "operating-room"},
+    "placental_abruption": {"sex": "female", "age": (18, 42), "disposition": "operating-room"},
+    "eclampsia": {"sex": "female", "age": (18, 42), "disposition": "operating-room"},
+    "pph": {"sex": "female", "age": (18, 42), "disposition": "operating-room"},
+    # stroke / monitored beds
+    "ischemic_stroke": {"sex": "any", "age": (55, 88), "disposition": "refer-specialty"},  # stroke unit / thrombectomy
+    "tia": {"sex": "any", "age": (55, 85), "disposition": "observation"},
+    "pulmonary_embolism": {"sex": "any", "age": (30, 80), "disposition": "admit-ward"},
+    "upper_gi_bleed": {"sex": "any", "age": (40, 85), "disposition": "admit-ward"},
+    "ascending_cholangitis": {"sex": "any", "age": (45, 85), "disposition": "admit-ward"},
+    "dka": {"sex": "any", "age": (14, 45), "disposition": "admit-ward"},
+    "hhs": {"sex": "any", "age": (55, 90), "disposition": "admit-ward"},
+    "hyperkalemia": {"sex": "any", "age": (45, 85), "disposition": "admit-ward"},
+    "hyperkalemia_esrd": {"sex": "any", "age": (40, 80), "disposition": "refer-specialty"},  # urgent dialysis
+    "febrile_neutropenia": {"sex": "any", "age": (25, 75), "disposition": "admit-ward"},
+    "sickle_crisis": {"sex": "any", "age": (16, 45), "disposition": "admit-ward"},
+    "opioid_overdose": {"sex": "any", "age": (18, 55), "disposition": "observation"},
+    "paracetamol_od": {"sex": "any", "age": (15, 45), "disposition": "admit-ward"},
+    "alcohol_withdrawal": {"sex": "any", "age": (30, 65), "disposition": "admit-ward"},
+    "renal_colic": {"sex": "any", "age": (20, 60), "disposition": "discharge"},
+    "hypoglycemia": {"sex": "any", "age": (18, 80), "disposition": "observation"},
+    "anaphylaxis": {"sex": "any", "age": (16, 60), "disposition": "observation"},
+    "preeclampsia": {"sex": "female", "age": (18, 42), "disposition": "admit-ward"},
+    "hypothermia": {"sex": "any", "age": (20, 90), "disposition": "admit-icu"},
+    "heat_stroke": {"sex": "any", "age": (18, 85), "disposition": "admit-icu"},
+}
+
 
 def _mk(system: str, rows: list[_Row]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for r in rows:
         id_, icd11, icd10, dsm, en, tr, cc_en, cc_tr, acuity, diff, rfs = r
+        meta = _META.get(id_, {})
         entry: dict[str, Any] = {
             "id": id_,
             "icd11": icd11,
@@ -72,7 +150,13 @@ def _mk(system: str, rows: list[_Row]) -> list[dict[str, Any]]:
             "typical_acuity": int(acuity),
             "difficulty": int(diff),
             "red_flags": [{"en": a, "tr": b} for (a, b) in rfs],
+            # OB/GYN entries are female by construction; others follow _META.
+            "sex": "female" if system == "obstetrics-gynecology" else meta.get("sex", "any"),
         }
+        if "age" in meta:
+            entry["age"] = tuple(meta["age"])
+        if "disposition" in meta:
+            entry["disposition"] = meta["disposition"]
         if dsm:
             entry["dsm5tr"] = dsm
         out.append(entry)
@@ -110,17 +194,17 @@ _CARDIOLOGY = _mk("cardiology", [
     ("acs_stemi", "BA41.0", "I21.3", "", "ST-elevation myocardial infarction", "ST yükselmeli miyokart enfarktüsü", "Crushing central chest pain with sweating", "Terlemeyle ezici göğüs ağrısı", 1, 3, [("ST elevation on ECG", "EKG'de ST yükselmesi"), ("Ongoing pain with haemodynamic instability", "Hemodinamik bozuklukla süren ağrı")]),
     ("acs_nstemi", "BA41.1", "I21.4", "", "Non-ST elevation myocardial infarction", "ST yükselmesiz miyokart enfarktüsü", "Central chest pressure radiating to the arm", "Kola yayılan göğüs baskısı", 2, 3, [("Dynamic troponin rise", "Dinamik troponin yükselişi")]),
     ("unstable_angina", "BA40", "I20.0", "", "Unstable angina", "Kararsız angina", "Chest tightness now coming on at rest", "İstirahatte gelen göğüs sıkışması", 2, 3, [("Crescendo pattern at rest", "İstirahatte artan patern")]),
-    ("aortic_dissection", "BD50", "I71.0", "", "Acute aortic dissection", "Akut aort diseksiyonu", "Sudden tearing chest and back pain", "Ani yırtıcı göğüs ve sırt ağrısı", 1, 4, [("Pulse or blood-pressure differential between arms", "Kollar arası nabız/tansiyon farkı"), ("Tearing pain radiating to the back", "Sırta yayılan yırtıcı ağrı")]),
+    ("aortic_dissection", "BD50.0", "I71.01", "", "Acute aortic dissection", "Akut aort diseksiyonu", "Sudden tearing chest and back pain", "Ani yırtıcı göğüs ve sırt ağrısı", 1, 4, [("Pulse or blood-pressure differential between arms", "Kollar arası nabız/tansiyon farkı"), ("Tearing pain radiating to the back", "Sırta yayılan yırtıcı ağrı")]),
     ("heart_failure_acute", "BD10", "I50.9", "", "Acute decompensated heart failure", "Akut dekompanse kalp yetmezliği", "Breathless and swollen legs, worse lying flat", "Nefes darlığı ve bacak şişliği, yatınca artan", 2, 3, [("Pulmonary oedema with hypoxia", "Hipoksiyle akciğer ödemi")]),
     ("afib_rvr", "BC81.3", "I48.0", "", "Atrial fibrillation with rapid response", "Hızlı yanıtlı atriyal fibrilasyon", "Palpitations with an irregular fast pulse", "Düzensiz hızlı nabızla çarpıntı", 2, 3, [("Rapid AF with hypotension", "Hipotansiyonla hızlı AF")]),
     ("svt", "BC81.0", "I47.1", "", "Supraventricular tachycardia", "Supraventriküler taşikardi", "Sudden racing heartbeat", "Ani hızlanan kalp atışı", 3, 2, [("Narrow-complex tachycardia with instability", "İnstabiliteyle dar QRS taşikardisi")]),
     ("vt", "BC71.0", "I47.2", "", "Ventricular tachycardia", "Ventriküler taşikardi", "Palpitations with lightheadedness and chest pain", "Baş dönmesi ve göğüs ağrısıyla çarpıntı", 1, 4, [("Broad-complex tachycardia with shock", "Şokla geniş QRS taşikardisi")]),
-    ("complete_heart_block", "BC63.3", "I44.2", "", "Complete heart block", "Tam kalp bloğu", "Fainting spells with a very slow pulse", "Çok yavaş nabızla bayılma atakları", 1, 3, [("Bradycardia with syncope", "Senkopla bradikardi")]),
+    ("complete_heart_block", "BC63", "I44.2", "", "Complete heart block", "Tam kalp bloğu", "Fainting spells with a very slow pulse", "Çok yavaş nabızla bayılma atakları", 1, 3, [("Bradycardia with syncope", "Senkopla bradikardi")]),
     ("pericarditis", "BB20", "I30.9", "", "Acute pericarditis", "Akut perikardit", "Sharp chest pain, better sitting forward", "Öne eğilince azalan keskin göğüs ağrısı", 3, 2, [("Pain with a pericardial rub", "Perikardiyal frotmanla ağrı")]),
-    ("cardiac_tamponade", "BB40", "I31.4", "", "Cardiac tamponade", "Kardiyak tamponad", "Breathless with faintness and chest pressure", "Baş dönmesi ve göğüs baskısıyla nefes darlığı", 1, 4, [("Hypotension with muffled heart sounds", "Boğuk kalp sesleriyle hipotansiyon")]),
-    ("hypertensive_emergency", "BA00", "I16.9", "", "Hypertensive emergency", "Hipertansif acil", "Severe headache with very high blood pressure", "Çok yüksek tansiyonla şiddetli baş ağrısı", 2, 3, [("Very high BP with end-organ signs", "Hedef organ bulgularıyla çok yüksek TA")]),
-    ("infective_endocarditis", "BB40.0", "I33.0", "", "Infective endocarditis", "Enfektif endokardit", "Weeks of fever, sweats and fatigue", "Haftalarca ateş, terleme ve yorgunluk", 2, 4, [("New murmur with fever and emboli", "Ateş ve embolisiyle yeni üfürüm")]),
-    ("myocarditis", "BB30", "I40.9", "", "Acute myocarditis", "Akut miyokardit", "Chest pain and breathlessness after a viral illness", "Viral hastalık sonrası göğüs ağrısı ve nefes darlığı", 2, 3, [("Heart failure in a young patient", "Genç hastada kalp yetmezliği")]),
+    ("cardiac_tamponade", "BB23", "I31.4", "", "Cardiac tamponade", "Kardiyak tamponad", "Breathless with faintness and chest pressure", "Baş dönmesi ve göğüs baskısıyla nefes darlığı", 1, 4, [("Hypotension with muffled heart sounds", "Boğuk kalp sesleriyle hipotansiyon")]),
+    ("hypertensive_emergency", "BA00", "I16.1", "", "Hypertensive emergency", "Hipertansif acil", "Severe headache with very high blood pressure", "Çok yüksek tansiyonla şiddetli baş ağrısı", 2, 3, [("Very high BP with end-organ signs", "Hedef organ bulgularıyla çok yüksek TA")]),
+    ("infective_endocarditis", "BB40", "I33.0", "", "Infective endocarditis", "Enfektif endokardit", "Weeks of fever, sweats and fatigue", "Haftalarca ateş, terleme ve yorgunluk", 2, 4, [("New murmur with fever and emboli", "Ateş ve embolisiyle yeni üfürüm")]),
+    ("myocarditis", "BC42", "I40.9", "", "Acute myocarditis", "Akut miyokardit", "Chest pain and breathlessness after a viral illness", "Viral hastalık sonrası göğüs ağrısı ve nefes darlığı", 2, 3, [("Heart failure in a young patient", "Genç hastada kalp yetmezliği")]),
     ("aortic_stenosis", "BB01", "I35.0", "", "Severe aortic stenosis", "Ağır aort darlığı", "Breathless and faint on exertion", "Eforla nefes darlığı ve baş dönmesi", 3, 3, [("Exertional syncope with a murmur", "Üfürümle efor senkopu")]),
     ("stable_angina", "BA40.Z", "I20.9", "", "Stable angina", "Kararlı angina", "Chest tightness on walking that eases with rest", "Yürürken gelen, istirahatte azalan göğüs sıkışması", 4, 2, [("Escalating symptoms suggesting instability", "İnstabiliteyi düşündüren artan semptomlar")]),
 ])
@@ -151,18 +235,18 @@ _PULMONOLOGY = _mk("pulmonology", [
 _GI = _mk("gastroenterology", [
     ("appendicitis", "DA20", "K35.80", "", "Acute appendicitis", "Akut apandisit", "Pain that moved to the right lower belly", "Sağ alt karına göç eden ağrı", 3, 2, [("Peritonism at McBurney point", "McBurney noktasında peritonizm")]),
     ("cholecystitis", "DC12", "K81.0", "", "Acute cholecystitis", "Akut kolesistit", "Right upper belly pain after fatty food", "Yağlı yemek sonrası sağ üst karın ağrısı", 3, 2, [("Positive Murphy sign with fever", "Ateşle pozitif Murphy bulgusu")]),
-    ("pancreatitis", "DC31", "K85.9", "", "Acute pancreatitis", "Akut pankreatit", "Severe upper belly pain boring to the back", "Sırta vuran şiddetli üst karın ağrısı", 2, 3, [("Pain with vomiting and tachycardia", "Kusma ve taşikardiyle ağrı")]),
-    ("upper_gi_bleed", "DA63", "K92.2", "", "Upper gastrointestinal bleed", "Üst gastrointestinal kanama", "Vomiting blood and black stools", "Kan kusma ve siyah dışkı", 1, 3, [("Haematemesis with hypotension", "Hipotansiyonla hematemez"), ("Melaena with tachycardia", "Taşikardiyle melena")]),
-    ("perforated_ulcer", "DA60.0", "K25.1", "", "Perforated peptic ulcer", "Perfore peptik ülser", "Sudden severe belly pain, board-like abdomen", "Ani şiddetli karın ağrısı, tahta karın", 1, 4, [("Rigid abdomen with free air", "Serbest havayla rijit karın")]),
+    ("pancreatitis", "DC31", "K85.90", "", "Acute pancreatitis", "Akut pankreatit", "Severe upper belly pain boring to the back", "Sırta vuran şiddetli üst karın ağrısı", 2, 3, [("Pain with vomiting and tachycardia", "Kusma ve taşikardiyle ağrı")]),
+    ("upper_gi_bleed", "DA63", "K92.2", "", "Upper gastrointestinal bleed", "Üst gastrointestinal kanama", "Vomiting blood and black stools", "Kan kusma ve siyah dışkı", 2, 3, [("Haematemesis with hypotension", "Hipotansiyonla hematemez"), ("Melaena with tachycardia", "Taşikardiyle melena")]),
+    ("perforated_ulcer", "DA60.0", "K25.1", "", "Perforated peptic ulcer", "Perfore peptik ülser", "Sudden severe belly pain, board-like abdomen", "Ani şiddetli karın ağrısı, tahta karın", 2, 4, [("Rigid abdomen with free air", "Serbest havayla rijit karın")]),
     ("bowel_obstruction", "DA91", "K56.60", "", "Bowel obstruction", "Bağırsak tıkanıklığı", "Cramping pain, vomiting and no bowel motion", "Kramp tarzı ağrı, kusma ve gaz-gaita çıkışı yok", 2, 3, [("Distension with absolute constipation", "Mutlak kabızlıkla distansiyon")]),
-    ("mesenteric_ischemia", "DD30", "K55.0", "", "Acute mesenteric ischaemia", "Akut mezenter iskemi", "Severe belly pain out of proportion to exam", "Muayeneyle orantısız şiddetli karın ağrısı", 1, 4, [("Pain out of proportion with acidosis", "Asidozla orantısız ağrı")]),
+    ("mesenteric_ischemia", "DD30", "K55.0", "", "Acute mesenteric ischaemia", "Akut mezenter iskemi", "Severe belly pain out of proportion to exam", "Muayeneyle orantısız şiddetli karın ağrısı", 2, 4, [("Pain out of proportion with acidosis", "Asidozla orantısız ağrı")]),
     ("diverticulitis", "DB32", "K57.92", "", "Acute diverticulitis", "Akut divertikülit", "Left lower belly pain with fever", "Ateşle sol alt karın ağrısı", 3, 2, [("Peritonitis suggesting perforation", "Perforasyonu düşündüren peritonit")]),
     ("acute_hepatitis", "DB90", "K72.0", "", "Acute hepatitis", "Akut hepatit", "Yellow eyes, nausea and right upper pain", "Sarı gözler, bulantı ve sağ üst ağrı", 3, 3, [("Encephalopathy or coagulopathy", "Ensefalopati veya koagülopati")]),
     ("gastroenteritis", "1A40", "A09", "", "Infectious gastroenteritis", "Enfeksiyöz gastroenterit", "Vomiting and watery diarrhoea", "Kusma ve sulu ishal", 4, 1, [("Dehydration with reduced urine output", "İdrar azalmasıyla dehidratasyon")]),
     ("gi_reflux", "DA22", "K21.9", "", "Gastro-oesophageal reflux disease", "Gastroözofageal reflü hastalığı", "Burning behind the chest after meals", "Yemek sonrası göğüs arkasında yanma", 5, 1, [("Alarm features: dysphagia or weight loss", "Alarm bulguları: disfaji veya kilo kaybı")]),
     ("ibd_flare", "DD70", "K51.90", "", "Inflammatory bowel disease flare", "İnflamatuar bağırsak hastalığı alevlenmesi", "Bloody diarrhoea and cramping", "Kanlı ishal ve kramp", 3, 3, [("Toxic megacolon signs", "Toksik megakolon bulguları")]),
     ("biliary_colic", "DC11", "K80.20", "", "Biliary colic", "Bilier kolik", "Episodic right upper belly pain after eating", "Yemek sonrası ataklarla sağ üst karın ağrısı", 4, 2, [("Fever or jaundice suggesting complication", "Komplikasyonu düşündüren ateş/sarılık")]),
-    ("ascending_cholangitis", "DC13", "K83.09", "", "Ascending cholangitis", "Asendan kolanjit", "Fever, jaundice and right upper pain", "Ateş, sarılık ve sağ üst ağrı", 1, 3, [("Charcot triad with hypotension", "Hipotansiyonla Charcot triadı")]),
+    ("ascending_cholangitis", "DC13", "K83.09", "", "Ascending cholangitis", "Asendan kolanjit", "Fever, jaundice and right upper pain", "Ateş, sarılık ve sağ üst ağrı", 2, 3, [("Charcot triad with hypotension", "Hipotansiyonla Charcot triadı")]),
     ("bariatric_dumping", "DA0Z", "K91.1", "", "Dumping syndrome", "Dumping sendromu", "Sweating and palpitations after eating", "Yemek sonrası terleme ve çarpıntı", 5, 3, [("Severe post-prandial hypoglycaemia", "Ağır tokluk hipoglisemisi")]),
 ])
 
@@ -170,10 +254,10 @@ _GI = _mk("gastroenterology", [
 # NEUROLOGY                                                                    #
 # --------------------------------------------------------------------------- #
 _NEURO = _mk("neurology", [
-    ("ischemic_stroke", "8B11", "I63.9", "", "Acute ischaemic stroke", "Akut iskemik inme", "Sudden weakness and slurred speech", "Ani güçsüzlük ve peltek konuşma", 1, 3, [("Focal deficit within the thrombolysis window", "Tromboliz penceresinde fokal defisit")]),
+    ("ischemic_stroke", "8B11", "I63.9", "", "Acute ischaemic stroke", "Akut iskemik inme", "Sudden weakness and slurred speech", "Ani güçsüzlük ve peltek konuşma", 2, 3, [("Focal deficit within the thrombolysis window", "Tromboliz penceresinde fokal defisit")]),
     ("intracerebral_hemorrhage", "8B00", "I61.9", "", "Intracerebral haemorrhage", "İntraserebral kanama", "Sudden headache with weakness and vomiting", "Güçsüzlük ve kusmayla ani baş ağrısı", 1, 4, [("Reduced GCS with focal signs", "Fokal bulgularla GKS düşüklüğü")]),
     ("subarachnoid_hemorrhage", "8B01", "I60.9", "", "Subarachnoid haemorrhage", "Subaraknoid kanama", "Sudden worst-ever thunderclap headache", "Aniden gelen en şiddetli gök gürültüsü baş ağrısı", 1, 4, [("Thunderclap onset", "Gök gürültüsü başlangıç"), ("Neck stiffness with photophobia", "Fotofobiyle ense sertliği")]),
-    ("bacterial_meningitis", "1D01", "G00.9", "", "Bacterial meningitis", "Bakteriyel menenjit", "Fever, severe headache and a stiff neck", "Ateş, şiddetli baş ağrısı ve ense sertliği", 1, 3, [("Fever with neck stiffness and rash", "Döküntü ve ense sertliğiyle ateş"), ("Non-blanching purpuric rash", "Basmakla solmayan purpurik döküntü")]),
+    ("bacterial_meningitis", "1D01", "G00.9", "", "Bacterial meningitis", "Bakteriyel menenjit", "Fever, severe headache and a stiff neck", "Ateş, şiddetli baş ağrısı ve ense sertliği", 2, 3, [("Fever with neck stiffness and rash", "Döküntü ve ense sertliğiyle ateş"), ("Non-blanching purpuric rash", "Basmakla solmayan purpurik döküntü")]),
     ("status_epilepticus", "8A6Z", "G41.9", "", "Status epilepticus", "Status epileptikus", "A seizure that will not stop", "Durmayan nöbet", 1, 4, [("Continuous or recurrent seizures", "Sürekli veya tekrarlayan nöbetler")]),
     ("first_seizure", "8A60", "R56.9", "", "First unprovoked seizure", "İlk provoke olmayan nöbet", "First-ever fit witnessed by family", "Ailenin tanık olduğu ilk nöbet", 3, 3, [("Prolonged post-ictal deficit", "Uzamış postiktal defisit")]),
     ("tia", "8B10", "G45.9", "", "Transient ischaemic attack", "Geçici iskemik atak", "Brief weakness and speech trouble, now resolved", "Kısa süreli güçsüzlük ve konuşma sorunu, geçti", 2, 3, [("High ABCD2 with recurrent episodes", "Tekrarlayan ataklarla yüksek ABCD2")]),
@@ -181,9 +265,9 @@ _NEURO = _mk("neurology", [
     ("gbs", "8C01", "G61.0", "", "Guillain-Barre syndrome", "Guillain-Barre sendromu", "Progressive leg then arm weakness", "İlerleyici bacak sonra kol güçsüzlüğü", 2, 4, [("Ascending weakness with breathing difficulty", "Nefes güçlüğüyle çıkan güçsüzlük")]),
     ("myasthenic_crisis", "8C6Z", "G70.01", "", "Myasthenic crisis", "Miyastenik kriz", "Worsening droopy eyes and breathing trouble", "Kötüleşen düşük göz kapağı ve nefes güçlüğü", 1, 4, [("Respiratory muscle weakness", "Solunum kası güçsüzlüğü")]),
     ("bells_palsy", "8B88", "G51.0", "", "Bell palsy", "Bell felci", "Sudden one-sided facial droop", "Ani tek taraflı yüz düşüklüğü", 4, 2, [("Forehead sparing suggesting a central lesion", "Santral lezyonu düşündüren alın korunması")]),
-    ("vertigo_bppv", "AB31.0", "H81.1", "", "Benign paroxysmal positional vertigo", "Benign paroksismal pozisyonel vertigo", "Brief spinning with head movements", "Baş hareketiyle kısa dönme hissi", 4, 2, [("Central features on HINTS exam", "HINTS muayenesinde santral bulgular")]),
+    ("vertigo_bppv", "AB31.0", "H81.1", "", "Benign paroxysmal positional vertigo", "Benign paroksismal pozisyonel vertigo", "Brief spinning with head movements", "Baş hareketiyle kısa dönme hissi", 4, 2, [("Vertigo that is continuous rather than positional, new hearing loss, or any focal neurology", "Pozisyonel değil sürekli vertigo, yeni işitme kaybı veya herhangi bir fokal nöroloji")]),
     ("spinal_cord_compression", "8B4Z", "G95.20", "", "Acute spinal cord compression", "Akut spinal kord basısı", "Back pain with leg weakness and retention", "Bacak güçsüzlüğü ve idrar retansiyonuyla sırt ağrısı", 1, 4, [("Saddle anaesthesia with retention", "Retansiyonla eyer anestezisi")]),
-    ("encephalitis", "1C00", "G04.90", "", "Viral encephalitis", "Viral ensefalit", "Fever with confusion and odd behaviour", "Konfüzyon ve garip davranışla ateş", 1, 4, [("Fever with altered mental state and seizures", "Nöbet ve bilinç değişimiyle ateş")]),
+    ("encephalitis", "1C00", "G04.90", "", "Viral encephalitis", "Viral ensefalit", "Fever with confusion and odd behaviour", "Konfüzyon ve garip davranışla ateş", 2, 4, [("Fever with altered mental state and seizures", "Nöbet ve bilinç değişimiyle ateş")]),
     ("delirium", "6D70", "F05", "", "Delirium", "Deliryum", "Suddenly confused and inattentive", "Ani konfüzyon ve dikkat kaybı", 3, 2, [("Acute fluctuating confusion with infection", "Enfeksiyonla akut dalgalanan konfüzyon")]),
 ])
 
@@ -214,10 +298,10 @@ _ENDOCRINE = _mk("endocrine", [
     ("dka", "5A22", "E10.10", "", "Diabetic ketoacidosis", "Diyabetik ketoasidoz", "Thirst, vomiting and deep breathing", "Susama, kusma ve derin nefes", 2, 3, [("Kussmaul breathing with ketosis", "Ketozla Kussmaul solunumu")]),
     ("hhs", "5A22.1", "E11.00", "", "Hyperosmolar hyperglycaemic state", "Hiperozmolar hiperglisemik durum", "Confusion with very high sugar", "Çok yüksek şekerle konfüzyon", 2, 4, [("Marked dehydration with altered mental state", "Bilinç değişimiyle belirgin dehidratasyon")]),
     ("hypoglycemia", "5A41", "E16.2", "", "Severe hypoglycaemia", "Ağır hipoglisemi", "Sweaty, shaky and confused", "Terli, titrek ve konfüze", 2, 2, [("Reduced consciousness from low glucose", "Düşük glukozla bilinç bozukluğu")]),
-    ("thyroid_storm", "5A42", "E05.51", "", "Thyroid storm", "Tiroid fırtınası", "Fever, racing heart and agitation", "Ateş, hızlı kalp ve ajitasyon", 1, 4, [("Hyperthermia with tachyarrhythmia", "Taşiaritmiyle hipertermi")]),
+    ("thyroid_storm", "5A02", "E05.91", "", "Thyroid storm", "Tiroid fırtınası", "Fever, racing heart and agitation", "Ateş, hızlı kalp ve ajitasyon", 1, 4, [("Hyperthermia with tachyarrhythmia", "Taşiaritmiyle hipertermi")]),
     ("myxedema_coma", "5A00", "E03.5", "", "Myxoedema coma", "Miksödem koması", "Very drowsy, cold and slow", "Çok uykulu, soğuk ve yavaş", 1, 4, [("Hypothermia with reduced consciousness", "Bilinç bozukluğuyla hipotermi")]),
     ("adrenal_crisis", "5A74", "E27.2", "", "Adrenal crisis", "Adrenal kriz", "Weakness, vomiting and low blood pressure", "Güçsüzlük, kusma ve düşük tansiyon", 1, 4, [("Hypotension unresponsive to fluids", "Sıvıya yanıtsız hipotansiyon")]),
-    ("hyperkalemia", "5B5A", "E87.5", "", "Severe hyperkalaemia", "Ağır hiperkalemi", "Weakness and palpitations, missed dialysis", "Kaçırılmış diyalizle güçsüzlük ve çarpıntı", 1, 3, [("ECG changes with high potassium", "Yüksek potasyumla EKG değişiklikleri")]),
+    ("hyperkalemia", "5B5A", "E87.5", "", "Severe hyperkalaemia", "Ağır hiperkalemi", "Weakness and palpitations, missed dialysis", "Kaçırılmış diyalizle güçsüzlük ve çarpıntı", 2, 3, [("ECG changes with high potassium", "Yüksek potasyumla EKG değişiklikleri")]),
     ("hyponatremia", "5B5A.1", "E87.1", "", "Severe hyponatraemia", "Ağır hiponatremi", "Confusion and nausea, low sodium", "Düşük sodyumla konfüzyon ve bulantı", 2, 3, [("Seizures from rapid sodium shift", "Hızlı sodyum kaymasıyla nöbet")]),
     ("hypercalcemia", "5B90", "E83.52", "", "Hypercalcaemia", "Hiperkalsemi", "Thirst, constipation and confusion", "Susama, kabızlık ve konfüzyon", 3, 3, [("Marked hypercalcaemia with drowsiness", "Uykuyla belirgin hiperkalsemi")]),
     ("pheochromocytoma", "2F37", "E27.5", "", "Phaeochromocytoma crisis", "Feokromositoma krizi", "Episodic sweating, headache and palpitations", "Ataklarla terleme, baş ağrısı ve çarpıntı", 2, 4, [("Severe paroxysmal hypertension", "Ağır paroksismal hipertansiyon")]),
@@ -231,11 +315,11 @@ _ENDOCRINE = _mk("endocrine", [
 _RENAL = _mk("renal", [
     ("aki", "GB60", "N17.9", "", "Acute kidney injury", "Akut böbrek hasarı", "Passing very little urine and swollen", "Çok az idrar ve şişlik", 2, 3, [("Anuria with fluid overload", "Sıvı yüklenmesiyle anüri")]),
     ("renal_colic", "GB70", "N23", "", "Renal colic", "Renal kolik", "Severe loin pain radiating to the groin", "Kasığa yayılan şiddetli yan ağrısı", 3, 2, [("Fever with an obstructing stone", "Tıkayıcı taşla ateş")]),
-    ("hyperkalemia_esrd", "GB61", "N18.6", "", "End-stage renal disease with hyperkalaemia", "Hiperkalemiyle son dönem böbrek hastalığı", "Missed dialysis, weak and breathless", "Kaçırılmış diyaliz, güçsüz ve nefes darlığı", 1, 3, [("ECG changes with missed dialysis", "Kaçırılmış diyalizle EKG değişiklikleri")]),
+    ("hyperkalemia_esrd", "GB61", "N18.6", "", "End-stage renal disease with hyperkalaemia", "Hiperkalemiyle son dönem böbrek hastalığı", "Missed dialysis, weak and breathless", "Kaçırılmış diyaliz, güçsüz ve nefes darlığı", 2, 3, [("ECG changes with missed dialysis", "Kaçırılmış diyalizle EKG değişiklikleri")]),
     ("urinary_retention", "MF50.2", "R33.9", "", "Acute urinary retention", "Akut idrar retansiyonu", "Cannot pass urine with a painful bladder", "İdrar yapamama ve ağrılı mesane", 3, 2, [("Retention with kidney injury", "Böbrek hasarıyla retansiyon")]),
     ("nephrotic_syndrome", "GB40", "N04.9", "", "Nephrotic syndrome", "Nefrotik sendrom", "Frothy urine and swollen legs and face", "Köpüklü idrar, bacak ve yüz şişliği", 4, 3, [("Thromboembolism risk with heavy proteinuria", "Ağır proteinüriyle tromboemboli riski")]),
     ("glomerulonephritis", "GB4Z", "N05.9", "", "Acute glomerulonephritis", "Akut glomerülonefrit", "Blood in urine with high blood pressure", "Yüksek tansiyonla idrarda kan", 3, 3, [("Rapidly rising creatinine", "Hızla yükselen kreatinin")]),
-    ("testicular_torsion", "GB05", "N44.00", "", "Testicular torsion", "Testis torsiyonu", "Sudden severe one-sided testicular pain", "Ani şiddetli tek taraflı testis ağrısı", 1, 3, [("Acute scrotal pain in a young male (time-critical)", "Genç erkekte akut skrotal ağrı (zaman kritik)")]),
+    ("testicular_torsion", "GB05", "N44.00", "", "Testicular torsion", "Testis torsiyonu", "Sudden severe one-sided testicular pain", "Ani şiddetli tek taraflı testis ağrısı", 2, 3, [("Acute scrotal pain in a young male (time-critical)", "Genç erkekte akut skrotal ağrı (zaman kritik)")]),
     ("bph_retention", "GA90", "N40.1", "", "Benign prostatic hyperplasia", "Benign prostat hiperplazisi", "Poor stream and straining to pass urine", "Zayıf akım ve idrarda zorlanma", 5, 1, [("Retention with post-renal failure", "Postrenal yetmezlikle retansiyon")]),
     ("epididymo_orchitis", "GB41", "N45.3", "", "Epididymo-orchitis", "Epididimo-orşit", "Painful, swollen testicle developing over a day", "Bir gün içinde gelişen ağrılı, şiş testis", 3, 2, [("Cannot exclude torsion in a young male", "Genç erkekte torsiyon dışlanamıyor")]),
     ("acute_prostatitis", "GA91", "N41.0", "", "Acute prostatitis", "Akut prostatit", "Fever with pelvic pain and painful urination", "Ateşle pelvik ağrı ve ağrılı idrar", 3, 2, [("Sepsis or acute retention", "Sepsis veya akut retansiyon")]),
@@ -257,8 +341,8 @@ _PSYCH = _mk("psychiatry", [
     ("anorexia_nervosa", "6B80", "F50.00", "307.1", "Anorexia nervosa", "Anoreksiya nervoza", "Severe weight loss and fear of eating", "Ağır kilo kaybı ve yemekten korku", 3, 4, [("Bradycardia or electrolyte derangement", "Bradikardi veya elektrolit bozukluğu")]),
     ("alcohol_withdrawal", "6C40.4", "F10.239", "291.81", "Alcohol withdrawal", "Alkol yoksunluğu", "Shaking, sweating and anxious after stopping drinking", "İçkiyi bırakınca titreme, terleme ve anksiyete", 2, 3, [("Seizures or delirium tremens", "Nöbet veya deliryum tremens")]),
     ("opioid_overdose", "6C43.4", "T40.2X", "", "Opioid overdose", "Opioid aşırı dozu", "Found unresponsive with slow breathing", "Yavaş nefesle yanıtsız bulundu", 1, 3, [("Respiratory depression with pinpoint pupils", "İğne başı pupillayla solunum depresyonu")]),
-    ("serotonin_syndrome", "6C4Z", "T43.225", "", "Serotonin syndrome", "Serotonin sendromu", "Agitation, tremor and fever after a dose change", "Doz değişimi sonrası ajitasyon, tremor ve ateş", 1, 4, [("Hyperthermia with clonus and rigidity", "Klonus ve rijiditeyle hipertermi")]),
-    ("nms", "6C4Z.1", "G21.0", "", "Neuroleptic malignant syndrome", "Nöroleptik malign sendrom", "High fever and stiffness on antipsychotics", "Antipsikotikle yüksek ateş ve sertlik", 1, 4, [("Rigidity with hyperthermia and raised CK", "Yüksek CK ve hipertermiyle rijidite")]),
+    ("serotonin_syndrome", "6C4Z", "T43.225", "", "Serotonin syndrome", "Serotonin sendromu", "Agitation, tremor and fever after a dose change", "Doz değişimi sonrası ajitasyon, tremor ve ateş", 2, 4, [("Hyperthermia with clonus and rigidity", "Klonus ve rijiditeyle hipertermi")]),
+    ("nms", "6C4Z.1", "G21.0", "", "Neuroleptic malignant syndrome", "Nöroleptik malign sendrom", "High fever and stiffness on antipsychotics", "Antipsikotikle yüksek ateş ve sertlik", 2, 4, [("Rigidity with hyperthermia and raised CK", "Yüksek CK ve hipertermiyle rijidite")]),
     ("somatic_symptom", "6C20", "F45.1", "300.82", "Somatic symptom disorder", "Somatik semptom bozukluğu", "Persistent worrying physical symptoms", "Sürekli endişe veren fiziksel semptomlar", 5, 3, [("Do not miss an organic cause", "Organik nedeni atlamayın")]),
     ("delirium_tremens", "6C40.6", "F10.231", "291.0", "Delirium tremens", "Deliryum tremens", "Confusion, tremor and hallucinations off alcohol", "Alkolsüz konfüzyon, tremor ve halüsinasyon", 1, 4, [("Autonomic instability with confusion", "Konfüzyonla otonom instabilite")]),
     ("eating_binge", "6B82", "F50.81", "307.51", "Binge eating disorder", "Tıkınırcasına yeme bozukluğu", "Recurrent loss of control with eating", "Yemede tekrarlayan kontrol kaybı", 5, 2, [("Comorbid mood disorder or purging", "Eşlik eden duygudurum bozukluğu veya çıkarma")]),
@@ -268,12 +352,12 @@ _PSYCH = _mk("psychiatry", [
 # BREADTH TAIL — heme/onc, obstetric/gynae, musculoskeletal, tox, derm         #
 # --------------------------------------------------------------------------- #
 _HEMATOLOGY = _mk("hematology", [
-    ("febrile_neutropenia", "2A20", "D70.9", "", "Febrile neutropenia", "Febril nötropeni", "Fever days after chemotherapy", "Kemoterapi sonrası günlerce ateş", 1, 3, [("Fever with neutropenia (oncologic emergency)", "Nötropeniyle ateş (onkolojik acil)")]),
+    ("febrile_neutropenia", "2A20", "D70.9", "", "Febrile neutropenia", "Febril nötropeni", "Fever days after chemotherapy", "Kemoterapi sonrası günlerce ateş", 2, 3, [("Fever with neutropenia (oncologic emergency)", "Nötropeniyle ateş (onkolojik acil)")]),
     ("sickle_crisis", "3A51", "D57.00", "", "Sickle cell crisis", "Orak hücre krizi", "Severe bone pain in a sickle patient", "Orak hücreli hastada şiddetli kemik ağrısı", 2, 3, [("Chest syndrome with hypoxia", "Hipoksiyle göğüs sendromu")]),
     ("dvt", "BD71", "I82.409", "", "Deep vein thrombosis", "Derin ven trombozu", "Swollen, painful calf", "Şiş, ağrılı baldır", 3, 2, [("Signs of concurrent pulmonary embolism", "Eşlik eden pulmoner emboli bulguları")]),
-    ("tumor_lysis", "2A00.0", "E88.3", "", "Tumour lysis syndrome", "Tümör lizis sendromu", "Unwell soon after starting chemotherapy", "Kemoterapi başlangıcından kısa süre sonra kötüleşme", 1, 4, [("Hyperkalaemia with acute kidney injury", "Akut böbrek hasarıyla hiperkalemi")]),
+    ("tumor_lysis", "2A00.0", "E88.3", "", "Tumour lysis syndrome", "Tümör lizis sendromu", "Unwell soon after starting chemotherapy", "Kemoterapi başlangıcından kısa süre sonra kötüleşme", 2, 4, [("Hyperkalaemia with acute kidney injury", "Akut böbrek hasarıyla hiperkalemi")]),
     ("anemia_symptomatic", "3A9Z", "D64.9", "", "Symptomatic anaemia", "Semptomatik anemi", "Tired, pale and breathless on exertion", "Yorgun, solgun ve eforla nefes darlığı", 3, 2, [("Anaemia with chest pain or syncope", "Göğüs ağrısı veya senkopla anemi")]),
-    ("dic", "3B20", "D65", "", "Disseminated intravascular coagulation", "Yaygın damar içi pıhtılaşma", "Bleeding and bruising while very unwell", "Çok kötü durumda kanama ve morarma", 1, 4, [("Bleeding with thrombosis and organ failure", "Trombozla kanama ve organ yetmezliği")]),
+    ("dic", "3B20", "D65", "", "Disseminated intravascular coagulation", "Yaygın damar içi pıhtılaşma", "Bleeding and bruising while very unwell", "Çok kötü durumda kanama ve morarma", 2, 4, [("Bleeding with thrombosis and organ failure", "Trombozla kanama ve organ yetmezliği")]),
     ("itp", "3B64.10", "D69.3", "", "Immune thrombocytopenia", "İmmün trombositopeni", "Easy bruising and a pinpoint rash", "Kolay morarma ve iğne başı döküntü", 3, 3, [("Mucosal or intracranial bleeding", "Mukozal veya kafa içi kanama")]),
     ("acute_leukemia", "2B33.Z", "C95.00", "", "Acute leukaemia (new)", "Akut lösemi (yeni)", "Weeks of fatigue, bruising and infections", "Haftalarca yorgunluk, morarma ve enfeksiyon", 2, 4, [("Blasts with bleeding or infection", "Kanama veya enfeksiyonla blast")]),
     ("hemophilia_bleed", "3B10", "D66", "", "Haemophilia with acute bleed", "Akut kanamalı hemofili", "Painful, swollen joint after minor injury", "Küçük travma sonrası ağrılı, şiş eklem", 2, 3, [("Head injury in a haemophiliac", "Hemofili hastasında kafa travması")]),
@@ -294,7 +378,7 @@ _OBGYN = _mk("obstetrics-gynecology", [
 ])
 
 _MSK_TOX = _mk("musculoskeletal", [
-    ("cauda_equina", "FA80", "G83.4", "", "Cauda equina syndrome", "Kauda ekina sendromu", "Back pain with leg weakness and numb saddle", "Bacak güçsüzlüğü ve eyer uyuşmasıyla sırt ağrısı", 1, 4, [("Bladder dysfunction with saddle anaesthesia", "Eyer anestezisiyle mesane işlev bozukluğu")]),
+    ("cauda_equina", "FA80", "G83.4", "", "Cauda equina syndrome", "Kauda ekina sendromu", "Back pain with leg weakness and numb saddle", "Bacak güçsüzlüğü ve eyer uyuşmasıyla sırt ağrısı", 2, 4, [("Bladder dysfunction with saddle anaesthesia", "Eyer anestezisiyle mesane işlev bozukluğu")]),
     ("open_fracture", "NC72", "S82.90", "", "Open long-bone fracture", "Açık uzun kemik kırığı", "Deformed limb with a wound after a fall", "Düşme sonrası yaralı ve deforme uzuv", 2, 3, [("Neurovascular compromise distal to injury", "Yaralanma distalinde nörovasküler bozukluk")]),
     ("compartment_syndrome", "FB32.Y", "T79.A0", "", "Acute compartment syndrome", "Akut kompartman sendromu", "Severe limb pain after a crush injury", "Ezilme sonrası şiddetli uzuv ağrısı", 1, 4, [("Pain on passive stretch out of proportion", "Pasif gerilmeyle orantısız ağrı")]),
     ("gout", "FA25", "M10.9", "", "Acute gout", "Akut gut", "A hot, swollen, very painful big toe", "Sıcak, şiş, çok ağrılı ayak başparmağı", 4, 1, [("Cannot exclude septic arthritis", "Septik artrit dışlanamıyor")]),
