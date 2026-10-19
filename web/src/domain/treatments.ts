@@ -11,10 +11,22 @@
  * not a pharmacokinetic model. Pure + deterministic: no Date.now, no
  * Math.random.
  *
+ * Review 02 (docs/review/02-clinical-content-review-2026-10.md):
+ *  - finding 7: adrenaline IM 0.5 mg is the anaphylaxis first line; IV
+ *    adrenaline is a separate, specialist entry (Resuscitation Council UK 2021,
+ *    https://www.resus.org.uk/library/additional-guidance/guidance-anaphylaxis/emergency-treatment)
+ *  - finding 8: nitrate effects are gated (SBP < 90, HR < 50 or > 100, RV
+ *    infarct, PDE-5 inhibitor) and only act in ischaemic chest pain / acute
+ *    pulmonary oedema (ACCF/AHA 2013 STEMI, https://www.ahajournals.org/doi/10.1161/CIR.0b013e3182742cf6)
+ *  - finding 36: naloxone acts only with an opioid on board or an opioid toxidrome
+ *  - finding 44: paracetamol defaults to the oral route (NICE CKS analgesia,
+ *    https://cks.nice.org.uk/topics/analgesia-mild-to-moderate-pain/)
+ *
  * Education only. No real patient data path.
  */
 
 import type { Bilingual } from "@/data/mock";
+import { ROUTE_LABEL, type Route } from "@/domain/formulary";
 
 /** The six tracked vital signs. */
 export type VitalKey = "hr" | "systolic" | "diastolic" | "rr" | "spo2" | "tempC";
@@ -33,125 +45,63 @@ export interface TreatmentOption {
   label: Bilingual;
   /** Pharmacologic / therapeutic class, bilingual. */
   klass: Bilingual;
+  /** Display label of the default route (from the formulary route table). */
   route?: Bilingual;
+  /** Machine-readable default route (matches the formulary). */
+  routeCode?: Route;
+  /** Adult default dose shown on the order chip (the formulary holds the range). */
+  defaultDose?: { amount: number; unit: string };
 }
 
 /* -------------------------------------------------------------------------- */
-/* Common routes                                                              */
+/* Catalog (~16 common ED / psych agents)                                     */
 /* -------------------------------------------------------------------------- */
 
-const ROUTE = {
-  iv: { en: "IV", tr: "İ.V." },
-  im: { en: "IM", tr: "İ.M." },
-  po: { en: "PO", tr: "Ağızdan" },
-  sl: { en: "SL", tr: "Dilaltı" },
-  inhaled: { en: "Inhaled", tr: "İnhalasyon" },
-  neb: { en: "Nebulized", tr: "Nebülizatör" },
-} as const satisfies Record<string, Bilingual>;
-
-/* -------------------------------------------------------------------------- */
-/* Catalog (~14 common ED / psych agents)                                     */
-/* -------------------------------------------------------------------------- */
+function opt(
+  code: string,
+  label: Bilingual,
+  klass: Bilingual,
+  routeCode: Route,
+  defaultDose?: { amount: number; unit: string },
+): TreatmentOption {
+  return { code, label, klass, route: ROUTE_LABEL[routeCode], routeCode, ...(defaultDose ? { defaultDose } : {}) };
+}
 
 export const TREATMENT_CATALOG: TreatmentOption[] = [
-  {
-    code: "7806", // RxNorm: oxygen
-    label: { en: "Oxygen", tr: "Oksijen" },
-    klass: { en: "Oxygen therapy", tr: "Oksijen tedavisi" },
-    route: ROUTE.inhaled,
-  },
-  {
-    code: "313002", // RxNorm: sodium chloride 0.9% injectable
-    label: { en: "IV fluid bolus (NS / RL)", tr: "İ.V. sıvı bolusu (SF / RL)" },
-    klass: { en: "Crystalloid", tr: "Kristaloid" },
-    route: ROUTE.iv,
-  },
-  {
-    code: "1191", // RxNorm: aspirin
-    label: { en: "Aspirin", tr: "Aspirin" },
-    klass: { en: "Antiplatelet", tr: "Antiagregan" },
-    route: ROUTE.po,
-  },
-  {
-    code: "4917", // RxNorm: nitroglycerin
-    label: { en: "Nitroglycerin", tr: "Nitrogliserin" },
-    klass: { en: "Nitrate vasodilator", tr: "Nitrat vazodilatör" },
-    route: ROUTE.sl,
-  },
-  {
-    code: "7052", // RxNorm: morphine
-    label: { en: "Morphine / fentanyl", tr: "Morfin / fentanil" },
-    klass: { en: "Opioid analgesic", tr: "Opioid analjezik" },
-    route: ROUTE.iv,
-  },
-  {
-    code: "2193", // RxNorm: ceftriaxone
-    label: { en: "Ceftriaxone", tr: "Seftriakson" },
-    klass: { en: "Antibiotic (cephalosporin)", tr: "Antibiyotik (sefalosporin)" },
-    route: ROUTE.iv,
-  },
-  {
-    code: "435", // RxNorm: albuterol / salbutamol
-    label: { en: "Salbutamol nebulizer", tr: "Salbutamol nebül" },
-    klass: { en: "Bronchodilator (SABA)", tr: "Bronkodilatör (SABA)" },
-    route: ROUTE.neb,
-  },
-  {
-    code: "448", // RxNorm: adenosine
-    label: { en: "Adenosine", tr: "Adenozin" },
-    klass: { en: "Antiarrhythmic", tr: "Antiaritmik" },
-    route: ROUTE.iv,
-  },
-  {
-    code: "5856", // RxNorm: insulin regular
-    label: { en: "IV insulin", tr: "İ.V. insülin" },
-    klass: { en: "Insulin", tr: "İnsülin" },
-    route: ROUTE.iv,
-  },
-  {
-    code: "7242", // RxNorm: naloxone
-    label: { en: "Naloxone", tr: "Nalokson" },
-    klass: { en: "Opioid antagonist", tr: "Opioid antagonisti" },
-    route: ROUTE.iv,
-  },
-  {
-    code: "6470", // RxNorm: lorazepam
-    label: { en: "Lorazepam", tr: "Lorazepam" },
-    klass: { en: "Benzodiazepine", tr: "Benzodiazepin" },
-    route: ROUTE.iv,
-  },
-  {
-    code: "161", // RxNorm: acetaminophen / paracetamol
-    label: { en: "Paracetamol", tr: "Parasetamol" },
-    klass: { en: "Antipyretic / analgesic", tr: "Antipiretik / analjezik" },
-    route: ROUTE.iv,
-  },
-  {
-    code: "26225", // RxNorm: ondansetron
-    label: { en: "Ondansetron", tr: "Ondansetron" },
-    klass: { en: "Antiemetic (5-HT3)", tr: "Antiemetik (5-HT3)" },
-    route: ROUTE.iv,
-  },
-  {
-    code: "3992", // RxNorm: epinephrine / adrenaline
-    label: { en: "Adrenaline", tr: "Adrenalin" },
-    klass: { en: "Vasopressor / inotrope", tr: "Vazopresör / inotrop" },
-    route: ROUTE.iv,
-  },
+  opt("7806", { en: "Oxygen", tr: "Oksijen" }, { en: "Oxygen therapy", tr: "Oksijen tedavisi" }, "INH", { amount: 4, unit: "L/min" }),
+  opt("313002", { en: "IV fluid bolus (NS / RL)", tr: "İ.V. sıvı bolusu (SF / RL)" }, { en: "Crystalloid", tr: "Kristaloid" }, "IV", { amount: 500, unit: "mL" }),
+  opt("1191", { en: "Aspirin", tr: "Aspirin" }, { en: "Antiplatelet", tr: "Antiagregan" }, "PO", { amount: 300, unit: "mg" }),
+  opt("4917", { en: "Nitroglycerin (GTN)", tr: "Nitrogliserin (GTN)" }, { en: "Nitrate vasodilator", tr: "Nitrat vazodilatör" }, "SL", { amount: 0.4, unit: "mg" }),
+  opt("7052", { en: "Morphine", tr: "Morfin" }, { en: "Opioid analgesic", tr: "Opioid analjezik" }, "IV", { amount: 2.5, unit: "mg" }),
+  opt("2193", { en: "Ceftriaxone", tr: "Seftriakson" }, { en: "Antibiotic (cephalosporin)", tr: "Antibiyotik (sefalosporin)" }, "IV", { amount: 2000, unit: "mg" }),
+  opt("435", { en: "Salbutamol nebuliser", tr: "Salbutamol nebül" }, { en: "Bronchodilator (SABA)", tr: "Bronkodilatör (SABA)" }, "NEB", { amount: 5, unit: "mg" }),
+  opt("448", { en: "Adenosine", tr: "Adenozin" }, { en: "Antiarrhythmic", tr: "Antiaritmik" }, "IV", { amount: 6, unit: "mg" }),
+  opt("5856", { en: "Insulin infusion (fixed rate)", tr: "İnsülin infüzyonu (sabit hız)" }, { en: "Insulin", tr: "İnsülin" }, "IV", { amount: 0.1, unit: "units/kg/h" }),
+  opt("7242", { en: "Naloxone", tr: "Nalokson" }, { en: "Opioid antagonist", tr: "Opioid antagonisti" }, "IV", { amount: 0.4, unit: "mg" }),
+  opt("6470", { en: "Lorazepam", tr: "Lorazepam" }, { en: "Benzodiazepine", tr: "Benzodiazepin" }, "IV", { amount: 4, unit: "mg" }),
+  // Review 02 finding 44: oral first line; IV only when nil by mouth / vomiting.
+  opt("161", { en: "Paracetamol", tr: "Parasetamol" }, { en: "Antipyretic / analgesic", tr: "Antipiretik / analjezik" }, "PO", { amount: 1000, unit: "mg" }),
+  opt("26225", { en: "Ondansetron", tr: "Ondansetron" }, { en: "Antiemetic (5-HT3)", tr: "Antiemetik (5-HT3)" }, "IV", { amount: 4, unit: "mg" }),
+  // Review 02 finding 7: IM adrenaline 0.5 mg is the anaphylaxis first line.
+  opt("3992-im", { en: "Adrenaline IM 0.5 mg (anaphylaxis)", tr: "Adrenalin İ.M. 0.5 mg (anafilaksi)" }, { en: "Anaphylaxis first line", tr: "Anafilaksi birinci basamak" }, "IM", { amount: 0.5, unit: "mg" }),
+  opt("3992", { en: "Adrenaline IV (arrest / refractory anaphylaxis infusion)", tr: "Adrenalin İ.V. (arrest / dirençli anafilaksi infüzyonu)" }, { en: "Vasopressor / inotrope", tr: "Vazopresör / inotrop" }, "IV", { amount: 1, unit: "mg" }),
+  opt("8410", { en: "Alteplase (thrombolysis)", tr: "Alteplaz (tromboliz)" }, { en: "Thrombolytic", tr: "Trombolitik" }, "IV", { amount: 0.9, unit: "mg/kg" }),
 ];
 
 /* -------------------------------------------------------------------------- */
 /* Generic physiology fallback                                                */
 /* -------------------------------------------------------------------------- */
 
-type GenericClass =
+export type GenericClass =
   | "oxygen"
   | "fluids"
   | "antipyretic"
   | "nitro"
   | "bronchodilator"
   | "opioid"
-  | "naloxone";
+  | "naloxone"
+  | "adrenaline_im"
+  | "adrenaline_iv";
 
 /** Catalog codes mapped to a generic physiologic class. */
 const CLASS_BY_CODE: Record<string, GenericClass> = {
@@ -162,10 +112,12 @@ const CLASS_BY_CODE: Record<string, GenericClass> = {
   "435": "bronchodilator",
   "7052": "opioid",
   "7242": "naloxone",
+  "3992-im": "adrenaline_im",
+  "3992": "adrenaline_iv",
 };
 
 /** Classify by catalog code first, then by keyword on the code string. */
-function classify(code: string): GenericClass | null {
+export function classify(code: string): GenericClass | null {
   const known = CLASS_BY_CODE[code];
   if (known) return known;
   const c = code.toLowerCase();
@@ -177,7 +129,23 @@ function classify(code: string): GenericClass | null {
   if (c.includes("salbut") || c.includes("albuter") || c.includes("bronch")) return "bronchodilator";
   if (c.includes("morphin") || c.includes("fentan") || c.includes("opioid")) return "opioid";
   if (c.includes("naloxon")) return "naloxone";
+  if (c.includes("adrenal") || c.includes("epineph")) return "adrenaline_iv";
   return null;
+}
+
+/**
+ * Context the gates need. Supplied by clinicalCourse / treatmentRules; when
+ * absent (bare call) the fallback stays permissive EXCEPT for the two agents
+ * whose indiscriminate effect the review flagged: nitrates and naloxone, which
+ * then require an explicit allow.
+ */
+export interface EffectContext {
+  /** Nitrate gate verdict from treatmentRules.nitrateGate (undefined = not gated). */
+  nitrateAllowed?: boolean;
+  /** An opioid is on board (prior dose) or the case is an opioid toxidrome. */
+  opioidOnBoard?: boolean;
+  /** The case is an anaphylaxis (IM adrenaline raises BP and relieves bronchospasm). */
+  anaphylaxis?: boolean;
 }
 
 /**
@@ -189,6 +157,7 @@ function classify(code: string): GenericClass | null {
 export function genericEffect(
   code: string,
   v: { spo2: number; systolic: number; hr: number; tempC: number; rr: number; diastolic: number },
+  ctx: EffectContext = {},
 ): VitalEffect[] {
   const cls = classify(code);
   const eff: VitalEffect[] = [];
@@ -209,8 +178,11 @@ export function genericEffect(
       if (v.tempC > 38) eff.push({ key: "tempC", delta: -0.8, onsetMs: 300_000 });
       break;
     case "nitro":
-      // Small, careful drop in systolic pressure.
-      eff.push({ key: "systolic", delta: -8, onsetMs: 90_000 });
+      // Review 02 finding 8: no effect unless the nitrate gate explicitly allows
+      // (ischaemic pain / APO, SBP >= 90, HR 50-100, no RV infarct, no PDE-5i).
+      if (ctx.nitrateAllowed === true) {
+        eff.push({ key: "systolic", delta: -8, onsetMs: 90_000 });
+      }
       break;
     case "bronchodilator":
       // Relieve tachypnoea and improve oxygenation.
@@ -220,17 +192,61 @@ export function genericEffect(
       }
       break;
     case "opioid":
-      // Mild analgesic slowing of heart + respiratory rate.
+      // Analgesic slowing of heart + respiratory rate; each repeat dose stacks
+      // (review 02 finding 36: cumulative respiratory depression).
       eff.push({ key: "hr", delta: -6, onsetMs: 120_000 });
       eff.push({ key: "rr", delta: -2, onsetMs: 120_000 });
+      eff.push({ key: "spo2", delta: -1, onsetMs: 300_000 });
       break;
     case "naloxone":
-      // Reverse respiratory depression.
-      eff.push({ key: "rr", delta: 4, onsetMs: 60_000 });
-      eff.push({ key: "spo2", delta: 4, onsetMs: 60_000 });
+      // Review 02 finding 36: naloxone reverses an opioid; it does nothing to a
+      // patient with no opioid on board.
+      if (ctx.opioidOnBoard === true) {
+        eff.push({ key: "rr", delta: 4, onsetMs: 60_000 });
+        eff.push({ key: "spo2", delta: 4, onsetMs: 60_000 });
+      }
+      break;
+    case "adrenaline_im":
+      // Review 02 finding 7: IM adrenaline restores pressure and eases
+      // bronchospasm in anaphylaxis over ~5 min.
+      if (ctx.anaphylaxis === true || v.systolic < 100) {
+        eff.push({ key: "systolic", delta: 20, onsetMs: 300_000 });
+        eff.push({ key: "diastolic", delta: 10, onsetMs: 300_000 });
+        eff.push({ key: "spo2", delta: 4, onsetMs: 300_000 });
+        eff.push({ key: "rr", delta: -4, onsetMs: 300_000 });
+      }
+      eff.push({ key: "hr", delta: 8, onsetMs: 180_000 });
+      break;
+    case "adrenaline_iv":
+      eff.push({ key: "systolic", delta: 25, onsetMs: 60_000 });
+      eff.push({ key: "hr", delta: 20, onsetMs: 60_000 });
       break;
     default:
       break;
   }
   return eff;
+}
+
+/**
+ * The adverse physiologic consequence of a treatment the case has authored as
+ * CONTRAINDICATED but whose fixture carries no explicit effects (review 02
+ * finding 28: contraindicated items must act negatively, never as a rescue).
+ * Fluids in pulmonary oedema: SpO2 falls, RR rises (ESC 2021 heart failure,
+ * https://doi.org/10.1093/eurheartj/ehab368). Nitrates when contraindicated
+ * drop the pressure further; opioids depress breathing.
+ */
+export function adverseEffectForContraindicated(code: string): VitalEffect[] {
+  switch (classify(code)) {
+    case "fluids":
+      return [
+        { key: "spo2", delta: -4, onsetMs: 300_000 },
+        { key: "rr", delta: 4, onsetMs: 300_000 },
+      ];
+    case "nitro":
+      return [{ key: "systolic", delta: -15, onsetMs: 90_000 }, { key: "hr", delta: 10, onsetMs: 90_000 }];
+    case "opioid":
+      return [{ key: "rr", delta: -3, onsetMs: 120_000 }, { key: "spo2", delta: -2, onsetMs: 300_000 }];
+    default:
+      return [];
+  }
 }
