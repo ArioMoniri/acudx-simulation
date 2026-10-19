@@ -1,0 +1,31 @@
+# AcuDx one-click deploy: `DOMAIN=sim.example.edu docker compose up -d`
+# Point the domain's A record at this host first; Caddy obtains the certificate.
+services:
+  web:
+    build: { context: ., dockerfile: deploy/Dockerfile.web }
+    environment:
+      - DOMAIN=${DOMAIN:-}
+    ports: ["80:80", "443:443", "443:443/udp"]
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [server, multiplayer]
+    restart: unless-stopped
+  server:
+    build: { context: ., dockerfile: deploy/Dockerfile.server }
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - AIRGAPPED=${AIRGAPPED:-false}
+      - CORS_ORIGINS=https://${DOMAIN:-localhost}
+    volumes:
+      - server_data:/app/server/data
+    restart: unless-stopped
+  multiplayer:
+    build: { context: ., dockerfile: deploy/Dockerfile.multiplayer }
+    restart: unless-stopped
+volumes:
+  caddy_data:
+  caddy_config:
+  server_data:

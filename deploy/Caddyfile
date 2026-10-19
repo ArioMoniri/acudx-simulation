@@ -1,0 +1,20 @@
+# One domain in, TLS out. Set DOMAIN=sim.example.edu (or leave ":80" for local).
+{$DOMAIN::80} {
+	encode zstd gzip
+	handle_path /api/* {
+		reverse_proxy server:8890
+	}
+	handle /ws* {
+		reverse_proxy multiplayer:8899
+	}
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

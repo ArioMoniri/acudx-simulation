@@ -1,0 +1,12 @@
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY server/requirements.txt server/requirements.txt
+RUN pip install -r server/requirements.txt
+COPY server server
+RUN mkdir -p /app/server/data
+ENV HOST=0.0.0.0 PORT=8890 ACUDX_DB_PATH=/app/server/data/acudx.db
+EXPOSE 8890
+HEALTHCHECK --interval=20s --timeout=5s --retries=10 CMD curl -sf http://localhost:8890/health || exit 1
+CMD ["python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8890"]
