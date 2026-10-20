@@ -356,7 +356,9 @@ runcmd:
   # GPU, vLLM died with "Engine core initialization failed"). So vLLM starts alone and the
   # GPU side-cars start only after its health check passes (compose --wait, 40 min cap).
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d caddy
-  - cd /opt/acudx && set -a && . ./.env && set +a && timeout 2400 docker compose up -d --wait vllm || echo "acudx: vllm did not become healthy" >&2
+  - |
+    cd /opt/acudx && set -a && . ./.env && set +a
+    timeout 2400 docker compose up -d --wait vllm || echo "acudx - vllm did not become healthy within 40 min" >&2
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d speaches kokoro
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d --build chatterbox
   # Task 24 check: a fresh container from the same service definition reports what torch sees.
