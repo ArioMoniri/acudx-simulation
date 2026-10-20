@@ -85,8 +85,14 @@ test.describe("encounter", () => {
     const administer = page.getByRole("button", { name: /^Administer / }).first();
     await expect(administer).toBeVisible();
     await administer.click();
+    // A medication is never given by a bare click (clinical review 02, finding
+    // 9): Administer opens the dose / route / indication form prefilled from the
+    // formulary, and "Give" submits it through the five-rights + allergy check.
+    const give = page.getByRole("button", { name: /^Confirm and administer / }).first();
+    await expect(give).toBeVisible();
+    await give.click();
     // Treatments are repeatable, so the control keeps its "Administer" label
-    // and the given-count badge + timestamp record the dose.
+    // and the given-count badge + MAR line record the dose.
     await expect(page.getByText("1 given")).toBeVisible();
 
     // Diagnosis: add a candidate to the differential and commit it.
@@ -97,8 +103,12 @@ test.describe("encounter", () => {
     await expect(add).toBeVisible();
     const dxName = (await add.getAttribute("aria-label"))!.replace(/^Add /, "").replace(/ to the differential$/, "");
     await add.click();
-    await page.getByRole("button", { name: `Commit ${dxName} as the working diagnosis` }).click();
-    await expect(page.getByText(/Working diagnosis committed|Committed/).first()).toBeVisible();
+    const commit = page.getByRole("button", { name: `Commit ${dxName} as the working diagnosis` });
+    await commit.click();
+    // Committed: the control reads as pressed ("Working") and the working
+    // diagnosis card offers the attending debrief.
+    await expect(commit).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("heading", { name: "Working diagnosis" })).toBeVisible();
 
     // Attending debrief -> full report (Feedback page).
     await page.getByRole("button", { name: "View attending debrief" }).click();

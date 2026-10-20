@@ -305,8 +305,10 @@ export function ActivityTabs({
           </TabsList>
         </div>
         {/* Non-stealing notification: a landing result is announced here instead
-            of moving the tab strip. Always mounted so the change is spoken. */}
-        <span role="status" aria-live="polite" className="sr-only">
+            of moving the tab strip. Always mounted so the change is spoken. A
+            plain polite live region, not role=status: RouteFallback's status
+            spinner is what "the route has settled" checks wait on. */}
+        <span aria-live="polite" aria-atomic="true" className="sr-only">
           {unseenResults > 0 ? t("ehr.tabs.newResults", { count: unseenResults }) : ""}
         </span>
         <span
