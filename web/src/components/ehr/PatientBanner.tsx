@@ -9,6 +9,7 @@ import { PatientPhoto } from "@/components/PatientPhoto";
 import { resolvePatientVisual } from "@/domain/patientIdentity";
 import { SimBadge } from "./SimBadge";
 import { conceptText, esiToState, pick } from "./labels";
+import { getGeneration, useEncounterSelector } from "@/state/encounterStore";
 import type { Lang } from "@/data/mock";
 import type { CaseInstance } from "@/domain/case";
 
@@ -56,6 +57,9 @@ function BannerFact({
 export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProps) {
   const { t } = useTranslation();
   const { patient, encounter, allergies, triageVitals } = caseInstance;
+  // Provenance of the running case (model, template, offline, curated); the
+  // badge names it so a learner never mistakes a template for a model case.
+  const generation = useEncounterSelector(getGeneration);
 
   const sexLabel = t(`common.${patient.gender === "female" ? "female" : "male"}`);
   const acuityPresent = stateMap[esiToState(caseInstance.acuityESI)];
@@ -114,7 +118,7 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
                 </span>
               </span>
             </p>
-            <SimBadge />
+            <SimBadge generation={generation} />
           </div>
         </div>
 
