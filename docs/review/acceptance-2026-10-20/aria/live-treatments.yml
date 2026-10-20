@@ -1,0 +1,206 @@
+- main:
+  - figure:
+    - img "Synthetic patient portrait, not a real individual"
+  - heading "Sara" [level=2]
+  - text: 24 y, female MRNSIM-AI-U70WZA
+  - 'note "Simulation. Synthetic patient. For education only. Case source: model generated."': SIM synthetic patient model generated council accepted
+  - text: 00:36
+  - 'status "Clinical Director: the server adapts vitals, facts and complications to your actions."': "Director: 0 steps"
+  - button "New case"
+  - text: Chief complaint I have a fever, severe headache, and my neck feels very stiff. Allergies No known drug allergies Code Full code Acuity ESI 2 Abnormal Weight 58kg Encounter Emergency (ED)
+  - navigation "Stage":
+    - list "Stage":
+      - listitem: Chart review
+      - listitem: Interview and exam
+      - listitem: Orders
+      - listitem: Results
+      - listitem: A and P
+  - paragraph: Difficulty 3/5 · model generated
+  - complementary "Storyboard":
+    - figure:
+      - img "Synthetic patient portrait — not a real individual"
+      - button "Enlarge patient view"
+    - paragraph: Sara
+    - paragraph: In pain, anxious
+    - paragraph: Tachycardic · Diaphoretic · Pale · Febrile
+    - term: MRN
+    - definition: SIM-AI-U70WZA
+    - term: Age
+    - definition: "24"
+    - term: Sex
+    - definition: female
+    - term: Acuity
+    - definition: ESI 2
+    - term: Weight
+    - definition: 58 kg
+    - paragraph: Fills in as you work the chart.
+    - heading "Problem list" [level=3]
+    - paragraph: No problems added yet. Build them in A and P.
+    - heading "Allergies" [level=3]
+    - paragraph: No known drug allergies
+    - heading "Vitals snapshot Live" [level=3]
+    - paragraph: HR
+    - paragraph: 115bpm
+    - paragraph: BP
+    - paragraph: 100/65
+    - paragraph: RR
+    - paragraph: 20/min
+    - paragraph: SpO2
+    - paragraph: 97%
+    - paragraph: Temp
+    - paragraph: 39.2°C
+    - heading "Medications and history" [level=3]
+    - paragraph: Ask about medications and past history to populate this.
+    - heading "Exam findings" [level=3]
+    - paragraph: Request an exam maneuver and findings appear here.
+    - heading "Care team" [level=3]
+    - list:
+      - listitem: You Treating clinician
+      - listitem: Triage nurse Nursing
+      - listitem: Charge nurse Resuscitation support
+    - heading "Encounter clock" [level=3]
+    - text: 00:36
+  - tablist "Chart sections":
+    - tab "Chart Review"
+    - tab "Interview"
+    - tab "Flowsheets"
+    - tab "Monitor"
+    - tab "Orders" [selected]
+    - tab "Results"
+    - tab "Guidance"
+    - tab "Problem List / A&P"
+  - tabpanel "Orders":
+    - tablist:
+      - tab "Order tests"
+      - tab "Treatments" [selected]
+    - tabpanel "Treatments":
+      - paragraph: Administer to change the patient — the monitor responds live.
+      - text: Oxygen therapy
+      - list:
+        - listitem:
+          - text: "Oxygen Dose: 4 L/min Route: Inhaled"
+          - button "Administer Oxygen": Administer
+      - text: Crystalloid
+      - list:
+        - listitem:
+          - text: "IV fluid bolus (NS / RL) Dose: 500 mL Route: IV"
+          - button "Administer IV fluid bolus (NS / RL)": Administer
+      - text: Antiplatelet
+      - list:
+        - listitem:
+          - text: "Aspirin Dose: 300 mg Route: PO"
+          - button "Administer Aspirin": Administer
+      - text: Nitrate vasodilator
+      - list:
+        - listitem:
+          - text: "Nitroglycerin (GTN) Dose: 0.4 mg Route: SL"
+          - button "Administer Nitroglycerin (GTN)": Administer
+      - text: Opioid analgesic
+      - list:
+        - listitem:
+          - text: "Morphine Dose: 2.5 mg Route: IV High-alert"
+          - button "Administer Morphine": Administer
+      - text: Antibiotic
+      - list:
+        - listitem:
+          - text: "Ceftriaxone Dose: 2000 mg Route: IV"
+          - button "Administer Ceftriaxone": Administer
+        - listitem:
+          - text: "Piperacillin-tazobactam (penicillin) Dose: 4500 mg Route: IV"
+          - button "Administer Piperacillin-tazobactam (penicillin)": Administer
+        - listitem:
+          - text: "Meropenem (carbapenem) Dose: 1000 mg Route: IV"
+          - button "Administer Meropenem (carbapenem)": Administer
+        - listitem:
+          - text: "Vancomycin (glycopeptide) Dose: 1500 mg Route: IV High-alert"
+          - button "Administer Vancomycin (glycopeptide)": Administer
+        - listitem:
+          - text: "Gentamicin (aminoglycoside) Dose: 5 mg/kg Route: IV High-alert"
+          - button "Administer Gentamicin (aminoglycoside)": Administer
+        - listitem:
+          - text: "Levofloxacin (fluoroquinolone) Dose: 500 mg Route: IV"
+          - button "Administer Levofloxacin (fluoroquinolone)": Administer
+        - listitem:
+          - text: "Clarithromycin (macrolide) Dose: 500 mg Route: PO"
+          - button "Administer Clarithromycin (macrolide)": Administer
+        - listitem:
+          - text: "Doxycycline (tetracycline) Dose: 200 mg Route: PO"
+          - button "Administer Doxycycline (tetracycline)": Administer
+        - listitem:
+          - text: "Clindamycin (lincosamide) Dose: 600 mg Route: IV"
+          - button "Administer Clindamycin (lincosamide)": Administer
+        - listitem:
+          - text: "Metronidazole (nitroimidazole) Dose: 500 mg Route: IV"
+          - button "Administer Metronidazole (nitroimidazole)": Administer
+        - listitem:
+          - text: "Chloramphenicol Dose: 25 mg/kg Route: IV High-alert"
+          - button "Administer Chloramphenicol": Administer
+      - text: Antimalarial / antiviral
+      - list:
+        - listitem:
+          - text: "Artesunate IV (antimalarial) Dose: 2.4 mg/kg Route: IV"
+          - button "Administer Artesunate IV (antimalarial)": Administer
+        - listitem:
+          - text: "Oseltamivir (neuraminidase inhibitor) Dose: 75 mg Route: PO"
+          - button "Administer Oseltamivir (neuraminidase inhibitor)": Administer
+      - text: Corticosteroid
+      - list:
+        - listitem:
+          - text: "Dexamethasone Dose: 6 mg Route: IV"
+          - button "Administer Dexamethasone": Administer
+      - text: Bronchodilator (SABA)
+      - list:
+        - listitem:
+          - text: "Salbutamol nebuliser Dose: 5 mg Route: Nebulised"
+          - button "Administer Salbutamol nebuliser": Administer
+      - text: Antiarrhythmic
+      - list:
+        - listitem:
+          - text: "Adenosine Dose: 6 mg Route: IV"
+          - button "Administer Adenosine": Administer
+      - text: Insulin
+      - list:
+        - listitem:
+          - text: "Insulin infusion (fixed rate) Dose: 0.1 units/kg/h Route: IV High-alert"
+          - button "Administer Insulin infusion (fixed rate)": Administer
+      - text: Opioid antagonist
+      - list:
+        - listitem:
+          - text: "Naloxone Dose: 0.4 mg Route: IV"
+          - button "Administer Naloxone": Administer
+      - text: Benzodiazepine
+      - list:
+        - listitem:
+          - text: "Lorazepam Dose: 4 mg Route: IV High-alert"
+          - button "Administer Lorazepam": Administer
+      - text: Antipyretic / analgesic
+      - list:
+        - listitem:
+          - text: "Paracetamol Dose: 1000 mg Route: PO"
+          - button "Administer Paracetamol": Administer
+      - text: Antiemetic (5-HT3)
+      - list:
+        - listitem:
+          - text: "Ondansetron Dose: 4 mg Route: IV"
+          - button "Administer Ondansetron": Administer
+      - text: Anaphylaxis first line
+      - list:
+        - listitem:
+          - text: "Adrenaline IM 0.5 mg (anaphylaxis) Dose: 0.5 mg Route: IM High-alert"
+          - button "Administer Adrenaline IM 0.5 mg (anaphylaxis)": Administer
+      - text: Vasopressor / inotrope
+      - list:
+        - listitem:
+          - text: "Adrenaline IV (arrest / refractory anaphylaxis infusion) Dose: 1 mg Route: IV High-alert"
+          - button "Administer Adrenaline IV (arrest / refractory anaphylaxis infusion)": Administer
+      - text: Thrombolytic
+      - list:
+        - listitem:
+          - text: "Alteplase (thrombolysis) Dose: 0.9 mg/kg Route: IV High-alert"
+          - button "Administer Alteplase (thrombolysis)": Administer
+    - complementary:
+      - heading "Order tracker" [level=3]
+      - paragraph: No orders yet. Pick a test to watch its result arrive.
+      - paragraph: Results open in the Results tab as each test finalises.
+      - paragraph: ETA is the clinical turnaround in simulated time; the simulation compresses time, so the "ready in" countdown is the real wait on your screen.
+  - note "Simulation. Synthetic patient. For education only.": SIM synthetic patient education only
