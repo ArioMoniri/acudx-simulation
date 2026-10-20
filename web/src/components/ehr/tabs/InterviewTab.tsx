@@ -24,6 +24,7 @@ import {
   askQuestion,
   requestExam,
   recordDialogue,
+  dedupePatientTurns,
   logGuardOutcome,
   getCurrentVitals,
   getPersonaLiveContext,
@@ -375,7 +376,7 @@ export function InterviewTab({
   // after a typed question now appears after it, not pinned to the top. The sort
   // is stable, so a doctor turn stays before its patient reply within one seq.
   const allTurns = useMemo(
-    () => [...turns, ...dialogueTurns].sort((a, b) => a.seq - b.seq),
+    () => dedupePatientTurns([...turns, ...dialogueTurns].sort((a, b) => a.seq - b.seq)),
     [turns, dialogueTurns],
   );
   const allAffect = useMemo(
@@ -645,6 +646,7 @@ export function InterviewTab({
   async function sendToPatient(text: string) {
     if (typingTimer.current) window.clearTimeout(typingTimer.current);
     setTyping(true);
+    let answered = false;
     try {
       const intent = inferQuestionIntent(text, caseInstance);
       const tres = await backendPatientTurn(buildPatientTurnRequest(text, intent));
@@ -658,12 +660,14 @@ export function InterviewTab({
       // Neutral affect caption — the reply's live provenance stays internal
       // (recorded as `source` for metrics) and is never shown to the learner.
       appendExchange(text, { en: reply, tr: reply }, affectLabel, "live");
+      answered = true;
       // The question the persona just answered is revealed and steps the Director
       // (voiced: the narrator's line is not added on top of the persona's reply).
       if (intent) askQuestion(intent, { utterance: text, voiced: true });
     } catch {
-      // Belt and suspenders: the client never throws, but never trust the wire.
-      liveFallback(text);
+      // Belt and suspenders: the client never throws, but never trust the wire. Once the
+      // persona answered, the fallback would add a second patient line for the same turn.
+      if (!answered) liveFallback(text);
     } finally {
       setTyping(false);
     }

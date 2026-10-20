@@ -373,6 +373,92 @@ test.describe("cases are generated on request", () => {
     await expect.poll(async () => Math.abs((await read("SpO2")) - DIRECTOR_VITALS.spo2), { message: "SpO2 follows the Director", timeout: 15_000 }).toBeLessThanOrEqual(3);
   });
 
+  test("a vetoed treatment table blocks administration until a safe one lands (06b F30)", async ({ page }) => {
+    const gw = await signIn(page);
+    const rec = LIVE[0];
+    const threadId = "th-f30";
+    const spec = (treatments: string) => ({
+      ...rec.spec,
+      meta: { ...rec.spec.meta, source: "model", pipeline: "staged", thread_id: threadId, layers: { treatments } },
+    });
+    const layerReads: number[] = [];
+    let releaseFirst: () => void = () => undefined;
+    const firstHeld = new Promise<void>((r) => {
+      releaseFirst = r;
+    });
+    await page.route(
+      (url) => url.pathname === "/api/v2/case/generate/stream" || url.pathname === `/api/v2/case/${threadId}/layer/treatments`,
+      async (route) => {
+        const path = new URL(route.request().url()).pathname;
+        if (path.endsWith("/stream")) {
+          gw.calls.push({ method: "POST", path, body: null });
+          gw.served.push(rec);
+          return route.fulfill({
+            status: 200, headers: { "content-type": "text/event-stream" },
+            body: sse("start", { thread_id: threadId })
+              + sse("opening.ready", { thread_id: threadId, opening: {}, spec: spec("pending") })
+              + sse("layer.pending", { layer: "treatments", reason: "continuation" })
+              + sse("error", { stage: "treatments", error: "safety_veto", status: 502, retryable: true, thread_id: threadId,
+                               reason: "The safety review rejected the treatment table after the rewrite.", issues: ["unsafe dose"] }),
+          });
+        }
+        layerReads.push(layerReads.length + 1);
+        if (layerReads.length === 1) {
+          await firstHeld;
+          return route.fulfill({ status: 502, json: { error: "safety_veto", detail: "rejected again", retryable: true } });
+        }
+        return route.fulfill({ json: { thread_id: threadId, layer: "treatments", status: "ready", data: {}, spec: spec("ready") } });
+      },
+    );
+    await openEncounter(page, gw);
+    await openTab(page, "Orders");
+    await page.getByRole("tab", { name: /^Treatments/ }).click();
+    const notice = page.getByTestId("treatment-table-notice");
+    // Regenerated once on its own: nothing pre-made is shown and nothing can be given.
+    await expect(notice.getByText("Treatment options are being regenerated")).toBeVisible({ timeout: 15_000 });
+    const administer = page.getByRole("button", { name: /^Administer / }).first();
+    await expect(administer).toBeDisabled();
+    releaseFirst();
+    // Rejected again: the failure is shown with Retry for that layer only.
+    await expect(notice.getByText("The safety review rejected the treatment options for this patient")).toBeVisible();
+    await expect(administer).toBeDisabled();
+    await notice.getByRole("button", { name: "Retry" }).click();
+    await expect(notice).toHaveCount(0, { timeout: 15_000 });
+    await expect(administer).toBeEnabled();
+    expect(layerReads).toHaveLength(2);
+  });
+
+  test("one patient line per action: the persona reply suppresses the Director's line for the same step", async ({ page }) => {
+    const gw = await signIn(page);
+    const PERSONA = "It started two days ago with chills, doctor.";
+    const turns: number[] = [];
+    await page.route(
+      (url) => url.pathname === "/api/v1/patient/turn",
+      async (route) => {
+        turns.push(turns.length + 1);
+        // The second reply says exactly what the Director narrates: shown once.
+        const utterance = turns.length === 1 ? PERSONA : DIRECTOR_UTTERANCE;
+        return route.fulfill({
+          json: { utterance, routed_as: "in_scope", state_advance: true, flags: [], meta: null,
+                  guard: { class: "in_scope", score: 0.9, rationale: "history question" } },
+        });
+      },
+    );
+    await openEncounter(page, gw);
+    const transcript = page.getByRole("log", { name: "Encounter transcript" });
+    await askQuestion(page, "When did the fever start?");
+    await expect(transcript.getByText(PERSONA)).toHaveCount(1, { timeout: 15_000 });
+    await expect.poll(() => gw.directorCalls().length, { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+    // The Director answered the same step, but the persona already did: no narrator line.
+    await page.waitForTimeout(1_000);
+    await expect(transcript.getByText(DIRECTOR_UTTERANCE)).toHaveCount(0);
+    await askQuestion(page, "How is your breathing now?");
+    await expect(transcript.getByText(DIRECTOR_UTTERANCE)).toHaveCount(1, { timeout: 15_000 });
+    await expect.poll(() => gw.directorCalls().length, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+    await page.waitForTimeout(1_000);
+    await expect(transcript.getByText(DIRECTOR_UTTERANCE)).toHaveCount(1);
+  });
+
   test("the patient reply reflects the Director's utterance", async ({ page }) => {
     const gw = await signIn(page);
     await openEncounter(page, gw);

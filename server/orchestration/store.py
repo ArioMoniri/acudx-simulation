@@ -20,6 +20,9 @@ Interface (stable, other modules bind to it):
     Add one SSE event to the thread log; returns its monotonically increasing id.
 ``events(thread_id, after=0) -> list[(id, event, data)]``
     The log after ``after`` (reconnect: ``GET /v2/case/{thread_id}/events?after=``).
+``set_room(thread_id, code)``, ``add_member(thread_id, member, code)``, ``is_member(thread_id, *ids)``
+    Team-room membership of a thread: the owner binds the room by its join code (a salted
+    hash is kept), members join with the same code and may then read the thread.
 ``list_for_owner(owner, limit) -> list[dict]``
     The learner's own generated encounters (Cases page history), newest first.
 
@@ -39,6 +42,7 @@ Education only. Synthetic patients.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sqlite3
@@ -145,6 +149,48 @@ class CaseStore:
                 "SELECT id, event, data_json FROM case_events WHERE thread_id = ? AND id > ? ORDER BY id",
                 (thread_id, int(after or 0))).fetchall()
         return [(int(r["id"]), str(r["event"]), json.loads(r["data_json"])) for r in rows]
+
+    # ----------------------------------------------------------------- rooms
+    @staticmethod
+    def _code_hash(thread_id: str, code: str) -> str:
+        norm = "".join(str(code or "").split()).upper()
+        return hashlib.sha256(f"{thread_id}:{norm}".encode("utf-8")).hexdigest()
+
+    def set_room(self, thread_id: str, code: str) -> bool:
+        """Bind a thread to a team room by its join code (only a salted hash is kept). The
+        owner calls it; members then join with the same code (:meth:`add_member`)."""
+        if not str(code or "").strip():
+            return False
+        digest = self._code_hash(thread_id, code)
+
+        def m(s: dict[str, Any]) -> None:
+            room = dict(s.get("room") or {})
+            room["code_hash"] = digest
+            room.setdefault("members", [])
+            s["room"] = room
+
+        return self.update(thread_id, m) is not None
+
+    def add_member(self, thread_id: str, member: str, code: str) -> bool:
+        """Record ``member`` as a member of the thread's room when ``code`` is the room's code."""
+        st = self.get(thread_id)
+        room = (st or {}).get("room") or {}
+        if not member or not room.get("code_hash") or room["code_hash"] != self._code_hash(thread_id, code):
+            return False
+
+        def m(s: dict[str, Any]) -> None:
+            r = dict(s.get("room") or {})
+            members = list(r.get("members") or [])
+            if member not in members:
+                members.append(member)
+            r["members"] = members[-32:]
+            s["room"] = r
+
+        return self.update(thread_id, m) is not None
+
+    def is_member(self, thread_id: str, *ids: Optional[str]) -> bool:
+        members = set(((self.get(thread_id) or {}).get("room") or {}).get("members") or [])
+        return any(i and i in members for i in ids)
 
     # ---------------------------------------------------------------- history
     def list_for_owner(self, owner: str, limit: int = 50) -> list[dict[str, Any]]:

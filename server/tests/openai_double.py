@@ -48,6 +48,8 @@ class Scenario:
     layer_delay_s: float = 0.0
     stream_chunk: int = 24               # characters per streamed delta
     treatments_unsafe_first: bool = False  # first table marks a contraindicated row indicated
+    event_unsafe: bool = False           # branch events name a drug and the event safety judge fails them
+    render_drops_numbers: bool = False   # TR renderings drop every digit (the rendering gate must reject)
     prompt_tokens: int = 1200
     completion_tokens: int = 800
     calls: list[dict[str, Any]] = field(default_factory=list)
@@ -214,6 +216,10 @@ def _layer_reply(layer: str, text: str, sc: Scenario) -> dict[str, Any]:
                          for lab in spec["labs"]][:5],
                 "imaging": [{"code": im["code"], "modality": im["modality_en"], "findings": im["findings_en"],
                              "image_query": im.get("image_query_en") or ""} for im in spec["imaging"]][:2]}
+    if kind == "event" and sc.event_unsafe:
+        return {"facts": ["Given 10 mg morphine and now drowsy."],
+                "nurse_call": "Doctor, the patient is very drowsy after the morphine.",
+                "exam_changes": [], "affect": "drowsy"}
     if kind == "event":
         return {"facts": ["The patient is more breathless and clammy."],
                 "nurse_call": "Doctor, the pressure is dropping and the patient looks worse.",
@@ -273,7 +279,13 @@ def build_double(sc: Scenario) -> FastAPI:
                 system = next((str(m.get("content") or "") for m in messages if m.get("role") == "system"), "")
                 content = json.dumps(_layer_reply(layer, system, sc))
         elif role == "judge:safety_event":
-            content = json.dumps({"verdict": "pass", "issues": []})
+            content = json.dumps({"verdict": "fail", "issues": ["morphine dose unsafe for this event"]}
+                                 if sc.event_unsafe else {"verdict": "pass", "issues": []})
+        elif role == "author.render":
+            m = re.search(r"^TEXTS\n(.*)$", user_text, re.MULTILINE)
+            texts = json.loads(m.group(1)) if m else []
+            out = ["[TR] " + (re.sub(r"\d", "", t) if sc.render_drops_numbers else t) for t in texts]
+            content = json.dumps({"texts": out}, ensure_ascii=False)
         elif role == "author" and sc.live_drafts:
             content = json.dumps(sc.live_drafts.pop(0), ensure_ascii=False)
         elif role == "author":

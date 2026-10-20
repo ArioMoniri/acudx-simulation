@@ -50,7 +50,15 @@ import {
 import { gateFor } from "@/domain/treatmentRules";
 import { matchTreatmentResponse } from "@/domain/treatmentMatch";
 import { inferQuestionTopic } from "@/domain/scopeGuard";
-import { directorStep, type DirectorAction, type DirectorAffect, type DirectorCaseState, type DirectorStepResult } from "@/lib/caseGenV2";
+import {
+  directorStep,
+  type DebriefLayerData,
+  type DirectorAction,
+  type DirectorAffect,
+  type DirectorCaseState,
+  type DirectorStepResult,
+  type DirectorThreadEvent,
+} from "@/lib/caseGenV2";
 import { layerForIntent, layerForManeuver, layerPending, type LayerStatus } from "@/lib/caseLayers";
 import { resolveOrder as engineResolveOrder, type OrderResult } from "@/lib/resultsApi";
 import {
@@ -211,6 +219,22 @@ export interface DirectorSlice {
   error: string | null;
 }
 
+/** Why a layer of the running thread failed (shown with Retry; nothing replaces it). */
+export interface LayerFailure {
+  error: string;
+  reason?: string;
+  issues?: string[];
+}
+
+/** The model-written debrief of the running thread, requested when the diagnosis is committed. */
+export interface DebriefSlice {
+  status: "idle" | "pending" | "ready" | "failed";
+  data: DebriefLayerData | null;
+  /** Renderings of the debrief in another UI language (the source stays authoritative). */
+  rendered: Partial<Record<"tr", DebriefLayerData>>;
+  error: string | null;
+}
+
 export interface ProblemListEntry {
   /** Condition code the student added. */
   code: string;
@@ -259,6 +283,9 @@ export interface EncounterState {
    * the server has written for this thread so far. Empty for a case that arrived whole.
    */
   caseLayers: Record<string, LayerStatus>;
+  /** Failure reasons of failed layers (06b F30: a safety veto fails the layer honestly). */
+  layerErrors: Record<string, LayerFailure>;
+  debrief: DebriefSlice;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -300,7 +327,13 @@ function initialState(): EncounterState {
     generation: null,
     director: initialDirector(),
     caseLayers: {},
+    layerErrors: {},
+    debrief: initialDebrief(),
   };
+}
+
+function initialDebrief(): DebriefSlice {
+  return { status: "idle", data: null, rendered: {}, error: null };
 }
 
 function initialDirector(): DirectorSlice {
@@ -324,6 +357,10 @@ let directorTickQueued = false;
 let directorClock: ReturnType<typeof setInterval> | null = null;
 /** Sim time the Director accounts for every cadence tick. */
 const DIRECTOR_TICK_MS = 60_000;
+/** Off for a room member who is not the host: the host's cadence drives the shared course. */
+let directorClockEnabled = true;
+/** This browser tab, echoed on the thread's `director` events (a step is applied once). */
+export const DIRECTOR_CLIENT_ID = `tab-${Math.random().toString(36).slice(2, 10)}`;
 
 function emit(): void {
   for (const l of listeners) l();
@@ -419,7 +456,48 @@ export function getCaseLayers(s: EncounterState): Record<string, LayerStatus> {
 /** Mark layer statuses of the running thread (layer.pending / layer.ready / error events). */
 export function setCaseLayers(threadId: string, layers: Record<string, LayerStatus>): void {
   if (!state.caseInstance || state.generation?.threadId !== threadId) return;
-  setState({ ...state, caseLayers: { ...state.caseLayers, ...layers } });
+  setState({ ...state, caseLayers: { ...state.caseLayers, ...layers }, layerErrors: clearedErrors(layers) });
+}
+
+/** A layer of the running thread failed: keep why (shown with Retry for that layer only). */
+export function setCaseLayerFailure(threadId: string, layer: string, failure: LayerFailure): void {
+  if (!state.caseInstance || state.generation?.threadId !== threadId) return;
+  setState({
+    ...state,
+    caseLayers: { ...state.caseLayers, [layer]: "failed" },
+    layerErrors: { ...state.layerErrors, [layer]: failure },
+  });
+}
+
+/** The failure of a layer of the running thread, if it failed. */
+export function getLayerFailure(s: EncounterState, layer: string): LayerFailure | null {
+  return s.caseLayers[layer] === "failed" ? (s.layerErrors[layer] ?? { error: "layer_failed" }) : null;
+}
+
+/**
+ * True while an on-request case has no safe treatment table yet (pending, or failed after
+ * the safety review): administration is blocked until the table lands (06b F30).
+ */
+export function treatmentsLocked(s: EncounterState): boolean {
+  const st = s.caseLayers.treatments;
+  return st !== undefined && st !== "ready";
+}
+
+/** The last failure of a layer that is being written again (pending after a failure). */
+export function getLayerRetrying(s: EncounterState, layer: string): LayerFailure | null {
+  return s.caseLayers[layer] === "pending" ? (s.layerErrors[layer] ?? null) : null;
+}
+
+/** A layer's failure is kept while it is written again and cleared when it lands. */
+function clearedErrors(layers: Record<string, LayerStatus>): Record<string, LayerFailure> {
+  let out = state.layerErrors;
+  for (const [name, st] of Object.entries(layers)) {
+    if (st === "ready" && name in out) {
+      out = { ...out };
+      delete out[name];
+    }
+  }
+  return out;
 }
 
 /**
@@ -455,7 +533,38 @@ export function mergeGeneratedCase(
     discovered,
     events,
     caseLayers: { ...state.caseLayers, ...layers },
+    layerErrors: clearedErrors(layers),
   });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Debrief layer (requested when the diagnosis is committed)                   */
+/* -------------------------------------------------------------------------- */
+
+let debriefRequester: ((diagnosis: { code: string; display: string }) => void) | null = null;
+
+/** Register who requests the debrief layer of the running thread (set by caseSession.ts). */
+export function setDebriefRequester(fn: ((diagnosis: { code: string; display: string }) => void) | null): void {
+  debriefRequester = fn;
+}
+
+/** Update the debrief of the running thread. */
+export function setDebrief(threadId: string, patch: Partial<DebriefSlice>): void {
+  if (!state.caseInstance || state.generation?.threadId !== threadId) return;
+  setState({ ...state, debrief: { ...state.debrief, ...patch } });
+}
+
+/** Ask for the debrief again (Retry after a failure), for the committed diagnosis. */
+export function retryDebrief(): void {
+  const code = state.committedDiagnosis;
+  if (!code || !debriefRequester) return;
+  const working = state.problemList.find((p) => p.role === "working");
+  debriefRequester({ code, display: working?.display ?? code });
+}
+
+/** Read the debrief slice. */
+export function getDebrief(s: EncounterState): DebriefSlice {
+  return s.debrief;
 }
 
 /** Start (or restart) an encounter with a case. Captures the sim-clock start. */
@@ -837,6 +946,9 @@ export function administerMedication(
     allergy,
     outcome,
   };
+  // 06b F30: no safe treatment table for this patient yet (being written, or rejected by the
+  // safety review and being regenerated): nothing is administered until it lands.
+  if (treatmentsLocked(state)) return null;
   const marEv = appendEvent("mar", order.drug, {
     outcome,
     dose: order.dose,
@@ -922,7 +1034,10 @@ export function commitDiagnosis(code: string, display: string): void {
     ],
     stage: "assessment",
     events: [...state.events, ev],
+    debrief: debriefRequester ? { ...initialDebrief(), status: "pending" } : state.debrief,
   });
+  // The model writes the debrief of THIS encounter now (on-request case only).
+  debriefRequester?.({ code, display });
 }
 
 /** Add a differential/working/plan entry to the student's problem list. */
@@ -998,6 +1113,7 @@ interface DirectorStepContext {
 function queueDirector(action: DirectorAction, ctx: DirectorStepContext = {}): void {
   if (!liveEnabled || !state.caseInstance) return;
   if (action.kind === "elapsed") {
+    if (!directorClockEnabled) return;
     if (directorTickQueued) return;
     directorTickQueued = true;
   }
@@ -1032,6 +1148,7 @@ async function runDirectorStep(action: DirectorAction, caseId: string, ctx: Dire
         : { spec: caseInstanceToSpec(c) }),
     action: { ...action, locale: c.locale },
     use_model: true,
+    client_id: DIRECTOR_CLIENT_ID,
   });
   // The encounter may have changed under us; never apply a stale answer.
   if (!state.caseInstance || state.caseInstance.id !== caseId) return;
@@ -1049,6 +1166,42 @@ async function runDirectorStep(action: DirectorAction, caseId: string, ctx: Dire
   for (const layer of res.data.layers_pending ?? []) {
     if (layerRequester) layerRequester(layer);
   }
+}
+
+/** Two patient lines say the same thing (case, spacing and end punctuation aside). */
+function samePatientLine(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLocaleLowerCase().replace(/\s+/g, " ").replace(/[\s.!?,;:…]+$/u, "").trim();
+  return norm(a) !== "" && norm(a) === norm(b);
+}
+
+/**
+ * True when the live persona (/v1/patient/turn) answered the action logged at `seq`:
+ * the question carries `voiced`, or a persona exchange was recorded for it (recordDialogue
+ * logs its own event right before the question it answers, so it sits at seq or seq - 1).
+ * The Director's narrator line is then not added on top (one patient line per action).
+ */
+function personaAnswered(seq: number): boolean {
+  const ev = state.events.find((e) => e.seq === seq);
+  if (ev?.meta?.voiced === true) return true;
+  // The same words were just answered by the persona: its exchange sits right before.
+  const asked = typeof ev?.meta?.utterance === "string" ? ev.meta.utterance.trim() : "";
+  if (!asked) return false;
+  const doctor = state.dialogue.find((d) => d.role === "doctor" && d.id.startsWith("dlg-") && d.seq === seq - 1);
+  return Boolean(doctor && doctor.en.trim().slice(0, 280) === asked.slice(0, 280));
+}
+
+/**
+ * The transcript view: identical consecutive patient lines are shown once (a persona reply
+ * and a narrator or reveal line that say the same thing).
+ */
+export function dedupePatientTurns<T extends { role: "doctor" | "patient"; en: string }>(turns: T[]): T[] {
+  const out: T[] = [];
+  for (const turn of turns) {
+    const prev = out[out.length - 1];
+    if (turn.role === "patient" && prev?.role === "patient" && samePatientLine(prev.en, turn.en)) continue;
+    out.push(turn);
+  }
+  return out;
 }
 
 /** Fold a Director answer into the store: overlay, facts, notes, complications. */
@@ -1079,8 +1232,17 @@ function applyDirectorStep(data: DirectorStepResult, action?: DirectorAction, ct
   const pv = data.patient_visible_changes;
   const line = { en: (pv?.utterance_en ?? "").trim(), tr: (pv?.utterance_tr ?? "").trim() };
   let dialogue = state.dialogue;
-  if (action && (action.kind === "question" || action.kind === "exam" || action.kind === "treatment") && !ctx.voiced && (line.en || line.tr)) {
-    const seq = ctx.seq ?? (events[events.length - 1]?.seq ?? 0);
+  const seqOfAction = ctx.seq ?? (events[events.length - 1]?.seq ?? 0);
+  const lastPatient = [...dialogue].reverse().find((d) => d.role === "patient");
+  if (
+    action &&
+    (action.kind === "question" || action.kind === "exam" || action.kind === "treatment") &&
+    !ctx.voiced &&
+    (line.en || line.tr) &&
+    !personaAnswered(seqOfAction) &&
+    !(lastPatient && samePatientLine(lastPatient.en, line.en || line.tr))
+  ) {
+    const seq = seqOfAction;
     dialogue = [
       ...dialogue,
       {
@@ -1106,6 +1268,23 @@ function applyDirectorStep(data: DirectorStepResult, action?: DirectorAction, ct
       error: null,
     },
   });
+}
+
+/**
+ * A Director step another member of the room took on the same thread (the thread's
+ * `director` event): applied once, unless this tab sent it.
+ */
+export function applyThreadDirector(threadId: string, ev: DirectorThreadEvent): void {
+  if (!state.caseInstance || state.generation?.threadId !== threadId) return;
+  if (ev.client_id && ev.client_id === DIRECTOR_CLIENT_ID) return;
+  const prevT = Number(state.director.caseState?.t_ms ?? -1);
+  if (Number(ev.case_state?.t_ms ?? 0) < prevT) return;
+  applyDirectorStep(ev, ev.action);
+}
+
+/** Room members other than the host leave the cadence ticks to the host (one shared clock). */
+export function setDirectorClockEnabled(enabled: boolean): void {
+  directorClockEnabled = enabled;
 }
 
 function startDirectorClock(): void {
@@ -1136,6 +1315,11 @@ export async function __flushLive(): Promise<void> {
 /* -------------------------------------------------------------------------- */
 /* Store subscription + hooks                                                  */
 /* -------------------------------------------------------------------------- */
+
+/** Subscribe to every store change (non-React callers such as the case session). */
+export function subscribeEncounter(listener: () => void): () => void {
+  return subscribe(listener);
+}
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);

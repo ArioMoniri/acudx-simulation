@@ -54,8 +54,10 @@ import {
   administerMedication,
   getEncounterClockMs,
   placeOrder,
+  treatmentsLocked,
   useEncounterState,
 } from "@/state/encounterStore";
+import { TreatmentTableNotice } from "@/components/ehr/TreatmentTableNotice";
 import type { PlacedOrder } from "@/state/encounterStore";
 import { minutesOf, pick } from "../labels";
 import type { Bilingual, Lang } from "@/data/schema";
@@ -175,6 +177,8 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
   useSecondTick(pending.length > 0);
 
   const treatmentGroups = useMemo(() => groupTreatments(TREATMENT_CATALOG), []);
+  // 06b F30: no safe treatment table for this patient yet, so nothing can be administered.
+  const locked = treatmentsLocked(state);
   // Acceptance 2026-10-20 D-17: allergy-safe alternatives need the allergy list
   // and the diagnosis (the guideline differs between meningitis and pneumonia).
   const allergyTexts = useMemo(() => allergyTextList(caseInstance.allergies), [caseInstance]);
@@ -278,6 +282,7 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
           {/* --- Treatments --- */}
           <TabsContent value="treatments" className="flex flex-col gap-4">
             <p className="text-xs text-muted">{t("orders2.treatments.subtitle")}</p>
+            <TreatmentTableNotice />
             {treatmentGroups.map(({ klass, items }) => (
               <Card key={klass.en} padding="sm">
                 <SectionLabel
@@ -296,6 +301,7 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
                       weightKg={caseInstance.patient.weightKg}
                       allergyTexts={allergyTexts}
                       dxCode={dxCode}
+                      locked={locked}
                     />
                   ))}
                 </ul>
@@ -478,6 +484,7 @@ function TreatmentRow({
   weightKg,
   allergyTexts = [],
   dxCode = "",
+  locked = false,
 }: {
   option: TreatmentOption;
   lang: Lang;
@@ -485,6 +492,8 @@ function TreatmentRow({
   weightKg?: number;
   allergyTexts?: string[];
   dxCode?: string;
+  /** The case's treatment table is not in yet (being written, or rejected and regenerated). */
+  locked?: boolean;
 }) {
   const { t } = useTranslation();
   const name = pick(option.label, lang);
@@ -550,15 +559,16 @@ function TreatmentRow({
           onClick={() => setOpen((o) => !o)}
           leadingIcon={<Syringe weight="bold" className="h-3.5 w-3.5" aria-hidden />}
           aria-label={t("orders2.treatments.administerAria", { name })}
-          aria-expanded={open}
+          aria-expanded={open && !locked}
           aria-controls={formId}
+          disabled={locked}
           className="shrink-0"
         >
           {t("orders2.treatments.administer")}
         </Button>
       </div>
 
-      {open ? (
+      {open && !locked ? (
         <form
           id={formId}
           className="grid gap-2 rounded-control border border-border bg-bg-subtle p-3 sm:grid-cols-[1fr_1fr_2fr_auto]"

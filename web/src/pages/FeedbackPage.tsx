@@ -39,6 +39,7 @@ import { type Band, type FeedbackAxis } from "@/data/schema";
 import { complaintFamilyOf } from "@/data/caseLibrary";
 import { safetyCriticalMisses } from "@/domain/processMetrics";
 import { useEncounterState } from "@/state/encounterStore";
+import { CaseDebriefLayer } from "@/components/ehr/CaseDebriefLayer";
 import {
   buildEncounterRecord,
   deriveFeedbackGaps,
@@ -315,6 +316,9 @@ export function FeedbackPage() {
           </p>
         </div>
       </motion.div>
+
+      {/* The model-written debrief of the encounter just played (its thread's debrief layer). */}
+      {liveRecord ? <CaseDebriefLayer headingLevel={2} /> : null}
 
       {/* HERO — the verdict + the signature calibration scatter, side by side. */}
       <motion.section {...hero} aria-label={t("feedback3.verdict.eyebrow")}>

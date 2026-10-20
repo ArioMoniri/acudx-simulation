@@ -27,7 +27,8 @@
         "results": "Results",
         "debrief": "Debrief",
         "event": "Bedside event"
-      }
+      },
+      "rejected": "{{layer}} was rejected by the safety review"
     },
     "unavailable": {
       "title": "The case generator is not reachable",
@@ -54,6 +55,24 @@
     "recommended": {
       "hint": "A fresh case is written when you open one of these.",
       "row": "{{family}}, difficulty {{difficulty}}"
+    },
+    "treatments": {
+      "writing": "Treatment options are being written for this patient",
+      "regenerating": "Treatment options are being regenerated",
+      "rejected": "The safety review rejected the treatment options for this patient",
+      "failed": "The treatment options could not be written",
+      "safetyReason": "The safety review found an unsafe drug or dose and rejected the table after its rewrite. Nothing else is shown in its place.",
+      "blocked": "Administration is blocked until the treatment table lands."
+    },
+    "debrief": {
+      "title": "Debrief written for this encounter",
+      "writing": "Your debrief is being written for this encounter",
+      "failed": "The debrief could not be written",
+      "teaching": "Teaching points",
+      "missed": "Cues you could have caught",
+      "sources": "Guideline sources",
+      "noSources": "No verified guideline statement was linked to this case.",
+      "rendered": "Shown in Turkish; the case was written in English."
     }
   }
 }
