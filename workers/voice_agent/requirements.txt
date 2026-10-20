@@ -1,0 +1,17 @@
+# AcuDx voice agent worker. Versions verified on PyPI on 2026-10-19:
+#   livekit-agents 1.8.8 (released 2026-10-15; 2.0.0b1 exists but is a beta),
+#   livekit-api 1.2.2 (2026-10-16), every livekit-plugins-* 1.8.8 (2026-10-15).
+# Install:  python -m venv .venv && .venv/bin/pip install -r workers/voice_agent/requirements.txt
+# Run:      .venv/bin/python -m workers.voice_agent.agent dev   (see README.md)
+livekit-agents==1.8.8
+livekit-api==1.2.2
+livekit-plugins-silero==1.8.8
+# Hosted STT / TTS plugins (used only when the admin registry resolves that provider)
+livekit-plugins-deepgram==1.8.8
+livekit-plugins-elevenlabs==1.8.8
+# OpenAI-compatible STT / TTS: the GPU worker's speaches (/stt) and Chatterbox (/tts)
+livekit-plugins-openai==1.8.8
+# Avatar renderers, selected by the registry's avatar row (extra.avatar)
+livekit-plugins-simli==1.8.8
+livekit-plugins-anam==1.8.8
+httpx>=0.27,<1.0

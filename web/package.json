@@ -25,6 +25,7 @@
     "clsx": "^2.1.1",
     "i18next": "^24.2.2",
     "i18next-browser-languagedetector": "^8.0.4",
+    "livekit-client": "2.23.0",
     "lottie-web": "^5.13.0",
     "motion": "^12.4.7",
     "react": "^18.3.1",

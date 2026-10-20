@@ -3,10 +3,30 @@
 # Launched by server/providers/gpu_worker.py and terminated when idle.
 # Serves, behind Caddy with automatic TLS on <ip>.sslip.io:
 #   /v1/*        vLLM OpenAI-compatible LLM (model from WORKER_LLM_MODEL)
-#   /tts/*       Kokoro FastAPI (OpenAI-compatible /v1/audio/speech)
-#   /stt/*       speaches (faster-whisper, OpenAI-compatible /v1/audio/transcriptions)
+#   /tts/*       Chatterbox Multilingual TTS API (OpenAI-compatible /v1/audio/speech,
+#                23 languages including Turkish; voice name carries the language)
+#   /tts-en/*    Kokoro FastAPI (English-only secondary, OpenAI-compatible /v1/audio/speech)
+#   /stt/*       speaches (faster-whisper large-v3-turbo, OpenAI-compatible /v1/audio/transcriptions)
 #   /healthz     aggregate health
 # Every route requires: Authorization: Bearer ${WORKER_TOKEN}
+#
+# Image pins (verified against the registries on 2026-10-19):
+#   vllm/vllm-openai:v0.11.0                      (Docker Hub)
+#   ghcr.io/speaches-ai/speaches:0.8.3-cuda       (GHCR tags list; 0.9.0 is still rc)
+#   ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4      (GHCR tags list)
+#   Chatterbox: travisvn/chatterbox-tts-api has no published multilingual image
+#     (Docker Hub tags v1.0.1 / latest / gpu all date from 2025-06-03, before the
+#     multilingual model landed), so the image is BUILT here from the pinned main
+#     commit a5f466128e4baa8e4cceb3bba9b7ca9de6f7ec6b (docker/Dockerfile.uv.gpu,
+#     USE_MULTILINGUAL_MODEL=true, model chatterbox-tts 0.1.4 multilingual, MIT).
+#
+# VRAM budget on one A100 40 GB (docs/research/14 section 2.2, planning numbers):
+#   vLLM          --gpu-memory-utilization 0.60 -> 24 GB (weights + KV cache)
+#   Chatterbox    about 4 GB (Multilingual 500M, fp16)
+#   speaches      about 3 GB (large-v3-turbo fp16; the turbo decoder is 4 layers)
+#   Kokoro        under 1 GB
+#   headroom      about 8 GB for CUDA context, batching and a future MuseTalk stream
+# On an H100 80 GB raise vLLM to 0.75 and keep the same side-cars.
 write_files:
   - path: /opt/acudx/.env
     permissions: "0600"
@@ -15,12 +35,14 @@ write_files:
       WORKER_LLM_MODEL=__WORKER_LLM_MODEL__
       WORKER_DOMAIN=__WORKER_DOMAIN__
       HF_HOME=/opt/acudx/hf
+      CHATTERBOX_REF=a5f466128e4baa8e4cceb3bba9b7ca9de6f7ec6b
   - path: /opt/acudx/Caddyfile
     content: |
       {$WORKER_DOMAIN} {
         @unauth not header Authorization "Bearer {$WORKER_TOKEN}"
         respond @unauth 401
-        handle_path /tts/* { reverse_proxy kokoro:8880 }
+        handle_path /tts/* { reverse_proxy chatterbox:4123 }
+        handle_path /tts-en/* { reverse_proxy kokoro:8880 }
         handle_path /stt/* { reverse_proxy speaches:8000 }
         handle /healthz { respond "ok" 200 }
         handle { reverse_proxy vllm:8000 }
@@ -34,24 +56,54 @@ write_files:
           ipc: host
           environment: [ "HF_HOME=/hf" ]
           volumes: [ "/opt/acudx/hf:/hf" ]
+          # 0.60 leaves room for Chatterbox (about 4 GB), speaches (about 3 GB) and Kokoro
+          # on a 40 GB card; see the VRAM budget in the header comment.
           command: >
             --model ${WORKER_LLM_MODEL} --max-model-len 16384
-            --gpu-memory-utilization 0.72 --enable-prefix-caching
+            --gpu-memory-utilization 0.60 --enable-prefix-caching
             --enable-auto-tool-choice --tool-call-parser hermes
             --served-model-name acudx-llm
           healthcheck:
             test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
             interval: 20s
             retries: 90
+        chatterbox:
+          build:
+            context: /opt/acudx/chatterbox-tts-api
+            dockerfile: docker/Dockerfile.uv.gpu
+          image: acudx/chatterbox-tts-api:multilingual
+          runtime: nvidia
+          environment:
+            - PORT=4123
+            - HOST=0.0.0.0
+            - DEVICE=cuda
+            - USE_MULTILINGUAL_MODEL=true
+            - MODEL_CACHE_DIR=/cache
+            - VOICE_LIBRARY_DIR=/voices
+            - VOICE_SAMPLE_PATH=/app/voice-sample.mp3
+            - MAX_CHUNK_LENGTH=280
+            - NVIDIA_VISIBLE_DEVICES=all
+            - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+          volumes:
+            - /opt/acudx/chatterbox-cache:/cache
+            - /opt/acudx/chatterbox-voices:/voices
+          healthcheck:
+            test: ["CMD-SHELL", "curl -sf http://localhost:4123/health || exit 1"]
+            interval: 20s
+            retries: 60
         kokoro:
           image: ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4
           runtime: nvidia
           environment: [ "NVIDIA_VISIBLE_DEVICES=all" ]
         speaches:
-          image: ghcr.io/speaches-ai/speaches:latest-cuda
+          image: ghcr.io/speaches-ai/speaches:0.8.3-cuda
           runtime: nvidia
           environment:
-            - WHISPER__MODEL=Systran/faster-whisper-large-v3
+            # Whisper large-v3-turbo in CTranslate2 form (https://huggingface.co/deepdml/faster-whisper-large-v3-turbo-ct2);
+            # preloaded at start and never unloaded so the first dictation does not pay the load.
+            - PRELOAD_MODELS=["deepdml/faster-whisper-large-v3-turbo-ct2"]
+            - STT_MODEL_TTL=-1
+            - WHISPER__COMPUTE_TYPE=float16
             - HF_HOME=/hf
           volumes: [ "/opt/acudx/hf:/hf" ]
         caddy:
@@ -61,8 +113,25 @@ write_files:
           volumes:
             - /opt/acudx/Caddyfile:/etc/caddy/Caddyfile:ro
             - /opt/acudx/caddy:/data
+  # Voice library seeding: Chatterbox picks the synthesis language from the voice's
+  # metadata, so one voice per language is uploaded once the API is up. The reference
+  # clip is the repository's bundled sample; institutions replace it with consented
+  # actor recordings through POST /voices (docs/architecture/18 section 4.2).
+  - path: /opt/acudx/seed-voices.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -u
+      api=http://127.0.0.1:4123
+      for i in $(seq 1 90); do curl -sf "$api/health" >/dev/null && break; sleep 10; done
+      sample=/opt/acudx/chatterbox-tts-api/voice-sample.mp3
+      for spec in acudx_tr_female:tr acudx_tr_male:tr acudx_en_female:en acudx_en_male:en; do
+        name=${spec%%:*}; lang=${spec##*:}
+        curl -sf -X POST "$api/voices" -F "voice_name=$name" -F "language=$lang" -F "voice_file=@$sample" >/dev/null \
+          || echo "acudx: voice $name already present or upload failed" >&2
+      done
 runcmd:
-  - mkdir -p /opt/acudx/hf /opt/acudx/caddy
+  - mkdir -p /opt/acudx/hf /opt/acudx/caddy /opt/acudx/chatterbox-cache /opt/acudx/chatterbox-voices
   # The public IP is not known before launch, so the manager renders
   # WORKER_DOMAIN=auto and the worker derives <ip-with-dashes>.sslip.io itself
   # (the manager derives the identical name from the API-reported IP).
@@ -75,4 +144,12 @@ runcmd:
       [ -n "$ip" ] || { echo "acudx: could not resolve public IP" >&2; exit 1; }
       sed -i "s|^WORKER_DOMAIN=auto$|WORKER_DOMAIN=$(echo "$ip" | tr . -).sslip.io|" /opt/acudx/.env
     fi
-  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d
+  # Chatterbox Multilingual is built from the pinned commit (no published multilingual image).
+  - |
+    set -a && . /opt/acudx/.env && set +a
+    if [ ! -d /opt/acudx/chatterbox-tts-api ]; then
+      git clone --filter=blob:none https://github.com/travisvn/chatterbox-tts-api /opt/acudx/chatterbox-tts-api
+    fi
+    git -C /opt/acudx/chatterbox-tts-api checkout --quiet "$CHATTERBOX_REF"
+  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d --build
+  - nohup /opt/acudx/seed-voices.sh >/var/log/acudx-seed-voices.log 2>&1 &

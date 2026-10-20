@@ -51,6 +51,9 @@ from server.rubric import grade_transcript
 from server.scope_guard import classify, crisis_resources
 from server.results_routes import router as results_router
 from server.telemetry.events import TelemetryRecorder, call_context
+from server.voice.routes import admin_router as voice_admin_router
+from server.voice.routes import router as voice_router
+from server.voice.service import VoiceService
 
 log = logging.getLogger("acudx.app")
 
@@ -110,14 +113,18 @@ async def lifespan(app: FastAPI):
     gateway = ModelGateway(settings, resolver=resolver, telemetry=telemetry)  # may raise EgressBlocked under AIRGAPPED+api
     await gateway.start()
     worker_manager.start_reaper()
+    # Voice (docs/architecture/18): TTS / STT through the same registry, worker fallback and telemetry.
+    voice = VoiceService(settings, resolver, telemetry=telemetry)
     app.state.settings = settings
     app.state.gateway = gateway
     app.state.registry = registry
     app.state.telemetry = telemetry
     app.state.worker_manager = worker_manager
+    app.state.voice = voice
     try:
         yield
     finally:
+        await voice.aclose()
         await worker_manager.aclose()
         await gateway.aclose()
 
@@ -145,6 +152,8 @@ app.add_middleware(
 app.include_router(admin_router)
 app.include_router(results_router)  # /v1/results/* and /v1/imaging/resolve (server/results_routes.py)
 app.include_router(registry_router)
+app.include_router(voice_router)        # /v1/voice/* (server/voice/routes.py)
+app.include_router(voice_admin_router)  # /admin/voice/agent-config
 
 
 # Telemetry context: every model call made while serving a request is tagged

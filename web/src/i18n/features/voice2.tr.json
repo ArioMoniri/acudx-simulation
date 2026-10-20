@@ -1,0 +1,46 @@
+{
+  "voice2": {
+    "tile": {
+      "heading": "Hasta görüşmesi",
+      "synthetic": "Sentetik hasta",
+      "status": {
+        "connecting": "Bağlanıyor",
+        "live": "Canlı video",
+        "audio": "Sesli görüşme",
+        "textTimed": "Metne göre animasyon",
+        "hold": "Beklemede",
+        "ended": "Görüşme sona erdi",
+        "muted": "Sessiz"
+      },
+      "degraded": "Gerçek zamanlı video kullanılamıyor; konuşan yüz ses kaydını izliyor.",
+      "noVoice": "Etkin bir ses sağlayıcısı yok. Yanıtlar metin olarak gösterilir.",
+      "voiceOff": "Ses kapalı. Hastayı duymak için açın.",
+      "controls": {
+        "mute": "Hastayı sessize al",
+        "unmute": "Hastanın sesini aç",
+        "hold": "Beklet",
+        "resume": "Devam et",
+        "end": "Görüşmeyi bitir",
+        "rejoin": "Görüşmeye dön",
+        "captionsOn": "Altyazıları gizle",
+        "captionsOff": "Altyazıları göster",
+        "voiceOn": "Ses açık",
+        "voiceOff": "Ses kapalı"
+      },
+      "captions": {
+        "label": "Canlı altyazı",
+        "patient": "Hasta",
+        "you": "Siz",
+        "listening": "Dinleniyor…",
+        "empty": "Hasta konuştukça altyazılar burada görünür."
+      },
+      "provenance": {
+        "voice": "Ses: {{provider}}",
+        "firstAudio": "İlk ses {{ms}} ms",
+        "renderer": "Video: {{renderer}}"
+      },
+      "signs": "Görünüm",
+      "endedNote": "Hasta hâlâ burada. Sesli görüşmeye devam etmek için yeniden katılın; yazmak her zaman çalışır."
+    }
+  }
+}
