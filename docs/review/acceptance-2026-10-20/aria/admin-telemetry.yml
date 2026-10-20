@@ -1,0 +1,43 @@
+- main:
+  - text: Operator console
+  - heading "Admin" [level=1]
+  - paragraph: Providers, GPU policy, budgets and telemetry for this AcuDx deployment. Every change is saved on the server; no key ever reaches the browser.
+  - text: Admin session active
+  - button "Sign out of admin"
+  - tablist "Admin":
+    - tab "Overview"
+    - tab "Providers"
+    - tab "Users"
+    - tab "GPU"
+    - tab "Telemetry" [selected]
+    - tab "Settings"
+  - tabpanel "Telemetry":
+    - paragraph: One row per gateway call. Cost comes from the versioned price table (2026-10-19); self-hosted endpoints are billed by the hour in the GPU ledger instead.
+    - tablist "Window":
+      - tab "24 hours" [selected]
+      - tab "7 days"
+      - tab "30 days"
+    - button "Refresh"
+    - text: "Calls 72 0 in, 0 out Cost $0.0000 Error rate 100% 72 errors p95 latency 0 ms p50 latency: 0 ms"
+    - heading "Calls over time" [level=3]
+    - button "View as table"
+    - text: Failed Succeeded
+    - application: 12:58 15:58 18:58 21:58 00:58 03:58 06:58 09:58 0 20 40 60 80
+    - heading "Cost over time" [level=3]
+    - button "View as table"
+    - application: 12:58 15:58 18:58 21:58 00:58 03:58 06:58 09:58 $0.0000 $1.00 $2.00 $3.00 $4.00
+    - heading "Latency over time" [level=3]
+    - button "View as table"
+    - text: p50 (ms) p95 (ms)
+    - application: 12:58 15:58 18:58 21:58 00:58 03:58 06:58 09:58 0 ms 1 ms 2 ms 3 ms 4 ms
+    - heading "Share of cost" [level=3]
+    - paragraph: No model calls in this window.
+    - heading "By provider" [level=3]
+    - button "View as table"
+    - application: 0 20 40 60 80 unresolved
+    - heading "By model" [level=3]
+    - button "View as table"
+    - application: 0 20 40 60 80 unknown
+    - heading "By route" [level=3]
+    - button "View as table"
+    - application: 0 15 30 45 60 /v1/grade /v1/patient/turn /v1/ground

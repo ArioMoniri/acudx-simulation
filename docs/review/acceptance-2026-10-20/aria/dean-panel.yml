@@ -1,0 +1,146 @@
+- main:
+  - text: Dean's office
+  - heading "Institution dashboard" [level=1]
+  - paragraph: Every learner's completed encounters for your organisation, aggregated on the server from the hash-chained event log. Learners appear as masked handles; nothing here is a learner's private ego-data.
+  - text: Chain verified (2 batches) Local, unverified Aggregate view for acudx-acceptance-faculty. Handles are masked; chain integrity is verified on every load.
+  - group "Window":
+    - button "7 days"
+    - button "30 days" [pressed]
+    - button "90 days"
+    - button "All"
+  - button "Refresh"
+  - region "Cohort headline metrics":
+    - text: Cohort headline metrics
+    - list "Cohort headline metrics":
+      - listitem: Learners 1 Distinct learners with a completed encounter in the window
+      - listitem: Encounters 2 Completed encounters received by the server
+      - listitem: Diagnostic accuracy 100% Share of encounters with the correct final diagnosis
+      - listitem: Safety-miss rate 100% Encounters with a safety-critical timing miss or unchecked allergies
+      - listitem: Mean Brier 0.196 Calibration error across scored domains, lower is better
+      - listitem: At-risk learners 1 Flagged by safety, competence, diagnosis or calibration rules
+  - region "At-risk learners and remediation":
+    - heading "At-risk learners and remediation" [level=2]
+    - paragraph: "Learners the server flagged from their own recorded encounters. Assigning a remediation case closes the loop: the assignment completes when the learner's next encounter for that case is received."
+    - text: 1 at risk
+    - list "At-risk learners":
+      - listitem:
+        - paragraph: ECED9D
+        - paragraph: 2 encounters, 2 safety misses, 100% diagnostic accuracy
+        - text: "Safety Competence Calibration Weakest: Examination and investigations"
+        - button "Assign remediation"
+    - paragraph: Assignments and completions are visible to faculty on the Faculty page.
+  - region "Cohort competency grid":
+    - heading "Cohort competency grid" [level=2]
+    - paragraph: Each learner's mean competence per domain, banded. The band word and fill level carry the meaning; colour is secondary.
+    - table "Learners by competency domain":
+      - caption: Learners by competency domain
+      - rowgroup:
+        - row "Learner History-taking Examination and investigations Clinical reasoning Communication Management Professionalism Last active":
+          - columnheader "Learner"
+          - columnheader "History-taking"
+          - columnheader "Examination and investigations"
+          - columnheader "Clinical reasoning"
+          - columnheader "Communication"
+          - columnheader "Management"
+          - columnheader "Professionalism"
+          - columnheader "Last active"
+      - rowgroup:
+        - 'row "ECED9D At risk ECED9D History-taking: Developing, 2 encounters ECED9D Examination and investigations: Emerging, 2 encounters ECED9D Clinical reasoning: Strong, 2 encounters ECED9D Communication: Developing, 2 encounters ECED9D Management: Developing, 2 encounters ECED9D Professionalism: Withheld Oct 20"':
+          - rowheader "ECED9D At risk":
+            - text: ECED9D
+            - img "At risk"
+          - 'cell "ECED9D History-taking: Developing, 2 encounters"': Dv
+          - 'cell "ECED9D Examination and investigations: Emerging, 2 encounters"': Em
+          - 'cell "ECED9D Clinical reasoning: Strong, 2 encounters"': St
+          - 'cell "ECED9D Communication: Developing, 2 encounters"': Dv
+          - 'cell "ECED9D Management: Developing, 2 encounters"': Dv
+          - 'cell "ECED9D Professionalism: Withheld"': Withheld
+          - cell "Oct 20"
+  - region "Charts":
+    - heading "Charts" [level=2]
+    - heading "Band distribution by domain" [level=3]
+    - paragraph: How many scored encounters fell in each band, per domain.
+    - heading "Activity (30d)" [level=3]
+    - text: Encounters Active learners
+    - application: Sep 20 Sep 24 Sep 28 Oct 2 Oct 6 Oct 10 Oct 14 Oct 18
+  - region "Aggregate calibration":
+    - heading "Aggregate calibration" [level=2]
+    - paragraph: Decisiveness against measured competence, aggregated per domain across the cohort.
+    - heading "Calibration by domain" [level=3]
+    - paragraph: Mean absolute gap between confidence and competence, and how many encounters ran over-, well- or under-confident.
+    - table:
+      - rowgroup:
+        - row "Domain n Mean gap Overconfident Well-calibrated Underconfident":
+          - columnheader "Domain"
+          - columnheader "n"
+          - columnheader "Mean gap"
+          - columnheader "Overconfident"
+          - columnheader "Well-calibrated"
+          - columnheader "Underconfident"
+      - rowgroup:
+        - row "History-taking 2 0.59 2 0 0":
+          - rowheader "History-taking"
+          - cell "2"
+          - cell "0.59"
+          - cell "2"
+          - cell "0"
+          - cell "0"
+        - row "Examination and investigations 2 0.64 2 0 0":
+          - rowheader "Examination and investigations"
+          - cell "2"
+          - cell "0.64"
+          - cell "2"
+          - cell "0"
+          - cell "0"
+        - row "Clinical reasoning 2 0.07 0 2 0":
+          - rowheader "Clinical reasoning"
+          - cell "2"
+          - cell "0.07"
+          - cell "0"
+          - cell "2"
+          - cell "0"
+        - row "Communication 2 0.13 2 0 0":
+          - rowheader "Communication"
+          - cell "2"
+          - cell "0.13"
+          - cell "2"
+          - cell "0"
+          - cell "0"
+        - row "Management 2 0.44 2 0 0":
+          - rowheader "Management"
+          - cell "2"
+          - cell "0.44"
+          - cell "2"
+          - cell "0"
+          - cell "0"
+  - region "Compliance and audit":
+    - text: Compliance and audit
+    - heading "Compliance and audit" [level=2]
+    - heading "Accreditation export (server)" [level=3]
+    - paragraph: "A de-identified JSON file built on the server from the same chained rows: masked handles, per-domain bands, outcome flags and the chain head for audit."
+    - button "Download export (30d)"
+    - heading "Language subgroup fairness" [level=3]
+    - paragraph: Broken out for the Turkish-primary and English-primary subgroups.
+    - paragraph: The clinical axis must not track language. Accent and second-language form never score, so clinical bands should match across subgroups.
+    - paragraph: A per-language subgroup audit (TR vs EN) needs a multi-learner cohort from a connected institution data source. A single local learner has no subgroup to compare, so no fairness metric is asserted here.
+    - table "Fairness metrics for the Turkish-primary and English-primary subgroups, with a within-tolerance status.":
+      - caption: Fairness metrics for the Turkish-primary and English-primary subgroups, with a within-tolerance status.
+      - rowgroup:
+        - row "Metric Status":
+          - columnheader "Metric"
+          - columnheader "Status"
+      - rowgroup:
+        - row "Median clinical band Insufficient data":
+          - cell "Median clinical band"
+          - cell "Insufficient data"
+        - row "Median communication band Insufficient data":
+          - cell "Median communication band"
+          - cell "Insufficient data"
+        - row "Model refusal rate Insufficient data":
+          - cell "Model refusal rate"
+          - cell "Insufficient data"
+        - row "Speech-to-text fallback rate Insufficient data":
+          - cell "Speech-to-text fallback rate"
+          - cell "Insufficient data"
+    - paragraph: The higher Turkish speech-to-text fallback rate is a voice-path property, shown transparently. It never feeds a competence score.
+  - paragraph: Generated for Deniz Acceptance from server data for acudx-acceptance-faculty.

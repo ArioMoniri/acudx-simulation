@@ -127,6 +127,27 @@ class ModelGateway:
                                     model=s.rerank_model, api_key=s.llm_api_key, source="env")
         raise GatewayError(f"unknown endpoint kind {kind!r}")
 
+    async def _resolve_for_call(self, kind: str) -> ProviderEndpoint:
+        """:meth:`resolve_endpoint` for a real call: a refusal is recorded too.
+
+        Acceptance test 2026-10-20 (docs/review/05): once the scheduled probe
+        marked the only local model unreachable and the GPU worker was refused
+        (AIRGAPPED), every patient turn failed in resolution, before any
+        socket, so ``model_calls`` stayed empty and the admin console showed
+        0 calls and a 0 % error rate for a session in which every model call
+        failed. The failed attempt now leaves one row (provider ``unresolved``).
+        """
+        try:
+            return await self.resolve_endpoint(kind)
+        except GatewayError:
+            if self.telemetry is not None:
+                try:
+                    self.telemetry.record(kind=kind, provider="unresolved", model="", billing_provider="unresolved",
+                                          latency_ms=0.0, ok=False, error="no_provider")
+                except Exception:  # noqa: BLE001 - telemetry is best-effort
+                    pass
+            raise
+
     def _record(self, ep: ProviderEndpoint, *, kind: str, model: str | None, usage: dict[str, Any] | None,
                 latency_ms: float, ok: bool, error: str | None = None) -> None:
         """One telemetry row per attempt; never lets telemetry break the call."""
@@ -194,7 +215,7 @@ class ModelGateway:
     ) -> ChatResult:
         """Call ``/chat/completions`` for a task tier and parse robustly."""
         tier = self.tiers.get(task) or self.tiers["patient"]
-        ep = await self.resolve_endpoint("llm")
+        ep = await self._resolve_for_call("llm")
         # Per-call guard: even if the registry were mis-wired to egress, block it.
         self.settings.guard_egress(ep.base_url)
 
@@ -278,7 +299,7 @@ class ModelGateway:
         be confirmed at deploy time; we try the common shapes so the fix, if
         any, is one line. ``AIRGAPPED`` guard applies (the URL is local).
         """
-        ep = await self.resolve_endpoint("embed")
+        ep = await self._resolve_for_call("embed")
         self.settings.guard_egress(ep.base_url)
         base = ep.base_url
         model = ep.model or self.settings.embed_model
@@ -306,7 +327,7 @@ class ModelGateway:
     # -- rerank adapter (thin, defensive) ----------------------------------- #
     async def rerank(self, query: str, documents: list[str]) -> list[float]:
         """POST (query, documents) to ``RERANK_URL`` → one score per document."""
-        ep = await self.resolve_endpoint("rerank")
+        ep = await self._resolve_for_call("rerank")
         self.settings.guard_egress(ep.base_url)
         base = ep.base_url
         model = ep.model or self.settings.rerank_model

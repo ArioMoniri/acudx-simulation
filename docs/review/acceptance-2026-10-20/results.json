@@ -1,0 +1,477 @@
+[
+  {
+    "id": "S1",
+    "actor": "Student",
+    "step": "Create a profile through the UI",
+    "expected": "Profile created, app lands on Home",
+    "observed": "Home heading: \"Welcome back, Deniz Acceptance\"",
+    "pass": true,
+    "screenshot": "01-student-profile-form.png"
+  },
+  {
+    "id": "S2",
+    "actor": "Student",
+    "step": "Constrain the case by chief complaint 'fever' on Start",
+    "expected": "A fever option, or a family that yields febrile presentations",
+    "observed": "No 'Fever' option among the 17 tiles; used 'Infectious (Sepsis-spectrum illness)' instead",
+    "pass": false,
+    "screenshot": "02-start-complaint-picker.png"
+  },
+  {
+    "id": "S3",
+    "actor": "Student",
+    "step": "Generator with no reachable model",
+    "expected": "POST /v2/case/generate/stream answers 503 model_unreachable; UI names the failure and offers the labelled template and a retry",
+    "observed": "HTTP 503 model_unreachable; panel: \"The model did not return a caseNothing was substituted silently. Choose how to continue.SamplingAuthoringCouncil judgingGroundingFinalizingThe case generator mo\"",
+    "pass": true,
+    "screenshot": "03-case1-generator-503.png"
+  },
+  {
+    "id": "C0.1",
+    "actor": "Student",
+    "step": "Febrile case 1 via the template path",
+    "expected": "A febrile presentation within 6 tries",
+    "observed": "Febrile neutropenia (D70.9) after 1 try",
+    "pass": true
+  },
+  {
+    "id": "C1.1",
+    "actor": "Student",
+    "step": "Banner labels the source",
+    "expected": "Banner says template (not model generated) and degraded; no line calls it generated",
+    "observed": "note: \"Simulation. Synthetic patient. For education only. Case source: template (not model generated).\" / \"SIMsynthetic patient·template (not model generated)degraded\"; sub-line: \"Difficulty 3/5 · template (not model generated)\"",
+    "pass": true,
+    "screenshot": "04-case1-banner.png"
+  },
+  {
+    "id": "C2.1",
+    "actor": "Student",
+    "step": "Triage vitals show fever",
+    "expected": "Temp at or above 38.0 C on the chart",
+    "observed": "Presenting vitalsHR115BP121/91RR20SpO296%Temp39.6°C",
+    "pass": true,
+    "screenshot": "05-case1-chart-review.png"
+  },
+  {
+    "id": "C3b.1",
+    "actor": "Student",
+    "step": "Typed history questions reach a case answer",
+    "expected": "No 'be more specific' clarification for the 10 standard febrile history questions",
+    "observed": "2 clarification replies of 8; last: \"I didn't quite follow — what would you like to ask me about?In pain, anxious\"",
+    "pass": false
+  },
+  {
+    "id": "C3.1",
+    "actor": "Student",
+    "step": "Interview with 10 typed questions",
+    "expected": "10 patient replies, none the gateway's 'hard to answer' deflection",
+    "observed": "8 patient replies, 0 deflections. Sample: \"It came on over the past week and won't ease.In pain, anxious\" | \"It feels like fever days after chemotherapy.In pain, anxious\" | \"Could you be a little more specific about what you'd like to know?In p\"",
+    "pass": false,
+    "screenshot": "06-case1-interview.png"
+  },
+  {
+    "id": "C4.1",
+    "actor": "Student",
+    "step": "Perform the relevant exams",
+    "expected": "6 findings recorded (vitals recheck aside)",
+    "observed": "Exam findings4; GeneralUncomfortable but engaging with questions.Abnormal | GeneralFebrile 38.9C, rigors, PICC line site clean; no mucositis; no localising  | RespiratoryClear chest.Within normal limits",
+    "pass": false,
+    "screenshot": "07-case1-exam.png"
+  },
+  {
+    "id": "C5.1",
+    "actor": "Student",
+    "step": "Order CBC, CRP, lactate, blood cultures, urinalysis, chest X-ray, ECG",
+    "expected": "7 orders placed",
+    "observed": "placed: CBC, CRP, Lactate, Blood cultures, Urinalysis, Chest X-ray, ECG; tracker: 7 placed · 7 pending · 0 resulted",
+    "pass": true,
+    "screenshot": "08-case1-orders.png"
+  },
+  {
+    "id": "C6.1",
+    "actor": "Student",
+    "step": "Paracetamol and an antibiotic through the five-rights dose form",
+    "expected": "Dose form with dose, route and indication for each; both recorded as given",
+    "observed": "given: Paracetamol, Ceftriaxone; badges: 1 given, 1 given; form: \"Dose (mg)RoutePOIVIndicationGiveAdult range 500-1000 mg · max 4000 mg / 24 h · NICE CKS — Analgesia, mild-to-moderate pain\"",
+    "pass": true,
+    "screenshot": "10-case1-treatments-given.png"
+  },
+  {
+    "id": "C7.1",
+    "actor": "Student",
+    "step": "Monitor or flowsheet reacts to treatment",
+    "expected": "Temperature trends down after paracetamol (or another vital moves), Director steps logged",
+    "observed": "Temp NaN -> NaN C; 27 Director steps so far; before \"Current vital signsParameterValueHeart rate121 bpm — DeterioratingOxygen saturation94 % — StableBlood pressure\" after \"Current vital signsParameterValueHeart rate122 bpm — DeterioratingOxygen saturation94 % — StableBlood pressure\"",
+    "pass": true,
+    "screenshot": "11-case1-monitor-after-treatment.png"
+  },
+  {
+    "id": "C8.1",
+    "actor": "Student",
+    "step": "All results arrive, each with a provenance chip",
+    "expected": "Tracker 0 pending; every result group carries a provenance label; every analyte carries a source",
+    "observed": "7 placed · 0 pending · 7 resulted; 7 resolve calls; provenance chips: 4 lab groups + 3 report items; analytes with source 21/21",
+    "pass": true,
+    "screenshot": "12-case1-results.png"
+  },
+  {
+    "id": "C9.1",
+    "actor": "Student",
+    "step": "Cultures return later than the CBC",
+    "expected": "Blood culture turnaround longer than CBC turnaround",
+    "observed": "CBC turnaround 40 sim-min, blood culture 2880 sim-min",
+    "pass": true
+  },
+  {
+    "id": "C10.1",
+    "actor": "Student",
+    "step": "WBC, CRP and lactate consistent with the condition",
+    "expected": "Bacterial febrile illness: WBC raised, CRP raised, lactate reported (raised if septic). Condition: Febrile neutropenia",
+    "observed": "WBC 0.9 10*9/L (LL); CRP 135.3 mg/L (H); lactate 7.8 mmol/L (HH); culture: {\"loinc\":\"600-7\",\"name\":\"Blood culture\",\"short\":\"BCx\",\"value\":\"No growth at 48 h\",\"unit\":\"\",\"qualitative\":true,\"ref_low\":null,\"ref_high\":null,\"flag\":\"N\",\"critic",
+    "pass": false
+  },
+  {
+    "id": "C11.1",
+    "actor": "Student",
+    "step": "Attending tips each show a citation chip linking to a real source",
+    "expected": "Every tip card carries a link to the verified statement's source URL",
+    "observed": "tips API count 1; 0 tip cards shown, 0 cited; 0 citation links (0 match the verified store's source_url); raw i18n keys: none; first: -",
+    "pass": false,
+    "screenshot": "13-case1-guidance.png"
+  },
+  {
+    "id": "C11b.1",
+    "actor": "Student",
+    "step": "Next best action and work-up outline rows are cited",
+    "expected": "No 'Source unavailable' on a recommendation shown to the learner",
+    "observed": "4 rows show 'Source unavailable' (next best action + work-up outline)",
+    "pass": false
+  },
+  {
+    "id": "C12.1",
+    "actor": "Student",
+    "step": "Clinical guidance panel is relevant or honestly unavailable",
+    "expected": "Lead statement relevant to the case, or 'Guidance unavailable' when retrieval is degraded",
+    "observed": "panel state: unavailable; /v1/ground mode hashing-fallback degraded=true ids gs_sign158_asthma_severity, gs_nice_ng128_stroke_unit, gs_sign158_asthma_steroids, gs_nice_cg141_terlipressin",
+    "pass": true
+  },
+  {
+    "id": "C13.1",
+    "actor": "Student",
+    "step": "Tip source URLs resolve",
+    "expected": "Each source URL answers 2xx or 3xx",
+    "observed": "no links to test",
+    "pass": false
+  },
+  {
+    "id": "C14.1",
+    "actor": "Student",
+    "step": "Add a differential and commit a working diagnosis",
+    "expected": "Two candidates, one committed, verdict shown",
+    "observed": "differential: sepsis + Febrile neutropenia; committed Febrile neutropenia",
+    "pass": true,
+    "screenshot": "14-case1-diagnosis.png"
+  },
+  {
+    "id": "C15.1",
+    "actor": "Student",
+    "step": "Feedback shows bands, a calibration plot and gaps with citations",
+    "expected": "Domain bands, a calibration visual, gaps each linking a guideline source",
+    "observed": "31 band words, 3 calibration elements, 3 external citation links",
+    "pass": true,
+    "screenshot": "16-case1-feedback.png"
+  },
+  {
+    "id": "C16.1",
+    "actor": "Student",
+    "step": "Finished encounter is posted to the server",
+    "expected": "POST /v1/events/encounter 200/201 with a chain hash",
+    "observed": "HTTP 201 {\"stored\":true,\"id\":1,\"org\":\"acudx-acceptance-faculty\",\"chain_hash\":\"aafe8e477174b5541e1db50bcb4291a29c17d62e7e3c3cac8adef979621389b7\",\"prev_hash\":\"000000000000",
+    "pass": true
+  },
+  {
+    "id": "S3b",
+    "actor": "Student",
+    "step": "Generator with no reachable model",
+    "expected": "POST /v2/case/generate/stream answers 503 model_unreachable; UI names the failure and offers the labelled template and a retry",
+    "observed": "HTTP 503 model_unreachable; panel: \"The model did not return a caseNothing was substituted silently. Choose how to continue.SamplingAuthoringCouncil judgingGroundingFinalizingThe case generator mo\"",
+    "pass": true,
+    "screenshot": "17-case2-generator-503.png"
+  },
+  {
+    "id": "C0.2",
+    "actor": "Student",
+    "step": "Febrile case 2 via the template path",
+    "expected": "A febrile presentation within 6 tries",
+    "observed": "Sepsis (A41.9) after 2 tries",
+    "pass": true
+  },
+  {
+    "id": "C1.2",
+    "actor": "Student",
+    "step": "Banner labels the source",
+    "expected": "Banner says template (not model generated) and degraded; no line calls it generated",
+    "observed": "note: \"Simulation. Synthetic patient. For education only. Case source: template (not model generated).\" / \"SIMsynthetic patient·template (not model generated)degraded\"; sub-line: \"Difficulty 3/5 · template (not model generated)\"",
+    "pass": true,
+    "screenshot": "18-case2-banner.png"
+  },
+  {
+    "id": "C2.2",
+    "actor": "Student",
+    "step": "Triage vitals show fever",
+    "expected": "Temp at or above 38.0 C on the chart",
+    "observed": "Presenting vitalsHR120BP120/65RR23SpO295%Temp38.8°C",
+    "pass": true,
+    "screenshot": "19-case2-chart-review.png"
+  },
+  {
+    "id": "C3b.2",
+    "actor": "Student",
+    "step": "Typed history questions reach a case answer",
+    "expected": "No 'be more specific' clarification for the 10 standard febrile history questions",
+    "observed": "1 clarification replies of 8; last: \"I didn't quite follow — what would you like to ask me about?In pain, anxious\"",
+    "pass": false
+  },
+  {
+    "id": "C3.2",
+    "actor": "Student",
+    "step": "Interview with 10 typed questions",
+    "expected": "10 patient replies, none the gateway's 'hard to answer' deflection",
+    "observed": "8 patient replies, 0 deflections. Sample: \"It crept up on me over the last couple of days.In pain, anxious\" | \"It feels like fever with a fast heart rate and malaise.In pain, anxiou\" | \"Could you be a little more specific about what you'd like to know?In p\"",
+    "pass": false,
+    "screenshot": "20-case2-interview.png"
+  },
+  {
+    "id": "C4.2",
+    "actor": "Student",
+    "step": "Perform the relevant exams",
+    "expected": "6 findings recorded (vitals recheck aside)",
+    "observed": "Exam findings3; GeneralUncomfortable but engaging with questions.Abnormal | GeneralLooks unwell but alert; warm peripheries, capillary refill 2 s.Abnormal",
+    "pass": false,
+    "screenshot": "21-case2-exam.png"
+  },
+  {
+    "id": "C5.2",
+    "actor": "Student",
+    "step": "Order CBC, CRP, lactate, blood cultures, urinalysis, chest X-ray, ECG",
+    "expected": "7 orders placed",
+    "observed": "placed: CBC, CRP, Lactate, Blood cultures, Urinalysis, Chest X-ray, ECG; tracker: 7 placed · 7 pending · 0 resulted",
+    "pass": true,
+    "screenshot": "22-case2-orders.png"
+  },
+  {
+    "id": "C6.2",
+    "actor": "Student",
+    "step": "Paracetamol and an antibiotic through the five-rights dose form",
+    "expected": "Dose form with dose, route and indication for each; both recorded as given",
+    "observed": "given: Paracetamol, Ceftriaxone; badges: 1 given, 1 given; form: \"Dose (mg)RoutePOIVIndicationGiveAdult range 500-1000 mg · max 4000 mg / 24 h · NICE CKS — Analgesia, mild-to-moderate pain\"",
+    "pass": true,
+    "screenshot": "24-case2-treatments-given.png"
+  },
+  {
+    "id": "C7.2",
+    "actor": "Student",
+    "step": "Monitor or flowsheet reacts to treatment",
+    "expected": "Temperature trends down after paracetamol (or another vital moves), Director steps logged",
+    "observed": "Temp NaN -> NaN C; 55 Director steps so far; before \"Current vital signsParameterValueHeart rate122 bpm — DeterioratingOxygen saturation95 % — StableBlood pressure\" after \"Current vital signsParameterValueHeart rate123 bpm — DeterioratingOxygen saturation95 % — StableBlood pressure\"",
+    "pass": true,
+    "screenshot": "25-case2-monitor-after-treatment.png"
+  },
+  {
+    "id": "C8.2",
+    "actor": "Student",
+    "step": "All results arrive, each with a provenance chip",
+    "expected": "Tracker 0 pending; every result group carries a provenance label; every analyte carries a source",
+    "observed": "7 placed · 0 pending · 7 resulted; 7 resolve calls; provenance chips: 4 lab groups + 3 report items; analytes with source 21/21",
+    "pass": true,
+    "screenshot": "26-case2-results.png"
+  },
+  {
+    "id": "C9.2",
+    "actor": "Student",
+    "step": "Cultures return later than the CBC",
+    "expected": "Blood culture turnaround longer than CBC turnaround",
+    "observed": "CBC turnaround 40 sim-min, blood culture 2880 sim-min",
+    "pass": true
+  },
+  {
+    "id": "C10.2",
+    "actor": "Student",
+    "step": "WBC, CRP and lactate consistent with the condition",
+    "expected": "Bacterial febrile illness: WBC raised, CRP raised, lactate reported (raised if septic). Condition: Sepsis",
+    "observed": "WBC 12 10*9/L (H); CRP 70.8 mg/L (H); lactate 5.5 mmol/L (HH); culture: {\"loinc\":\"600-7\",\"name\":\"Blood culture\",\"short\":\"BCx\",\"value\":\"Growth: Escherichia coli\",\"unit\":\"\",\"qualitative\":true,\"ref_low\":null,\"ref_high\":null,\"flag\":\"A\",",
+    "pass": true
+  },
+  {
+    "id": "C11.2",
+    "actor": "Student",
+    "step": "Attending tips each show a citation chip linking to a real source",
+    "expected": "Every tip card carries a link to the verified statement's source URL",
+    "observed": "tips API count 4; 2 tip cards shown, 2 cited; 3 citation links (3 match the verified store's source_url); raw i18n keys: none; first: https://www.sccm.org/survivingsepsiscampaign/guidelines-and-resources/surviving-sepsis-campaign-adult-guidelines",
+    "pass": true,
+    "screenshot": "27-case2-guidance.png"
+  },
+  {
+    "id": "C11b.2",
+    "actor": "Student",
+    "step": "Next best action and work-up outline rows are cited",
+    "expected": "No 'Source unavailable' on a recommendation shown to the learner",
+    "observed": "4 rows show 'Source unavailable' (next best action + work-up outline)",
+    "pass": false
+  },
+  {
+    "id": "C12.2",
+    "actor": "Student",
+    "step": "Clinical guidance panel is relevant or honestly unavailable",
+    "expected": "Lead statement relevant to the case, or 'Guidance unavailable' when retrieval is degraded",
+    "observed": "panel state: unavailable; /v1/ground mode hashing-fallback degraded=true ids gs_bts_asthma_acute, gs_nice_ng185_nstemi_assessment, gs_nice_ng228_thunderclap, gs_nice_upper_gi_bleed",
+    "pass": true
+  },
+  {
+    "id": "C13.2",
+    "actor": "Student",
+    "step": "Tip source URLs resolve",
+    "expected": "Each source URL answers 2xx or 3xx",
+    "observed": "200 https://www.sccm.org/survivingsepsiscampaign/guidelines-and-resources/surviving-sepsis-campaign-adult-guidelines; 200 https://www.nice.org.uk/guidance/ng253/chapter/Evaluating-risk; 200 https://www.sccm.org/survivingsepsiscampaign/guidelines-and-resources/surviving-sepsis-campaign-adult-guidelines",
+    "pass": true
+  },
+  {
+    "id": "C14.2",
+    "actor": "Student",
+    "step": "Add a differential and commit a working diagnosis",
+    "expected": "Two candidates, one committed, verdict shown",
+    "observed": "differential: pneumonia + Sepsis; committed Sepsis",
+    "pass": true,
+    "screenshot": "28-case2-diagnosis.png"
+  },
+  {
+    "id": "C15.2",
+    "actor": "Student",
+    "step": "Feedback shows bands, a calibration plot and gaps with citations",
+    "expected": "Domain bands, a calibration visual, gaps each linking a guideline source",
+    "observed": "31 band words, 3 calibration elements, 3 external citation links",
+    "pass": true,
+    "screenshot": "30-case2-feedback.png"
+  },
+  {
+    "id": "C16.2",
+    "actor": "Student",
+    "step": "Finished encounter is posted to the server",
+    "expected": "POST /v1/events/encounter 200/201 with a chain hash",
+    "observed": "HTTP 201 {\"stored\":true,\"id\":2,\"org\":\"acudx-acceptance-faculty\",\"chain_hash\":\"de37059f3b0a96acefb06d9138191e1dbd1ea42a85846b4d19aa41f5ff1e11b4\",\"prev_hash\":\"aafe8e477174",
+    "pass": true
+  },
+  {
+    "id": "F1",
+    "actor": "Faculty",
+    "step": "Open /faculty as the student",
+    "expected": "Refused with an explanation (role gate)",
+    "observed": "landed on /",
+    "pass": true,
+    "screenshot": "31-faculty-as-student.png"
+  },
+  {
+    "id": "F2",
+    "actor": "Faculty",
+    "step": "Switch to the faculty vantage (local mode: profile role)",
+    "expected": "Account -> Role -> Faculty; nav shows Faculty; /faculty renders with the Local, unverified badge",
+    "observed": "nav: AcuDxHomeCasesFacultyAuthoringAtlasGuided tourTourView asLearnerEducatorView asLearnerEducatorEnglish; badge: Local, unverified",
+    "pass": true,
+    "screenshot": "32-faculty-panel.png"
+  },
+  {
+    "id": "F3",
+    "actor": "Faculty",
+    "step": "Review queue",
+    "expected": "GET /v1/faculty/queue 200; flagged encounters listed when a diagnosis was wrong or a safety miss occurred",
+    "observed": "HTTP 200 {\"org\":\"acudx-acceptance-faculty\",\"cases\":[],\"encounters\":[{\"batch_id\":1,\"org\":\"acudx-acceptance-faculty\",\"status\":\"flagged\",\"reasons\":[\"safety_miss\"],\"flagged_at\":1792486409.4818785,\"reviewer_sub\":null,\"reviewer_name\":n",
+    "pass": true
+  },
+  {
+    "id": "F4",
+    "actor": "Faculty",
+    "step": "Roster",
+    "expected": "GET /v1/faculty/roster 200 listing the student with 2 encounters",
+    "observed": "HTTP 200 {\"org\":\"acudx-acceptance-faculty\",\"roster\":[{\"sub\":\"local-c0c6a54e-4a4a-45e8-8061-1b1cb24bd675\",\"user_hash\":\"eced9d20f093cac9\",\"name\":\"Deniz Acceptance\",\"email\":null,\"roles\":[],\"encounters\":2,\"last_at\":1792486641.7038474,\"open_assignments\":0,\"safety_misses\":2}",
+    "pass": true
+  },
+  {
+    "id": "D1",
+    "actor": "Dean",
+    "step": "Open /dean; cohort reflects the two encounters",
+    "expected": "Cohort encounters = 2, learner count = 1, from the server (not the on-device fallback)",
+    "observed": "UI GET /v1/dean/cohort HTTP 200; encounters 2; learners 1; page: \"Dean's officeInstitution dashboardEvery learner's completed encounters for your organisation, aggregated on the server from the hash-chained event log. Learners\"",
+    "pass": true,
+    "screenshot": "33-dean-panel.png"
+  },
+  {
+    "id": "D2",
+    "actor": "Dean",
+    "step": "Chain badge verifies",
+    "expected": "Badge reads verified/intact",
+    "observed": "badge text: \"Chain verified (2 batches)Local, unverified\"; cohort.chain {\"ok\":true,\"length\":2,\"broken_at\":null,\"head\":\"de37059f3b0a96acefb06d9138191e1dbd1ea42a85846b4d19aa41f5ff1e11b4\"}",
+    "pass": true
+  },
+  {
+    "id": "D3",
+    "actor": "Dean",
+    "step": "Verify with GET /v1/dean/cohort and /v1/dean/chain (curl)",
+    "expected": "encounters = 2 for the org; chain ok",
+    "observed": "cohort HTTP 200 encounters=2; chain HTTP 200 {\"org\":\"acudx-acceptance-faculty\",\"ok\":true,\"length\":2,\"broken_at\":null,\"head\":\"de37059f3b0a96acefb06d9138191e1dbd1ea42a85846b4d19aa41f5ff1e11b4\"}",
+    "pass": true
+  },
+  {
+    "id": "A1",
+    "actor": "Admin",
+    "step": "Open /admin with the token",
+    "expected": "Token verified, console tabs render",
+    "observed": "tabs: Overview, Providers, Users, GPU, Telemetry, Settings",
+    "pass": true,
+    "screenshot": "34-admin-token-gate.png"
+  },
+  {
+    "id": "A2",
+    "actor": "Admin",
+    "step": "Overview",
+    "expected": "Health tiles, 24 h cost, calls, error rate",
+    "observed": "Operator consoleAdminProviders, GPU policy, budgets and telemetry for this AcuDx deployment. Every change is saved on the server; no key ever reaches the browser.Admin session activeSign out of adminO",
+    "pass": true,
+    "screenshot": "35-admin-overview.png"
+  },
+  {
+    "id": "A3",
+    "actor": "Admin",
+    "step": "Providers",
+    "expected": "Seeded env rows listed with kind, endpoint, probe",
+    "observed": "Operator consoleAdminProviders, GPU policy, budgets and telemetry for this AcuDx deployment. Every change is saved on the server; no key ever reaches the browse",
+    "pass": true,
+    "screenshot": "36-admin-providers.png"
+  },
+  {
+    "id": "A4",
+    "actor": "Admin",
+    "step": "GPU",
+    "expected": "Policy readable; Start refused with reason airgapped",
+    "observed": "Operator consoleAdminProviders, GPU policy, budgets and telemetry for this AcuDx deployment. Every change is saved on the server; no key ever reaches the browse | status 200 can_launch=false; policy 200 {\"idle_minutes\":20,\"daily_budget_usd\":25,\"allowlist\":[\"gpu_1x_a100_sxm4\",\"gpu_1x_a10\",\"gpu_1x_a100\",\"gpu_1x_h100_pcie\"],; POST start 409 {\"detail\":{\"reason\":\"airgapped\",\"message\":\"AIRGAPPED=true: the gateway refuses to launch cloud GPU capacity (fail closed",
+    "pass": true,
+    "screenshot": "37-admin-gpu.png"
+  },
+  {
+    "id": "A5",
+    "actor": "Admin",
+    "step": "Telemetry",
+    "expected": "24 h calls and costs from this session",
+    "observed": "Operator consoleAdminProviders, GPU policy, budgets and telemetry for this AcuDx deployment. Every change is saved on the server; no key ever reaches the browse | summary: calls=72 cost=0 by_route=[{\"key\":\"/v1/grade\",\"calls\":48,\"errors\":48,\"cost_usd\":0,\"tokens_in\":0,\"tokens_out\":0,\"p50_ms\":0,\"p95_ms\":0},{\"key\":\"/v1/patient/turn\",\"calls\":20,\"errors\":20,\"cost_usd\":0,\"tokens_in\":0,\"tokens_out\":0,\"p50_ms\":0,\"p95_ms\":0},{\"key\":\"/v1/ground\",\"calls\":4,\"errors\":4,\"cost_usd\":0,\"tokens_in\":0,\"tokens_ou",
+    "pass": true,
+    "screenshot": "38-admin-telemetry.png"
+  },
+  {
+    "id": "A6",
+    "actor": "Admin",
+    "step": "Users",
+    "expected": "User list renders (roles table)",
+    "observed": "Operator consoleAdminProviders, GPU policy, budgets and telemetry for this AcuDx deployment. Every change is saved on the server; no key ever reaches the browse",
+    "pass": true,
+    "screenshot": "39-admin-users.png"
+  }
+]

@@ -62,6 +62,8 @@ const webCommand = process.env.E2E_PREVIEW
 
 export default defineConfig({
   testDir: "./e2e",
+  // The live acceptance run has its own config (playwright.acceptance.config.ts).
+  testIgnore: ["acceptance/**"],
   outputDir: "./test-results",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

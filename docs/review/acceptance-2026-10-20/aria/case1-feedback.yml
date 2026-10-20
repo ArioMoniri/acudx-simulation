@@ -1,0 +1,172 @@
+- main:
+  - text: Feedback
+  - heading "Fever days after chemotherapy" [level=1]
+  - paragraph: Dual-axis, evidence-anchored, band-only. No hidden score.
+  - text: Formative - practice From your last completed encounter
+  - paragraph: "Safety-critical: check this next time"
+  - region "Performance summary":
+    - text: Performance summary Bands at proficient+ 1/5 of 5 scored competency bands
+    - separator
+    - text: By axis
+    - term: Clinical
+    - definition: 1/4
+    - term: Communication and professionalism
+    - definition: 0/1
+    - separator
+    - text: Calibration gap 36 % Self-rating vs measured, latest session
+    - paragraph: 1 domain withheld pending more evidence
+    - heading "Confidence vs performance" [level=2]
+    - paragraph: How well your confidence matches your performance. This is a skill you can train.
+    - 'figure "Calibration by domain Your gap over recent encounters: 36%"':
+      - group "Confidence vs performance Each dot is one domain. Dots on the dashed line mean your confidence matched your performance. This is a trainable skill, not a grade.":
+        - text: 0 0 25 25 50 50 75 75 100 100 Underconfident Overconfident
+        - button "History-taking. Confidence 100 percent, performance 41 percent. Confidence ran ahead of performance.": Hx
+        - button "Examination and investigations. Confidence 100 percent, performance 43 percent. Confidence ran ahead of performance.": Ex
+        - button "Clinical reasoning. Confidence 85 percent, performance 78 percent. Well-calibrated.": Rx
+        - button "Communication. Confidence 60 percent, performance 48 percent. Confidence ran ahead of performance.": Co
+        - button "Management. Confidence 80 percent, performance 36 percent. Confidence ran ahead of performance.": Mx
+        - text: Your confidence Measured performance
+      - paragraph: Point to a dot, or tab to it, to read that domain.
+      - list:
+        - listitem: Perfectly calibrated
+        - listitem: Overconfident
+        - listitem: Underconfident
+        - listitem: Well-calibrated
+      - paragraph: Reading the quadrants
+      - paragraph: Where a dot sits shows what to train next.
+      - list:
+        - listitem:
+          - paragraph: Performance ahead of confidence
+          - paragraph: Performing better than you think
+        - listitem:
+          - paragraph: Calibrated and strong
+          - paragraph: High confidence, strong performance
+        - listitem:
+          - paragraph: Calibrated and growing
+          - paragraph: Low confidence, still building
+        - listitem:
+          - paragraph: Confidence ahead of performance
+          - paragraph: Confident, but performance lags
+      - table "Calibration by domain":
+        - caption: Calibration by domain
+        - rowgroup:
+          - row "Domain Confidence Performance Direction":
+            - columnheader "Domain"
+            - columnheader "Confidence"
+            - columnheader "Performance"
+            - columnheader "Direction"
+        - rowgroup:
+          - row "History-taking 100% 41% Confidence ran ahead of performance":
+            - rowheader "History-taking"
+            - cell "100%"
+            - cell "41%"
+            - cell "Confidence ran ahead of performance"
+          - row "Examination and investigations 100% 43% Confidence ran ahead of performance":
+            - rowheader "Examination and investigations"
+            - cell "100%"
+            - cell "43%"
+            - cell "Confidence ran ahead of performance"
+          - row "Clinical reasoning 85% 78% Well-calibrated":
+            - rowheader "Clinical reasoning"
+            - cell "85%"
+            - cell "78%"
+            - cell "Well-calibrated"
+          - row "Communication 60% 48% Confidence ran ahead of performance":
+            - rowheader "Communication"
+            - cell "60%"
+            - cell "48%"
+            - cell "Confidence ran ahead of performance"
+          - row "Management 80% 36% Confidence ran ahead of performance":
+            - rowheader "Management"
+            - cell "80%"
+            - cell "36%"
+            - cell "Confidence ran ahead of performance"
+      - paragraph: "Your gap over recent encounters: 36%"
+    - paragraph: Improving across sessions · Private by design. No public leaderboard.
+  - region "By domain":
+    - text: Competency bands
+    - heading "Reasoning and communication" [level=2]
+    - paragraph: These are scored independently.
+    - heading "Clinical" [level=3]
+    - text: History-taking Developing
+    - 'img "You reached: Developing"': Emerging Developing Proficient Strong Exemplary
+    - text: Examination and investigations Developing
+    - 'img "You reached: Developing"': Emerging Developing Proficient Strong Exemplary
+    - text: Clinical reasoning Strong
+    - 'img "You reached: Strong"': Emerging Developing Proficient Strong Exemplary
+    - text: Management Developing
+    - 'img "You reached: Developing"': Emerging Developing Proficient Strong Exemplary
+    - heading "Communication and professionalism" [level=3]
+    - text: Communication Developing
+    - 'img "You reached: Developing"': Emerging Developing Proficient Strong Exemplary
+    - text: Professionalism Withheld
+    - paragraph: Not enough reliability to score this yet.
+  - region "Process and timing":
+    - text: Process & timing
+    - heading "Process and timing" [level=2]
+    - paragraph: What was done, in what order, and how fast, measured against guideline expectations and cited.
+    - paragraph: "Safety-critical process miss: review this"
+    - list:
+      - listitem:
+        - text: Absolute neutrophil count Not ordered; target within 30 min
+        - status: Source unavailable
+      - listitem:
+        - text: Chest X-ray Not ordered; target within 30 min
+        - status: Source unavailable
+    - text: History coverage 50 % 4 of 8 expected areas asked Redundant questions 0 6 off-target question(s) Total encounter time 4 min From arrival to disposition Time to diagnosis 4 min Correct working diagnosis Time to critical actions
+    - paragraph: Each action is measured against its guideline target and cited, whether on time or not.
+    - text: 1 of 3 on time
+    - paragraph: Absolute neutrophil count
+    - paragraph: Missed · Not ordered; target within 30 min
+    - text: Critical
+    - status: Source unavailable
+    - paragraph: C-reactive protein
+    - paragraph: On time · Ordered at 0 min; target within 30 min
+    - status: Source unavailable
+    - paragraph: Chest X-ray
+    - paragraph: Missed · Not ordered; target within 30 min
+    - text: Critical
+    - status: Source unavailable
+    - text: Investigation stewardship
+    - paragraph: Whether each order was indicated by the presentation, measured against the expected workup and cited.
+    - text: Indicated orders 1 Matched the expected workup Low-value orders 0 Not indicated for this presentation
+    - paragraph: No low-value orders. Every investigation was indicated.
+    - paragraph: Order what the presentation indicates. Low-value tests add cost, delay, and incidental findings.
+    - 'link "Source: NICE NG185. Open provenance."':
+      - /url: https://www.nice.org.uk/guidance/ng185/chapter/Recommendations
+      - text: NICE NG185
+    - text: How the patient was treated
+    - list "How the patient was treated":
+      - listitem:
+        - text: Screened cardiac red flags Safety Missed
+        - paragraph: Red-flag features were not screened during the history.
+        - 'link "Source: NICE NG185. Open provenance."':
+          - /url: https://www.nice.org.uk/guidance/ng185/chapter/Recommendations
+          - text: NICE NG185
+      - listitem:
+        - text: Checked allergies before prescribing Safety Done
+        - paragraph: Confirmed allergy status before treatment.
+        - 'link "Source: NICE NG185. Open provenance."':
+          - /url: https://www.nice.org.uk/guidance/ng185/chapter/Recommendations
+          - text: NICE NG185
+      - listitem:
+        - text: Explored ideas, concerns and expectations Communication Missed
+        - paragraph: The patient's ideas and concerns were not explored.
+        - status: Source unavailable
+  - region "Gaps and next steps":
+    - text: Evidence-anchored gaps
+    - heading "Gaps and next steps" [level=2]
+    - article:
+      - text: Safety-critical Clinical reasoning
+      - heading "Expected action was not ordered" [level=3]
+      - paragraph: From the transcript
+      - blockquote: Absolute neutrophil count was never ordered (guideline target ≤ 30 min).
+      - paragraph: Practice this
+      - paragraph: Order Absolute neutrophil count within 30 minutes of first contact for this presentation.
+      - status: Source unavailable
+  - region "Next steps":
+    - text: Next steps
+    - heading "Next steps" [level=2]
+    - button "Add to spaced repetition"
+    - button "Retry a harder variant"
+    - paragraph: Nothing here is graded or ranked. It feeds your practice queue.

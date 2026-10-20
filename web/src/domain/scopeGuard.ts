@@ -363,13 +363,13 @@ const INTENT_STEMS: Array<[QuestionIntent, string[]]> = [
   ["timing", ["timing", "constant", "intermitt", "frequen", "long", "durat", "süre", "sürekli", "aralık", "sıklık"]],
   ["aggravating", ["aggrava", "worse", "trigger", "exert", "kötüleş", "artır", "tetik", "efor", "hareket"]],
   ["relieving", ["reliev", "better", "ease", "rest", "help", "hafifle", "azal", "rahatla", "dinlen"]],
-  ["associated-symptoms", ["associat", "along", "also", "other", "nausea", "vomit", "sweat", "fever", "cough", "dizz", "palpit", "ilişkili", "eşlik", "başka", "bulant", "kusma", "terle", "ateş"]],
+  ["associated-symptoms", ["associat", "along", "also", "other", "nausea", "vomit", "sweat", "fever", "cough", "dizz", "palpit", "ilişkili", "eşlik", "başka", "bulant", "kusma", "terle", "ateş", "chill", "rigor", "shiver", "shak", "urin", "pee", "dysur", "breath", "headach", "neck", "stiff", "rash", "titre", "idrar", "nefes", "ense"]],
   ["red-flags", ["flag", "night", "worst", "thunderclap", "kırmızı", "bayrak", "gece", "kötü"]],
   ["past-medical-history", ["past", "previous", "chronic", "surger", "operat", "geçmiş", "öykü", "kronik", "ameliyat", "önce"]],
   ["medications", ["medicat", "medicine", "drug", "pill", "tablet", "dose", "aspirin", "ilaç", "hap", "doz", "kullan"]],
   ["allergies", ["allerg", "reaction", "alerj", "tepki"]],
   ["family-history", ["family", "father", "mother", "parent", "sibling", "hered", "aile", "baba", "anne", "kardeş", "kalıtsal", "soy"]],
-  ["social-history", ["social", "smok", "alcohol", "drink", "occupat", "job", "work", "exercise", "diet", "sosyal", "sigara", "alkol", "meslek", "yaşa", "egzersiz", "diyet", "içki"]],
+  ["social-history", ["social", "smok", "alcohol", "drink", "occupat", "job", "work", "exercise", "diet", "sosyal", "sigara", "alkol", "meslek", "yaşa", "egzersiz", "diyet", "içki", "travel", "abroad", "trip", "seyahat", "yurtdış"]],
   ["risk-factors", ["risk", "factor", "diabet", "hypertens", "cholest", "obes", "sedentary", "faktör", "diyabet", "tansiyon", "kolesterol", "obez"]],
   ["ice", ["worried", "concern", "afraid", "expect", "idea", "fear", "think", "endişe", "kaygı", "kork", "bekle", "fikir", "düşün"]],
 ];
@@ -397,9 +397,18 @@ export function inferQuestionIntent(text: string, caseInstance: CaseInstance): Q
   let bestScore = 0;
   for (const [intent, stems] of INTENT_STEMS) {
     let hits = 0;
-    for (const tok of tokens) if (startsWithAny(tok, stems)) hits++;
+    tokens.forEach((tok, i) => {
+      // "when" opens an onset question ("When did it start?") but mid-sentence
+      // it is a conjunction ("pain when you pass urine"): acceptance test
+      // 2026-10-20 saw urinary and breathing questions routed to onset.
+      if (intent === "onset" && tok === "when" && i > 0) return;
+      if (startsWithAny(tok, stems)) hits++;
+    });
     if (hits === 0) continue;
-    const score = hits + (expected.has(intent) ? 0.5 : 0);
+    // An allergy question names medicines too ("allergies to medicines"); the
+    // allergy stem decides, or the allergy check is never credited.
+    const weight = intent === "allergies" ? 2 : 1;
+    const score = hits * weight + (expected.has(intent) ? 0.5 : 0);
     if (score > bestScore) {
       bestScore = score;
       best = intent;

@@ -249,3 +249,25 @@ async def test_gateway_raises_when_registry_has_no_llm(tmp_path):
     with pytest.raises(GatewayError):
         await gw.chat([{"role": "user", "content": "hi"}])
     await gw.aclose()
+
+
+async def test_gateway_records_a_row_when_no_provider_resolves(tmp_path):
+    """Acceptance 2026-10-20 (docs/review/05, D-07): a call refused in resolution
+    (probe-failed local model, GPU worker refused) must still be visible in
+    telemetry, otherwise the console reports 0 calls and 0 errors."""
+    cfg = _settings(tmp_path)
+    store = RegistryStore(cfg.acudx_db_path, secret_key=None)   # not seeded: nothing resolves
+    telemetry = TelemetryRecorder(cfg.acudx_db_path)
+    gw = ModelGateway(cfg, resolver=RegistryResolver(store, cfg), telemetry=telemetry)
+    await gw.start()
+    with call_context(route="/v1/patient/turn"):
+        with pytest.raises(GatewayError):
+            await gw.chat([{"role": "user", "content": "hi"}])
+    with pytest.raises(GatewayError):
+        await gw.embed(["a"])
+    rows = telemetry.recent(limit=5)
+    assert sorted(r["kind"] for r in rows) == ["embed", "llm"]
+    assert all(r["ok"] == 0 and r["error"] == "no_provider" and r["provider"] == "unresolved" for r in rows)
+    assert any(r["route"] == "/v1/patient/turn" for r in rows)
+    assert all((r["cost_usd"] or 0) == 0 for r in rows)
+    await gw.aclose()

@@ -41,7 +41,8 @@
       "order": "Order {{label}}",
       "screenRedFlags": "Screen the remaining red flags",
       "complete": "Core work-up covered — consolidate your assessment",
-      "urgent": "Time-critical"
+      "urgent": "Time-critical",
+      "within": "within {{minutes}} min"
     },
     "workup": {
       "title": "What a strong work-up covers",

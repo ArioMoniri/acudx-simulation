@@ -1,0 +1,42 @@
+- main:
+  - text: Operator console
+  - heading "Admin" [level=1]
+  - paragraph: Providers, GPU policy, budgets and telemetry for this AcuDx deployment. Every change is saved on the server; no key ever reaches the browser.
+  - text: Admin session active
+  - button "Sign out of admin"
+  - tablist "Admin":
+    - tab "Overview"
+    - tab "Providers"
+    - tab "Users"
+    - tab "GPU" [selected]
+    - tab "Telemetry"
+    - tab "Settings"
+  - tabpanel "GPU":
+    - paragraph: "Never always-on: a Lambda Cloud instance is launched when the LLM registry has no reachable API provider and terminated after the idle window or when the daily budget would be exceeded."
+    - heading "On-demand GPU worker" [level=3]
+    - text: none
+    - paragraph: No worker running. One is launched on demand when a request needs a GPU and no API provider answers.
+    - paragraph: LAMBDA_KEY or LAMBDA_SSH_KEY_NAME is not set on the gateway.
+    - paragraph: "Cannot launch: AIRGAPPED=true: the gateway refuses to launch cloud GPU capacity (fail closed). Set AIRGAPPED=false to allow Lambda Cloud egress."
+    - button "Start worker now" [disabled]
+    - text: Spent today $0.0000 Spent (7 d) $0.0000 Spent (30 d) $0.0000
+    - heading "Policy" [level=3]
+    - paragraph: One instance type per line; the cheapest with capacity wins.
+    - text: Idle minutes before termination
+    - spinbutton "Idle minutes before termination": "20"
+    - text: Daily budget (USD)
+    - spinbutton "Daily budget (USD)": "25"
+    - text: vLLM model
+    - textbox "vLLM model": Qwen/Qwen3-32B-AWQ
+    - text: Instance allow-list
+    - paragraph: One instance type per line; the cheapest with capacity wins.
+    - textbox "Instance allow-list": gpu_1x_a100_sxm4 gpu_1x_a10 gpu_1x_a100 gpu_1x_h100_pcie
+    - text: Region preference optional
+    - paragraph: Optional, one region per line, in order.
+    - textbox "Region preference optional"
+    - status
+    - button "Save policy"
+    - heading "GPU cost per day (14 d)" [level=3]
+    - paragraph: No GPU sessions yet.
+    - heading "Cost ledger" [level=3]
+    - paragraph: No GPU sessions yet.

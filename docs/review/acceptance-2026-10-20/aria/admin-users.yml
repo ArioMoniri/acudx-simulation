@@ -1,0 +1,26 @@
+- main:
+  - text: Operator console
+  - heading "Admin" [level=1]
+  - paragraph: Providers, GPU policy, budgets and telemetry for this AcuDx deployment. Every change is saved on the server; no key ever reaches the browser.
+  - text: Admin session active
+  - button "Sign out of admin"
+  - tablist "Admin":
+    - tab "Overview"
+    - tab "Providers"
+    - tab "Users" [selected]
+    - tab "GPU"
+    - tab "Telemetry"
+    - tab "Settings"
+  - tabpanel "Users":
+    - heading "Users and roles" [level=3]
+    - paragraph: Server-side role grants keyed by the identity provider subject. Granted roles are unioned with the roles in the person's verified token, so faculty and deans can be promoted here even when the university IdP sends no role claim.
+    - text: Filter by org
+    - paragraph: Leave empty for every org.
+    - textbox "Filter by org"
+    - text: Add a user by subject
+    - paragraph: The IdP sub (Keycloak user id, Supabase uid). The row is created with the student role.
+    - textbox "Add a user by subject"
+    - text: Org for the new user optional
+    - textbox "Org for the new user optional"
+    - button "Add" [disabled]
+    - text: No users yet. A user appears after their first verified request, or when you add one by subject.

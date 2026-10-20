@@ -1,0 +1,286 @@
+- main:
+  - figure:
+    - img "Synthetic patient portrait — not a real individual"
+  - heading "Poppy T." [level=2]
+  - paragraph: 32 y, female MRNSIM-AI-VF084F
+  - 'note "Simulation. Synthetic patient. For education only. Case source: template (not model generated)."': SIM synthetic patient template (not model generated) degraded
+  - text: 03:30
+  - 'status "Clinical Director: the server adapts vitals, facts and complications to your actions."': "Director: 29 steps"
+  - button "New case"
+  - text: Chief complaint Fever days after chemotherapy Allergies No known drug allergies Code Full code Acuity ESI 2 · Abnormal Encounter Emergency (ED)
+  - navigation "Stage":
+    - list "Stage":
+      - listitem: Chart review
+      - listitem: Interview and exam
+      - listitem: Orders
+      - listitem: Results
+      - listitem: A and P
+  - paragraph: Difficulty 3/5 · template (not model generated)
+  - complementary "Storyboard":
+    - figure:
+      - img "Synthetic patient portrait — not a real individual"
+      - button "Enlarge patient view"
+    - paragraph: Poppy T.
+    - paragraph: In pain, anxious
+    - paragraph: Tachycardic · Diaphoretic · Febrile
+    - term: MRN
+    - definition: SIM-AI-VF084F
+    - term: Age
+    - definition: "32"
+    - term: Sex
+    - definition: female
+    - term: Acuity
+    - definition: ESI 2
+    - term: Weight
+    - definition: 87 kg
+    - paragraph: Fills in as you work the chart.
+    - heading "Problem list" [level=3]
+    - paragraph: No problems added yet. Build them in A and P.
+    - heading "Allergies" [level=3]
+    - paragraph: No known drug allergies
+    - heading "Vitals snapshot Live" [level=3]
+    - paragraph: HR
+    - paragraph: 122bpm
+    - paragraph: BP
+    - paragraph: 114/86
+    - paragraph: RR
+    - paragraph: 22/min
+    - paragraph: SpO2
+    - paragraph: 94%
+    - paragraph: Temp
+    - paragraph: 38.8°C
+    - heading "Medications and history 2" [level=3]
+    - list:
+      - listitem: Ondansetron and dexamethasone from the chemo pack.
+      - listitem: Ondansetron and dexamethasone from the chemo pack.
+    - heading "Exam findings 4" [level=3]
+    - list:
+      - listitem: General Uncomfortable but engaging with questions. Abnormal
+      - listitem: General Febrile 38.9C, rigors, PICC line site clean; no mucositis; no localising source. Abnormal
+      - listitem: Respiratory Clear chest. Within normal limits
+      - listitem: Vitals Vitals rechecked and trending as charted. Within normal limits
+    - heading "Care team" [level=3]
+    - list:
+      - listitem: You Treating clinician
+      - listitem: Triage nurse Nursing
+      - listitem: Charge nurse Resuscitation support
+    - heading "Encounter clock" [level=3]
+    - text: 03:30
+  - tablist "Chart sections":
+    - tab "Chart Review"
+    - tab "Interview"
+    - tab "Flowsheets"
+    - tab "Monitor"
+    - tab "Orders 7"
+    - tab "Results 7" [selected]
+    - tab "Guidance"
+    - tab "Problem List / A&P"
+  - tabpanel "Results 7":
+    - text: Result summary 7 of 7 orders resulted 5 abnormal 2 critical
+    - switch "Abnormal only"
+    - text: Abnormal only
+    - heading "Critical values" [level=3]
+    - list:
+      - listitem: WBC 0.910*9/L
+      - listitem: Lac 7.8mmol/L
+    - paragraph: Review and act on critical results without delay.
+    - heading "Laboratory" [level=3]
+    - heading "Complete blood count (CBC) with differential 7 analytes Results engine" [level=4]
+    - text: Ordered 0 min → resulted 1 min
+    - table "Complete blood count (CBC) with differential — Laboratory results with reference ranges and abnormal flags":
+      - caption: Complete blood count (CBC) with differential — Laboratory results with reference ranges and abnormal flags
+      - rowgroup:
+        - row "Test Value Reference Flag":
+          - columnheader "Test"
+          - columnheader "Value"
+          - columnheader "Reference"
+          - columnheader "Flag"
+      - rowgroup:
+        - row "WBC 0.910*9/L 4.5 - 11 Critically low":
+          - rowheader "WBC"
+          - cell "0.910*9/L"
+          - cell "4.5 - 11"
+          - cell "Critically low"
+        - row "Hb 13.4g/dL 12 - 16 Normal":
+          - rowheader "Hb"
+          - cell "13.4g/dL"
+          - cell "12 - 16"
+          - cell "Normal"
+        - row "Hct 42% 36 - 46 Normal":
+          - rowheader "Hct"
+          - cell "42%"
+          - cell "36 - 46"
+          - cell "Normal"
+        - row "Plt 26810*9/L 150 - 400 Normal":
+          - rowheader "Plt"
+          - cell "26810*9/L"
+          - cell "150 - 400"
+          - cell "Normal"
+        - row "MCV 95fL 80 - 100 Normal":
+          - rowheader "MCV"
+          - cell "95fL"
+          - cell "80 - 100"
+          - cell "Normal"
+        - row "Neut 0.310*9/L 1.8 - 7.7 Low":
+          - rowheader "Neut"
+          - cell "0.310*9/L"
+          - cell "1.8 - 7.7"
+          - cell "Low"
+        - row "Lymph 3.610*9/L 1 - 4.4 Normal":
+          - rowheader "Lymph"
+          - cell "3.610*9/L"
+          - cell "1 - 4.4"
+          - cell "Normal"
+    - heading "C-reactive protein (CRP) 1 analytes Results engine" [level=4]
+    - text: Ordered 0 min → resulted 1 min
+    - table "C-reactive protein (CRP) — Laboratory results with reference ranges and abnormal flags":
+      - caption: C-reactive protein (CRP) — Laboratory results with reference ranges and abnormal flags
+      - rowgroup:
+        - row "Test Value Reference Flag":
+          - columnheader "Test"
+          - columnheader "Value"
+          - columnheader "Reference"
+          - columnheader "Flag"
+      - rowgroup:
+        - row "CRP 135.3mg/L 0 - 3 High":
+          - rowheader "CRP"
+          - cell "135.3mg/L"
+          - cell "0 - 3"
+          - cell "High"
+    - heading "Lactate 1 analytes Results engine" [level=4]
+    - text: Ordered 0 min → resulted 1 min
+    - table "Lactate — Laboratory results with reference ranges and abnormal flags":
+      - caption: Lactate — Laboratory results with reference ranges and abnormal flags
+      - rowgroup:
+        - row "Test Value Reference Flag":
+          - columnheader "Test"
+          - columnheader "Value"
+          - columnheader "Reference"
+          - columnheader "Flag"
+      - rowgroup:
+        - row "Lac 7.8mmol/L 0.5 - 2.2 Critically high":
+          - rowheader "Lac"
+          - cell "7.8mmol/L"
+          - cell "0.5 - 2.2"
+          - cell "Critically high"
+    - heading "Urinalysis with microscopy 11 analytes Results engine" [level=4]
+    - text: Ordered 0 min → resulted 1 min
+    - table "Urinalysis with microscopy — Laboratory results with reference ranges and abnormal flags":
+      - caption: Urinalysis with microscopy — Laboratory results with reference ranges and abnormal flags
+      - rowgroup:
+        - row "Test Value Reference Flag":
+          - columnheader "Test"
+          - columnheader "Value"
+          - columnheader "Reference"
+          - columnheader "Flag"
+      - rowgroup:
+        - 'row "uSG 1.017{ratio} 1.005 - 1.03 Normal"':
+          - rowheader "uSG"
+          - 'cell "1.017{ratio}"'
+          - cell "1.005 - 1.03"
+          - cell "Normal"
+        - row "upH 6.1[pH] 4.6 - 8 Normal":
+          - rowheader "upH"
+          - cell "6.1[pH]"
+          - cell "4.6 - 8"
+          - cell "Normal"
+        - row "uProt Negative — Normal":
+          - rowheader "uProt"
+          - cell "Negative"
+          - cell "—"
+          - cell "Normal"
+        - row "uGlu Negative — Normal":
+          - rowheader "uGlu"
+          - cell "Negative"
+          - cell "—"
+          - cell "Normal"
+        - row "uKet Negative — Normal":
+          - rowheader "uKet"
+          - cell "Negative"
+          - cell "—"
+          - cell "Normal"
+        - row "uBld Negative — Normal":
+          - rowheader "uBld"
+          - cell "Negative"
+          - cell "—"
+          - cell "Normal"
+        - row "uNit Negative — Normal":
+          - rowheader "uNit"
+          - cell "Negative"
+          - cell "—"
+          - cell "Normal"
+        - row "uLE Negative — Normal":
+          - rowheader "uLE"
+          - cell "Negative"
+          - cell "—"
+          - cell "Normal"
+        - row "uWBC None seen — Normal":
+          - rowheader "uWBC"
+          - cell "None seen"
+          - cell "—"
+          - cell "Normal"
+        - row "uRBC None seen — Normal":
+          - rowheader "uRBC"
+          - cell "None seen"
+          - cell "—"
+          - cell "Normal"
+        - row "uBact None seen — Normal":
+          - rowheader "uBact"
+          - cell "None seen"
+          - cell "—"
+          - cell "Normal"
+    - heading "Microbiology, serology & reports" [level=3]
+    - list:
+      - listitem:
+        - text: Blood culture (×2) + Gram stain Results engine Ordered 0 min → resulted 3 min
+        - paragraph: Expected turnaround 48 h
+        - paragraph: "Blood culture: No growth at 48 h"
+    - heading "Imaging and reports" [level=3]
+    - list:
+      - listitem:
+        - text: 12-lead ECG Results engine Ordered 0 min → resulted 1 min
+        - paragraph: Expected turnaround 10 min
+        - paragraph: "Impression: Sinus tachycardia, otherwise normal complexes."
+        - figure "Sinus tachycardia, otherwise normal complexes. 25 mm/s, 10 mm/mV, 1 mm / 5 mm grid, calibration pulse at left Synthetic tracing synthesized from the structured state (not a recording).":
+          - text: ECG 12-lead
+          - img "12-lead ECG printout, rate 115 per minute, sinus"
+          - term: HR
+          - definition: "115"
+          - term: PR
+          - definition: "160"
+          - term: QRS
+          - definition: "90"
+          - term: QTc
+          - definition: "400"
+          - term: Axis
+          - definition: "41"
+          - term: Rhythm
+          - definition: sinus
+          - paragraph: Structured findings
+          - list:
+            - listitem: No structured findings reported.
+          - paragraph: "Impression: Sinus tachycardia, otherwise normal complexes."
+          - paragraph: Sinus tachycardia, otherwise normal complexes.
+          - paragraph: 25 mm/s, 10 mm/mV, 1 mm / 5 mm grid, calibration pulse at left
+          - paragraph: Synthetic tracing synthesized from the structured state (not a recording).
+      - listitem:
+        - text: Chest X-ray (CXR) Results engine Ordered 0 min → resulted 1 min
+        - paragraph: Expected turnaround 30 min
+        - paragraph: "Impression: Screen for an occult source of infection."
+        - 'figure "Screen for an occult source of infection. License: CC0 Attribution: Image: Mikael Häggström, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Normal_posteroanterior_(PA)_chest_radiograph_(X-ray).jpg) View source (wikimedia_commons) Representative image, not this patient · licence verified 2026-10-19"':
+          - text: X-ray Results engine
+          - img "X-ray — representative image of Normal PA chest radiograph, 21 year old woman."
+          - paragraph: Representative image — not this patient
+          - paragraph: Structured findings
+          - list:
+            - listitem: Screen for an occult source of infection.
+          - paragraph: "Impression: Screen for an occult source of infection."
+          - paragraph: Screen for an occult source of infection.
+          - text: "License:"
+          - link "CC0":
+            - /url: http://creativecommons.org/publicdomain/zero/1.0/deed.en
+          - text: "Attribution: Image: Mikael Häggström, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Normal_posteroanterior_(PA)_chest_radiograph_(X-ray).jpg)"
+          - link "View source (wikimedia_commons)":
+            - /url: https://commons.wikimedia.org/wiki/File:Normal_posteroanterior_(PA)_chest_radiograph_(X-ray).jpg
+          - text: Representative image, not this patient · licence verified 2026-10-19
+  - note "Simulation. Synthetic patient. For education only.": SIM synthetic patient education only

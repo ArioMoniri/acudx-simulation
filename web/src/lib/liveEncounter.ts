@@ -46,6 +46,20 @@ export interface CaseGenerationMeta {
 }
 
 /**
+ * i18n key for the provenance word on the case-meta line under the banner
+ * ("Difficulty 3/5 · <provenance>"). The generation source wins over the
+ * CaseInstance's coarse `provenance` ("seed" | "generated"): the acceptance run
+ * of 2026-10-20 saw a template case labelled "Generated case" there while the
+ * banner said "template (not model generated)".
+ */
+export function caseMetaProvenanceKey(
+  generation: Pick<CaseGenerationMeta, "source"> | null | undefined,
+  caseProvenance: string,
+): string {
+  return generation ? `live2.source.${generation.source}` : `ehr.provenance.${caseProvenance}`;
+}
+
+/**
  * Where a resolved result's numbers came from. Every `result` event carries
  * one of these in `meta.source` so a reviewer can tell measured-by-engine from
  * authored-by-case from the offline synthetic normal.
