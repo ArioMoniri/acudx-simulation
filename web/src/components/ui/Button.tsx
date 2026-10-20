@@ -33,31 +33,31 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const base =
-  "inline-flex items-center justify-center gap-2 font-medium whitespace-nowrap " +
-  "rounded-control select-none transition-[background-color,color,box-shadow,transform] " +
-  "duration-150 ease-out active:scale-[0.98] disabled:opacity-50 " +
-  "disabled:pointer-events-none focus-visible:outline-none no-underline";
+  "inline-flex items-center justify-center gap-1.5 font-medium whitespace-nowrap " +
+  "rounded-control select-none transition-[background-color,color,border-color] " +
+  "duration-[120ms] ease-out disabled:opacity-50 " +
+  "disabled:pointer-events-none no-underline";
 
 const variants: Record<Variant, string> = {
   // The ONE locked accent CTA — flat, no float.
   primary: "bg-brand text-white hover:bg-brand-hover",
   secondary: "bg-surface text-fg border border-border-strong hover:bg-bg-subtle",
-  ghost: "bg-transparent text-fg hover:bg-bg-subtle",
+  ghost: "bg-transparent text-fg hover:bg-bg-inset",
   danger:
     "bg-[color:var(--state-critical)] text-white hover:brightness-95",
 };
 
 // Tighter, software-grade heights. Min target stays comfortable at md/lg.
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3 text-[0.8125rem] min-w-8",
-  md: "h-9 px-4 text-sm min-w-9",
-  lg: "h-11 px-6 text-[0.9375rem] min-w-11",
+  sm: "h-7 px-2.5 text-xs min-w-7",
+  md: "h-8 px-3 text-[0.8125rem] min-w-8",
+  lg: "h-9 px-4 text-sm min-w-9",
 };
 
 const circleSizes: Record<Size, string> = {
-  sm: "h-4 w-4 -me-0.5",
-  md: "h-5 w-5 -me-1",
-  lg: "h-6 w-6 -me-1.5",
+  sm: "h-3.5 w-3.5 -me-0.5",
+  md: "h-4 w-4 -me-0.5",
+  lg: "h-4 w-4 -me-1",
 };
 
 const spinnerSizes: Record<Size, string> = {
@@ -111,10 +111,8 @@ function renderContent(
         <span
           aria-hidden="true"
           className={cn(
-            "inline-flex shrink-0 items-center justify-center rounded-full",
-            variant === "primary" || variant === "danger"
-              ? "bg-white/20"
-              : "bg-brand-tint text-brand",
+            "inline-flex shrink-0 items-center justify-center",
+            variant === "primary" || variant === "danger" ? "text-white" : "text-muted",
             circleSizes[size],
           )}
         >

@@ -87,10 +87,10 @@ export function CohortKpis({ report }: { report: CohortReport }) {
     { id: "risk", icon: Warning, label: t("panels.dean.kpi.atRisk"), value: String(k.at_risk), hint: t("panels.dean.kpi.atRiskHint") },
   ];
   return (
-    <ul aria-label={t("panels.dean.kpi.sectionLabel")} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    <ul aria-label={t("panels.dean.kpi.sectionLabel")} className="grid gap-px overflow-hidden rounded-card border border-border bg-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {items.map(({ id, icon: Icon, label, value, hint }) => (
-        <li key={id} className="h-full">
-          <Card variant="surface" padding="md" className="h-full">
+        <li key={id} className="h-full bg-surface">
+          <Card variant="flat" padding="md" className="h-full">
             <Stat label={label} value={value} hint={hint} icon={<Icon weight="bold" className="h-4 w-4" aria-hidden />} />
           </Card>
         </li>
@@ -257,8 +257,8 @@ export function ActivityChart({ activity, window }: { activity: CohortReport["ac
         <EvilAreaChart.Grid />
         <EvilAreaChart.XAxis dataKey="label" interval={tickEvery - 1} />
         <EvilAreaChart.YAxis allowDecimals={false} />
-        <EvilAreaChart.Area dataKey="encounters" variant="gradient" strokeWidth={1.5} />
-        <EvilAreaChart.Area dataKey="learners" variant="gradient" strokeWidth={1.5} />
+        <EvilAreaChart.Area dataKey="encounters" variant="solid" strokeWidth={1.5} />
+        <EvilAreaChart.Area dataKey="learners" variant="solid" strokeWidth={1.5} />
         <EvilAreaChart.Tooltip />
         <EvilAreaChart.Legend variant="circle" />
       </EvilAreaChart>

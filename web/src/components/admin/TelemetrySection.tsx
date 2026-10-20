@@ -263,7 +263,7 @@ export function TelemetrySection() {
               <EvilAreaChart.Grid />
               <EvilAreaChart.XAxis dataKey="label" interval={tickEvery - 1} />
               <EvilAreaChart.YAxis tickFormatter={(v: number) => formatUsd(v, locale)} />
-              <EvilAreaChart.Area dataKey="cost_usd" variant="gradient" strokeWidth={1.5} />
+              <EvilAreaChart.Area dataKey="cost_usd" variant="solid" strokeWidth={1.5} />
               <EvilAreaChart.Tooltip />
             </EvilAreaChart>
           }

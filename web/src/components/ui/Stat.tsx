@@ -36,10 +36,10 @@ export interface StatProps {
 }
 
 const valueSize: Record<StatSize, string> = {
-  sm: "text-lg",
-  md: "text-2xl",
-  lg: "text-[2rem]",
-  xl: "text-[2.75rem]",
+  sm: "text-base",
+  md: "text-xl",
+  lg: "text-2xl",
+  xl: "text-[2rem]",
 };
 
 function trendClasses(dir: TrendDir, goodUp: boolean): string {
@@ -75,7 +75,7 @@ export function Stat({
         {icon ? (
           <span
             aria-hidden="true"
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-chip bg-brand-tint text-brand"
+            className="grid h-4 w-4 shrink-0 place-items-center text-subtle"
           >
             {icon}
           </span>
@@ -100,7 +100,7 @@ export function Stat({
         {trend ? (
           <span
             className={cn(
-              "inline-flex items-center gap-0.5 rounded-pill px-1.5 py-0.5",
+              "inline-flex items-center gap-0.5 rounded-chip px-1 py-px",
               "text-xs font-semibold tabular-nums",
               trendClasses(dir, trend.goodUp ?? true),
             )}

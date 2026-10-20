@@ -33,16 +33,16 @@ const dotColor: Record<Tone, string> = {
 
 // Soft: tinted text on a soft tint. Text label is always present.
 const soft: Record<Tone, string> = {
-  neutral: "bg-bg-subtle text-muted border-transparent",
+  neutral: "bg-bg-inset text-muted border-transparent",
   brand: "bg-brand-tint text-brand border-transparent",
   normal:
-    "border-transparent text-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_14%,transparent)]",
+    "border-transparent text-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_12%,transparent)]",
   caution:
-    "border-transparent text-[color:var(--state-caution)] bg-[color-mix(in_srgb,var(--state-caution)_16%,transparent)]",
+    "border-transparent text-[color:var(--state-caution)] bg-[color-mix(in_srgb,var(--state-caution)_12%,transparent)]",
   warning:
-    "border-transparent text-[color:var(--state-warning)] bg-[color-mix(in_srgb,var(--state-warning)_16%,transparent)]",
+    "border-transparent text-[color:var(--state-warning)] bg-[color-mix(in_srgb,var(--state-warning)_12%,transparent)]",
   critical:
-    "border-transparent text-[color:var(--state-critical)] bg-[color-mix(in_srgb,var(--state-critical)_15%,transparent)]",
+    "border-transparent text-[color:var(--state-critical)] bg-[color-mix(in_srgb,var(--state-critical)_12%,transparent)]",
 };
 
 // Outline: hairline chip on surface. Clinical tones carry meaning through a
@@ -61,7 +61,7 @@ const outline: Record<Tone, string> = {
     "bg-surface text-[color:var(--state-critical)] border-[color:var(--state-critical)]",
 };
 
-/** Badge — small pill. Clinical tones pair an icon or dot with the label. */
+/** Badge: a 4 px chip (Linear-style label). Clinical tones pair an icon or dot with the label. */
 export function Badge({
   tone = "neutral",
   icon,
@@ -74,8 +74,8 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-pill border px-2.5 py-0.5",
-        "text-xs font-medium leading-5",
+        "inline-flex items-center gap-1 rounded-chip border px-1.5 py-px",
+        "text-[0.6875rem] font-medium leading-4 tracking-[0.01em]",
         variant === "soft" ? soft[tone] : outline[tone],
         className,
       )}

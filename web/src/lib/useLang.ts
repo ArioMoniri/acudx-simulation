@@ -18,8 +18,8 @@ export function useLang(): Lang {
 export function useEntry(delay = 0) {
   const reduce = useReducedMotion();
   return {
-    initial: reduce ? undefined : { opacity: 0, y: 12 },
+    initial: reduce ? undefined : { opacity: 0, y: 4 },
     animate: reduce ? undefined : { opacity: 1, y: 0 },
-    transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const, delay },
+    transition: { duration: 0.16, ease: [0.2, 0, 0, 1] as const, delay },
   };
 }
