@@ -1,0 +1,35 @@
+{
+  "nav": {
+    "primary": "Ana gezinme",
+    "more": "Diğer",
+    "search": "Ara",
+    "breadcrumbs": "Sayfa yolu",
+    "sections": "Bölümler"
+  },
+  "landing": {
+    "breadcrumb": "Hoş geldiniz"
+  },
+  "landing3": {
+    "hero": {
+      "shotAlt": "Vaka çalışma alanı: hasta şeridi, storyboard rayı ve kart sekmeleri",
+      "shotCaption": "Vaka çalışma alanı, 1280 px, sentetik hasta"
+    }
+  },
+  "orders2": {
+    "tracker": {
+      "orderCol": "İstem",
+      "statusCol": "Durum"
+    }
+  },
+  "cases3": {
+    "sortBy": "{{column}} sütununa göre sırala",
+    "sortedAsc": "artan sıralı",
+    "sortedDesc": "azalan sıralı",
+    "generatorTitle": "Yeni sentetik vaka",
+    "library": "Vaka kütüphanesi",
+    "rows": "{{count}} vaka"
+  },
+  "shell3": {
+    "openSection": "Bölümü aç"
+  }
+}

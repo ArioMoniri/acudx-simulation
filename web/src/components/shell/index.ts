@@ -8,3 +8,6 @@ export { LanguageSwitcher } from "./LanguageSwitcher";
 export { ThemeToggle } from "./ThemeToggle";
 export { RoleSwitcher } from "./RoleSwitcher";
 export { GuidedTour } from "./GuidedTour";
+export { SideNav } from "./SideNav";
+export { BottomTabBar } from "./BottomTabBar";
+export { GlobalSearch } from "./GlobalSearch";

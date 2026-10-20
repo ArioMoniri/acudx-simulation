@@ -205,10 +205,9 @@ export function GuidedTour({ className }: { className?: string }) {
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "inline-flex min-h-9 items-center gap-1.5 rounded-control border border-border",
-          "bg-surface px-3 text-sm font-medium text-fg",
-          "transition-colors duration-200 ease-out hover:bg-bg-subtle",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98]",
+          "inline-flex h-8 items-center gap-1.5 rounded-control border border-border",
+          "bg-surface px-2.5 text-[0.8125rem] font-medium text-fg",
+          "transition-colors duration-[120ms] ease-out hover:bg-bg-subtle",
         )}
       >
         <Path weight="bold" className="h-4 w-4 text-brand" aria-hidden />
@@ -228,7 +227,7 @@ export function GuidedTour({ className }: { className?: string }) {
             aria-label={t("tour.title")}
             className={cn(
               "absolute right-0 z-50 mt-2 w-[min(calc(100vw-2rem),24rem)]",
-              "rounded-card border border-border bg-surface p-4 shadow-soft-md",
+              "rounded-card border border-border bg-surface p-4 shadow-pop",
             )}
           >
             <div className="flex items-start justify-between gap-3">

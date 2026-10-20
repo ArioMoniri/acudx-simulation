@@ -134,9 +134,9 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         aria-label={`${t("language.label")}: ${currentMeta.nativeName}`}
         title={t("language.label")}
         className={cn(
-          "inline-flex min-h-8 items-center gap-1.5 rounded-control border border-border bg-bg-subtle px-2.5",
+          "inline-flex h-8 items-center gap-1.5 rounded-control border border-border bg-bg-subtle px-2.5",
           "text-xs font-semibold text-fg",
-          "transition-colors duration-200 ease-out focus-visible:outline-none",
+          "transition-colors duration-[120ms] ease-out focus-visible:outline-none",
           "hover:bg-surface",
         )}
       >
@@ -146,7 +146,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           weight="bold"
           aria-hidden="true"
           className={cn(
-            "h-3 w-3 text-muted transition-transform duration-200",
+            "h-3 w-3 text-muted transition-transform duration-[120ms]",
             open && "rotate-180",
           )}
         />
@@ -163,7 +163,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
           onKeyDown={onListKeyDown}
           className={cn(
             "absolute end-0 top-[calc(100%+6px)] z-50 max-h-72 w-52 overflow-y-auto",
-            "rounded-control border border-border bg-surface p-1 shadow-soft",
+            "rounded-control border border-border bg-surface p-1 shadow-pop",
             "focus-visible:outline-none",
           )}
         >
