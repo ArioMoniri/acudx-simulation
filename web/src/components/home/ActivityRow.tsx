@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ShieldWarning } from "@phosphor-icons/react";
 import { Badge, StatusDot } from "@/components/ui";
-import type { Band, Lang, RecentFeedbackItem } from "@/data/mock";
+import type { Band, Lang, RecentFeedbackItem } from "@/data/schema";
 
 /** Band → badge tone. Communication/clinical bands share the same scale. */
 const bandTone: Record<Band, "brand" | "normal" | "neutral"> = {

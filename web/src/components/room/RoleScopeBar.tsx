@@ -14,7 +14,7 @@ import { Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { ROLE_ICON } from "./roleMeta";
 import { ROLE_SCOPES, type ClinicalRole } from "@/data/rooms";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 export interface RoleScopeBarProps {
   role: ClinicalRole;

@@ -55,7 +55,7 @@ import type {
   Lang,
   TranscriptRole,
   TranscriptTurn,
-} from "@/data/mock";
+} from "@/data/schema";
 
 export interface InterviewTabProps {
   caseInstance: CaseInstance;

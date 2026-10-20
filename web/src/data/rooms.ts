@@ -14,7 +14,7 @@
  * Education only. No real patient data path.
  */
 
-import type { Bilingual } from "@/data/mock";
+import type { Bilingual } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 import { getSeedCase } from "@/data/seedCases";
 import { NURSE_PROTOCOL_ORDERS, PARAMEDIC_INTERVENTIONS } from "@/domain/scopeOfPractice";

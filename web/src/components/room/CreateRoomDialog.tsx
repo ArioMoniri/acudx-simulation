@@ -9,7 +9,7 @@ import { CLINICAL_ROLE_ORDER, type ClinicalRole, type RoomLocale } from "@/data/
 import { seedCases } from "@/data/seedCases";
 import { usePublishedCases } from "@/data/authoring";
 import { complaintFamilyOf } from "@/data/caseLibrary";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type { ChiefComplaintFamily } from "@/domain/caseGen";
 import { familyForSeedCase } from "./roomStore";
 import { pick } from "@/components/ehr/labels";

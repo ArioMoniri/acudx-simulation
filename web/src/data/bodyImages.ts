@@ -18,7 +18,7 @@ import type { CaseInstance, ExamFinding } from "@/domain/case";
 import { PATIENT_PHOTOS } from "@/data/patientPhotos";
 import { resolvePatientVisual } from "@/domain/patientIdentity";
 import type { BodyFinding } from "@/components/PatientBodyViewer";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 export interface BodyImageSet {
   id: string;

@@ -1,6 +1,6 @@
 import { Check } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
-import type { EncounterStageMeta, Lang } from "@/data/mock";
+import type { EncounterStageMeta, Lang } from "@/data/schema";
 
 export interface ProgressStagesProps {
   stages: EncounterStageMeta[];

@@ -4,7 +4,7 @@ import { UserSwitch, Robot } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import { ROLE_ICON } from "./roleMeta";
 import { CLINICAL_ROLE_ORDER, type ClinicalRole } from "@/data/rooms";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 export interface RoleSwitcherProps {
   actingRole: ClinicalRole;

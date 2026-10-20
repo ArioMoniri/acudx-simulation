@@ -161,6 +161,37 @@ async def test_gpu_worker_fallback_serves_tts_and_stt_with_zero_cost_rows(tmp_pa
     assert worker.ensure_calls == 2 and worker.touches == 2
 
 
+async def test_registry_provider_serves_without_launching_the_gpu_worker(tmp_path):
+    """Review 04: the worker is a fallback, not a sibling candidate. A hosted row that serves
+    the request must never trigger ensure_worker (which launches paid capacity and can block
+    the request for the whole boot)."""
+    router = respx.MockRouter(assert_all_called=False)
+    router.post("https://api.elevenlabs.io/v1/text-to-speech/ThT5KcBeYPX3keUQqHPh/stream").mock(
+        return_value=httpx.Response(200, content=b"\xff\xfb" * 4, headers={"content-type": "audio/mpeg"}))
+    worker = FakeWorkerManager(ready=False)
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=worker, respx_router=router)
+    store.create_provider(ProviderIn(kind="tts", name="elevenlabs-eu", base_url="https://api.elevenlabs.io",
+                                     api_key="xi", extra={"model_id": "eleven_flash_v2_5"}))
+    out = await svc.tts("Göğsümde ağrı var.", lang="tr", sex="female", age=68)
+    assert out.endpoint.name == "elevenlabs-eu" and (await _collect(out.stream)) == b"\xff\xfb" * 4
+    assert worker.ensure_calls == 0, "a serving registry row must not launch the GPU worker"
+
+
+async def test_gpu_worker_is_asked_only_after_every_registry_row_failed(tmp_path):
+    router = respx.MockRouter(assert_all_called=False)
+    router.post("https://api.elevenlabs.io/v1/text-to-speech/ThT5KcBeYPX3keUQqHPh/stream").mock(
+        return_value=httpx.Response(500, text="upstream down"))
+    sc = WorkerScenario()
+    worker = FakeWorkerManager(ready=False)
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=worker, scenario=sc, respx_router=router)
+    store.create_provider(ProviderIn(kind="tts", name="elevenlabs-eu", base_url="https://api.elevenlabs.io",
+                                     api_key="xi"))
+    out = await svc.tts("Göğsümde ağrı var.", lang="tr", sex="female", age=68, output_format="wav")
+    assert out.endpoint.source == "gpu_worker" and worker.ensure_calls == 1
+    rows = telemetry.recent()
+    assert [r["ok"] for r in rows] == [0] and rows[0]["provider"] == "elevenlabs-eu"
+
+
 async def test_worker_not_configured_is_reported_not_raised(tmp_path):
     worker = FakeWorkerManager(ready=False, refuse=NotConfigured("LAMBDA_KEY is not set"), can_launch=False)
     store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=worker)

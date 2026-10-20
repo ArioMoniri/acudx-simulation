@@ -40,7 +40,7 @@
 
 import { useSyncExternalStore } from "react";
 
-import type { Bilingual, FeedbackDomainKey, Lang } from "@/data/mock";
+import type { Bilingual, FeedbackDomainKey, Lang } from "@/data/schema";
 import { cachedCitation } from "@/lib/guidelinesApi";
 import { CODE_SYSTEMS } from "@/domain/fhir";
 import type { CaseInstance } from "@/domain/case";

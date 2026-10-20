@@ -1,18 +1,14 @@
 /**
- * AcuDx shared domain types + a little cited reference content — bilingual
- * (EN/TR), typed.
+ * AcuDx shared domain types, bilingual (EN/TR), typed.
  *
- * This module is the schema hub: the bilingual/clinical primitives, the
+ * This module is the schema hub: the bilingual/clinical primitives and the
  * case / transcript / vitals / feedback / dashboard shapes that the rest of the
- * app imports. The superseded single-case demo fixtures (the chest-pain case,
- * its transcript, and the static vitals series) have been REMOVED — encounters
- * now run on generated `CaseInstance`s and the live `encounterStore`. What
- * remains as a VALUE is genuinely in use: the `recommendedCases` fallback
- * rail. Citations and guidance hints moved to the verified guideline API
- * (src/lib/guidelinesApi.ts); nothing clinical is hard-coded here.
+ * app imports, plus one pure helper (`difficultyToTier`). It carries no
+ * fixture content: encounters run on generated `CaseInstance`s and the live
+ * `encounterStore`; citations and guidance hints come from the verified
+ * guideline API (src/lib/guidelinesApi.ts). Nothing clinical is hard-coded here.
  *
- * Everything is education-only sample content. No real patient data.
- * Turkish strings use correct clinical terminology.
+ * Education only. No real patient data.
  */
 
 /* -------------------------------------------------------------------------- */
@@ -293,57 +289,6 @@ export interface RecommendedCase {
   /** Languages the case content is available in. */
   languages: Lang[];
 }
-
-/**
- * Static FALLBACK rail — used ONLY when the client case generator throws while
- * building the Home "Recommended for you" set. The live rail is drawn fresh each
- * session from `generateCase` and weighted toward the learner's weakest domains
- * (see `HomePage`), so these hard-coded rows are never the always-on content.
- */
-export const recommendedCases: RecommendedCase[] = [
-  {
-    id: "em-acs-001",
-    title: {
-      en: "Central chest pain, radiating",
-      tr: "Yayılan orta hat göğüs ağrısı",
-    },
-    chiefComplaint: { en: "Chest pain", tr: "Göğüs ağrısı" },
-    setting: { en: "Emergency", tr: "Acil" },
-    ageSex: { en: "58M", tr: "58E" },
-    difficulty: "core",
-    guidelineTag: "ESC ACS 2023",
-    estMinutes: 12,
-    languages: ["en", "tr"],
-  },
-  {
-    id: "em-sepsis-002",
-    title: {
-      en: "Fever and confusion in an older adult",
-      tr: "Yaşlı bir hastada ateş ve konfüzyon",
-    },
-    chiefComplaint: { en: "Sepsis screen", tr: "Sepsis taraması" },
-    setting: { en: "Emergency", tr: "Acil" },
-    ageSex: { en: "74F", tr: "74K" },
-    difficulty: "advanced",
-    guidelineTag: "NICE NG51",
-    estMinutes: 15,
-    languages: ["en", "tr"],
-  },
-  {
-    id: "em-asthma-003",
-    title: {
-      en: "Acute breathlessness in a young adult",
-      tr: "Genç bir erişkinde akut nefes darlığı",
-    },
-    chiefComplaint: { en: "Breathlessness", tr: "Nefes darlığı" },
-    setting: { en: "Emergency", tr: "Acil" },
-    ageSex: { en: "23F", tr: "23K" },
-    difficulty: "foundation",
-    guidelineTag: "BTS/SIGN",
-    estMinutes: 10,
-    languages: ["en", "tr"],
-  },
-];
 
 /** A recent-feedback row on the home dashboard. */
 export interface RecentFeedbackItem {

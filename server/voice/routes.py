@@ -6,7 +6,9 @@ POST /v1/voice/tts            {text, lang, sex, age, voice_id?, format?} -> chun
 POST /v1/voice/stt            multipart file (+ lang) -> {text, language, confidence, provider, model, audio_seconds}
 GET  /v1/voice/capabilities   what is enabled now (provider, adapter, languages) for tts / stt / avatar
 POST /v1/voice/room           {encounter_id, identity?, name?} -> {url, token, room, renderer} when a LiveKit
-                               avatar row is configured, else 404
+                               avatar row is configured, else 404. Signed in only (401 when anonymous): the
+                               token is a room credential, so the participant identity is derived from the
+                               caller's hashed subject and the metadata is JSON-encoded, never string-built
 GET  /admin/voice/agent-config resolved stt / tts / avatar / livekit config for the agent worker (admin token)
 
 503 ``{error: "<kind>_unavailable", airgapped, reasons[]}`` when no provider can serve
@@ -15,7 +17,7 @@ GET  /admin/voice/agent-config resolved stt / tts / avatar / livekit config for 
 
 from __future__ import annotations
 
-import time
+import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
@@ -23,6 +25,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from server.admin_routes import require_admin
+from server.auth.deps import Principal, current_user
 from server.voice import livekit as lk
 from server.voice.adapters import STT_ADAPTERS, TTS_ADAPTERS, adapter_name_for
 from server.voice.service import NoVoiceProvider, VoiceService
@@ -109,7 +112,7 @@ class RoomBody(BaseModel):
 
 
 @router.post("/room")
-async def room(request: Request, body: RoomBody) -> dict[str, Any]:
+async def room(request: Request, body: RoomBody, user: Principal = Depends(current_user)) -> dict[str, Any]:
     svc = _service(request)
     cfg = None
     for ep in svc.resolver.endpoints("avatar"):
@@ -121,9 +124,13 @@ async def room(request: Request, body: RoomBody) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail={"error": "avatar_unavailable",
                                                      "reasons": [f"{n}: refused by AIRGAPPED" for n in refused]})
     room_id = lk.room_name(body.encounter_id)
-    identity = body.identity or f"learner-{int(time.time() * 1000) % 10_000_000}"
-    token = lk.issue_token(cfg, room=room_id, identity=identity, name=body.name,
-                           metadata=f'{{"encounter_id":"{body.encounter_id}"}}')
+    # The participant identity is bound to the caller's hashed subject (no raw sub or
+    # name in LiveKit logs); a client-chosen identity only disambiguates the caller's
+    # own devices, it can never impersonate another learner.
+    identity = f"learner-{user.user_hash}" + (f"-{body.identity}" if body.identity else "")
+    metadata = json.dumps({"encounter_id": body.encounter_id, "user_hash": user.user_hash,
+                           "verified": user.verified}, separators=(",", ":"))
+    token = lk.issue_token(cfg, room=room_id, identity=identity, name=body.name or user.name, metadata=metadata)
     return {"url": cfg.url, "token": token, "room": room_id, "identity": identity, "renderer": cfg.renderer,
             "ttl_s": lk.DEFAULT_TTL_S}
 

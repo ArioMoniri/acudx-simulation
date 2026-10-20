@@ -22,7 +22,7 @@
  * Education only. No real patient data path.
  */
 
-import type { Bilingual } from "@/data/mock";
+import type { Bilingual } from "@/data/schema";
 import type { ServiceRequestKind } from "@/domain/fhir";
 
 /** Broad turnaround class an order falls into. */

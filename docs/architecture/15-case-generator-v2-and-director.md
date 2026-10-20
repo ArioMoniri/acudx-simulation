@@ -194,4 +194,4 @@ Persona. `getPersonaLiveContext` gives `InterviewTab` the Director's sanctioned 
 * The judge council runs on one model today; the research recommends three model families. `JUDGE_*` already separates the judge endpoint from the author; per-judge endpoints are the next step.
 * Checkpoints accumulate in SQLite; add a pruning job and move to `PostgresSaver` for multi-process deployment.
 * Calibration is recorded through `LearnerMemory.record_calibration` but no route writes it yet; the assessment service should call it after grading.
-* The web Director step does not yet send `learner_id`, so learner memory is not written from the encounter; wire it when the profile store exposes a stable learner id.
+* Resolved (October 2026): `caseGenV2.withLearnerId` fills `learner_id` on `/v2/case/generate`, the SSE generator and `/v2/director/step` from `profileStore.selectLearnerId` (verified IdP `sub`, otherwise the pseudonymous `localId` that the local principal also carries in `X-User-Id`). An explicit `learner_id: null` from the caller opts out (faculty preview).

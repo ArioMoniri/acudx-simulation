@@ -21,7 +21,7 @@ import os
 import secrets
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -101,21 +101,39 @@ class VerifyRequest(BaseModel):
     min_score: Optional[float] = None
 
 
-def _check_admin_token(x_admin_token: Optional[str]) -> None:
-    expected = os.environ.get("ADMIN_TOKEN", "")
+def _check_admin_token(x_admin_token: Optional[str], settings: Any = None) -> None:
+    """Constant-time check against ``ADMIN_TOKEN`` (env first, then the loaded settings)."""
+    expected = os.environ.get("ADMIN_TOKEN", "") or str(getattr(settings, "admin_token", None) or "")
     if not expected:
         raise HTTPException(status_code=503, detail="ADMIN_TOKEN is not configured")
     if not x_admin_token or not secrets.compare_digest(x_admin_token.encode("utf-8"), expected.encode("utf-8")):
         raise HTTPException(status_code=401, detail="invalid admin token")
 
 
-@router.post("/admin/guidelines/verify")
+async def require_guidelines_admin(
+    request: Request,
+    x_admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+) -> None:
+    """Same contract as ``server.admin_routes.require_admin``: the bootstrap ``X-Admin-Token``
+    or a verified bearer holding admin / super_admin. The env token keeps working for the
+    clock-3 batch job that runs this route from a shell."""
+    settings = getattr(request.app.state, "settings", None)
+    try:
+        _check_admin_token(x_admin_token, settings)
+        return
+    except HTTPException as token_exc:
+        from server.auth.deps import bearer_admin  # lazy: keeps the guideline store importable standalone
+
+        if await bearer_admin(request) is not None:
+            return
+        raise token_exc
+
+
+@router.post("/admin/guidelines/verify", dependencies=[Depends(require_guidelines_admin)])
 async def admin_verify(
     request: Request,
     body: Optional[VerifyRequest] = None,
-    x_admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
 ) -> Dict[str, Any]:
-    _check_admin_token(x_admin_token)
     from server.guidelines import verifier  # lazy: pulls httpx/trafilatura only when used
 
     settings = getattr(request.app.state, "settings", None)

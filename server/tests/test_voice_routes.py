@@ -8,6 +8,8 @@ from cryptography.fernet import Fernet
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from server.auth.deps import AuthService
+from server.auth.store import UserRoleStore
 from server.config import Settings
 from server.registry.store import ProviderIn, RegistryStore
 from server.registry.resolve import RegistryResolver
@@ -37,6 +39,8 @@ def _app(tmp_path, *, scenario: WorkerScenario | None = None, worker: FakeWorker
     app.state.registry = store
     app.state.telemetry = telemetry
     app.state.voice = VoiceService(s, resolver, telemetry=telemetry, client=client)
+    # Local auth mode: /v1/voice/room needs a signed-in principal (X-User-Id header here).
+    app.state.auth = AuthService(store, UserRoleStore(s.acudx_db_path), env_mode="local")
     app.include_router(router)
     app.include_router(admin_router)
     return app, store, telemetry
@@ -102,20 +106,47 @@ def test_capabilities_reports_providers_languages_and_avatar(tmp_path):
     assert j["avatar"]["enabled"] is False and j["airgapped"] is False
 
 
+LEARNER = {"X-User-Id": "stu-7", "X-User-Name": "Ayse Student"}
+
+
 def test_room_token_requires_a_livekit_avatar_row(tmp_path):
     app, store, _ = _app(tmp_path)
     c = TestClient(app)
-    assert c.post("/v1/voice/room", json={"encounter_id": "enc-1"}).status_code == 404
+    assert c.post("/v1/voice/room", json={"encounter_id": "enc-1"}, headers=LEARNER).status_code == 404
     store.create_provider(ProviderIn(kind="avatar", name="lk", base_url="https://lk.example.org", api_key="lk-secret",
                                      extra={"transport": "livekit", "livekit_api_key": "APIabc", "avatar": "anam"}))
-    r = c.post("/v1/voice/room", json={"encounter_id": "enc-1", "identity": "learner-7", "name": "Learner"})
+    r = c.post("/v1/voice/room", json={"encounter_id": "enc-1", "identity": "tablet", "name": "Learner"}, headers=LEARNER)
     assert r.status_code == 200, r.text
     j = r.json()
-    assert j["url"] == "wss://lk.example.org" and j["renderer"] == "anam" and j["identity"] == "learner-7"
+    assert j["url"] == "wss://lk.example.org" and j["renderer"] == "anam"
+    assert j["identity"].startswith("learner-") and j["identity"].endswith("-tablet") and "stu-7" not in j["identity"]
     assert j["room"] == lk.room_name("enc-1") and "enc-1" not in j["room"]
     claims = lk.decode_unverified(j["token"])
-    assert claims["iss"] == "APIabc" and claims["sub"] == "learner-7" and claims["video"]["room"] == j["room"]
+    assert claims["iss"] == "APIabc" and claims["sub"] == j["identity"] and claims["video"]["room"] == j["room"]
     assert "lk-secret" not in r.text
+
+
+def test_room_token_is_signed_in_only_and_identity_is_bound_to_the_caller(tmp_path):
+    """Review 04: a room token is a credential. Anonymous callers get 401, the participant
+    identity derives from the caller's hashed subject (no impersonation by choosing another
+    learner's identity), and the metadata is JSON-encoded (no injection through encounter_id)."""
+    app, store, _ = _app(tmp_path)
+    store.create_provider(ProviderIn(kind="avatar", name="lk", base_url="https://lk.example.org", api_key="lk-secret",
+                                     extra={"transport": "livekit", "livekit_api_key": "APIabc"}))
+    c = TestClient(app)
+    assert c.post("/v1/voice/room", json={"encounter_id": "enc-1"}).status_code == 401
+    a = c.post("/v1/voice/room", json={"encounter_id": "enc-1"}, headers=LEARNER).json()
+    b = c.post("/v1/voice/room", json={"encounter_id": "enc-1"}, headers={"X-User-Id": "stu-8"}).json()
+    assert a["identity"] != b["identity"] and a["room"] == b["room"]
+    spoof = c.post("/v1/voice/room", json={"encounter_id": "enc-1", "identity": b["identity"]}, headers=LEARNER).json()
+    assert spoof["identity"] != b["identity"] and spoof["identity"].startswith(a["identity"])
+    hostile = 'x","video":{"roomAdmin":true,"room":"*"},"z":"'
+    r = c.post("/v1/voice/room", json={"encounter_id": hostile}, headers=LEARNER)
+    claims = lk.decode_unverified(r.json()["token"])
+    assert claims["video"]["room"] == lk.room_name(hostile) and "roomAdmin" not in claims["video"]
+    import json as _json
+    meta = _json.loads(claims["metadata"])
+    assert meta["encounter_id"] == hostile and meta["verified"] is False and "stu-7" not in claims["metadata"]
 
 
 def test_airgapped_refuses_hosted_livekit_cloud_but_allows_private(tmp_path):
@@ -123,11 +154,11 @@ def test_airgapped_refuses_hosted_livekit_cloud_but_allows_private(tmp_path):
     store.create_provider(ProviderIn(kind="avatar", name="cloud", base_url="https://proj.livekit.cloud", api_key="s",
                                      priority=0, extra={"transport": "livekit", "livekit_api_key": "K"}))
     c = TestClient(app)
-    r = c.post("/v1/voice/room", json={"encounter_id": "e"})
+    r = c.post("/v1/voice/room", json={"encounter_id": "e"}, headers=LEARNER)
     assert r.status_code == 404 and "cloud" in str(r.json()["detail"])
     store.create_provider(ProviderIn(kind="avatar", name="onprem", base_url="http://10.0.0.9:7880", api_key="s",
                                      priority=5, extra={"transport": "livekit", "livekit_api_key": "K", "avatar": "musetalk"}))
-    r = c.post("/v1/voice/room", json={"encounter_id": "e"})
+    r = c.post("/v1/voice/room", json={"encounter_id": "e"}, headers=LEARNER)
     assert r.status_code == 200 and r.json()["url"] == "ws://10.0.0.9:7880" and r.json()["renderer"] == "musetalk"
 
 

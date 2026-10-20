@@ -26,7 +26,7 @@ import {
   type CoverageGroup,
 } from "@/lib/guidanceEngine";
 import type { CaseInstance } from "@/domain/case";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 export interface RealtimeGuidanceProps {
   className?: string;

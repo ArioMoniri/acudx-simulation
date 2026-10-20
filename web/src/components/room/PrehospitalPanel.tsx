@@ -3,7 +3,7 @@ import { Ambulance, CheckCircle, PaperPlaneTilt } from "@phosphor-icons/react";
 
 import { Button, Badge } from "@/components/ui";
 import type { CaseInstance } from "@/domain/case";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 export interface PrehospitalPanelProps {
   caseInstance: CaseInstance;

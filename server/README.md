@@ -85,6 +85,8 @@ Every field of `Settings` in `config.py`, overridable by the env var of the same
 | `ACUDX_SECRET_KEY` | unset | Fernet key sealing provider API keys at rest; unset means keys cannot be stored (never plaintext). |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | When set, every gateway call emits an OpenTelemetry `gen_ai.*` span (deps in `requirements-telemetry.txt`). |
 | `ADMIN_TOKEN` | unset | Guards `/admin/*`; unset means `503`. |
+| `PROBE_INTERVAL_MINUTES` | `10` | Enabled provider rows are probed on this schedule (`server/registry/jobs.py`); `0` disables. |
+| `RETENTION_PURGE_INTERVAL_MINUTES` | `60` | How often `model_calls` rows older than the console's `telemetry.retention_days` are purged; `0` disables. |
 | GPU worker vars | see the table below | `LAMBDA_KEY`, `LAMBDA_SSH_KEY_NAME`, `GPU_*`. |
 
 ## Run

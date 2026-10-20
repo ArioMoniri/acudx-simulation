@@ -56,7 +56,7 @@ import {
 import type { AdministeredTreatment } from "@/domain/clinicalCourse";
 import type { CaseInstance, ImagingResult, LabResult } from "@/domain/case";
 import type { Observation } from "@/domain/fhir";
-import type { Bilingual, Lang } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
 
 export interface ResultsTabProps {
   lang: Lang;

@@ -6,7 +6,7 @@ import {
   useGuidelineCitation,
   type CitationView,
 } from "@/lib/guidelinesApi";
-import type { Lang } from "@/data/mock"; // watchdog: allow (shared schema hub, type only)
+import type { Lang } from "@/data/schema"; // watchdog: allow (shared schema hub, type only)
 
 export interface CitationPillProps {
   /** A verified GuidelineStatement id (or a legacy alias; see guidelinesApi). */

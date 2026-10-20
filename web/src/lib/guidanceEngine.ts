@@ -47,7 +47,7 @@ import {
   type GuidanceHint,
   type GuidelineStatementPayload,
 } from "@/lib/guidelinesApi";
-import type { Bilingual, Lang } from "@/data/mock"; // watchdog: allow (shared schema hub, type only)
+import type { Bilingual, Lang } from "@/data/schema"; // watchdog: allow (shared schema hub, type only)
 
 /* -------------------------------------------------------------------------- */
 /* Coverage result shapes                                                      */

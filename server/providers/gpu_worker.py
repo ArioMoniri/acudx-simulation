@@ -419,13 +419,32 @@ class WorkerManager:
 
     # -- idle reaper --------------------------------------------------------- #
     async def reap_once(self) -> bool:
+        """One reaper pass. Terminates the worker when it is idle past the policy window, when
+        today's spend has reached the daily budget (the launch-time check alone lets a worker
+        that is kept busy run past the cap), or when a boot has been orphaned (the gateway
+        restarted mid-boot and no request re-attached) for longer than both boot budgets."""
         w = self.store.active_worker()
         if w is None:
             return False
+        now = self._clock()
         if w.status == "booting":
-            # Boot time is never idle time; a stuck boot is bounded by ready_timeout_s.
-            return False
-        idle_s = self._clock() - w.last_used_at
+            # Boot time is never idle time; a boot that an in-flight task is still watching is
+            # bounded by ready_timeout_s. Without a watcher (process restart) nothing else would
+            # ever terminate it, so the reaper does once both budgets have elapsed.
+            watched = self._inflight is not None and not self._inflight.done()
+            if watched or now - w.launched_at < self.boot_timeout_s + self.ready_timeout_s:
+                return False
+            log.warning("gpu worker %s: orphaned boot older than %.0fs; terminating", w.instance_id,
+                        self.boot_timeout_s + self.ready_timeout_s)
+            await self.terminate(reason="stale_boot")
+            return True
+        spent = self.spent_today_usd()
+        if spent >= self.policy.daily_budget_usd:
+            log.warning("gpu worker %s: spent %.2f USD today >= budget %.2f USD; terminating", w.instance_id,
+                        spent, self.policy.daily_budget_usd)
+            await self.terminate(reason="budget")
+            return True
+        idle_s = now - w.last_used_at
         if idle_s < self.policy.idle_minutes * 60:
             return False
         log.info("gpu worker %s idle for %.0fs > %d min; terminating", w.instance_id, idle_s,

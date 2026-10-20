@@ -52,14 +52,22 @@ write_files:
         }
         @unauth not header Authorization "Bearer {$WORKER_TOKEN}"
         respond @unauth 401
-        handle_path /tts/* { reverse_proxy chatterbox:4123 }
-        handle_path /tts-en/* { reverse_proxy kokoro:8880 }
-        handle_path /stt/* { reverse_proxy speaches:8000 }
+        handle_path /tts/* {
+          reverse_proxy chatterbox:4123
+        }
+        handle_path /tts-en/* {
+          reverse_proxy kokoro:8880
+        }
+        handle_path /stt/* {
+          reverse_proxy speaches:8000
+        }
         handle /healthz {
           rewrite * /health
           reverse_proxy vllm:8000
         }
-        handle { reverse_proxy vllm:8000 }
+        handle {
+          reverse_proxy vllm:8000
+        }
       }
   - path: /opt/acudx/docker-compose.yml
     content: |

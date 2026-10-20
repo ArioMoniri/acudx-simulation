@@ -19,7 +19,7 @@
  * and the invented TR/EN fairness numbers have been removed.
  */
 
-import type { Bilingual, Band, FeedbackDomainKey } from "@/data/mock";
+import type { Bilingual, Band, FeedbackDomainKey } from "@/data/schema";
 import type { EncounterRecord } from "@/state/progressStore";
 
 /* -------------------------------------------------------------------------- */

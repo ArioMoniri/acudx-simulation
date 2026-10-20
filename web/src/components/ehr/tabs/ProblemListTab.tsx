@@ -41,7 +41,7 @@ import {
   type DxAssessment,
   type GradeInsight,
 } from "@/domain/debrief";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type {
   CaseInstance,
   Disposition,

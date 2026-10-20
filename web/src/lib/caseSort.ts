@@ -1,5 +1,5 @@
 import { estMinutesOf, SPECIALTY_LABELS, specialtyOf } from "@/data/caseLibrary";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 
 /** Sortable columns of the case catalogue table. */

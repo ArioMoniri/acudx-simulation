@@ -8,8 +8,8 @@
  * Education only.
  */
 
-import type { Bilingual, Lang } from "@/data/mock";
-import type { ClinicalState } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
+import type { ClinicalState } from "@/data/schema";
 import type { CodeableConcept } from "@/domain/fhir";
 import type { ObservationInterpretation } from "@/domain/fhir";
 

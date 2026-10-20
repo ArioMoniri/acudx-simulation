@@ -8,7 +8,7 @@
  *
  * Design intent (why this file exists): the Home calibration snapshot, the
  * Progress mastery/calibration trend, and the Feedback report used to render
- * fixed mock arrays, so they looked identical for every learner and never
+ * fixed static arrays, so they looked identical for every learner and never
  * changed. Those plots are now driven from this store. A brand-new user has NO
  * history, so the plots render an honest empty state; each completed encounter
  * appends one real record and the plots fill in from earned data.
@@ -38,7 +38,7 @@ import type {
   FeedbackGap,
   RecentFeedbackItem,
   TreatmentBehavior,
-} from "@/data/mock";
+} from "@/data/schema";
 import {
   badgeCatalog,
   epaCatalog,

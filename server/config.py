@@ -192,6 +192,11 @@ class Settings(BaseSettings):
     # When set, every gateway call also emits an OpenTelemetry gen_ai.* span over
     # OTLP/HTTP (optional dependency, see server/requirements-telemetry.txt).
     otel_exporter_otlp_endpoint: str | None = None
+    # Background jobs (server/registry/jobs.py). Enabled provider rows are probed
+    # every PROBE_INTERVAL_MINUTES (0 disables); model_calls rows older than the
+    # console's telemetry.retention_days are purged every RETENTION_PURGE_INTERVAL_MINUTES.
+    probe_interval_minutes: int = Field(default=10, ge=0)
+    retention_purge_interval_minutes: int = Field(default=60, ge=0)
 
     @field_validator(
         "local_allowlist", "cors_origins", "gpu_instance_allowlist", "gpu_region_preference",

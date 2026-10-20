@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/cn";
 import { Card, SectionLabel } from "@/components/ui";
 import { acsDebrief, type DebriefData, type DebriefMark } from "@/data/rooms";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 /** The collaborative order→execution loop, earned from the live session. */
 export interface DebriefLoopStats {

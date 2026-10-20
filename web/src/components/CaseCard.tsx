@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, Clock, BookOpen, Gauge } from "@phosphor-icons/react";
 import { Card, Badge, Button, SectionLabel } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import type { RecommendedCase, Lang } from "@/data/mock";
+import type { RecommendedCase, Lang } from "@/data/schema";
 
 const difficultyDots: Record<RecommendedCase["difficulty"], number> = {
   foundation: 1,

@@ -5,7 +5,7 @@ import {
   ShieldWarning,
   type Icon,
 } from "@phosphor-icons/react";
-import type { ClinicalState, Trend } from "@/data/mock";
+import type { ClinicalState, Trend } from "@/data/schema";
 import type { BadgeProps } from "@/components/ui";
 
 /**

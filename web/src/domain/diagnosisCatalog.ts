@@ -19,7 +19,7 @@
  * validated clinical terminology service. Education only. No real patient data.
  */
 
-import type { Bilingual, Lang } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
 import { CODE_SYSTEMS, type Coding } from "@/domain/fhir";
 
 /* -------------------------------------------------------------------------- */

@@ -34,7 +34,7 @@ import {
   type TipStage,
   type TipsState,
 } from "@/lib/guidelinesApi";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 export interface AttendingTipsProps {
   className?: string;

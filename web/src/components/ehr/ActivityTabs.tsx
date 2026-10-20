@@ -24,7 +24,7 @@ import { LiveVitalsMonitor, TrendMonitor } from "@/components/monitor";
 import { RealtimeGuidance, AttendingTips } from "@/components/guidance";
 import { setStage, useEncounterState } from "@/state/encounterStore";
 import type { EncounterStage } from "@/state/encounterStore";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 
 export interface ActivityTabsProps {

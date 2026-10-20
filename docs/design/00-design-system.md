@@ -348,7 +348,7 @@ Icon button, light ⇄ dark, persisted (`acudx-theme`).
 - **BottomTabBar:** a fixed 56 px bar with up to four destinations plus "More", which opens a sheet with the remaining destinations and the vantage and language controls.
 - **PageHeader:** optional `breadcrumbs`, eyebrow, a 18 to 20 px title with the actions on the right and a hairline under the block. `tone="marketing"` switches the title to the `display` size (landing only).
 - **PageContainer:** 16 px gutters on phone, 24 px from md; `width="wide"` is 1600 px for the encounter and consoles.
-- **Wordmark:** the "acute trace" mark (inline SVG in `currentColor`) + "Acu**Dx**" in Manrope through the `display` utility, "Dx" and the mark in `--axis-clinical`. Full spec: `02-brand-identity.md`.
+- **Wordmark:** the "pulse seal" mark (a rounded tile split in two by one 60 degree deflection of a monitor trace, inline SVG in `currentColor`, round two of the brand work) + "Acu**Dx**" in Manrope through the `display` utility, "Dx" and the mark in `--axis-clinical`. Full spec: `02-brand-identity.md`; files: `web/public/brand/`.
 
 ### 4.20 DataTable (v1) & shared primitives
 Cohort analytics text-equivalents (`IN-1`): real `<table>` semantics (`<th scope>`, caption, `aria-sort`), band cells (not decimals), drill-down cohort→section→learner→encounter→evidence, role-gated columns, de-identified export; wide tables scroll inside their own `overflow-x:auto` container (never the page body). **Shared Radix primitives** (Dialog, Toast, Popover, Select, Progress) are restyled to the tokens and inherit focus (§6) + 24px targets.

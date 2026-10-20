@@ -227,6 +227,19 @@ class TelemetryRecorder:
             rows = c.execute("SELECT * FROM model_calls ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [dict(r) for r in rows]
 
+    def purge_older_than(self, days: float, *, now: float | None = None) -> int:
+        """Delete rows with ``ts`` older than ``days`` before ``now``; returns the count.
+
+        The retention job (server/registry/jobs.py) calls this with the console's
+        ``telemetry.retention_days``. A non-positive window deletes nothing.
+        """
+        if days <= 0:
+            return 0
+        cutoff = (now if now is not None else self._clock()) - float(days) * 86_400.0
+        with self._conn() as c:
+            cur = c.execute("DELETE FROM model_calls WHERE ts < ?", (cutoff,))
+            return int(cur.rowcount or 0)
+
     def rows_since(self, since: float, until: float) -> list[dict[str, Any]]:
         with self._conn() as c:
             rows = c.execute("SELECT ts, kind, provider, model, tokens_in, tokens_out, cached_tokens, latency_ms, "

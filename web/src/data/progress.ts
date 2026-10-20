@@ -14,7 +14,7 @@
  * brand-new learner sees honest empty / emerging states instead of demo data.
  */
 
-import type { Bilingual, Band, FeedbackDomainKey } from "@/data/mock";
+import type { Bilingual, Band, FeedbackDomainKey } from "@/data/schema";
 
 /* -------------------------------------------------------------------------- */
 /* Level & XP — tied to mastery / calibration, not volume                     */

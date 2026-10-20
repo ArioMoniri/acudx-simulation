@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight } from "@phosphor-icons/react";
 import { StatusDot, type StatusTone } from "@/components/ui";
-import type { Lang, RecommendedCase } from "@/data/mock";
+import type { Lang, RecommendedCase } from "@/data/schema";
 
 /**
  * Difficulty maps to a status tone so the tier reads at a glance without a
