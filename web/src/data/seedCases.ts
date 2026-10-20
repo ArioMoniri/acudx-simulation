@@ -3,7 +3,7 @@
  *
  * Reuses the FHIR-shaped domain model (src/domain/fhir.ts) and the CaseInstance
  * ground-truth model (src/domain/case.ts). Extends the existing chestPainCase
- * shape from src/data/mock.ts into the full EHR-workable ground truth.
+ * shape from src/data/schema.ts into the full EHR-workable ground truth.
  *
  * Cases:
  *   1. em-acs-001    Chest pain / NSTEMI            (ESC ACS 2023)
@@ -12,13 +12,13 @@
  *   4. em-pe-004     Dyspnea / pulmonary embolism   (ESC, Wells/PERC)
  *   5. em-panic-005  Chest pain, panic vs ACS mimic (DSM-5-TR / ESC rule-out)
  *
- * Citation ids match src/data/mock.ts citations[].id where possible and add a
+ * Citation ids match src/data/schema.ts citations[].id where possible and add a
  * few case-specific ids consumed by the feedback layer in a later stage.
  *
  * Education only. Synthetic patients. No real patient data.
  */
 
-import type { Bilingual } from "@/data/mock";
+import type { Bilingual } from "@/data/schema";
 import {
   concept,
   DSM5TR,

@@ -19,7 +19,7 @@ import {
   type FloorEvent,
   type FloorEventKind,
 } from "@/data/rooms";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 export interface FloorPanelProps {
   room: Room;

@@ -4,7 +4,7 @@ import { ArrowsLeftRight, ArrowRight, Path } from "@phosphor-icons/react";
 import { Button } from "@/components/ui";
 import { CLINICAL_ROLE_ORDER, type ClinicalRole } from "@/data/rooms";
 import { handoff, type RoomCaseState } from "./roomCaseStore";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 export interface HandoffTimelineProps {
   roomId: string;

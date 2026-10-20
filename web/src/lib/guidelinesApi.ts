@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 
 import { apiGet, type BackendResult } from "@/lib/backend";
 import { useLiveBackend } from "@/lib/liveBackend";
-import type { Bilingual, Lang } from "@/data/mock"; // watchdog: allow (shared schema hub, type only)
+import type { Bilingual, Lang } from "@/data/schema"; // watchdog: allow (shared schema hub, type only)
 
 /* -------------------------------------------------------------------------- */
 /* API payloads (mirror server/guidelines/store.py learner_view + tips.py)      */

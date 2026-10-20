@@ -34,7 +34,7 @@ import {
   getDiscoveredHistory,
   useEncounterState,
 } from "@/state/encounterStore";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 
 export interface StoryboardProps {

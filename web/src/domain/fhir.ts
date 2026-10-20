@@ -14,7 +14,7 @@
  * Education only. No real patient data path.
  */
 
-import type { Bilingual, Lang, Sex } from "@/data/mock";
+import type { Bilingual, Lang, Sex } from "@/data/schema";
 
 export type { Bilingual, Lang, Sex };
 

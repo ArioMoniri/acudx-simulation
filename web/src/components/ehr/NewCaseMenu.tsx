@@ -8,7 +8,7 @@ import { usePublishedCases } from "@/data/authoring";
 import { startEncounter } from "@/state/encounterStore";
 import type { ChiefComplaintFamily } from "@/domain/caseGen";
 import type { CaseInstance } from "@/domain/case";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import { pick } from "./labels";
 
 export interface NewCaseMenuProps {

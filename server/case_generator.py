@@ -1246,7 +1246,7 @@ async def generate_case_spec(
 
 
 # --------------------------------------------------------------------------- #
-# Self-test — `python -m server.case_generator` (fully offline; fake gateways) #
+# Self-test: `python -m server.case_generator` (fully offline; gateway doubles) #
 # --------------------------------------------------------------------------- #
 def _validate_public(spec: dict[str, Any]) -> bool:
     """Re-validate a returned dict against the schema (meta is non-schema)."""
@@ -1269,7 +1269,7 @@ def _selftest() -> None:
     @dataclass
     class _Res:
         text: str
-        model: str = "fake-qwen"
+        model: str = "fake-qwen"  # watchdog: allow offline self-test double, __main__ only
 
     @dataclass
     class _GoodGateway:

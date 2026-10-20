@@ -22,7 +22,7 @@ import { minutesOf, pick } from "../labels";
 import { getOrderableByCode } from "@/domain/orderables";
 import { getOffTaskCount, useEncounterState } from "@/state/encounterStore";
 import type { EncounterEvent, EncounterEventType, PlacedOrder } from "@/state/encounterStore";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 
 export interface ChartReviewTabProps {

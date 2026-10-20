@@ -14,7 +14,7 @@
  * Pure data + two lookups. Education only. No real patient data path.
  */
 
-import type { Bilingual } from "@/data/mock";
+import type { Bilingual } from "@/data/schema";
 
 /** Administration routes the formulary recognises. */
 export type Route = "IV" | "IM" | "PO" | "SL" | "INH" | "NEB" | "SC" | "IO";

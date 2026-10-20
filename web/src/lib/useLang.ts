@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useReducedMotion } from "motion/react";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
-/** Resolve the active UI language as the narrow "en" | "tr" union used by mock content. */
+/** Resolve the active UI language as the narrow "en" | "tr" union used by bilingual content. */
 export function useLang(): Lang {
   const { i18n } = useTranslation();
   return ((i18n.resolvedLanguage ?? "en").split("-")[0] as Lang) === "tr"

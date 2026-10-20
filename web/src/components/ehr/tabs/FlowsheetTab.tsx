@@ -24,7 +24,7 @@ import type {
   Trend,
   VitalReading,
   Lang,
-} from "@/data/mock";
+} from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 import type { CurrentVitals } from "@/domain/clinicalCourse";
 

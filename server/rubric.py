@@ -435,7 +435,7 @@ async def grade_transcript(transcript: Any, gateway: ChatGateway, *,
 @dataclass
 class _FakeResult:
     text: str
-    model: str = "fake-grader"
+    model: str = "fake-grader"  # watchdog: allow offline self-test double, __main__ only
 
 
 @dataclass
@@ -521,7 +521,7 @@ def _selftest() -> None:
     check("e2e: 4/24 -> overall insufficient", out["overall_band"] == "insufficient")
     check("e2e: bands only (no stray band values)",
           all(d["band"] in (*BANDS, UNGRADED) for d in out["domains"]))
-    check("e2e: model captured", out["meta"]["model"] == "fake-grader")
+    check("e2e: model captured", out["meta"]["model"] == "fake-grader")  # watchdog: allow self-test double
 
     # degraded gateway -> everything ungraded, still returns
     out2 = asyncio.run(grade_transcript(transcript, _FakeGateway(fail=True)))

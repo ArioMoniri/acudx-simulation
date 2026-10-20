@@ -20,7 +20,7 @@ import { TREATMENT_CATALOG } from "@/domain/treatments";
 import { ROLE_SCOPES } from "@/data/rooms";
 import { canPlaceOrder, PROTOCOL_ITEM_LABELS, protocolDetailFor } from "@/domain/scopeOfPractice";
 import { primaryCode } from "@/domain/case";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type { ClinicalRole } from "@/data/rooms";
 import {
   placeOrderAs,

@@ -35,7 +35,7 @@ import {
   TreatmentChecklist,
   CitationPill,
 } from "@/components";
-import { type Band, type FeedbackAxis } from "@/data/mock";
+import { type Band, type FeedbackAxis } from "@/data/schema";
 import { complaintFamilyOf } from "@/data/caseLibrary";
 import { generateCase } from "@/domain/caseGen";
 import { safetyCriticalMisses } from "@/domain/processMetrics";

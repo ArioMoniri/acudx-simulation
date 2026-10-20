@@ -7,7 +7,7 @@
  * default). Every request is bounded by a short AbortController timeout and every
  * function returns a discriminated result
  * (`{ ok: true, data } | { ok: false, error }`) so a call NEVER throws into the
- * UI. On any failure the caller falls back to the offline mock path.
+ * UI. On any failure the caller falls back to the offline deterministic path.
  *
  * The request/response shapes mirror the FastAPI pydantic models exactly:
  *   GET  /health           -> HealthResult

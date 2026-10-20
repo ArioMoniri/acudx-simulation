@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Sparkline } from "./Sparkline";
 import { stateMap } from "./clinicalState";
-import type { VitalReading } from "@/data/mock";
+import type { VitalReading } from "@/data/schema";
 
 export interface VitalCardProps {
   vital: VitalReading;

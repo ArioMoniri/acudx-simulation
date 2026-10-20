@@ -21,7 +21,7 @@ import {
   SPECIALTY_LABELS,
   DIFFICULTY_BAND,
 } from "@/data/caseLibrary";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 
 export interface CaseInstanceCardProps {

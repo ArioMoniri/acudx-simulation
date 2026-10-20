@@ -25,13 +25,12 @@ import { CaseListRow } from "@/components/home/CaseListRow";
 import { ActivityRow } from "@/components/home/ActivityRow";
 import {
   difficultyToTier,
-  recommendedCases,
   type Band,
   type DashboardStat,
   type FeedbackDomainKey,
   type Lang,
   type RecommendedCase,
-} from "@/data/mock";
+} from "@/data/schema";
 import {
   useCalibrationPoints,
   useCalibrationTrajectory,
@@ -204,9 +203,51 @@ function toRow(c: CaseInstance): RecommendedCase {
 }
 
 /**
+ * Deterministic fallback rail, used ONLY when the client case generator throws
+ * while building the "Recommended for you" set. Rows carry `instance: null`, so
+ * they open the default encounter rather than a live instance (degraded path;
+ * the generator is pure and this branch is not expected to run in production).
+ */
+const FALLBACK_RAIL: RecommendedCase[] = [
+  {
+    id: "em-acs-001",
+    title: { en: "Central chest pain, radiating", tr: "Yayılan orta hat göğüs ağrısı" },
+    chiefComplaint: { en: "Chest pain", tr: "Göğüs ağrısı" },
+    setting: { en: "Emergency", tr: "Acil" },
+    ageSex: { en: "58M", tr: "58E" },
+    difficulty: "core",
+    guidelineTag: "ESC ACS 2023",
+    estMinutes: 12,
+    languages: ["en", "tr"],
+  },
+  {
+    id: "em-sepsis-002",
+    title: { en: "Fever and confusion in an older adult", tr: "Yaşlı bir hastada ateş ve konfüzyon" },
+    chiefComplaint: { en: "Sepsis screen", tr: "Sepsis taraması" },
+    setting: { en: "Emergency", tr: "Acil" },
+    ageSex: { en: "74F", tr: "74K" },
+    difficulty: "advanced",
+    guidelineTag: "NICE NG51",
+    estMinutes: 15,
+    languages: ["en", "tr"],
+  },
+  {
+    id: "em-asthma-003",
+    title: { en: "Acute breathlessness in a young adult", tr: "Genç bir erişkinde akut nefes darlığı" },
+    chiefComplaint: { en: "Breathlessness", tr: "Nefes darlığı" },
+    setting: { en: "Emergency", tr: "Acil" },
+    ageSex: { en: "23F", tr: "23K" },
+    difficulty: "foundation",
+    guidelineTag: "BTS/SIGN",
+    estMinutes: 10,
+    languages: ["en", "tr"],
+  },
+];
+
+/**
  * Build the fresh rail: draw weighted families, generate a constrained case for
- * each, and map it to a row. On any generator failure fall back to the tiny
- * static list (which navigates to the default encounter, no live instance).
+ * each, and map it to a row. On any generator failure fall back to
+ * `FALLBACK_RAIL` (which navigates to the default encounter, no live instance).
  */
 function buildRecommended(mastery: MasteryDomain[], locale: Lang): RecommendedRow[] {
   try {
@@ -222,7 +263,7 @@ function buildRecommended(mastery: MasteryDomain[], locale: Lang): RecommendedRo
       return { row: toRow(instance), instance };
     });
   } catch {
-    return recommendedCases.map((row) => ({ row, instance: null }));
+    return FALLBACK_RAIL.map((row) => ({ row, instance: null }));
   }
 }
 

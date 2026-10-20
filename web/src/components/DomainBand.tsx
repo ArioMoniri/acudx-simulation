@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { SealCheck, Lock } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
-import type { Band, FeedbackDomainKey } from "@/data/mock";
+import type { Band, FeedbackDomainKey } from "@/data/schema";
 
 /** The five ordered performance bands, lowest to highest. */
 export const BAND_SCALE: Exclude<Band, "withheld">[] = [

@@ -10,7 +10,7 @@ import { resolvePatientVisual } from "@/domain/patientIdentity";
 import { SimBadge } from "./SimBadge";
 import { conceptText, esiToState, pick } from "./labels";
 import { getGeneration, useEncounterSelector } from "@/state/encounterStore";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 
 export interface PatientBannerProps {

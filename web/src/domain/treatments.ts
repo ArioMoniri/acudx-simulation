@@ -25,7 +25,7 @@
  * Education only. No real patient data path.
  */
 
-import type { Bilingual } from "@/data/mock";
+import type { Bilingual } from "@/data/schema";
 import { ROUTE_LABEL, type Route } from "@/domain/formulary";
 
 /** The six tracked vital signs. */

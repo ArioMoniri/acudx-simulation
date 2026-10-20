@@ -13,7 +13,7 @@
  * Education only. No real patient data path.
  */
 
-import type { Bilingual, Lang } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
 import type {
   AllergyIntolerance,
   CodeableConcept,
@@ -176,7 +176,7 @@ export interface OrderExpectation {
   critical: boolean;
   /** True when this is a low-value / not-indicated order for the case. */
   lowValue?: boolean;
-  /** Citation id (matches src/data/mock.ts citations[].id). */
+  /** Citation id (matches src/data/schema.ts citations[].id). */
   citationId: string;
 }
 

@@ -50,7 +50,7 @@ import { CalibrationPlot, CitationPill, Sparkline } from "@/components";
 import { useEntry, useLang } from "@/lib/useLang";
 import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/cn";
-import { type Band } from "@/data/mock";
+import { type Band } from "@/data/schema";
 import {
   MASTERY_BANDS,
   scheduleReview,

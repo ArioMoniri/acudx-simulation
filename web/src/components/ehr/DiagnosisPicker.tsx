@@ -4,7 +4,7 @@ import { MagnifyingGlass, Plus, Check, Stethoscope, CaretDown } from "@phosphor-
 
 import { Divider, SectionLabel, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import {
   caseEntry,
   diagnosisLabel,

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
-import type { TranscriptRole } from "@/data/mock";
+import type { TranscriptRole } from "@/data/schema";
 
 export interface ChatMessageProps {
   role: TranscriptRole;
