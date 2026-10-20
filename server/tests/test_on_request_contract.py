@@ -203,8 +203,19 @@ async def test_my_cases_lists_only_own_summaries_never_a_case(client: httpx.Asyn
 # 3. The Director changes state deterministically                             #
 # --------------------------------------------------------------------------- #
 async def _step(client: httpx.AsyncClient, state_or_spec: dict, action: dict, *, spec: bool = False) -> dict:
-    body = {"spec" if spec else "case_state": state_or_spec, "action": action, "use_model": False}
-    r = await client.post("/v2/director/step", json=body)
+    """One Director step bound to a thread (review 06a 4.5: the server holds the case and the
+    Director state; a client-sent case_state is not accepted). ``spec=True`` stores the
+    model-generated spec as a fresh thread of the student; later calls name that thread through
+    the returned ``case_state["case_id"]`` (the Director's case id is the thread id)."""
+    rt = app_module.app.state.orchestration
+    if spec:
+        thread_id = f"th-dir-{state_or_spec['seed']}"
+        rt.cases.put(thread_id, {"source": "model", "owner": "L-student", "spec": state_or_spec,
+                                 "director": None, "layers": {}, "layer_order": [], "status": "playable"})
+    else:
+        thread_id = state_or_spec["case_id"]
+    body = {"thread_id": thread_id, "action": action, "use_model": False}
+    r = await client.post("/v2/director/step", json=body, headers=STUDENT)
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -216,6 +227,16 @@ async def _run(client: httpx.AsyncClient, spec: dict, actions: list[dict]) -> li
         state = res["case_state"]
         out.append(res)
     return out
+
+
+async def test_a_client_held_case_state_is_never_accepted(client: httpx.AsyncClient):
+    first = await _step(client, _live_spec("fever-fever_and_rigors"), {"kind": "question", "ref": "onset"}, spec=True)
+    forged = {**first["case_state"], "t_ms": 99_000_000}
+    r = await client.post("/v2/director/step", json={"case_state": forged, "action": {"kind": "question", "ref": "onset"}},
+                          headers=STUDENT)
+    assert r.status_code == 422
+    nxt = await _step(client, first["case_state"], {"kind": "question", "ref": "onset"})
+    assert nxt["case_state"]["t_ms"] == first["case_state"]["t_ms"] + 30_000
 
 
 async def test_director_is_deterministic_for_identical_actions(client: httpx.AsyncClient):

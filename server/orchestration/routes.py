@@ -51,13 +51,14 @@ from pydantic import BaseModel, Field
 
 from server.auth.deps import Principal, current_user, optional_user
 from server.config import EgressBlocked, Settings, get_settings
+from server.orchestration import director as D
 from server.orchestration.director import Action, CaseState, anext_state
 from server.orchestration.llm import StructuredLLM, WorkerCostSource
 from server.orchestration.memory import LearnerMemory, memory_store
 from server.orchestration.staged import (
     StagedRuntime, director_state_from_spec, layers_for_action, refresh_director, valid_layer,
 )
-from server.orchestration.store import CaseStore
+from server.orchestration.store import CaseStore, DirectorStoreView, set_case_store
 from server.orchestration.trace import summarize
 from server.telemetry.events import bind_context, current_context, unbind_context
 
@@ -122,6 +123,8 @@ class OrchestrationRuntime:
         store = memory_store(path)
         memory = LearnerMemory(store)
         cases = CaseStore(path)
+        # The app's store is the default the Director binds to (director.default_case_store()).
+        set_case_store(cases)
         staged = StagedRuntime(llm, cases, memory, continuation=continuation)
         from langgraph.checkpoint.memory import InMemorySaver
 
@@ -234,8 +237,9 @@ class GenerateV2Request(BaseModel):
 
 class DirectorStepRequest(BaseModel):
     thread_id: str | None = None
-    case_state: dict[str, Any] | None = None   # faculty diagnostics only
-    spec: dict[str, Any] | None = None         # faculty diagnostics only
+    # Faculty diagnostics only (no thread): step a model-generated spec once, statelessly.
+    # A client-sent case_state is never accepted: the state lives in CaseStore.
+    spec: dict[str, Any] | None = None
     action: dict[str, Any]
     learner_id: str | None = None
     use_model: bool = True
@@ -500,19 +504,21 @@ async def director_step(req: DirectorStepRequest, request: Request,
             except (asyncio.TimeoutError, KeyError):
                 pending_layers.append(name)
     st = rt.cases.get(req.thread_id) or st
-    current = st.get("director")
-    if not isinstance(current, dict):
-        current = director_state_from_spec(st["spec"], req.thread_id)
+    before = st.get("director")
     try:
-        state = CaseState.model_validate(current)
+        prev_state = CaseState.model_validate(before) if isinstance(before, dict) else None
     except Exception as exc:  # noqa: BLE001 - the Director model changed shape under a stored state
         return _error(409, "invalid_case_state", str(exc)[:300])
-    new_state, visible, notes = await anext_state(state, action, llm)
-    dumped = new_state.model_dump()
+    # director.director_step reads and writes the record's "director" key; the view merges
+    # only that key, so a layer landing during the narrator call is never overwritten.
+    view = DirectorStoreView(rt.cases)
+    try:
+        new_state, visible, notes = await D.director_step(view, req.thread_id, action, llm=llm)
+    except LookupError as exc:
+        return _error(409, "opening_not_ready", str(exc)[:200])
     fired_now = [c for c in (visible.get("complications_fired") or []) if c]
 
     def write(s: dict[str, Any]) -> None:
-        s["director"] = dumped
         refresh_director(s)
         for name in needed:
             entry = (s.get("layers") or {}).get(name)
@@ -520,7 +526,8 @@ async def director_step(req: DirectorStepRequest, request: Request,
                 entry["seen"] = True
 
     rt.cases.update(req.thread_id, write)
-    _record_errors(rt, req.learner_id, state, new_state)
+    _record_errors(rt, req.learner_id, prev_state or CaseState.from_spec(st["spec"], case_id=req.thread_id),
+                   new_state)
     # A branch opened: author its bedside event for THIS thread in the background (S6).
     reasons = {str(getattr(c, "id", "")): str(getattr(c, "reason", "")) for c in
                (getattr(new_state, "pending_complications", None) or [])}
@@ -533,7 +540,7 @@ async def director_step(req: DirectorStepRequest, request: Request,
                                                extra=reasons.get(cid) or cid, at_ms=int(new_state.t_ms)))
     return JSONResponse(content={
         "thread_id": req.thread_id,
-        "case_state": dumped,
+        "case_state": new_state.model_dump(),
         "patient_visible_changes": visible,
         "director_notes": notes,
         "layers_pending": pending_layers + branch_layers,
@@ -551,27 +558,18 @@ def _record_errors(rt: OrchestrationRuntime, learner_id: str | None, before: Cas
 
 async def _director_diagnostic(rt: OrchestrationRuntime, req: DirectorStepRequest, action: Action,
                                llm: StructuredLLM | None, user: Principal | None) -> JSONResponse:
-    """Stateless step of a supplied spec or state; nothing is written to CaseStore.
-
-    The web client always steps by ``thread_id``. This path exists for faculty diagnostics and
-    deterministic Director checks. Provenance guard: a spec must be model-generated
-    (``meta.source == "model"``); seed, template, offline or published specs are refused
-    unless the caller is faculty."""
-    faculty = user is not None and user.has("faculty")
-    if req.spec is not None and req.case_state is None and not faculty:
-        source = str((req.spec.get("meta") or {}).get("source") or "")
-        if source != "model":
-            return _error(422, "not_model_generated",
-                          f"only model-generated cases can be stepped (meta.source={source!r})")
-    if req.case_state is not None:
-        try:
-            state = CaseState.model_validate(req.case_state)
-        except Exception as exc:  # pydantic.ValidationError
-            return _error(422, "invalid_case_state", str(exc)[:300])
-    elif req.spec is not None:
-        state = CaseState.from_spec(req.spec)
-    else:
-        return _error(422, "missing_case_state", "send thread_id (learners) or case_state/spec (faculty)")
+    """Faculty diagnostic: one stateless step of a supplied model-generated spec; nothing is
+    written to CaseStore. Learners always step by ``thread_id`` (the state is server-held), and
+    a client-sent ``case_state`` is never accepted."""
+    if user is None or not user.has("faculty"):
+        return _error(422, "thread_required",
+                      "send the thread_id of a case generated on request; the case state is held by the server")
+    if req.spec is None:
+        return _error(422, "missing_spec", "send thread_id, or (faculty diagnostics) a model-generated spec")
+    source = str((req.spec.get("meta") or {}).get("source") or "")
+    if source != "model":
+        return _error(422, "not_model_generated", f"only model-generated cases can be stepped (meta.source={source!r})")
+    state = CaseState.from_spec(req.spec)
     new_state, visible, notes = await anext_state(state, action, llm)
     _record_errors(rt, req.learner_id, state, new_state)
     return JSONResponse(content={"case_state": new_state.model_dump(), "patient_visible_changes": visible,

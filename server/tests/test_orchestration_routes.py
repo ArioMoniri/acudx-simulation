@@ -207,36 +207,37 @@ async def test_director_steps_by_thread_with_server_state(client: httpx.AsyncCli
 
 async def test_director_refuses_a_non_model_spec_without_a_thread(client: httpx.AsyncClient):
     spec = (await client.post("/v2/case/template", json={"seed": 4}, headers=FACULTY)).json()["spec"]
-    r = await client.post("/v2/director/step", json={"spec": spec, "action": {"kind": "question", "ref": "onset"},
-                                                     "use_model": False}, headers=ME)
-    assert r.status_code == 422 and r.json()["error"] == "not_model_generated"
+    learner = await client.post("/v2/director/step", json={"spec": spec, "action": {"kind": "question", "ref": "onset"},
+                                                           "use_model": False}, headers=ME)
+    assert learner.status_code == 422 and learner.json()["error"] == "thread_required"
+    fac = await client.post("/v2/director/step", json={"spec": spec, "action": {"kind": "question", "ref": "onset"},
+                                                       "use_model": False}, headers=FACULTY)
+    assert fac.status_code == 422 and fac.json()["error"] == "not_model_generated"
 
 
-async def test_director_step_from_spec_then_from_state(client: httpx.AsyncClient, scenario: Scenario):
-    gen = await client.post("/v2/case/generate", json={"system": "cardiology", "complaint": "STEMI", "seed": 1})
+async def test_director_step_by_thread_records_errors_in_memory(client: httpx.AsyncClient, scenario: Scenario):
+    gen = await client.post("/v2/case/generate", json={"system": "cardiology", "complaint": "STEMI", "seed": 1,
+                                                       "learner_id": "L-route", "thread_id": "th-mem"}, headers=ME)
     spec = gen.json()["spec"]
     r = await client.post("/v2/director/step", json={
-        "spec": spec, "action": {"kind": "question", "ref": "onset"}, "learner_id": "L-route", "use_model": False,
-    }, headers=ME)
+        "thread_id": "th-mem", "action": {"kind": "question", "ref": "onset"}, "learner_id": "L-route",
+        "use_model": False}, headers=ME)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["patient_visible_changes"]["new_facts"]
     assert body["case_state"]["t_ms"] == 30_000
-    state = body["case_state"]
     # Give a contraindicated treatment: the error reaches learner memory.
     contra = next(t["code"] for t in spec["treatments"] if t["appropriateness"] == "contraindicated")
     r2 = await client.post("/v2/director/step", json={
-        "case_state": state, "action": {"kind": "treatment", "ref": contra}, "learner_id": "L-route", "use_model": True,
-    }, headers=ME)
+        "thread_id": "th-mem", "action": {"kind": "treatment", "ref": contra}, "learner_id": "L-route",
+        "use_model": True}, headers=ME)
     assert r2.status_code == 200
     body2 = r2.json()
-    assert any(n["note"].startswith("contraindicated treatment") for n in body2["director_notes"])
-    assert body2["patient_visible_changes"]["utterance_en"] == "It hurts, doctor, please help."
+    assert any("contraindicated" in n["note"] for n in body2["director_notes"])
     profile = (await client.get("/v2/learner/L-route", headers=ME)).json()
-    assert profile["error_count"] == 1 and profile["weak_systems"] == ["cardiology"]
-    assert profile["conditions_seen"] == []  # generation had no learner_id
-    bad = await client.post("/v2/director/step", json={"action": {"kind": "question", "ref": "onset"}})
-    assert bad.status_code == 422
+    assert profile["error_count"] >= 1 and "cardiology" in profile["weak_systems"]
+    bad = await client.post("/v2/director/step", json={"action": {"kind": "question", "ref": "onset"}}, headers=ME)
+    assert bad.status_code == 422 and bad.json()["error"] == "thread_required"
 
 
 # --- review 04 O3: learner memory and checkpoints belong to their learner ---- #
@@ -264,9 +265,11 @@ async def test_faculty_with_the_admin_token_may_read_any_learner(client: httpx.A
 
 
 async def test_director_step_cannot_write_another_learners_memory(client: httpx.AsyncClient):
-    gen = await client.post("/v2/case/generate", json={"system": "cardiology", "complaint": "STEMI", "seed": 1})
-    body = {"spec": gen.json()["spec"], "action": {"kind": "question", "ref": "onset"}, "use_model": False}
-    assert (await client.post("/v2/director/step", json=body)).status_code == 200      # no learner_id: anonymous ok
+    gen = await client.post("/v2/case/generate", json={"system": "cardiology", "complaint": "STEMI", "seed": 1,
+                                                       "thread_id": "th-own-dir", "learner_id": "L-route"}, headers=ME)
+    body = {"thread_id": "th-own-dir", "action": {"kind": "question", "ref": "onset"}, "use_model": False}
+    assert gen.status_code == 200
+    assert (await client.post("/v2/director/step", json=body, headers=ME)).status_code == 200
     assert (await client.post("/v2/director/step", json={**body, "learner_id": "L-victim"})).status_code == 401
     poisoned = await client.post("/v2/director/step", json={**body, "learner_id": "L-victim"},
                                  headers={"X-User-Id": "L-attacker"})

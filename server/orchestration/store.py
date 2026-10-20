@@ -177,4 +177,37 @@ class CaseStore:
             self._conn.close()
 
 
-__all__ = ["CaseSourceError", "CaseStore"]
+class DirectorStoreView:
+    """The ``CaseStoreLike`` the Clinical Director binds to (``director.director_step``): ``get``
+    returns the whole record, ``put`` merges ONLY the record's ``"director"`` key atomically, so a
+    layer written by the continuation while the Director narrates is never lost."""
+
+    def __init__(self, store: CaseStore) -> None:
+        self.store = store
+
+    def get(self, thread_id: str) -> Optional[dict[str, Any]]:
+        return self.store.get(thread_id)
+
+    def put(self, thread_id: str, record: dict[str, Any]) -> None:
+        director = record.get("director")
+        self.store.update(thread_id, lambda s: s.update(director=director))
+
+
+_DEFAULT: Optional[CaseStore] = None
+
+
+def set_case_store(store: CaseStore) -> None:
+    """Register the app's CaseStore (the orchestration runtime does this at creation)."""
+    global _DEFAULT
+    _DEFAULT = store
+
+
+def get_case_store() -> "DirectorStoreView":
+    """The app's CaseStore as the Director sees it (``director.default_case_store()``)."""
+    global _DEFAULT
+    if _DEFAULT is None:
+        _DEFAULT = CaseStore(None)
+    return DirectorStoreView(_DEFAULT)
+
+
+__all__ = ["CaseSourceError", "CaseStore", "DirectorStoreView", "get_case_store", "set_case_store"]

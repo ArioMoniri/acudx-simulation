@@ -102,6 +102,8 @@ RULE_IDS: tuple[str, ...] = (
     "labs_present", "imaging_present", "exam_present", "treatment_code", "fixture_appropriateness",
     "effect_caps", "effect_plausibility", "indicated_and_distractor", "difficulty_band", "acuity_band",
     "hpi_count", "hpi_onset", "red_flag_hpi", "red_flags_structured", "complaint_adherence",
+    "untreated_worsens", "complication_plan_present", "definitive_covers_deadline", "allergy_structured",
+    "effect_sign",
 )
 
 
@@ -290,6 +292,63 @@ def complaint_problems(draft: dict[str, Any], requested: str | None) -> list[str
     if missing:
         out.append(f"requested complaint parts {missing} absent from chief complaint and hpi (rule:complaint_adherence)")
     return out
+
+
+def check_course_rules(spec: dict[str, Any], cond: dict[str, Any]) -> dict[str, Any]:
+    """Course coherence (review 06b F25), deterministic, for an assembled (staged) case.
+
+    * ``untreated_worsens``: an ESI 1 or 2 case must not be authored as improving untreated.
+    * ``complication_plan_present``: an ESI 1 or 2 case needs a course rule or a latent branch.
+    * ``definitive_covers_deadline``: every guideline target of the course rule has an
+      indicated row in the treatment table whose class meets the target's group.
+    * ``allergy_structured``: an allergy stated in the chart is also structured
+      (``course.allergies``), so an exposure can open the reaction branch.
+    * ``effect_sign``: an indicated treatment does not author a worsening vital (SpO2 down,
+      systolic down in a hypotensive patient, HR up in a tachycardic one).
+    """
+    from server.orchestration import course as COURSE
+
+    issues: list[str] = []
+    esi = int(spec.get("acuity_esi") or cond.get("typical_acuity") or 3)
+    traj = spec.get("vitals_trajectory") or []
+    if esi <= 2 and len(traj) >= 2:
+        a, b = traj[0], traj[-1]
+        try:
+            better = (float(b["spo2"]) > float(a["spo2"]) and float(b["hr"]) < float(a["hr"])
+                      and float(b["systolic"]) >= float(a["systolic"]))
+        except (KeyError, TypeError, ValueError):
+            better = False
+        if better:
+            issues.append(f"ESI {esi} case improves untreated (rule:untreated_worsens)")
+    cid = str(cond.get("id") or "")
+    rule = COURSE.library_for(cid).get(cid) or {}
+    course = spec.get("course") or {}
+    if esi <= 2 and rule.get("fallback") and not course.get("latent_branches"):
+        issues.append(f"ESI {esi} case has no course rule and no latent branch (rule:complication_plan_present)")
+    indicated = [t for t in spec.get("treatments") or [] if t.get("appropriateness") == "indicated"]
+    if spec.get("treatments"):
+        groups = {g["id"]: g for g in rule.get("groups") or []}
+        for target in rule.get("targets") or []:
+            g = groups.get(target.get("group")) or {}
+            codes = set(g.get("codes") or [])
+            classes = set(g.get("classes") or [])
+            covered = any(str(t.get("code")) in codes or classes & set(N.classify_treatment(
+                f"{t.get('label_en') or ''} {t.get('code') or ''}")) for t in indicated)
+            if g and not covered:
+                issues.append(f"target {target.get('id')} ({g.get('label_en')}) has no indicated treatment "
+                              "(rule:definitive_covers_deadline)")
+    allergy_text = f"{spec.get('allergies_en') or ''}".lower()
+    stated = allergy_text.strip() and not any(w in allergy_text for w in ("no known", "nkda", "none", "yok"))
+    if stated and not course.get("allergies"):
+        issues.append("the chart states an allergy that is not structured (rule:allergy_structured)")
+    tv = spec.get("triage_vitals") or {}
+    for t in indicated:
+        for e in t.get("effects") or []:
+            key, d = str(e.get("key") or ""), float(e.get("delta") or 0)
+            if (key == "spo2" and d < 0) or (key == "systolic" and d < 0 and float(tv.get("systolic") or 120) < 100) \
+                    or (key == "hr" and d > 0 and float(tv.get("hr") or 80) > 100):
+                issues.append(f"indicated {t.get('code')}: effect {key} {d:+g} worsens the patient (rule:effect_sign)")
+    return {"ok": not issues, "issues": issues}
 
 
 DETERMINISTIC = {

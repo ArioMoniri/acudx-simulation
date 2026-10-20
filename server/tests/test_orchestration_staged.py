@@ -254,6 +254,56 @@ async def test_provenance_guard_every_learner_facing_spec_is_model_generated():
         await rt.aclose()
 
 
+def test_kernel_course_fields_are_validated_against_the_course_library():
+    """06b 4.5: model-authored branches, flags and allergies are validated, never trusted."""
+    from server.condition_catalog import CATALOG
+
+    cond = next(c for c in CATALOG if c["id"] == "sepsis_uncomplicated")
+    kernel, notes = S.gate_kernel({
+        "key_positives": ["fever", "rigors"], "course": "deteriorating",
+        "branches": [{"id": "septic_shock", "trigger": "no antibiotic", "effect": "shock"},
+                     {"id": "dragon_pox", "trigger": "x", "effect": "y"}],
+        "flags": ["copd", "made_up"], "allergies": [{"agent_class": "penicillin", "reaction": "anaphylaxis"},
+                                                   {"agent_class": "unicorn", "reaction": "rash"}],
+    }, cond)
+    assert [b["id"] for b in kernel["branches"]] == ["septic_shock"]
+    assert kernel["flags"] == ["copd"] and kernel["allergies"] == [{"agent_class": "penicillin", "reaction": "anaphylaxis"}]
+    assert any("dragon_pox" in n for n in notes)
+    assert "septic_shock" in S.kernel_messages(cond, {}, locale="en", acuity=2, candidates=[])[1]["content"]
+
+
+def test_background_history_must_carry_pmh_and_the_structured_allergy():
+    state = {"condition": {"id": "x"}, "kernel": {"allergies": [{"agent_class": "penicillin", "reaction": "rash"}]}}
+    with pytest.raises(S.LayerRejected) as exc:
+        S.gate_layer("history.background", {"items": [{"intent": "allergies", "text": "No allergies"}],
+                                             "pmh": "", "allergies": "No known drug allergies"}, state)
+    assert any("pmh" in i for i in exc.value.issues) and any("penicillin" in i for i in exc.value.issues)
+    ok, _ = S.gate_layer("history.background", {"items": [{"intent": "allergies", "text": "Penicillin gives me a rash"}],
+                                                "pmh": "Type 2 diabetes", "allergies": "Penicillin (rash)"}, state)
+    assert ok["pmh"] == "Type 2 diabetes"
+
+
+def test_course_rule_judges_06b_f25():
+    from server.condition_catalog import CATALOG
+    from server.orchestration.judges import check_course_rules
+
+    cond = next(c for c in CATALOG if c["id"] == "sepsis_uncomplicated")
+    good = {"acuity_esi": 2, "triage_vitals": {"hr": 118, "systolic": 92, "spo2": 94},
+            "vitals_trajectory": S.derived_trajectory({"hr": 118, "systolic": 92, "diastolic": 60, "rr": 24,
+                                                       "spo2": 94, "tempC": 39}, "deteriorating"),
+            "treatments": [{"code": "abx", "label_en": "IV antibiotics", "appropriateness": "indicated", "effects": []}],
+            "allergies_en": "No known drug allergies", "course": {"allergies": []}}
+    assert check_course_rules(good, cond)["ok"], check_course_rules(good, cond)
+    bad = {**good, "vitals_trajectory": S.derived_trajectory(good["triage_vitals"] | {"diastolic": 60, "rr": 24,
+                                                                                       "tempC": 39}, "improving"),
+           "treatments": [{"code": "o2", "label_en": "Oxygen", "appropriateness": "indicated",
+                           "effects": [{"key": "spo2", "delta": -4, "onsetMs": 120000}]}],
+           "allergies_en": "Penicillin: rash"}
+    issues = " ".join(check_course_rules(bad, cond)["issues"])
+    for rule in ("untreated_worsens", "definitive_covers_deadline", "allergy_structured", "effect_sign"):
+        assert f"rule:{rule}" in issues
+
+
 def test_layers_for_action_map_learner_actions_to_layers():
     assert S.layers_for_action("question", "onset") == ["history.presenting"]
     assert S.layers_for_action("question", "allergies") == ["history.background"]

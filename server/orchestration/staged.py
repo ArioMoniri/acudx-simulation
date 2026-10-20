@@ -177,6 +177,28 @@ _OPENING: dict[str, Any] = _obj({
 # The S1 reply: the visible opening only (streamed field by field).
 S1_SCHEMA: dict[str, Any] = _obj({"opening": _OPENING})
 
+# Course fields the model may author (review 06b section 4.5): validated, never trusted.
+COURSE_FLAGS: tuple[str, ...] = ("heart_failure", "renal_failure", "copd", "beta_blocked", "pde5", "rv_infarct",
+                                 "killip2", "hypercapnic_target")
+ALLERGY_CLASSES: tuple[str, ...] = ("penicillin", "cephalosporin", "nsaid", "opioid", "contrast", "sulfonamide")
+ALLERGY_REACTIONS: tuple[str, ...] = ("rash", "angioedema", "bronchospasm", "anaphylaxis", "pruritus")
+
+
+def course_library(cond_id: str) -> dict[str, Any]:
+    """The condition's course rule library (server/orchestration/course.py): branch ids the
+    Director can open, guideline targets and treatment groups. Empty for the long tail."""
+    try:
+        from server.orchestration import course as COURSE
+
+        lib = COURSE.library_for(cond_id)
+    except Exception:  # noqa: BLE001 - the course engine is optional for a layer prompt
+        return {"branches": [], "targets": [], "groups": []}
+    rule = lib.get(cond_id) or {}
+    return {"branches": [str(b.get("id")) for b in rule.get("branches") or [] if b.get("id")],
+            "targets": [t for t in rule.get("targets") or []], "groups": [g for g in rule.get("groups") or []],
+            "fallback": bool(rule.get("fallback"))}
+
+
 KERNEL_SCHEMA: dict[str, Any] = _obj({
     "key_positives": _arr(_str(3, 80), 3, 5),
     "key_negatives": _arr(_str(3, 80), 2, 4),
@@ -187,6 +209,11 @@ KERNEL_SCHEMA: dict[str, Any] = _obj({
     "red_flags": _arr(_obj({"text": _str(3, 80), "channel": {"enum": ["patient", "clinician"]}}), 1, 2),
     "exam_systems": _arr({"enum": [s for s in EXAM_SYSTEMS if s != "general"]}, 1, 2),
     "anchor_ids": _arr({"type": "string"}, 0, 3),
+    # 06b 4.5 / F30: structured allergies (an empty list means no known drug allergy) and
+    # course flags from the closed vocabulary.
+    "allergies": _arr(_obj({"agent_class": {"enum": list(ALLERGY_CLASSES)},
+                            "reaction": {"enum": list(ALLERGY_REACTIONS)}}), 0, 2),
+    "flags": _arr({"enum": list(COURSE_FLAGS)}, 0, 3),
 })
 
 
@@ -296,6 +323,15 @@ def s1_messages(cond: dict[str, Any], *, locale: str, acuity: int, difficulty: i
     return [{"role": "system", "content": "ROLE: author\n" + _CHARTER}, {"role": "user", "content": "STAGE: s1\n" + user}]
 
 
+def _branch_rule(cond_id: str) -> str:
+    lib = course_library(cond_id)
+    if lib["branches"]:
+        return ("- branches: pick 1-2 ids ONLY from this course library " + ", ".join(lib["branches"])
+                + "; trigger and effect in plain words for THIS patient\n")
+    return ("- branches: 1-2 ways THIS patient's course can change, each with a trigger tied to a learner action "
+            "or delay (for example no antibiotic by 60 min) and its effect\n")
+
+
 def kernel_messages(cond: dict[str, Any], opening: dict[str, Any], *, locale: str, acuity: int,
                     candidates: list[str]) -> list[dict[str, str]]:
     """The hidden kernel, conditioned on the opening the learner already sees."""
@@ -308,8 +344,9 @@ def kernel_messages(cond: dict[str, Any], opening: dict[str, Any], *, locale: st
         "OPENING (already shown to the learner, do not contradict it)\n"
         + json.dumps(opening, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n\n"
         f"CONSTRAINTS\n- {_locale_rule(locale)}\n- be terse: short phrases\n"
-        "- branches: 1-2 ways THIS patient's course can change, each with a trigger tied to a learner action "
-        "or delay (for example no antibiotic by 60 min) and its effect\n"
+        + _branch_rule(cond["id"]) +
+        "- allergies: structured drug allergies of this patient ([] for no known drug allergy)\n"
+        "- flags: comorbidity flags that change the course (heart_failure, copd, beta_blocked, ...), [] if none\n"
         "- exam_systems: the 1-2 systems with the key findings\n"
         "- anchor_ids: 0-3 ids ONLY from this list (never invent one):\n" + cands + "\n"
     )
@@ -456,9 +493,22 @@ def gate_s1(draft: dict[str, Any], cond: dict[str, Any], *, acuity: int,
     return {"opening": opening}, notes
 
 
-def gate_kernel(kernel: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    """Deterministic kernel checks (consistency with the condition is the async judges' job)."""
+def gate_kernel(kernel: dict[str, Any], cond: Optional[dict[str, Any]] = None) -> tuple[dict[str, Any], list[str]]:
+    """Deterministic kernel checks (consistency with the condition is the async judges' job).
+    Branch ids are validated against the condition's course library (06b 4.5: anything
+    unknown is dropped, not executed); flags and allergies against closed vocabularies."""
     notes: list[str] = []
+    lib = course_library(cond["id"]) if cond else {"branches": []}
+    if lib["branches"]:
+        known = set(lib["branches"])
+        kept = [b for b in kernel.get("branches") or [] if isinstance(b, dict) and b.get("id") in known]
+        dropped = [str((b or {}).get("id")) for b in kernel.get("branches") or [] if b not in kept]
+        if dropped:
+            notes.append(f"kernel branches {dropped} are not in the course library: dropped")
+        kernel["branches"] = kept
+    kernel["flags"] = [f for f in kernel.get("flags") or [] if f in COURSE_FLAGS][:3]
+    kernel["allergies"] = [a for a in kernel.get("allergies") or [] if isinstance(a, dict)
+                           and a.get("agent_class") in ALLERGY_CLASSES and a.get("reaction") in ALLERGY_REACTIONS][:2]
     if len([p for p in kernel.get("key_positives") or [] if str(p).strip()]) < 2:
         raise LayerRejected(["key_positives needs at least two findings"])
     if kernel.get("course") not in COURSES:
@@ -490,6 +540,19 @@ def gate_layer(layer: str, data: dict[str, Any], state: dict[str, Any]) -> tuple
         if not items:
             raise LayerRejected([f"history.{sub} has no usable item"])
         data = {**data, "items": items}
+        if sub == "background":
+            problems = []
+            if not str(data.get("pmh") or "").strip():
+                problems.append("pmh is empty: write the past medical history (or 'No significant history')")
+            allergy_text = str(data.get("allergies") or "").lower()
+            if not allergy_text.strip():
+                problems.append("allergies is empty: state the allergies or 'No known drug allergies'")
+            for a in (state.get("kernel") or {}).get("allergies") or []:
+                if a.get("agent_class") and a["agent_class"] not in allergy_text and not (
+                        a["agent_class"] == "penicillin" and "amoxicillin" in allergy_text):
+                    problems.append(f"allergies must state the {a['agent_class']} allergy ({a.get('reaction')})")
+            if problems:
+                raise LayerRejected(problems)
     elif kind == "exam":
         allowed = EXAM_SYSTEMS[sub]
         items = []
@@ -722,6 +785,12 @@ def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
         "guideline_anchors": list(state.get("anchors") or []),
         "red_flags": [{"en": _bi(r.get("text"))[0], "tr": _bi(r.get("text"))[1], "channel": r.get("channel") or "clinician"}
                       for r in kernel.get("red_flags") or []],
+        "course": {
+            "latent_branches": [{"id": b.get("id"), "trigger": b.get("trigger"), "effect": b.get("effect")}
+                                for b in kernel.get("branches") or []],
+            "flags": list(kernel.get("flags") or []),
+            "allergies": list(kernel.get("allergies") or []),
+        },
         "triage_note": str(opening.get("triage_note") or ""),
         "persona": dict(opening.get("persona") or {}),
         "events": events,
@@ -997,7 +1066,7 @@ class StagedRuntime:
             try:
                 reply = await self._call(thread_id, "kernel", msgs, KERNEL_SCHEMA, max_tokens=MAX_TOKENS["kernel"],
                                          temperature=TEMPERATURE["layer"])
-                kernel, notes = gate_kernel(dict(reply.data))
+                kernel, notes = gate_kernel(dict(reply.data), cond)
                 break
             except LayerRejected as exc:
                 issues = exc.issues
@@ -1221,7 +1290,7 @@ class StagedRuntime:
         spec = state.get("spec") or {}
         votes = await asyncio.gather(*(J.run_judge(n, spec, state["condition"], self.llm, round_no=0)
                                        for n in ("clinical_consistency", "pedagogy")), return_exceptions=True)
-        issues: list[str] = []
+        issues: list[str] = [f"[course] {i}" for i in J.check_course_rules(spec, state["condition"])["issues"]]
         for res in votes:
             if isinstance(res, BaseException):
                 continue
@@ -1258,7 +1327,13 @@ class StagedRuntime:
         out: dict[str, list[str]] = {}
         for issue in issues:
             low = issue.lower()
-            if "hpi" in low or "history" in low or "red flag" in low or "complaint" in low:
+            if "rule:allergy_structured" in low:
+                target = "history.background" if "history.background" in ready else None
+            elif "rule:effect_sign" in low or "rule:definitive_covers_deadline" in low:
+                target = "treatments" if "treatments" in ready else None
+            elif "rule:untreated_worsens" in low or "rule:complication_plan_present" in low:
+                target = "opening"      # kernel and course class: recorded, the shown opening is kept
+            elif "hpi" in low or "history" in low or "red flag" in low or "complaint" in low:
                 target = next((n for n in ready if n.startswith("history.")), None)
                 if "chief complaint" in low:
                     target = "opening"
