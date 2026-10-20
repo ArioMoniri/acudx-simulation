@@ -128,7 +128,11 @@ interface GuardNoticeState {
  * intent-chip and free-text/live sources can be merged in true chronological
  * order rather than one source always before the other.
  */
-type OrderedTurn = TranscriptTurn & { seq: number };
+type OrderedTurn = TranscriptTurn & {
+  seq: number;
+  /** Secondary chip: the intent a free-text question was classified to. */
+  intent?: string;
+};
 
 /** Question-intent chips offered to the student (history extraction). */
 const QUESTION_INTENTS: QuestionIntent[] = [
@@ -286,14 +290,20 @@ export function InterviewTab({
       const intentKey = t(`ehr.intents.${camel(ev.ref)}`, {
         defaultValue: ev.ref,
       });
+      // A typed question classified to an intent shows the learner's own words
+      // as the doctor turn, with the intent as a secondary chip; a chip click
+      // (no utterance) shows the intent label as before.
+      const utterance =
+        typeof ev.meta?.utterance === "string" ? ev.meta.utterance : "";
       const docId = `d-${ev.seq}`;
       turnsAcc.push({
         id: docId,
         role: "doctor",
         stage: "history",
-        en: intentKey,
-        tr: intentKey,
+        en: utterance || intentKey,
+        tr: utterance || intentKey,
         seq: ev.seq,
+        ...(utterance ? { intent: intentKey } : {}),
       });
 
       const revealed = (ev.meta?.revealed as string[] | undefined) ?? [];
@@ -442,8 +452,8 @@ export function InterviewTab({
     typingTimer.current = window.setTimeout(() => setTyping(false), 900);
   }
 
-  function handleAsk(intent: QuestionIntent) {
-    askQuestion(intent);
+  function handleAsk(intent: QuestionIntent, utterance?: string) {
+    askQuestion(intent, utterance ? { utterance } : undefined);
     pulseTyping();
   }
 
@@ -480,7 +490,7 @@ export function InterviewTab({
         setNotice(null);
         const intent = inferQuestionIntent(text, caseInstance);
         if (intent) {
-          handleAsk(intent);
+          handleAsk(intent, text);
         } else {
           appendCannedReply(text, CLARIFY_REPLIES);
         }
@@ -734,6 +744,7 @@ export function InterviewTab({
                         ? allAffect[turn.id] ?? t("encounter.affect.distress")
                         : undefined
                     }
+                    intent={turn.intent}
                     showMeta={startsGroup}
                     spaced={startsGroup && i > 0}
                   />
@@ -964,6 +975,7 @@ function ChatTurn({
   text,
   speaker,
   affect,
+  intent,
   showMeta,
   spaced,
 }: {
@@ -971,6 +983,8 @@ function ChatTurn({
   text: string;
   speaker: string;
   affect?: string;
+  /** Doctor turns only: the intent a typed question was classified to. */
+  intent?: string;
   showMeta: boolean;
   spaced: boolean;
 }) {
@@ -1008,6 +1022,11 @@ function ChatTurn({
         {!isDoctor && affect ? (
           <span className="mt-1 px-0.5 text-[11px] italic text-muted">
             {affect}
+          </span>
+        ) : null}
+        {isDoctor && intent ? (
+          <span className="mt-1 inline-flex items-center rounded-full border border-border bg-bg-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+            {intent}
           </span>
         ) : null}
       </div>

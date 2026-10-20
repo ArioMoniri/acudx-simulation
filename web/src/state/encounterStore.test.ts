@@ -183,6 +183,40 @@ describe("encounterStore — orders reveal results after turnaround", () => {
   });
 });
 
+describe("encounterStore — every resolved order enters the event log", () => {
+  it("labels a case-backed result meta.source=case and a synthetic-normal one synthetic-normal", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    // Seed 106 is the same case the turnaround test above uses: it carries labs.
+    const c = makeCase(106);
+    const caseCode = c.groundTruth.labs[0].orderCode;
+    // TSH is in the orderable catalog but a chest-pain case carries no datum for
+    // it, so it resolves to the synthetic within-normal result.
+    const syntheticCode = "tsh";
+    expect(c.groundTruth.labs.some((l) => l.orderCode === syntheticCode)).toBe(false);
+    run(() => startEncounter(c));
+    run(() => placeOrder(caseCode));
+    run(() => placeOrder(syntheticCode, { en: "TSH", tr: "TSH" }));
+
+    const readyAt = Math.max(...snapshot.orders.map((o) => o.resultsReadyAt));
+    run(() => {
+      now = readyAt;
+      vi.advanceTimersByTime(readyAt);
+    });
+
+    const results = snapshot.events.filter((e) => e.type === "result");
+    expect(results.map((e) => e.ref).sort()).toEqual([caseCode, syntheticCode].sort());
+    expect(results.find((e) => e.ref === caseCode)?.meta?.source).toBe("case");
+    const synthetic = results.find((e) => e.ref === syntheticCode);
+    expect(synthetic?.meta?.source).toBe("synthetic-normal");
+    expect(synthetic?.meta?.revealed).toEqual([]);
+    // The tracker and the log agree: both orders resolved, both in results.
+    expect(snapshot.orders.every((o) => o.resolved)).toBe(true);
+    expect(snapshot.results.map((r) => r.code).sort()).toEqual([caseCode, syntheticCode].sort());
+    // A synthetic-normal result discloses no case datum.
+    expect(getDiscoveredLabs(snapshot).every((l) => l.orderCode !== syntheticCode)).toBe(true);
+  });
+});
+
 describe("encounterStore — per-test turnaround (sense of time)", () => {
   it("schedules a culture much later than a CBC", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });

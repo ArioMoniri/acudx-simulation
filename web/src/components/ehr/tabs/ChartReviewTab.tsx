@@ -19,8 +19,9 @@ import { Badge, Card, SectionLabel, Stat } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useStagger } from "@/lib/motion";
 import { minutesOf, pick } from "../labels";
+import { getOrderableByCode } from "@/domain/orderables";
 import { getOffTaskCount, useEncounterState } from "@/state/encounterStore";
-import type { EncounterEvent, EncounterEventType } from "@/state/encounterStore";
+import type { EncounterEvent, EncounterEventType, PlacedOrder } from "@/state/encounterStore";
 import type { Lang } from "@/data/mock";
 import type { CaseInstance } from "@/domain/case";
 
@@ -230,7 +231,7 @@ export function ChartReviewTab({ caseInstance, lang }: ChartReviewTabProps) {
           <motion.ol {...container} className="flex flex-col">
             {shown.map((ev) => (
               <motion.li key={ev.seq} {...item}>
-                <TimelineRow ev={ev} label={describeEvent(ev, t)} />
+                <TimelineRow ev={ev} label={describeEvent(ev, t, lang, state.orders)} />
               </motion.li>
             ))}
           </motion.ol>
@@ -315,10 +316,25 @@ function TimelineRow({
   );
 }
 
+/**
+ * The catalog label for an order code (EN/TR), so the timeline never prints a
+ * raw code such as "tsh". Falls back to the label captured on the placed order
+ * (ad hoc / case-only codes), then to the code itself.
+ */
+function orderLabel(code: string, lang: Lang, orders: readonly PlacedOrder[]): string {
+  const orderable = getOrderableByCode(code);
+  if (orderable) return pick(orderable.label, lang);
+  const placed = orders.find((o) => o.code === code);
+  if (placed) return lang === "tr" ? placed.labelTr : placed.labelEn;
+  return code;
+}
+
 /** Human-readable one-liner for a timeline event. */
 function describeEvent(
   ev: EncounterEvent,
   t: (k: string, o?: Record<string, unknown>) => string,
+  lang: Lang,
+  orders: readonly PlacedOrder[],
 ): string {
   const ref = ev.ref;
   switch (ev.type) {
@@ -331,9 +347,9 @@ function describeEvent(
         maneuver: t(`ehr.maneuvers.${camel(ref)}`, { defaultValue: ref }),
       });
     case "order":
-      return t("ehr.timeline.order", { code: ref });
+      return t("ehr.timeline.order", { code: orderLabel(ref, lang, orders) });
     case "result":
-      return t("ehr.timeline.result", { code: ref });
+      return t("ehr.timeline.result", { code: orderLabel(ref, lang, orders) });
     case "treatment":
       return t("treatments.timeline", {
         name: (ev.meta?.display as string) ?? ref,

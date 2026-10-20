@@ -296,18 +296,24 @@ export function startEncounter(caseInstance: CaseInstance): void {
   emit();
 }
 
-/** Ask a history question by intent. Reveals matching history + logs the event. */
-export function askQuestion(intent: QuestionIntent): void {
+/**
+ * Ask a history question by intent. Reveals matching history + logs the event.
+ * `utterance` carries the learner's own words when the intent was inferred from
+ * free text (offline guard path), so the transcript can show what they typed.
+ */
+export function askQuestion(intent: QuestionIntent, opts?: { utterance?: string }): void {
   const c = state.caseInstance;
   if (!c) return;
   const resolved = resolveReveal(c, { kind: "question", ref: intent });
   const hit = resolved?.datumKind === "history";
   const datumIds = hit ? resolved!.datumIds : [];
   const alreadyKnown = datumIds.every((id) => state.discovered.has(id));
+  const utterance = opts?.utterance?.trim();
   const ev = appendEvent("question", intent, {
     hit,
     redundant: hit && alreadyKnown,
     revealed: datumIds,
+    ...(utterance ? { utterance: utterance.slice(0, 280) } : {}),
   });
   setState({
     ...state,
@@ -438,25 +444,38 @@ export function placeOrder(
   pendingTimers.add(timer);
 }
 
-/** Resolve a placed order: reveal its result datum and append a result event. */
+/**
+ * Resolve a placed order: reveal its result datum and append a result event.
+ *
+ * Every resolved order enters the event log. Case data wins when the case has a
+ * datum for the code (`meta.source: "case"`); otherwise the order resolved to the
+ * synthetic within-normal result the Results tab renders (`domain/orderables`),
+ * and the log still records it (`meta.source: "synthetic-normal"`, no datum ids)
+ * so grading, debrief and progress count the same orders the tracker does.
+ */
 function resolveOrder(code: string): void {
   const c = state.caseInstance;
   if (!c) return;
+  const order = state.orders.find((o) => o.code === code);
+  if (!order) return;
   const resolved = resolveReveal(c, { kind: "order", ref: code });
-  if (!resolved) return;
+  const datumKind: RevealDatumKind =
+    resolved?.datumKind ?? (order.category.startsWith("imaging") ? "imaging" : "lab");
+  const datumIds = resolved?.datumIds ?? [];
   const ev = appendEvent("result", code, {
-    datumKind: resolved.datumKind,
-    revealed: resolved.datumIds,
+    datumKind,
+    revealed: datumIds,
+    source: resolved ? "case" : "synthetic-normal",
   });
   const result: ResolvedResult = {
     code,
-    datumKind: resolved.datumKind,
-    datumIds: resolved.datumIds,
+    datumKind,
+    datumIds,
     at: nowOffset(),
   };
   setState({
     ...state,
-    discovered: revealDatumIds(resolved.datumIds, state.discovered),
+    discovered: resolved ? revealDatumIds(datumIds, state.discovered) : state.discovered,
     orders: state.orders.map((o) => (o.code === code ? { ...o, resolved: true } : o)),
     results: [...state.results, result],
     stage: "results",
