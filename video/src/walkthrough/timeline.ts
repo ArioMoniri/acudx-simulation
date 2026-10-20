@@ -49,6 +49,8 @@ export interface Segment {
   rate: number;
   out0: number;
   out1: number;
+  /** Set on a spliced clip that is not the screen recording (e.g. "call", the live patient video). */
+  insert?: string;
 }
 
 export interface CutOptions {
@@ -149,6 +151,7 @@ export function buildCut(timeline: Timeline, options: CutOptions): Segment[] {
 export function mapTime(segments: Segment[], t: number, offset = 0): number | null {
   const s = t + offset;
   for (const seg of segments) {
+    if (seg.insert) continue;
     if (s >= seg.src0 && s <= seg.src1) return seg.out0 + (s - seg.src0) / seg.rate;
   }
   return null;
@@ -312,4 +315,41 @@ export function buildClips(clips: Array<{ chapter: string; src0: number; src1: n
     out += len;
     return seg;
   });
+}
+
+/**
+ * Replace the recording of one chapter with a spliced clip of `duration`
+ * output seconds (the chapter keeps its place, caption and marker); later
+ * segments shift by the difference.
+ */
+export function spliceInsert(segments: Segment[], chapter: string, insert: string, duration: number): Segment[] {
+  const first = segments.findIndex((s) => s.chapter === chapter);
+  if (first < 0) return segments;
+  const own = segments.filter((s) => s.chapter === chapter);
+  const start = own[0].out0;
+  const shift = duration - (own[own.length - 1].out1 - start);
+  const out: Segment[] = [];
+  for (const s of segments) {
+    if (s.chapter === chapter) {
+      if (s === own[0]) out.push({ chapter, src0: -1, src1: -1, rate: 1, out0: start, out1: start + duration, insert });
+      continue;
+    }
+    out.push(s.out0 >= start ? { ...s, out0: s.out0 + shift, out1: s.out1 + shift } : s);
+  }
+  return out;
+}
+
+/** Consecutive runs of recording segments and inserts, each rebased to its own start. */
+export function splitRuns(segments: Segment[]): Array<{ start: number; end: number; insert?: string; segments: Segment[] }> {
+  const runs: Array<{ start: number; end: number; insert?: string; segments: Segment[] }> = [];
+  for (const s of segments) {
+    const last = runs[runs.length - 1];
+    if (!s.insert && last && !last.insert) {
+      last.segments.push(s);
+      last.end = s.out1;
+    } else {
+      runs.push({ start: s.out0, end: s.out1, insert: s.insert, segments: [s] });
+    }
+  }
+  return runs.map((r) => ({ ...r, segments: r.segments.map((s) => ({ ...s, out0: s.out0 - r.start, out1: s.out1 - r.start })) }));
 }

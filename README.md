@@ -26,54 +26,75 @@
 
 ## Why AcuDx
 
-Clinical reasoning is learned by doing: taking a history, choosing tests, reading results, treating and committing to a diagnosis under time pressure. AcuDx writes every case on request for the learner who asks (there is no case library, seed list or template), and the case changes with what the learner does, inside an Epic-like chart, with an AI patient that answers only what is asked, results that arrive on real turnaround timers, and a debrief whose clinical statements cite a verified guideline or say plainly that no verified source was found. It runs on open-weight models on an on-demand GPU worker, so a school can host it with zero third-party data egress.
+Clinical reasoning is learned by doing: taking a history, choosing tests, reading results, treating and committing to a diagnosis under time pressure. AcuDx writes every case on request for the learner who asks; there is no case library, seed list or template. The opening streams in first and the chart opens on it, while history, exam, treatments and results are written for that patient as the learner works. The case keeps changing in flight: after every question, exam, order or treatment the Clinical Director steps the patient on the server (a shared course engine with guideline targets, harms and branches) and the vitals monitor and the patient's replies follow. It all happens inside an Epic-like chart, with an AI patient that answers only what is asked (in text, voice or a live video call), results that arrive on real turnaround timers, and a debrief whose clinical statements cite a verified guideline or say plainly that no verified source was found. It runs on open-weight models on an on-demand GPU worker, so a school can host it with zero third-party data egress.
 
 ## Features
 
 <table>
   <tr>
-    <td width="33%" valign="top">
-      <img src="docs/media/readme/feature-generator.png" alt="Case request and on-request generation">
-      <br><strong>Case generator</strong>
-      <br>Every case is generated on request: the opening streams in about 20 s, history, exam, orders and results are written for that patient while the learner works, behind deterministic and safety checks; a Clinical Director adapts the live case.
+    <td colspan="2" valign="top">
+      <img src="docs/media/readme/feature-generator.png" alt="The chart header of a case generated on request: the banner reads model generated while history, exam, treatment and result layers are written for this patient">
+      <br><strong>Generated on request</strong>
+      <br>Every case is written by the model when the learner asks. The opening (patient, complaint, triage) streams in first and the chart opens on it; each layer of history, exam, treatments and results is then written for that patient, behind deterministic and safety checks. The banner always says where the case came from.
     </td>
-    <td width="33%" valign="top">
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/media/readme/feature-director.png" alt="Bedside monitor and trends after fluids, oxygen and an antibiotic, with treatment markers">
+      <br><strong>Clinical Director</strong>
+      <br>Every learner action is one Director step on the server. The course engine moves the vitals, fires or averts complications against guideline time targets, and the patient answers in character.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/media/readme/feature-call.png" alt="A frame of the live patient video call, lip-synced by MuseTalk on the GPU worker">
+      <br><strong>Live video call</strong>
+      <br>Talk to the patient face to face: a self-hosted LiveTalking and MuseTalk 1.5 runner on the GPU worker lip-syncs the patient's voice over WebRTC, or an optional Tavus adapter does it as a hosted service.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
       <img src="docs/media/readme/feature-interview.png" alt="Free-text interview with patient replies and the patient call tile">
       <br><strong>Patient interview</strong>
-      <br>Free text, voice or video call. Each question is scope-screened and reveals only what was asked.
+      <br>Free text, voice or video. Each question is scope-screened and reveals only what was asked.
     </td>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="docs/media/readme/feature-orders.png" alt="Orders worklist with the order tracker">
       <br><strong>Orders worklist</strong>
       <br>Labs, imaging, micro and point of care, with an order tracker showing status, ETA and countdown.
     </td>
   </tr>
   <tr>
-    <td width="33%" valign="top">
-      <img src="docs/media/readme/feature-results.png" alt="Results with a 12-lead ECG, licence and attribution">
+    <td width="50%" valign="top">
+      <img src="docs/media/readme/feature-results.png" alt="Results from the results engine with flags and reference ranges">
       <br><strong>Results and ECG</strong>
       <br>Sourced reference ranges, treatment-responsive kinetics and a 12-lead ECG; every value shows its provenance.
     </td>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <img src="docs/media/readme/feature-guidance.png" alt="Attending tips with citation chips">
       <br><strong>Attending tips</strong>
       <br>Coaching traced to verified guideline statements. Unverified sources are shown as unavailable, never invented.
     </td>
-    <td width="33%" valign="top">
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
       <img src="docs/media/readme/feature-feedback.png" alt="Calibration plot of confidence against measured performance">
       <br><strong>Calibrated feedback</strong>
       <br>Attending debrief, competency bands and a calibration plot of confidence against measured performance.
     </td>
+    <td width="50%" valign="top">
+      <a href="video/out/walkthrough.mp4"><img src="docs/media/readme/walkthrough-poster.png" alt="Play the AcuDx walkthrough (MP4)"></a>
+      <br><strong>Walkthrough</strong>
+      <br>The whole loop in a two-minute screen recording; see below.
+    </td>
   </tr>
 </table>
 
-## See it in 90 seconds
+## See it in two minutes
 
 <p align="center">
   <a href="video/out/walkthrough.mp4"><img src="docs/media/readme/walkthrough-poster.png" alt="Play the AcuDx walkthrough (MP4)" width="760"></a>
 </p>
 
-A real screen recording of the running app, driven by [`video/scripts/record-walkthrough.mjs`](video/scripts/record-walkthrough.mjs) and cut in Remotion: profile, a fever case, chart review, interview, exam, six orders, results with the ECG, attending tips, paracetamol through the dose form, diagnosis, feedback, then the dean panel, the admin token gate and the 3D atlas. Also: [15 s teaser](video/out/teaser-v2.mp4), [square social cut](video/out/square.mp4). How it is made: [video/README.md](video/README.md).
+A real screen recording of the running app, driven by [`video/scripts/record-walkthrough.mjs`](video/scripts/record-walkthrough.mjs) and cut in Remotion. The case is a recorded live model case (the same output the e2e suite replays) streamed in stages, and every other call is answered by a local gateway: profile, a fever case requested and generated, chart, interview, the live patient video call (spliced from a real capture of the MuseTalk worker), exam, orders, fluids, oxygen and an antibiotic, the Clinical Director moving the patient, results with the ECG, attending tips, diagnosis, feedback, then the admin telemetry and the dean panel. Also: [15 s teaser](video/out/teaser-v2.mp4), [square social cut](video/out/square.mp4). How it is made: [video/README.md](video/README.md).
 
 ## Quick start
 
@@ -108,10 +129,10 @@ flowchart LR
     Dir["Clinical Director"]
     Res["Results engine<br/>ranges, kinetics, ECG, image bank"]
     GS["Guideline store<br/>verified statements"]
-    Voice["Voice and video<br/>STT, TTS, LiveKit"]
+    Voice["Voice and video<br/>STT, TTS, live avatar"]
     Reg["Provider registry<br/>air-gap guard, telemetry"]
   end
-  GPU["On-demand GPU worker<br/>vLLM, TTS, STT"]
+  GPU["On-demand GPU worker<br/>vLLM, TTS, STT, MuseTalk"]
   EHR -->|case stream| Gen
   Gen --> Dir
   EHR -->|orders| Res
@@ -158,7 +179,7 @@ Seven phases from substrate to evidence (psychometrics, a published eval set and
 
 ## Status and limits
 
-Shipped: the engines above, the redesigned EHR ([docs/design/03](docs/design/03-ui-redesign-2026-10.md)) and the round-two brand ([docs/design/02](docs/design/02-brand-identity.md)). Still needed from the owner: provider keys, a domain, the identity provider choice, clinician sign-off per condition family and a Turkish listening test. Known limits: no MuseTalk runner yet, synthetic imaging offline only, no paediatric reference ranges, and some publisher guideline texts cannot be fetched headlessly. The full list is in [docs/build/REMAINING-AND-LIMITS.md](docs/build/REMAINING-AND-LIMITS.md); clinical content findings are in [docs/review/02](docs/review/02-clinical-content-review-2026-10.md).
+Shipped: the engines above, the redesigned EHR ([docs/design/03](docs/design/03-ui-redesign-2026-10.md)) and the round-two brand ([docs/design/02](docs/design/02-brand-identity.md)). Still needed from the owner: provider keys, a domain, the identity provider choice, clinician sign-off per condition family and a Turkish listening test. Known limits: the live video call needs a GPU worker (or a Tavus key), synthetic imaging offline only, no paediatric reference ranges, and some publisher guideline texts cannot be fetched headlessly. The full list is in [docs/build/REMAINING-AND-LIMITS.md](docs/build/REMAINING-AND-LIMITS.md); clinical content findings are in [docs/review/02](docs/review/02-clinical-content-review-2026-10.md).
 
 ## Contributing
 

@@ -1,20 +1,33 @@
 // Capture the README hero, feature and panel images from the running app.
 //
-//   npm --prefix web run dev -- --port 4205 --strictPort --host 127.0.0.1   (another shell)
-//   node scripts/design/capture-readme.mjs            # raw PNGs into docs/media/readme/raw/
-//   python3 scripts/design/readme-media.py           # optimise into docs/media/readme/
+//   bash <gateway>   # uvicorn server.app:app with ADMIN_TOKEN and ACUDX_DB_PATH (see video/README.md)
+//   API_PROXY_TARGET=http://127.0.0.1:8931 npm --prefix web run dev -- --port 4205 --strictPort --host 127.0.0.1
+//   GATEWAY_DB=<ACUDX_DB_PATH> ADMIN_TOKEN=<token> node scripts/design/capture-readme.mjs   # raw PNGs into docs/media/readme/raw/
+//   python3 scripts/design/readme-media.py                                                  # optimise into docs/media/readme/
 //
 // Everything is a plain screenshot of the real UI: no cursor overlay, no
-// caption bar, no crop that cuts text. The learner starts a freshly generated
-// case from Home (the offline generator, so the run needs no gateway: /api/**
-// is aborted as in web/e2e/helpers/session.ts), interviews the patient, places
-// three orders, waits for their results, commits a diagnosis and opens the
-// feedback report; the panels are taken after switching the local profile to
-// the admin role, as the walkthrough recorder does.
+// caption bar, no crop that cuts text. The case is model generated: the
+// generate request is answered with the recorded live model case the e2e
+// suite replays (web/e2e/helpers/liveCase.ts, server/tests/fixtures/live),
+// paced as the staged generator writes it (video/scripts/staged-replay.mjs),
+// and the same thread is stored in the local gateway's CaseStore
+// (video/scripts/seed-thread.py), so the patient turn, results engine,
+// Clinical Director, telemetry and dean analytics are the real gateway's.
+// Without GATEWAY_DB the rest of /api is aborted as in
+// web/e2e/helpers/session.ts and the panels show their offline states.
+//
+// The learner asks for a fever case on the Start page, interviews the patient,
+// places orders, gives fluids, oxygen and an antibiotic (each a Director step),
+// waits for the results, commits a diagnosis and opens the feedback report;
+// the panels are taken after switching the local profile to the admin role
+// and signing in to the admin console with ADMIN_TOKEN.
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { LIVE_CASES } from "../../web/e2e/helpers/liveCase.ts";
+import { installStagedReplay } from "../../video/scripts/staged-replay.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, "..", "..");
@@ -22,8 +35,12 @@ const require = createRequire(join(repo, "web", "package.json"));
 const { chromium } = require("playwright-core");
 
 const out = resolve(repo, "docs/media/readme/raw");
-const base =
-  process.env.ACUDX_BASE_URL ?? `http://127.0.0.1:${process.env.PORT ?? 4205}`;
+const base = process.env.ACUDX_BASE_URL ?? `http://127.0.0.1:${process.env.PORT ?? 4205}`;
+const GATEWAY_DB = process.env.GATEWAY_DB;
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+const PYTHON = process.env.GATEWAY_PYTHON ?? "python3";
+const DARK = process.env.SCHEME === "dark";
+const CASE = LIVE_CASES.find((c) => c.spec.meta.condition_id === "sepsis_uncomplicated") ?? LIVE_CASES[0];
 mkdirSync(out, { recursive: true });
 
 function chromiumPath() {
@@ -38,10 +55,7 @@ function chromiumPath() {
   return bin;
 }
 
-const browser = await chromium.launch({
-  executablePath: chromiumPath(),
-  headless: true,
-});
+const browser = await chromium.launch({ executablePath: chromiumPath(), headless: true });
 const context = await browser.newContext({
   viewport: { width: 1280, height: 800 },
   deviceScaleFactor: 2,
@@ -50,7 +64,21 @@ const context = await browser.newContext({
   locale: "en-US",
   timezoneId: "Europe/Istanbul",
 });
-await context.route("**/api/**", (route) => route.abort("failed"));
+if (!GATEWAY_DB) {
+  await context.route("**/api/**", (route) => route.abort("failed"));
+}
+// Slower than the film (pace 2.5) so the staged layers can be captured while they are written.
+await installStagedReplay(context, [CASE], {
+  pace: 2.5,
+  onGenerate: ({ body, rec, threadId }) => {
+    if (!GATEWAY_DB) return;
+    const r = spawnSync(PYTHON, [join(repo, "video", "scripts", "seed-thread.py"), GATEWAY_DB, threadId, String(body.learner_id ?? "")], {
+      input: JSON.stringify(rec),
+      encoding: "utf8",
+    });
+    if (r.status !== 0) throw new Error(`seed-thread failed: ${r.stderr}`);
+  },
+});
 const page = await context.newPage();
 page.setDefaultTimeout(30_000);
 
@@ -65,10 +93,7 @@ async function settle(ms = 900) {
 }
 
 async function tab(name) {
-  await page
-    .getByRole("tablist", { name: "Chart sections" })
-    .getByRole("tab", { name })
-    .click();
+  await page.getByRole("tablist", { name: "Chart sections" }).getByRole("tab", { name }).click();
   await page.waitForTimeout(500);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(300);
@@ -105,8 +130,13 @@ async function element(name, locator, maxHeight = 720, pad = 0) {
   console.log(name, JSON.stringify(clip));
 }
 
-const activePanel = () =>
-  page.locator('[role="tabpanel"][data-state="active"]').first();
+const activePanel = () => page.locator('[role="tabpanel"][data-state="active"]').first();
+
+async function give(drug) {
+  await page.getByRole("button", { name: drug }).first().click();
+  await page.getByRole("button", { name: /^Confirm and administer / }).first().click();
+  await page.waitForTimeout(1500);
+}
 
 // 1. Onboard as a learner through the real profile form.
 await page.goto(`${base}/signin`);
@@ -114,64 +144,54 @@ await settle();
 await page.getByRole("button", { name: "Create your profile" }).click();
 await page.getByLabel("Full name").fill("Elif Kaya");
 await page.getByLabel("Role", { exact: true }).selectOption("student");
-await page
-  .getByLabel("Institution")
-  .fill("Istanbul University Faculty of Medicine");
+await page.getByLabel("Institution").fill("Istanbul University Faculty of Medicine");
 await page.getByRole("button", { name: "Create profile" }).click();
 await page.waitForURL((u) => !/\/(profile|signin)$/.test(u.pathname));
 await settle(1200);
-await full("panel-student");
+if (!DARK) await full("panel-student");
 
-// 2. The case generator (Cases page, generator block only).
-await page.goto(`${base}/cases`);
-await settle(1200);
-const genHeading = page
-  .getByRole("heading", { name: /Generate a case/ })
-  .first();
-await element(
-  "feature-generator",
-  genHeading.locator("xpath=ancestor::*[contains(@class,'border')][1]"),
-  720,
-  12,
-);
-
-// 3. A freshly generated case: Start page, Begin encounter (offline the
-// on-device generator builds it and labels it "offline generator").
+// 2. Ask for a fever case on the Start page; the case is written on request.
 await page.goto(`${base}/start`);
 await settle(1200);
-await page.getByRole("button", { name: /begin encounter/i }).click();
+await page
+  .locator("main#main")
+  .getByRole("button", { name: /^Fever/ })
+  .or(page.locator("main#main").getByRole("radio", { name: /^Fever/ }))
+  .first()
+  .click();
+await page.getByRole("button", { name: "Begin encounter" }).click();
 await page.waitForURL(/\/encounter/);
-await settle(1500);
 const strip = page.getByRole("tablist", { name: "Chart sections" });
-const useTemplate = page.getByRole("button", { name: /^Use template case/ });
-await strip.or(useTemplate).first().waitFor({ timeout: 30_000 });
-if (await useTemplate.isVisible().catch(() => false)) await useTemplate.click();
-await strip.waitFor();
+await strip.waitFor({ timeout: 60_000 });
+// The opening is in and the layers are being written: the chart header with its layer chips.
+await page.getByText(/is being written for this patient/).first().waitFor();
+await page.waitForTimeout(2500);
+if (!DARK) {
+  // The banner (patient, "model generated") down to the last layer chip, full main width.
+  const main = await page.locator("main#main").boundingBox();
+  const name = await page.getByText(CASE.spec.demographics.name_hint).first().boundingBox();
+  const chip = await page.getByText(/is being written for this patient/).last().boundingBox();
+  const y = Math.max(0, name.y - 16);
+  await page.screenshot({
+    path: resolve(out, "feature-generator.png"),
+    clip: { x: main.x, y, width: main.width, height: chip.y + chip.height + 18 - y },
+  });
+  console.log("feature-generator");
+}
+await page.getByText(/is being written for this patient/).first().waitFor({ state: "hidden", timeout: 90_000 }).catch(() => {});
+await settle(800);
 
 await tab("Interview");
-const composer = page.getByPlaceholder(
-  "Type a question to the patient, then press Enter",
-);
-for (const q of [
-  "When did the pain start?",
-  "Where exactly is the pain and does it move anywhere?",
-  "Do you take any regular medications?",
-]) {
+const composer = page.getByPlaceholder("Type a question to the patient, then press Enter"); // watchdog: allow Playwright locator API, not data
+for (const q of ["When did the fever start?", "How severe is it?", "Is the fever constant or does it come and go?"]) {
   await composer.fill(q);
   await composer.press("Enter");
-  await page.waitForTimeout(1600);
+  await page.waitForTimeout(1800);
 }
-for (const chip of ["General inspection", "Associated symptoms"]) {
-  await page
-    .getByRole("button", { name: chip, exact: true })
-    .first()
-    .click()
-    .catch(() => {});
-  await page.waitForTimeout(1200);
-}
-await page.waitForTimeout(1200);
+await page.getByRole("button", { name: "Auscultate lungs" }).click().catch(() => {});
+await page.waitForTimeout(1500);
 await tab("Interview");
-if (process.env.SCHEME === "dark") {
+if (DARK) {
   // Dark run: only the encounter, for the landing page's dark hero shot.
   await full("hero-encounter-dark");
   await browser.close();
@@ -181,10 +201,13 @@ await full("hero-encounter");
 await element("feature-interview", activePanel(), 640, 0);
 
 await tab("Orders");
-const search = page.getByPlaceholder(/Search tests/);
+const search = page.getByPlaceholder(/Search tests/); // watchdog: allow Playwright locator API, not data
 for (const [q, re] of [
-  ["ecg", /^Order .*(ECG|electrocardiogram)/i],
-  ["chest", /^Order .*(X-ray|radiograph)/i],
+  ["CBC", /^Order Complete blood count/],
+  ["lactate", /^Order Lactate$/],
+  ["blood culture", /^Order Blood culture/],
+  ["ecg", /^Order 12-lead ECG/],
+  ["chest", /^Order Chest X-ray/],
 ]) {
   await search.fill(q);
   const btn = page.getByRole("button", { name: re }).first();
@@ -194,67 +217,72 @@ await search.fill("");
 await tab("Orders");
 await element("feature-orders", activePanel(), 600, 0);
 
-const deadline = Date.now() + 150_000;
+// Treat: each administration is one Clinical Director step on the server.
+await page.getByRole("tab", { name: "Treatments" }).click();
+await page.waitForTimeout(500);
+for (const drug of [/^Administer IV fluid bolus/, /^Administer Oxygen/, /^Administer Ceftriaxone/]) await give(drug);
+await tab("Interview");
+for (let i = 0; i < 4; i++) {
+  await page.getByRole("button", { name: "Recheck vitals" }).click();
+  await page.waitForTimeout(1200);
+}
+await tab("Monitor");
+await page.waitForTimeout(2500);
+await element("feature-director", activePanel(), 760, 0);
+
+const deadline = Date.now() + 240_000;
 while (Date.now() < deadline) {
   await tab("Orders");
+  await page.getByRole("tab", { name: "Order tests" }).click().catch(() => {});
   if (await page.getByText(/placed · 0 pending/).count()) break;
   await page.waitForTimeout(3000);
 }
 await tab("Results");
-const ecg = page.getByText(/12-lead ECG/).first();
 await element("feature-results", activePanel(), 680, 0);
-void ecg;
 await tab("Guidance");
 await element("feature-guidance", activePanel(), 660, 0);
 
 // 4. Commit a diagnosis and open the report.
 await tab(/Problem List/);
-const dx = page.getByPlaceholder("Search diagnoses or ICD/DSM code...");
-for (const term of ["pneumonia", "infection", "pain", "a"]) {
+const dx = page.getByPlaceholder("Search diagnoses or ICD/DSM code..."); // watchdog: allow Playwright locator API, not data
+for (const term of ["sepsis", "infection", "fever", "a"]) {
   await dx.fill(term);
   await page.waitForTimeout(400);
-  if (
-    await page
-      .getByRole("button", { name: /^Add .* to the differential$/ })
-      .count()
-  )
-    break;
+  if (await page.getByRole("button", { name: /^Add .* to the differential$/ }).count()) break;
 }
-await page
-  .getByRole("button", { name: /^Add .* to the differential$/ })
-  .first()
-  .click();
-await page
-  .getByRole("button", { name: /^Commit .* as the working diagnosis$/ })
-  .first()
-  .click();
+await page.getByRole("button", { name: /^Add .* to the differential$/ }).first().click();
+await page.getByRole("button", { name: /^Commit .* as the working diagnosis$/ }).first().click();
 await page.getByRole("button", { name: "View attending debrief" }).click();
 await page.getByRole("button", { name: "View full report" }).click();
 await page.waitForURL(/\/feedback$/);
 await settle(1500);
-const plotHeading = page
-  .getByRole("heading", { name: /Confidence vs performance/ })
-  .first();
-await element(
-  "feature-feedback",
-  plotHeading.locator("xpath=ancestor::*[contains(@class,'border')][1]"),
-  640,
-  0,
-);
+const plotHeading = page.getByRole("heading", { name: /Confidence vs performance/ }).first();
+await element("feature-feedback", plotHeading.locator("xpath=ancestor::*[contains(@class,'border')][1]"), 640, 0);
 
-// 5. Panels under the admin role (dean, faculty, admin console).
+// 5. Panels under the admin role (admin console signed in with the token, dean, faculty).
 await page.goto(`${base}/account`);
 await settle();
 await page.getByLabel("Role", { exact: true }).selectOption("admin");
 await page.getByRole("button", { name: /^Save/ }).first().click();
 await page.waitForTimeout(800);
-for (const [name, path] of [
-  ["panel-dean", "/dean"],
-  ["panel-faculty", "/faculty"],
-  ["panel-admin", "/admin"],
+await page.goto(`${base}/admin`);
+await settle(1200);
+if (ADMIN_TOKEN) {
+  await page.getByLabel("Admin token").first().fill(ADMIN_TOKEN);
+  await page.getByRole("button", { name: "Sign in" }).first().click();
+  await page.getByText("Admin session active").first().waitFor({ timeout: 20_000 });
+  await page.getByRole("tab", { name: "Telemetry" }).first().click();
+  await page.getByText("Calls over time").first().waitFor({ timeout: 20_000 }).catch(() => {});
+  await page.waitForTimeout(2000);
+}
+await full("panel-admin");
+// Client-side navigation keeps the admin session of this tab (sessionStorage) for the panels.
+for (const [name, label] of [
+  ["panel-dean", "Institution"],
+  ["panel-faculty", "Faculty"],
 ]) {
-  await page.goto(`${base}${path}`);
-  await settle(1500);
+  await page.locator("nav").getByRole("link", { name: label, exact: true }).first().click();
+  await settle(2500);
   await full(name);
 }
 

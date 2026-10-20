@@ -25,7 +25,15 @@ case "${1:-}" in
     # Intra-heavy H.264 (keyframe every 10 frames) so OffthreadVideo seeks fast; near-lossless.
     "$FFMPEG" -v error -y -i public/recording/walkthrough.webm -c:v libx264 -preset medium -crf 12 \
       -g 10 -pix_fmt yuv420p -movflags +faststart -an public/recording/walkthrough.mp4
-    ls -la public/recording/walkthrough.mp4
+    # The live patient video chapter: two spans of the real live capture
+    # (docs/media/live-avatar, MuseTalk on the GPU worker), silent, seek-friendly.
+    # call-page: the transcript and call tile of the encounter page while the patient answers
+    # (cropped below the banner, which in that capture shows its own case source); call-face: the stream.
+    "$FFMPEG" -v error -y -ss 78 -t 8.5 -i ../docs/media/live-avatar/encounter-page.mp4 -vf "crop=570:474:390:125,setpts=PTS-STARTPTS" -c:v libx264 -preset medium -crf 14 \
+      -g 10 -r 30 -pix_fmt yuv420p -movflags +faststart -an public/recording/call-page.mp4
+    "$FFMPEG" -v error -y -ss 9.5 -t 9 -i ../docs/media/live-avatar/patient-live.mp4 -c:v libx264 -preset medium -crf 14 \
+      -g 10 -r 30 -pix_fmt yuv420p -movflags +faststart -an public/recording/call-face.mp4
+    ls -la public/recording/*.mp4
     ;;
   final)
     # Screen content. A light temporal denoise removes the VP8 shimmer of the

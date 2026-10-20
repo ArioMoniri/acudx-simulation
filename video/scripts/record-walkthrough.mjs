@@ -2,44 +2,64 @@
 /**
  * Record the AcuDx product walkthrough as a real screen recording.
  *
- * Drives the running web app (no seeded state, no gateway) through one
- * student encounter on a febrile case, then the dean panel, the admin console
- * token gate and the 3D atlas, with Playwright's `recordVideo` at 1920 x 1080.
- * Every step is written to a JSON timeline (time since the recording started,
- * action, chapter and the element's bounding box) that the Remotion
- * `Walkthrough` composition reads for its zoom-to-focus camera, captions and
- * chapter markers.
+ * Drives the running web app through one student encounter on a case
+ * generated on request (a recorded live model case, replayed as the staged
+ * stream), the Clinical Director stepping the patient after treatments, then
+ * the admin console telemetry and the dean panel, with Playwright's
+ * `recordVideo` at 1920 x 1080. Every step is written to a JSON timeline (time
+ * since the recording started, action, chapter and the element's bounding
+ * box) that the Remotion `Walkthrough` composition reads for its
+ * zoom-to-focus camera, captions and chapter markers. The live patient video
+ * chapter is spliced in by the composition from docs/media/live-avatar (a
+ * real capture of the MuseTalk worker), see video/README.md.
  *
- *   npm --prefix web run dev -- --port 4197
- *   cd video && npm run record
+ *   bash /path/to/gateway.sh   # uvicorn server.app:app on 8931, ADMIN_TOKEN and ACUDX_DB_PATH set
+ *   API_PROXY_TARGET=http://127.0.0.1:8931 npm --prefix web run dev -- --port 4197
+ *   cd video && GATEWAY_DB=<the gateway's ACUDX_DB_PATH> ADMIN_TOKEN=<its token> npm run record
+ *
+ * Case source: POST /api/v2/case/generate/stream is intercepted and answered
+ * with the recorded live model output the e2e suite replays
+ * (web/e2e/helpers/liveCase.ts LIVE_CASES, server/tests/fixtures/live), paced
+ * as the staged generator writes it (scripts/staged-replay.mjs). The same
+ * thread is stored in the gateway's CaseStore (scripts/seed-thread.py), so
+ * every other /api call (patient turn, results engine, Director, telemetry,
+ * dean analytics) is answered by the real local gateway. The gateway has no
+ * model endpoint in this run: the Director narrates with its deterministic
+ * line, and the telemetry counts the failed model calls as errors.
  *
  * Outputs:
  *   public/recording/walkthrough.webm      the raw recording
  *   public/recording/walkthrough.json      the timeline
  *   out/record-debug/*.png                 one still per chapter (with --debug)
  *
- * Offline path: every `/api/**` request is aborted, exactly like
- * web/e2e/helpers/session.ts `offlineGateway`, so the run never depends on a
- * gateway and the UI shows its labelled on-device fallbacks.
- *
- * Environment: BASE_URL (default http://localhost:4197), CHROMIUM_PATH
+ * Environment: BASE_URL (default http://localhost:4197), GATEWAY_DB (required),
+ * ADMIN_TOKEN (required), GATEWAY_PYTHON (default python3), CHROMIUM_PATH
  * (default the Playwright Chromium under /opt/pw-browsers). Never runs
  * `playwright install`.
  */
 import { chromium } from "playwright-core";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, renameSync, writeFileSync, rmSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { LIVE_CASES } from "../../web/e2e/helpers/liveCase.ts";
+import { installStagedReplay } from "./staged-replay.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = process.env.BASE_URL ?? "http://localhost:4197";
 const CHROME = process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+const GATEWAY_DB = process.env.GATEWAY_DB;
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+const PYTHON = process.env.GATEWAY_PYTHON ?? "python3";
+if (!GATEWAY_DB || !ADMIN_TOKEN) throw new Error("set GATEWAY_DB and ADMIN_TOKEN to the local gateway's ACUDX_DB_PATH and ADMIN_TOKEN");
 const DEBUG = process.argv.includes("--debug");
 const REC_DIR = join(ROOT, "public", "recording");
 const TMP_DIR = join(REC_DIR, ".tmp");
 const DEBUG_DIR = join(ROOT, "out", "record-debug");
 const W = 1920;
 const H = 1080;
+/** The recorded sepsis case (fever and rigors): the one whose course answers fluids, oxygen and an antibiotic. */
+const CASE = LIVE_CASES.find((c) => c.spec.meta.condition_id === "sepsis_uncomplicated") ?? LIVE_CASES[0];
 
 mkdirSync(REC_DIR, { recursive: true });
 rmSync(TMP_DIR, { recursive: true, force: true });
@@ -113,7 +133,15 @@ const context = await browser.newContext({
   reducedMotion: "no-preference",
   recordVideo: { dir: TMP_DIR, size: { width: W, height: H } },
 });
-await context.route("**/api/**", (route) => route.abort("failed"));
+await installStagedReplay(context, [CASE], {
+  onGenerate: ({ body, rec, threadId }) => {
+    const r = spawnSync(PYTHON, [join(ROOT, "scripts", "seed-thread.py"), GATEWAY_DB, threadId, String(body.learner_id ?? "")], {
+      input: JSON.stringify(rec),
+      encoding: "utf8",
+    });
+    if (r.status !== 0) throw new Error(`seed-thread failed: ${r.stderr}`);
+  },
+});
 await context.addInitScript(CURSOR_SCRIPT);
 
 const page = await context.newPage();
@@ -388,91 +416,82 @@ try {
   await snap("profile");
   await click(page.getByRole("button", { name: "Create profile" }), "Create profile", { zoom: 1.5, focus: form });
   await routeLoad("home load", page.locator("main#main h1"));
-  await pause(900);
-  await snap("home");
-
-  /* ------------------------------------------------------------ case */
-  await startChapter("case");
-  await click(nav("Cases"), "Cases");
-  await routeLoad("cases load", page.getByRole("region", { name: "Generate a case" }).getByRole("button", { name: "Quick generate" }));
-  await pause(500);
-  const gen = page.getByRole("region", { name: "Generate a case" });
-  await choose(gen.locator("select").first(), { label: "Infectious" }, "Chief complaint: Infectious", { zoom: 1.45 });
-  // The generator draws by prevalence within the family; keep drawing until it
-  // serves the community-acquired pneumonia presentation (cough and fever).
-  // Extra draws are marked as a skip so the edit compresses them.
-  let drew = 0;
-  for (;;) {
-    if (drew === 1) skipBegin("redraw");
-    await click(gen.getByRole("button", { name: "Quick generate" }), "Quick generate", { zoom: drew === 0 ? 1.45 : 0, hold: 700 });
-    drew++;
-    const first = await page.locator("tbody tr").first().innerText();
-    if (/cough, fever/i.test(first) || drew > 12) break;
-  }
-  if (drew > 1) skipEnd("redraw");
-  const row = page.locator("tbody tr").first();
-  await look(row, "Generated case: cough, fever and breathlessness", { zoom: 1.5, dwell: 1300 });
-  await snap("generated");
-  await click(row.getByRole("button", { name: /Start/ }), "Start", { zoom: 1.5, focus: row });
-  await routeLoad("encounter load", tab("Chart Review"));
   await pause(700);
+
+  /* ------------------------------------------------------------ request */
+  await startChapter("request");
+  await click(nav("Start"), "Start");
+  await routeLoad("start load", page.getByRole("button", { name: "Begin encounter" }));
+  await pause(500);
+  const fever = page.locator("main#main").getByRole("button", { name: /^Fever/ }).or(page.locator("main#main").getByRole("radio", { name: /^Fever/ })).first();
+  await click(fever, "Presentation: Fever", { zoom: 1.4 });
+  await snap("request");
+  const begin = page.getByRole("button", { name: "Begin encounter" });
+  await click(begin, "Begin encounter", { zoom: 1.4, hold: 200 });
+
+  /* ------------------------------------------------------------ generate */
+  await startChapter("generate");
+  const writing = page.getByText(/Writing your case/).first();
+  await writing.waitFor({ timeout: 20_000 });
+  const card = writing.locator("xpath=ancestor::*[contains(@class,'border')][1]");
+  await pause(1200);
+  await lookBox(await card.boundingBox(), "Opening streams in", { zoom: 1.5, dwell: 3200, point: false }).catch(async () => pause(2000));
+  await snap("opening");
+  await tab("Chart Review").waitFor({ timeout: 30_000 });
+  await pause(500);
+  const pending = page.getByText(/is being written for this patient/).first();
+  if (await pending.isVisible().catch(() => false)) {
+    const pb = await pending.boundingBox();
+    await lookBox({ x: 276, y: pb.y - 14, width: 1600, height: 70 }, "Layers written for this patient", { zoom: 1.2, dwell: 2600 });
+    await snap("layers");
+  }
+  skipBegin("layers finish");
+  await pending.waitFor({ state: "hidden", timeout: 40_000 }).catch(() => {});
+  await pause(400);
+  skipEnd("layers finish");
 
   /* ------------------------------------------------------------ chart */
   await startChapter("chart");
-  await look(page.locator("header, [data-patient-banner], section").filter({ hasText: "Chief complaint" }).first(), "Patient banner", {
-    zoom: 1.45,
-    dwell: 1800,
-  });
+  const banner = page.getByText("model generated").first();
+  await lookBox(await union(page.getByText(CASE.spec.demographics.name_hint).first(), banner), "Banner: model generated", { zoom: 1.6, dwell: 2200 });
   await snap("chart");
-  await look(page.getByText(/Vitals snapshot/i).first().locator("xpath=ancestor::section[1]"), "Vitals snapshot", { zoom: 1.6, dwell: 1500 }).catch(
-    async () => {
-      await pause(1200);
-    },
-  );
+  await look(page.getByText(/Vitals snapshot/i).first().locator("xpath=ancestor::section[1]"), "Vitals snapshot", { zoom: 1.6, dwell: 1300 }).catch(async () => pause(900));
 
   /* ------------------------------------------------------------ interview */
   await startChapter("interview");
   await openTab("Interview", "Interview tab");
   await pause(500);
-  const composer = page.getByPlaceholder("Type a question to the patient, then press Enter");
+  const composer = page.getByPlaceholder("Type a question to the patient, then press Enter"); // watchdog: allow Playwright locator API, not data
   const transcript = page.getByRole("log", { name: "Encounter transcript" });
-  const questions = [
-    "When did the cough start?",
-    "Have you had a fever along with it?",
-    "How severe is the breathlessness?",
-    "Any risk factors, like a chronic lung condition?",
-  ];
+  const questions = ["When did the fever start?", "How high has the temperature been?", "Is the fever constant or does it come and go?"];
   for (const [i, q] of questions.entries()) {
     await type(composer, q, `Question ${i + 1}`, { zoom: 1.3, focus: transcript, enter: true });
-    await transcript
-      .getByRole("listitem")
-      .filter({ hasText: /^Patient/ })
-      .nth(i)
-      .waitFor({ timeout: 15_000 })
-      .catch(() => {});
+    await transcript.getByRole("listitem").filter({ hasText: /^Patient/ }).nth(i).waitFor({ timeout: 15_000 }).catch(() => {});
     await pause(900);
   }
-  await look(transcript, "Transcript with patient replies", { zoom: 1.3, dwell: 1600 });
+  await look(transcript, "Transcript with patient replies", { zoom: 1.3, dwell: 1400 });
   await snap("interview");
+
+  /* ------------------------------------------------------------ call (the composition splices the live capture here) */
+  await startChapter("call");
+  const callTile = page.getByText("Patient call", { exact: true }).first().locator("xpath=ancestor::*[contains(@class,'border')][1]");
+  await look(callTile, "Patient call tile", { zoom: 1.3, dwell: 1800 }).catch(async () => pause(1500));
 
   /* ------------------------------------------------------------ exam */
   await startChapter("exam");
   await click(page.getByRole("button", { name: "Auscultate lungs" }), "Auscultate lungs", { zoom: 1.45, hold: 900 });
   await snap("exam");
-  await click(page.getByRole("button", { name: "Recheck vitals" }), "Recheck vitals", { zoom: 0, hold: 700 });
-  await look(page.getByText(/Exam findings/i).first().locator("xpath=ancestor::section[1]"), "Exam findings in the chart rail", {
-    zoom: 1.6,
-    dwell: 1500,
-  }).catch(async () => pause(1000));
+  await look(page.getByText(/Exam findings/i).first().locator("xpath=ancestor::section[1]"), "Exam findings in the chart rail", { zoom: 1.6, dwell: 1300 }).catch(
+    async () => pause(900),
+  );
 
   /* ------------------------------------------------------------ orders */
   await startChapter("orders");
   await openTab(/^Orders/, "Orders tab");
   await pause(500);
-  const search = page.getByPlaceholder(/Search tests/);
+  const search = page.getByPlaceholder(/Search tests/); // watchdog: allow Playwright locator API, not data
   const orders = [
     ["CBC", /^Order Complete blood count/],
-    ["CRP", /^Order C-reactive protein/],
     ["lactate", /^Order Lactate$/],
     ["blood culture", /^Order Blood culture/],
     ["chest x-ray", /^Order Chest X-ray/],
@@ -485,182 +504,177 @@ try {
   await search.fill("");
   await snap("orders");
 
+  /* ------------------------------------------------------------ treat */
+  await startChapter("treat");
+  await click(page.getByRole("tab", { name: "Treatments" }), "Treatments", { zoom: 1.3 });
+  await pause(500);
+  for (const [drug, label] of [
+    [/^Administer IV fluid bolus/, "IV fluid bolus"],
+    [/^Administer Oxygen/, "Oxygen"],
+    [/^Administer Ceftriaxone/, "Ceftriaxone"],
+  ]) {
+    await click(page.getByRole("button", { name: drug }).first(), `Administer ${label}`, { zoom: 1.35, hold: 400 });
+    const give = page.getByRole("button", { name: /^Confirm and administer / }).first();
+    await give.waitFor();
+    await pause(500);
+    if (label === "IV fluid bolus") {
+      const doseBox = await union(give, page.getByText(/Adult range/).first()).catch(() => null);
+      if (doseBox) await lookBox(doseBox, "Dose, route and indication form", { zoom: 1.4, dwell: 1500 });
+      await snap("dose");
+    }
+    await click(give, `Confirm ${label}`, { zoom: 1.35, hold: 1100 });
+  }
+
+  /* ------------------------------------------------------------ director */
+  await startChapter("director");
+  await openTab("Interview", "Interview tab");
+  await pause(600);
+  const reply = transcript.getByRole("listitem").filter({ hasText: /^Patient/ }).last();
+  await look(reply, "Patient reply after the treatment", { zoom: 1.5, dwell: 1800 }).catch(async () => pause(1200));
+  await snap("director-reply");
+  // Each action is one Director step on the server: the course engine moves the patient.
+  for (let i = 0; i < 4; i++) await click(page.getByRole("button", { name: "Recheck vitals" }), "Recheck vitals", { zoom: i === 0 ? 1.4 : 0, hold: 900 });
+  const chip = page.getByText(/Director: \d+ steps?/).first();
+  await look(chip, "Director steps", { zoom: 1.7, dwell: 1200 }).catch(async () => pause(800));
+  await openTab("Monitor", "Monitor tab");
+  await pause(1500);
+  await look(page.getByText("Bedside monitor").first().locator("xpath=ancestor::*[contains(@class,'rounded')][1]"), "Bedside monitor", {
+    zoom: 1.15,
+    dwell: 2000,
+    point: false,
+  }).catch(async () => pause(1500));
+  await snap("monitor");
+  const trends = page.getByText("Trends", { exact: true }).first();
+  const tb = await trends.boundingBox();
+  if (tb) await smoothScrollBy(tb.y - 120, "Scroll to the trends", 1000);
+  await lookBox(await union(trends, page.getByText(/Treatment/).last()), "Trends with treatment markers", { zoom: 1.3, dwell: 2200 }).catch(async () => pause(1500));
+  await snap("trends");
+
   /* ------------------------------------------------------------ results */
   await startChapter("results");
-  const tracker = page.getByText(/6 placed · \d+ pending · \d+ resulted/).first();
+  await openTab(/^Orders/, "Orders tab");
+  await page.getByRole("tab", { name: "Order tests" }).click().catch(() => {});
   const trackerPanel = page.getByText("Order tracker").first();
-  await lookBox(await union(trackerPanel, tracker), "Order tracker", { zoom: 1.5, dwell: 1500 }).catch(async () => pause(1000));
   skipBegin("results turnaround");
-  await page.getByText(/6 placed · 0 pending · 6 resulted/).first().waitFor({ timeout: 240_000 }).catch(() => {});
+  await page.getByText(/5 placed · 0 pending · 5 resulted/).first().waitFor({ timeout: 240_000 }).catch(() => {});
   await pause(400);
   skipEnd("results turnaround");
-  await lookBox(await union(trackerPanel, page.getByText(/12-lead ECG/).last()), "All six resulted", { zoom: 1.5, dwell: 1300 }).catch(async () =>
-    pause(800),
-  );
+  await look(trackerPanel.locator("xpath=ancestor::*[contains(@class,'border')][1]"), "All five resulted", { zoom: 1.4, dwell: 1300 }).catch(async () => pause(800));
   await openTab(/^Results/, "Results tab");
   await pause(800);
   await snap("results");
-  // Provenance: every result row carries where it came from (case record,
-  // offline synthetic), and the summary counts abnormal and critical values.
-  await lookBox(await union(page.getByText("Result summary").first(), page.getByText("Critical values").first()), "Result summary and critical value", {
+  await lookBox(await union(page.getByText("Result summary").first(), page.getByText(/Critical values|Abnormal/).first()), "Result summary", {
     zoom: 1.35,
     dwell: 1500,
   }).catch(async () => pause(900));
-  await lookBox(
-    await union(page.getByText(/Complete blood count \(CBC\) with differential/).nth(0), page.getByText("Case record").first(), page.getByText("Haemoglobin").first()),
-    "Provenance chips",
-    { zoom: 1.6, dwell: 1700 },
-  ).catch(async () => pause(900));
   const ecg = page.getByRole("img", { name: /ECG|electrocardiogram/i }).first();
-  const ecgBox = await ecg.boundingBox();
+  const ecgBox = await ecg.boundingBox().catch(() => null);
   if (ecgBox) await smoothScrollBy(ecgBox.y - 250, "Scroll to the ECG");
-  await look(ecg, "12-lead ECG strip", { zoom: 1.3, dwell: 2300 }).catch(async () => pause(1200));
+  await look(ecg, "12-lead ECG strip", { zoom: 1.3, dwell: 2000 }).catch(async () => pause(1200));
   await snap("ecg");
 
   /* ------------------------------------------------------------ guidance */
   await startChapter("guidance");
   await openTab("Guidance", "Guidance tab");
-  await pause(700);
+  await pause(800);
   await snap("guidance");
-  await lookBox(await union(page.getByText("Attending tips").first(), page.getByText("What a strong work-up covers").first()), "Attending tips", {
-    zoom: 1.4,
-    dwell: 1800,
-  }).catch(async () => pause(1200));
-  const chip = page.getByText("Source unavailable").first();
-  await lookBox(await union(chip, page.getByText(/within \d+ min/).first()), "Citation chips", { zoom: 1.7, dwell: 1700 }).catch(async () => pause(1000));
-
-  /* ------------------------------------------------------------ treat */
-  await startChapter("treat");
-  await openTab(/^Orders/, "Orders tab");
-  await pause(400);
-  await click(page.getByRole("tab", { name: "Treatments" }), "Treatments", { zoom: 1.3 });
-  await pause(500);
-  const adminPara = page.getByRole("button", { name: /^Administer .*Paracetamol/i }).first();
-  await click(adminPara, "Administer paracetamol", { zoom: 1.35 });
-  const give = page.getByRole("button", { name: /^Confirm and administer / }).first();
-  await give.waitFor();
-  await pause(300);
-  const doseBox = await union(page.getByText("Paracetamol", { exact: true }).first(), give, page.getByText(/Adult range/).first());
-  await lookBox(doseBox, "Dose, route and indication form", { zoom: 1.5, dwell: 2000 }).catch(async () => pause(1200));
-  await snap("dose");
-  await click(give, "Confirm and administer", { zoom: 1.5, focus: give, hold: 900 });
-  await lookBox(doseBox, "Given and charted", { zoom: 1.5, dwell: 1300, point: false }).catch(async () => pause(800));
+  await look(page.locator('[role="tabpanel"][data-state="active"]').first(), "Guidance panel", { zoom: 1.2, dwell: 2200, point: false }).catch(async () => pause(1200));
 
   /* ------------------------------------------------------------ diagnose */
   await startChapter("diagnose");
   await openTab(/Problem List/, "Problem List tab");
   await pause(500);
-  const dxSearch = page.getByPlaceholder("Search diagnoses or ICD/DSM code...");
-  await type(dxSearch, "pneumonia", "Search diagnoses", { zoom: 1.35 });
-  const add = page.getByRole("button", { name: /^Add .*pneumonia.* to the differential$/i }).first();
+  const dxSearch = page.getByPlaceholder("Search diagnoses or ICD/DSM code..."); // watchdog: allow Playwright locator API, not data
+  await type(dxSearch, "sepsis", "Search diagnoses", { zoom: 1.35 });
+  const add = page.getByRole("button", { name: /^Add .*sepsis.* to the differential$/i }).first();
   await add.waitFor();
   const dxName = (await add.getAttribute("aria-label")).replace(/^Add /, "").replace(/ to the differential$/, "");
   await click(add, `Add ${dxName}`, { zoom: 1.35 });
   await click(page.getByRole("button", { name: `Commit ${dxName} as the working diagnosis` }), "Commit diagnosis", { zoom: 1.35, hold: 900 });
   await snap("committed");
   const debrief = page.getByRole("button", { name: "View attending debrief" });
-  await lookBox(await union(page.getByText("Working diagnosis", { exact: true }).first(), debrief), "Verdict", { zoom: 1.3, dwell: 1500 }).catch(
-    async () => pause(900),
+  await lookBox(await union(page.getByText("Working diagnosis", { exact: true }).first(), debrief), "Verdict", { zoom: 1.3, dwell: 1400 }).catch(async () =>
+    pause(900),
   );
 
   /* ------------------------------------------------------------ feedback */
   await startChapter("feedback");
   await click(debrief, "View attending debrief", { zoom: 1.3, hold: 900 });
   const dlg = page.getByRole("dialog", { name: /Attending debrief/ });
-  await look(dlg, "Attending debrief", { zoom: 1.15, dwell: 1800, point: false }).catch(async () => pause(1000));
+  await look(dlg, "Attending debrief", { zoom: 1.15, dwell: 1700, point: false }).catch(async () => pause(1000));
   await snap("debrief");
   await click(page.getByRole("button", { name: "View full report" }), "View full report", { zoom: 1.3 });
   await routeLoad("feedback load", page.getByText("Confidence vs performance"));
   await pause(700);
-  await snap("feedback");
   const calibTitle = page.getByText("Confidence vs performance").first();
-  await calibTitle.waitFor({ timeout: 10_000 });
   const ct = await calibTitle.boundingBox();
   if (ct) await smoothScrollBy(ct.y - 70, "Scroll to the calibration plot", 1100);
-  const plotBox = await union(calibTitle, page.getByText("Your confidence").first());
-  await lookBox(plotBox, "Calibration plot", { zoom: 1.45, dwell: 1000 });
-  const dot = page.locator("svg circle").nth(0);
-  if (await dot.isVisible().catch(() => false)) {
-    const db = await dot.boundingBox();
-    await glide(db.x + db.width / 2, db.y + db.height / 2, 700);
-    log("focus", { label: "A domain on the plot", box: boxOf(db), focus: boxOf(plotBox), zoom: 1.45 });
-    await pause(1600);
-  }
+  const plotBox = await union(calibTitle, page.getByText("Your confidence").first()).catch(() => null);
+  if (plotBox) await lookBox(plotBox, "Calibration plot", { zoom: 1.45, dwell: 1800 });
   await snap("calibration");
-
-  /* ------------------------------------------------------------ dean */
-  await startChapter("dean");
-  await click(page.getByRole("link", { name: "Account" }).first(), "Account").catch(async () => {
-    await page.goto(`${BASE}/account`);
-  });
-  await routeLoad("account load", page.getByLabel("Role", { exact: true }));
-  await pause(500);
-  // Local profiles may take any role (no identity provider configured); with
-  // OIDC the role comes from verified claims instead.
-  await choose(page.getByLabel("Role", { exact: true }), "admin", "Role: Platform administrator (local profile)", { zoom: 1.5 });
-  await click(page.getByRole("button", { name: /^Save/ }).first(), "Save changes", { zoom: 1.5, hold: 800 });
-  await snap("role");
-  await click(nav("Institution"), "Institution").catch(async () => {
-    await page.goto(`${BASE}/dean`);
-  });
-  await routeLoad("dean load", page.getByText("Your headline metrics"));
-  await pause(700);
-  await snap("dean");
-  await lookBox(await union(page.getByText("Your headline metrics").first(), page.getByText("Domains scored").first()), "Headline metrics", {
-    zoom: 1.25,
-    dwell: 1500,
-  }).catch(async () => pause(1000));
-  const heat = page.getByText("Cohort competency heatmap").first();
-  const hb = await heat.boundingBox();
-  if (hb) await smoothScrollBy(hb.y - 80, "Scroll to the heatmap", 1100);
-  await lookBox(await union(heat, page.getByText("Select any cell to inspect the evidence behind its band.").first()), "Competency heatmap", {
-    zoom: 1.2,
-    dwell: 1800,
-  }).catch(async () => pause(1200));
-  await snap("dean-2");
 
   /* ------------------------------------------------------------ admin */
   await startChapter("admin");
   await toTop();
+  await click(page.getByRole("link", { name: "Account" }).first(), "Account").catch(async () => {
+    await page.goto(`${BASE}/account`);
+  });
+  await routeLoad("account load", page.getByLabel("Role", { exact: true }));
+  await pause(400);
+  // Local profiles may pick any role (no identity provider configured); the server caps an
+  // unverified header principal at resident, so the panels below need the admin token.
+  await choose(page.getByLabel("Role", { exact: true }), "admin", "Role: Platform administrator (local profile)", { zoom: 1.5 });
+  await click(page.getByRole("button", { name: /^Save/ }).first(), "Save changes", { zoom: 1.5, hold: 700 });
   await click(nav("Admin"), "Admin").catch(async () => {
     await page.goto(`${BASE}/admin`);
   });
   await routeLoad("admin load", page.getByText("Admin sign-in"));
-  await pause(600);
+  await pause(400);
+  await type(page.getByLabel("Admin token").first(), ADMIN_TOKEN, "Admin token", { zoom: 1.6, delay: 20 });
+  await click(page.getByRole("button", { name: "Sign in" }).first(), "Sign in", { zoom: 1.6, hold: 600 });
+  skipBegin("console load");
+  await page.getByText("Admin session active").first().waitFor({ timeout: 20_000 });
+  await pause(1200);
+  skipEnd("console load");
   await snap("admin");
-  const tokenField = page.getByLabel("Admin token").first();
-  await lookBox(await union(page.getByText("Admin sign-in").first(), page.getByRole("button", { name: "Sign in" }).first()), "Admin token gate", {
-    zoom: 1.6,
-    dwell: 1000,
-  }).catch(async () => pause(800));
-  await click(tokenField, "Admin token field", { zoom: 1.6, hold: 1100 }).catch(async () => pause(600));
+  await click(page.getByRole("tab", { name: "Telemetry" }).first(), "Telemetry", { zoom: 1.3 });
+  skipBegin("telemetry load");
+  await page.getByText("Calls over time").first().waitFor({ timeout: 20_000 }).catch(() => {});
+  await pause(1500);
+  skipEnd("telemetry load");
+  await lookBox(await union(page.getByText("Calls", { exact: true }).first(), page.getByText("P95 latency", { exact: false }).first()), "Telemetry headline", {
+    zoom: 1.3,
+    dwell: 1800,
+  }).catch(async () => pause(1200));
+  await snap("telemetry");
+  const route = page.getByText("By route").first();
+  const rb = await route.boundingBox().catch(() => null);
+  if (rb) await smoothScrollBy(rb.y - 380, "Scroll to calls by route", 1100);
+  await look(route.locator("xpath=ancestor::*[contains(@class,'border')][1]"), "Calls by route", { zoom: 1.4, dwell: 2000 }).catch(async () => pause(1200));
+  await snap("telemetry-2");
 
-  /* ------------------------------------------------------------ atlas */
-  await startChapter("atlas");
-  // Admin navigation is console-first; "View as Learner" brings the learner rail back.
-  await click(page.getByRole("button", { name: /Learner/ }).first(), "View as Learner").catch(async () => {});
-  await pause(500);
-  await click(nav("Atlas"), "Atlas").catch(async () => {
-    await page.goto(`${BASE}/atlas`);
+  /* ------------------------------------------------------------ dean */
+  await startChapter("dean");
+  await toTop();
+  await click(nav("Institution"), "Institution").catch(async () => {
+    await page.goto(`${BASE}/dean`);
   });
-  await routeLoad("atlas load", page.getByRole("tablist", { name: "Atlas view" }));
-  await pause(600);
-  const modes = page.getByRole("tablist", { name: "Atlas view" });
-  await click(modes.getByRole("tab", { name: "3D organs" }), "3D organs", { zoom: 1.3 });
-  skipBegin("3D load");
-  const canvas = page.locator("canvas").first();
-  await canvas.waitFor({ state: "visible", timeout: 30_000 });
-  await pause(2500);
-  skipEnd("3D load");
-  const spin = page.getByRole("button", { name: /Spin/ }).first();
-  if (await spin.isVisible().catch(() => false)) await click(spin, "Spin", { zoom: 0, hold: 300 });
-  const cb = await canvas.boundingBox();
-  if (cb) {
-    await glide(cb.x + cb.width * 0.55, cb.y + cb.height * 0.45);
-    log("focus", { label: "3D organs from TotalSegmentator", box: boxOf(cb), focus: boxOf(cb), zoom: 1.2 });
-    await pause(3200);
-  }
-  await snap("atlas");
+  await routeLoad("dean load", page.getByText("Institution dashboard"));
+  await pause(1500);
+  await snap("dean");
+  await lookBox(await union(page.getByText("Institution dashboard").first(), page.getByText(/Chain verified/).first()), "Dean panel and chain check", {
+    zoom: 1.4,
+    dwell: 1700,
+  }).catch(async () => pause(1000));
+  const kpi = page.getByText("Cohort headline metrics").first();
+  await lookBox(await union(kpi, page.getByText("At-risk learners", { exact: true }).first()), "Cohort headline metrics", { zoom: 1.2, dwell: 2000 }).catch(
+    async () => pause(1200),
+  );
+  const grid = page.getByText("Cohort competency grid").first();
+  const gb = await grid.boundingBox().catch(() => null);
+  if (gb) await smoothScrollBy(gb.y - 90, "Scroll to the competency grid", 1100);
+  await look(grid, "Cohort competency grid", { zoom: 1.2, dwell: 2600, point: false }).catch(async () => pause(1500));
+  await snap("dean-2");
   await pause(600);
 } catch (err) {
   console.error(err);

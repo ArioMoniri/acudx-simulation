@@ -9,7 +9,9 @@
    v4 renewal palette (Pulse cobalt on warm ink, light cobalt on paper white).
 2. Renders the walkthrough poster from poster.html (a real capture of the
    renewed encounter beside the lockup) with the Playwright Chromium.
-3. Resizes and palette-quantises every image (no dithering, so UI text stays
+3. Takes the live video call card from a frame of the real live capture
+   (docs/media/live-avatar/frames).
+4. Resizes and palette-quantises every image (no dithering, so UI text stays
    crisp) and checks each is under 350 KB.
 
 No crop cuts text: features are element captures of whole panels, panels and
@@ -33,12 +35,13 @@ LIMIT = 350 * 1024
 # (output, raw source, output width)
 JOBS = [
     ("hero-encounter.png", "hero-encounter.png", 1760),
-    ("feature-generator.png", "feature-generator.png", 900),
-    ("feature-interview.png", "feature-interview.png", 760),
-    ("feature-orders.png", "feature-orders.png", 760),
-    ("feature-results.png", "feature-results.png", 760),
-    ("feature-guidance.png", "feature-guidance.png", 760),
-    ("feature-feedback.png", "feature-feedback.png", 700),
+    ("feature-generator.png", "feature-generator.png", 1100),
+    ("feature-director.png", "feature-director.png", 900),
+    ("feature-interview.png", "feature-interview.png", 900),
+    ("feature-orders.png", "feature-orders.png", 900),
+    ("feature-results.png", "feature-results.png", 900),
+    ("feature-guidance.png", "feature-guidance.png", 900),
+    ("feature-feedback.png", "feature-feedback.png", 900),
     ("panel-student.png", "panel-student.png", 1120),
     ("panel-faculty.png", "panel-faculty.png", 1120),
     ("panel-dean.png", "panel-dean.png", 1120),
@@ -90,6 +93,16 @@ def poster() -> None:
     JOBS.append(("walkthrough-poster.png", "walkthrough-poster.png", 1280))
 
 
+def call_frame() -> None:
+    """The live video call card: one frame of the real live capture in
+    docs/media/live-avatar (MuseTalk lip-sync on the GPU worker), the head and
+    shoulders only (the bottom rows of that frame carry the blending seam)."""
+    src = os.path.join(ROOT, "docs", "media", "live-avatar", "frames", "talk_05.png")
+    img = Image.open(src).convert("RGB")
+    img.crop((0, 0, img.width, 600)).save(os.path.join(RAW, "feature-call.png"))
+    JOBS.append(("feature-call.png", "feature-call.png", 566))
+
+
 def save(img: Image.Image, path: str) -> int:
     size = 0
     for colors in (256, 224, 192, 160, 128):
@@ -120,6 +133,7 @@ def main() -> None:
         sys.exit("missing raw captures: run node scripts/design/capture-readme.mjs first")
     lockups()
     poster()
+    call_frame()
     over = 0
     for name, src, width in JOBS:
         img = Image.open(os.path.join(RAW, src))

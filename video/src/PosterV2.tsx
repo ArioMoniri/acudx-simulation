@@ -6,12 +6,12 @@ import { FILM, RECORDING, REC_H, REC_W, SYNC_OFFSET } from "./walkthrough/Stage"
 
 /**
  * 1920 x 1080 poster for the walkthrough (`<video poster>`, README, social).
- * One real frame of the recording (the Results tab with the ECG in view) in
+ * One real frame of the recording (the bedside monitor while the Director steps the patient) in
  * the film frame, the dark lockup, the promise and a play affordance.
  */
 export function PosterV2() {
   const { fps } = useVideoConfig();
-  const t = sourceTimeOf(TIMELINE, /^12-lead ECG strip$/) + 0.6 + SYNC_OFFSET;
+  const t = sourceTimeOf(TIMELINE, /^Bedside monitor$/) + 1.2 + SYNC_OFFSET;
   const frameW = 1180;
   const fit = frameW / REC_W;
   return (

@@ -4,7 +4,7 @@ import { EASE, FONT, FPS, REPO_URL } from "./theme";
 import { MarkScene } from "./scenes/MarkScene";
 import { EndScene } from "./scenes/EndScene";
 import { cutDuration } from "./walkthrough/timeline";
-import { ChapterBar, FilmGround, FILM, LowerThird, RecordingFrame } from "./walkthrough/Stage";
+import { ChapterBar, FilmGround, FILM, LowerThird, CutFrame } from "./walkthrough/Stage";
 import { SQUARE_CUT, TEASER_CUT } from "./walkthrough/highlights";
 import { LANDSCAPE } from "./Walkthrough";
 
@@ -37,7 +37,7 @@ export function Teaser() {
       <Sequence from={from} durationInFrames={T_BODY} name="beats">
         <Fade duration={T_BODY}>
           <FilmGround>
-            <RecordingFrame segments={TEASER_CUT.segments} rect={LANDSCAPE.frame} />
+            <CutFrame segments={TEASER_CUT.segments} rect={LANDSCAPE.frame} />
             <LowerThird segments={TEASER_CUT.segments} captions={TEASER_CUT.captions} rect={LANDSCAPE.caption} size={32} />
             <ChapterBar segments={TEASER_CUT.segments} captions={TEASER_CUT.captions} rect={LANDSCAPE.bar} labels={false} />
           </FilmGround>
@@ -91,7 +91,7 @@ export function Square() {
               Education only · synthetic patients
             </div>
             <LowerThird segments={SQUARE_CUT.segments} captions={SQUARE_CUT.captions} rect={SQUARE.caption} size={42} align="center" />
-            <RecordingFrame segments={SQUARE_CUT.segments} rect={SQUARE.frame} maxScale={2.0} radius={14} />
+            <CutFrame segments={SQUARE_CUT.segments} rect={SQUARE.frame} maxScale={2.0} radius={14} />
             <ChapterBar segments={SQUARE_CUT.segments} captions={SQUARE_CUT.captions} rect={SQUARE.bar} />
             <div
               style={{

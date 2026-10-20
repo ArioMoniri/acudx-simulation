@@ -3,15 +3,17 @@ import { AbsoluteFill, interpolate, Sequence, useCurrentFrame } from "remotion";
 import { EASE, FPS } from "./theme";
 import { MarkScene } from "./scenes/MarkScene";
 import { EndScene } from "./scenes/EndScene";
-import { buildCut, cutDuration, TIMELINE, type Segment } from "./walkthrough/timeline";
-import { ChapterBar, FilmGround, LowerThird, RecordingFrame, SYNC_OFFSET, type Caption } from "./walkthrough/Stage";
+import { buildCut, cutDuration, spliceInsert, TIMELINE, type Segment } from "./walkthrough/timeline";
+import { ChapterBar, CutFrame, FilmGround, LowerThird, SYNC_OFFSET, type Caption } from "./walkthrough/Stage";
 
 /**
  * Walkthrough: the product, recorded. A real Playwright screen recording of
- * one student encounter on a febrile case (then the dean panel, the admin
- * token gate and the 3D atlas), cut from its JSON timeline, with a
- * zoom-to-focus camera on every click, lower-third captions per chapter and
- * chapter markers. 3 s intro with the Lottie mark, 4 s end card.
+ * one student encounter on a case generated on request (a recorded live model
+ * case replayed as the staged stream), the Clinical Director stepping the
+ * patient after treatment, then the admin telemetry and the dean panel, cut
+ * from its JSON timeline with a zoom-to-focus camera, lower-third captions and
+ * chapter markers. The "call" chapter is spliced from the real live capture of
+ * the patient video call (docs/media/live-avatar). 3 s intro, 4 s end card.
  *
  * Source: public/recording/walkthrough.{mp4,json} from
  * scripts/record-walkthrough.mjs (see video/README.md).
@@ -19,55 +21,76 @@ import { ChapterBar, FilmGround, LowerThird, RecordingFrame, SYNC_OFFSET, type C
 
 /** Output seconds per chapter: the cut trims idle time, then speeds a chapter up (at most 2.2x) to fit. */
 export const BUDGETS: Record<string, number> = {
-  profile: 5.5,
-  case: 6,
+  profile: 4.5,
+  request: 4,
+  generate: 8,
   chart: 4,
-  interview: 9,
-  exam: 4,
-  orders: 8,
-  results: 9.5,
-  guidance: 5,
-  treat: 6,
-  diagnose: 5.5,
-  feedback: 7,
-  dean: 6.5,
-  admin: 3.5,
-  atlas: 6,
+  interview: 7,
+  call: 1,
+  exam: 3.5,
+  orders: 6,
+  treat: 6.5,
+  director: 11,
+  results: 8,
+  guidance: 4,
+  diagnose: 5,
+  feedback: 6,
+  admin: 9,
+  dean: 8,
 };
+
+/** Output seconds of the spliced live call. */
+export const CALL_SECONDS = 8;
 
 export const CAPTIONS: Caption[] = [
   { chapter: "profile", title: "Profile", lines: [{ text: "Create a local profile: name, role, institution." }] },
-  { chapter: "case", title: "Case", lines: [{ text: "Generate a synthetic case. Infectious: cough, fever and breathlessness." }] },
-  { chapter: "chart", title: "Chart review", lines: [{ text: "An EHR chart: patient banner, vitals, allergies and code status." }] },
+  { chapter: "request", title: "Request", lines: [{ text: "Ask for a case: solo, as the doctor, presenting with fever." }] },
   {
-    chapter: "interview",
-    title: "Interview",
-    lines: [{ text: "Ask in free text. The patient reveals only what you ask." }, { at: 6.2, text: "Each question is screened for scope and mapped to the history." }],
+    chapter: "generate",
+    title: "Generate",
+    lines: [
+      { text: "The model writes the case on request. The opening streams in first." },
+      { at: 3.6, text: "History, exam, treatments and results are written for this patient while you work." },
+    ],
   },
+  { chapter: "chart", title: "Chart", lines: [{ text: "The banner says where the case came from: model generated." }] },
+  { chapter: "interview", title: "Interview", lines: [{ text: "Ask in free text. The patient reveals only what you ask." }] },
+  { chapter: "call", title: "Video call", lines: [{ text: "Live patient video, lip-synced on the GPU worker" }] },
   { chapter: "exam", title: "Exam", lines: [{ text: "Each exam manoeuvre writes its finding into the chart." }] },
-  { chapter: "orders", title: "Orders", lines: [{ text: "Order CBC, CRP, lactate, blood cultures, chest X-ray and ECG." }] },
+  { chapter: "orders", title: "Orders", lines: [{ text: "Order CBC, lactate, blood cultures, chest X-ray and ECG." }] },
+  { chapter: "treat", title: "Treat", lines: [{ text: "Fluids, oxygen and an antibiotic through the dose, route and indication form." }] },
+  {
+    chapter: "director",
+    title: "Director",
+    lines: [
+      { text: "The Clinical Director steps the patient after every action, and the patient answers." },
+      { at: 5.2, text: "The monitor follows the course engine: heart rate down, pressure and saturation up." },
+    ],
+  },
   {
     chapter: "results",
     title: "Results",
+    lines: [{ text: "Results arrive on turnaround timers from the results engine, flagged and sourced." }],
+  },
+  { chapter: "guidance", title: "Guidance", lines: [{ text: "Attending tips cite verified guideline statements, or say none was found." }] },
+  { chapter: "diagnose", title: "Diagnose", lines: [{ text: "Commit a working diagnosis from the ICD catalogue." }] },
+  { chapter: "feedback", title: "Feedback", lines: [{ text: "Attending debrief, then calibration: confidence against measured performance." }] },
+  {
+    chapter: "admin",
+    title: "Admin",
     lines: [
-      { text: "Results arrive on turnaround timers. Every value is flagged and sourced." },
-      { at: 5.6, text: "12-lead ECG: a labelled representative image offline, with its licence." },
+      { text: "Admin console behind the token gate: providers, GPU policy and telemetry." },
+      { at: 4.4, text: "One telemetry row per gateway call. This local run has no model endpoint, so model calls show as errors." },
     ],
   },
-  { chapter: "guidance", title: "Guidance", lines: [{ text: "Attending tips coach the process. An unverified source shows as unavailable." }] },
-  { chapter: "treat", title: "Treat", lines: [{ text: "Paracetamol through the dose, route and indication form." }] },
-  { chapter: "diagnose", title: "Diagnose", lines: [{ text: "Commit a working diagnosis from the ICD-10 catalogue." }] },
-  { chapter: "feedback", title: "Feedback", lines: [{ text: "Attending debrief, then calibration: confidence against measured performance." }] },
   {
     chapter: "dean",
     title: "Dean",
-    lines: [{ text: "Local profiles pick a role. With OIDC, roles come from verified claims." }, { at: 2.6, text: "Dean panel: headline metrics and the competency heatmap." }],
+    lines: [{ text: "Dean panel: this encounter in the cohort metrics, from the hash-chained event log." }],
   },
-  { chapter: "admin", title: "Admin", lines: [{ text: "Admin console: providers and GPU policy behind a token gate." }] },
-  { chapter: "atlas", title: "Atlas", lines: [{ text: "Anatomy atlas: 3D organs from TotalSegmentator, CC BY 4.0." }] },
 ];
 
-export const WALKTHROUGH_CUT: Segment[] = buildCut(TIMELINE, { budgets: BUDGETS, offset: SYNC_OFFSET });
+export const WALKTHROUGH_CUT: Segment[] = spliceInsert(buildCut(TIMELINE, { budgets: BUDGETS, offset: SYNC_OFFSET }), "call", "call", CALL_SECONDS);
 
 const INTRO = 3 * FPS;
 const OUTRO = 4 * FPS;
@@ -99,7 +122,7 @@ export function Walkthrough() {
       <Sequence from={bodyFrom} durationInFrames={BODY} name="recording">
         <BodyFade duration={BODY}>
           <FilmGround>
-            <RecordingFrame segments={WALKTHROUGH_CUT} rect={LANDSCAPE.frame} />
+            <CutFrame segments={WALKTHROUGH_CUT} rect={LANDSCAPE.frame} />
             <LowerThird segments={WALKTHROUGH_CUT} captions={CAPTIONS} rect={LANDSCAPE.caption} size={28} />
             <ChapterBar segments={WALKTHROUGH_CUT} captions={CAPTIONS} rect={LANDSCAPE.bar} labels={false} />
           </FilmGround>
