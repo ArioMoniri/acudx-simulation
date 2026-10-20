@@ -53,6 +53,12 @@ export default tseslint.config(
     },
   },
   {
+    // Node scripts (capture and probe tools under e2e/) run outside the browser.
+    files: ["e2e/**/*.{mjs,js}"],
+    // Callbacks passed to page.evaluate run in the page, so browser globals are valid too.
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     // Playwright specs and config run under Node and use `{}` destructuring in skip predicates.
     files: ["e2e/**/*.ts", "playwright.config.ts", "vite.config.ts", "vitest.config.ts"],
     rules: {
