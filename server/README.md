@@ -1,10 +1,10 @@
-# AcuDx Backend Gateway (Phase-0 / MVP)
+# AcuDx Backend Gateway
 
-The **pod-side chokepoint** in front of AcuDx's local, open-weight model stack.
-It is a small, async, typed FastAPI app that **calls** model endpoints — it never
-loads a model itself, so it stays resource-light and starts in well under a
-second. Every model call flows through one component (`ModelGateway`), which is
-where the **air-gapped, zero-egress** invariant is mechanically enforced.
+The FastAPI gateway in front of AcuDx's model, voice, results, guideline,
+identity and GPU providers. It is a small, async, typed app that **calls**
+endpoints and never loads a model itself. Every model call flows through one
+component (`ModelGateway`), which is where the **air-gapped, zero-egress**
+invariant is enforced, and every provider is resolved from the admin registry.
 
 > Education only. Synthetic patients only. No real patient-data path.
 
@@ -12,24 +12,33 @@ where the **air-gapped, zero-egress** invariant is mechanically enforced.
 
 | Module | Doc | What it realises |
 |---|---|---|
-| `config.py` | `02 §13.1.2`, `12` | `pydantic-settings` config + the **no-egress guard**: under `AIRGAPPED` it refuses to resolve any non-local LLM/embed/rerank endpoint (fails closed at resolution time, before a socket opens). |
-| `model_gateway.py` | `02 §1–5, §10` | The **only path to a model**. Async `chat()` over OpenAI-compatible `/v1/chat/completions`, robust parsing (`content` **or** `reasoning_content`, `<think>…</think>` stripped), retries + timeouts, a per-task **tier map** (`patient`/`guard`/`grade`) structured for future T1→T2→T3 routing, and thin defensive `embed()`/`rerank()` adapters. |
-| `scope_guard.py` | `13 §3` | The **Scope & Injection Guard** — deterministic, pure, local. Classifies every learner utterance into `in-scope` / `off-topic` / `answer-seeking` / `injection` / `unsafe` (EN + TR). Hard classes dominate, fail-closed. Ships a `__main__` self-test. |
-| `persona.py` | `01 §2, §6`; `13 §4.5` | The **two-tier boundary** for the roleplay layer: `build_patient_turn()` injects a "KNOWN CASE FACTS" block and forbids the persona from sourcing clinical facts; `fact_assertion_gate()` is the post-generation **FactAssertionGate** that flags/strips any unsanctioned number, dose, or diagnosis. |
-| `app.py` | `13 §1`, `02`, `05` | The HTTP surface wiring guard → route-by-class → persona + gateway → FactGate, plus `/health`, `/status`, and a lazy delegation to the sibling-owned grounding engine. |
-
-Sibling-owned (imported by name, not written here): `grounding.py`,
-`guidelines_seed.py`, `deploy.sh`, `smoke_test.py`.
+| `config.py` | `02`, `12` | `pydantic-settings` config + the **no-egress guard**: under `AIRGAPPED` it refuses to resolve any non-local endpoint before a socket opens. |
+| `model_gateway.py` | `02` | The **only path to a model**: async `chat()` over OpenAI-compatible `/v1/chat/completions`, retries, timeouts, tier map, `embed()` / `rerank()` adapters. |
+| `scope_guard.py`, `persona.py` | `13`, `01` | Deterministic Scope and Injection Guard (EN + TR); two-tier persona boundary and the post-generation FactAssertionGate. |
+| `orchestration/` | `15` | Case generator v2 (LangGraph graph, three-judge council, repair) and the Clinical Director; SQLite checkpoints and learner memory. |
+| `results/`, `results_routes.py` | `14` | Results engine: sourced reference ranges, kinetics, synthesized 12-lead ECG, verified image bank with laterality guard. |
+| `guidelines/`, `grounding.py` | `16` | Verified `GuidelineStatement` store, verifier, attending tips, `/v1/ground`. |
+| `registry/`, `telemetry/` | `17` | Provider registry (keys sealed with Fernet), admin console API, per-call cost rows, optional OTel spans. |
+| `voice/` | `18` | `/v1/voice/*`: TTS, STT, capabilities and the LiveKit room token, resolved from the registry. |
+| `auth/`, `learning/` | `19` | OIDC token verification (JWKS), roles from claims unioned with `user_roles`, hash-chained encounter events, dean and faculty routes. |
+| `providers/` | `12`, section below | Lambda Cloud client and the on-demand GPU worker manager. |
+| `app.py` | `10` | Mounts every router above plus `/health`, `/status`, `/v1/guard`, `/v1/patient/turn`, `/v1/grade`, `/v1/case/generate` (v1), `/v1/ground`. |
 
 ## Endpoints
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET`  | `/health` | Liveness + resolved provider/model + `airgapped` flag. |
-| `GET`  | `/status` | `{disk, ram}` (from `statvfs('/data')` + `/proc/meminfo`) and reachability of the LLM / embed / rerank pods. |
-| `POST` | `/v1/guard` | `{text, case_context?}` → `{cls, score, rationale, action, layers}`. |
-| `POST` | `/v1/patient/turn` | Guard the utterance; **injection/unsafe** are blocked deterministically (no LLM); soft classes go to the persona model, then through the FactAssertionGate. |
-| `POST` | `/v1/ground` | Delegates to `server.grounding.ground()` (lazy import → `503` if unavailable). |
+Routers mounted in `app.py` (paths as declared in each `routes.py`). Routes under `/admin/*` need `X-Admin-Token` (or an admin bearer token); when `ADMIN_TOKEN` is unset they answer `503`.
+
+| Area | Routes |
+|---|---|
+| Core | `GET /health`, `GET /status`, `POST /v1/guard`, `POST /v1/patient/turn`, `POST /v1/grade`, `POST /v1/case/generate` (v1, single call), `POST /v1/ground` |
+| Case generator v2 (`orchestration/routes.py`) | `POST /v2/case/generate`, `POST /v2/case/generate/stream`, `POST /v2/case/template` (labelled `meta.source = "template"`), `GET /v2/case/{thread_id}`, `POST /v2/director/step`, `GET /v2/learner/{learner_id}` |
+| Results (`results_routes.py`) | `POST /v1/results/resolve`, `POST /v1/results/ecg`, `GET /v1/results/reference-ranges`, `GET /v1/imaging/resolve` |
+| Guidelines (`guidelines/routes.py`) | `GET /v1/guidelines/statements`, `GET /v1/guidelines/statements/{id}`, `GET /v1/guidelines/tips`, `POST /admin/guidelines/verify` |
+| Voice (`voice/routes.py`) | `POST /v1/voice/tts`, `POST /v1/voice/stt`, `GET /v1/voice/capabilities`, `POST /v1/voice/room`, `GET /admin/voice/agent-config` |
+| Identity (`auth/routes.py`) | `GET /v1/auth/config`, `GET /v1/auth/me`, `GET /admin/users`, `PUT /admin/users/{sub}/roles`, `DELETE /admin/users/{sub}` |
+| Learning and panels (`learning/routes.py`) | `POST /v1/events/encounter`, `GET /v1/me/assignments`, `GET /v1/dean/cohort`, `GET /v1/dean/export`, `GET /v1/dean/chain`, `GET /v1/faculty/queue`, `POST /v1/faculty/review/{batch_id}`, `POST /v1/faculty/cases/submit`, `POST /v1/faculty/cases/{id}/decide`, `POST /v1/faculty/assign`, `GET /v1/faculty/assignments`, `GET /v1/faculty/roster` |
+| Registry and telemetry (`registry/routes.py`) | `GET/POST /admin/providers`, `GET/PUT/DELETE /admin/providers/{id}`, `POST /admin/providers/{id}/probe`, `GET/PUT /admin/settings`, `GET /admin/health`, `GET /admin/telemetry/summary`, `GET /admin/telemetry/gpu` |
+| GPU worker (`admin_routes.py`) | `GET /admin/gpu/status`, `POST /admin/gpu/start`, `POST /admin/gpu/stop`, `GET /admin/gpu/boot-log`, `GET /admin/gpu/ledger`, `GET/PUT /admin/gpu/policy` |
 
 ### `POST /v1/patient/turn` request
 
@@ -52,23 +61,31 @@ is **not** in that set is flagged and neutralised by the FactAssertionGate.
 
 ## Configuration (env / `.env`)
 
+Every field of `Settings` in `config.py`, overridable by the env var of the same name (case-insensitive). Providers configured in the admin registry take precedence over the LLM env fields at resolution time.
+
 | Var | Default | Notes |
 |---|---|---|
 | `LLM_PROVIDER` | `local` | `local` \| `api`. `api` uses `OPENAI_*` and is blocked by the egress guard while `AIRGAPPED=true`. |
-| `LLM_BASE_URL` | `http://127.0.0.1:3040/v1` | Local llama-server (Qwen2.5-7B-Instruct). |
+| `LLM_BASE_URL` | `http://127.0.0.1:3040/v1` | Local OpenAI-compatible server. |
 | `LLM_MODEL` | `qwen2.5-7b-instruct` | |
-| `OPENAI_BASE_URL` / `OPENAI_API_KEY` / `OPENAI_MODEL` | — | API fallback, selected by `LLM_PROVIDER=api`. |
-| `EMBED_URL` | `http://127.0.0.1:8003` | modernbert-tr-embed (dim 768). Payload shape is probed defensively. |
-| `RERANK_URL` | `http://127.0.0.1:8004` | query+docs → scores. |
-| `AIRGAPPED` | `true` | When true, refuse any non-local model endpoint (no egress). |
-| `LOCAL_ALLOWLIST` | _(empty)_ | Extra hosts/CIDRs treated as local (in-VPC GPU pool). Comma-sep or JSON. |
+| `LLM_API_KEY` | `sk-local` | Sent as Bearer; llama-server ignores it. |
+| `OPENAI_BASE_URL` / `OPENAI_API_KEY` / `OPENAI_MODEL` | unset | API fallback, selected by `LLM_PROVIDER=api`. |
+| `CASEGEN_BASE_URL` / `CASEGEN_MODEL` / `CASEGEN_API_KEY` | unset (inherit LLM) | Endpoint for the case author and repair nodes. |
+| `JUDGE_BASE_URL` / `JUDGE_MODEL` / `JUDGE_API_KEY` | unset (inherit LLM) | Endpoint for the judge council and the Director narrator. |
+| `ACUDX_DB_PATH` | `server/data/acudx.db` | SQLite: LangGraph checkpoints, learner memory, GPU state and ledger, registry, telemetry, users, events. |
+| `EMBED_URL` / `EMBED_DIM` / `EMBED_MODEL` | `http://127.0.0.1:8003` / `768` / `ytu-ce-cosmos/modernbert-tr-embed` | Embedding side-car. |
+| `RERANK_URL` / `RERANK_MODEL` | `http://127.0.0.1:8004` / `ytu-ce-cosmos/modernbert-tr-reranker` | Reranker side-car. |
+| `AIRGAPPED` | `true` | Refuse any non-local endpoint (no egress). Compose sets `false`. |
+| `LOCAL_ALLOWLIST` | empty | Extra hosts or CIDRs treated as local. CSV or JSON list. |
 | `HOST` / `PORT` | `127.0.0.1` / `8890` | |
-| `CORS_ORIGINS` | _(empty)_ | Extra origins; localhost/127.0.0.1 (any port) are always allowed for the tunnelled web demo. |
+| `CORS_ORIGINS` | empty | Extra origins; localhost and 127.0.0.1 on any port are always allowed. CSV or JSON. |
+| `REQUEST_TIMEOUT_S` / `CONNECT_TIMEOUT_S` / `PROBE_TIMEOUT_S` / `MAX_RETRIES` | `60` / `5` / `2` / `2` | httpx tuning. |
 | `STATUS_DISK_PATH` | `/data` | Falls back to `/` if absent. |
-
-The embed/rerank services already run on the pod. Their exact request/response
-shapes should be **confirmed at deploy time**; `model_gateway._parse_embeddings`
-/ `_parse_rerank` already try the common shapes, so any fix is a one-liner.
+| `AUTH_MODE` | `local` | `local` (unverified local profiles, `X-Auth-Mode: local`) \| `oidc` (verified bearer JWT required). The registry setting `auth_mode` overrides it. |
+| `ACUDX_SECRET_KEY` | unset | Fernet key sealing provider API keys at rest; unset means keys cannot be stored (never plaintext). |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | When set, every gateway call emits an OpenTelemetry `gen_ai.*` span (deps in `requirements-telemetry.txt`). |
+| `ADMIN_TOKEN` | unset | Guards `/admin/*`; unset means `503`. |
+| GPU worker vars | see the table below | `LAMBDA_KEY`, `LAMBDA_SSH_KEY_NAME`, `GPU_*`. |
 
 ## Run
 
@@ -87,6 +104,8 @@ python -m server.scope_guard
 
 `run.sh` respects `HOST` / `PORT` and forwards extra args to uvicorn
 (e.g. `bash server/run.sh --reload` in dev).
+
+Tests: `pip install -r server/requirements-dev.txt && python -m pytest server/tests -q` (`pytest.ini` at the repo root; network is intercepted, nothing is launched).
 
 ## On-demand GPU worker (Lambda Cloud)
 
@@ -130,6 +149,7 @@ asyncio task started in the app lifespan) terminates it after
 | `LAMBDA_SSH_KEY_NAME` | unset | name of exactly one registered ssh key |
 | `GPU_IDLE_MINUTES` | `20` | idle window before termination |
 | `GPU_READY_TIMEOUT_S` | `2700` | how long a fresh worker may take to pass /healthz before it is terminated (cold boot pulls the vLLM image and the model weights) |
+| `GPU_FILE_SYSTEM_NAME` | unset | Lambda file system to attach at launch (pre-baked weights shorten the cold start) |
 | `GPU_BOOT_TIMEOUT_S` | `900` | how long the provider may take to report the instance active with an IP |
 | `GPU_DAILY_BUDGET_USD` | `25.0` | hard daily cap |
 | `GPU_LLM_MODEL` | `Qwen/Qwen3-32B-AWQ` | model vLLM loads on the worker |

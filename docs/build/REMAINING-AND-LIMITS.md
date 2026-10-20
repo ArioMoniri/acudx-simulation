@@ -1,145 +1,46 @@
-# AcuDx — Remaining work, data needs & honest limits
+# AcuDx: what is shipped, what needs the owner, what is a real limit
 
-A living checklist of what was requested, what's done, what still needs **more
-data / external resources / your action** to finish, and what is a genuine
-limitation. Come back to this to continue. Last updated: 2026-09-13.
+Last updated: 2026-10-20 (October 2026 build, phases P0 to P5 of `docs/review/01-multi-persona-review-and-roadmap-2026-10.md`). This replaces the September checklist; the Supabase-only auth path described there is superseded by the OIDC design in architecture doc 19.
 
----
+## 1. Shipped
 
-## 🔑 1. Needs YOU — Supabase auth (the only hard blocker)
+Each row names the owning architecture doc and the code it describes. "Shipped" means: merged on the integration branch, covered by Vitest or pytest, and free of mock or placeholder paths (the watchdog rules in `docs/process/AGENT-PROTOCOL.md` section 7).
 
-Real accounts, **email verification**, saved profiles, and **server-verified
-roles** need a publicly-reachable backend. The pod can't be one (its outbound
-network is firewalled), so we use **Supabase** (managed Postgres + Auth). It's
-free to start. Steps:
+| Capability | Doc | Code |
+|---|---|---|
+| Results and imaging engine: sourced reference ranges, kinetics (troponin, lactate, glucose, paracetamol, alcohol), synthesized 12-lead ECG with rule-authored pathologies, license-verified image bank with laterality guard, provenance on every result | [14](../architecture/14-results-and-imaging-engine.md) | `server/results/`, `server/results_routes.py`, `web/src/lib/resultsApi.ts` |
+| Case generator v2 and Clinical Director: LangGraph graph, three-judge council plus deterministic high-stakes checks, repair loop, learner memory store, cost attribution, streamed progress, `503` instead of a silent template | [15](../architecture/15-case-generator-v2-and-director.md) | `server/orchestration/`, `web/src/lib/caseGenV2.ts` |
+| Guideline store and verification: `GuidelineStatement` rows with URL or DOI, verifier that promotes a row only when the source passage is found, attending tips authored over verified rows, "guidance unavailable" state in the web app | [16](../architecture/16-guideline-store-and-verification.md) | `server/guidelines/`, `server/grounding.py`, `web/src/lib/guidelinesApi.ts` |
+| Provider registry, admin console, telemetry: every provider kind configured and sealed server-side, probe, priority order, air-gap guard, per-call cost rows, OTel gen_ai spans (optional) | [17](../architecture/17-provider-registry-admin-telemetry.md) | `server/registry/`, `server/telemetry/`, `web/src/pages/AdminPage.tsx` |
+| Voice and the patient video call: gateway-routed TTS and STT with provider switch, LiveKit room and avatar renderer rows (Simli, Anam), bundled talking head driven by the real audio, voice agent worker | [18](../architecture/18-voice-and-video-call.md) | `server/voice/`, `workers/voice_agent/`, `web/src/components/ehr/PatientCallTile.tsx` |
+| Identity, roles and panels: OIDC PKCE sign-in, server-verified bearer tokens, roles from claims unioned with the `user_roles` table, dean cohort analytics from the hash-chained event log, faculty queue and assignments, admin users tab, Keycloak dev realm | [19](../architecture/19-identity-roles-and-panels.md) | `server/auth/`, `server/learning/`, `web/src/lib/auth.ts`, `web/src/pages/{DeanPage,FacultyPage,SignInPage}.tsx`, `deploy/keycloak/` |
+| On-demand GPU worker: Lambda Cloud launch on demand, idle reaper, daily budget, ledger, worker image with vLLM, TTS and STT behind Caddy | [12](../architecture/12-air-gapped-reference-architecture.md), `server/README.md` | `server/providers/`, `infra/gpu-worker/cloud-init.yaml` |
+| Interprofessional rooms: create, join by code, seats for doctor, nurse and paramedic, AI-held seats, order handoff, WebSocket snapshot relay | [07](../architecture/07-multiplayer-rooms.md) | `web/src/components/room/`, `multiplayer/server.mjs` |
+| Launch kit: Docker Compose plus Caddy one-click deploy, brand kit, launch film and poster, README with real captures, e2e harness at four viewports, CI with web, pytest and Playwright jobs | [design/02](../design/02-brand-identity.md), `video/README.md`, `deploy/` | `deploy/one-click.sh`, `docker-compose.yml`, `web/public/brand/`, `video/`, `web/e2e/`, `.github/workflows/ci.yml` |
 
-1. Go to **https://supabase.com** → sign in (GitHub or email) → **New project**.
-2. Pick your org, name it `acudx`, set a **database password** (save it — you
-   keep it, I never need it), choose the **nearest region**, **Free** plan →
-   **Create project** (~2 min to provision).
-3. Left sidebar → **⚙ Project Settings → API**. Copy **two** values:
-   - **Project URL** — e.g. `https://abcdefgh.supabase.co`
-   - **anon public** key — the long `eyJ…` string in *Project API keys* labelled
-     **`anon` `public`**. (Newer projects call it the **Publishable** key — same
-     thing.) ⚠️ **Never** the `service_role` / secret key.
-4. Give them to me, or create `web/.env.local` (gitignored — never committed):
-   ```
-   VITE_SUPABASE_URL=https://abcdefgh.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
-   ```
-5. (Email verification is ON by default under **Authentication → Providers →
-   Email**; for high volume later, point it at your own SMTP.)
+## 2. Needs the owner
 
-Once those land I build: sign-up → email-verify → sign-in → persisted profile,
-a `profiles` table with **row-level security**, and roles become a
-**server-verified permission** feeding the `profile.role` gating already in the
-app (routes/nav/authoring/institution). This also retires the local
-"Dr. Test User" placeholder.
+Nothing below can be finished by an agent alone.
 
----
+1. **Hosted provider keys** (optional). ElevenLabs, Deepgram, Simli or Anam, DeepInfra or OpenRouter. Entered in the admin console, never in the repo. Without them the platform runs entirely on the GPU worker; with `AIRGAPPED=true` hosted rows are refused.
+2. **Lambda Cloud key and SSH key name** for the on-demand worker (`LAMBDA_KEY`, `LAMBDA_SSH_KEY_NAME`), or an alternative GPU host wired through the same provider interface.
+3. **A domain name** for `DOMAIN=... ./deploy/one-click.sh`; Caddy obtains the certificate once the A record resolves.
+4. **Identity provider choice**: Keycloak (default, dev realm shipped in `deploy/keycloak/`) or Supabase Auth as the managed option. The gateway only needs an OIDC discovery URL and a client id; `auth_mode=oidc` then makes verified identity mandatory.
+5. **Clinician sign-off per condition.** No condition is learner-visible as verified until a licensed reviewer initials the 20-item checklist in `docs/review/02-clinical-content-review-2026-10.md` section 4 (coding, presentation, objective data, treatments and effects, guidance and citations, interprofessional content) and the sign-off record (name, credential, date, commit hash, citation URLs checked) is stored. The critical and major findings in sections 1 to 3 of that review are the fix list to work through first.
+6. **Turkish listening test.** Chatterbox Multilingual against ElevenLabs on short clinical utterances with native speakers (`docs/research/14` section 5.4); the bundled reference voice is a stand-in for consented actor recordings.
+7. **Licence choice and trademark search.** No LICENSE file is committed; the brand mark has had no trademark or reverse image search (`docs/design/02` section 7).
 
-## 🧩 2. Built, but would improve with MORE DATA / resources
+## 3. Honest limits
 
-These work now; the note says what unlocks the next level.
+- **MuseTalk runner not shipped.** The self-hosted lip-synced face (LiveTalking plus MuseTalk through a LiveKit `AvatarRunner`) is specified in architecture doc 18 section 6.3 and the registry already routes `extra.avatar: musetalk`, but the runner has not been benchmarked on a GPU or written. Without a Simli or Anam row the call tile shows the bundled talking head, timed to the real audio and labelled "Text-timed animation".
+- **Synthetic imaging offline only.** With a gateway, every image comes from the verified bank (real, licensed, laterality-checked) or the authored case record. Without a gateway the web app falls back to the curated bundle and to `syntheticNormalResult` values tagged "offline synthetic"; the ECG tracing is always synthetic and says so in its footer. No generated CT, MRI or echo is ever shown as diagnostic.
+- **Paediatric reference ranges not authored.** `reference_ranges.json` holds adult bands with sources; CALIPER import and a clinical pathologist's sign-off are pending (doc 14 section 6). Paediatric cases therefore cannot be served with verified ranges.
+- **ESC and AHA full texts not fetchable headlessly.** The verifier could not read the ESC landing pages, two AHA/ASA statements (JavaScript wall) and the Tokyo Guidelines; those rows stay `failed` and are never shown. The same thresholds are served from the verified open equivalents (NICE NG185, NG158, NG128). Doc 16 section 3 lists each row and its reason.
+- **Mobile Problem list click interception.** At 390 px the Playwright click on the Problem list tab is intercepted by an overlapping element, so the e2e flow scrolls and forces the click; a learner on a phone may need a second tap. Tracked for the next UI polish pass, not fixed.
+- **Rooms are a snapshot relay.** The relay forwards the latest room snapshot per channel (last write wins); room state is not server-authoritative and the room debrief is not yet derived from server events (roadmap P4).
+- **No LTI launch, no roster import.** LTI 1.3 through ltijs and the SAML onboarding runbook are specified (doc 19 sections 8 and 11) but not implemented; learners sign in through OIDC or local profiles.
+- **Cold GPU start is minutes.** A fresh worker pulls the vLLM image and about 19 GB of weights (`GPU_READY_TIMEOUT_S` defaults to 45 min). A pre-baked filesystem and a warm-on-schedule policy are the mitigation, both owner-configured.
 
-- **Anatomy atlas (the Japanese-reference tool) — `/atlas`, reachable from every
-  role.** Two views on the SAME real, expert-segmented CT (TotalSegmentator,
-  CC-BY-4.0), switched by a "Cross-section / 3D organs" toggle:
-  - **Cross-section (2D):** 14 organs with toggleable SVG overlays,
-    axial/coronal/sagittal, level scrubber, abdomen/bone windows, R/L/A/P/S/I
-    markers, guided lessons.
-  - **3D organs (navigable):** a real GLB built by marching cubes from the same
-    masks (`data/atlas-pipeline/build_organs_glb.py` → `web/public/atlas/organs.glb`,
-    14 organs, 382 KB). Orbit/zoom/pan, the shared legend toggles organs in both
-    views, and an **axial cutting plane** reveals the cross-section in 3D. three.js
-    is lazy-loaded (own chunk, no main-bundle cost).
-  - *Needs more data to grow:* more subjects + full-body coverage (only ~90 mm of
-    one subject now), an **MRI** lesson (source: AMOS22, CC-BY), and **syncing the
-    3D cut level to the 2D slice scrubber** (lock-step). Pipelines live in
-    `data/atlas-pipeline/`; edit + re-run to expand.
+## 4. How to continue
 
-- **Ordered-imaging viewer (under Results) — a DICOM-style sequence viewer.**
-  Ordered studies render richer than a single still: an **echocardiogram plays a
-  beating-heart cine loop**, an **abdominal CT scrolls as a multi-slice series**
-  (built from the atlas's real CT — slice scrubber, wheel/keys, soft-tissue/bone
-  windows), and everything else keeps the representative still.
-  - *Could improve:* cines/stacks for more modalities (a US/FAST cine, MRI stacks)
-    and region-specific CT stacks (head/chest) — the CT series is abdomen-only
-    today (the volume the atlas ships).
-
-- **Model-driven / dynamic test results.** Results respond to the patient's
-  status, elapsed time, and what the student does (treat in time → improves;
-  delay → deteriorates), via a **deterministic, medically-bounded** clinical
-  engine — see the limit note below on why numbers are NOT LLM-generated.
-  - *Could improve:* a pod-generated **narrative/impression** layer (text only,
-    numbers stay bounded) for richer, question-aware read-outs.
-
-- **Catalog completeness (tests + imaging).** Expanded to the common ED studies.
-  Ordered **US / echo / MRI** (and normal-read CT head) now show **real,
-  curated, open-licensed** representative images — 11 verified Commons studies
-  (normal echo, normal abdominal US, cholelithiasis, hydronephrosis, AAA, normal
-  brain MRI, DWI stroke, lumbar-spine MRI, cervical-spine MRI, MRCP, normal head
-  CT), matching the ECG/CXR/CT bank; the key fix is that a **NORMAL read** now
-  resolves (it is queried as literally `"normal <study>"`), which is what left
-  the echo blank before.
-  - *Residual imaging gaps (next):* curated **normal chest / abdominal CT**,
-    **normal AXR**, and an **extremity X-ray / fracture** set; and US/MRI
-    *pathology* beyond the curated stills (DVT clot, FAST free fluid, ectopic,
-    cord compression, ductal stone) still fall to the live web-search fallback.
-
-- **Interview panel UX.** Scrolling, Q&A layout, and profile-photo panel
-  polished to the AMBOSS/Epic language.
-
----
-
-## ⚠️ 3. Honest limits (can't be faked well — by design)
-
-- **Generated CT / MRI / ECG / echo are NOT anatomically or diagnostically
-  accurate.** Image/3D generators invent anatomy, get L/R + slice geometry
-  wrong, and fabricate ECG morphology. For a tool whose value is reading the
-  *real* thing, that's actively miseducating. → We use **real, curated,
-  open-licensed** data with verified provenance (imaging bank + the atlas), and
-  will only ever *generate* non-diagnostic assets (patient portraits).
-
-- **True per-word lip-sync on the patient video** needs a real-time talking-head
-  avatar model — it can't come from a fixed pre-generated clip and can't run on
-  the (CPU, air-gapped) pod. What we do instead (shipped, #165): **sync the
-  clip's play duration to the actual spoken (ElevenLabs) audio** so the patient
-  "talks" for exactly as long as the reply lasts, and no longer loops. Per-word
-  sync remains the genuine limit.
-
-- **Symptoms baked into the still photo.** The generated portrait is a fixed
-  image and can't be re-rendered per-symptom. Live symptoms are shown instead
-  via **CSS animation from t0** (breathing rate tied to RR, sweat sheen, pallor /
-  cyanosis / fever tint, tremor, reduced-LOC droop) over the photo *and* the talk
-  video — which is reactive and medically honest.
-
----
-
-## 🌐 4. Infra still blocked (needs your hosting, not fakeable)
-
-- **Public gateway hosting + internet-scale multiplayer** — the pod firewalls
-  outbound tunnels, so it can't be publicly reachable. Needs a public host (or
-  opening the pod's egress). Multiplayer works locally on the LAN today.
-- **Native-clinician review** of the 12 machine-translated languages.
-- **CI is billing-blocked** on the GitHub account (payments failed) → merges are
-  gated locally (`tsc && vite build` + vitest) and admin-merged. Fix billing to
-  restore CI on PRs.
-
----
-
-## ✅ 5. Done this arc (for reference)
-
-Interview live path + `/api` dev proxy · unlimited case generation · vitals
-realtime + cross-panel + calm monitor · dynamic guidance + correct citations +
-guidance-off gating · ElevenLabs **voice** + **mic (STT)** · live symptom
-animation · orderable catalog fixes · real curated ECG/CXR/CT imaging ·
-full **AMBOSS/Epic redesign** (shell, A&P, all encounter tabs, nav preload) ·
-real role permissions + publish→learner wiring · dev/prototype "tells" removed ·
-de-hardcoded config. See git history / PRs #135–#156.
-
-Latest arc (#158–#165): **anatomy atlas** — real segmented-CT cross-section
-viewer at `/atlas` (#161) · **catalog completeness + action/time-responsive
-dynamic results** (#162) · **interview panel UX** — scrolling Q&A, chat bubbles,
-portrait (#163) · **patient voice ↔ talking-head sync** — the talk clip matches
-the real audio length instead of looping (#165).
+Work through section 2 in order; each item unblocks a phase exit gate in `docs/review/01` section 5. The next engineering items are the MuseTalk runner benchmark (doc 18 section 11), paediatric ranges (doc 14 section 6), server-authoritative rooms (P4) and the psychometric evidence pack (P6).
