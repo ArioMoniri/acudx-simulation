@@ -8,6 +8,18 @@ import type { AtlasOrgan } from "@/data/anatomyAtlas";
 
 const GLB_URL = `${import.meta.env.BASE_URL}atlas/organs.glb`;
 
+/** True when WebGL is being rasterised in software (no GPU behind it). */
+function isSoftwareGl(renderer: THREE.WebGLRenderer): boolean {
+  try {
+    const gl = renderer.getContext();
+    const info = gl.getExtension("WEBGL_debug_renderer_info");
+    const name = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+    return /swiftshader|llvmpipe|softpipe|software/i.test(name);
+  } catch {
+    return false;
+  }
+}
+
 interface ThreeApp {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -98,7 +110,13 @@ export function Organ3DViewer({
       }
       const w = container.clientWidth || 640;
       const h = container.clientHeight || 460;
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      // Adaptive quality: a software GL (SwiftShader / llvmpipe, i.e. a VM,
+      // remote desktop or a browser without GPU access) rasterises every pixel
+      // on the CPU, so the view renders at half resolution there and stays
+      // interactive; a real GPU keeps the device pixel ratio (capped at 2).
+      renderer.setPixelRatio(
+        isSoftwareGl(renderer) ? 0.5 : Math.min(window.devicePixelRatio || 1, 2),
+      );
       renderer.setSize(w, h);
       renderer.localClippingEnabled = true;
       container.appendChild(renderer.domElement);
@@ -231,8 +249,22 @@ export function Organ3DViewer({
         needsRender = true;
       };
       controls.addEventListener("change", requestRender);
+      // Spin (auto-rotate) only animates while the canvas is actually on screen
+      // and the tab is visible: scrolled past the viewer, the loop idles instead
+      // of drawing frames nobody sees (battery on phones, and on a software GL
+      // a frame costs hundreds of ms that would starve the rest of the page).
+      let inView = true;
+      const io =
+        typeof IntersectionObserver !== "undefined"
+          ? new IntersectionObserver((entries) => {
+              inView = entries.some((e) => e.isIntersecting);
+              if (inView) requestRender();
+            })
+          : null;
+      io?.observe(container);
       const tick = () => {
         raf = requestAnimationFrame(tick);
+        if (!inView || document.visibilityState === "hidden") return;
         // Emits "change" while damping or auto-rotating, which requests a frame.
         controls.update();
         if (!needsRender) return;
@@ -255,6 +287,7 @@ export function Organ3DViewer({
       const dispose = () => {
         cancelAnimationFrame(appRef.current?.raf ?? raf);
         ro.disconnect();
+        io?.disconnect();
         controls.removeEventListener("change", requestRender);
         controls.dispose();
         scene.traverse((obj: THREE.Object3D) => {
