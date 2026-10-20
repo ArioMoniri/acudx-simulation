@@ -36,14 +36,18 @@ test.describe("routes", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("role gates bounce a student off /authoring and /institution", async ({ browser, page }) => {
+  test("role gates refuse a student on /authoring and /institution with a notice", async ({ browser, page }) => {
+    // Acceptance 2026-10-20 D-21: a refused page names the role it needs instead of a
+    // silent redirect; the protected content must not render.
     const fresh = await browser.newContext({ viewport: page.viewportSize() ?? undefined });
     const p2 = await fresh.newPage();
     await createProfile(p2, { role: "student" });
-    await p2.goto("/authoring");
-    await expect(p2).toHaveURL(/\/$/);
-    await p2.goto("/institution");
-    await expect(p2).toHaveURL(/\/$/);
+    for (const path of ["/authoring", "/institution"]) {
+      await p2.goto(path);
+      const notice = p2.getByRole("alert").filter({ has: p2.locator("#role-gate-title") });
+      await expect(notice).toBeVisible();
+      await expect(p2.locator("#role-gate-title")).not.toBeEmpty();
+    }
     await fresh.close();
   });
 });
