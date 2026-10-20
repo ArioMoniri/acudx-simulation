@@ -217,15 +217,17 @@ async def test_director_is_deterministic_for_identical_actions(client: httpx.Asy
 
 
 async def test_director_deteriorates_after_a_missed_deadline(client: httpx.AsyncClient):
-    spec = _live_spec("fever-fever_and_rigors")  # ESI 2 sepsis: 20 min definitive-treatment deadline
+    # Review 06b F06: the deadline is the guideline target (sepsis antimicrobial
+    # within 1 h, NICE NG253), not an ESI clock; the course keeps worsening.
+    spec = _live_spec("fever-fever_and_rigors")
     base = spec["triage_vitals"]
-    steps = await _run(client, spec, [{"kind": "elapsed", "elapsed_ms": 25 * 60_000},
+    steps = await _run(client, spec, [{"kind": "elapsed", "elapsed_ms": 65 * 60_000},
                                       {"kind": "elapsed", "elapsed_ms": 5 * 60_000}])
-    assert "missed_time_critical_treatment" in steps[0]["patient_visible_changes"]["complications_fired"]
-    assert any("missed_time_critical_treatment" in n["note"] for n in steps[0]["director_notes"])
+    assert "abx_1h" in steps[0]["patient_visible_changes"]["complications_fired"]
+    assert any("abx_1h" in n["note"] and "NG253" in n["why"] for n in steps[0]["director_notes"])
     v = steps[-1]["patient_visible_changes"]["vitals"]
-    assert v["hr"] > base["hr"] and v["systolic"] < base["systolic"] and v["spo2"] < base["spo2"]
-    assert any(e["kind"] == "missed_deadline" for e in steps[-1]["case_state"]["errors"])
+    assert v["hr"] > base["hr"] and v["systolic"] < base["systolic"] and v["spo2"] <= base["spo2"]
+    assert any(e["kind"] == "missed_target" for e in steps[-1]["case_state"]["errors"])
 
 
 async def test_director_improves_after_indicated_treatment(client: httpx.AsyncClient):
