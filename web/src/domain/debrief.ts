@@ -138,6 +138,20 @@ export interface Debrief {
   teachingPoints: TeachingPoint[];
   /** Real pod rubric insight, when the A&P obtained a live grade (optional). */
   grade?: GradeInsight;
+  /**
+   * Clinical Director notes logged during the encounter (Live mode): what the
+   * Director changed and why, in sim-clock order. Empty offline.
+   */
+  directorNotes: DirectorNoteItem[];
+}
+
+export interface DirectorNoteItem {
+  /** Sim-clock offset (ms) when the note was logged. */
+  atMs: number;
+  note: string;
+  why: string;
+  /** Set when the note records a fired complication rather than a narration. */
+  complication?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -394,6 +408,15 @@ export function buildDebrief(
     coverage: metrics.historyCoveragePct,
   });
 
+  const directorNotes: DirectorNoteItem[] = state.events
+    .filter((e) => e.meta?.director === true)
+    .map((e) => ({
+      atMs: e.at,
+      note: typeof e.meta?.note === "string" ? e.meta.note : typeof e.meta?.complication === "string" ? e.meta.complication : e.ref,
+      why: typeof e.meta?.why === "string" ? e.meta.why : "",
+      ...(typeof e.meta?.complication === "string" ? { complication: e.meta.complication } : {}),
+    }));
+
   return {
     dxVerdict,
     dxDisplay,
@@ -411,5 +434,6 @@ export function buildDebrief(
     redFlagReference: caseInstance.redFlags,
     teachingPoints,
     ...(resolved.grade ? { grade: resolved.grade } : {}),
+    directorNotes,
   };
 }
