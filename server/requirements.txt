@@ -17,6 +17,8 @@ langgraph==1.2.16
 langchain-core==1.6.12
 langgraph-checkpoint-sqlite==3.1.2
 aiosqlite>=0.21,<1.0
+# Multipart uploads for POST /v1/voice/stt (FastAPI UploadFile / Form).
+python-multipart>=0.0.20,<1.0
 # Guideline verifier (server/guidelines/verifier.py): fetch + extract the source documents.
 trafilatura>=1.8,<3.0
 lxml>=5.0,<7.0

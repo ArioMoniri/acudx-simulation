@@ -10,6 +10,9 @@ kind, or ``None``:
 4. for ``kind == "llm"`` only, when nothing is left and a worker manager is
    wired, the on-demand GPU worker is brought up (``ensure_worker``) and its
    endpoint returned. ``touch()`` resets the worker's idle window on each use.
+   Voice kinds (``tts``, ``stt``) ask for the same worker explicitly through
+   :meth:`RegistryResolver.resolve_worker`, which maps them onto the worker's
+   ``/tts`` and ``/stt`` routes behind the same bearer token.
 
 The resolver keeps decrypted keys in memory only for the lifetime of the
 returned endpoint; ``ProviderEndpoint.__repr__`` hides the key.
@@ -26,6 +29,11 @@ from server.providers.gpu_worker import WorkerRefused
 from server.registry.store import ProviderRecord, RegistryStore
 
 log = logging.getLogger("acudx.registry.resolve")
+
+# Worker route prefix per kind (infra/gpu-worker/cloud-init.yaml Caddyfile).
+WORKER_PATHS: dict[str, str] = {"llm": "/v1", "tts": "/tts", "stt": "/stt"}
+# What the worker serves on each route (served model names are fixed by the image).
+WORKER_MODELS: dict[str, str] = {"tts": "chatterbox-multilingual", "stt": "deepdml/faster-whisper-large-v3-turbo-ct2"}
 
 
 class WorkerManagerLike(Protocol):
@@ -58,6 +66,7 @@ class RegistryResolver:
         self.store = store
         self.settings = settings
         self.worker_manager = worker_manager
+        self.last_worker_refusal: str | None = None
 
     # -- filtering (sync, cheap) --------------------------------------------- #
     def _allowed(self, rec: ProviderRecord) -> bool:
@@ -93,6 +102,10 @@ class RegistryResolver:
         return ProviderEndpoint(kind=rec.kind, name=rec.name, base_url=rec.base_url.rstrip("/"), model=rec.model,
                                 api_key=self._key_for(rec), source="registry", provider_id=rec.id, extra=rec.extra)
 
+    def endpoints(self, kind: str) -> list[ProviderEndpoint]:
+        """Every eligible registry endpoint for ``kind`` in priority order (keys decrypted)."""
+        return [self._endpoint(rec) for rec in self.candidates(kind)]
+
     # -- resolution ----------------------------------------------------------- #
     async def resolve(self, kind: str) -> ProviderEndpoint | None:
         cands = self.candidates(kind)
@@ -103,17 +116,33 @@ class RegistryResolver:
         return None
 
     async def _gpu_endpoint(self) -> ProviderEndpoint | None:
-        assert self.worker_manager is not None
+        return await self.resolve_worker("llm")
+
+    async def resolve_worker(self, kind: str) -> ProviderEndpoint | None:
+        """The on-demand GPU worker's endpoint for ``kind`` (llm | tts | stt), or None when refused.
+
+        ``ensure_worker`` launches or reuses the worker; a :class:`WorkerRefused`
+        (air-gapped, not configured, budget, capacity) yields ``None`` with the
+        reason logged, so callers answer "unavailable" instead of egressing.
+        """
+        if self.worker_manager is None or kind not in WORKER_PATHS:
+            return None
         try:
             await self.worker_manager.ensure_worker()
         except WorkerRefused as exc:
-            log.info("gpu worker unavailable for llm resolution: %s", exc.reason)
+            log.info("gpu worker unavailable for %s resolution: %s", kind, exc.reason)
+            self.last_worker_refusal = exc.reason
             return None
+        self.last_worker_refusal = None
         ep = self.worker_manager.llm_endpoint()
         if not ep:
             return None
-        return ProviderEndpoint(kind="llm", name="gpu-worker", base_url=ep["base_url"].rstrip("/"),
-                                model=ep["model"], api_key=ep["api_key"], source="gpu_worker")
+        origin = ep["base_url"].rstrip("/")
+        if origin.endswith("/v1"):
+            origin = origin[: -len("/v1")]
+        model = ep["model"] if kind == "llm" else WORKER_MODELS[kind]
+        return ProviderEndpoint(kind=kind, name="gpu-worker", base_url=origin + WORKER_PATHS[kind], model=model,
+                                api_key=ep["api_key"], source="gpu_worker")
 
     def touch(self, endpoint: ProviderEndpoint | None) -> None:
         """Reset the GPU worker idle window after a request that used it."""

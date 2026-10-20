@@ -65,7 +65,71 @@ _HOST_SLUGS: tuple[tuple[str, str], ...] = (
     ("openrouter.ai", "openrouter"),
     ("huggingface.co", "huggingface"),
     ("openai.com", "openai"),
+    ("elevenlabs.io", "elevenlabs"),
+    ("deepgram.com", "deepgram"),
 )
+
+
+# --------------------------------------------------------------------------- #
+# Voice (TTS / STT) unit prices                                               #
+# --------------------------------------------------------------------------- #
+# TTS is billed per 1,000 characters, STT per audio minute. Figures read on
+# 2026-10-19 (docs/research/14-voice-video-stack-oct-2026.md sections 3.1, 3.2):
+#   ElevenLabs Flash/Turbo v2.5 and v4 Turbo $0.04 per 1k chars; Multilingual v2,
+#   v3 and v4 $0.08; Scribe v2 batch $0.22 per audio hour, Scribe v2 realtime
+#   $0.39 per audio hour (https://elevenlabs.io/pricing/api).
+#   Deepgram Nova-3 $0.0048/min monolingual, $0.0058/min multilingual; Aura-2
+#   $0.030 per 1k chars (https://deepgram.com/pricing).
+VoiceUnit = str   # "chars" (per 1,000 characters) | "minutes" (per audio minute)
+
+
+@dataclass(frozen=True)
+class VoicePriceRow:
+    provider: str
+    model_pattern: str
+    unit: VoiceUnit
+    usd_per_unit: float        # per 1k chars or per minute
+    effective_from: str
+    source_url: str
+
+    def matches(self, provider: str, model: str) -> bool:
+        return provider.lower().startswith(self.provider) and re.search(self.model_pattern, model, re.I) is not None
+
+
+VOICE_PRICE_TABLE: tuple[VoicePriceRow, ...] = (
+    VoicePriceRow("elevenlabs", r"eleven_(flash|turbo)_v2(_5)?$", "chars", 0.04, "2026-10-19",
+                  "https://elevenlabs.io/pricing/api"),
+    VoicePriceRow("elevenlabs", r"eleven_v4_turbo", "chars", 0.04, "2026-10-19", "https://elevenlabs.io/pricing/api"),
+    VoicePriceRow("elevenlabs", r"eleven_(multilingual_v2|v3|v4)$", "chars", 0.08, "2026-10-19",
+                  "https://elevenlabs.io/pricing/api"),
+    VoicePriceRow("elevenlabs", r"scribe_v2_realtime", "minutes", 0.39 / 60.0, "2026-10-19",
+                  "https://elevenlabs.io/pricing/api"),
+    VoicePriceRow("elevenlabs", r"scribe_v(1|2)", "minutes", 0.22 / 60.0, "2026-10-19",
+                  "https://elevenlabs.io/pricing/api"),
+    VoicePriceRow("deepgram", r"nova-3.*multi|nova-3-multi", "minutes", 0.0058, "2026-10-19",
+                  "https://deepgram.com/pricing"),
+    VoicePriceRow("deepgram", r"nova-3", "minutes", 0.0048, "2026-10-19", "https://deepgram.com/pricing"),
+    VoicePriceRow("deepgram", r"aura-2", "chars", 0.030, "2026-10-19", "https://deepgram.com/pricing"),
+)
+
+
+def voice_lookup(provider: str, model: str) -> VoicePriceRow | None:
+    for row in VOICE_PRICE_TABLE:
+        if row.matches(provider, model):
+            return row
+    return None
+
+
+def voice_cost_usd(provider: str, model: str, *, chars: int = 0, audio_seconds: float = 0.0) -> float:
+    """USD for one TTS (characters) or STT (audio seconds) call; self-hosted and unknown cost 0."""
+    if provider.lower() in _FREE_PROVIDERS:
+        return 0.0
+    row = voice_lookup(provider, model or "")
+    if row is None:
+        return 0.0
+    if row.unit == "chars":
+        return round(max(0, chars) / 1000.0 * row.usd_per_unit, 8)
+    return round(max(0.0, audio_seconds) / 60.0 * row.usd_per_unit, 8)
 
 
 def provider_from_url(base_url: str) -> str | None:

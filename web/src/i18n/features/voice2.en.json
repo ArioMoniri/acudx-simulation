@@ -1,0 +1,46 @@
+{
+  "voice2": {
+    "tile": {
+      "heading": "Patient call",
+      "synthetic": "Synthetic patient",
+      "status": {
+        "connecting": "Connecting",
+        "live": "Live video",
+        "audio": "Voice call",
+        "textTimed": "Text-timed animation",
+        "hold": "On hold",
+        "ended": "Call ended",
+        "muted": "Muted"
+      },
+      "degraded": "Realtime video unavailable; the talking head follows the voice audio.",
+      "noVoice": "No voice provider is enabled. Replies are shown as text.",
+      "voiceOff": "Voice is off. Turn it on to hear the patient.",
+      "controls": {
+        "mute": "Mute patient",
+        "unmute": "Unmute patient",
+        "hold": "Hold",
+        "resume": "Resume",
+        "end": "End call",
+        "rejoin": "Rejoin call",
+        "captionsOn": "Hide captions",
+        "captionsOff": "Show captions",
+        "voiceOn": "Voice on",
+        "voiceOff": "Voice off"
+      },
+      "captions": {
+        "label": "Live captions",
+        "patient": "Patient",
+        "you": "You",
+        "listening": "Listening…",
+        "empty": "Captions appear as the patient speaks."
+      },
+      "provenance": {
+        "voice": "Voice: {{provider}}",
+        "firstAudio": "First audio {{ms}} ms",
+        "renderer": "Video: {{renderer}}"
+      },
+      "signs": "Presentation",
+      "endedNote": "The patient is still here. Rejoin to continue the voice call; typing always works."
+    }
+  }
+}

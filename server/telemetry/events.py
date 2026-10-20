@@ -152,7 +152,8 @@ class TelemetryRecorder:
                    error: str | None, ts: float) -> None:
         if self.tracer is None:
             return
-        op = {"llm": "chat", "embed": "embeddings", "rerank": "rerank"}.get(kind, kind)
+        op = {"llm": "chat", "embed": "embeddings", "rerank": "rerank", "tts": "text_to_speech",
+              "stt": "speech_to_text"}.get(kind, kind)
         start_ns = int((ts - latency_ms / 1000.0) * 1e9)
         attrs: dict[str, Any] = {
             "gen_ai.operation.name": op,
@@ -185,11 +186,15 @@ class TelemetryRecorder:
     def record(self, *, kind: str, provider: str, model: str, tokens_in: int = 0, tokens_out: int = 0,
                cached_tokens: int = 0, latency_ms: float, route: str | None = None, tenant: str | None = None,
                user_hash: str | None = None, encounter_id: str | None = None, ok: bool, error: str | None = None,
-               requested_model: str | None = None, billing_provider: str | None = None) -> CallRow:
+               requested_model: str | None = None, billing_provider: str | None = None,
+               cost_usd: float | None = None) -> CallRow:
         """Persist one call. Explicit context args win over the ambient :func:`call_context`.
 
         ``provider`` is the registry row name shown in dashboards; ``billing_provider``
-        (default: the same) is the slug the price table is keyed by.
+        (default: the same) is the slug the price table is keyed by. ``cost_usd``
+        overrides the token-table price for calls billed in other units (TTS
+        characters, STT minutes; see :func:`server.telemetry.prices.voice_cost_usd`),
+        with ``tokens_in`` then carrying the billed unit count.
         """
         ambient = current_context()
         ctx = CallContext(route=route if route is not None else ambient.route,
@@ -197,7 +202,8 @@ class TelemetryRecorder:
                           user_hash=user_hash if user_hash is not None else ambient.user_hash,
                           encounter_id=encounter_id if encounter_id is not None else ambient.encounter_id)
         ts = self._clock()
-        cost = prices.cost_usd(billing_provider or provider, model, tokens_in, tokens_out, cached_tokens)
+        cost = (float(cost_usd) if cost_usd is not None
+                else prices.cost_usd(billing_provider or provider, model, tokens_in, tokens_out, cached_tokens))
         with self._conn() as c:
             cur = c.execute(
                 "INSERT INTO model_calls (ts, kind, provider, model, tokens_in, tokens_out, cached_tokens, latency_ms, "

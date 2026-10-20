@@ -1,33 +1,27 @@
 /**
- * tts — real patient voice via the dev-server ElevenLabs proxy (POST /tts).
+ * tts: the patient's spoken voice through the gateway (POST /api/v1/voice/tts).
  *
- * The API key lives only in the Node dev server (see vite.config.ts); the
- * browser POSTs text + a voice id and plays the returned audio. It degrades
- * gracefully: if the proxy is unconfigured (503) or unreachable, the patient
- * stays text-only and we stop retrying for the session.
+ * The gateway resolves the provider from the admin registry (ElevenLabs, Deepgram
+ * Aura, the GPU worker's Chatterbox Multilingual, any OpenAI-compatible server)
+ * and streams the audio back; keys never reach the browser (server/voice). Voice
+ * selection by patient sex, age band and language lives server-side too
+ * (server/voice/profiles.py), so this module only forwards the profile.
  *
- * Autoplay: browsers block `audio.play()` that isn't inside a user gesture, and
- * our audio arrives AFTER an async fetch (out of the gesture). So we keep ONE
- * persistent <audio> element and "unlock" it on the Voice-toggle click
- * (`unlockTts()`, synchronous, inside the gesture) by playing a silent clip;
- * after that, programmatic playback of the fetched speech is allowed.
+ * Autoplay: browsers block `audio.play()` outside a user gesture and our audio
+ * arrives after an async fetch, so ONE persistent <audio> element is "unlocked"
+ * on the Voice-toggle click (`unlockTts`, synchronous, inside the gesture) by
+ * playing a silent clip. The same element is what the lip-sync analyser reads
+ * (`getTtsAudioElement`), so the face follows the real audio.
  *
- * Voices are ElevenLabs premade voices (on every account), chosen by the
- * patient's sex + age so the voice matches the person on screen.
+ * Degrades gracefully: a 503 (no provider can serve) disables voice for the
+ * session and the patient stays text-only with the text-timed animation.
  */
 
-type Sex = "male" | "female";
+import { playTtsStream, voiceApi, type Sex, type TtsMeta, type VoiceApi } from "@/lib/voiceApi";
 
-const VOICE: Record<Sex, { younger: string; older: string }> = {
-  female: { younger: "21m00Tcm4TlvDq8ikWAM", older: "ThT5KcBeYPX3keUQqHPh" },
-  male: { younger: "TxGEqnHWrfWFTfGW9XjX", older: "pNInz6obpgDQGcFmaJgB" },
-};
+export type { Sex };
 
-/** Pick a voice id for a patient by sex + age band. */
-export function voiceIdFor(sex: Sex, age: number): string {
-  const bySex = VOICE[sex] ?? VOICE.male;
-  return age >= 55 ? bySex.older : bySex.younger;
-}
+export type VoiceProfile = { sex: Sex; age: number; lang: string };
 
 // A short silent WAV used only to unlock playback within a user gesture.
 const SILENT_WAV =
@@ -36,20 +30,36 @@ const SILENT_WAV =
 let el: HTMLAudioElement | null = null;
 let unlocked = false;
 let disabledForSession = false;
+let muted = false;
+let api: VoiceApi = voiceApi;
+let lastMeta: TtsMeta | null = null;
+let lastFirstAudioMs: number | null = null;
+let current: AbortController | null = null;
+
+/** Swap the gateway client (tests). */
+export function configureTts(client: VoiceApi): void {
+  api = client;
+}
 
 function element(): HTMLAudioElement | null {
   if (typeof Audio === "undefined") return null;
   if (!el) {
     el = new Audio();
     el.preload = "auto";
+    el.crossOrigin = "anonymous";
   }
   return el;
 }
 
+/** The shared playback element (for the Web Audio analyser); null outside a browser. */
+export function getTtsAudioElement(): HTMLAudioElement | null {
+  return element();
+}
+
 /**
- * Unlock audio playback — call SYNCHRONOUSLY from a user gesture (the Voice-on
+ * Unlock audio playback: call SYNCHRONOUSLY from a user gesture (the Voice-on
  * click). Plays a silent clip on the persistent element so the browser then
- * permits programmatic playback of the fetched speech.
+ * permits programmatic playback of the streamed speech.
  */
 export function unlockTts(): void {
   const a = element();
@@ -66,17 +76,19 @@ export function unlockTts(): void {
       } catch {
         /* ignore */
       }
-      a.muted = false;
+      a.muted = muted;
     };
-    if (p && typeof p.then === "function") p.then(done).catch(() => (a.muted = false));
+    if (p && typeof p.then === "function") p.then(done).catch(() => (a.muted = muted));
     else done();
   } catch {
     /* ignore */
   }
 }
 
-/** Stop any patient audio currently playing. */
+/** Stop any patient audio currently playing (and cancel an in-flight download). */
 export function stopTts(): void {
+  current?.abort();
+  current = null;
   if (el) {
     try {
       el.pause();
@@ -86,75 +98,100 @@ export function stopTts(): void {
   }
 }
 
+/** Pause without discarding the clip (call hold); `resumeTts` continues it. */
+export function pauseTts(): void {
+  try {
+    el?.pause();
+  } catch {
+    /* ignore */
+  }
+}
+
+export function resumeTts(): void {
+  if (!el || !el.src) return;
+  void el.play().catch(() => {});
+}
+
+/** Mute the patient's voice without stopping playback (the face keeps moving). */
+export function setTtsMuted(next: boolean): void {
+  muted = next;
+  if (el) el.muted = next;
+}
+
+export function isTtsMuted(): boolean {
+  return muted;
+}
+
+/** Provenance of the most recent synthesis (provider, model, duration, latency). */
+export function lastTtsMeta(): (TtsMeta & { firstAudioMs: number | null }) | null {
+  return lastMeta ? { ...lastMeta, firstAudioMs: lastFirstAudioMs } : null;
+}
+
+export interface SpeakOptions extends VoiceProfile {
+  /** Fires once the clip's duration is known (0 when still unknown, e.g. MP3 via MediaSource). */
+  onStart?: (durationMs: number) => void;
+  /** Fires with the measured first-audio latency in ms. */
+  onFirstAudio?: (latencyMs: number) => void;
+  onEnded?: () => void;
+  signal?: AbortSignal;
+}
+
 /**
  * Speak `text` in the patient's voice on the shared (unlocked) element. A new
- * call cancels the previous one. `onStart` fires once the clip's real duration
- * is known (metadata loaded), and `onEnded` when playback finishes — together
- * they let the caller drive a "speaking" treatment that matches the actual
- * audio length instead of a text estimate. Returns whether audio began.
+ * call cancels the previous one. Returns whether audio began streaming; `false`
+ * means the caller should fall back to the text-timed animation.
  */
-export async function speakAsPatient(
-  text: string,
-  opts: {
-    sex: Sex;
-    age: number;
-    onStart?: (durationMs: number) => void;
-    onEnded?: () => void;
-    signal?: AbortSignal;
-  },
-): Promise<boolean> {
+export async function speakAsPatient(text: string, opts: SpeakOptions): Promise<boolean> {
   const clean = text?.trim();
   const a = element();
   if (!clean || disabledForSession || !a) return false;
   stopTts();
+  const ctl = new AbortController();
+  current = ctl;
+  opts.signal?.addEventListener("abort", () => ctl.abort(), { once: true });
+  const startedAt = typeof performance !== "undefined" ? performance.now() : Date.now();
   try {
-    const res = await fetch("/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: clean, voiceId: voiceIdFor(opts.sex, opts.age) }),
-      signal: opts.signal,
-    });
-    if (res.status === 503) {
-      disabledForSession = true; // no key configured — don't hammer it again
+    const res = await api.synthesize(
+      { text: clean, lang: opts.lang, sex: opts.sex, age: opts.age, format: "mp3" },
+      { signal: ctl.signal },
+    );
+    if (!res.ok) {
+      if (res.error === "unavailable") disabledForSession = true; // nothing can serve; stop asking
       return false;
     }
-    if (!res.ok) return false;
-    const url = URL.createObjectURL(await res.blob());
-    if (opts.signal?.aborted) {
-      URL.revokeObjectURL(url);
-      return false;
-    }
-    const onDone = () => {
-      URL.revokeObjectURL(url);
-      opts.onEnded?.();
-    };
-    // Fire onStart once, as soon as the real clip duration is known, so the
-    // caller can size the "speaking" animation to the voice (0 = still unknown).
+    if (ctl.signal.aborted) return false;
+    lastMeta = res.meta;
+    lastFirstAudioMs = null;
     let started = false;
-    const fireStart = () => {
-      if (started || opts.signal?.aborted) return;
+    const fireStart = (durationMs: number) => {
+      if (started || ctl.signal.aborted) return;
       started = true;
-      const d = a.duration;
-      opts.onStart?.(Number.isFinite(d) && d > 0 ? Math.round(d * 1000) : 0);
+      opts.onStart?.(durationMs);
     };
-    a.onended = onDone;
-    a.onerror = () => URL.revokeObjectURL(url);
-    a.onloadedmetadata = fireStart;
-    a.muted = false;
-    a.src = url;
-    a.currentTime = 0;
-    await a.play().catch(() => {
-      /* blocked despite unlock — stay silent */
+    a.muted = muted;
+    const handle = playTtsStream(res.response, a, {
+      signal: ctl.signal,
+      startedAt,
+      onFirstAudio: (ms) => {
+        lastFirstAudioMs = ms;
+        opts.onFirstAudio?.(ms);
+        // Duration may stay unknown while streaming through MediaSource; the
+        // analyser-driven lip-sync does not need it, so start the treatment now.
+        fireStart(res.meta.durationMs ?? 0);
+      },
+      onDuration: (ms) => fireStart(ms),
     });
-    // Metadata is often already available by the time play() resolves.
-    if (a.readyState >= 1) fireStart();
+    void handle.done.then(() => {
+      if (current === ctl) current = null;
+      if (!ctl.signal.aborted) opts.onEnded?.();
+    });
     return true;
   } catch {
     return false;
   }
 }
 
-/** True until the proxy has told us (via a 503) that no key is configured. */
+/** True until the gateway has answered 503 (no provider can serve) this session. */
 export function ttsMaybeAvailable(): boolean {
   return !disabledForSession;
 }

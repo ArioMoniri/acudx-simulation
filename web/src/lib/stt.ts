@@ -1,12 +1,15 @@
 /**
- * stt — microphone dictation for the learner, via the dev-server ElevenLabs
- * speech-to-text proxy (POST /stt). Records the mic with MediaRecorder, sends
- * the audio to the proxy (key stays server-side, see vite.config.ts), and
- * returns the transcript. Replaces the flaky browser Web Speech API.
+ * stt: microphone dictation for the learner through the gateway
+ * (POST /api/v1/voice/stt). Records the mic with MediaRecorder, sends the clip,
+ * and returns the transcript. The gateway picks the provider from the admin
+ * registry (Deepgram Nova-3, ElevenLabs Scribe, the GPU worker's speaches with
+ * faster-whisper large-v3-turbo); keys stay server-side.
  *
- * Everything degrades gracefully: no mic permission / unsupported / proxy
- * unconfigured (503) → returns null and the composer stays typed-only.
+ * Everything degrades gracefully: no mic permission / unsupported / no provider
+ * (503) returns null and the composer stays typed-only.
  */
+
+import { voiceApi, type SttResponse, type VoiceApi } from "@/lib/voiceApi";
 
 export const sttSupported =
   typeof navigator !== "undefined" &&
@@ -16,6 +19,14 @@ export const sttSupported =
 let stream: MediaStream | null = null;
 let recorder: MediaRecorder | null = null;
 let chunks: BlobPart[] = [];
+let api: VoiceApi = voiceApi;
+let disabledForSession = false;
+let lastResult: SttResponse | null = null;
+
+/** Swap the gateway client (tests). */
+export function configureStt(client: VoiceApi): void {
+  api = client;
+}
 
 function cleanup(): void {
   stream?.getTracks().forEach((t) => t.stop());
@@ -51,7 +62,20 @@ export function isRecording(): boolean {
   return !!recorder && recorder.state === "recording";
 }
 
-/** Stop recording, transcribe via /stt, and return the text (or null). */
+/** Transcribe an already recorded clip (shared by the mic path and tests). */
+export async function transcribeBlob(blob: Blob, lang?: string): Promise<string | null> {
+  if (!blob.size || disabledForSession) return null;
+  const res = await api.transcribe(blob, { lang });
+  if (!res.ok) {
+    if (res.status === 503) disabledForSession = true;
+    return null;
+  }
+  lastResult = res.data;
+  const text = res.data.text?.trim();
+  return text ? text : null;
+}
+
+/** Stop recording, transcribe via the gateway, and return the text (or null). */
 export async function stopAndTranscribe(lang?: string): Promise<string | null> {
   const rec = recorder;
   if (!rec) return null;
@@ -65,16 +89,8 @@ export async function stopAndTranscribe(lang?: string): Promise<string | null> {
     }
   });
   cleanup();
-  if (!blob.size) return null;
   try {
-    const fd = new FormData();
-    fd.append("file", blob, "dictation." + (type.includes("mp4") ? "mp4" : "webm"));
-    fd.append("model_id", "scribe_v1");
-    if (lang) fd.append("language_code", lang);
-    const res = await fetch("/stt", { method: "POST", body: fd });
-    if (!res.ok) return null;
-    const j = (await res.json().catch(() => null)) as { text?: string } | null;
-    return j && typeof j.text === "string" ? j.text.trim() : null;
+    return await transcribeBlob(blob, lang);
   } catch {
     return null;
   }
@@ -90,4 +106,14 @@ export function cancelRecording(): void {
     }
   }
   cleanup();
+}
+
+/** Provider, language and confidence of the last transcript (for captions / telemetry). */
+export function lastSttResult(): SttResponse | null {
+  return lastResult;
+}
+
+/** True until the gateway has answered 503 (no provider can serve) this session. */
+export function sttMaybeAvailable(): boolean {
+  return !disabledForSession;
 }
