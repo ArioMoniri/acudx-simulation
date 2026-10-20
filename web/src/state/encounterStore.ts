@@ -594,7 +594,7 @@ function requestEngineResult(order: PlacedOrder): void {
     if (ev.type === "treatment" && typeof ev.meta?.display === "string") labels[ev.ref] = ev.meta.display;
   }
   const req = engineResolveOrder({
-    case_state: resultsCaseState(c, state.treatments, labels),
+    case_state: resultsCaseState(c, state.treatments, labels, state.director.overlay?.results ?? null),
     order_code: order.code,
     sim_time_ms: order.placedAt,
     prior: prior.length ? prior : null,

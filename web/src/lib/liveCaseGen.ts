@@ -64,6 +64,7 @@ import type {
   VitalsTrajectoryPoint,
 } from "@/domain/case";
 import type { VitalEffect, VitalKey } from "@/domain/treatments";
+import { courseBindingFromSpec, type CourseSpecLike } from "@/domain/clinicalCourse";
 
 /* -------------------------------------------------------------------------- */
 /* Wire shape — GeneratedCaseSpec (mirrors server /v1/case/generate)           */
@@ -179,6 +180,8 @@ export interface SpecGuidelineAnchor {
 }
 
 export interface SpecMeta {
+  /** Catalogue condition id (the Director's course rule key). */
+  condition_id?: string;
   source?: string;
   model?: string;
   latency_ms?: number;
@@ -984,6 +987,9 @@ export function specToCaseInstance(spec: GeneratedCaseSpec): CaseInstance {
     ...(treatmentResponses ? { treatmentResponses } : {}),
     provenance: "generated",
   };
+  // Review 06b: bind the case to the shared course model when its condition has a rule.
+  const course = courseBindingFromSpec(spec as CourseSpecLike);
+  if (course) candidate.course = course;
 
   return gapFill(candidate);
 }
