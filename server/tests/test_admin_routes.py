@@ -90,3 +90,35 @@ def test_boot_log_by_worker_id_survives_the_worker(tmp_path):
     latest = c.get("/admin/gpu/boot-log", headers=h).json()
     assert latest["cloud_init"] == "ci" and latest["live_error"] == "no active worker with an ip"
     assert c.get(f"/admin/gpu/boot-log?worker_id={w.id}").status_code == 401
+
+
+def test_policy_put_merges_partial_updates(tmp_path, monkeypatch):
+    """Live finding 2026-10-20: a one-field PUT reset budget, allowlist and filesystem."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    import server.admin_routes as ar
+    from server.providers.gpu_worker import WorkerPolicy
+
+    class Mgr:
+        def __init__(self):
+            self.policy = WorkerPolicy(idle_minutes=30, daily_budget_usd=12.0,
+                                       allowlist=["gpu_1x_a100_sxm4"], file_system_name="acudx-wm")
+        def set_policy(self, p):
+            self.policy = p
+            return p
+
+    monkeypatch.setenv("ADMIN_TOKEN", "t")
+    app = FastAPI()
+    app.include_router(ar.router)
+    app.state.worker_manager = Mgr()
+    app.state.settings = type("S", (), {"admin_token": "t"})()
+    app.state.auth = None
+    c = TestClient(app)
+    r = c.put("/admin/gpu/policy", json={"llm_model": "Qwen/Qwen3-14B-AWQ"}, headers={"X-Admin-Token": "t"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["llm_model"] == "Qwen/Qwen3-14B-AWQ"
+    assert body["daily_budget_usd"] == 12.0 and body["idle_minutes"] == 30
+    assert body["allowlist"] == ["gpu_1x_a100_sxm4"] and body["file_system_name"] == "acudx-wm"
+    assert c.put("/admin/gpu/policy", json={"bogus": 1}, headers={"X-Admin-Token": "t"}).status_code == 422
+    assert c.put("/admin/gpu/policy", json={"idle_minutes": 0}, headers={"X-Admin-Token": "t"}).status_code == 422

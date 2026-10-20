@@ -12,7 +12,8 @@ from __future__ import annotations
 import secrets
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
+from pydantic import ValidationError
 
 from server.auth.deps import bearer_admin
 from server.providers.gpu_worker import WorkerManager, WorkerPolicy, WorkerRefused
@@ -101,5 +102,19 @@ async def gpu_policy_get(request: Request) -> WorkerPolicy:
 
 
 @router.put("/gpu/policy", dependencies=[Depends(require_admin)])
-async def gpu_policy_put(request: Request, policy: WorkerPolicy) -> WorkerPolicy:
-    return _manager(request).set_policy(policy)
+async def gpu_policy_put(request: Request, patch: dict[str, Any] = Body(...)) -> WorkerPolicy:
+    """Merge the given fields into the current policy (unknown fields 422).
+
+    A partial body only changes the fields it names; it never resets the others to
+    their defaults (live finding 2026-10-20: a one-field PUT reset the budget,
+    allowlist and filesystem).
+    """
+    m = _manager(request)
+    unknown = set(patch) - set(WorkerPolicy.model_fields)
+    if unknown:
+        raise HTTPException(status_code=422, detail={"unknown_fields": sorted(unknown)})
+    try:
+        merged = WorkerPolicy.model_validate({**m.policy.model_dump(), **patch})
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors(include_url=False)) from exc
+    return m.set_policy(merged)
