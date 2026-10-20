@@ -63,6 +63,19 @@ def call_context(**fields: str | None) -> Iterator[CallContext]:
         _ctx.reset(token)
 
 
+def bind_context(**fields: str | None) -> contextvars.Token:
+    """Bind a context without a ``with`` block (async generators that outlive the request)."""
+    return _ctx.set(CallContext(**fields))
+
+
+def unbind_context(token: contextvars.Token) -> None:
+    """Undo :func:`bind_context`; tolerant of a generator closed from another context."""
+    try:
+        _ctx.reset(token)
+    except ValueError:
+        pass
+
+
 # --------------------------------------------------------------------------- #
 # recorder                                                                    #
 # --------------------------------------------------------------------------- #

@@ -6,10 +6,15 @@
 * ``sample_condition`` draws the condition spine from the catalog, seeded, and
   consults the learner memory (avoid repeats, steer to weak systems).
 * ``author`` asks the casegen model for a full draft as structured JSON
-  (temperature 0.7). No template is merged in: the draft is the model's.
+  (temperature 0.7). No template is merged in: the draft is the model's, then
+  ``normalize.normalize_draft`` maps treatment codes, clamps effect onsets and
+  fills empty objective fields from the condition fixture, listing every filled
+  field in ``meta.gap_filled``.
 * The three judges run in parallel via ``Send``; ``aggregate`` takes the
   majority with a safety veto; ``repair`` asks the model to fix the listed
-  issues, at most ``max_repairs`` times.
+  issues, at most ``max_repairs`` times when a veto stands, at most once when
+  only non-veto votes failed, and never when the wall-clock budget
+  (``time_budget_s``) would be exceeded.
 * ``ground`` attaches guideline anchors strictly by existing statement id.
 * ``finalize`` validates with pydantic, overwrites the authoritative codes,
   and records the case in learner memory.
@@ -34,14 +39,18 @@ from langgraph.types import Send
 from server.case_generator import (
     APPROPRIATENESS, DISPOSITIONS, INTENTS, MANEUVERS, GeneratedCaseSpec, _clamp,
 )
-from server.condition_catalog import list_systems, sample_condition
+from server import case_generator as CG
+from server.condition_catalog import complaint_keys, list_systems, sample_condition
 from server.orchestration import judges as J
+from server.orchestration import normalize as N
 from server.orchestration.anchors import anchor_from_statement, candidate_ids, resolve_anchors, statement_index
 from server.orchestration.llm import ModelOutputInvalid, StructuredLLM, schema_of
 from server.orchestration.memory import LearnerMemory
 from server.orchestration.trace import make_event, summarize
 
 MAX_REPAIRS_DEFAULT = 2
+MAX_NONVETO_REPAIRS = 1     # repair rounds when no veto stands (only votes failed)
+TIME_BUDGET_S_DEFAULT = 120.0
 AUTHOR_TEMPERATURE = 0.7
 REPAIR_TEMPERATURE = 0.3
 AUTHOR_MAX_TOKENS = 2400
@@ -54,7 +63,43 @@ class AuthorDraft(GeneratedCaseSpec):
     guideline_anchor_ids: list[str] = []
 
 
-AUTHOR_SCHEMA = schema_of(AuthorDraft, drop=("guideline_anchors",))
+def _author_schema() -> dict[str, Any]:
+    """The JSON schema the author must fill.
+
+    Live finding 2026-10-20: with labs, imaging and red_flags optional (they
+    default to ``[]``) the 14B model left all three empty, every treatment code
+    was ``""``, and one repair emitted 53 invented anchor ids until it hit the
+    token cap. The objective sections are therefore required with minimum
+    counts, codes must be non-empty, and anchor ids are capped at three."""
+    schema = schema_of(AuthorDraft, drop=("guideline_anchors",))
+    props = schema["properties"]
+    for key, lo, hi in (("hpi", 5, 8), ("exam", 3, 5), ("vitals_trajectory", 3, 5), ("labs", 2, 5),
+                        ("imaging", 1, 2), ("treatments", 3, 5), ("red_flags", 1, 4)):
+        props[key]["minItems"] = lo
+        props[key]["maxItems"] = hi
+        props[key].pop("default", None)
+    props["guideline_anchor_ids"]["maxItems"] = 3
+    required = list(schema.get("required") or [])
+    for key in ("vitals_trajectory", "labs", "imaging", "treatments", "red_flags", "disposition",
+                "guideline_anchor_ids"):
+        if key not in required:
+            required.append(key)
+    schema["required"] = required
+    defs = schema.get("$defs") or {}
+    for name, fields in (("Treatment", ("code", "appropriateness", "effects")), ("Lab", ("code", "unit", "ref_low",
+                                                                                          "ref_high", "flag")),
+                         ("RedFlag", ("channel",)), ("Imaging", ("code",))):
+        d = defs.get(name)
+        if not d:
+            continue
+        d["required"] = sorted(set(d.get("required") or []) | set(fields))
+        if "code" in d.get("properties", {}):
+            d["properties"]["code"].pop("default", None)
+            d["properties"]["code"]["minLength"] = 1
+    return schema
+
+
+AUTHOR_SCHEMA = _author_schema()
 
 
 class CaseGenState(TypedDict, total=False):
@@ -70,6 +115,9 @@ class CaseGenState(TypedDict, total=False):
     votes: Annotated[list[dict[str, Any]], operator.add]
     round: int
     repairs: int
+    started_at: float
+    gap_filled: list[str]
+    normalization: list[str]
     council: dict[str, Any]
     anchors: list[dict[str, Any]]
     spec: dict[str, Any]
@@ -82,6 +130,8 @@ class CaseGenDeps:
     llm: Optional[StructuredLLM]
     memory: Optional[LearnerMemory] = None
     max_repairs: int = MAX_REPAIRS_DEFAULT
+    max_nonveto_repairs: int = MAX_NONVETO_REPAIRS
+    time_budget_s: float = TIME_BUDGET_S_DEFAULT
 
 
 class CouncilRejected(RuntimeError):
@@ -132,8 +182,22 @@ _AUTHOR_SYSTEM = (
 )
 
 
+def _reference_block(cond: dict[str, Any]) -> str:
+    """Treatment codes, labs and imaging from the condition fixture for the prompt."""
+    prof = CG._resolve_fixture(cond)
+    tx = "\n".join(f"  - {t[0]}: {t[1]} ({t[3]})" for t in prof.get("treatments") or [])
+    web = ", ".join(f"{c} {en}" for c, en, _tr, _cls in N.WEB_TREATMENT_CATALOG)
+    labs = "\n".join(f"  - {r[0]} {r[1]}: unit {r[4]}, ref {r[5]}-{r[6]}" for r in prof.get("labs") or [])
+    img = prof.get("imaging")
+    img_line = f"  - {img[0]} {img[1]}" if img else "  - (choose a condition-appropriate study)"
+    return (f"- treatment codes for this condition (use these codes):\n{tx}\n"
+            f"- other catalogue codes: {web}\n"
+            f"- reference labs (LOINC code, UCUM unit, reference interval):\n{labs}\n"
+            f"- reference imaging:\n{img_line}")
+
+
 def author_messages(cond: dict[str, Any], *, locale: str, acuity: int, difficulty: int,
-                    candidates: list[str]) -> list[dict[str, str]]:
+                    candidates: list[str], complaint: str | None = None) -> list[dict[str, str]]:
     rf = "; ".join(f"{r['en']} / {r['tr']}" for r in cond.get("red_flags", [])) or "(none)"
     index = statement_index()
     cand_lines = "\n".join(
@@ -141,6 +205,8 @@ def author_messages(cond: dict[str, Any], *, locale: str, acuity: int, difficult
         for sid in candidates if sid in index
     ) or "- (none available; return an empty list)"
     dsm = f"\n- DSM-5-TR: {cond['dsm5tr']}" if cond.get("dsm5tr") else ""
+    cc_rule = (f"- the learner asked for a patient presenting with \"{complaint}\": chief_complaint_en and "
+               f"chief_complaint_tr MUST present it in the patient's words\n" if complaint else "")
     user = f"""Author a full case. Output JSON only.
 
 CONDITION
@@ -154,22 +220,31 @@ CONDITION
 - red flags: {rf}
 
 CONSTRAINTS
-- primary locale: {locale}
+{cc_rule}- primary locale: {locale}
 - acuity_esi: {acuity} (1 = most acute .. 5 = least); difficulty: {difficulty} (1 .. 5)
 - hpi[].intent MUST be one of: {', '.join(INTENTS)}; include "onset"; mark red-flag positives red_flag=true
 - exam[].maneuver MUST be one of: {', '.join(MANEUVERS)}
 - treatments[].appropriateness MUST be one of: {', '.join(APPROPRIATENESS)}; include at least one indicated and one contraindicated
-- treatments[].effects[].key in hr, systolic, diastolic, rr, spo2, tempC, pain; deltas modest and signed
+- treatments[].code MUST be a catalogue code from REFERENCE below
+- treatments[].effects[].key in hr, systolic, diastolic, rr, spo2, tempC, pain; deltas modest and signed;
+  onsetMs is MILLISECONDS in sim time and realistic (oxygen 120000-600000, fluid bolus 300000-1800000,
+  antipyretic 1800000-7200000; antibiotics change no vital within the hour: effects [])
+- labs[]: use the reference LOINC codes and UCUM units; values consistent with the condition; flag N, L, H, LL or HH agreeing with ref_low and ref_high
+- red_flags[]: structured {{en, tr, channel}}; channel "clinician" for signs and results, "patient" for a symptom the patient can report
 - disposition one of: {', '.join(DISPOSITIONS)}
 - vitals physiologically plausible for the acuity (SpO2 <= 100, diastolic < systolic); ~4 trajectory points with increasing atMs from 0
 - 5-8 hpi items, 3-4 exam items, 2-4 labs with ref ranges and flags, 1-2 imaging, 3-4 treatments
 - guideline_anchor_ids: pick 1-3 ids ONLY from this list (never invent an id):
 {cand_lines}
+
+REFERENCE
+{_reference_block(cond)}
 """
     return [{"role": "system", "content": _AUTHOR_SYSTEM}, {"role": "user", "content": user}]
 
 
-def repair_messages(draft: dict[str, Any], cond: dict[str, Any], issues: list[str], hints: list[str]) -> list[dict[str, str]]:
+def repair_messages(draft: dict[str, Any], cond: dict[str, Any], issues: list[str], hints: list[str],
+                    complaint: str | None = None) -> list[dict[str, str]]:
     system = (
         "ROLE: repair\n"
         "You are the same case author. The judge council rejected your draft. Return the "
@@ -177,10 +252,12 @@ def repair_messages(draft: dict[str, Any], cond: dict[str, Any], issues: list[st
         "the issues require and keeping everything else identical."
     )
     user = (
-        f"CONDITION: {cond.get('id')} ({cond.get('label_en')})\n\n"
+        f"CONDITION: {cond.get('id')} ({cond.get('label_en')})\n"
+        + (f"REQUESTED COMPLAINT: {complaint}\n" if complaint else "")
+        + f"\nREFERENCE\n{_reference_block(cond)}\n\n"
         "ISSUES\n" + "\n".join(f"- {i}" for i in issues) + "\n\n"
         "HINTS\n" + ("\n".join(f"- {h}" for h in hints) or "- (none)") + "\n\n"
-        f"DRAFT\n{json.dumps(draft, ensure_ascii=False, separators=(',', ':'))}"
+        f"DRAFT\n{json.dumps({k: v for k, v in draft.items() if k != 'meta'}, ensure_ascii=False, separators=(',', ':'))}"
     )
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
@@ -252,7 +329,10 @@ def build_casegen_graph(deps: CaseGenDeps):
         )
         acuity = int(cond["typical_acuity"])
         difficulty = req["difficulty"] if req["difficulty"] is not None else int(cond["difficulty"])
+        if req["complaint"]:
+            cond["requested_complaint"] = req["complaint"]   # read by the pedagogy judge
         return {
+            "started_at": time.time(), "gap_filled": [], "normalization": [],
             "request": req, "seed": req["seed"], "locale": req["locale"], "condition": cond,
             "acuity": acuity, "difficulty": difficulty,
             "candidate_anchor_ids": candidate_ids(cond),
@@ -261,6 +341,7 @@ def build_casegen_graph(deps: CaseGenDeps):
             "trace": [make_event(
                 "sample_condition", started=started, condition_id=cond["id"], system=cond["system"],
                 steered_system=steer_system, excluded=len(exclude), systems=len(list_systems()),
+                complaint=req["complaint"], complaint_keys=complaint_keys(req["complaint"] or ""),
             )],
         }
 
@@ -291,6 +372,15 @@ def build_casegen_graph(deps: CaseGenDeps):
         draft.setdefault("acuity_esi", state["acuity"])
         return draft
 
+    def _normalize(draft: dict[str, Any], state: CaseGenState) -> dict[str, Any]:
+        report = N.normalize_draft(draft, state["condition"], seed=int(state["seed"]))
+        gap = list(dict.fromkeys([*(state.get("gap_filled") or []), *report["gap_filled"]]))
+        notes = [*(state.get("normalization") or []), *report["notes"]][-60:]
+        return {"gap_filled": gap, "normalization": notes, "report": report}
+
+    def _model_attrs(reply: Any) -> dict[str, Any]:
+        return {"cost_usd": reply.extras.get("cost_usd"), "cost_basis": reply.extras.get("cost_basis")}
+
     async def node_author(state: CaseGenState) -> dict[str, Any]:
         if deps.llm is None:
             raise RuntimeError("author requires a model; no StructuredLLM configured")
@@ -298,15 +388,21 @@ def build_casegen_graph(deps: CaseGenDeps):
         messages = author_messages(
             state["condition"], locale=state["locale"], acuity=state["acuity"],
             difficulty=state["difficulty"], candidates=state.get("candidate_anchor_ids") or [],
+            complaint=(state.get("request") or {}).get("complaint"),
         )
         reply = await _author_call(messages, AUTHOR_TEMPERATURE)
         draft = _stamp_authoritative(dict(reply.data), state)
+        norm = _normalize(draft, state)
         return {
             "draft": draft, "status": "authored",
+            "gap_filled": norm["gap_filled"], "normalization": norm["normalization"],
             "trace": [make_event(
                 "author", started=started, model=reply.model, model_requested=reply.model_requested,
                 provider=reply.provider, tokens_in=reply.tokens_in, tokens_out=reply.tokens_out,
-                temperature=AUTHOR_TEMPERATURE,
+                **_model_attrs(reply), temperature=AUTHOR_TEMPERATURE,
+                gap_filled=norm["report"]["gap_filled"], normalized=len(norm["report"]["notes"]),
+                unresolved_codes=norm["report"]["unresolved_codes"],
+                finish_reason=reply.extras.get("finish_reason"),
             )],
         }
 
@@ -333,13 +429,26 @@ def build_casegen_graph(deps: CaseGenDeps):
             )],
         }
 
+    def _repairs_exhausted(state: CaseGenState, council: dict[str, Any]) -> bool:
+        bound = deps.max_repairs if council.get("vetoed") else min(deps.max_repairs, deps.max_nonveto_repairs)
+        return int(state.get("repairs", 0)) >= bound
+
     def route_after_aggregate(state: CaseGenState) -> str:
         council = state.get("council") or {}
         if council.get("decision") == "accept":
             return "ground"
-        if int(state.get("repairs", 0)) < deps.max_repairs:
-            return "repair"
-        return "ground"
+        if _repairs_exhausted(state, council):
+            return "ground"
+        # Wall-clock budget: a repair costs about one author call plus one judge round.
+        trace = state.get("trace") or []
+        last_author = max((float(e.get("latency_ms") or 0.0) for e in trace if e.get("node") in ("author", "repair")),
+                          default=0.0)
+        judges = max((float(e.get("latency_ms") or 0.0) for e in trace if str(e.get("node")).startswith("judge:")),
+                     default=0.0)
+        elapsed = time.time() - float(state.get("started_at") or time.time())
+        if elapsed + (last_author + judges) / 1000.0 > deps.time_budget_s:
+            return "ground"
+        return "repair"
 
     async def node_repair(state: CaseGenState) -> dict[str, Any]:
         if deps.llm is None:
@@ -348,17 +457,22 @@ def build_casegen_graph(deps: CaseGenDeps):
         council = state.get("council") or {}
         messages = repair_messages(
             state["draft"], state["condition"], council.get("issues") or [], council.get("repair_hints") or [],
+            complaint=(state.get("request") or {}).get("complaint"),
         )
         reply = await _author_call(messages, REPAIR_TEMPERATURE)
         draft = _stamp_authoritative(dict(reply.data), state)
+        norm = _normalize(draft, state)
         repairs = int(state.get("repairs", 0)) + 1
         return {
             "draft": draft, "repairs": repairs, "round": int(state.get("round", 0)) + 1,
             "status": "repaired",
+            "gap_filled": norm["gap_filled"], "normalization": norm["normalization"],
             "trace": [make_event(
                 "repair", started=started, model=reply.model, model_requested=reply.model_requested,
                 provider=reply.provider, tokens_in=reply.tokens_in, tokens_out=reply.tokens_out,
-                repair_no=repairs, issues=len(council.get("issues") or []),
+                **_model_attrs(reply), repair_no=repairs, issues=len(council.get("issues") or []),
+                gap_filled=norm["report"]["gap_filled"], unresolved_codes=norm["report"]["unresolved_codes"],
+                finish_reason=reply.extras.get("finish_reason"),
             )],
         }
 
@@ -428,11 +542,15 @@ def build_casegen_graph(deps: CaseGenDeps):
                 "decision": council.get("decision"), "rounds": int(state.get("round", 0)) + 1,
                 "repairs": int(state.get("repairs", 0)), "vetoed": bool(council.get("vetoed")),
                 "issues": council.get("issues") or [],
+                "notes": council.get("notes") or [],
             },
+            # Fields the model left empty and code filled from the condition fixture.
+            "gap_filled": list(state.get("gap_filled") or []),
+            "normalization": list(state.get("normalization") or []),
             "degraded": degraded,
-            "note": "council_exhausted; deterministic safety overrides applied: " + "; ".join(notes)
-            if degraded else None,
-            "latency_ms": summarize(full_trace)["latency_ms"],
+            "note": (("council_exhausted" if _repairs_exhausted(state, council) else "time_budget_exceeded")
+                     + "; deterministic safety overrides applied: " + "; ".join(notes)) if degraded else None,
+            "latency_ms": summarize(full_trace)["wall_ms"],
             "trace_summary": summarize(full_trace),
         }
         return {"spec": spec, "status": "done", "trace": [trace_event]}
@@ -463,6 +581,7 @@ def initial_state(request: dict[str, Any], thread_id: str | None = None) -> Case
     return {
         "request": dict(request or {}), "thread_id": thread_id or str(uuid.uuid4()),
         "votes": [], "trace": [], "round": 0, "repairs": 0, "status": "new",
+        "started_at": time.time(), "gap_filled": [], "normalization": [],
     }
 
 

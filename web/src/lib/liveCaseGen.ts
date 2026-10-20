@@ -811,7 +811,10 @@ function mapEffect(e: SpecTreatmentEffect): VitalEffect | null {
 function buildTreatmentResponses(
   spec: GeneratedCaseSpec,
 ): TreatmentResponse[] | undefined {
-  const list = spec.treatments ?? [];
+  // Live finding 2026-10-20: a model left every code empty. An uncoded response
+  // can never match an order (encounterStore matches on order.drug), so it is
+  // dropped here; the server maps codes before a case is returned.
+  const list = (spec.treatments ?? []).filter((t) => (t.code ?? "").trim().length > 0);
   if (list.length === 0) return undefined;
   return list.map((t) => ({
     treatmentCode: (t.code ?? "").trim(),

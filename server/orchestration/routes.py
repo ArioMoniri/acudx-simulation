@@ -50,9 +50,10 @@ from server.orchestration.director import Action, CaseState, anext_state
 from server.orchestration.graph import (
     CaseGenDeps, build_casegen_graph, initial_state, template_spec,
 )
-from server.orchestration.llm import ModelOutputInvalid, ModelUnreachable, StructuredLLM
+from server.orchestration.llm import ModelOutputInvalid, ModelUnreachable, StructuredLLM, WorkerCostSource
 from server.orchestration.memory import LearnerMemory, memory_store
 from server.orchestration.trace import summarize
+from server.telemetry.events import bind_context, current_context, unbind_context
 
 router = APIRouter(prefix="/v2", tags=["orchestration"])
 
@@ -89,11 +90,16 @@ class OrchestrationRuntime:
         db_path: str | None = None,
         max_repairs: int = 2,
         in_memory: bool = False,
+        telemetry: Any = None,
+        worker_manager: Any = None,
+        time_budget_s: float | None = None,
     ) -> "OrchestrationRuntime":
         settings = settings or get_settings()
         llm: StructuredLLM | None
+        gpu = (WorkerCostSource(worker_manager, getattr(settings, "casegen_gpu_usd_per_hour", None))
+               if worker_manager is not None else None)
         try:
-            llm = StructuredLLM(settings, transport=transport)
+            llm = StructuredLLM(settings, transport=transport, telemetry=telemetry, gpu=gpu)
         except EgressBlocked:
             # AIRGAPPED with a non-local endpoint: nothing may be dialled. The
             # routes report 503 for every model-backed call.
@@ -112,7 +118,9 @@ class OrchestrationRuntime:
             checkpointer = InMemorySaver()
         store = memory_store(path)
         memory = LearnerMemory(store)
-        deps = CaseGenDeps(llm=llm, memory=memory, max_repairs=max_repairs)
+        budget = time_budget_s if time_budget_s is not None else float(
+            getattr(settings, "casegen_time_budget_s", 120.0) or 120.0)
+        deps = CaseGenDeps(llm=llm, memory=memory, max_repairs=max_repairs, time_budget_s=budget)
         graph = build_casegen_graph(deps).compile(checkpointer=checkpointer, store=store)
         return cls(settings=settings, llm=llm, checkpointer=checkpointer, store=store,
                    memory=memory, graph=graph, db_path=path, _conn=conn)
@@ -147,7 +155,11 @@ async def get_runtime(request: Request) -> OrchestrationRuntime:
     async with _runtime_lock(state):
         rt = getattr(state, "orchestration", None)
         if rt is None:
-            rt = await OrchestrationRuntime.create(getattr(state, "settings", None))
+            rt = await OrchestrationRuntime.create(
+                getattr(state, "settings", None),
+                telemetry=getattr(state, "telemetry", None),
+                worker_manager=getattr(state, "worker_manager", None),
+            )
             state.orchestration = rt
     return rt
 
@@ -239,7 +251,19 @@ def _sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-async def _stream_events(rt: OrchestrationRuntime, req: GenerateV2Request) -> AsyncIterator[str]:
+async def _stream_events(rt: OrchestrationRuntime, req: GenerateV2Request,
+                         ctx: dict[str, Any] | None = None) -> AsyncIterator[str]:
+    # The body runs after the request middleware returned, so the telemetry
+    # context (route, tenant, user) captured in the handler is bound again here.
+    token = bind_context(**(ctx or {"route": "/v2/case/generate/stream"}))
+    try:
+        async for chunk in _stream_body(rt, req):
+            yield chunk
+    finally:
+        unbind_context(token)
+
+
+async def _stream_body(rt: OrchestrationRuntime, req: GenerateV2Request) -> AsyncIterator[str]:
     thread_id = req.thread_id or str(uuid.uuid4())
     yield _sse("start", {"thread_id": thread_id, "pipeline": list(PIPELINE_NODES)})
     state = initial_state(req.model_dump(exclude={"thread_id"}), thread_id)
@@ -305,8 +329,11 @@ async def generate_stream(req: GenerateV2Request, request: Request,
     probe = await rt.llm.probe("casegen")
     if not probe.get("reachable"):
         return _unreachable(rt, None)
+    ambient = current_context()
+    ctx = {"route": ambient.route or request.url.path, "tenant": ambient.tenant,
+           "user_hash": ambient.user_hash, "encounter_id": ambient.encounter_id}
     return StreamingResponse(
-        _stream_events(rt, req), media_type="text/event-stream",
+        _stream_events(rt, req, ctx), media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 

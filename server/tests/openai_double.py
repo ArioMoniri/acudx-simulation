@@ -11,6 +11,7 @@ doubles are allowed only under ``tests/``).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import random
 import re
@@ -34,6 +35,10 @@ class Scenario:
     author_spo2_over_100: bool = False   # emit triage spo2 = 104 (consistency judge must catch it)
     repair_fixes: bool = True            # when False, repair re-emits the same broken draft
     judge_verdicts: dict[str, str] = field(default_factory=dict)  # model-phase verdict per judge
+    judge_free_text: set[str] = field(default_factory=set)       # judges whose fail cites no evidence
+    judge_delay_s: float = 0.0                                    # simulated judge latency
+    author_delay_s: float = 0.0                                   # simulated author / repair latency
+    live_drafts: list[dict[str, Any]] = field(default_factory=list)  # author replies replayed verbatim
     propose_bogus_anchor: bool = True    # author proposes one id that does not exist
     author_bad_json: int = 0             # number of author calls that return non-JSON
     prompt_tokens: int = 1200
@@ -71,17 +76,11 @@ def _draft_for(cond_id: str, user_text: str, sc: Scenario, *, broken: bool) -> d
     if sc.propose_bogus_anchor:
         proposed.append("gs_does_not_exist")
     spec["guideline_anchor_ids"] = proposed
-    # Mark the red flag so pedagogy passes, and make sure a contraindicated
-    # distractor exists (some fixtures only list indicated treatments).
+    # Mark the red flag so pedagogy passes. A missing contraindicated distractor
+    # is gap-filled from the fixture by server/orchestration/normalize.py.
     for h in spec["hpi"]:
         if h["intent"] == "red-flags":
             h["red_flag"] = True
-    if not any(t["appropriateness"] == "contraindicated" for t in spec["treatments"]):
-        spec["treatments"].append({
-            "code": "distractor_tx", "label_en": "Empiric distractor therapy", "label_tr": "Ampirik yanıltıcı tedavi",
-            "appropriateness": "contraindicated", "effects": [],
-            "narrative_en": "Not indicated for this condition.", "narrative_tr": "Bu durum için endike değildir.",
-        })
     if broken and sc.author_unsafe:
         contra = {t[0] for t in (CONDITION_FIXTURES.get(cond["id"]) or {}).get("treatments", []) if t[3] == "contraindicated"}
         for t in spec["treatments"]:
@@ -92,11 +91,24 @@ def _draft_for(cond_id: str, user_text: str, sc: Scenario, *, broken: bool) -> d
     return spec
 
 
-def _judge_reply(role: str, sc: Scenario) -> dict[str, Any]:
+_EVIDENCE_LINE = re.compile(r"^- ((?:catalog|fixture)\.[^:]+): (.*)$", re.MULTILINE)
+
+
+def _judge_reply(role: str, sc: Scenario, user_text: str = "") -> dict[str, Any]:
+    """A verdict in the evidence-bound shape. A failing judge cites the first
+    EVIDENCE line of the prompt (bound) unless ``judge_free_text`` asks for the
+    unbound opinions the live 14B judges produced."""
     name = role.split(":", 1)[1] if ":" in role else role
     verdict = sc.judge_verdicts.get(name, "pass")
-    return {"verdict": verdict, "issues": [] if verdict == "pass" else [f"{name}: model-phase objection"],
-            "repair_hints": [] if verdict == "pass" else [f"{name}: fix it"]}
+    if verdict == "pass":
+        return {"verdict": "pass", "issues": [], "notes": []}
+    if name in sc.judge_free_text:
+        return {"verdict": "fail", "issues": [f"{name}: model-phase opinion without evidence"], "notes": []}
+    m = _EVIDENCE_LINE.search(user_text)
+    key, value = (m.group(1), m.group(2)) if m else ("catalog.label", "")
+    return {"verdict": "fail", "notes": [],
+            "issues": [{"field": "exam", "evidence": key, "evidence_value": value,
+                        "problem": f"{name}: contradicts the reference", "fix": f"{name}: fix it"}]}
 
 
 def build_double(sc: Scenario) -> FastAPI:
@@ -114,7 +126,11 @@ def build_double(sc: Scenario) -> FastAPI:
         user_text = "\n".join(str(m.get("content") or "") for m in messages if m.get("role") == "user")
         sc.calls.append({"role": role, "model": body.get("model"), "temperature": body.get("temperature"),
                          "response_format": body.get("response_format", {}).get("type")})
-        if role == "author":
+        if role in ("author", "repair") and sc.author_delay_s:
+            await asyncio.sleep(sc.author_delay_s)
+        if role == "author" and sc.live_drafts:
+            content = json.dumps(sc.live_drafts.pop(0), ensure_ascii=False)
+        elif role == "author":
             if sc.author_bad_json > 0:
                 sc.author_bad_json -= 1
                 content = "Sorry, I cannot produce that right now."
@@ -123,7 +139,9 @@ def build_double(sc: Scenario) -> FastAPI:
         elif role == "repair":
             content = json.dumps(_draft_for(_condition_id(user_text), user_text, sc, broken=not sc.repair_fixes))
         elif role.startswith("judge"):
-            content = json.dumps(_judge_reply(role, sc))
+            if sc.judge_delay_s:
+                await asyncio.sleep(sc.judge_delay_s)
+            content = json.dumps(_judge_reply(role, sc, user_text))
         elif role == "director":
             content = json.dumps({"utterance_en": "It hurts, doctor, please help.", "utterance_tr": "Acıyor doktor, lütfen yardım edin.",
                                   "pain": 7, "mood_en": "scared", "mood_tr": "korkmuş"})

@@ -197,7 +197,7 @@ _CARDIOLOGY = _mk("cardiology", [
     ("aortic_dissection", "BD50.0", "I71.01", "", "Acute aortic dissection", "Akut aort diseksiyonu", "Sudden tearing chest and back pain", "Ani yırtıcı göğüs ve sırt ağrısı", 1, 4, [("Pulse or blood-pressure differential between arms", "Kollar arası nabız/tansiyon farkı"), ("Tearing pain radiating to the back", "Sırta yayılan yırtıcı ağrı")]),
     ("heart_failure_acute", "BD10", "I50.9", "", "Acute decompensated heart failure", "Akut dekompanse kalp yetmezliği", "Breathless and swollen legs, worse lying flat", "Nefes darlığı ve bacak şişliği, yatınca artan", 2, 3, [("Pulmonary oedema with hypoxia", "Hipoksiyle akciğer ödemi")]),
     ("afib_rvr", "BC81.3", "I48.0", "", "Atrial fibrillation with rapid response", "Hızlı yanıtlı atriyal fibrilasyon", "Palpitations with an irregular fast pulse", "Düzensiz hızlı nabızla çarpıntı", 2, 3, [("Rapid AF with hypotension", "Hipotansiyonla hızlı AF")]),
-    ("svt", "BC81.0", "I47.1", "", "Supraventricular tachycardia", "Supraventriküler taşikardi", "Sudden racing heartbeat", "Ani hızlanan kalp atışı", 3, 2, [("Narrow-complex tachycardia with instability", "İnstabiliteyle dar QRS taşikardisi")]),
+    ("svt", "BC81.0", "I47.1", "", "Supraventricular tachycardia", "Supraventriküler taşikardi", "Sudden racing heartbeat", "Ani hızlanan kalp atışı", 2, 2, [("Narrow-complex tachycardia with instability", "İnstabiliteyle dar QRS taşikardisi")]),
     ("vt", "BC71.0", "I47.2", "", "Ventricular tachycardia", "Ventriküler taşikardi", "Palpitations with lightheadedness and chest pain", "Baş dönmesi ve göğüs ağrısıyla çarpıntı", 1, 4, [("Broad-complex tachycardia with shock", "Şokla geniş QRS taşikardisi")]),
     ("complete_heart_block", "BC63", "I44.2", "", "Complete heart block", "Tam kalp bloğu", "Fainting spells with a very slow pulse", "Çok yavaş nabızla bayılma atakları", 1, 3, [("Bradycardia with syncope", "Senkopla bradikardi")]),
     ("pericarditis", "BB20", "I30.9", "", "Acute pericarditis", "Akut perikardit", "Sharp chest pain, better sitting forward", "Öne eğilince azalan keskin göğüs ağrısı", 3, 2, [("Pain with a pericardial rub", "Perikardiyal frotmanla ağrı")]),
@@ -426,6 +426,179 @@ _SYSTEM_ALIASES: dict[str, str] = {
 
 _TOKEN_SPLIT = re.compile(r"[^a-z0-9çğıöşü]+", re.I)
 
+# --------------------------------------------------------------------------- #
+# Presenting-complaint index (live finding 2026-10-20: a request for "fever    #
+# and cough" sampled ascending cholangitis because the token "and" matched     #
+# every haystack). A requested complaint is resolved to one or more canonical  #
+# complaint keys through EN and TR synonyms; sampling is then restricted to    #
+# the conditions that present with every requested key (or, when no condition  #
+# carries all of them, with any). Membership is an emergency-medicine          #
+# judgement about the usual presenting complaint of each condition, checked    #
+# against the catalog's own ``typical_complaint`` text by the tests.           #
+# --------------------------------------------------------------------------- #
+COMPLAINT_INDEX: dict[str, dict[str, tuple[str, ...]]] = {
+    "fever": {
+        "synonyms": ("fever", "fevers", "febrile", "pyrexia", "high temperature", "rigor", "rigors",
+                     "chills", "feeling hot", "ateş", "ateşi", "üşüme"),
+        "conditions": (
+            "septic_shock", "sepsis_uncomplicated", "undiff_fever", "pneumonia_cap", "influenza", "covid19",
+            "tb_pulmonary", "bacterial_meningitis", "encephalitis", "meningococcemia", "pyelonephritis",
+            "malaria", "cellulitis", "nec_fasciitis", "infective_endocarditis", "ascending_cholangitis",
+            "cholecystitis", "diverticulitis", "febrile_neutropenia", "septic_arthritis", "osteomyelitis",
+            "acute_prostatitis", "pid", "infectious_mononucleosis", "hiv_seroconversion", "thyroid_storm",
+            "heat_stroke", "nms", "serotonin_syndrome", "transfusion_reaction", "bronchiolitis",
+            "infectious_diarrhea",
+        ),
+    },
+    "cough": {
+        "synonyms": ("cough", "coughing", "coughs", "sputum", "phlegm", "öksürük", "öksürüyor", "balgam"),
+        "conditions": (
+            "pneumonia_cap", "influenza", "covid19", "tb_pulmonary", "copd_exacerbation", "asthma_exacerbation",
+            "hemoptysis", "bronchiolitis", "aspiration_pneumonitis", "heart_failure_acute", "drowning",
+        ),
+    },
+    "dyspnoea": {
+        "synonyms": ("dyspnoea", "dyspnea", "breathless", "breathlessness", "shortness of breath",
+                     "short of breath", "difficulty breathing", "trouble breathing", "struggling to breathe",
+                     "wheeze", "wheezy", "wheezing", "nefes darlığı", "nefes almakta güçlük", "hırıltı"),
+        "conditions": (
+            "undiff_dyspnea", "asthma_exacerbation", "copd_exacerbation", "pneumonia_cap", "pulmonary_embolism",
+            "tension_pneumothorax", "spontaneous_pneumothorax", "pleural_effusion", "ards", "heart_failure_acute",
+            "cardiac_tamponade", "anaphylaxis", "aortic_stenosis", "myocarditis", "aspiration_pneumonitis",
+            "bronchiolitis", "anemia_symptomatic", "covid19", "myasthenic_crisis", "hyperkalemia_esrd", "drowning",
+        ),
+    },
+    "chest pain": {
+        "synonyms": ("chest pain", "chest tightness", "chest pressure", "chest discomfort", "angina",
+                     "göğüs ağrısı", "göğüs baskısı", "göğüste sıkışma"),
+        "conditions": (
+            "acs_stemi", "acs_nstemi", "unstable_angina", "stable_angina", "aortic_dissection", "pericarditis",
+            "myocarditis", "pulmonary_embolism", "tension_pneumothorax", "spontaneous_pneumothorax",
+            "undiff_chest_pain", "gi_reflux", "panic_disorder", "vt", "cardiac_tamponade", "electrical_injury",
+        ),
+    },
+    "abdominal pain": {
+        "synonyms": ("abdominal pain", "abdo pain", "belly pain", "stomach pain", "tummy pain", "epigastric pain",
+                     "right upper quadrant", "ruq pain", "right lower quadrant", "rlq pain", "pelvic pain",
+                     "karın ağrısı", "mide ağrısı", "kasık ağrısı"),
+        "conditions": (
+            "undiff_abdo_pain", "appendicitis", "cholecystitis", "pancreatitis", "perforated_ulcer",
+            "bowel_obstruction", "mesenteric_ischemia", "diverticulitis", "biliary_colic", "ascending_cholangitis",
+            "acute_hepatitis", "gastroenteritis", "ibd_flare", "ectopic_pregnancy", "ovarian_torsion", "pid",
+            "ovarian_cyst_rupture", "dka", "placental_abruption", "acute_prostatitis",
+        ),
+    },
+    "headache": {
+        "synonyms": ("headache", "head ache", "head pain", "migraine", "thunderclap", "baş ağrısı", "başım ağrıyor"),
+        "conditions": (
+            "undiff_headache", "subarachnoid_hemorrhage", "intracerebral_hemorrhage", "bacterial_meningitis",
+            "migraine", "hypertensive_emergency", "carbon_monoxide", "preeclampsia", "encephalitis",
+            "pheochromocytoma",
+        ),
+    },
+    "syncope": {
+        "synonyms": ("syncope", "faint", "fainted", "fainting", "passed out", "blackout", "bayılma", "bayıldı"),
+        "conditions": (
+            "undiff_syncope", "complete_heart_block", "aortic_stenosis", "vt", "pulmonary_embolism",
+        ),
+    },
+    "palpitations": {
+        "synonyms": ("palpitation", "palpitations", "racing heart", "heart racing", "racing heartbeat",
+                     "pounding heart", "çarpıntı"),
+        "conditions": (
+            "afib_rvr", "svt", "vt", "panic_disorder", "thyroid_storm", "hyperkalemia", "pheochromocytoma",
+            "bariatric_dumping",
+        ),
+    },
+    "confusion": {
+        "synonyms": ("confusion", "confused", "altered mental status", "disoriented", "delirium", "konfüzyon",
+                     "bilinç bulanıklığı"),
+        "conditions": (
+            "delirium", "encephalitis", "hhs", "hypoglycemia", "hyponatremia", "hypercalcemia", "septic_shock",
+            "heat_stroke", "delirium_tremens", "poisoning_unknown", "anticholinergic_tox", "myxedema_coma",
+            "bacterial_meningitis",
+        ),
+    },
+    "weakness": {
+        "synonyms": ("weakness", "weak arm", "weak leg", "slurred speech", "facial droop", "güçsüzlük",
+                     "konuşma bozukluğu"),
+        "conditions": (
+            "ischemic_stroke", "tia", "intracerebral_hemorrhage", "gbs", "spinal_cord_compression", "cauda_equina",
+            "myasthenic_crisis", "bells_palsy", "adrenal_crisis", "hyperkalemia",
+        ),
+    },
+    "seizure": {
+        "synonyms": ("seizure", "seizures", "fit", "convulsion", "convulsions", "nöbet", "havale"),
+        "conditions": ("status_epilepticus", "first_seizure", "eclampsia", "hypoglycemia", "hyponatremia"),
+    },
+    "vomiting": {
+        "synonyms": ("vomiting", "vomit", "nausea", "being sick", "kusma", "bulantı"),
+        "conditions": (
+            "gastroenteritis", "bowel_obstruction", "dka", "hyperemesis", "pancreatitis", "upper_gi_bleed",
+            "intracerebral_hemorrhage", "adrenal_crisis", "acute_hepatitis", "migraine", "hyponatremia",
+        ),
+    },
+    "back pain": {
+        "synonyms": ("back pain", "backache", "loin pain", "flank pain", "sırt ağrısı", "bel ağrısı", "böğür ağrısı"),
+        "conditions": (
+            "aortic_dissection", "cauda_equina", "spinal_cord_compression", "low_back_pain", "renal_colic",
+            "pyelonephritis", "pancreatitis",
+        ),
+    },
+    "dizziness": {
+        "synonyms": ("dizziness", "dizzy", "vertigo", "room spinning", "baş dönmesi"),
+        "conditions": ("undiff_dizziness", "vertigo_bppv", "carbon_monoxide", "vt", "cardiac_tamponade",
+                       "aortic_stenosis"),
+    },
+    "rash": {
+        "synonyms": ("rash", "hives", "urticaria", "petechiae", "döküntü", "kurdeşen"),
+        "conditions": ("anaphylaxis", "meningococcemia", "cellulitis", "hiv_seroconversion", "itp"),
+    },
+    "bleeding": {
+        "synonyms": ("bleeding", "haemorrhage", "hemorrhage", "vomiting blood", "haematemesis", "hematemesis",
+                     "coughing up blood", "kanama", "kan kusma"),
+        "conditions": (
+            "upper_gi_bleed", "pph", "threatened_miscarriage", "placental_abruption", "hemoptysis", "dic",
+            "hemophilia_bleed",
+        ),
+    },
+}
+
+# Words that carry no clinical signal in a free-text complaint (the old matcher
+# let "and" select almost every condition).
+_COMPLAINT_STOPWORDS = frozenset({
+    "and", "with", "the", "for", "from", "after", "since", "into", "onto", "over", "very", "feel", "feeling",
+    "pain", "patient", "acute", "new", "severe", "mild", "sudden", "days", "hours", "weeks", "ile", "bir",
+    "çok", "ağrı", "ağrısı",
+})
+
+
+def _norm_text(text: str) -> str:
+    return " " + " ".join(t for t in _TOKEN_SPLIT.split((text or "").lower()) if t) + " "
+
+
+def complaint_keys(text: str) -> list[str]:
+    """Canonical complaint keys mentioned in ``text`` (EN or TR), in index order."""
+    hay = _norm_text(text)
+    out: list[str] = []
+    for key, entry in COMPLAINT_INDEX.items():
+        for syn in entry["synonyms"]:
+            if _norm_text(syn) in hay:
+                out.append(key)
+                break
+    return out
+
+
+def conditions_for_complaint(text: str) -> list[str]:
+    """Condition ids that present with every requested complaint key (else with any)."""
+    keys = complaint_keys(text)
+    if not keys:
+        return []
+    sets = [set(COMPLAINT_INDEX[k]["conditions"]) for k in keys]
+    both = set.intersection(*sets)
+    chosen = both or set.union(*sets)
+    return [c["id"] for c in CATALOG if c["id"] in chosen]
+
 
 def _normalize_system(system: str) -> str:
     s = (system or "").strip().lower().replace(" ", "-")
@@ -455,7 +628,7 @@ def _matches_complaint(cond: dict[str, Any], needle: str) -> bool:
     if not needle:
         return True
     hay = _haystack(cond)
-    tokens = [t for t in _TOKEN_SPLIT.split(needle) if len(t) >= 3]
+    tokens = [t for t in _TOKEN_SPLIT.split(needle) if len(t) >= 3 and t not in _COMPLAINT_STOPWORDS]
     if not tokens:
         return needle in hay
     return any(t in hay for t in tokens)
@@ -484,8 +657,11 @@ def sample_condition(
     * ``system``     — one of :func:`list_systems` (synonyms accepted). Ignored
       if it selects nothing.
     * ``difficulty`` — 1..5; if no exact match, the nearest difficulty is used.
-    * ``complaint``  — free text; token-overlap match against label / complaint /
-      red-flags / codes. Ignored if it selects nothing.
+    * ``complaint``: free text. A recognised presenting complaint (see
+      :data:`COMPLAINT_INDEX`, EN and TR synonyms) restricts the pool to the
+      conditions presenting with it, even over a conflicting ``system``; other
+      text falls back to a stopword-filtered token match against label /
+      complaint / red-flags / codes. Ignored if it selects nothing.
     * ``rng``        — a ``random.Random`` (seedable), an int/str seed, or None.
     * ``exclude_ids``— recently-served condition ids to avoid (anti-repeat).
       Applied AFTER the other filters and ONLY while it still leaves at least one
@@ -503,7 +679,16 @@ def sample_condition(
             pool = sub
 
     if complaint:
-        sub = [c for c in pool if _matches_complaint(c, complaint)]
+        indexed = set(conditions_for_complaint(complaint))
+        if indexed:
+            # A recognised presenting complaint restricts the pool to the
+            # conditions that present with it (never widened by token overlap);
+            # it wins over a system constraint that selects none of them.
+            sub = [c for c in pool if c["id"] in indexed]
+            if not sub and system:
+                sub = [c for c in CATALOG if c["id"] in indexed]
+        else:
+            sub = [c for c in pool if _matches_complaint(c, complaint)]
         if sub:
             pool = sub
 

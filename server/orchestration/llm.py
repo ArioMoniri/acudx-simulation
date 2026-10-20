@@ -17,21 +17,41 @@ Both inherit the active LLM endpoint when unset, and both pass through the
 Honesty rule: a model that cannot be reached raises :class:`ModelUnreachable`;
 a reply that is not valid JSON raises :class:`ModelOutputInvalid`. Nothing in
 this module ever substitutes a template for a model answer.
+
+Accounting (live findings 2026-10-20): every call, success or failure, is
+recorded through the admin :class:`~server.telemetry.events.TelemetryRecorder`
+(``kind=llm``, route from :func:`~server.telemetry.events.call_context`). A call
+served by the self-hosted GPU worker has no per-token price, so its cost is
+amortised: ``usd_per_hour * latency_h / concurrency``, where the hourly price
+comes from the GPU ledger (the active worker, else the latest ledger row, else
+``CASEGEN_GPU_USD_PER_HOUR``) and ``concurrency`` is the largest number of calls
+in flight on the same endpoint during this one (vLLM batches them, so three
+parallel judges share the hour instead of each paying for it). The basis is
+recorded as ``cost_basis = "gpu_hour_amortised"``.
 """
 
 from __future__ import annotations
 
 import asyncio
+import itertools
 import json
+import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Callable, Literal, Optional, Protocol
 
 import httpx
 from langchain_core.utils.json import parse_json_markdown
 
 from server.config import EgressBlocked, LlmEndpoint, Settings
-from server.model_gateway import strip_think
+from server.model_gateway import strip_think, wants_no_thinking
+from server.telemetry import prices as telemetry_prices
+
+log = logging.getLogger("acudx.orchestration.llm")
+
+# The vLLM ``--served-model-name`` of the GPU worker (server/providers/gpu_worker.py).
+SELF_HOSTED_MODEL = "acudx-llm"
+COST_BASIS_GPU = "gpu_hour_amortised"
 
 Role = Literal["casegen", "judge"]
 
@@ -55,6 +75,70 @@ class LLMReply:
     latency_ms: float = 0.0
     raw: str = ""
     extras: dict[str, Any] = field(default_factory=dict)
+
+
+class GpuCostSource(Protocol):
+    """Where the hourly price of the self-hosted worker comes from."""
+
+    def usd_per_hour(self) -> Optional[float]: ...
+
+    def serves(self, base_url: str) -> bool: ...
+
+    def touch(self) -> None: ...
+
+
+class WorkerCostSource:
+    """Adapter over :class:`server.providers.gpu_worker.WorkerManager`."""
+
+    def __init__(self, manager: Any, fallback_usd_per_hour: Optional[float] = None) -> None:
+        self.manager = manager
+        self.fallback = fallback_usd_per_hour
+
+    def usd_per_hour(self) -> Optional[float]:
+        try:
+            w = self.manager.store.active_worker()
+            if w is not None:
+                return w.price_cents_per_hour / 100.0
+            rows = self.manager.store.ledger(limit=1)
+            if rows:
+                return rows[0].price_cents_per_hour / 100.0
+        except Exception:  # noqa: BLE001 - accounting must never break a call
+            log.debug("gpu ledger read failed", exc_info=True)
+        return self.fallback
+
+    def serves(self, base_url: str) -> bool:
+        try:
+            ep = self.manager.llm_endpoint()
+        except Exception:  # noqa: BLE001
+            return False
+        return bool(ep) and ep["base_url"].rstrip("/") == (base_url or "").rstrip("/")
+
+    def touch(self) -> None:
+        try:
+            self.manager.touch()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+class StaticGpuCost:
+    """A fixed hourly price (settings fallback, tests)."""
+
+    def __init__(self, usd_per_hour: Optional[float]) -> None:
+        self._usd = usd_per_hour
+
+    def usd_per_hour(self) -> Optional[float]:
+        return self._usd
+
+    def serves(self, base_url: str) -> bool:
+        return False
+
+    def touch(self) -> None:
+        return None
+
+
+def amortised_cost_usd(usd_per_hour: float, latency_ms: float, concurrency: int = 1) -> float:
+    """GPU-hour share of one call: hourly price times its latency, split across overlapping calls."""
+    return round(max(0.0, usd_per_hour) * max(0.0, latency_ms) / 3_600_000.0 / max(1, concurrency), 8)
 
 
 def _parse_object(text: str) -> dict[str, Any]:
@@ -88,8 +172,17 @@ class StructuredLLM:
         transport: httpx.AsyncBaseTransport | None = None,
         timeout_s: float | None = None,
         retries: int = 1,
+        telemetry: Any = None,
+        gpu: GpuCostSource | None = None,
     ) -> None:
         self.settings = settings
+        self.telemetry = telemetry
+        fallback = getattr(settings, "casegen_gpu_usd_per_hour", None)
+        self.gpu: GpuCostSource | None = gpu if gpu is not None else (
+            StaticGpuCost(fallback) if fallback is not None else None)
+        self._ids = itertools.count(1)
+        # endpoint base_url -> {call id: largest number of calls in flight seen}
+        self._inflight: dict[str, dict[int, int]] = {}
         self.endpoints: dict[str, LlmEndpoint] = {
             "casegen": settings.resolve_casegen(),
             "judge": settings.resolve_judge(),
@@ -107,6 +200,47 @@ class StructuredLLM:
 
     def endpoint(self, role: Role) -> LlmEndpoint:
         return self.endpoints[role]
+
+    def self_hosted(self, ep: LlmEndpoint) -> bool:
+        """True when ``ep`` is the GPU worker (served alias or the worker's own URL)."""
+        if (ep.model or "") == SELF_HOSTED_MODEL:
+            return True
+        return self.gpu is not None and self.gpu.serves(ep.base_url)
+
+    def _begin(self, base_url: str) -> int:
+        cid = next(self._ids)
+        active = self._inflight.setdefault(base_url, {})
+        active[cid] = 1
+        n = len(active)
+        for k in active:
+            active[k] = max(active[k], n)
+        return cid
+
+    def _end(self, base_url: str, cid: int) -> int:
+        return self._inflight.get(base_url, {}).pop(cid, 1)
+
+    def _cost(self, ep: LlmEndpoint, latency_ms: float, concurrency: int) -> tuple[Optional[float], Optional[str]]:
+        if not self.self_hosted(ep) or self.gpu is None:
+            return None, None
+        usd = self.gpu.usd_per_hour()
+        if usd is None:
+            return None, None
+        return amortised_cost_usd(usd, latency_ms, concurrency), COST_BASIS_GPU
+
+    def _record(self, ep: LlmEndpoint, *, model: str, tokens_in: int, tokens_out: int, latency_ms: float,
+                ok: bool, error: Optional[str], cost: Optional[float]) -> None:
+        if self.telemetry is None:
+            return
+        hosted = self.self_hosted(ep)
+        provider = "gpu-worker" if hosted else (telemetry_prices.provider_from_url(ep.base_url) or ep.provider)
+        try:
+            self.telemetry.record(
+                kind="llm", provider=provider, model=model or ep.model or "", billing_provider=provider,
+                tokens_in=tokens_in, tokens_out=tokens_out, latency_ms=round(latency_ms, 3), ok=ok,
+                error=error, requested_model=ep.model, cost_usd=cost,
+            )
+        except Exception:  # noqa: BLE001 - telemetry is best-effort
+            log.debug("telemetry record failed", exc_info=True)
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None:
@@ -145,7 +279,7 @@ class StructuredLLM:
                 "json_schema": {"name": schema_name, "schema": schema, "strict": False},
             },
         }
-        if _wants_no_thinking(ep.model, self.settings):
+        if wants_no_thinking(ep.model, self.settings):
             # Qwen3-family models otherwise spend the token budget on hidden reasoning
             # before the JSON; vLLM and SGLang accept chat_template_kwargs.
             payload["chat_template_kwargs"] = {"enable_thinking": False}
@@ -155,7 +289,55 @@ class StructuredLLM:
 
         client = await self._get_client()
         url = f"{ep.base_url}/chat/completions"
+        if self.gpu is not None and self.self_hosted(ep):
+            self.gpu.touch()  # keep the idle reaper off a worker that is generating
         t0 = time.monotonic()
+        cid = self._begin(ep.base_url)
+        try:
+            data = await self._post_with_retries(client, url, payload, headers)
+        except (ModelUnreachable, ModelOutputInvalid) as exc:
+            latency_ms = round((time.monotonic() - t0) * 1000.0, 1)
+            concurrency = self._end(ep.base_url, cid)
+            cost, _basis = self._cost(ep, latency_ms, concurrency)
+            self._record(ep, model=ep.model, tokens_in=0, tokens_out=0, latency_ms=latency_ms, ok=False,
+                         error=type(exc).__name__, cost=cost)
+            raise
+        latency_ms = round((time.monotonic() - t0) * 1000.0, 1)
+        concurrency = self._end(ep.base_url, cid)
+        cost, basis = self._cost(ep, latency_ms, concurrency)
+
+        choices = data.get("choices") or [{}]
+        msg = (choices[0] or {}).get("message") or {}
+        content = msg.get("content") or msg.get("reasoning_content") or ""
+        if isinstance(content, list):  # some servers return content parts
+            content = "".join(p.get("text", "") for p in content if isinstance(p, dict))
+        usage = data.get("usage") or {}
+        served = str(data.get("model") or ep.model)
+        tokens_in = int(usage.get("prompt_tokens") or 0)
+        tokens_out = int(usage.get("completion_tokens") or 0)
+        try:
+            obj = _parse_object(content)
+        except ModelOutputInvalid as exc:
+            self._record(ep, model=served, tokens_in=tokens_in, tokens_out=tokens_out, latency_ms=latency_ms,
+                         ok=False, error=type(exc).__name__, cost=cost)
+            raise
+        self._record(ep, model=served, tokens_in=tokens_in, tokens_out=tokens_out, latency_ms=latency_ms,
+                     ok=True, error=None, cost=cost)
+        return LLMReply(
+            data=obj,
+            model=served,
+            model_requested=ep.model,
+            provider=ep.provider,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            latency_ms=latency_ms,
+            raw=content,
+            extras={"finish_reason": (choices[0] or {}).get("finish_reason"), "cost_usd": cost,
+                    "cost_basis": basis, "concurrency": concurrency},
+        )
+
+    async def _post_with_retries(self, client: httpx.AsyncClient, url: str, payload: dict[str, Any],
+                                 headers: dict[str, str]) -> dict[str, Any]:
         last: Exception | None = None
         data: dict[str, Any] | None = None
         for attempt in range(self._retries + 1):
@@ -182,26 +364,7 @@ class StructuredLLM:
                 await asyncio.sleep(min(0.2 * (2 ** attempt), 1.0))
         if data is None:
             raise ModelUnreachable(f"{url} unreachable: {type(last).__name__}: {last}")
-        latency_ms = round((time.monotonic() - t0) * 1000.0, 1)
-
-        choices = data.get("choices") or [{}]
-        msg = (choices[0] or {}).get("message") or {}
-        content = msg.get("content") or msg.get("reasoning_content") or ""
-        if isinstance(content, list):  # some servers return content parts
-            content = "".join(p.get("text", "") for p in content if isinstance(p, dict))
-        obj = _parse_object(content)
-        usage = data.get("usage") or {}
-        return LLMReply(
-            data=obj,
-            model=str(data.get("model") or ep.model),
-            model_requested=ep.model,
-            provider=ep.provider,
-            tokens_in=int(usage.get("prompt_tokens") or 0),
-            tokens_out=int(usage.get("completion_tokens") or 0),
-            latency_ms=latency_ms,
-            raw=content,
-            extras={"finish_reason": (choices[0] or {}).get("finish_reason")},
-        )
+        return data
 
     async def probe(self, role: Role = "casegen") -> dict[str, Any]:
         """Reachability check used by the routes before starting a graph run."""
@@ -227,13 +390,9 @@ def schema_of(model_cls: Any, *, drop: tuple[str, ...] = ()) -> dict[str, Any]:
 
 
 __all__ = [
-    "LLMReply", "ModelOutputInvalid", "ModelUnreachable", "Role", "StructuredLLM", "schema_of",
+    "COST_BASIS_GPU", "GpuCostSource", "LLMReply", "ModelOutputInvalid", "ModelUnreachable", "Role",
+    "StaticGpuCost", "StructuredLLM", "WorkerCostSource", "amortised_cost_usd", "schema_of",
 ]
 
-
-def _wants_no_thinking(model: str, settings: Settings) -> bool:
-    """True when the served model is a Qwen3-family reasoning model (or forced by setting)."""
-    forced = getattr(settings, "casegen_disable_thinking", None)
-    if forced is not None:
-        return bool(forced)
-    return "qwen3" in (model or "").lower() or (model or "") == "acudx-llm"
+# Kept for callers that imported the private name before it moved to model_gateway.
+_wants_no_thinking = wants_no_thinking

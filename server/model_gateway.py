@@ -45,6 +45,21 @@ class GatewayError(RuntimeError):
     """A model call failed after retries (network, 5xx, or unparseable body)."""
 
 
+def wants_no_thinking(model: str | None, settings: Settings) -> bool:
+    """True when the served model is a Qwen3-family reasoning model (or forced by setting).
+
+    Qwen3 otherwise spends the token budget on hidden reasoning before the
+    answer (live finding 2026-10-20: 4 to 6 s and ``had_reasoning=true`` per
+    patient turn on the GPU worker). vLLM and SGLang accept
+    ``chat_template_kwargs: {"enable_thinking": false}``. The GPU worker serves
+    Qwen3 under the alias ``acudx-llm``. Shared by the patient gateway and the
+    orchestration client (``server/orchestration/llm.py``)."""
+    forced = getattr(settings, "casegen_disable_thinking", None)
+    if forced is not None:
+        return bool(forced)
+    return "qwen3" in (model or "").lower() or (model or "") == "acudx-llm"
+
+
 def strip_think(text: str) -> tuple[str, bool]:
     """Remove reasoning scaffolding from a completion.
 
@@ -207,6 +222,8 @@ class ModelGateway:
         }
         if stop:
             payload["stop"] = stop
+        if wants_no_thinking(payload["model"], self.settings):
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
 
         t0 = time.monotonic()
         try:

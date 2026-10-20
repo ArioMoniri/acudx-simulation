@@ -22,8 +22,13 @@ def _draft(cond_id: str) -> dict:
 
 
 def test_template_drafts_pass_all_deterministic_checks():
+    # The graph normalises every draft before the council (SI glucose to the
+    # reference table's mg/dL, for example), so the template does too here.
+    from server.orchestration.normalize import normalize_draft
+
     for cond_id in ("acs_stemi", "septic_shock", "dka", "pneumonia_cap", "subarachnoid_hemorrhage"):
         d = _draft(cond_id)
+        normalize_draft(d, COND[cond_id], seed=1)
         for name, check in J.DETERMINISTIC.items():
             res = check(d, COND[cond_id])
             assert res["ok"], f"{name} failed on {cond_id}: {res['issues']}"

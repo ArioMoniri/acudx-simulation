@@ -174,4 +174,22 @@ describe("v2SpecToCaseInstance", () => {
     expect(tpl.source).toBe("template");
     expect(tpl.degraded).toBe(true);
   });
+
+  it("keeps only coded treatment responses with minute-scale onsets", () => {
+    const out = v2SpecToCaseInstance({
+      ...spec,
+      treatments: [
+        { code: "", label_en: "NPO", label_tr: "Ağızdan yok", appropriateness: "neutral", effects: [] },
+        {
+          code: "iv_fluids", label_en: "IV fluid resuscitation", label_tr: "IV sıvı", appropriateness: "indicated",
+          effects: [{ key: "systolic", delta: 15, onsetMs: 300_000 }],
+        },
+      ],
+      meta: { ...spec.meta, gap_filled: ["labs", "imaging", "red_flags"], council: { decision: "accept", rounds: 1, repairs: 0, vetoed: false, issues: [], notes: ["opinion"] } },
+    });
+    const responses = out.case.treatmentResponses ?? [];
+    expect(responses.map((r) => r.treatmentCode)).toEqual(["iv_fluids"]);
+    expect(responses[0].effects[0].onsetMs).toBe(300_000);
+    expect(out.meta.gap_filled).toEqual(["labs", "imaging", "red_flags"]);
+  });
 });

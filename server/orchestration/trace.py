@@ -15,7 +15,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
-from server.orchestration.prices import PRICE_TABLE_VERSION, cost_usd
+from server.orchestration.prices import PRICE_TABLE_VERSION
+from server.orchestration.prices import cost_usd as table_cost
 
 
 class TraceEvent(BaseModel):
@@ -31,6 +32,9 @@ class TraceEvent(BaseModel):
     tokens_in: int = 0
     tokens_out: int = 0
     cost_usd: Optional[float] = None
+    # "token_table" (prices.py per-token row) or "gpu_hour_amortised" (self-hosted
+    # worker: the GPU ledger's hourly price times this call's share of the hour).
+    cost_basis: Optional[str] = None
     price_table_version: str = PRICE_TABLE_VERSION
     attributes: dict[str, Any] = Field(default_factory=dict)
     note: Optional[str] = None
@@ -47,9 +51,18 @@ def make_event(
     tokens_in: int = 0,
     tokens_out: int = 0,
     note: str | None = None,
+    cost_usd: float | None = None,
+    cost_basis: str | None = None,
     **attributes: Any,
 ) -> dict[str, Any]:
-    """Build a serialisable trace record. ``started`` is a ``time.monotonic()``."""
+    """Build a serialisable trace record. ``started`` is a ``time.monotonic()``.
+
+    ``cost_usd`` given by the caller (an amortised GPU-hour cost) wins over the
+    per-token price table."""
+    if cost_usd is None and model:
+        cost_usd = table_cost(model, tokens_in, tokens_out)
+        if cost_usd is not None:
+            cost_basis = cost_basis or "token_table"
     ev = TraceEvent(
         node=node,
         status=status,
@@ -59,7 +72,8 @@ def make_event(
         provider=provider,
         tokens_in=tokens_in,
         tokens_out=tokens_out,
-        cost_usd=cost_usd(model, tokens_in, tokens_out) if model else None,
+        cost_usd=cost_usd,
+        cost_basis=cost_basis if cost_usd is not None else None,
         note=note,
         attributes=attributes,
     )
@@ -81,7 +95,19 @@ def summarize(trace: list[dict[str, Any]]) -> dict[str, Any]:
         "tokens_in": tokens_in,
         "tokens_out": tokens_out,
         "latency_ms": round(sum(float(e.get("latency_ms") or 0.0) for e in trace), 1),
+        # Wall clock from the first node's start to the last node's end. Smaller
+        # than ``latency_ms`` because the three judges overlap.
+        "wall_ms": _wall_ms(trace),
         "cost_usd": round(sum(priced), 8) if priced else None,
+        "cost_basis": sorted({str(e["cost_basis"]) for e in trace if e.get("cost_basis")}),
         "unpriced_models": unpriced_models,
         "price_table_version": PRICE_TABLE_VERSION,
     }
+
+
+def _wall_ms(trace: list[dict[str, Any]]) -> float:
+    spans = [(float(e["ts"]) - float(e.get("latency_ms") or 0.0) / 1000.0, float(e["ts"]))
+             for e in trace if e.get("ts") is not None]
+    if not spans:
+        return 0.0
+    return round((max(end for _, end in spans) - min(start for start, _ in spans)) * 1000.0, 1)

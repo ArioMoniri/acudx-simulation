@@ -153,6 +153,12 @@ class Settings(BaseSettings):
     casegen_timeout_s: float = 300.0
     # None = auto (Qwen3 family and the GPU worker's acudx-llm); true/false forces it.
     casegen_disable_thinking: bool | None = None
+    # Hourly price of a self-hosted worker used for amortised call cost when no
+    # GPU ledger row is available in this process (CASEGEN_GPU_USD_PER_HOUR).
+    casegen_gpu_usd_per_hour: float | None = None
+    # Wall-clock budget for one case generation; a repair that would not fit is
+    # skipped and the case is finalized as degraded (server/orchestration/graph.py).
+    casegen_time_budget_s: float = 120.0
     connect_timeout_s: float = 5.0
     probe_timeout_s: float = 2.0
     max_retries: int = 2

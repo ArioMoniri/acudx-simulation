@@ -55,6 +55,8 @@ export interface TraceEvent {
   tokens_in: number;
   tokens_out: number;
   cost_usd: number | null;
+  /** "token_table" or "gpu_hour_amortised" (self-hosted worker share of the GPU hour). */
+  cost_basis?: string | null;
   price_table_version: string;
   attributes: Record<string, unknown>;
   note: string | null;
@@ -66,7 +68,10 @@ export interface TraceSummary {
   tokens_in: number;
   tokens_out: number;
   latency_ms: number;
+  /** Wall clock of the run (the parallel judges overlap, so it is below latency_ms). */
+  wall_ms?: number;
   cost_usd: number | null;
+  cost_basis?: string[];
   unpriced_models: string[];
   price_table_version: string;
 }
@@ -79,6 +84,8 @@ export interface CouncilVerdict {
   decision: "accept" | "repair";
   issues: string[];
   repair_hints: string[];
+  /** Model opinions that cited no evidence: shown, never a veto. */
+  notes?: string[];
 }
 
 /** Guideline anchor as attached by the `ground` node: always carries an id. */
@@ -103,7 +110,11 @@ export interface CaseGenV2Meta {
     repairs: number;
     vetoed: boolean;
     issues: string[];
+    notes?: string[];
   };
+  /** Fields the model left empty that the server filled from the condition fixture. */
+  gap_filled?: string[];
+  normalization?: string[];
   degraded: boolean;
   note: string | null;
   latency_ms: number;

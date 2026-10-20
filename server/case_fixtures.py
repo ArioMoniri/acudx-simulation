@@ -233,6 +233,10 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("rate_control", "Rate control (beta-blocker / diltiazem)", "Hız kontrolü (beta-bloker / diltiazem)", "indicated", [("hr", -25.0, 600000)], "Rate control if haemodynamically stable.", "Hemodinamik stabilse hız kontrolü."),
             ("anticoag_score", "Anticoagulate per stroke risk", "İnme riskine göre antikoagülasyon", "indicated", [], "Assess CHA2DS2-VASc for anticoagulation.", "Antikoagülasyon için CHA2DS2-VASc değerlendirin."),
             ("dc_cardioversion", "DC cardioversion if unstable", "İnstabilse DC kardiyoversiyon", "indicated", [("hr", -40.0, 120000)], "Immediate cardioversion for instability.", "İnstabilitede hemen kardiyoversiyon."),
+            # Live finding 2026-10-20 (no distractor, so no model case could pass the
+            # safety judge). Elective cardioversion of AF lasting > 48 h without
+            # anticoagulation risks stroke; ESC 2020 AF https://doi.org/10.1093/eurheartj/ehaa612
+            ("cardiovert_no_anticoag", "Elective cardioversion without anticoagulation (AF > 48 h)", "Antikoagülasyonsuz elektif kardiyoversiyon (AF > 48 sa)", "contraindicated", [], "Stable AF of unknown or > 48 h duration needs anticoagulation (or TOE) before cardioversion.", "Süresi bilinmeyen veya > 48 sa stabil AF'de kardiyoversiyondan önce antikoagülasyon (veya TÖE) gerekir."),
         ],
     },
     "svt": {
@@ -248,6 +252,8 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("vagal", "Vagal manoeuvres", "Vagal manevralar", "indicated", [("hr", -20.0, 120000)], "Try vagal manoeuvres first.", "Önce vagal manevraları deneyin."),
             ("adenosine", "IV adenosine", "IV adenozin", "indicated", [("hr", -60.0, 60000)], "Adenosine for regular narrow-complex SVT.", "Düzenli dar QRS SVT'de adenozin."),
             ("cardioversion", "Synchronised cardioversion if unstable", "İnstabilse senkron kardiyoversiyon", "indicated", [], "Cardiovert if haemodynamically unstable.", "Hemodinamik instabilse kardiyoversiyon."),
+            # Verapamil is avoided in hypotension; ESC 2019 SVT https://doi.org/10.1093/eurheartj/ehz467
+            ("verapamil_hypotension", "IV verapamil while hypotensive", "Hipotansifken IV verapamil", "contraindicated", [], "A calcium-channel blocker deepens hypotension; cardiovert the unstable patient instead.", "Kalsiyum kanal blokeri hipotansiyonu derinleştirir; instabil hastada kardiyoversiyon yapın."),
         ],
     },
     "vt": {
@@ -446,6 +452,21 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("controlled_o2", "Controlled oxygen to SpO2 88-92%", "SpO2 %88-92'ye kontrollü oksijen", "indicated", [("spo2", 3.0, 300000)], "Titrate oxygen to avoid CO2 narcosis.", "CO2 narkozundan kaçınmak için oksijeni titre edin."),
             ("neb_steroid_abx", "Nebulisers + steroid ± antibiotics", "Nebül + steroid ± antibiyotik", "indicated", [("rr", -4.0, 600000)], "Bronchodilators, steroids and antibiotics if purulent.", "Bronkodilatör, steroid ve pürülansta antibiyotik."),
             ("niv", "NIV for hypercapnic acidosis", "Hiperkapnik asidozda NIV", "indicated", [], "NIV when pH < 7.35 with hypercapnia.", "Hiperkapniyle pH < 7.35 iken NIV."),
+            # BTS 2017: target 88-92% in hypercapnic risk https://doi.org/10.1136/thoraxjnl-2016-209729
+            ("untitrated_high_o2", "Untitrated 15 L/min oxygen via reservoir mask", "Titre edilmeden rezervuarlı maskeyle 15 L/dk oksijen", "contraindicated", [], "Uncontrolled oxygen worsens hypercapnia in COPD; titrate to 88-92%.", "Kontrolsüz oksijen KOAH'ta hiperkapniyi kötüleştirir; %88-92'ye titre edin."),
+        ],
+    },
+    # Live finding 2026-10-20: the emergency profile had no contraindicated
+    # distractor, so a model-authored sepsis case could never satisfy the safety
+    # judge. Delaying antimicrobials is the teachable harm: SSC recommends them
+    # within 1 hour of recognising probable sepsis or shock
+    # https://www.sccm.org/SurvivingSepsisCampaign/Guidelines
+    "sepsis_uncomplicated": {
+        "treatments": [
+            ("cultures", "Blood cultures before antibiotics", "Antibiyotik öncesi kan kültürü", "indicated", [], "Culture before antibiotics if no delay.", "Geciktirmiyorsa antibiyotik öncesi kültür alın."),
+            ("abx", "Broad-spectrum IV antibiotics", "Geniş spektrumlu IV antibiyotik", "indicated", [], "Early antibiotics for suspected sepsis; they do not move the vitals within the hour.", "Şüpheli sepsiste erken antibiyotik; vitalleri ilk saatte değiştirmez."),
+            ("iv_fluids", "IV fluid resuscitation", "IV sıvı resüsitasyonu", "indicated", [("hr", -10.0, 600000), ("systolic", 10.0, 600000)], "Restore perfusion.", "Perfüzyonu düzeltin."),
+            ("delay_abx", "Delay antibiotics until all results are back", "Tüm sonuçlar çıkana kadar antibiyotiği ertele", "contraindicated", [], "Do not delay antimicrobials in probable sepsis (target within 1 hour).", "Olası sepsiste antimikrobiyali geciktirmeyin (hedef 1 saat içinde)."),
         ],
     },
     "pneumonia_cap": {
@@ -497,6 +518,9 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("high_flow_o2", "High-flow 100% oxygen", "Yüksek akım %100 oksijen", "indicated", [], "100% oxygen shortens carboxyhaemoglobin half-life.", "%100 oksijen karboksihemoglobin yarı ömrünü kısaltır."),
             ("remove_source", "Remove from the source", "Kaynaktan uzaklaştır", "indicated", [], "Immediate removal from exposure.", "Maruziyetten hemen uzaklaştırma."),
             ("hyperbaric", "Consider hyperbaric oxygen", "Hiperbarik oksijeni değerlendir", "neutral", [], "Consider hyperbaric in severe poisoning.", "Ağır zehirlenmede hiperbariği düşünün."),
+            # Pulse oximetry reads carboxyhaemoglobin as oxyhaemoglobin (Hampson,
+            # Chest 1998 https://doi.org/10.1378/chest.114.4.1036); co-oximetry is needed.
+            ("discharge_normal_spo2", "Discharge because pulse oximetry SpO2 is normal", "Nabız oksimetresi SpO2 normal diye taburcu", "contraindicated", [], "SpO2 is falsely normal in CO poisoning; measure COHb by co-oximetry.", "CO zehirlenmesinde SpO2 yanlış normaldir; COHb'yi ko-oksimetriyle ölçün."),
         ],
     },
 
@@ -959,6 +983,9 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("uterotonics", "Uterine massage + uterotonics", "Uterin masaj + uterotonikler", "indicated", [], "Oxytocin and massage for atony.", "Atoni için oksitosin ve masaj."),
             ("tranexamic_acid", "Tranexamic acid", "Traneksamik asit", "indicated", [], "Give tranexamic acid early.", "Traneksamik asidi erken verin."),
             ("resus_transfuse", "Resuscitate + transfuse", "Resüsitasyon + transfüzyon", "indicated", [("systolic", 12.0, 600000)], "Major haemorrhage protocol.", "Masif kanama protokolü."),
+            # WHO 2023 PPH recommendations (treat on clinical estimate of loss)
+            # https://www.who.int/publications/i/item/9789240085398
+            ("wait_for_hb", "Wait for the laboratory haemoglobin before resuscitating", "Resüsitasyon için laboratuvar hemoglobinini bekle", "contraindicated", [], "Resuscitate on the clinical estimate of blood loss; a first Hb lags behind the bleed.", "Kan kaybının klinik tahminine göre resüsite edin; ilk Hb kanamanın gerisinde kalır."),
         ],
     },
 

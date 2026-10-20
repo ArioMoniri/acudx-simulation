@@ -527,6 +527,10 @@ _PROFILES: dict[str, dict[str, Any]] = {
             # Review 02 finding 14: no 30-minute antipyresis from antibiotics.
             ("abx", "Broad-spectrum IV antibiotics", "Geniş spektrumlu IV antibiyotik", "indicated", [], "Early antibiotics for suspected sepsis.", "Şüpheli sepsiste erken antibiyotik."),
             ("iv_fluids", "IV fluid resuscitation", "IV sıvı resüsitasyonu", "indicated", [("hr", -10.0, 600000), ("systolic", 10.0, 600000)], "Restore perfusion.", "Perfüzyonu düzeltin."),
+            # Live finding 2026-10-20: without a contraindicated distractor no
+            # model-authored emergency case could pass the safety judge. The
+            # _default profile's distractor applies to every undifferentiated case.
+            ("premature_dispo", "Discharge before a working diagnosis", "Çalışma tanısı öncesi taburcu", "contraindicated", [], "Reach a safe disposition first.", "Önce güvenli bir dispozisyona ulaşın."),
         ],
         "guide": ("SSC", "Surviving Sepsis Campaign (summary)", "For suspected sepsis take cultures and lactate and start antibiotics and fluids within the first hour.", "Şüpheli sepsiste kültür ve laktat alıp ilk saat içinde antibiyotik ve sıvı başlayın."),
     },
@@ -583,6 +587,8 @@ _PROFILES: dict[str, dict[str, Any]] = {
             ("risk_assessment", "Structured risk assessment", "Yapılandırılmış risk değerlendirmesi", "indicated", [], "Assess risk to self and others.", "Kendine ve başkalarına riski değerlendirin."),
             ("deescalation", "Verbal de-escalation, safe environment", "Sözel sakinleştirme, güvenli ortam", "indicated", [], "De-escalate before any medication.", "İlaçtan önce sakinleştirin."),
             ("organic_workup", "Exclude an organic cause", "Organik nedeni dışla", "indicated", [], "Rule out delirium / metabolic causes.", "Deliryum / metabolik nedenleri dışlayın."),
+            # Live finding 2026-10-20: a distractor so model-authored psychiatry cases can pass the safety judge.
+            ("discharge_no_risk", "Discharge before a risk assessment", "Risk değerlendirmesi öncesi taburcu", "contraindicated", [], "Never discharge before assessing risk to self and others.", "Kendine ve başkalarına risk değerlendirilmeden taburcu etmeyin."),
         ],
         "guide": ("TEPDAD", "Psychiatric emergency (summary)", "Ensure safety, perform a structured risk assessment, and exclude an organic cause before attributing symptoms to a primary psychiatric disorder.", "Güvenliği sağlayın, yapılandırılmış risk değerlendirmesi yapın ve semptomları birincil psikiyatrik bozukluğa bağlamadan önce organik nedeni dışlayın."),
     },
@@ -908,6 +914,11 @@ def _trajectory(triage: dict[str, Any], acuity: int, cond: Optional[dict[str, An
             "spo2": int(max(80, min(100, triage["spo2"] + (-1 if worsen else 1) * f))),
             "tempC": triage["tempC"],
         })
+    for pt in pts:
+        # A collapsing pulse pressure (tamponade drift) must still keep diastolic
+        # below systolic; the judges reject diastolic >= systolic.
+        if pt["diastolic"] >= pt["systolic"] - 10:
+            pt["diastolic"] = max(20, pt["systolic"] - 10)
     return pts
 
 
