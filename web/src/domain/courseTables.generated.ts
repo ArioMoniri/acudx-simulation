@@ -5138,6 +5138,72 @@ export const COURSE_TABLES: CourseTables = {
     "systolic": 120
    }
   },
+  "herniation": {
+   "arrest_rhythm": "PEA",
+   "bedside0": {
+    "gcs": 13
+   },
+   "branches": [],
+   "findings": [],
+   "floor": 0.35,
+   "fluid": "neutral",
+   "fluid_limit_ml": null,
+   "fluid_persistent": false,
+   "groups": [
+    {
+     "active_min": null,
+     "classes": [],
+     "codes": [
+      "mannitol",
+      "hypertonic_saline"
+     ],
+     "id": "osmotherapy",
+     "label_en": "Osmotherapy and neurosurgery",
+     "label_tr": "Ozmoterapi ve nöroşirürji",
+     "lag_min": null,
+     "modifies": true,
+     "needs": [],
+     "recover_h": null
+    }
+   ],
+   "harm_rules": [],
+   "hypercapnic": false,
+   "id": "herniation",
+   "lag_min": 0,
+   "metabolic": null,
+   "o2_response": 0.4,
+   "pattern": "neuro_bleed",
+   "peri": {
+    "diastolic": 110,
+    "gcs": 5,
+    "hr": 55,
+    "rr": 10,
+    "systolic": 200
+   },
+   "rate_h": 0.4,
+   "recover_h": 0.0,
+   "resolve_below": null,
+   "row_classes": {},
+   "row_harms": {},
+   "s0": 0.5,
+   "start_arrest": null,
+   "targets": [
+    {
+     "basis": "design",
+     "by_min": 30,
+     "group": "osmotherapy",
+     "id": "osmotherapy",
+     "source": "IDSA 2004 meningitis https://doi.org/10.1086/425368"
+    }
+   ],
+   "well": {
+    "diastolic": 85,
+    "gcs": 15,
+    "hr": 80,
+    "rr": 16,
+    "systolic": 150
+   }
+  },
   "hhs": {
    "arrest_rhythm": "PEA",
    "bedside0": {

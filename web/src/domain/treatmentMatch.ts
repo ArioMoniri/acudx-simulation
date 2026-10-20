@@ -58,6 +58,24 @@ export const DIAGNOSTIC_ROW_STEMS = [
   "referral", "source control",
 ];
 
+/**
+ * Contraindicated rows that describe NOT acting ("Delay antibiotics"): scored
+ * by the target timer, never administered (review 06b F09). Mirror of
+ * OMISSION_ROW_STEMS in server/orchestration/director.py.
+ */
+export const OMISSION_ROW_STEMS = [
+  "delay", "withhold", "wait", "await", "watchful", "discharge", "safety-net", "safety net", "continue nephrotoxins",
+  "single oral",
+];
+
+/** True for a contraindicated omission row (mirror of director.row_role "omission"). */
+export function isOmissionRow(row: TreatmentResponse): boolean {
+  if (row.appropriateness !== "contraindicated") return false;
+  const lead = (row.label?.en ?? "").toLowerCase();
+  const head = ` ${lead.slice(0, 30)}`;
+  return OMISSION_ROW_STEMS.some((s) => lead.startsWith(s) || head.includes(` ${s}`));
+}
+
 function isDiagnosticRow(label: string): boolean {
   const lead = label.toLowerCase();
   const head = ` ${lead.slice(0, 40)}`;

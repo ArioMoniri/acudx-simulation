@@ -133,3 +133,26 @@ def test_9_pneumonia_branches_to_septic_shock_with_new_findings_results_and_narr
     assert lactate["value"] > 4.0
     msgs = D._narrate_messages(state, D.Action(kind="question", ref="pain"), [], [branch])
     assert "septic_shock" in msgs[1]["content"]
+
+
+# Extra harm rules of 06b section 4.2 ------------------------------------- #
+def test_lp_before_ct_with_red_flags_opens_herniation():
+    r = run("bacterial_meningitis", [(5, "order", "lumbar_puncture")], until=60, bedside0={"gcs": 12})
+    assert any(e["kind"] == "lp_before_ct" for e in r.state.errors)
+    assert any("herniation" in r.minutes[m].get("active_diagnoses", []) for m in r.minutes)
+    safe = run("bacterial_meningitis", [(2, "order", "ct head"), (5, "order", "lumbar_puncture")], until=60,
+               bedside0={"gcs": 12})
+    assert not any(e["kind"] == "lp_before_ct" for e in safe.state.errors)
+
+
+def test_omission_rows_are_not_administered():
+    r = run("sepsis_uncomplicated", [(2, "treatment", "delay_abx")], until=5)
+    assert any("omission" in n["note"] for n in r.notes)
+    assert not r.state.events
+
+
+def test_fluid_bolus_harms_a_heart_failure_patient_with_another_diagnosis():
+    spec = spec_for("sepsis_uncomplicated")
+    spec["pmh_en"] = "Chronic heart failure (EF 30 %)."
+    r = run("sepsis_uncomplicated", [(5, "treatment", "313002")], until=30, spec=spec)
+    assert any(e["kind"] == "fluid_overload" for e in r.state.errors)

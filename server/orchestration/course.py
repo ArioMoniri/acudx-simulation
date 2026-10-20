@@ -166,9 +166,9 @@ def library_for(cid: str) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     if cid not in FX.CONDITION_COURSE:
         out[cid] = fallback_rule(cid)
-    todo = [cid, "anaphylaxis_iatrogenic", "hypoglycemia"]
-    while todo:
-        nxt = todo.pop()
+    queue = [cid, "anaphylaxis_iatrogenic", "hypoglycemia"]
+    while queue:
+        nxt = queue.pop()
         if nxt in out or not nxt:
             continue
         rule = expand_rule(nxt)
@@ -176,17 +176,17 @@ def library_for(cid: str) -> dict[str, dict[str, Any]]:
             continue
         out[nxt] = rule
         for b in rule["branches"]:
-            todo.append(b.get("to") or "")
+            queue.append(b.get("to") or "")
         for h in rule["row_harms"].values():
-            todo.append(h.get("branch") or "")
+            queue.append(h.get("branch") or "")
         if "beta_blocker_killip" in rule["harm_rules"]:
-            todo.append("cardiogenic_shock")
+            queue.append("cardiogenic_shock")
         if "lp_before_ct" in rule["harm_rules"]:
-            todo.append("cerebral_oedema_dka")
+            queue.append("herniation")
         if rule.get("hypercapnic"):
-            todo.append("type2_respiratory_failure")
+            queue.append("type2_respiratory_failure")
         if rule.get("fluid") == "rv":
-            todo.append("pe_high_risk")
+            queue.append("pe_high_risk")
     return out
 
 
@@ -377,7 +377,7 @@ class _Sim:
                     if v.get("gcs", 15) < 13 or "red_flags" in self.flags:
                         self._harm("lp_before_ct", minute, "Lumbar puncture before CT with red flags: herniation risk (IDSA 2004; NICE NG240)",
                                    "Kırmızı bayrak varken BT öncesi lomber ponksiyon: herniasyon riski (IDSA 2004; NICE NG240)", code)
-                        self.pending.append({"at": minute + 30, "to": "cerebral_oedema_dka", "parent": self.procs[0]["id"],
+                        self.pending.append({"at": minute + 30, "to": "herniation", "parent": self.procs[0]["id"],
                                              "why_en": "Herniation after lumbar puncture with red flags (IDSA 2004)",
                                              "why_tr": "Kırmızı bayraklı hastada LP sonrası herniasyon (IDSA 2004)", "supersede": False, "s_start": 0.5})
             self._satisfy(code, row, [], [], minute)

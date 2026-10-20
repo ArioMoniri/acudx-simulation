@@ -27,7 +27,7 @@
 import type { CaseInstance } from "@/domain/case";
 import { adverseEffectForContraindicated, classify, genericEffect } from "@/domain/treatments";
 import { fluidsGate, gateFor, isAnaphylaxis, isOpioidToxidrome } from "@/domain/treatmentRules";
-import { FORMULARY_ROW_STEMS, matchTreatmentResponse } from "@/domain/treatmentMatch";
+import { FORMULARY_ROW_STEMS, isOmissionRow, matchTreatmentResponse } from "@/domain/treatmentMatch";
 import { COURSE_TABLES } from "@/domain/courseTables.generated";
 
 export interface CurrentVitals {
@@ -749,19 +749,19 @@ export function courseLibrary(cid: string): Dict<CourseRule> {
   const out: Dict<CourseRule> = {};
   const rules = COURSE_TABLES.rules;
   if (!(cid in rules)) out[cid] = fallbackRule(cid);
-  const todo = [cid, "anaphylaxis_iatrogenic", "hypoglycemia"];
-  while (todo.length) {
-    const nxt = todo.pop() as string;
+  const queue = [cid, "anaphylaxis_iatrogenic", "hypoglycemia"];
+  while (queue.length) {
+    const nxt = queue.pop() as string;
     if (!nxt || nxt in out) continue;
     const rule = rules[nxt];
     if (!rule) continue;
     out[nxt] = rule;
-    for (const b of rule.branches) todo.push(b.to || "");
-    for (const h of Object.values(rule.row_harms)) todo.push(h.branch || "");
-    if (rule.harm_rules.includes("beta_blocker_killip")) todo.push("cardiogenic_shock");
-    if (rule.harm_rules.includes("lp_before_ct")) todo.push("cerebral_oedema_dka");
-    if (rule.hypercapnic) todo.push("type2_respiratory_failure");
-    if (rule.fluid === "rv") todo.push("pe_high_risk");
+    for (const b of rule.branches) queue.push(b.to || "");
+    for (const h of Object.values(rule.row_harms)) queue.push(h.branch || "");
+    if (rule.harm_rules.includes("beta_blocker_killip")) queue.push("cardiogenic_shock");
+    if (rule.harm_rules.includes("lp_before_ct")) queue.push("herniation");
+    if (rule.hypercapnic) queue.push("type2_respiratory_failure");
+    if (rule.fluid === "rv") queue.push("pe_high_risk");
   }
   LIB_CACHE.set(cid, out);
   return out;
@@ -993,7 +993,7 @@ class CourseSim {
           if ((v.gcs ?? 15) < 13 || this.flags.includes("red_flags")) {
             this.harm("lp_before_ct", minute, "Lumbar puncture before CT with red flags: herniation risk (IDSA 2004; NICE NG240)",
               "Kırmızı bayrak varken BT öncesi lomber ponksiyon: herniasyon riski (IDSA 2004; NICE NG240)", code);
-            this.pending.push({ at: minute + 30, to: "cerebral_oedema_dka", parent: this.procs[0].id,
+            this.pending.push({ at: minute + 30, to: "herniation", parent: this.procs[0].id,
               why_en: "Herniation after lumbar puncture with red flags (IDSA 2004)",
               why_tr: "Kırmızı bayraklı hastada LP sonrası herniasyon (IDSA 2004)", supersede: false, s_start: 0.5 });
           }
@@ -1847,17 +1847,13 @@ export function courseBindingFromSpec(spec: CourseSpecLike): CaseCourseBinding |
 }
 
 const PENICILLIN_WORDS = ["penicillin", "amoxicillin", "co-amoxiclav", "co amoxiclav", "flucloxacillin", "piperacillin", "benzylpenicillin", "ampicillin"];
-const OMISSION_ROW_STEMS = ["delay", "withhold", "wait", "await", "watchful", "discharge", "safety-net", "safety net", "continue nephrotoxins", "single oral"];
 const EFFECT_CAPS: Record<string, number> = { hr: 80, systolic: 50, diastolic: 30, rr: 15, spo2: 15, tempC: 2.5, pain: 10 };
 
 /** One course event for an administered code (mirror of director.course_event), or null for an omission row. */
 export function courseEventFor(c: CaseInstance, code: string, at: number, seq: number): CourseEvent | null {
   const row = matchTreatmentResponse(c, code);
   const label = `${row?.label?.en ?? ""} ${row?.narrative.en ?? ""}`.toLowerCase();
-  if (row && row.appropriateness === "contraindicated") {
-    const lead = (row.label?.en ?? "").toLowerCase();
-    if (OMISSION_ROW_STEMS.some((s) => lead.startsWith(s) || ` ${lead.slice(0, 30)}`.includes(` ${s}`))) return null;
-  }
+  if (row && isOmissionRow(row)) return null;
   let classes = COURSE_TABLES.codeClasses[code];
   if (!classes) classes = row ? COURSE_TABLES.rowClasses[row.treatmentCode] ?? [] : COURSE_TABLES.rowClasses[code] ?? [];
   let acls = COURSE_TABLES.agentAllergyClass[code] ?? "";

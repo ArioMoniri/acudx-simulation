@@ -51,3 +51,13 @@ def test_engine_reproduces_the_fixture_from_inputs_alone():
             snap = C.simulate(case["input"], int(mark) * 60_000)
             assert snap["vitals"] == want["vitals"], (case["condition_id"], case["label"], mark)
             assert snap["phase"] == want["phase"], (case["condition_id"], case["label"], mark)
+
+
+def test_client_omission_and_stem_tables_mirror_the_director():
+    """06b F09 and F29: omission rows are never administered on either side."""
+    from server.orchestration import director as D
+    ts = (ROOT / "web/src/domain/treatmentMatch.ts").read_text(encoding="utf-8")
+    block = ts[ts.index("export const OMISSION_ROW_STEMS"):]
+    block = block[:block.index("];")]
+    import re
+    assert set(re.findall(r'"([^"]+)"', block)) == set(D.OMISSION_ROW_STEMS)

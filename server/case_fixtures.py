@@ -3257,6 +3257,11 @@ CONDITION_COURSE: dict[str, dict[str, Any]] = {
         "targets": [_tgt("glucose", "glucose", 15, "JBDS hypoglycaemia 2022 https://abcd.care/resource/current-guidelines (treat immediately)", basis="design")],
         "row_classes": {"glucose": ["dextrose"], "insulin": ["insulin_bolus"]},
     },
+    "herniation": {
+        "pattern": "neuro_bleed", "rate_h": 0.4, "s0": 0.5,
+        "groups": [_grp("osmotherapy", ("mannitol", "hypertonic_saline"), (), en="Osmotherapy and neurosurgery", tr="Ozmoterapi ve nöroşirürji")],
+        "targets": [_tgt("osmotherapy", "osmotherapy", 30, "IDSA 2004 meningitis https://doi.org/10.1086/425368", basis="design")],
+    },
     "cerebral_oedema_dka": {
         "pattern": "neuro_bleed", "rate_h": 0.4, "s0": 0.35,
         "groups": [_grp("osmotherapy", ("mannitol", "hypertonic_saline"), (), en="Mannitol or hypertonic saline", tr="Mannitol veya hipertonik salin")],
