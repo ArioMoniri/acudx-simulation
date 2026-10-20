@@ -1,6 +1,5 @@
 // D-26 probe: which request holds the `load` event? Not a test; run by hand:
 //   node web/e2e/acceptance/load-probe.mjs http://localhost:4201/signin
-/* global process, console, localStorage */
 import { chromium } from "@playwright/test";
 
 const url = process.argv[2] ?? "http://localhost:4193/signin";
