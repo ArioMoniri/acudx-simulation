@@ -101,8 +101,6 @@ WORKER_FIREWALL_RULES: list[FirewallRule] = [
                  description="acudx gpu-worker: ACME http-01 for Caddy"),
     FirewallRule(protocol="tcp", port_range=[443, 443], source_network="0.0.0.0/0",
                  description="acudx gpu-worker: HTTPS (LLM/TTS/STT behind bearer token)"),
-    FirewallRule(protocol="tcp", port_range=[8081, 8081], source_network="0.0.0.0/0",
-                 description="acudx gpu-worker: boot diagnostics (token-scoped path, plain HTTP)"),
 ]
 
 

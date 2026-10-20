@@ -534,7 +534,7 @@ class WorkerManager:
         raise WorkerFailed(f"worker {w.domain} did not pass /healthz in {self.ready_timeout_s:.0f}s")
 
     async def boot_log(self, tail_lines: int = 200) -> dict[str, Any]:
-        """Read the worker's cloud-init output and docker status over the diagnostics port.
+        """Read the worker's cloud-init output and docker status over plain HTTP on port 80 (/diag/<token>/).
 
         The path embeds the worker token, so only the gateway (which holds it) can read it.
         Returns {available, cloud_init, docker_status, error}; never raises.
@@ -543,7 +543,7 @@ class WorkerManager:
         if w is None or not w.ip:
             return {"available": False, "error": "no active worker with an ip"}
         out: dict[str, Any] = {"available": False, "instance_id": w.instance_id, "ip": w.ip}
-        base = f"http://{w.ip}:8081/{w.token}"
+        base = f"http://{w.ip}/diag/{w.token}"
         for key, name in (("cloud_init", "cloud-init-output.log"), ("docker_status", "docker-status.txt")):
             try:
                 r = await self._probe_client().get(f"{base}/{name}")

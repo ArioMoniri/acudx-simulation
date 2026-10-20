@@ -62,7 +62,7 @@ async def gpu_stop(request: Request) -> dict[str, Any]:
 
 @router.get("/gpu/boot-log", dependencies=[Depends(require_admin)])
 async def gpu_boot_log(request: Request, tail: int = 200) -> dict[str, Any]:
-    """Cloud-init output and docker status of the active worker (diagnostics port 8081)."""
+    """Cloud-init output and docker status of the active worker (plain HTTP /diag/<token>/ on port 80)."""
     return await _manager(request).boot_log(tail_lines=max(10, min(tail, 2000)))
 
 

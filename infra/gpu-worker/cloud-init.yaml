@@ -38,6 +38,18 @@ write_files:
       CHATTERBOX_REF=a5f466128e4baa8e4cceb3bba9b7ca9de6f7ec6b
   - path: /opt/acudx/Caddyfile
     content: |
+      # Boot diagnostics over plain HTTP: /diag/<worker token>/cloud-init-output.log and
+      # docker-status.txt. The token in the path is the only credential, so the files are
+      # readable only by the gateway that launched the worker. ACME http-01 still works.
+      http://:80 {
+        handle /diag/* {
+          root * /opt/acudx/public
+          file_server
+        }
+        handle {
+          redir https://{$WORKER_DOMAIN}{uri} permanent
+        }
+      }
       {$WORKER_DOMAIN} {
         @unauth not header Authorization "Bearer {$WORKER_TOKEN}"
         respond @unauth 401
@@ -116,11 +128,12 @@ write_files:
           volumes:
             - /opt/acudx/Caddyfile:/etc/caddy/Caddyfile:ro
             - /opt/acudx/caddy:/data
+            - /opt/acudx/public:/opt/acudx/public:ro
   # Voice library seeding: Chatterbox picks the synthesis language from the voice's
   # metadata, so one voice per language is uploaded once the API is up. The reference
   # clip is the repository's bundled sample; institutions replace it with consented
   # actor recordings through POST /voices (docs/architecture/18 section 4.2).
-  # Boot diagnostics: a stdlib HTTP server on :8081 serving the cloud-init output
+  # Boot diagnostics: a stdlib HTTP server on :80 serving the cloud-init output
   # and a rolling docker status under a path that embeds the worker token, so the
   # gateway can read boot logs without SSH (GET /admin/gpu/boot-log).
   - path: /opt/acudx/diag.sh
@@ -129,10 +142,15 @@ write_files:
       #!/usr/bin/env bash
       set -u
       . /opt/acudx/.env
-      d=/opt/acudx/diag/$WORKER_TOKEN
+      # Only /opt/acudx/public is ever served (never .env); index files stop directory listings.
+      d=/opt/acudx/public/diag/$WORKER_TOKEN
       mkdir -p "$d"
+      echo "acudx worker" > /opt/acudx/public/index.html
+      echo "acudx worker diagnostics" > /opt/acudx/public/diag/index.html
       ln -sf /var/log/cloud-init-output.log "$d/cloud-init-output.log"
-      nohup python3 -m http.server 8081 --bind 0.0.0.0 --directory /opt/acudx/diag >/var/log/acudx-diag.log 2>&1 &
+      # Served on :80 by python until Caddy binds the port (compose step); if compose
+      # fails the runcmd below restarts this server so the failure is still readable.
+      nohup python3 -m http.server 80 --bind 0.0.0.0 --directory /opt/acudx/public >/var/log/acudx-diag.log 2>&1 &
       while true; do
         { date; echo "--- docker ps"; docker ps --format '{{.Names}} {{.Status}}' 2>&1;
           echo "--- compose logs (tail)"; cd /opt/acudx && docker compose logs --tail 40 2>&1; } > "$d/docker-status.txt.tmp"
@@ -179,6 +197,7 @@ runcmd:
     git -C /opt/acudx/chatterbox-tts-api checkout --quiet "$CHATTERBOX_REF"
   # Core first (Caddy, vLLM, STT, Kokoro) so /healthz turns green as soon as the model
   # loads; the Chatterbox image build runs afterwards and attaches when done.
-  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d caddy vllm speaches kokoro
+  - pkill -f "http.server 80" || true
+  - cd /opt/acudx && set -a && . ./.env && set +a && (docker compose up -d caddy vllm speaches kokoro || nohup python3 -m http.server 80 --bind 0.0.0.0 --directory /opt/acudx/public >/var/log/acudx-diag.log 2>&1 &)
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d --build chatterbox
   - nohup /opt/acudx/seed-voices.sh >/var/log/acudx-seed-voices.log 2>&1 &
