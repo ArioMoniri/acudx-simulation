@@ -65,15 +65,15 @@ function SectionHeading({
   badge?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <div className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-border pb-2">
       <div>
         <div className="flex items-center gap-2">
-          <Icon weight="bold" className="h-4.5 w-4.5 text-brand" aria-hidden />
-          <h2 id={id} className="text-lg font-semibold tracking-tight text-fg">
+          <Icon weight="bold" className="h-4 w-4 text-subtle" aria-hidden />
+          <h2 id={id} className="text-[0.9375rem] font-semibold tracking-tight text-fg">
             {title}
           </h2>
         </div>
-        <p className="mt-1 max-w-2xl text-sm text-muted">{subtitle}</p>
+        <p className="mt-0.5 max-w-2xl text-xs text-muted">{subtitle}</p>
       </div>
       {badge ? <div className="shrink-0">{badge}</div> : null}
     </div>
@@ -170,7 +170,7 @@ export function DeanPage() {
   const unverified = authMode === "local" || report?.verified_identity === false;
 
   return (
-    <PageContainer width="wide" className="flex flex-col gap-12">
+    <PageContainer width="wide" className="flex flex-col gap-8">
       <motion.div {...header}>
         <PageHeader
           tone="clinical"
@@ -234,7 +234,7 @@ export function DeanPage() {
       ) : null}
 
       {!loading && !serverOk ? (
-        <motion.div {...body} className="flex flex-col gap-10">
+        <motion.div {...body} className="flex flex-col gap-8">
           <Card padding="md" variant="inset" className="flex flex-wrap items-center gap-3">
             <WifiSlash weight="bold" className="h-5 w-5 shrink-0 text-muted" aria-hidden />
             <div className="min-w-0 flex-1">
@@ -273,7 +273,7 @@ export function DeanPage() {
       ) : null}
 
       {serverOk ? (
-        <motion.div {...body} className="flex flex-col gap-12">
+        <motion.div {...body} className="flex flex-col gap-8">
           <section aria-label={t("panels.dean.kpi.sectionLabel")}>
             <SectionLabel className="mb-3">{t("panels.dean.kpi.sectionLabel")}</SectionLabel>
             <CohortKpis report={report} />

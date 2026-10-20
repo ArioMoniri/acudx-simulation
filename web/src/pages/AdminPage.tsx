@@ -46,7 +46,7 @@ function Console() {
 
   return (
     <PageContainer width="wide">
-      <motion.div {...entry} className="flex flex-col gap-6">
+      <motion.div {...entry} className="flex flex-col gap-5">
         <PageHeader
           eyebrow={t("admin.eyebrow")}
           title={t("admin.title")}
@@ -64,16 +64,27 @@ function Console() {
         {!signedIn ? (
           <AdminTokenGate />
         ) : (
-          <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-              <TabsList aria-label={t("admin.title")}>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8">
+            {/* Console section nav: a left list on lg+, a segmented strip below. */}
+            <div className="lg:sticky lg:top-16 lg:self-start">
+              <TabsList aria-label={t("admin.title")} variant="vertical" className="hidden lg:flex">
                 {TABS.map((k) => (
                   <TabsTrigger key={k} value={k}>
                     {t(`admin.tabs.${k}`)}
                   </TabsTrigger>
                 ))}
               </TabsList>
+              <div className="-mx-4 overflow-x-auto px-4 lg:hidden">
+                <TabsList aria-label={t("admin.title")} variant="underline" className="w-max min-w-full">
+                  {TABS.map((k) => (
+                    <TabsTrigger key={k} value={k}>
+                      {t(`admin.tabs.${k}`)}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
             </div>
+            <div className="min-w-0 [&>[role=tabpanel]]:mt-0">
             <TabsContent value="overview">
               <OverviewSection />
             </TabsContent>
@@ -92,6 +103,7 @@ function Console() {
             <TabsContent value="settings">
               <SettingsSection />
             </TabsContent>
+            </div>
           </Tabs>
         )}
       </motion.div>
