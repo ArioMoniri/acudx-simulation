@@ -1168,6 +1168,42 @@ async function runDirectorStep(action: DirectorAction, caseId: string, ctx: Dire
   }
 }
 
+/** Two patient lines say the same thing (case, spacing and end punctuation aside). */
+function samePatientLine(a: string, b: string): boolean {
+  const norm = (s: string) => s.toLocaleLowerCase().replace(/\s+/g, " ").replace(/[\s.!?,;:…]+$/u, "").trim();
+  return norm(a) !== "" && norm(a) === norm(b);
+}
+
+/**
+ * True when the live persona (/v1/patient/turn) answered the action logged at `seq`:
+ * the question carries `voiced`, or a persona exchange was recorded for it (recordDialogue
+ * logs its own event right before the question it answers, so it sits at seq or seq - 1).
+ * The Director's narrator line is then not added on top (one patient line per action).
+ */
+function personaAnswered(seq: number): boolean {
+  const ev = state.events.find((e) => e.seq === seq);
+  if (ev?.meta?.voiced === true) return true;
+  // The same words were just answered by the persona: its exchange sits right before.
+  const asked = typeof ev?.meta?.utterance === "string" ? ev.meta.utterance.trim() : "";
+  if (!asked) return false;
+  const doctor = state.dialogue.find((d) => d.role === "doctor" && d.id.startsWith("dlg-") && d.seq === seq - 1);
+  return Boolean(doctor && doctor.en.trim().slice(0, 280) === asked.slice(0, 280));
+}
+
+/**
+ * The transcript view: identical consecutive patient lines are shown once (a persona reply
+ * and a narrator or reveal line that say the same thing).
+ */
+export function dedupePatientTurns<T extends { role: "doctor" | "patient"; en: string }>(turns: T[]): T[] {
+  const out: T[] = [];
+  for (const turn of turns) {
+    const prev = out[out.length - 1];
+    if (turn.role === "patient" && prev?.role === "patient" && samePatientLine(prev.en, turn.en)) continue;
+    out.push(turn);
+  }
+  return out;
+}
+
 /** Fold a Director answer into the store: overlay, facts, notes, complications. */
 function applyDirectorStep(data: DirectorStepResult, action?: DirectorAction, ctx: DirectorStepContext = {}): void {
   const c = state.caseInstance;
@@ -1196,8 +1232,17 @@ function applyDirectorStep(data: DirectorStepResult, action?: DirectorAction, ct
   const pv = data.patient_visible_changes;
   const line = { en: (pv?.utterance_en ?? "").trim(), tr: (pv?.utterance_tr ?? "").trim() };
   let dialogue = state.dialogue;
-  if (action && (action.kind === "question" || action.kind === "exam" || action.kind === "treatment") && !ctx.voiced && (line.en || line.tr)) {
-    const seq = ctx.seq ?? (events[events.length - 1]?.seq ?? 0);
+  const seqOfAction = ctx.seq ?? (events[events.length - 1]?.seq ?? 0);
+  const lastPatient = [...dialogue].reverse().find((d) => d.role === "patient");
+  if (
+    action &&
+    (action.kind === "question" || action.kind === "exam" || action.kind === "treatment") &&
+    !ctx.voiced &&
+    (line.en || line.tr) &&
+    !personaAnswered(seqOfAction) &&
+    !(lastPatient && samePatientLine(lastPatient.en, line.en || line.tr))
+  ) {
+    const seq = seqOfAction;
     dialogue = [
       ...dialogue,
       {

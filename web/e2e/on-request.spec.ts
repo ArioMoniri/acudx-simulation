@@ -428,6 +428,37 @@ test.describe("cases are generated on request", () => {
     expect(layerReads).toHaveLength(2);
   });
 
+  test("one patient line per action: the persona reply suppresses the Director's line for the same step", async ({ page }) => {
+    const gw = await signIn(page);
+    const PERSONA = "It started two days ago with chills, doctor.";
+    const turns: number[] = [];
+    await page.route(
+      (url) => url.pathname === "/api/v1/patient/turn",
+      async (route) => {
+        turns.push(turns.length + 1);
+        // The second reply says exactly what the Director narrates: shown once.
+        const utterance = turns.length === 1 ? PERSONA : DIRECTOR_UTTERANCE;
+        return route.fulfill({
+          json: { utterance, routed_as: "in_scope", state_advance: true, flags: [], meta: null,
+                  guard: { class: "in_scope", score: 0.9, rationale: "history question" } },
+        });
+      },
+    );
+    await openEncounter(page, gw);
+    const transcript = page.getByRole("log", { name: "Encounter transcript" });
+    await askQuestion(page, "When did the fever start?");
+    await expect(transcript.getByText(PERSONA)).toHaveCount(1, { timeout: 15_000 });
+    await expect.poll(() => gw.directorCalls().length, { timeout: 15_000 }).toBeGreaterThanOrEqual(1);
+    // The Director answered the same step, but the persona already did: no narrator line.
+    await page.waitForTimeout(1_000);
+    await expect(transcript.getByText(DIRECTOR_UTTERANCE)).toHaveCount(0);
+    await askQuestion(page, "How is your breathing now?");
+    await expect(transcript.getByText(DIRECTOR_UTTERANCE)).toHaveCount(1, { timeout: 15_000 });
+    await expect.poll(() => gw.directorCalls().length, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
+    await page.waitForTimeout(1_000);
+    await expect(transcript.getByText(DIRECTOR_UTTERANCE)).toHaveCount(1);
+  });
+
   test("the patient reply reflects the Director's utterance", async ({ page }) => {
     const gw = await signIn(page);
     await openEncounter(page, gw);
