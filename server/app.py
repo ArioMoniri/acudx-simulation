@@ -36,10 +36,16 @@ from fastapi.responses import JSONResponse
 from pydantic import AliasChoices, BaseModel, Field
 
 from server.admin_routes import router as admin_router
+from server.auth.deps import AuthService
+from server.auth.routes import admin_router as auth_admin_router
+from server.auth.routes import router as auth_router
+from server.auth.store import UserRoleStore
 from server.case_generator import generate_case_spec
 from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
 from server.guidelines.routes import router as guidelines_router
+from server.learning.routes import router as learning_router
+from server.learning.store import LearningStore
 from server.model_gateway import GatewayError, ModelGateway
 from server.orchestration.routes import router as orchestration_v2_router
 from server.persona import build_patient_turn, fact_assertion_gate
@@ -117,12 +123,20 @@ async def lifespan(app: FastAPI):
     worker_manager.start_reaper()
     # Voice (docs/architecture/18): TTS / STT through the same registry, worker fallback and telemetry.
     voice = VoiceService(settings, resolver, telemetry=telemetry)
+    # Identity + learner events (docs/architecture/19): the identity provider is a
+    # registry row (kind=identity); roles come from verified claims unioned with
+    # the admin-editable user_roles table. AUTH_MODE=local keeps local profiles.
+    users = UserRoleStore(settings.acudx_db_path)
+    auth = AuthService(registry, users, env_mode=settings.auth_mode, client=getattr(gateway, "_client", None))
+    learning = LearningStore(settings.acudx_db_path)
     app.state.settings = settings
     app.state.gateway = gateway
     app.state.registry = registry
     app.state.telemetry = telemetry
     app.state.worker_manager = worker_manager
     app.state.voice = voice
+    app.state.auth = auth
+    app.state.learning = learning
     try:
         yield
     finally:
@@ -150,6 +164,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Auth-Mode"],
 )
 app.include_router(admin_router)
 app.include_router(results_router)  # /v1/results/* and /v1/imaging/resolve (server/results_routes.py)
@@ -157,11 +172,16 @@ app.include_router(registry_router)
 app.include_router(voice_router)        # /v1/voice/* (server/voice/routes.py)
 app.include_router(voice_admin_router)  # /admin/voice/agent-config
 app.include_router(guidelines_router)  # /v1/guidelines/* + /admin/guidelines/verify
+app.include_router(auth_router)        # /v1/auth/config, /v1/auth/me (server/auth/routes.py)
+app.include_router(auth_admin_router)  # /admin/users, /admin/users/{sub}/roles
+app.include_router(learning_router)    # /v1/events/encounter, /v1/dean/*, /v1/faculty/*, /v1/me/assignments
 
 
 # Telemetry context: every model call made while serving a request is tagged
 # with its route and, when the caller sends them, the tenant / user / encounter
 # (user ids are hashed before they are stored; no PHI path, education only).
+# The response also carries X-Auth-Mode so the UI can show when identity is the
+# unverified local profile rather than a verified IdP token.
 @app.middleware("http")
 async def _telemetry_context(request: Request, call_next):  # type: ignore[no-untyped-def]
     user = request.headers.get("x-user-id")
@@ -171,7 +191,10 @@ async def _telemetry_context(request: Request, call_next):  # type: ignore[no-un
         user_hash=hashlib.sha256(user.encode("utf-8")).hexdigest()[:16] if user else None,
         encounter_id=request.headers.get("x-encounter-id") or None,
     ):
-        return await call_next(request)
+        response = await call_next(request)
+    auth = getattr(request.app.state, "auth", None)
+    response.headers["X-Auth-Mode"] = auth.mode if auth is not None else "local"
+    return response
 
 
 # --------------------------------------------------------------------------- #

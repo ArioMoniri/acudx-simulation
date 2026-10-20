@@ -1,9 +1,10 @@
 """Admin API (``/admin/*``): operator surface for the on-demand GPU worker.
 
-Guard: ``X-Admin-Token`` header compared with ``ADMIN_TOKEN`` in constant time.
-``503`` when ``ADMIN_TOKEN`` is unset (the surface is simply not available),
-``401`` on a missing or wrong token. Responses never include the worker's
-bearer token.
+Guard: either the bootstrap ``X-Admin-Token`` header (compared with ``ADMIN_TOKEN``
+in constant time) or a verified bearer JWT holding ``admin`` / ``super_admin``
+(server/auth). ``503`` when neither ``ADMIN_TOKEN`` nor an identity provider is
+configured, ``401`` on a missing or wrong credential. Responses never include the
+worker's bearer token.
 """
 
 from __future__ import annotations
@@ -13,18 +14,24 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
+from server.auth.deps import bearer_admin
 from server.providers.gpu_worker import WorkerManager, WorkerPolicy, WorkerRefused
 from server.providers.lambda_cloud import LambdaCloudError
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-def require_admin(request: Request, x_admin_token: str | None = Header(default=None)) -> None:
+async def require_admin(request: Request, x_admin_token: str | None = Header(default=None)) -> None:
     expected = getattr(request.app.state.settings, "admin_token", None)
-    if not expected:
+    if x_admin_token and expected and secrets.compare_digest(x_admin_token.encode(), expected.encode()):
+        return
+    if await bearer_admin(request) is not None:
+        return
+    auth = getattr(request.app.state, "auth", None)
+    idp_configured = auth is not None and auth.provider() is not None
+    if not expected and not idp_configured:
         raise HTTPException(status_code=503, detail="ADMIN_TOKEN is not configured; admin API disabled")
-    if not x_admin_token or not secrets.compare_digest(x_admin_token.encode(), expected.encode()):
-        raise HTTPException(status_code=401, detail="invalid X-Admin-Token")
+    raise HTTPException(status_code=401, detail="invalid X-Admin-Token or admin bearer token")
 
 
 def _manager(request: Request) -> WorkerManager:
