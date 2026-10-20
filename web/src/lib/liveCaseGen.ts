@@ -1,5 +1,5 @@
 /**
- * AcuDx — liveCaseGen: the wire spec of a case generated on request by the model
+ * AcuDx liveCaseGen: the wire spec of a case generated on request by the model
  * (server/orchestration/staged.py, `GeneratedCaseSpec` shape) and its adapter to the
  * client CaseInstance model.
  *
@@ -53,7 +53,7 @@ import type { VitalEffect, VitalKey } from "@/domain/treatments";
 import { courseBindingFromSpec, type CourseSpecLike } from "@/domain/clinicalCourse";
 
 /* -------------------------------------------------------------------------- */
-/* Wire shape — GeneratedCaseSpec (server staged v2 spec)                   */
+/* Wire shape: GeneratedCaseSpec (server staged v2 spec)                    */
 /* -------------------------------------------------------------------------- */
 
 export interface SpecCondition {

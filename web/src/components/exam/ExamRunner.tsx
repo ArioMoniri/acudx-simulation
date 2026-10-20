@@ -29,7 +29,7 @@ export interface ExamRunnerProps {
 }
 
 /**
- * ExamRunner — drives the proctored, timed sequence of cases. Each station requests
+ * ExamRunner: drives the proctored, timed sequence of cases. Each station requests
  * its case from the model at the start of that station (POST
  * /v2/case/generate/stream, review 06a P13), starts the shared encounter store from
  * the opening as soon as it is playable, and renders the SAME EHR workspace as free practice but

@@ -27,7 +27,7 @@ export interface CreateRoomDialogProps {
 }
 
 /**
- * CreateRoomDialog — Create Room flow (Screen 6.1). Pick a presentation (the room's
+ * CreateRoomDialog: Create Room flow (Screen 6.1). Pick a presentation (the room's
  * case is generated on request by the model, never picked from a list), choose which
  * of Doctor / Nurse / Paramedic are HUMAN seats vs AI-backfilled, and toggle
  * AI backfill for the rest. Focus is trapped to the panel, Escape closes, and

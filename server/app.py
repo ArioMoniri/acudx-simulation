@@ -456,7 +456,7 @@ async def grade(req: GradeRequest) -> GradeResponse:
 
 
 # --------------------------------------------------------------------------- #
-# /v1/case/generate  — retired (owner decision, review 06a). It overlaid model output
+# /v1/case/generate: retired (owner decision, review 06a). It overlaid model output
 # on a template and answered the bare template on any model failure. Every learner
 # case is now generated on request by the staged v2 pipeline
 # (POST /v2/case/generate/stream), so this route answers 410 Gone.

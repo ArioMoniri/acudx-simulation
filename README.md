@@ -26,16 +26,16 @@
 
 ## Why AcuDx
 
-Clinical reasoning is learned by doing: taking a history, choosing tests, reading results, treating and committing to a diagnosis under time pressure. AcuDx gives every learner an endless supply of generated emergency cases inside an Epic-like chart, with an AI patient that answers only what is asked, results that arrive on real turnaround timers, and a debrief whose clinical statements cite a verified guideline or say plainly that no verified source was found. It runs on open-weight models on an on-demand GPU worker, so a school can host it with zero third-party data egress.
+Clinical reasoning is learned by doing: taking a history, choosing tests, reading results, treating and committing to a diagnosis under time pressure. AcuDx writes every case on request for the learner who asks (there is no case library, seed list or template), and the case changes with what the learner does, inside an Epic-like chart, with an AI patient that answers only what is asked, results that arrive on real turnaround timers, and a debrief whose clinical statements cite a verified guideline or say plainly that no verified source was found. It runs on open-weight models on an on-demand GPU worker, so a school can host it with zero third-party data egress.
 
 ## Features
 
 <table>
   <tr>
     <td width="33%" valign="top">
-      <img src="docs/media/readme/feature-generator.png" alt="Case generator and curated case library">
+      <img src="docs/media/readme/feature-generator.png" alt="Case request and on-request generation">
       <br><strong>Case generator</strong>
-      <br>LangGraph author, three judges and deterministic safety checks; a Clinical Director adapts the live case.
+      <br>Every case is generated on request: the opening streams in about 20 s, history, exam, orders and results are written for that patient while the learner works, behind deterministic and safety checks; a Clinical Director adapts the live case.
     </td>
     <td width="33%" valign="top">
       <img src="docs/media/readme/feature-interview.png" alt="Free-text interview with patient replies and the patient call tile">
@@ -93,7 +93,7 @@ python -m venv .venv && . .venv/bin/activate && pip install -r server/requiremen
 cd multiplayer && npm install && npm start
 ```
 
-The web app also runs without the gateway: cases come from the labelled on-device template, results from the labelled offline fallback, and guidance shows "unavailable" rather than unverified text. The walkthrough above was recorded on exactly that path.
+Every learner case is generated on request by the model (owner decision): without a reachable model no case can start, and the app says so and offers Retry; no template, seed or curated case is ever served in its place. Results without the gateway fall back to a labelled offline value, and guidance shows "unavailable" rather than unverified text. The e2e suite replays recorded live model cases (`server/tests/fixtures/live`) instead of a gateway.
 
 ## How it works
 

@@ -31,16 +31,7 @@ import { createProfile, openTab, settle } from "./helpers/session";
  *   PORT=4203 npx playwright test e2e/on-request.spec.ts --project=laptop
  */
 
-const DOC = "docs/review/06c-tester-on-request-cases.md";
-
-/**
- * Mark a test as a known failure of today's code (finding id in DOC). Set
- * ON_REQUEST_SHOW_FAILURES=1 to run the marked tests as ordinary tests and see
- * exactly why each one fails.
- */
-function knownFailure(finding: string): void {
-  test.fail(!process.env.ON_REQUEST_SHOW_FAILURES, `${DOC} ${finding}`);
-}
+// Every F-W1..F-W8 known-failure marker of docs/review/06c was flipped on 2026-10-20 (all pass).
 const HERE = dirname(fileURLToPath(import.meta.url));
 const LIVE_DIR = join(HERE, "../../server/tests/fixtures/live");
 
