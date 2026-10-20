@@ -1,5 +1,6 @@
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
-import { Student, ChalkboardTeacher, Buildings, Wrench } from "@phosphor-icons/react";
+import { Student, ChalkboardTeacher, Buildings, Wrench, CaretDown } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import { useProfile } from "@/state/profileStore";
 import { permittedVantages, useViewAs, type ViewAsRole } from "@/lib/viewAs";
@@ -21,10 +22,21 @@ const roleIcon: Record<ViewAsRole, typeof Student> = {
  * the meaning (never icon-only), and the label is hidden on the narrowest widths
  * but announced.
  */
-export function RoleSwitcher({ className }: { className?: string }) {
+export interface RoleSwitcherProps {
+  className?: string;
+  /**
+   * `segmented` (default) is the full control with every vantage visible;
+   * `menu` collapses it into one labelled select so the TopNav right cluster
+   * fits inside a 768px viewport without overflowing the page.
+   */
+  variant?: "segmented" | "menu";
+}
+
+export function RoleSwitcher({ className, variant = "segmented" }: RoleSwitcherProps) {
   const { t } = useTranslation();
   const { role, setRole } = useViewAs();
   const profile = useProfile();
+  const selectId = useId();
 
   // Only the vantages the REAL profile role permits (single source of truth).
   const vantages: ViewAsRole[] = profile?.onboarded
@@ -34,6 +46,44 @@ export function RoleSwitcher({ className }: { className?: string }) {
   // A single permitted vantage is nothing to switch between — hide the control
   // entirely (a student/resident gets no "View as" affordance at all).
   if (vantages.length <= 1) return null;
+
+  if (variant === "menu") {
+    const Icon = roleIcon[role];
+    return (
+      <div className={cn("relative inline-flex items-center", className)}>
+        <label htmlFor={selectId} className="sr-only">
+          {t("role.viewAs")}
+        </label>
+        <Icon
+          weight="bold"
+          className="pointer-events-none absolute start-2.5 h-4 w-4 text-muted"
+          aria-hidden="true"
+        />
+        <select
+          id={selectId}
+          value={role}
+          onChange={(e) => setRole(e.target.value as ViewAsRole)}
+          title={t("role.viewAs")}
+          className={cn(
+            "h-9 appearance-none rounded-control border border-border bg-bg-subtle ps-8 pe-7",
+            "text-xs font-semibold text-fg transition-colors duration-200 ease-out",
+            "hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          )}
+        >
+          {vantages.map((r) => (
+            <option key={r} value={r}>
+              {t(`role.${r}`)}
+            </option>
+          ))}
+        </select>
+        <CaretDown
+          weight="bold"
+          className="pointer-events-none absolute end-2.5 h-3 w-3 text-muted"
+          aria-hidden="true"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={cn("inline-flex items-center gap-1.5", className)}>

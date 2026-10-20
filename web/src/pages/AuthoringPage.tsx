@@ -161,7 +161,7 @@ function PipelineStepper({
   return (
     <div className="flex flex-col gap-3">
       <ol
-        className="flex flex-col gap-2 md:flex-row md:items-stretch md:gap-0"
+        className="flex flex-col gap-2 lg:flex-row lg:items-stretch lg:gap-0"
         aria-label={t("authoring2.stepper.aria")}
       >
         {pipelineStages.map((stage, i) => {
@@ -175,14 +175,11 @@ function PipelineStepper({
             stage.key === "publish" && !state.published && !!state.draft && !clear;
 
           return (
-            <li key={stage.key} className="flex items-stretch md:flex-1">
+            <li key={stage.key} className="flex items-stretch lg:flex-1">
               <button
                 type="button"
                 onClick={() => dispatch({ type: "setStage", index: i })}
                 aria-current={isActive ? "step" : undefined}
-                aria-label={`${t("authoring2.stepper.goTo", { title })}, ${t(
-                  `authoring.pipeline.state.${display}`,
-                )}`}
                 className={cn(
                   "flex flex-1 flex-col gap-2.5 rounded-card border p-3.5 text-start",
                   "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
@@ -193,6 +190,12 @@ function PipelineStepper({
                       : "border-dashed border-border bg-surface hover:bg-bg-subtle",
                 )}
               >
+                {/* The action + state lead the accessible name ("Go to the X
+                    stage, Complete, ..."); the visible content follows so the
+                    name contains the visible text (axe label-content-name). */}
+                <span className="sr-only">
+                  {t("authoring2.stepper.goTo", { title })}, {t(`authoring.pipeline.state.${display}`)},{" "}
+                </span>
                 <div className="flex items-center justify-between gap-2">
                   <span
                     className={cn(
@@ -236,7 +239,7 @@ function PipelineStepper({
               </button>
               {i < pipelineStages.length - 1 ? (
                 <span
-                  className="hidden shrink-0 items-center px-1 text-border md:flex"
+                  className="hidden shrink-0 items-center px-1 text-border lg:flex"
                   aria-hidden
                 >
                   <ArrowRight weight="bold" className="h-4 w-4" />
