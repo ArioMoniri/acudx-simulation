@@ -67,7 +67,13 @@ write_files:
       services:
         vllm:
           image: vllm/vllm-openai:v0.11.0
-          runtime: nvidia
+          deploy:
+            resources:
+              reservations:
+                devices:
+                  - driver: nvidia
+                    count: all
+                    capabilities: [gpu]
           ipc: host
           environment: [ "HF_HOME=/hf" ]
           volumes: [ "/opt/acudx/hf:/hf" ]
@@ -87,7 +93,13 @@ write_files:
             context: /opt/acudx/chatterbox-tts-api
             dockerfile: docker/Dockerfile.uv.gpu
           image: acudx/chatterbox-tts-api:multilingual
-          runtime: nvidia
+          deploy:
+            resources:
+              reservations:
+                devices:
+                  - driver: nvidia
+                    count: all
+                    capabilities: [gpu]
           environment:
             - PORT=4123
             - HOST=0.0.0.0
@@ -108,11 +120,23 @@ write_files:
             retries: 60
         kokoro:
           image: ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4
-          runtime: nvidia
+          deploy:
+            resources:
+              reservations:
+                devices:
+                  - driver: nvidia
+                    count: all
+                    capabilities: [gpu]
           environment: [ "NVIDIA_VISIBLE_DEVICES=all" ]
         speaches:
           image: ghcr.io/speaches-ai/speaches:0.8.3-cuda
-          runtime: nvidia
+          deploy:
+            resources:
+              reservations:
+                devices:
+                  - driver: nvidia
+                    count: all
+                    capabilities: [gpu]
           environment:
             # Whisper large-v3-turbo in CTranslate2 form (https://huggingface.co/deepdml/faster-whisper-large-v3-turbo-ct2);
             # preloaded at start and never unloaded so the first dictation does not pay the load.
@@ -197,6 +221,10 @@ runcmd:
     git -C /opt/acudx/chatterbox-tts-api checkout --quiet "$CHATTERBOX_REF"
   # Core first (Caddy, vLLM, STT, Kokoro) so /healthz turns green as soon as the model
   # loads; the Chatterbox image build runs afterwards and attaches when done.
+  # Lambda Stack ships the NVIDIA container toolkit but dockerd has no "nvidia" runtime
+  # name registered (boot log 2026-10-20: "unknown or invalid runtime name: nvidia");
+  # register it and restart docker so both --gpus and device reservations work.
+  - (command -v nvidia-ctk >/dev/null && nvidia-ctk runtime configure --runtime=docker && systemctl restart docker) || true
   - pkill -f "http.server 80" || true
   - cd /opt/acudx && set -a && . ./.env && set +a && (docker compose up -d caddy vllm speaches kokoro || nohup python3 -m http.server 80 --bind 0.0.0.0 --directory /opt/acudx/public >/var/log/acudx-diag.log 2>&1 &)
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d --build chatterbox
