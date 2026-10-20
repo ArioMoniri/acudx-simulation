@@ -6,7 +6,7 @@ describe("isDegradedPatientTurn", () => {
     // The exact 200 the acceptance run (2026-10-20) received for every typed question.
     expect(
       isDegradedPatientTurn({
-        utterance: "…sorry, I— I'm finding it hard to answer just now. Could you ask me again?",
+        utterance: "sorry, I'm finding it hard to answer just now. Could you ask me again?",
         flags: [{ type: "gateway_degraded", error: "GatewayError" }],
       }),
     ).toBe(true);

@@ -54,6 +54,11 @@ export interface FormularyEntry {
     unit: string;
     /** Weight-based dose (per kg) when the guideline expresses it that way. */
     perKg?: number;
+    /**
+     * The per-kg ceiling applies only below this weight (paracetamol: 15 mg/kg
+     * under 50 kg). Unset means it applies at any weight.
+     */
+    perKgBelowKg?: number;
   };
   /** Maximum cumulative dose in 24 h (same unit), when the source states one. */
   maxPerDay?: number;
@@ -248,7 +253,9 @@ export const FORMULARY: FormularyEntry[] = [
     // Review 02 finding 44: oral first line when the patient can swallow; IV
     // reserved for nil-by-mouth or vomiting. NICE CKS analgesia.
     defaultRoute: "PO",
-    dose: { default: 1000, min: 500, max: 1000, unit: "mg", perKg: 15 },
+    // Acceptance 2026-10-20: the 15 mg/kg ceiling applied at any weight and
+    // blocked 1 g in a 60 kg adult; BNF and the frequency line: under 50 kg only.
+    dose: { default: 1000, min: 500, max: 1000, unit: "mg", perKg: 15, perKgBelowKg: 50 },
     maxPerDay: 4000,
     minIntervalMs: 4 * HOUR,
     frequency: { en: "Every 4-6 h, maximum 4 g in 24 h (15 mg/kg if under 50 kg)", tr: "4-6 saatte bir, 24 saatte en fazla 4 g (50 kg altında 15 mg/kg)" },

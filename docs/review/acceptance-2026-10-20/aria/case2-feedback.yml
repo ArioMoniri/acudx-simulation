@@ -5,26 +5,26 @@
   - text: Formative - practice From your last completed encounter
   - paragraph: "Safety-critical: check this next time"
   - region "Performance summary":
-    - text: Performance summary Bands at proficient+ 1/5 of 5 scored competency bands
+    - text: Performance summary Bands at proficient+ 2/5 of 5 scored competency bands
     - separator
     - text: By axis
     - term: Clinical
-    - definition: 1/4
+    - definition: 2/4
     - term: Communication and professionalism
     - definition: 0/1
     - separator
-    - text: Calibration gap 39 % 3 pp narrower Self-rating vs measured, latest session
+    - text: Calibration gap 31 % 2 pp narrower Self-rating vs measured, latest session
     - paragraph: 1 domain withheld pending more evidence
     - heading "Confidence vs performance" [level=2]
     - paragraph: How well your confidence matches your performance. This is a skill you can train.
-    - 'figure "Calibration by domain Your gap over recent encounters: 36%, 39%"':
+    - 'figure "Calibration by domain Your gap over recent encounters: 29%, 31%"':
       - group "Confidence vs performance Each dot is one domain. Dots on the dashed line mean your confidence matched your performance. This is a trainable skill, not a grade.":
         - text: 0 0 25 25 50 50 75 75 100 100 Underconfident Overconfident
         - button "History-taking. Confidence 100 percent, performance 41 percent. Confidence ran ahead of performance.": Hx
         - button "Examination and investigations. Confidence 100 percent, performance 29 percent. Confidence ran ahead of performance.": Ex
         - button "Clinical reasoning. Confidence 85 percent, performance 78 percent. Well-calibrated.": Rx
         - button "Communication. Confidence 60 percent, performance 48 percent. Confidence ran ahead of performance.": Co
-        - button "Management. Confidence 80 percent, performance 36 percent. Confidence ran ahead of performance.": Mx
+        - button "Management. Confidence 60 percent, performance 53 percent. Well-calibrated.": Mx
         - text: Your confidence Measured performance
       - paragraph: Point to a dot, or tab to it, to read that domain.
       - list:
@@ -77,12 +77,12 @@
             - cell "60%"
             - cell "48%"
             - cell "Confidence ran ahead of performance"
-          - row "Management 80% 36% Confidence ran ahead of performance":
+          - row "Management 60% 53% Well-calibrated":
             - rowheader "Management"
-            - cell "80%"
-            - cell "36%"
-            - cell "Confidence ran ahead of performance"
-      - paragraph: "Your gap over recent encounters: 36%, 39%"
+            - cell "60%"
+            - cell "53%"
+            - cell "Well-calibrated"
+      - paragraph: "Your gap over recent encounters: 29%, 31%"
     - paragraph: Improving across sessions · Private by design. No public leaderboard.
   - region "By domain":
     - text: Competency bands
@@ -95,8 +95,8 @@
     - 'img "You reached: Emerging"': Emerging Developing Proficient Strong Exemplary
     - text: Clinical reasoning Strong
     - 'img "You reached: Strong"': Emerging Developing Proficient Strong Exemplary
-    - text: Management Developing
-    - 'img "You reached: Developing"': Emerging Developing Proficient Strong Exemplary
+    - text: Management Proficient
+    - 'img "You reached: Proficient"': Emerging Developing Proficient Strong Exemplary
     - heading "Communication and professionalism" [level=3]
     - text: Communication Developing
     - 'img "You reached: Developing"': Emerging Developing Proficient Strong Exemplary
@@ -111,7 +111,7 @@
       - listitem:
         - text: Chest X-ray Not ordered; target within 30 min
         - status: Source unavailable
-    - text: History coverage 50 % 4 of 8 expected areas asked Redundant questions 0 6 off-target question(s) Total encounter time 4 min From arrival to disposition Time to diagnosis 4 min Correct working diagnosis Time to critical actions
+    - text: History coverage 50 % 4 of 8 expected areas asked Redundant questions 0 6 off-target question(s) Total encounter time 3 min From arrival to disposition Time to diagnosis 3 min Correct working diagnosis Time to critical actions
     - paragraph: Each action is measured against its guideline target and cited, whether on time or not.
     - text: 1 of 3 on time
     - paragraph: White cell count

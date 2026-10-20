@@ -1,13 +1,15 @@
 - main:
   - figure:
-    - img "Synthetic patient portrait — not a real individual"
-  - heading "Karen M." [level=2]
-  - paragraph: 41 y, female MRNSIM-AI-QP1CLE
+    - img "Synthetic patient portrait - not a real individual"
+  - heading "John M." [level=2]
+  - paragraph: 59 y, male MRNSIM-AI-4R4M1N
   - 'note "Simulation. Synthetic patient. For education only. Case source: template (not model generated)."': SIM synthetic patient template (not model generated) degraded
-  - text: 03:24
-  - 'status "Clinical Director: the server adapts vitals, facts and complications to your actions."': "Director: 29 steps"
+  - text: 03:15
+  - 'status "Clinical Director: the server adapts vitals, facts and complications to your actions."': "Director: 27 steps"
   - button "New case"
-  - text: Chief complaint Fever with a fast heart rate and malaise Allergies No known drug allergies Code Full code Acuity ESI 2 · Abnormal Encounter Emergency (ED)
+  - text: Chief complaint Fever with a fast heart rate and malaise Allergies
+  - group "Allergies, always visible": Penicillin - anaphylaxis as a child (carries a card).
+  - text: Code Full code Acuity ESI 2 · Abnormal Encounter Emergency (ED)
   - navigation "Stage":
     - list "Stage":
       - listitem: Chart review
@@ -18,37 +20,38 @@
   - paragraph: Difficulty 3/5 · template (not model generated)
   - complementary "Storyboard":
     - figure:
-      - img "Synthetic patient portrait — not a real individual"
+      - img "Synthetic patient portrait - not a real individual"
       - button "Enlarge patient view"
-    - paragraph: Karen M.
+    - paragraph: John M.
     - paragraph: In pain, anxious
-    - paragraph: In distress · Tachycardic · Diaphoretic · Febrile
+    - paragraph: Tachycardic · Diaphoretic · Febrile
     - term: MRN
-    - definition: SIM-AI-QP1CLE
+    - definition: SIM-AI-4R4M1N
     - term: Age
-    - definition: "41"
+    - definition: "59"
     - term: Sex
-    - definition: female
+    - definition: male
     - term: Acuity
     - definition: ESI 2
     - term: Weight
-    - definition: 69 kg
+    - definition: 61 kg
     - paragraph: Fills in as you work the chart.
     - heading "Problem list" [level=3]
     - paragraph: No problems added yet. Build them in A and P.
     - heading "Allergies" [level=3]
-    - paragraph: No known drug allergies
+    - list:
+      - listitem: Penicillin - anaphylaxis as a child (carries a card).
     - heading "Vitals snapshot Live" [level=3]
     - paragraph: HR
-    - paragraph: 123bpm
+    - paragraph: 119bpm
     - paragraph: BP
-    - paragraph: 116/65
+    - paragraph: 115/75
     - paragraph: RR
-    - paragraph: 23/min
+    - paragraph: 22/min
     - paragraph: SpO2
     - paragraph: 95%
     - paragraph: Temp
-    - paragraph: 38.2°C
+    - paragraph: 39.3°C
     - heading "Medications and history 2" [level=3]
     - list:
       - listitem: Amlodipine 5 mg.
@@ -64,7 +67,7 @@
       - listitem: Triage nurse Nursing
       - listitem: Charge nurse Resuscitation support
     - heading "Encounter clock" [level=3]
-    - text: 03:24
+    - text: 03:15
   - tablist "Chart sections":
     - tab "Chart Review"
     - tab "Interview"
@@ -75,19 +78,18 @@
     - tab "Guidance"
     - tab "Problem List / A&P"
   - tabpanel "Results 7":
-    - text: Result summary 7 of 7 orders resulted 6 abnormal 2 critical
+    - text: Result summary 7 of 7 orders resulted 5 abnormal 1 critical
     - switch "Abnormal only"
     - text: Abnormal only
     - heading "Critical values" [level=3]
     - list:
       - listitem: Lac 5.5mmol/L
-      - listitem: "BCx Growth: Escherichia coli"
     - paragraph: Review and act on critical results without delay.
     - heading "Laboratory" [level=3]
     - heading "Complete blood count (CBC) with differential 7 analytes Results engine" [level=4]
-    - text: Ordered 0 min → resulted 1 min
-    - table "Complete blood count (CBC) with differential — Laboratory results with reference ranges and abnormal flags":
-      - caption: Complete blood count (CBC) with differential — Laboratory results with reference ranges and abnormal flags
+    - text: Ordered 0 min → resulted 0 min
+    - table "Complete blood count (CBC) with differential - Laboratory results with reference ranges and abnormal flags":
+      - caption: Complete blood count (CBC) with differential - Laboratory results with reference ranges and abnormal flags
       - rowgroup:
         - row "Test Value Reference Flag":
           - columnheader "Test"
@@ -100,40 +102,40 @@
           - cell "1210*9/L"
           - cell "4.5 - 11"
           - cell "High"
-        - row "Hb 14.6g/dL 12 - 16 Normal":
+        - row "Hb 15.3g/dL 13.5 - 17.5 Normal":
           - rowheader "Hb"
-          - cell "14.6g/dL"
-          - cell "12 - 16"
+          - cell "15.3g/dL"
+          - cell "13.5 - 17.5"
           - cell "Normal"
-        - row "Hct 40% 36 - 46 Normal":
+        - row "Hct 49% 41 - 53 Normal":
           - rowheader "Hct"
-          - cell "40%"
-          - cell "36 - 46"
+          - cell "49%"
+          - cell "41 - 53"
           - cell "Normal"
-        - row "Plt 22210*9/L 150 - 400 Normal":
+        - row "Plt 29410*9/L 150 - 400 Normal":
           - rowheader "Plt"
-          - cell "22210*9/L"
+          - cell "29410*9/L"
           - cell "150 - 400"
           - cell "Normal"
-        - row "MCV 86fL 80 - 100 Normal":
+        - row "MCV 94fL 80 - 100 Normal":
           - rowheader "MCV"
-          - cell "86fL"
+          - cell "94fL"
           - cell "80 - 100"
           - cell "Normal"
-        - row "Neut 14.910*9/L 1.8 - 7.7 High":
+        - row "Neut 12.410*9/L 1.8 - 7.7 High":
           - rowheader "Neut"
-          - cell "14.910*9/L"
+          - cell "12.410*9/L"
           - cell "1.8 - 7.7"
           - cell "High"
-        - row "Lymph 3.510*9/L 1 - 4.4 Normal":
+        - row "Lymph 2.310*9/L 1 - 4.4 Normal":
           - rowheader "Lymph"
-          - cell "3.510*9/L"
+          - cell "2.310*9/L"
           - cell "1 - 4.4"
           - cell "Normal"
     - heading "C-reactive protein (CRP) 1 analytes Results engine" [level=4]
-    - text: Ordered 0 min → resulted 1 min
-    - table "C-reactive protein (CRP) — Laboratory results with reference ranges and abnormal flags":
-      - caption: C-reactive protein (CRP) — Laboratory results with reference ranges and abnormal flags
+    - text: Ordered 0 min → resulted 0 min
+    - table "C-reactive protein (CRP) - Laboratory results with reference ranges and abnormal flags":
+      - caption: C-reactive protein (CRP) - Laboratory results with reference ranges and abnormal flags
       - rowgroup:
         - row "Test Value Reference Flag":
           - columnheader "Test"
@@ -147,9 +149,9 @@
           - cell "0 - 3"
           - cell "High"
     - heading "Lactate 1 analytes Results engine" [level=4]
-    - text: Ordered 0 min → resulted 1 min
-    - table "Lactate — Laboratory results with reference ranges and abnormal flags":
-      - caption: Lactate — Laboratory results with reference ranges and abnormal flags
+    - text: Ordered 0 min → resulted 0 min
+    - table "Lactate - Laboratory results with reference ranges and abnormal flags":
+      - caption: Lactate - Laboratory results with reference ranges and abnormal flags
       - rowgroup:
         - row "Test Value Reference Flag":
           - columnheader "Test"
@@ -163,9 +165,9 @@
           - cell "0.5 - 2.2"
           - cell "Critically high"
     - heading "Urinalysis with microscopy 11 analytes Results engine" [level=4]
-    - text: Ordered 0 min → resulted 1 min
-    - table "Urinalysis with microscopy — Laboratory results with reference ranges and abnormal flags":
-      - caption: Urinalysis with microscopy — Laboratory results with reference ranges and abnormal flags
+    - text: Ordered 0 min → resulted 0 min
+    - table "Urinalysis with microscopy - Laboratory results with reference ranges and abnormal flags":
+      - caption: Urinalysis with microscopy - Laboratory results with reference ranges and abnormal flags
       - rowgroup:
         - row "Test Value Reference Flag":
           - columnheader "Test"
@@ -173,67 +175,67 @@
           - columnheader "Reference"
           - columnheader "Flag"
       - rowgroup:
-        - 'row "uSG 1.015{ratio} 1.005 - 1.03 Normal"':
+        - 'row "uSG 1.012{ratio} 1.005 - 1.03 Normal"':
           - rowheader "uSG"
-          - 'cell "1.015{ratio}"'
+          - 'cell "1.012{ratio}"'
           - cell "1.005 - 1.03"
           - cell "Normal"
-        - row "upH 5.4[pH] 4.6 - 8 Normal":
+        - row "upH 6.3[pH] 4.6 - 8 Normal":
           - rowheader "upH"
-          - cell "5.4[pH]"
+          - cell "6.3[pH]"
           - cell "4.6 - 8"
           - cell "Normal"
-        - row "uProt Negative — Normal":
+        - row "uProt Negative - Normal":
           - rowheader "uProt"
           - cell "Negative"
-          - cell "—"
+          - cell "-"
           - cell "Normal"
-        - row "uGlu Negative — Normal":
+        - row "uGlu Negative - Normal":
           - rowheader "uGlu"
           - cell "Negative"
-          - cell "—"
+          - cell "-"
           - cell "Normal"
-        - row "uKet Negative — Normal":
+        - row "uKet Negative - Normal":
           - rowheader "uKet"
           - cell "Negative"
-          - cell "—"
+          - cell "-"
           - cell "Normal"
-        - row "uBld Negative — Normal":
+        - row "uBld Negative - Normal":
           - rowheader "uBld"
           - cell "Negative"
-          - cell "—"
+          - cell "-"
           - cell "Normal"
-        - row "uNit Negative — Normal":
+        - row "uNit Negative - Normal":
           - rowheader "uNit"
           - cell "Negative"
-          - cell "—"
+          - cell "-"
           - cell "Normal"
-        - row "uLE Negative — Normal":
+        - row "uLE Negative - Normal":
           - rowheader "uLE"
           - cell "Negative"
-          - cell "—"
+          - cell "-"
           - cell "Normal"
-        - row "uWBC None seen — Normal":
+        - row "uWBC None seen - Normal":
           - rowheader "uWBC"
           - cell "None seen"
-          - cell "—"
+          - cell "-"
           - cell "Normal"
-        - row "uRBC None seen — Normal":
+        - row "uRBC None seen - Normal":
           - rowheader "uRBC"
           - cell "None seen"
-          - cell "—"
+          - cell "-"
           - cell "Normal"
-        - row "uBact None seen — Normal":
+        - row "uBact None seen - Normal":
           - rowheader "uBact"
           - cell "None seen"
-          - cell "—"
+          - cell "-"
           - cell "Normal"
     - heading "Microbiology, serology & reports" [level=3]
     - list:
       - listitem:
         - text: Blood culture (×2) + Gram stain Results engine Ordered 0 min → resulted 3 min
         - paragraph: Expected turnaround 48 h
-        - paragraph: "Blood culture: Growth: Escherichia coli"
+        - paragraph: "Blood culture: No growth at 48 h"
     - heading "Imaging and reports" [level=3]
     - list:
       - listitem:
@@ -242,9 +244,9 @@
         - paragraph: "Impression: Sinus tachycardia, otherwise normal complexes."
         - figure "Sinus tachycardia, otherwise normal complexes. 25 mm/s, 10 mm/mV, 1 mm / 5 mm grid, calibration pulse at left Synthetic tracing synthesized from the structured state (not a recording).":
           - text: ECG 12-lead
-          - img "12-lead ECG printout, rate 120 per minute, sinus"
+          - img "12-lead ECG printout, rate 116 per minute, sinus"
           - term: HR
-          - definition: "120"
+          - definition: "116"
           - term: PR
           - definition: "160"
           - term: QRS
@@ -252,7 +254,7 @@
           - term: QTc
           - definition: "400"
           - term: Axis
-          - definition: "38"
+          - definition: "41"
           - term: Rhythm
           - definition: sinus
           - paragraph: Structured findings
@@ -268,8 +270,8 @@
         - paragraph: "Impression: No acute abnormality; correlate clinically."
         - 'figure "No acute abnormality; correlate clinically. License: CC0 Attribution: Image: Mikael Häggström, CC0, via Wikimedia Commons (https://commons.wikimedia.org/wiki/File:Normal_posteroanterior_(PA)_chest_radiograph_(X-ray).jpg) View source (wikimedia_commons) Representative image, not this patient · licence verified 2026-10-19"':
           - text: X-ray Results engine
-          - img "X-ray — representative image of Normal PA chest radiograph, 21 year old woman."
-          - paragraph: Representative image — not this patient
+          - img "X-ray - representative image of Normal PA chest radiograph, 21 year old woman."
+          - paragraph: Representative image - not this patient
           - paragraph: Structured findings
           - list:
             - listitem: No acute abnormality; correlate clinically.

@@ -1,13 +1,15 @@
 - main:
   - figure:
-    - img "Synthetic patient portrait — not a real individual"
-  - heading "Karen M." [level=2]
-  - paragraph: 41 y, female MRNSIM-AI-QP1CLE
+    - img "Synthetic patient portrait - not a real individual"
+  - heading "John M." [level=2]
+  - paragraph: 59 y, male MRNSIM-AI-4R4M1N
   - 'note "Simulation. Synthetic patient. For education only. Case source: template (not model generated)."': SIM synthetic patient template (not model generated) degraded
-  - text: 03:27
-  - 'status "Clinical Director: the server adapts vitals, facts and complications to your actions."': "Director: 29 steps"
+  - text: 03:18
+  - 'status "Clinical Director: the server adapts vitals, facts and complications to your actions."': "Director: 27 steps"
   - button "New case"
-  - text: Chief complaint Fever with a fast heart rate and malaise Allergies No known drug allergies Code Full code Acuity ESI 2 · Abnormal Encounter Emergency (ED)
+  - text: Chief complaint Fever with a fast heart rate and malaise Allergies
+  - group "Allergies, always visible": Penicillin - anaphylaxis as a child (carries a card).
+  - text: Code Full code Acuity ESI 2 · Abnormal Encounter Emergency (ED)
   - navigation "Stage":
     - list "Stage":
       - listitem: Chart review
@@ -18,37 +20,38 @@
   - paragraph: Difficulty 3/5 · template (not model generated)
   - complementary "Storyboard":
     - figure:
-      - img "Synthetic patient portrait — not a real individual"
+      - img "Synthetic patient portrait - not a real individual"
       - button "Enlarge patient view"
-    - paragraph: Karen M.
+    - paragraph: John M.
     - paragraph: In pain, anxious
-    - paragraph: In distress · Tachycardic · Diaphoretic · Febrile
+    - paragraph: Tachycardic · Diaphoretic · Febrile
     - term: MRN
-    - definition: SIM-AI-QP1CLE
+    - definition: SIM-AI-4R4M1N
     - term: Age
-    - definition: "41"
+    - definition: "59"
     - term: Sex
-    - definition: female
+    - definition: male
     - term: Acuity
     - definition: ESI 2
     - term: Weight
-    - definition: 69 kg
+    - definition: 61 kg
     - paragraph: Fills in as you work the chart.
     - heading "Problem list" [level=3]
     - paragraph: No problems added yet. Build them in A and P.
     - heading "Allergies" [level=3]
-    - paragraph: No known drug allergies
+    - list:
+      - listitem: Penicillin - anaphylaxis as a child (carries a card).
     - heading "Vitals snapshot Live" [level=3]
     - paragraph: HR
-    - paragraph: 123bpm
+    - paragraph: 119bpm
     - paragraph: BP
-    - paragraph: 116/65
+    - paragraph: 115/75
     - paragraph: RR
-    - paragraph: 23/min
+    - paragraph: 22/min
     - paragraph: SpO2
     - paragraph: 95%
     - paragraph: Temp
-    - paragraph: 38.2°C
+    - paragraph: 39.3°C
     - heading "Medications and history 2" [level=3]
     - list:
       - listitem: Amlodipine 5 mg.
@@ -64,7 +67,7 @@
       - listitem: Triage nurse Nursing
       - listitem: Charge nurse Resuscitation support
     - heading "Encounter clock" [level=3]
-    - text: 03:27
+    - text: 03:18
   - tablist "Chart sections":
     - tab "Chart Review"
     - tab "Interview"
@@ -85,8 +88,8 @@
       - paragraph: "Red flags: 0/1 screened"
       - text: Coverage 54% History 4/8 Examination 2/2 Work-up 1/3 Red flags 0/1
       - list:
-        - listitem: Organ dysfunction with suspected infection — Not yet screened
-      - paragraph: Education only — a guideline reference to structure the work-up, not medical advice or a diagnosis.
+        - listitem: Organ dysfunction with suspected infection - Not yet screened
+      - paragraph: Education only - a guideline reference to structure the work-up, not medical advice or a diagnosis.
     - complementary "Attending tips":
       - heading "Attending tips" [level=3]
       - text: Education only

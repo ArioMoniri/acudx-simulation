@@ -100,6 +100,19 @@ async function waitForApi(path: string, after: number, timeout = 30_000): Promis
   throw new Error(`no ${path} response within ${timeout} ms`);
 }
 
+async function adminSignIn(): Promise<boolean> {
+  await setRole("admin", "Platform administrator");
+  await page.goto("/admin", { waitUntil: "domcontentloaded" });
+  await settle(page);
+  const tokenInput = page.getByLabel(/token/i).first();
+  if (await tokenInput.isVisible().catch(() => false)) {
+    await tokenInput.fill(ADMIN_TOKEN);
+    await page.getByRole("button", { name: /sign in|unlock|continue|open/i }).first().click();
+    await page.waitForTimeout(2_000);
+  }
+  return (await page.getByRole("tab").count()) >= 5;
+}
+
 async function setRole(role: string, label: string): Promise<void> {
   await page.goto("/account", { waitUntil: "domcontentloaded" });
   await settle(page);
@@ -146,10 +159,8 @@ async function startFebrileCase(n: number, exclude: Set<string>): Promise<CaseRu
         s,
       );
     }
-    // No fever tile: Infectious first; for the second case, after three tries
-    // without guideline tips, the families whose febrile members carry tips
-    // (Respiratory: pneumonia; Renal / urology: pyelonephritis).
-    const family = n === 2 && attempt >= 4 ? (attempt <= 5 ? /^Respiratory/ : /^Renal \/ urology/) : /^Infectious/;
+    // No fever tile: "Infectious" is the closest family on the Start page.
+    const family = /^Infectious/;
     const pick = hasFever > 0 ? page.getByRole("radio", { name: /^Fever\b/ }) : page.getByRole("radio", { name: family });
     await pick.click();
     const before = Date.now();
@@ -191,7 +202,8 @@ async function startFebrileCase(n: number, exclude: Set<string>): Promise<CaseRu
     } catch {
       tipsCount = 0;
     }
-    const acceptable = febrile && !exclude.has(cid) && (tipsCount > 0 || attempt === 6);
+    // Prefer a case with attending tips for three tries, then take any febrile one.
+    const acceptable = febrile && !exclude.has(cid) && (tipsCount > 0 || attempt >= 4);
     console.log(`attempt ${attempt}: ${cid} temp ${spec.triage_vitals.tempC} febrile=${febrile} tips=${tipsCount} -> ${acceptable ? "take" : "retry"}`);
     if (acceptable) {
       return {
@@ -358,8 +370,8 @@ async function workCase(n: number): Promise<void> {
     await page.waitForTimeout(25_000);
     await openTab(page, "Monitor");
     const monitorAfter = await page.getByRole("table", { name: "Current vital signs" }).textContent().then((t) => t ?? "");
-    const t0 = Number(/Temp\s*([\d.]+)/i.exec(monitorBefore)?.[1] ?? NaN);
-    const t1 = Number(/Temp\s*([\d.]+)/i.exec(monitorAfter)?.[1] ?? NaN);
+    const t0 = Number(/Temp(?:erature)?\s*([\d.]+)/i.exec(monitorBefore)?.[1] ?? NaN);
+    const t1 = Number(/Temp(?:erature)?\s*([\d.]+)/i.exec(monitorAfter)?.[1] ?? NaN);
     const directorSteps = api.filter((c) => c.path === "/v2/director/step").length;
     const s2 = await shot(page, `${run.label}-monitor-after-treatment`);
     check(
@@ -423,7 +435,7 @@ async function workCase(n: number): Promise<void> {
     );
     const v = (o?: Obs) => (o ? `${o.value} ${o.unit} (${o.flag})` : "missing");
     const plausible =
-      !!wbc && Number(wbc.value) > 11 && !!crp && Number(crp.value) > 10 && !!lac && Number(lac.value) >= 1.0;
+      !!wbc && (run.conditionId === "febrile_neutropenia" ? Number(wbc.value) < 4 : Number(wbc.value) > 11) && !!crp && Number(crp.value) > 10 && !!lac && Number(lac.value) >= 1.0;
     check(
       id("C10"),
       "Student",
@@ -592,6 +604,26 @@ test("faculty: vantage, review queue and roster", async () => {
   const s1 = await shot(page, "faculty-panel");
   await snapshot(page, "faculty-panel");
   const main = (await page.locator("main").textContent().then((t) => t ?? "")).replace(/\s+/g, " ");
+  const q0 = [...api].reverse().find((c) => c.path === "/v1/faculty/queue");
+  check(
+    "F2a",
+    "Faculty",
+    "Faculty panel with a local faculty profile only",
+    "Either served (local mode trusts the profile role) or refused with a way forward",
+    !!q0 && (q0.status === 200 || /admin token|sign in/i.test(main)),
+    `queue HTTP ${q0?.status}; page says: "${(/Your current identity.{0,300}/.exec(main)?.[0] ?? "").slice(0, 300)}"`,
+  );
+  // The way forward the page names in local mode: sign in to the admin console
+  // in this tab, so the panels also send X-Admin-Token.
+  if (q0?.status !== 200) {
+    await adminSignIn();
+    await setRole("faculty", "Faculty (clinician educator)");
+    await page.goto("/faculty", { waitUntil: "domcontentloaded" });
+    await settle(page);
+    await page.waitForTimeout(2_000);
+    await shot(page, "faculty-panel-with-admin-token");
+    await snapshot(page, "faculty-panel-with-admin-token");
+  }
   const q = [...api].reverse().find((c) => c.path === "/v1/faculty/queue");
   const r = [...api].reverse().find((c) => c.path === "/v1/faculty/roster");
   check(
@@ -647,7 +679,9 @@ test("dean: cohort and chain", async () => {
   const chainText = /chain[^.]{0,60}(verified|intact|broken|unverified)/i.exec(main)?.[0] ?? "";
   check("D2", "Dean", "Chain badge verifies", "Badge reads verified/intact", /verified|intact/i.test(chainText) && !/broken/i.test(chainText), `badge text: "${chainText}"; cohort.chain ${JSON.stringify(cb.chain ?? null)}`);
 
-  const headers = { "X-User-Id": "acceptance-dean-curl", "X-User-Role": "dean", "X-Tenant": TENANT };
+  // Local-mode header principals are capped at resident; the bootstrap admin
+  // token is the documented operator path for the panels.
+  const headers = { "X-User-Id": "acceptance-dean-curl", "X-User-Role": "dean", "X-Tenant": TENANT, "X-Admin-Token": ADMIN_TOKEN };
   const curl = await gatewayJson("/v1/dean/cohort?window=all", headers);
   const chain = await gatewayJson("/v1/dean/chain", headers);
   const cbody = curl.body as { encounters?: number };
@@ -671,8 +705,10 @@ test("admin: overview, providers, GPU, telemetry, users", async () => {
   await settle(page);
   const gate = await shot(page, "admin-token-gate");
   const tokenInput = page.getByLabel(/token/i).first();
-  await tokenInput.fill(ADMIN_TOKEN);
-  await page.getByRole("button", { name: /sign in|unlock|continue|open/i }).first().click();
+  if (await tokenInput.isVisible().catch(() => false)) {
+    await tokenInput.fill(ADMIN_TOKEN);
+    await page.getByRole("button", { name: /sign in|unlock|continue|open/i }).first().click();
+  }
   await page.waitForTimeout(2_000);
   const main0 = (await page.locator("main").textContent().then((t) => t ?? "")).replace(/\s+/g, " ");
   const tabs = await page.getByRole("tab").allTextContents();

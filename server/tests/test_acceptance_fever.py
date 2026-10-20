@@ -140,3 +140,11 @@ def test_fluids_alone_do_not_satisfy_an_antibiotics_plus_fluids_row() -> None:
     assert row is not None and row.code == "iv_abx_fluids"
     # A contraindicated row is never matched by stems.
     assert D.match_treatment_row(state, "2193").appropriateness != "contraindicated"
+
+
+def test_sse_stream_cap_covers_an_author_call_plus_a_repair_round() -> None:
+    """D-13: at 180 s the cap cut a live generation off mid repair (504)."""
+    from server.config import Settings
+    from server.orchestration import routes as orch_routes
+
+    assert orch_routes.SSE_MAX_DURATION_S >= 2 * Settings().casegen_timeout_s

@@ -2,28 +2,11 @@
   - text: Faculty
   - heading "Faculty workspace" [level=1]
   - paragraph: Review authored cases and flagged encounters, manage your roster and assign cases. Every grading override is co-signed and recorded on the server.
-  - text: 2 pending Local, unverified
   - button "Refresh"
+  - paragraph: Your current identity is not allowed to use the faculty workspace. Sign in with an account that holds the faculty role. In local mode, faculty, dean and admin panels need the admin token or institution sign-in (SSO); a local profile alone has learner access only.
+  - button "Retry"
   - tablist "Faculty workspace":
     - tab "Review queue" [selected]
     - tab "Roster"
     - tab "Assignments"
-  - tabpanel "Review queue":
-    - region "Authored cases awaiting review (0)":
-      - heading "Authored cases awaiting review (0)" [level=2]
-      - paragraph: No cases waiting for review.
-    - region "Encounters flagged for review (2)":
-      - heading "Encounters flagged for review (2)" [level=2]
-      - paragraph: Fever days after chemotherapy
-      - paragraph: Deniz Acceptance · Oct 20, 11:53 AM
-      - text: "Safety miss History-taking: Developing Examination and investigations: Developing Clinical reasoning: Strong Communication: Developing Management: Developing"
-      - button "Review"
-      - paragraph: Fever with a fast heart rate and malaise
-      - paragraph: Deniz Acceptance · Oct 20, 11:57 AM
-      - text: "Safety miss History-taking: Developing Examination and investigations: Emerging Clinical reasoning: Strong Communication: Developing Management: Developing"
-      - button "Review"
-    - region "Recent reviews":
-      - heading "Recent reviews" [level=2]
-      - list:
-        - listitem: flagged gen-ai-qp1cle ·
-        - listitem: flagged gen-ai-vf084f ·
+  - tabpanel "Review queue"

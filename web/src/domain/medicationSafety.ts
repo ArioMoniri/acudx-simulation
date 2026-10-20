@@ -210,7 +210,12 @@ export function fiveRightsCheck(order: MedicationOrder, ctx: FiveRightsContext):
           fail("dose", "dose-exceeds-daily-max", true, `Cumulative ${given + order.dose} ${entry.dose.unit} would exceed the 24 h maximum of ${entry.maxPerDay} ${entry.dose.unit}.`);
         }
       }
-      if (entry.dose.perKg != null && weight != null && !perKgUnit) {
+      if (
+        entry.dose.perKg != null &&
+        weight != null &&
+        !perKgUnit &&
+        (entry.dose.perKgBelowKg == null || weight < entry.dose.perKgBelowKg)
+      ) {
         const ceiling = entry.dose.perKg * weight;
         if (order.dose > ceiling && order.dose > entry.dose.min) {
           fail("dose", "dose-above-max", true, `${order.dose} ${order.unit} exceeds ${entry.dose.perKg} ${entry.dose.unit}/kg for ${weight} kg (${Math.round(ceiling)} ${entry.dose.unit}).`);

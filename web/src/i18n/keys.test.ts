@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
 import en from "./locales/en.json";
 import tr from "./locales/tr.json";
 
@@ -12,8 +10,12 @@ import tr from "./locales/tr.json";
  */
 type Dict = Record<string, unknown>;
 
-const SRC = join(__dirname, "..");
-const FEATURES = join(__dirname, "features");
+const FEATURE_FILES = import.meta.glob<Dict>("./features/*.json", { eager: true, import: "default" });
+const SOURCE_FILES = import.meta.glob<string>(["../**/*.{ts,tsx}", "!../**/*.test.{ts,tsx}", "!../i18n/**"], {
+  eager: true,
+  query: "?raw",
+  import: "default",
+});
 
 function deepMerge(base: Dict, extra: Dict): Dict {
   const out: Dict = { ...base };
@@ -29,8 +31,8 @@ function deepMerge(base: Dict, extra: Dict): Dict {
 
 function bundle(lng: "en" | "tr", base: Dict): Dict {
   let merged = base;
-  for (const f of readdirSync(FEATURES)) {
-    if (f.endsWith(`.${lng}.json`)) merged = deepMerge(merged, JSON.parse(readFileSync(join(FEATURES, f), "utf8")) as Dict);
+  for (const [path, mod] of Object.entries(FEATURE_FILES)) {
+    if (path.endsWith(`.${lng}.json`)) merged = deepMerge(merged, mod);
   }
   return merged;
 }
@@ -41,27 +43,12 @@ function has(dict: Dict, key: string): boolean {
     if (!cur || typeof cur !== "object") return false;
     cur = (cur as Dict)[part];
   }
-  if (typeof cur === "string" || Array.isArray(cur) || (cur && typeof cur === "object")) return true;
-  return false;
+  return typeof cur === "string" || Array.isArray(cur) || (!!cur && typeof cur === "object");
 }
 
 /** A key with plural forms is stored as key_one / key_other. */
 function resolves(dict: Dict, key: string): boolean {
   return has(dict, key) || has(dict, `${key}_one`) || has(dict, `${key}_other`);
-}
-
-function sourceFiles(dir: string): string[] {
-  const out: string[] = [];
-  for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) {
-      if (name === "i18n" || name === "node_modules") continue;
-      out.push(...sourceFiles(p));
-    } else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) {
-      out.push(p);
-    }
-  }
-  return out;
 }
 
 const KEY_RE = /\bt\(\s*"([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)"/g;
@@ -80,14 +67,13 @@ function callArgs(rest: string): string {
 
 function usedKeys(): Map<string, string> {
   const keys = new Map<string, string>();
-  for (const file of sourceFiles(SRC)) {
-    const text = readFileSync(file, "utf8");
+  for (const [file, text] of Object.entries(SOURCE_FILES)) {
     for (const m of text.matchAll(KEY_RE)) {
       // A call that carries its own fallback (`{ defaultValue }` or a string
       // second argument) never renders the raw key, so it is not checked here.
       const rest = text.slice((m.index ?? 0) + m[0].length);
       if (/^\s*,\s*["'`]/.test(rest) || /defaultValue/.test(callArgs(rest))) continue;
-      keys.set(m[1], relative(SRC, file));
+      keys.set(m[1], file);
     }
   }
   return keys;
