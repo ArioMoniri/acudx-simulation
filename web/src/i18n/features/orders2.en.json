@@ -47,7 +47,8 @@
       "orderedAt": "ordered {{min}} min",
       "resultedAt": "resulted {{min}} min",
       "progressAria": "{{name}} result progress",
-      "hint": "Results open in the Results tab as each test finalises."
+      "hint": "Results open in the Results tab as each test finalises.",
+      "timeLegend": "ETA is the clinical turnaround in simulated time; the simulation compresses time, so the \"ready in\" countdown is the real wait on your screen."
     },
     "treatments": {
       "heading": "Treatments",

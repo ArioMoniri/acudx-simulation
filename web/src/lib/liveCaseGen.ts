@@ -453,6 +453,9 @@ function complaintHint(codings: Coding[]): string {
     return "chest-pain";
   }
   if (code.startsWith("I60") || code.startsWith("G4")) return "headache";
+  // Acceptance 2026-10-20 D-25: a malaria case was offered "Gastroenteritis,
+  // GERD" as differentials; febrile infections get a febrile pool.
+  if (/^(A[0-9]|B[0-9]|G0[0-4]|N10|N39|N41|N7[0-3]|L03|M00|K83|D70|U07|J09|J1[0-1]|R50)/.test(code)) return "fever";
   if (code.startsWith("K3") || code.startsWith("K5") || code.startsWith("I88")) {
     return "abdominal-pain";
   }
@@ -494,6 +497,16 @@ const DIFF_POOL: Record<string, DiffEntry[]> = {
     { code: ICD10.acsNstemi, label: { en: "Acute coronary syndrome (rule out)", tr: "Akut koroner sendrom (dışla)" } },
   ],
 };
+
+const icd = (code: string, display: string): Coding => ({ system: CODE_SYSTEMS.icd10, code, display });
+DIFF_POOL.fever = [
+  { code: icd("A41.9", "Sepsis, unspecified organism"), label: { en: "Sepsis (source to be found)", tr: "Sepsis (kaynak aranacak)" } },
+  { code: icd("N10", "Acute pyelonephritis"), label: { en: "Acute pyelonephritis", tr: "Akut piyelonefrit" } },
+  { code: icd("J18.9", "Pneumonia, unspecified organism"), label: { en: "Pneumonia", tr: "Pnömoni" } },
+  { code: icd("B54", "Unspecified malaria"), label: { en: "Malaria (after travel)", tr: "Sıtma (seyahat sonrası)" } },
+  { code: icd("J11.1", "Influenza with other respiratory manifestations"), label: { en: "Viral illness (influenza)", tr: "Viral hastalık (influenza)" } },
+  { code: icd("G00.9", "Bacterial meningitis, unspecified"), label: { en: "Bacterial meningitis", tr: "Bakteriyel menenjit" } },
+];
 
 const GENERIC_DIFF: DiffEntry[] = [
   { code: ICD10.gerd, label: { en: "GERD", tr: "Gastroözofageal reflü" } },

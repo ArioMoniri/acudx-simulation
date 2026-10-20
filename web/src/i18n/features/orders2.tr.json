@@ -47,7 +47,8 @@
       "orderedAt": "{{min}} dk’da istendi",
       "resultedAt": "{{min}} dk’da sonuçlandı",
       "progressAria": "{{name}} sonuç ilerlemesi",
-      "hint": "Her tetkik tamamlandıkça sonuçlar Sonuçlar sekmesinde açılır."
+      "hint": "Her tetkik tamamlandıkça sonuçlar Sonuçlar sekmesinde açılır.",
+      "timeLegend": "Tahmini süre simüle zamandaki klinik süredir; simülasyon zamanı sıkıştırır, bu yüzden \"hazır\" geri sayımı ekranınızdaki gerçek beklemedir."
     },
     "treatments": {
       "heading": "Tedaviler",

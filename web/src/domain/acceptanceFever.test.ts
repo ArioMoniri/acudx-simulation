@@ -15,7 +15,7 @@ const PEN_ANAPHYLAXIS: AllergyIntolerance = {
   resourceType: "AllergyIntolerance",
   id: "a1",
   patient: "p1",
-  code: { coding: [{ system: "x", code: "pen", display: "Penicillin" }], text: { en: "Penicillin — anaphylaxis as a child", tr: "Penisilin — anafilaksi" } },
+  code: { coding: [{ system: "x", code: "pen", display: "Penicillin" }], text: { en: "Penicillin, anaphylaxis as a child", tr: "Penisilin, anafilaksi" } },
   criticality: "high",
 } as unknown as AllergyIntolerance;
 
@@ -62,7 +62,7 @@ describe("D-17 non-beta-lactam antibiotics", () => {
   });
 
   it("suggests the guideline alternatives for the diagnosis", () => {
-    const texts = ["Penicillin — anaphylaxis as a child"];
+    const texts = ["Penicillin, anaphylaxis as a child"];
     const men = allergySafeAlternatives("2193", texts, "G00.9").alternatives.map((a) => a.entry.code);
     expect(men[0]).toBe("2348"); // NICE NG240: chloramphenicol
     const cap = allergySafeAlternatives("2193", texts, "J18.9").alternatives.map((a) => a.entry.code);

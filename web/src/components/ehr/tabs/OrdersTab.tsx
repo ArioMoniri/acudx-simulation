@@ -351,6 +351,8 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
         )}
 
         <p className="text-[0.6875rem] text-muted">{t("orders2.tracker.hint")}</p>
+        {/* Acceptance 2026-10-20 D-27: explain the sim-time compression. */}
+        <p className="text-[0.6875rem] text-muted">{t("orders2.tracker.timeLegend")}</p>
       </motion.aside>
     </div>
   );

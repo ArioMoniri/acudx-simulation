@@ -60,6 +60,7 @@ The web app runs without the gateway: cases come from the labelled on-device tem
 1. **Admin console first** (`/admin`, needs `ADMIN_TOKEN`): model, voice, avatar, imaging, identity and GPU providers, GPU policy and budget, telemetry. Keys are sealed with `ACUDX_SECRET_KEY` and never reach the browser.
 2. **Environment second**: only `ADMIN_TOKEN` is required to boot. `AIRGAPPED=true` (the default outside Compose) refuses every non-local endpoint before a socket opens. The full list with defaults is in [.env.example](.env.example) and [server/README.md](server/README.md).
 3. **Identity**: `docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up -d keycloak` starts a dev realm; see [deploy/keycloak/README.md](deploy/keycloak/README.md).
+4. **Local mode is capped** (`AUTH_MODE=local`, the default): the role a local profile declares in the `X-User-Role` header is honoured only up to `resident`. Faculty, dean and admin panels need institution sign-in (a verified OIDC bearer) or the `ADMIN_TOKEN` entered in the admin console in the same browser tab; without either they answer 403 and the page says which role and what to do. Details in [docs/architecture/19](docs/architecture/19-identity-roles-and-panels.md) section 2.
 
 ## Architecture
 

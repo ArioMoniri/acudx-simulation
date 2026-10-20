@@ -152,6 +152,19 @@ describe("D-12 fever topics answer the question that was asked", () => {
   });
 });
 
+describe("D-25 febrile differentials", () => {
+  it("a febrile case is not offered GERD, and a malaria case is offered sepsis and pneumonia", () => {
+    const sepsis = v2SpecToCaseInstance(SEPSIS).case.differentials.map((d) => d.code.coding[0]?.code);
+    expect(sepsis).not.toContain("K21.9");
+    const malaria = v2SpecToCaseInstance({
+      ...SEPSIS,
+      condition: { icd11: "1F40", icd10: "B54", label_en: "Malaria", label_tr: "Sıtma", system: "infectious" },
+    } as CaseGenV2Spec).case.differentials.map((d) => d.code.coding[0]?.code);
+    expect(malaria).not.toContain("K21.9");
+    expect(malaria).toEqual(expect.arrayContaining(["A41.9", "N10"]));
+  });
+});
+
 describe("D-20 an indicated formulary antibiotic scores indicated", () => {
   it("vancomycin given in sepsis is recorded as indicated, not neutral", () => {
     const c = v2SpecToCaseInstance(SEPSIS).case;

@@ -1,12 +1,12 @@
 /**
- * AcuDx — map a formulary drug to the case's own treatment row.
+ * AcuDx: map a formulary drug to the case's own treatment row.
  *
  * Acceptance 2026-10-20 D-20: the formulary sends RxNorm-style codes ("2193",
  * "11124") while a case authors abstract rows ("abx", "iv_abx_fluids",
  * "immediate_ceftriaxone"), and the encounter store matched them by exact code,
  * so an indicated antibiotic scored "neutral". This is the client mirror of
  * `match_treatment_row` in server/orchestration/director.py (D-09); the two
- * stem tables are kept identical by web/src/domain/treatmentMatch.test.ts and
+ * stem tables are kept identical by
  * server/tests/test_acceptance_fever.py.
  *
  * Rules: an exact code match wins; otherwise a formulary drug matches a

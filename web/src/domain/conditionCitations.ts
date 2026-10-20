@@ -1,5 +1,5 @@
 /**
- * AcuDx — condition-specific feedback rows and their verified citations.
+ * AcuDx: condition-specific feedback rows and their verified citations.
  *
  * Acceptance 2026-10-20 D-11: the Feedback page listed "Screened cardiac red
  * flags" for a sepsis case and cited NICE NG185 (acute coronary syndromes) for

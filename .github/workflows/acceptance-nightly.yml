@@ -1,0 +1,64 @@
+name: Acceptance (nightly)
+
+# Acceptance 2026-10-20 D-28: the faculty and dean specs in web/e2e run fully
+# offline, so none of them caught the local-mode role cap (D-15). This job runs
+# the live acceptance walk (web/e2e/acceptance/acceptance.spec.ts) every night
+# against a real gateway with a fresh database, no model and AIRGAPPED=true,
+# exactly as docs/review/05 section 1 describes. No secrets: the admin token is
+# a throwaway value for the run's own database.
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AIRGAPPED: "true"
+      AUTH_MODE: local
+      ADMIN_TOKEN: acceptance-admin
+      ACUDX_DB_PATH: ${{ runner.temp }}/acceptance.db
+      ACCEPTANCE_BASE_URL: http://localhost:4193
+      ACCEPTANCE_GATEWAY_URL: http://127.0.0.1:8931
+      ACCEPTANCE_ADMIN_TOKEN: acceptance-admin
+      ACCEPTANCE_OUTPUT_DIR: ${{ runner.temp }}/acudx-acceptance-results
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: server/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        run: |
+          python -m pip install -r server/requirements.txt
+          npm --prefix web ci
+          npx --prefix web playwright install --with-deps chromium
+      - name: Start gateway and web
+        run: |
+          python -m uvicorn server.app:app --port 8931 > "$RUNNER_TEMP/gateway.log" 2>&1 &
+          API_PROXY_TARGET=http://127.0.0.1:8931 npm --prefix web run dev -- --port 4193 --strictPort > "$RUNNER_TEMP/web.log" 2>&1 &
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:8931/health >/dev/null && curl -fsS http://localhost:4193 >/dev/null && break; sleep 2; done
+      - name: Acceptance walk
+        working-directory: web
+        run: npx playwright test -c playwright.acceptance.config.ts acceptance.spec
+      - name: Upload logs and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/gateway.log
+            ${{ runner.temp }}/web.log
+            ${{ runner.temp }}/acudx-acceptance-results

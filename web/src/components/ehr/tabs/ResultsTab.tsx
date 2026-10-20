@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { displayUnit, withUnit } from "@/lib/units";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
@@ -331,7 +332,7 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
       if (orderable.category === "micro") {
         const resultedAt = resultedAtAt(draws.length - 1);
         if (lastEngine) {
-          const lines = (lastEngine.observations ?? []).map((o) => `${o.name}: ${o.value}${o.unit ? ` ${o.unit}` : ""}`);
+          const lines = (lastEngine.observations ?? []).map((o) => `${o.name}: ${withUnit(o.value, o.unit)}`);
           const text = lines.join("; ") || lastEngine.reason || "";
           micro.push({
             id: `micro-${code}`,
@@ -580,7 +581,7 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
                   <span className="font-medium">{l.label}</span>
                   <span className="font-mono tabular-nums">
                     {l.value}
-                    {l.unit ? <span className="ms-1 text-xs text-muted">{l.unit}</span> : null}
+                    {l.unit ? <span className="ms-1 text-xs text-muted">{" "}{displayUnit(l.unit)}</span> : null}
                   </span>
                 </li>
               ))}
@@ -1081,7 +1082,7 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
           <>
             {obs.valueQuantity.value}
             {obs.valueQuantity.unit ? (
-              <span className="ms-1 text-xs text-muted">{obs.valueQuantity.unit}</span>
+              <span className="ms-1 text-xs text-muted">{" "}{displayUnit(obs.valueQuantity.unit)}</span>
             ) : null}
           </>
         ) : obs.valueString ? (
@@ -1218,7 +1219,7 @@ function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
         {latest.valueQuantity ? (
           <>
             {latest.valueQuantity.value}
-            {analyte.unit ? <span className="ms-1 text-xs text-muted">{analyte.unit}</span> : null}
+            {analyte.unit ? <span className="ms-1 text-xs text-muted">{" "}{displayUnit(analyte.unit)}</span> : null}
           </>
         ) : latest.valueString ? (
           pick(latest.valueString, lang)
@@ -1256,7 +1257,7 @@ function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
           <DirIcon weight="bold" className="h-3.5 w-3.5" aria-hidden />
           {deltaText}
           {analyte.unit && typeof analyte.delta === "number" ? (
-            <span className="ms-0.5 text-[10px] text-muted">{analyte.unit}</span>
+            <span className="ms-0.5 text-[10px] text-muted">{" "}{displayUnit(analyte.unit)}</span>
           ) : null}
         </span>
       </Td>
