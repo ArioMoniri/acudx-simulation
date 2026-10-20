@@ -1,13 +1,16 @@
 """Background jobs for the provider registry and telemetry (docs/architecture/17).
 
-A small periodic task closes the "manual today" items in doc 17 section 12:
+Two small periodic tasks close the "manual today" items in doc 17 section 12:
 
 * :class:`ProbeScheduler` runs :func:`server.registry.probe.probe_provider` for
   every **enabled** row every ``PROBE_INTERVAL_MINUTES`` (default 10, ``0``
   disables) and persists ``last_probe_*`` so the admin Providers table and
   ``/admin/health`` stay current without an operator clicking Probe.
+* :class:`RetentionPurger` deletes ``model_calls`` rows older than the
+  ``telemetry.retention_days`` setting every ``RETENTION_PURGE_INTERVAL_MINUTES``
+  (default 60). An unset, null or ``0`` retention keeps everything.
 
-It is built on :class:`PeriodicJob`: one asyncio task, an iteration that never kills
+Both share :class:`PeriodicJob`: one asyncio task, an iteration that never kills
 the loop (errors are logged and reported in :meth:`PeriodicJob.status`), and a
 ``stop`` that cancels and awaits the task. Started and stopped from the app
 lifespan next to the GPU idle reaper.
@@ -25,6 +28,7 @@ import httpx
 from server.config import Settings
 from server.registry.probe import probe_provider
 from server.registry.store import RegistryStore
+from server.telemetry.events import TelemetryRecorder
 
 log = logging.getLogger("acudx.registry.jobs")
 
@@ -134,3 +138,44 @@ class ProbeScheduler(PeriodicJob):
                                           client=client, store=self.store)
             out["probed"] += 1
             out["ok" if result["ok"] else "failed"] += 1
+
+
+def retention_days_from_settings(store: RegistryStore) -> int | None:
+    """Read the retention window the console saved (``telemetry.retention_days``).
+
+    Accepts the console's nested shape (``settings.telemetry = {"retention_days": N}``)
+    and the flat key named in doc 17. ``None``, ``0``, negative or non-numeric values
+    mean "keep everything".
+    """
+    raw: Any = None
+    nested = store.get_setting("telemetry")
+    if isinstance(nested, dict):
+        raw = nested.get("retention_days")
+    if raw is None:
+        raw = store.get_setting("telemetry.retention_days")
+    try:
+        days = int(raw) if raw is not None else 0
+    except (TypeError, ValueError):
+        return None
+    return days if days > 0 else None
+
+
+class RetentionPurger(PeriodicJob):
+    """Delete ``model_calls`` rows older than the configured retention window."""
+
+    name = "telemetry-retention"
+
+    def __init__(self, store: RegistryStore, telemetry: TelemetryRecorder, *, interval_minutes: float = 60.0,
+                 clock: Callable[[], float] | None = None):
+        super().__init__(interval_minutes=interval_minutes, clock=clock)
+        self.store = store
+        self.telemetry = telemetry
+
+    async def _run(self) -> dict[str, Any]:
+        days = retention_days_from_settings(self.store)
+        if days is None:
+            return {"retention_days": None, "deleted": 0}
+        deleted = self.telemetry.purge_older_than(days, now=self._clock())
+        if deleted:
+            log.info("telemetry retention: deleted %d model_calls rows older than %d days", deleted, days)
+        return {"retention_days": days, "deleted": deleted}

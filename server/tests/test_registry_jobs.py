@@ -1,4 +1,5 @@
-"""Background jobs: periodic provider probes (architecture doc 17 section 12 open item)."""
+"""Background jobs: periodic provider probes and the telemetry retention purge
+(architecture doc 17 section 12 open items)."""
 
 from __future__ import annotations
 
@@ -10,8 +11,9 @@ import respx
 from cryptography.fernet import Fernet
 
 from server.config import Settings
-from server.registry.jobs import ProbeScheduler
+from server.registry.jobs import ProbeScheduler, RetentionPurger, retention_days_from_settings
 from server.registry.store import ProviderIn, RegistryStore
+from server.telemetry.events import TelemetryRecorder
 
 KEY = Fernet.generate_key().decode()
 
@@ -115,3 +117,58 @@ def test_probe_interval_setting_defaults_to_ten_minutes(tmp_path):
     assert _settings(tmp_path, probe_interval_minutes=0).probe_interval_minutes == 0
     with pytest.raises(ValueError):
         _settings(tmp_path, probe_interval_minutes=-1)
+
+
+# --------------------------------------------------------------------------- #
+# retention purge                                                             #
+# --------------------------------------------------------------------------- #
+def _fill(rec: TelemetryRecorder, clock: dict, days: list[float]) -> None:
+    for d in days:
+        clock["v"] = 1_800_000_000.0 - d * 86_400
+        rec.record(kind="chat", provider="local", model="m", tokens_in=1, tokens_out=1, latency_ms=1.0, ok=True)
+
+
+def test_retention_days_from_settings_accepts_nested_and_flat_keys(tmp_path):
+    store = _store(_settings(tmp_path))
+    assert retention_days_from_settings(store) is None
+    store.set_setting("telemetry", {"retention_days": 30})          # the console's shape
+    assert retention_days_from_settings(store) == 30
+    store.set_setting("telemetry", {"retention_days": None})
+    assert retention_days_from_settings(store) is None
+    store.set_setting("telemetry.retention_days", "14")              # the flat key named in doc 17
+    assert retention_days_from_settings(store) == 14
+    store.set_setting("telemetry.retention_days", 0)                 # 0 keeps everything
+    assert retention_days_from_settings(store) is None
+    store.set_setting("telemetry.retention_days", "not-a-number")
+    assert retention_days_from_settings(store) is None
+
+
+async def test_retention_purge_honours_the_setting(tmp_path):
+    s = _settings(tmp_path)
+    store = _store(s)
+    clock = {"v": 1_800_000_000.0}
+    rec = TelemetryRecorder(s.acudx_db_path, clock=lambda: clock["v"])
+    _fill(rec, clock, days=[0.5, 5, 29.9, 30.1, 90])
+    clock["v"] = 1_800_000_000.0
+    job = RetentionPurger(store, rec, interval_minutes=60, clock=lambda: clock["v"])
+
+    # no setting: nothing is deleted, the run says so
+    assert await job.run_once() == {"retention_days": None, "deleted": 0}
+    assert len(rec.recent(limit=100)) == 5
+
+    store.set_setting("telemetry", {"retention_days": 30})
+    assert await job.run_once() == {"retention_days": 30, "deleted": 2}
+    kept = rec.recent(limit=100)
+    assert len(kept) == 3 and all(r["ts"] > clock["v"] - 30 * 86_400 for r in kept)
+    assert job.status()["runs"] == 2 and job.status()["interval_s"] == 3600.0
+
+
+def test_purge_older_than_returns_the_count_and_rejects_nonpositive(tmp_path):
+    clock = {"v": 1_800_000_000.0}
+    rec = TelemetryRecorder(str(tmp_path / "t.db"), clock=lambda: clock["v"])
+    _fill(rec, clock, days=[1, 2, 3])
+    clock["v"] = 1_800_000_000.0
+    assert rec.purge_older_than(2.5, now=clock["v"]) == 1
+    assert rec.purge_older_than(0, now=clock["v"]) == 0
+    assert rec.purge_older_than(-3, now=clock["v"]) == 0
+    assert len(rec.recent(limit=10)) == 2

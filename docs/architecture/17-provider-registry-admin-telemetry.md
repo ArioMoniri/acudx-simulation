@@ -90,6 +90,7 @@ The gateway without a resolver (unit tests, scripts) keeps the env-only behaviou
 * Cost is computed once, in the gateway, from `server/telemetry/prices.py`. The table is versioned (`PRICE_TABLE_VERSION = "2026-10-19"`), every row cites its source page, cached input tokens use the discounted rate when the provider publishes one, and self-hosted endpoints (`local`, `gpu_worker`, env seeds) cost 0 because their money is accounted by the hour in `gpu_ledger`. The billing slug is derived from the endpoint host (`api.deepinfra.com` to `deepinfra`) so operators can name rows freely.
 * Request context (`route`, `tenant`, `user_hash`, `encounter_id`) is bound per request by a FastAPI middleware through a `contextvars` slot (`call_context`). User ids arrive as `X-User-Id` and are stored as a 16-hex SHA-256 prefix; `X-Tenant` and `X-Encounter-Id` pass through. Education only, no PHI path.
 * When `OTEL_EXPORTER_OTLP_ENDPOINT` is set and `server/requirements-telemetry.txt` is installed, each call also emits one span named `gen_ai.<operation> <provider>` with `gen_ai.system`, `gen_ai.request.model`, `gen_ai.response.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.usage.cached_input_tokens` and `acudx.*` attributes (cost, route, tenant, encounter, price version). The import is optional; the gateway runs without the SDK.
+* Retention: `RetentionPurger` (`server/registry/jobs.py`) reads `telemetry.retention_days` from the settings table (the console's nested `telemetry` object or the flat key) every `RETENTION_PURGE_INTERVAL_MINUTES` (default 60) and calls `TelemetryRecorder.purge_older_than(days)`; unset, null or `0` keeps everything. Reported under `jobs.telemetry_retention` in `/admin/health`.
 * `GET /admin/telemetry/summary?window=24h|7d|30d` aggregates in Python over the window: calls, errors, error rate, cost, tokens, p50/p95 latency (linear interpolation), by provider / model / route / kind, and a complete bucket series (hourly for 24h, daily otherwise, right-inclusive buckets, empty buckets present). `GET /admin/telemetry/gpu` rolls up `gpu_ledger` by instance type with today, 7 d and 30 d spend.
 
 ## 8. Admin API
@@ -136,12 +137,11 @@ Charts are the evilcharts shadcn registry items `recharts-area-chart`, `recharts
 * `server/tests/test_registry_store.py`: schema, encryption round trip, public view never leaks, refusal without secret key, update semantics, wrong key, settings, env seed.
 * `server/tests/test_registry_resolve.py`: priority order, air-gap refusal and allow-list, probe-aware skipping, env key fallback, GPU worker fallback and touch, frozen endpoint hides key.
 * `server/tests/test_registry_routes.py`: guard, CRUD, 409 without secret key, probes via respx (success, failure, non-2xx, air-gap), settings, health, telemetry endpoints, main app mounts.
-* `server/tests/test_registry_jobs.py`: scheduled probes touch enabled rows only and persist, the loop runs and stops, interval 0 disables, a failing iteration is recorded and survived.
+* `server/tests/test_registry_jobs.py`: scheduled probes touch enabled rows only and persist, the loop runs and stops, interval 0 disables, a failing iteration is recorded and survived; retention setting parsing (nested, flat, null, 0, non-numeric), purge honours the window, `purge_older_than` count and non-positive guard.
 * `server/tests/test_telemetry.py`: price table, cost with cached discount, row writes, percentile math, summary math and buckets, OTel span attributes, gateway hooks for chat/embed/rerank, failure rows.
 * `web/src/lib/adminApi.test.ts`, `web/src/lib/adminCharts.test.ts`: client headers and error mapping, series and share shaping, ledger folding, formatting, provider tones.
 
 ## 12. Open items
 
-* Retention purge for `model_calls` is a setting without a job yet; add a daily task once the orchestrator schedules server jobs.
 * Per-tenant budgets: the summary already groups by tenant-capable columns; the console shows global totals only.
 * Jobs run in-process per gateway instance; with several replicas each one probes and purges on its own schedule (harmless, but a leader election or a single jobs replica would avoid duplicate probes).

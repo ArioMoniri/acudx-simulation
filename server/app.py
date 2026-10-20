@@ -51,7 +51,7 @@ from server.model_gateway import GatewayError, ModelGateway
 from server.orchestration.routes import router as orchestration_v2_router
 from server.persona import build_patient_turn, fact_assertion_gate
 from server.providers.gpu_worker import WorkerManager
-from server.registry.jobs import ProbeScheduler
+from server.registry.jobs import ProbeScheduler, RetentionPurger
 from server.registry.resolve import RegistryResolver
 from server.registry.routes import disk_usage
 from server.registry.routes import router as registry_router
@@ -126,9 +126,12 @@ async def lifespan(app: FastAPI):
     gateway = ModelGateway(settings, resolver=resolver, telemetry=telemetry)  # may raise EgressBlocked under AIRGAPPED+api
     await gateway.start()
     worker_manager.start_reaper()
-    # Registry jobs (docs/architecture/17 section 12): periodic probes keep last_probe_* current.
+    # Registry jobs (docs/architecture/17 section 12): periodic probes keep
+    # last_probe_* current; the retention purge honours telemetry.retention_days.
     probe_job = ProbeScheduler(registry, settings, client=getattr(gateway, "_client", None))
     probe_job.start()
+    retention_job = RetentionPurger(registry, telemetry, interval_minutes=settings.retention_purge_interval_minutes)
+    retention_job.start()
     # Voice (docs/architecture/18): TTS / STT through the same registry, worker fallback and telemetry.
     voice = VoiceService(settings, resolver, telemetry=telemetry)
     # Identity + learner events (docs/architecture/19): the identity provider is a
@@ -145,11 +148,12 @@ async def lifespan(app: FastAPI):
     app.state.voice = voice
     app.state.auth = auth
     app.state.learning = learning
-    app.state.jobs = {"provider_probe": probe_job}
+    app.state.jobs = {"provider_probe": probe_job, "telemetry_retention": retention_job}
     try:
         yield
     finally:
         await probe_job.stop()
+        await retention_job.stop()
         await voice.aclose()
         await worker_manager.aclose()
         await gateway.aclose()
