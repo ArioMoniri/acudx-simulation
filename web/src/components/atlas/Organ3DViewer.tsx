@@ -122,7 +122,8 @@ export function Organ3DViewer({
       controls.dampingFactor = 0.08;
       controls.rotateSpeed = 0.9;
 
-      const clipPlane = new T.Plane(new T.Vector3(0, 0, -1), 0);
+      const CLIP_PARKED = 1e7;
+      const clipPlane = new T.Plane(new T.Vector3(0, 0, -1), CLIP_PARKED);
 
       const organMeshes = new Map<string, THREE.Mesh[]>();
 
@@ -143,6 +144,10 @@ export function Organ3DViewer({
             const mats = (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) as THREE.Material[];
             for (const m of mats) {
               (m as THREE.Material & { side: THREE.Side }).side = T.DoubleSide;
+              // Every material carries the clip plane from the start; the cut is
+              // switched by moving the plane, never by adding / removing planes,
+              // because a change in plane count recompiles every shader.
+              (m as THREE.Material & { clippingPlanes: THREE.Plane[] }).clippingPlanes = [clipPlane];
             }
             if (id) {
               const arr = organMeshes.get(id) ?? [];
@@ -195,32 +200,43 @@ export function Organ3DViewer({
               // organ's own (possibly translucent, e.g. lungs) look.
               const dim = active != null && active !== id;
               const base = id === "lungs" ? 0.35 : 1;
+              // Opacity, transparency and depth write are plain uniforms /
+              // render state: no needsUpdate, which would recompile each
+              // material's program on every toggle (seconds on a software GL).
               m.opacity = dim ? Math.min(base, 0.12) : base;
               m.transparent = m.opacity < 1;
               m.depthWrite = m.opacity >= 0.95;
-              m.needsUpdate = true;
             }
           }
         }
       }
 
-      /** Enable/disable the axial clipping plane on every organ material. */
+      /**
+       * Enable/disable the axial cut. The plane stays attached to every
+       * material (see the loader); "off" parks it far above the model so
+       * nothing is clipped and no shader is recompiled.
+       */
       function applyClip(on: boolean, levelMm: number) {
-        clipPlane.constant = levelMm;
-        for (const meshes of organMeshes.values()) {
-          for (const mesh of meshes) {
-            const mats = (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) as Array<
-              THREE.Material & { clippingPlanes: THREE.Plane[] | null }
-            >;
-            for (const m of mats) m.clippingPlanes = on ? [clipPlane] : [];
-          }
-        }
+        clipPlane.constant = on ? levelMm : CLIP_PARKED;
       }
 
+      // Render on demand, not every frame: a frame is drawn only after the
+      // controls moved (drag, damping, auto-rotate), the visibility / clip plane
+      // changed, or the canvas resized. A static model costs no GPU (or, in a
+      // software-rendered CI browser, CPU) time, which keeps the rest of the
+      // Atlas page responsive once the 3D view is open.
       let raf = 0;
+      let needsRender = true;
+      const requestRender = () => {
+        needsRender = true;
+      };
+      controls.addEventListener("change", requestRender);
       const tick = () => {
         raf = requestAnimationFrame(tick);
+        // Emits "change" while damping or auto-rotating, which requests a frame.
         controls.update();
+        if (!needsRender) return;
+        needsRender = false;
         renderer.render(scene, camera);
       };
       raf = requestAnimationFrame(tick);
@@ -231,6 +247,7 @@ export function Organ3DViewer({
         camera.aspect = cw / ch;
         camera.updateProjectionMatrix();
         renderer.setSize(cw, ch);
+        requestRender();
       };
       const ro = new ResizeObserver(onResize);
       ro.observe(container);
@@ -238,6 +255,7 @@ export function Organ3DViewer({
       const dispose = () => {
         cancelAnimationFrame(appRef.current?.raf ?? raf);
         ro.disconnect();
+        controls.removeEventListener("change", requestRender);
         controls.dispose();
         scene.traverse((obj: THREE.Object3D) => {
           const mesh = obj as THREE.Mesh;
@@ -261,8 +279,17 @@ export function Organ3DViewer({
         raf,
         dispose,
         // expose the two updaters via closure on the app object
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...( { applyVisibility, applyClip } as any ),
+        ...({
+          applyVisibility: () => {
+            applyVisibility();
+            requestRender();
+          },
+          applyClip: (on: boolean, levelMm: number) => {
+            applyClip(on, levelMm);
+            requestRender();
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any),
       } as ThreeApp;
     })();
 

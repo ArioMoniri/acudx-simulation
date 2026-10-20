@@ -43,6 +43,10 @@ Unit tests are Vitest (`npm test`). End-to-end tests are Playwright
   (`npm run build && npm run preview`) instead of the dev server.
 - Sessions are created through the real UI (`e2e/helpers/session.ts`:
   SignInPage -> Create your profile -> role); no localStorage injection.
+- The suite measures the on-device path: `createProfile` aborts every `/api`
+  request for the browser context, so a gateway that happens to listen on the
+  proxy port of the same machine cannot switch the app to its live path
+  mid-run (the specs assume deterministic client replies and results).
 - Specs: `routes` (every route renders with no console errors and no
   horizontal overflow), `a11y` (axe-core; serious/critical fail, the rest are
   logged), `buttons` (click every enabled button on every route),

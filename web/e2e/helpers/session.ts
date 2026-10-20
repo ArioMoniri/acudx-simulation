@@ -17,6 +17,7 @@ export interface ProfileOptions {
  * Leaves the page on Home ("/") and signed in.
  */
 export async function createProfile(page: Page, opts: ProfileOptions = {}): Promise<void> {
+  await offlineGateway(page);
   const role: Role = opts.role ?? "student";
   const fullName = opts.fullName ?? `E2E ${role} ${Date.now().toString(36)}`;
   const institution = opts.institution ?? "AcuDx E2E Faculty of Medicine";
@@ -35,6 +36,20 @@ export async function createProfile(page: Page, opts: ProfileOptions = {}): Prom
   // Onboarding completes -> the gate opens and the app lands on Home.
   await expect(page).not.toHaveURL(/\/(profile|signin)$/);
   await expect(page.locator("main#main")).toBeVisible();
+}
+
+/**
+ * Pin the suite to the on-device path. Playwright starts no gateway, and every
+ * spec measures the client's own behaviour (deterministic reveal-graph replies,
+ * synthetic results, client-side grading). A gateway that happens to listen on
+ * the Vite `/api` proxy port on the same machine would silently switch the app
+ * to its live path (model replies arriving one HTTP round-trip at a time), so
+ * `/api` is aborted for the whole context; the app treats that exactly like no
+ * gateway at all. Aborted requests surface as net::ERR_FAILED, which
+ * helpers/console.ts already allows for the documented fallback.
+ */
+export async function offlineGateway(page: Page): Promise<void> {
+  await page.context().route("**/api/**", (route) => route.abort("failed"));
 }
 
 /** Every route in web/src/App.tsx that a signed-in dean can render directly. */
