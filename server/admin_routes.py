@@ -60,6 +60,12 @@ async def gpu_stop(request: Request) -> dict[str, Any]:
     return {"terminated": w.public() if w else None, "spent_today_usd": m.spent_today_usd()}
 
 
+@router.get("/gpu/boot-log", dependencies=[Depends(require_admin)])
+async def gpu_boot_log(request: Request, tail: int = 200) -> dict[str, Any]:
+    """Cloud-init output and docker status of the active worker (diagnostics port 8081)."""
+    return await _manager(request).boot_log(tail_lines=max(10, min(tail, 2000)))
+
+
 @router.get("/gpu/ledger", dependencies=[Depends(require_admin)])
 async def gpu_ledger(request: Request, limit: int = 100) -> dict[str, Any]:
     m = _manager(request)

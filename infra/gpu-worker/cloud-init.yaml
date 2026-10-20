@@ -44,7 +44,10 @@ write_files:
         handle_path /tts/* { reverse_proxy chatterbox:4123 }
         handle_path /tts-en/* { reverse_proxy kokoro:8880 }
         handle_path /stt/* { reverse_proxy speaches:8000 }
-        handle /healthz { respond "ok" 200 }
+        handle /healthz {
+          rewrite * /health
+          reverse_proxy vllm:8000
+        }
         handle { reverse_proxy vllm:8000 }
       }
   - path: /opt/acudx/docker-compose.yml
@@ -117,6 +120,25 @@ write_files:
   # metadata, so one voice per language is uploaded once the API is up. The reference
   # clip is the repository's bundled sample; institutions replace it with consented
   # actor recordings through POST /voices (docs/architecture/18 section 4.2).
+  # Boot diagnostics: a stdlib HTTP server on :8081 serving the cloud-init output
+  # and a rolling docker status under a path that embeds the worker token, so the
+  # gateway can read boot logs without SSH (GET /admin/gpu/boot-log).
+  - path: /opt/acudx/diag.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -u
+      . /opt/acudx/.env
+      d=/opt/acudx/diag/$WORKER_TOKEN
+      mkdir -p "$d"
+      ln -sf /var/log/cloud-init-output.log "$d/cloud-init-output.log"
+      nohup python3 -m http.server 8081 --bind 0.0.0.0 --directory /opt/acudx/diag >/var/log/acudx-diag.log 2>&1 &
+      while true; do
+        { date; echo "--- docker ps"; docker ps --format '{{.Names}} {{.Status}}' 2>&1;
+          echo "--- compose logs (tail)"; cd /opt/acudx && docker compose logs --tail 40 2>&1; } > "$d/docker-status.txt.tmp"
+        mv "$d/docker-status.txt.tmp" "$d/docker-status.txt"
+        sleep 30
+      done
   - path: /opt/acudx/seed-voices.sh
     permissions: "0755"
     content: |
@@ -132,6 +154,7 @@ write_files:
       done
 runcmd:
   - mkdir -p /opt/acudx/caddy /opt/acudx/chatterbox-cache /opt/acudx/chatterbox-voices
+  - nohup /opt/acudx/diag.sh >/dev/null 2>&1 &
   - |
     FS=$(ls -d /lambda/nfs/* 2>/dev/null | head -1)
     if [ -n "$FS" ]; then mkdir -p "$FS/hf" && rm -rf /opt/acudx/hf && ln -s "$FS/hf" /opt/acudx/hf; else mkdir -p /opt/acudx/hf; fi
@@ -154,5 +177,8 @@ runcmd:
       git clone --filter=blob:none https://github.com/travisvn/chatterbox-tts-api /opt/acudx/chatterbox-tts-api
     fi
     git -C /opt/acudx/chatterbox-tts-api checkout --quiet "$CHATTERBOX_REF"
-  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d --build
+  # Core first (Caddy, vLLM, STT, Kokoro) so /healthz turns green as soon as the model
+  # loads; the Chatterbox image build runs afterwards and attaches when done.
+  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d caddy vllm speaches kokoro
+  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d --build chatterbox
   - nohup /opt/acudx/seed-voices.sh >/var/log/acudx-seed-voices.log 2>&1 &

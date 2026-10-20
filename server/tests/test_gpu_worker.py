@@ -132,9 +132,9 @@ async def test_ensure_worker_launches_cheapest_and_waits_for_health(tmp_path):
     assert w.ip == IP and w.domain == DOMAIN
     assert w.status == "ready" and w.ready_at is not None
     assert len(w.token) >= 32
-    # Firewall: PUT carried the 11 existing rules plus 80/443.
+    # Firewall: PUT carried the 11 existing rules plus 80/443/8081.
     sent = json.loads(put.calls.last.request.content)["data"]
-    assert len(sent) == 13
+    assert len(sent) == 14
     body = json.loads(launch.calls.last.request.content)
     assert body["ssh_key_names"] == ["acudx-claude-mac"]
     assert f"WORKER_TOKEN={w.token}" in body["user_data"]
@@ -173,7 +173,8 @@ async def test_ensure_worker_skips_firewall_put_when_rules_present(tmp_path):
     clock = FakeClock()
     rules = load_fixture("firewall-rules")
     rules["data"] += [{"protocol": "tcp", "port_range": [80, 80], "source_network": "0.0.0.0/0", "description": "x"},
-                      {"protocol": "tcp", "port_range": [443, 443], "source_network": "0.0.0.0/0", "description": "y"}]
+                      {"protocol": "tcp", "port_range": [443, 443], "source_network": "0.0.0.0/0", "description": "y"},
+                      {"protocol": "tcp", "port_range": [8081, 8081], "source_network": "0.0.0.0/0", "description": "z"}]
     put, _, _ = _mock_launch_flow()
     respx.get(f"{LAMBDA_API_BASE}/firewall-rules").mock(return_value=httpx.Response(200, json=rules))
     m = _manager(tmp_path, clock)
