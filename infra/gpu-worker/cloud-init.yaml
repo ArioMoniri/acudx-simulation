@@ -268,6 +268,9 @@ write_files:
             echo "--- $svc logs (last 40 lines, redacted)"
             $compose logs --no-color --tail 40 "$svc" 2>&1 | redact
           done
+          # The root cause of a vLLM start-up failure sits far above the final traceback.
+          echo "--- vllm root-cause lines (errors and memory, redacted)"
+          $compose logs --no-color vllm 2>&1 | grep -E 'Error|error|CUDA|memory|Memory|OOM|insufficient|ValueError' | tail -30 | redact
           echo "--- chatterbox torch check"; redact < /var/log/acudx-chatterbox-gpu.log 2>/dev/null
         } > "$d/docker-status.txt.tmp"
         mv "$d/docker-status.txt.tmp" "$d/docker-status.txt"
@@ -348,7 +351,13 @@ runcmd:
   # name registered (boot log 2026-10-20: "unknown or invalid runtime name: nvidia");
   # register it and restart docker so both --gpus and device reservations work.
   - (command -v nvidia-ctk >/dev/null && nvidia-ctk runtime configure --runtime=docker && systemctl restart docker) || true
-  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d caddy vllm speaches kokoro
+  # vLLM reserves a fraction of the card at start-up and refuses to start when another
+  # process already holds that memory (worker 10, 2026-10-20: once Chatterbox reached the
+  # GPU, vLLM died with "Engine core initialization failed"). So vLLM starts alone and the
+  # GPU side-cars start only after its health check passes (compose --wait, 40 min cap).
+  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d caddy
+  - cd /opt/acudx && set -a && . ./.env && set +a && timeout 2400 docker compose up -d --wait vllm || echo "acudx: vllm did not become healthy" >&2
+  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d speaches kokoro
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d --build chatterbox
   # Task 24 check: a fresh container from the same service definition reports what torch sees.
   - |
