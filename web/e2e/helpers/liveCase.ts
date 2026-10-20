@@ -25,7 +25,7 @@ export interface LiveRecord {
   };
 }
 
-export const LIVE_CASES: LiveRecord[] = ["fever-fever_and_rigors", "fever-fever_and_cough"].map(
+export const LIVE_CASES: LiveRecord[] = ["accepted-meningitis", "accepted-tuberculosis", "fever-fever_and_rigors", "fever-fever_and_cough"].map(
   (name) => JSON.parse(readFileSync(join(LIVE_DIR, `${name}.json`), "utf8")) as LiveRecord,
 );
 

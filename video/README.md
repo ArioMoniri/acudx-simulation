@@ -55,8 +55,8 @@ The launch film, the ten-second teaser and the 1200 x 630 poster. Motion follows
 
 | File | Spec | Content |
 |---|---|---|
-| `out/launch.mp4` | 1920 x 1080, 30 fps, 51 s, H.264, no audio track | mark draws in, promise (EN and TR), four EHR captures with slow pan and zoom, five feature cards, open-source and sovereign line, end card with the repository URL |
-| `out/teaser.mp4` | 1920 x 1080, 30 fps, 10 s, H.264, no audio track | mark, promise, one EHR capture, end card |
+| `out/launch.mp4` (v1, retired, not committed; regenerate with `npm run render`) | 1920 x 1080, 30 fps, 51 s, H.264, no audio track | mark draws in, promise (EN and TR), four EHR captures with slow pan and zoom, five feature cards, open-source and sovereign line, end card with the repository URL |
+| `out/teaser.mp4` (v1, retired, not committed) | 1920 x 1080, 30 fps, 10 s, H.264, no audio track | mark, promise, one EHR capture, end card |
 | `out/poster.png` | 1200 x 630 | lockup, promise, EHR capture; also the `<video poster>` on the landing page |
 
 The landing page (`web/src/components/landing/LaunchTeaser.tsx`) no longer plays this teaser: `web/public/media/teaser.mp4` and `launch-poster.png` are copies of the walkthrough family's `teaser-v2.mp4` and `poster-v2.png` (see "Walkthrough"). After a re-render, copy them again.
