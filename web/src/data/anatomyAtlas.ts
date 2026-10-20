@@ -3,7 +3,7 @@
  * Real segmented CT cross-sections (TotalSegmentator example, CC BY 4.0):
  * windowed PNG slices + per-organ SVG contour overlays. Do not edit by hand.
  */
-import type { Bilingual } from "@/data/mock";
+import type { Bilingual } from "@/data/schema";
 
 export interface AtlasOrgan { id: string; label: string; labelKey: string; color: string; }
 export interface AtlasContour { organId: string; path: string; }

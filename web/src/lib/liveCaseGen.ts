@@ -21,7 +21,7 @@
  * Education only. Synthetic patients. No real patient data path.
  */
 
-import type { Bilingual, Lang } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
 import { BACKEND_URL, type BackendResult } from "@/lib/backend";
 import {
   concept,

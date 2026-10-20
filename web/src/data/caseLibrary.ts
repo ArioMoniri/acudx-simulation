@@ -6,13 +6,13 @@
  * facets the ground truth does not store directly: a specialty, a chief-complaint
  * family (for filtering), a guideline tag, an ICD/DSM code chip, and the set of
  * languages the content is authored in. These are pure, deterministic functions
- * over the case (no state, no i18n side effects), kept out of mock.ts so the
+ * over the case (no state, no i18n side effects), kept out of schema.ts so the
  * library owns its own facet vocabulary.
  *
  * Education only. Synthetic patients. No real patient data.
  */
 
-import type { Bilingual, Lang } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
 import { CODE_SYSTEMS } from "@/domain/fhir";
 import type { CaseInstance } from "@/domain/case";
 import { cachedCitation } from "@/lib/guidelinesApi";

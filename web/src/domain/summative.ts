@@ -20,7 +20,7 @@
 
 import { useSyncExternalStore } from "react";
 
-import type { Bilingual } from "@/data/mock";
+import type { Bilingual } from "@/data/schema";
 import type { ChiefComplaintFamily } from "@/domain/caseGen";
 import type { CaseInstance } from "@/domain/case";
 import { computeProcessMetrics } from "@/domain/processMetrics";

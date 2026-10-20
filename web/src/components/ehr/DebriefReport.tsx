@@ -38,7 +38,7 @@ import {
 
 import { Badge, Button, Card, Divider, SectionLabel, Stat, StatusDot } from "@/components/ui";
 import { cn } from "@/lib/cn";
-import type { Bilingual, Lang } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 import type { Debrief, DxVerdict, TeachingPoint, WorkupItem } from "@/domain/debrief";
 import { getDiagnosis } from "@/domain/diagnosisCatalog";

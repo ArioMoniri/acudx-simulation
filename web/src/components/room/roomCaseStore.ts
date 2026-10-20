@@ -43,7 +43,7 @@ import {
   type CurrentVitals,
 } from "@/domain/clinicalCourse";
 import type { ClinicalRole } from "@/data/rooms";
-import type { Bilingual } from "@/data/mock";
+import type { Bilingual } from "@/data/schema";
 
 /* -------------------------------------------------------------------------- */
 /* Shapes                                                                      */

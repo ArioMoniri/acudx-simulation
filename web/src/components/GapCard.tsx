@@ -7,7 +7,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import { CitationPill } from "@/components/CitationPill";
-import type { FeedbackGap, Lang } from "@/data/mock";
+import type { FeedbackGap, Lang } from "@/data/schema";
 
 export interface GapCardProps {
   gap: FeedbackGap;

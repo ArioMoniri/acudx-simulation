@@ -47,7 +47,7 @@ import {
   useEncounterState,
 } from "@/state/encounterStore";
 import type { EncounterStage as StoreStage } from "@/state/encounterStore";
-import type { EncounterStageMeta } from "@/data/mock";
+import type { EncounterStageMeta } from "@/data/schema";
 import { useLiveBackend } from "@/lib/liveBackend";
 import {
   streamCaseGenV2,
@@ -65,7 +65,7 @@ import { recordFromEncounter } from "@/state/progressStore";
 /* -------------------------------------------------------------------------- */
 
 /**
- * The linear teaching path shown in the stepper. `key` reuses the mock stage
+ * The linear teaching path shown in the stepper. `key` reuses the schema stage
  * union (ProgressStages only uses it as a React key + for the label lookup),
  * `stages` maps the store's canonical stages onto each step.
  */

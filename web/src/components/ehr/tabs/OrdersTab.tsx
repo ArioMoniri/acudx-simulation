@@ -51,7 +51,7 @@ import {
 } from "@/state/encounterStore";
 import type { PlacedOrder } from "@/state/encounterStore";
 import { minutesOf, pick } from "../labels";
-import type { Bilingual, Lang } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 
 export interface OrdersTabProps {

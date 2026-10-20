@@ -1,5 +1,5 @@
 /**
- * Landing / product-overview mock data — the one marketing-styled surface
+ * Landing / product-overview static content — the one marketing-styled surface
  * (docs/design/01 Screen 1.1). Presents the AcuDx phases and links each into
  * the live demo screen so a reviewer can walk every part of the product.
  *

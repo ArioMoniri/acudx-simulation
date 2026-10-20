@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/cn";
 import { CitationPill } from "@/components/CitationPill";
 import type { GuidanceHint } from "@/lib/guidelinesApi";
-import type { Lang } from "@/data/mock"; // watchdog: allow (shared schema hub, type only)
+import type { Lang } from "@/data/schema"; // watchdog: allow (shared schema hub, type only)
 
 export interface GuidanceCardProps {
   /**

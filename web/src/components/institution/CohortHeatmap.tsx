@@ -33,7 +33,7 @@ import {
   type EncounterRow,
   type DomainReadout,
 } from "@/data/institution";
-import type { Band, FeedbackDomainKey } from "@/data/mock";
+import type { Band, FeedbackDomainKey } from "@/data/schema";
 import {
   BAND_RANK,
   BAND_CELL_TINT,

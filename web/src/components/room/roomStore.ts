@@ -31,7 +31,7 @@ import {
   type FloorEvent,
   type FloorEventKind,
 } from "@/data/rooms";
-import type { Bilingual, Lang } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
 import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
 import type { CaseInstance } from "@/domain/case";
 import { registerRoomCase } from "./roomCaseStore";

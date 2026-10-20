@@ -7,7 +7,7 @@ import {
   Heartbeat,
 } from "@phosphor-icons/react";
 import { CitationPill } from "@/components/CitationPill";
-import type { Lang, TreatmentBehavior } from "@/data/mock";
+import type { Lang, TreatmentBehavior } from "@/data/schema";
 
 export interface TreatmentChecklistProps {
   behaviors: TreatmentBehavior[];

@@ -22,7 +22,7 @@
  * Education only. Synthetic patients. No real patient data.
  */
 
-import type { Bilingual, Lang } from "@/data/mock";
+import type { Bilingual, Lang } from "@/data/schema";
 import {
   concept,
   CODE_SYSTEMS,

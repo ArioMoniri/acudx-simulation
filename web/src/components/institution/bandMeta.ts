@@ -1,4 +1,4 @@
-import type { Band } from "@/data/mock";
+import type { Band } from "@/data/schema";
 
 /**
  * Shared band presentation for the institution dashboard.

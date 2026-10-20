@@ -1,15 +1,15 @@
 /**
  * AcuDx — Start / session-setup options (Journey 1.3-1.5, docs/design/01).
  *
- * Screen-specific mock content for the onboarding screen: the session MODE
+ * Screen-specific static content for the onboarding screen: the session MODE
  * (Solo vs AI · Multiplayer room · Observe), the participant ROLE
  * (Doctor / Nurse / Paramedic / Examiner), and the pickable chief-complaint
- * families. Kept out of mock.ts so the onboarding surface owns its own data.
+ * families. Kept out of schema.ts so the onboarding surface owns its own data.
  *
  * Education only. Synthetic content. No real patient data.
  */
 
-import type { Bilingual } from "@/data/mock";
+import type { Bilingual } from "@/data/schema";
 import { CHIEF_COMPLAINT_FAMILIES, type ChiefComplaintFamily } from "@/domain/caseGen";
 
 /* -------------------------------------------------------------------------- */

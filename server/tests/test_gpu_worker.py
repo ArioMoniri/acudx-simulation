@@ -316,19 +316,63 @@ async def test_reaper_task_starts_and_stops(tmp_path):
 async def test_reaper_never_counts_boot_time_as_idle(tmp_path):
     """Live finding 2026-10-19: a cold boot (image + weights pull) ran past the idle
     window and the reaper terminated the worker before it ever became ready."""
-    from server.providers.gpu_worker import WorkerStore
-    store = WorkerStore(str(tmp_path / "w.db"))
-    w = store.insert_worker(instance_id="i-boot", instance_type="gpu_1x_a100_sxm4", region="us-east-1",
-                            token="t", status="booting", price_cents_per_hour=199,
-                            launched_at=0.0, last_used_at=0.0)
-    store.open_ledger(w)
+    clock = FakeClock()
+    m = _manager(tmp_path, clock, gpu_idle_minutes=1)      # boot budget 60 s + ready budget 60 s
+    try:
+        w = m.store.insert_worker(instance_id="i-boot", instance_type="gpu_1x_a100_sxm4", region="us-east-1",
+                                  token="t", status="booting", price_cents_per_hour=199,
+                                  launched_at=clock.t, last_used_at=clock.t)
+        m.store.open_ledger(w)
+        clock.advance(100)                                   # past the 60 s idle window, inside the boot budgets
+        assert await m.reap_once() is False
+        assert m.store.active_worker() is not None and m.store.active_worker().status == "booting"
+    finally:
+        await m.aclose()
 
-    class M:
-        policy = type("P", (), {"idle_minutes": 1})()
-        def __init__(self): self.store = store; self.terminated = False
-        def _clock(self): return 10_000.0
-        async def terminate(self, reason=""): self.terminated = True
-    from server.providers.gpu_worker import WorkerManager
-    m = M()
-    assert await WorkerManager.reap_once(m) is False
-    assert m.terminated is False
+
+# --- review 04: reaper covers the daily budget and orphaned boots ---------- #
+
+@respx.mock
+async def test_reaper_terminates_a_busy_worker_once_the_daily_budget_is_spent(tmp_path):
+    """The launch-time projection alone lets a worker that is touched every minute run past the
+    cap; the reaper enforces the daily budget on a running worker."""
+    clock = FakeClock()
+    _mock_launch_flow()
+    term = respx.post(f"{LAMBDA_API_BASE}/instance-operations/terminate").mock(
+        return_value=httpx.Response(200, json={"data": {"terminated_instances": []}}))
+    m = _manager(tmp_path, clock, gpu_daily_budget_usd=3.0, gpu_idle_minutes=600)
+    try:
+        await m.ensure_worker()
+        clock.advance(1.0 * 3600)
+        m.touch()
+        assert await m.reap_once() is False          # 1.29 USD spent, under budget, not idle
+        clock.advance(1.5 * 3600)
+        m.touch()                                    # still busy: 3.2 USD spent >= 3.0 budget
+        assert await m.reap_once() is True
+        assert term.called and m.store.active_worker() is None
+        assert m.store.ledger(limit=1)[0].reason == "budget"
+    finally:
+        await m.aclose()
+
+
+@respx.mock
+async def test_reaper_terminates_an_orphaned_boot_after_both_budgets(tmp_path):
+    """A gateway restart mid-boot leaves a 'booting' row with no in-flight watcher; nothing
+    else would ever terminate that instance."""
+    clock = FakeClock()
+    term = respx.post(f"{LAMBDA_API_BASE}/instance-operations/terminate").mock(
+        return_value=httpx.Response(200, json={"data": {"terminated_instances": []}}))
+    m = _manager(tmp_path, clock)
+    try:
+        w = m.store.insert_worker(instance_id=INSTANCE_ID, instance_type="gpu_1x_a10", region="us-east-1",
+                                  token="t", status="booting", price_cents_per_hour=75, launched_at=clock.t,
+                                  last_used_at=clock.t)
+        m.store.open_ledger(w)
+        clock.advance(m.boot_timeout_s + m.ready_timeout_s - 1)
+        assert await m.reap_once() is False          # inside the boot budgets: hands off
+        clock.advance(2)
+        assert await m.reap_once() is True
+        assert term.called and m.store.active_worker() is None
+        assert m.store.ledger(limit=1)[0].reason == "stale_boot"
+    finally:
+        await m.aclose()

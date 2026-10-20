@@ -13,7 +13,7 @@ import {
   CLINICAL_ROLE_ORDER,
   type Room,
 } from "@/data/rooms";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 
 /** Room status → StatusDot tone. `in-progress` is the live/active state. */
 const STATUS_TONE = {

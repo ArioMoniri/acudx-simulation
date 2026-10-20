@@ -8,7 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import { CitationPill } from "@/components/CitationPill";
-import type { Lang } from "@/data/mock";
+import type { Lang } from "@/data/schema";
 import type {
   CriticalActionResult,
   CriticalActionStatus,

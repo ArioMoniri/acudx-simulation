@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { ChatMessage } from "./ChatMessage";
 import { cn } from "@/lib/cn";
-import type { TranscriptTurn, Lang } from "@/data/mock";
+import type { TranscriptTurn, Lang } from "@/data/schema";
 
 export interface EncounterChatProps {
   turns: TranscriptTurn[];

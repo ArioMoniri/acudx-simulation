@@ -89,17 +89,21 @@ class VoiceService:
             self._client = None
 
     # -- candidates ----------------------------------------------------------- #
-    async def _candidates(self, kind: str) -> tuple[list[ProviderEndpoint], list[str]]:
-        reasons: list[str] = []
-        eps = self.resolver.endpoints(kind)
-        for rec in self.resolver.refused(kind):
-            reasons.append(f"{rec.name}: refused by AIRGAPPED (non-local {rec.base_url})")
+    async def _candidates(self, kind: str) -> AsyncIterator[ProviderEndpoint]:
+        """Registry endpoints first; the GPU worker is asked for ONLY after every registry
+        row has been tried, so a request a hosted provider can serve never launches (or
+        waits on the boot of) cloud GPU capacity (AGENT-PROTOCOL section 2.4)."""
+        for ep in self.resolver.endpoints(kind):
+            yield ep
         worker = await self.resolver.resolve_worker(kind)
         if worker is not None:
-            eps.append(worker)
-        elif self.resolver.worker_manager is not None and self.resolver.last_worker_refusal:
+            yield worker
+
+    def _refusal_reasons(self, kind: str) -> list[str]:
+        reasons = [f"{rec.name}: refused by AIRGAPPED (non-local {rec.base_url})" for rec in self.resolver.refused(kind)]
+        if self.resolver.worker_manager is not None and self.resolver.last_worker_refusal:
             reasons.append(f"gpu-worker: {self.resolver.last_worker_refusal}")
-        return eps, reasons
+        return reasons
 
     # -- telemetry ------------------------------------------------------------ #
     def _record(self, ep: ProviderEndpoint, *, kind: str, model: str, chars: int = 0, audio_seconds: float = 0.0,
@@ -125,8 +129,8 @@ class VoiceService:
             raise ValueError("text is empty")
         lang = profiles.normalize_lang(lang)
         profile = profiles.profile_for(sex, age, lang)
-        eps, reasons = await self._candidates("tts")
-        for ep in eps:
+        reasons: list[str] = []
+        async for ep in self._candidates("tts"):
             name = adapter_name_for(ep)
             adapter = TTS_ADAPTERS[name]
             if adapter.languages is not None and lang not in adapter.languages:
@@ -150,7 +154,7 @@ class VoiceService:
             ttfb = (time.monotonic() - t0) * 1000.0
             stream.chunks = self._metered(stream.chunks, ep, model=stream.model, chars=len(text), t0=t0)
             return TtsOutcome(stream=stream, endpoint=ep, adapter=name, voice_id=vid, ttfb_ms=ttfb)
-        raise NoVoiceProvider("tts", reasons, airgapped=self.settings.airgapped)
+        raise NoVoiceProvider("tts", self._refusal_reasons("tts") + reasons, airgapped=self.settings.airgapped)
 
     async def _metered(self, chunks: AsyncIterator[bytes], ep: ProviderEndpoint, *, model: str, chars: int,
                        t0: float) -> AsyncIterator[bytes]:
@@ -172,8 +176,8 @@ class VoiceService:
         if not audio:
             raise ValueError("audio is empty")
         hint = profiles.normalize_lang(lang) if lang else None
-        eps, reasons = await self._candidates("stt")
-        for ep in eps:
+        reasons: list[str] = []
+        async for ep in self._candidates("stt"):
             name = adapter_name_for(ep)
             adapter = STT_ADAPTERS[name]
             req = SttRequest(audio=audio, content_type=content_type or "application/octet-stream", filename=filename,
@@ -191,7 +195,7 @@ class VoiceService:
             self._record(ep, kind="stt", model=result.model, audio_seconds=result.audio_seconds or 0.0,
                          latency_ms=latency, ok=True)
             return SttOutcome(result=result, endpoint=ep, adapter=name, latency_ms=latency)
-        raise NoVoiceProvider("stt", reasons, airgapped=self.settings.airgapped)
+        raise NoVoiceProvider("stt", self._refusal_reasons("stt") + reasons, airgapped=self.settings.airgapped)
 
     # -- capabilities ------------------------------------------------------------ #
     def _describe(self, kind: str, ep: ProviderEndpoint | None, reasons: list[str], *,

@@ -6,7 +6,7 @@ import type {
   CalibrationPoint,
   FeedbackDomainKey,
   Lang,
-} from "@/data/mock";
+} from "@/data/schema";
 
 export interface CalibrationPlotProps {
   points: CalibrationPoint[];
