@@ -151,14 +151,21 @@ write_files:
                   - driver: nvidia
                     count: all
                     capabilities: [gpu]
+          runtime: nvidia
           ipc: host
-          environment: [ "HF_HOME=/hf" ]
+          environment:
+            - HF_HOME=/hf
+            - NVIDIA_VISIBLE_DEVICES=all
+            - NVIDIA_DRIVER_CAPABILITIES=compute,utility
           volumes: [ "/opt/acudx/hf:/hf" ]
           # 0.60 leaves room for Chatterbox (about 4 GB), speaches (about 3 GB) and Kokoro
           # on a 40 GB card; see the VRAM budget in the header comment.
+          # --enforce-eager: on Lambda A100 SXM4 hosts CUDA graph capture fails with
+          # "CUDA error: operation not permitted" (workers 7, 11, 12 on 2026-10-20; the A10
+          # worker 9 served fine). Eager mode costs some decode speed but always starts.
           command: >
             --model ${WORKER_LLM_MODEL} --max-model-len 16384
-            --gpu-memory-utilization 0.60 --enable-prefix-caching
+            --gpu-memory-utilization 0.60 --enable-prefix-caching --enforce-eager
             --enable-auto-tool-choice --tool-call-parser hermes
             --served-model-name acudx-llm
           healthcheck:
