@@ -136,12 +136,16 @@ def test_local_mode_marks_every_response_and_accepts_header_profiles(tmp_path):
     assert r.headers["x-auth-mode"] == "local" and r.json()["mode"] == "local" and r.json()["configured"] is False
     assert anon.get("/v1/auth/me").status_code == 401
     assert anon.get("/v1/auth/me").headers["x-auth-mode"] == "local"
-    local = client_for(app, **{"X-User-Id": "local-1", "X-User-Role": "dean", "X-User-Name": "Local Dean", "X-Tenant": "demo-org"})
+    dean_hdr = {"X-User-Id": "local-1", "X-User-Role": "dean", "X-User-Name": "Local Dean", "X-Tenant": "demo-org"}
+    local = client_for(app, **dean_hdr, **ADMIN_HDR)
     me = local.get("/v1/auth/me")
     assert me.status_code == 200 and me.headers["x-auth-mode"] == "local"
     assert me.json()["verified"] is False and me.json()["roles"] == ["dean"] and me.json()["org"] == "demo-org"
     assert local.get("/v1/dean/cohort").status_code == 200
     assert local.get("/v1/dean/cohort").json()["verified_identity"] is False
+    # without the admin token the same headers are capped at resident (review 04 O2)
+    capped = client_for(app, **dean_hdr).get("/v1/auth/me").json()
+    assert capped["roles"] == ["resident"] and capped["role_capped_from"] == "dean"
     # an unknown self-declared role falls back to student; a bearer with no IdP is refused
     weird = client_for(app, **{"X-User-Id": "l2", "X-User-Role": "chancellor"})
     assert weird.get("/v1/auth/me").json()["roles"] == ["student"]
@@ -164,3 +168,39 @@ def test_registry_setting_overrides_env_mode(tmp_path, keys):
     assert client_for(app, **{"X-User-Id": "l"}).get("/v1/auth/me").status_code == 401
     parts["registry"].set_setting("auth_mode", "banana")
     assert client_for(app).get("/v1/auth/config").json()["mode"] == "local"
+
+
+# --------------------------------------------------------------------------- #
+# review 04 O2: local-mode header principals fail closed at resident          #
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("role", ["faculty", "dean", "admin", "super_admin"])
+def test_local_header_principals_above_resident_need_the_admin_token(tmp_path, role):
+    app, _ = build_app(tmp_path, with_idp=False, auth_mode="local")
+    hdr = {"X-User-Id": "peer-1", "X-User-Role": role}
+    spoofed = client_for(app, **hdr)
+    me = spoofed.get("/v1/auth/me").json()
+    assert me["roles"] == ["resident"] and me["role_capped_from"] == role and me["verified"] is False
+    assert spoofed.get("/v1/dean/cohort").status_code == 403
+    assert spoofed.get("/v1/faculty/queue").status_code == 403
+    wrong = client_for(app, **hdr, **{"X-Admin-Token": "not-the-token"})
+    assert wrong.get("/v1/faculty/queue").status_code == 403
+    seeded = client_for(app, **hdr, **ADMIN_HDR)
+    assert seeded.get("/v1/auth/me").json()["roles"] == [role]
+    assert seeded.get("/v1/faculty/queue").status_code == 200
+
+
+def test_local_header_learner_roles_are_unchanged_and_no_admin_token_means_no_escalation(tmp_path):
+    app, _ = build_app(tmp_path, with_idp=False, auth_mode="local", admin_token=None)
+    for role in ("student", "nurse", "paramedic", "resident"):
+        me = client_for(app, **{"X-User-Id": "l", "X-User-Role": role}).get("/v1/auth/me").json()
+        assert me["roles"] == [role] and "role_capped_from" not in me
+    # ADMIN_TOKEN unset: an X-Admin-Token header can never lift the cap.
+    me = client_for(app, **{"X-User-Id": "l", "X-User-Role": "dean", "X-Admin-Token": ""}).get("/v1/auth/me").json()
+    assert me["roles"] == ["resident"]
+
+
+def test_local_mode_verified_bearer_keeps_its_faculty_role(tmp_path, keys):
+    app, _ = build_app(tmp_path, keys=keys, auth_mode="local")
+    c = client_for(app, token=keys.mint(sub="f", roles=["faculty"]))
+    assert c.get("/v1/auth/me").json()["roles"] == ["faculty"]
+    assert c.get("/v1/faculty/queue").status_code == 200

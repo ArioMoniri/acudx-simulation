@@ -541,6 +541,9 @@ export function FacultyPage() {
             <WarningCircle weight="fill" className="h-5 w-5 shrink-0 text-[color:var(--state-critical)]" aria-hidden />
             <p className="min-w-0 flex-1 text-sm text-fg">
               {error === "forbidden" || error === "unauthenticated" ? t("panels.faculty.forbidden") : t("panels.faculty.unavailable", { error })}
+              {authMode === "local" && (error === "forbidden" || error === "unauthenticated") ? (
+                <span className="mt-1 block text-xs text-muted">{t("identity.badge.localPrivileged")}</span>
+              ) : null}
             </p>
             <Button size="sm" variant="secondary" onClick={refresh}>
               {t("panels.common.retry")}

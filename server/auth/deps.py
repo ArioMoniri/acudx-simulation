@@ -16,6 +16,12 @@ Modes
            sends, with ``verified=False``. Every response carries
            ``X-Auth-Mode: local`` (middleware in server/app.py).
 
+           Fail closed (review 04 O2): a header principal holds at most
+           ``resident``. ``faculty``, ``dean``, ``admin`` and ``super_admin``
+           need a verified bearer JWT, or the request must also carry a valid
+           ``X-Admin-Token`` (an operator seeding a classroom). A capped
+           principal reports the role it asked for in ``role_capped_from``.
+
 Guards
 ------
 ``require_role("dean")`` admits dean, admin and super_admin (precedence order,
@@ -27,6 +33,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import secrets
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable
 
@@ -42,6 +49,8 @@ from server.registry.store import RegistryStore
 log = logging.getLogger("acudx.auth")
 
 LOCAL_ORG = "local"
+# Highest role an unverified local-mode header principal may hold without X-Admin-Token.
+LOCAL_HEADER_ROLE_CAP = "resident"
 
 
 @dataclass
@@ -53,6 +62,7 @@ class Principal:
     org: str
     verified: bool
     mode: str
+    role_capped_from: str | None = None
     claims: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @property
@@ -69,6 +79,8 @@ class Principal:
     def public(self) -> dict[str, Any]:
         d = asdict(self)
         d.pop("claims", None)
+        if d.get("role_capped_from") is None:
+            d.pop("role_capped_from", None)
         d["primary_role"] = self.primary_role
         return d
 
@@ -139,6 +151,9 @@ class AuthService:
         if not sub:
             return None
         role = normalize_role(request.headers.get("x-user-role")) or DEFAULT_ROLE
+        capped_from: str | None = None
+        if at_least([role], "faculty") and not admin_token_presented(request):
+            capped_from, role = role, LOCAL_HEADER_ROLE_CAP
         org = (request.headers.get("x-tenant") or "").strip() or LOCAL_ORG
         return Principal(
             sub=sub,
@@ -148,6 +163,7 @@ class AuthService:
             org=org,
             verified=False,
             mode=mode,
+            role_capped_from=capped_from,
         )
 
     async def authenticate(self, request: Request) -> Principal | None:
@@ -178,6 +194,13 @@ class AuthService:
                                                              "message": "AUTH_MODE is oidc but no identity provider is enabled"})
             return None
         return self._principal_from_headers(request, mode)
+
+
+def admin_token_presented(request: Request) -> bool:
+    """True when ``X-Admin-Token`` matches the configured ``ADMIN_TOKEN`` (constant time)."""
+    presented = request.headers.get("x-admin-token") or ""
+    expected = getattr(getattr(request.app.state, "settings", None), "admin_token", None) or ""
+    return bool(presented and expected and secrets.compare_digest(presented.encode(), expected.encode()))
 
 
 def _service(request: Request) -> AuthService:

@@ -9,6 +9,7 @@
  */
 
 import { BACKEND_URL } from "@/lib/backend";
+import { getAdminToken } from "@/lib/adminApi";
 import { bearerHeader, ensureAccessToken, hasAccessToken, type AcuDxRole } from "@/lib/auth";
 import { getProfileState, localIdentityHeaders } from "@/state/profileStore";
 
@@ -271,14 +272,21 @@ function reasonFor(err: unknown): PanelsErrorCode {
   return "unknown";
 }
 
-/** Bearer when signed in through the IdP, else the unverified local-profile headers. */
+/**
+ * Bearer when signed in through the IdP, else the unverified local-profile headers.
+ * In local mode the server caps a header principal at resident (review 04 O2); an
+ * operator who signed in to the admin console in this tab also sends X-Admin-Token so
+ * the faculty and dean panels open for the role the local profile declares.
+ */
 export async function identityHeaders(): Promise<Record<string, string>> {
   if (hasAccessToken()) {
     await ensureAccessToken();
     const bearer = bearerHeader();
     if (bearer.Authorization) return bearer;
   }
-  return localIdentityHeaders(getProfileState());
+  const local = localIdentityHeaders(getProfileState());
+  const adminToken = local["X-User-Id"] ? getAdminToken() : null;
+  return adminToken ? { ...local, "X-Admin-Token": adminToken } : local;
 }
 
 export function createPanelsApi(opts: PanelsApiOptions = {}) {

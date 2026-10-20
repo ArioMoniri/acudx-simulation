@@ -172,6 +172,7 @@ export function SignInPage() {
               </>
             )}
             <p className="text-xs text-subtle">{t("identity.signIn.localNote")}</p>
+            <p className="text-xs text-subtle">{t("identity.badge.localPrivileged")}</p>
           </Card>
         ) : null}
 

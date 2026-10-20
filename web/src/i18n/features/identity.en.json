@@ -13,7 +13,8 @@
     "badge": {
       "verified": "Verified by your institution",
       "local": "Local, unverified",
-      "localHint": "This identity is a local profile stored only in this browser. The server runs in local mode and does not verify it."
+      "localHint": "This identity is a local profile stored only in this browser. The server runs in local mode and does not verify it.",
+      "localPrivileged": "In local mode, faculty, dean and admin panels need the admin token or institution sign-in (SSO); a local profile alone has learner access only."
     },
     "signIn": {
       "ssoHeading": "Sign in with your institution",
@@ -24,7 +25,7 @@
       "ssoNotConfigured": "This deployment requires institution sign-in, but no identity provider is configured yet. Ask your administrator to add one under Admin, Providers, kind identity.",
       "callbackError": "The last sign-in attempt failed: {{reason}}",
       "gatewayDown": "The AcuDx gateway could not be reached, so only the local profile is available right now.",
-      "localNote": "Local profiles are for air-gapped demos. Dean, faculty and admin surfaces opened from a local profile are not verified and the server marks every response X-Auth-Mode: local."
+      "localNote": "Local profiles are for air-gapped demos. The server treats a local profile as at most a resident and marks every response X-Auth-Mode: local."
     },
     "callback": {
       "eyebrow": "Institution sign-in",
