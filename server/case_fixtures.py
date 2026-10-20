@@ -1105,6 +1105,11 @@ FEBRILE_TEMP: dict[str, tuple[float, float]] = {
     "acute_prostatitis": (38.3, 39.8),
     "febrile_neutropenia": (38.3, 39.6),
     "pid": (38.0, 39.0),
+    # Acceptance 2026-10-20 D-01: the Fever tile serves every condition in the
+    # "fever" complaint index, so these three must be febrile too.
+    "tb_pulmonary": (37.8, 38.6),
+    "transfusion_reaction": (38.0, 39.2),
+    "infectious_diarrhea": (37.8, 38.9),
 }
 
 
@@ -2125,7 +2130,10 @@ FEVER_POSITIVES: dict[str, dict[str, tuple[str, str]]] = {
                            "immunosuppression": ("Not that I know of; I've never had a test.", "Bildiğim kadarıyla yok; hiç test yaptırmadım.")},
 }
 
-FEVER_HPI_CONDITIONS: frozenset[str] = frozenset(FEVER_POSITIVES) | frozenset(FEBRILE_TEMP)
+# Only conditions whose positives were authored (plus undifferentiated fever):
+# a default negative would contradict, for example, the cough of tuberculosis
+# or the tender abdomen of diverticulitis.
+FEVER_HPI_CONDITIONS: frozenset[str] = frozenset(FEVER_POSITIVES) | {"undiff_fever"}
 
 
 def fever_hpi(cond_id: str) -> list[dict[str, Any]]:

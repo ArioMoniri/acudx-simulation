@@ -16,6 +16,7 @@ import {
   Flask,
   Wind,
   Virus,
+  Thermometer,
   Drop,
   Pulse,
   Warning,
@@ -109,6 +110,7 @@ const ICON_BY_NAME: Record<string, Icon> = {
   Wind,
   Lungs: Wind, // no dedicated lungs glyph in this icon set
   Virus,
+  Thermometer,
   Drop,
   Pulse,
   Warning,

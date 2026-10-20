@@ -7,6 +7,8 @@ import type { CaseInstance, TreatmentResponse } from "@/domain/case";
 import { allergySafeAlternatives, formularyCodes, formularyFor } from "@/domain/formulary";
 import { allergyCrossCheck, fiveRightsCheck } from "@/domain/medicationSafety";
 import { TREATMENT_CATALOG } from "@/domain/treatments";
+import { generateCase } from "@/domain/caseGen";
+import { CHIEF_COMPLAINT_OPTIONS } from "@/data/startOptions";
 import { ANTIBIOTIC_CODES, matchTreatmentResponse } from "@/domain/treatmentMatch";
 
 const PEN_ANAPHYLAXIS: AllergyIntolerance = {
@@ -109,5 +111,19 @@ describe("D-20 formulary drugs map to the case's own rows", () => {
     expect(matchTreatmentResponse(pyelo, "313002")).toBeUndefined();
     expect(matchTreatmentResponse(pyelo, "4413")?.treatmentCode).toBe("iv_abx_fluids");
   });
+});
 
+describe("D-01 a Fever tile on the Start page", () => {
+  it("lists Fever among the families, EN and TR", () => {
+    const fever = CHIEF_COMPLAINT_OPTIONS.find((o) => o.id === "fever");
+    expect(fever?.label).toEqual({ en: "Fever", tr: "Ateş" });
+    expect(fever?.icon).toBe("Thermometer");
+  });
+
+  it("offline, the fever family yields febrile presentations", () => {
+    for (let seed = 1; seed <= 6; seed++) {
+      const c = generateCase({ seedMode: "constrained", chiefComplaint: "fever", locale: "en", seed });
+      expect(c.triageVitals.tempC, c.correctDiagnosis.code.coding[0]?.code).toBeGreaterThanOrEqual(37.8);
+    }
+  });
 });

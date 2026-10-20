@@ -329,3 +329,14 @@ def test_d11_every_client_citation_id_is_verified(rel: str) -> None:
     assert ids or rel.endswith("progressStore.ts")
     verified = CG._verified_statements()
     assert sorted(i for i in ids if i not in verified) == []
+
+
+def test_d01_the_web_fever_tile_serves_febrile_cases() -> None:
+    """web/src/domain/caseGen.ts sends "fever"; the complaint index resolves it."""
+    from pathlib import Path
+
+    ts = (Path(__file__).resolve().parents[2] / "web/src/domain/caseGen.ts").read_text(encoding="utf-8")
+    assert '{ id: "fever"' in ts
+    for seed in range(1, 25):
+        spec = template_spec({"complaint": "fever", "seed": seed})
+        assert spec["triage_vitals"]["tempC"] >= 37.8, (spec["meta"]["condition_id"], spec["triage_vitals"])

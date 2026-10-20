@@ -16,6 +16,7 @@ import {
   Flask,
   Wind,
   Virus,
+  Thermometer,
   Drop,
   Pulse,
   Warning,
@@ -72,6 +73,7 @@ const CC_ICON: Record<string, Icon> = {
   Wind,
   Lungs: Wind, // no dedicated lungs glyph in this icon set
   Virus,
+  Thermometer,
   Drop,
   Pulse,
   Warning,
