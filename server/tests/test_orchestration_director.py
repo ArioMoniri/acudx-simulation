@@ -32,11 +32,14 @@ def test_graph_topology():
         assert name in nodes
 
 
-def test_from_spec_plans_a_deadline_for_acute_cases():
+def test_from_spec_plans_guideline_targets_not_esi_deadlines():
+    """06b F01, F06: STEMI targets are all-of groups with guideline times."""
     state = D.CaseState.from_spec(_spec("acs_stemi"))  # ESI 1
     assert state.acuity_esi == 1
-    assert state.pending_complications and state.pending_complications[0].deadline_ms == 10 * 60_000
-    assert {"asa_p2y12", "primary_pci"} <= set(state.pending_complications[0].required_any_of)
+    ids = {c.id: c for c in state.pending_complications}
+    assert {"antiplatelet", "reperfusion"} <= set(ids)
+    assert ids["reperfusion"].deadline_ms == 30 * 60_000 and "ESC 2023" in ids["reperfusion"].source
+    assert "asa_p2y12" in ids["antiplatelet"].required_any_of and "primary_pci" in ids["reperfusion"].required_any_of
     calm = D.CaseState.from_spec(_spec("gi_reflux"))
     assert calm.pending_complications == []
 
@@ -45,7 +48,7 @@ def test_spo2_never_exceeds_100_and_hr_stays_in_bounds():
     spec = _spec("asthma_exacerbation")
     spec["triage_vitals"].update({"spo2": 99, "hr": 240})
     spec["vitals_trajectory"] = [{"atMs": 0, **spec["triage_vitals"]}]
-    # Four oxygen-like treatments plus a bespoke huge-delta agent.
+    # Oxygen plus a bespoke unclassified huge-delta agent (bounded by EFFECT_CAPS).
     spec["treatments"].append({"code": "mega", "label_en": "Mega agent", "label_tr": "", "appropriateness": "neutral",
                                "effects": [{"key": "spo2", "delta": 40, "onsetMs": 1000}, {"key": "hr", "delta": 300, "onsetMs": 1000}]})
     state = D.CaseState.from_spec(spec)
@@ -58,53 +61,64 @@ def test_spo2_never_exceeds_100_and_hr_stays_in_bounds():
     assert visible["vitals"]["diastolic"] < visible["vitals"]["systolic"]
 
 
-def test_lower_bounds_hold_under_massive_deterioration():
+def test_untreated_septic_shock_reaches_an_explicit_arrest_state():
+    """06b F05: no plateau; peri-arrest then arrest with ALS entry, vitals read zero."""
     spec = _spec("septic_shock")
     spec["triage_vitals"].update({"hr": 25, "systolic": 45, "diastolic": 30, "spo2": 60, "rr": 2})
     spec["vitals_trajectory"] = [{"atMs": 0, **spec["triage_vitals"]}]
     state = D.CaseState.from_spec(spec)
-    state, visible, _ = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=2 * 3_600_000))  # deadline missed
-    v = visible["vitals"]
-    for key, (lo, hi) in VITAL_BOUNDS.items():
-        assert lo <= v[key] <= hi, key
+    state, visible, notes = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=2 * 3_600_000))
+    assert visible["phase"] == "arrest" and visible["bedside"]["pulse"] is False
+    assert all(visible["vitals"][k] == 0 for k in ("hr", "systolic", "diastolic", "rr", "spo2"))
     assert visible["affect"]["consciousness"] == "unresponsive"
+    assert "cardiac_arrest" in visible["complications_fired"]
+    assert any("ALS" in n["note"] and "ERC 2021" in n["why"] for n in notes)
+    assert visible["utterance_en"] == "(no pulse, not breathing)"
 
 
-def test_complication_fires_after_missed_deadline_and_logs_why():
+def test_complication_fires_after_missed_target_and_logs_why():
     state = D.CaseState.from_spec(_spec("acs_stemi"))
-    before = state.vitals.hr
     state, visible, notes = D.next_state(state, D.Action(kind="question", ref="onset"))
     assert visible["complications_fired"] == []
-    state, visible, notes = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=11 * 60_000))
-    assert visible["complications_fired"] == ["missed_time_critical_treatment"]
-    fired = state.pending_complications[0]
-    assert fired.fired_at_ms is not None
+    state, visible, notes = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=31 * 60_000))
+    assert {"antiplatelet", "reperfusion"} <= set(visible["complications_fired"])
     why = [n for n in notes if "fired" in n["note"]]
-    assert why and "no indicated treatment" in why[0]["why"]
-    assert state.errors and state.errors[-1]["kind"] == "missed_deadline"
-    # Deterioration ramps in over time: later vitals are worse than at the deadline.
-    state, later, _ = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=10 * 60_000))
-    assert later["vitals"]["hr"] > before
-    assert "worse" in later["utterance_en"] or later["affect"]["consciousness"] != "alert" or visible["utterance_en"]
+    assert why and "not given within 30 min" in why[0]["why"]
+    assert any(e["kind"] == "missed_target" for e in state.errors)
 
 
-def test_timely_indicated_treatment_averts_the_complication():
+def test_both_groups_are_needed_to_meet_the_stemi_targets():
+    """06b F01: aspirin alone leaves reperfusion open; aspirin plus PCI meets both."""
     state = D.CaseState.from_spec(_spec("acs_stemi"))
     state, _, notes = D.next_state(state, D.Action(kind="treatment", ref="asa_p2y12", elapsed_ms=5 * 60_000))
-    assert state.pending_complications[0].cancelled
-    assert any("averted" in n["note"] for n in notes)
-    state, visible, _ = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=60 * 60_000))
-    assert visible["complications_fired"] == []
-    assert not state.errors
+    assert any("'antiplatelet' met" in n["note"] for n in notes)
+    state, visible, _ = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=30 * 60_000))
+    assert visible["complications_fired"] == ["reperfusion"] or "reperfusion" in visible["complications_fired"]
+    both = D.CaseState.from_spec(_spec("acs_stemi"))
+    both, _, _ = D.next_state(both, D.Action(kind="treatment", ref="asa_p2y12", elapsed_ms=5 * 60_000))
+    both, _, notes = D.next_state(both, D.Action(kind="treatment", ref="primary_pci", elapsed_ms=60_000))
+    assert any("'reperfusion' met" in n["note"] for n in notes)
+    both, visible, _ = D.next_state(both, D.Action(kind="elapsed", elapsed_ms=60 * 60_000))
+    assert not any(e["kind"] == "missed_target" for e in both.errors)
 
 
-def test_contraindicated_treatment_logs_error_and_adverse_effect():
+def test_contraindicated_treatment_logs_error_and_its_specific_harm():
+    """06b F09: no generic HR +12 / SBP -10; thrombolysis in dissection accelerates the disease."""
     state = D.CaseState.from_spec(_spec("aortic_dissection"))
     hr0 = state.vitals.hr
     state, visible, notes = D.next_state(state, D.Action(kind="treatment", ref="thrombolysis", elapsed_ms=180_000))
     assert state.errors[-1] == {"at_ms": 180_000, "kind": "contraindicated_treatment", "detail": "thrombolysis"}
     assert any("contraindicated" in n["note"] for n in notes)
-    assert visible["vitals"]["hr"] >= hr0  # adverse tachycardia applied (bounded)
+    assert any("rupture" in n["why"] for n in notes)
+    assert visible["vitals"]["hr"] >= hr0
+
+
+def test_beta_lactam_is_never_classed_as_a_beta_blocker():
+    """06b F08: the label "beta-lactam" hit the beta-blocker row."""
+    assert D.treatment_classes("2193", None) == ["antibiotic"]
+    row = D.TreatmentRow(code="x", label_en="IV beta-lactam (ceftriaxone)")
+    assert "beta_blocker_iv" not in D.treatment_classes("x", row)
+    assert "beta_blocker_iv" in D.treatment_classes("y", D.TreatmentRow(code="y", label_en="IV metoprolol 5 mg"))
 
 
 def test_questions_and_exams_reveal_sanctioned_facts_once():
@@ -121,17 +135,6 @@ def test_questions_and_exams_reveal_sanctioned_facts_once():
     state, visible, notes = D.next_state(state, D.Action(kind="order", ref="not-a-real-order"))
     assert visible["new_facts"] == [] and any("unlocks nothing" in n["note"] for n in notes)
     assert state.revealed["question"] == ["onset"] and state.revealed["exam"] == [maneuver]
-
-
-def test_generic_effect_table_is_gated_on_vitals():
-    v = D.Vitals(spo2=99, systolic=120, tempC=37.0, rr=14, hr=80, diastolic=80)
-    assert D.generic_effects_for("oxygen", "", v) == []           # not hypoxic
-    assert D.generic_effects_for("saline bolus", "", v) == []     # not hypotensive
-    low = D.Vitals(spo2=88, systolic=85, tempC=39.1, rr=28, hr=120, diastolic=50)
-    assert D.generic_effects_for("oxygen", "", low)[0].key == "spo2"
-    assert {e.key for e in D.generic_effects_for("313002", "Normal saline", low)} == {"systolic", "diastolic"}
-    assert D.generic_effects_for("paracetamol", "", low)[0].delta < 0
-    assert D.generic_effects_for("unknown-agent", "", low) == []
 
 
 def test_trajectory_interpolation_and_ramp():

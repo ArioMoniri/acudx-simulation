@@ -3180,7 +3180,7 @@ CONDITION_COURSE: dict[str, dict[str, Any]] = {
     "bacterial_meningitis": {
         "pattern": "neuro_infective",
         "groups": [_grp("antimicrobial", ("immediate_ceftriaxone",), ("antibiotic",), needs=("cns",), en="CNS-penetrant antimicrobial", tr="SSS'ye geçen antimikrobiyal"),
-                   _grp("dexamethasone", ("3264",), ("corticosteroid",), modifies=False, en="Dexamethasone", tr="Deksametazon")],
+                   _grp("dexamethasone", ("3264", "immediate_ceftriaxone"), ("corticosteroid",), modifies=False, en="Dexamethasone", tr="Deksametazon")],
         "targets": [_tgt("abx_1h", "antimicrobial", 60, NG240),
                     _tgt("dexamethasone", "dexamethasone", 60, "de Gans 2002 https://doi.org/10.1056/NEJMoa021334 ; " + NG240)],
         "branches": [_SEIZURE],

@@ -55,6 +55,14 @@ BOUNDS: dict[str, tuple[float, float]] = {
     "hr": (20, 250), "systolic": (40, 260), "diastolic": (20, 160), "rr": (0, 80), "spo2": (0, 100),
     "tempC": (25.0, 43.0), "gcs": (3, 15), "crt": (1, 10), "mottle": (0, 5), "urine": (0, 400), "pain": (0, 10),
 }
+# Classes whose vital effect the engine computes itself; authored row effects
+# are ignored for them so a model cannot author oxygen lowering SpO2 (06b F21).
+HANDLED_CLASSES: frozenset[str] = frozenset({
+    "fluids", "oxygen", "niv", "vasopressor", "adrenaline_iv", "adrenaline_im", "nitrate", "opioid", "benzodiazepine",
+    "analgesia", "naloxone", "antipyretic", "bronchodilator", "loop_diuretic", "beta_blocker_iv", "glucagon",
+    "thrombolytic", "antibiotic", "antiplatelet", "anticoagulant", "corticosteroid", "antihistamine", "insulin_frii",
+    "dextrose", "potassium", "insulin_dextrose", "insulin_bolus", "antiemetic", "antimalarial", "antiviral", "rhythm",
+})
 RULE_KEYS: tuple[str, ...] = (
     "s0", "rate_h", "recover_h", "floor", "lag_min", "arrest_rhythm", "start_arrest", "fluid", "fluid_limit_ml",
     "fluid_persistent", "o2_response", "hypercapnic", "metabolic", "resolve_below", "peri", "well", "bedside0",
@@ -130,6 +138,22 @@ def expand_rule(cid: str) -> Optional[dict[str, Any]]:
                          ("row_classes", {}), ("row_harms", {}), ("fluid", "neutral"), ("o2_response", 0.4),
                          ("hypercapnic", False), ("metabolic", None), ("resolve_below", None), ("start_arrest", None),
                          ("fluid_limit_ml", None), ("fluid_persistent", False), ("arrest_rhythm", None)):
+        rule.setdefault(key, copy.deepcopy(default))
+    return rule
+
+
+def fallback_rule(cid: str) -> dict[str, Any]:
+    """A condition with no course rule (ESI 3 to 5 long tail): no progression of
+    its own; the engine adds the authored trajectory drift instead."""
+    rule: dict[str, Any] = {"id": cid, "pattern": "stable", "fallback": True}
+    pat = FX.COURSE_PATTERNS["stable"]
+    for key in RULE_KEYS:
+        if key in pat:
+            rule[key] = copy.deepcopy(pat[key])
+    for key, default in (("groups", []), ("targets", []), ("branches", []), ("findings", []), ("harm_rules", []),
+                         ("row_classes", {}), ("row_harms", {}), ("bedside0", {}), ("metabolic", None),
+                         ("resolve_below", None), ("start_arrest", None), ("fluid_limit_ml", None),
+                         ("fluid_persistent", False), ("hypercapnic", False)):
         rule.setdefault(key, copy.deepcopy(default))
     return rule
 
@@ -500,6 +524,13 @@ class _Sim:
             self.k_drops.append(minute)
         if row in ("urgent_dialysis", "dialysis_referral") and self.dialysis_start is None:
             self.dialysis_start = minute + 60
+        # Authored effects only for an item no class rule covers (a procedure
+        # row, or a model-path item), bounded by the Director (judges.EFFECT_CAPS).
+        if e.get("effects") and not (set(classes) & HANDLED_CLASSES) and not in_arrest:
+            for eff in e["effects"]:
+                self.effects.append({"key": str(eff["key"]), "delta": float(eff["delta"]), "at_ms": at_ms,
+                                     "onset": max(0.0, float(eff.get("onsetMs", 0)) / MIN_MS), "wane": None, "src": code})
+            handled_vitals = True
         if appr == "contraindicated" and rh is None and not handled_vitals:
             self._harm("contraindicated_treatment", minute, "Contraindicated for this patient; no specific acute physiological effect (process error)",
                        "Bu hasta için kontrendike; özgül akut fizyolojik etkisi yok (süreç hatası)", code)
@@ -1089,5 +1120,5 @@ def simulate(inp: dict[str, Any], t_ms: int) -> dict[str, Any]:
     return _Sim(inp).run(t_ms)
 
 
-__all__ = ["ANCHOR_KEYS", "MIN_MS", "VITAL_KEYS", "curve", "expand_rule", "fnv1a", "library_for", "news2", "rnd",
+__all__ = ["ANCHOR_KEYS", "MIN_MS", "VITAL_KEYS", "curve", "expand_rule", "fallback_rule", "fnv1a", "library_for", "news2", "rnd",
            "simulate", "u01"]
