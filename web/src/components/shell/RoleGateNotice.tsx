@@ -20,7 +20,7 @@ export function RoleGateNotice({ required, current }: { required: string; curren
     >
       <div className="flex items-center gap-2">
         <LockKey weight="bold" className="h-5 w-5 text-muted" aria-hidden />
-        <h1 id="role-gate-title" className="text-base font-semibold text-fg">
+        <h1 id="role-gate-title" className="text-lg text-fg">
           {t("identity.roleGate.title", { role: required })}
         </h1>
       </div>

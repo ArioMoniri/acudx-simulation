@@ -59,7 +59,7 @@ export function JoinByCode({ onJoin }: JoinByCodeProps) {
           <Keyhole weight="bold" className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-fg">{t("rooms.join.title")}</h2>
+          <h2 className="text-[1.0625rem] text-fg">{t("rooms.join.title")}</h2>
           <p className="mt-0.5 text-xs text-muted">{t("rooms.join.subtitle")}</p>
         </div>
       </div>

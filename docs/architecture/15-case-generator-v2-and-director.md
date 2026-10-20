@@ -132,11 +132,16 @@ LangGraph `BaseStore`, namespace `("learner", learner_id)`:
 
 ## 6. The Clinical Director (`server/orchestration/director.py`)
 
+Rebuilt after medical review 06b (`docs/review/06b-medical-review-dynamic-cases.md`). The Director is a thin LangGraph
+around one deterministic physiology engine (`server/orchestration/course.py`) that the browser mirrors line by line
+(`web/src/domain/clinicalCourse.ts`). The engine runs a per-condition **course rule** (how a disease behaves), not a
+stored case: the case is still generated on request, and the rule is applied to whatever the learner does.
+
 ```mermaid
 flowchart LR
-  A([action]) --> P[perceive<br/>clock, facts, treatment effects]
-  P --> PH[physiology<br/>baseline + ramps, hard bounds]
-  PH --> C[complications<br/>fire missed deadlines, affect]
+  A([action]) --> P[perceive<br/>clock, facts, course event]
+  P --> PH[physiology<br/>course.simulate 0..t]
+  PH --> C[complications<br/>diff: targets, harms, branches, arrest, findings]
   C --> N[narrate<br/>deterministic, or one bounded model call]
   N --> EM[emit<br/>visible changes + notes]
   classDef det fill:#e8f0ff,stroke:#4472c4;
@@ -145,19 +150,78 @@ flowchart LR
   class N llm;
 ```
 
-`CaseState.from_spec(spec)` builds the authoritative state: triage vitals, the authored trajectory as baseline, the case's treatment table (code, appropriateness, effects), the facts behind each trigger (`question:<intent>`, `exam:<maneuver>`, `order:<code>`), and the planned complications. For ESI 1, 2 and 3 cases one complication `missed_time_critical_treatment` is planned with a deadline of 10, 20 or 40 minutes and deterioration deltas scaled by acuity; it is cancelled when any indicated treatment is given before the deadline.
+### 6.1 Course rules (`server/case_fixtures.py`: `COURSE_PATTERNS`, `CONDITION_COURSE`)
 
-`Action`: `{kind: question|exam|order|treatment|elapsed, ref, elapsed_ms?, utterance?, locale}`. Default sim-time per kind: 30 s question, 60 s exam, 45 s order, 60 s treatment.
+Every one of the 97 ESI 1 to 2 conditions has a rule (and a treatment fixture: 47 were added by 06b F03); the long tail
+without a rule uses a stable fallback that keeps the authored trajectory. A rule is a pattern (anchors and default
+rates) plus per-condition fields:
 
-Node contracts:
+| Field | Meaning |
+|---|---|
+| `s0`, `rate_h`, `recover_h`, `floor`, `lag_min` | Severity at arrival, rise per hour untreated, fall per hour once every disease-modifying group is met (after the lag), residual floor |
+| `peri`, `well` | Absolute vitals and bedside signs at severity 1 (peri-arrest) and 0; a key absent is not moved by the disease (DKA and meningitis never desaturate, F14) |
+| `groups` | All-of treatment requirements: each group is met by a case row code or a treatment class; `needs` adds an antimicrobial spectrum check (F11); `active_min` makes a group act only while a dose works (IM adrenaline 25 min, naloxone 45 min, nebuliser 60 min) |
+| `targets` | Guideline time per group with its citation and `basis` (`guideline` or `design`), scored separately from the physiology (F06) |
+| `branches` | New diagnoses with conditions, seeded probability and window: pneumonia to septic shock (CURB-65 3, no antibiotic by 60 min, p 0.3), sepsis to septic shock (MAP below 65 or lactate 4), pyelonephritis to urosepsis (obstructed kidney seeded p 0.2), DKA to cerebral oedema (age 25 or under and 2 L or more in the first hour), PE to obstructive shock (SBP below 90), STEMI to VF (p 0.06 before reperfusion) or cardiogenic shock (p 0.1 without reperfusion by 60 min), meningitis to status epilepticus (p 0.15) |
+| `row_harms` | Specific harm of a contraindicated row (effects, rate multiplier, seeded arrest or branch): no generic HR +12 / SBP -10 (F09) |
+| `harm_rules`, `fluid`, `o2_response`, `hypercapnic`, `metabolic` | Context rules: fluid response mode (responsive, pulmonary oedema, renal, RV, haemorrhage), oxygen dose response, CO2 retention, DKA / hypoglycaemia / hyperkalaemia lab model |
+| `findings` | Exam findings that appear when state conditions hold (mottling, purpura, stridor, peritonism, crackles) |
 
-* **perceive**: advances `t_ms`; for question, exam and order resolves the authored facts and appends new ones to `sanctioned_facts` (a trigger with no datum is noted as low value); for a treatment takes the effects from the case table, else from the generic class table (`GENERIC_EFFECTS`, mirroring `web/src/domain/treatments.ts` so client and server agree), caps every delta (`EFFECT_CAPS`), starts the ramps, applies an adverse response and records an error for a contraindicated code, and cancels averted complications.
-* **physiology**: `vitals(t) = baseline(t) + sum of ramps(delta, onset, t - start)` then `clamp_vitals`: HR 20-250, SBP 40-260, DBP 20-160 and below SBP, RR 0-60, SpO2 0-100, temp 30-43. SpO2 can never exceed 100 regardless of stacked oxygen effects.
-* **complications**: fires every pending complication whose deadline has passed, logs `why` (the planned reason), records a `missed_deadline` error, recomputes vitals and affect (consciousness drops to drowsy below SBP 85 or SpO2 86 and to unresponsive below SBP 70 or SpO2 75).
-* **narrate**: deterministic line by default. With a model, one bounded call (judge endpoint, temperature 0.6, 240 tokens) may set `utterance_en/tr`, `pain` and `mood`. The prompt lists only the sanctioned facts of this turn; the model cannot change vitals, facts or complications, and any failure falls back to the deterministic line with the reason in the trace.
-* **emit**: `patient_visible_changes = {t_ms, vitals, affect, utterance_en, utterance_tr, new_facts, complications_fired, trace}`; `director_notes = [{at_ms, note, why}]`.
+### 6.2 Engine (`course.simulate(input, t_ms)`)
 
-API: `next_state(case_state, action)` (sync, deterministic) and `anext_state(case_state, action, llm)`; both return `(case_state, patient_visible_changes, director_notes)`.
+Pure, minute by minute from arrival: processes (presenting condition and branches) advance severity; events at each
+minute apply class effect curves (`CLASS_EFFECTS`: onset then wane, for example IM adrenaline 4 min onset, fading
+10 to 30 min; a 500 mL bolus SBP +12 at 15 min, fading 30 to 75 min) and harm rules; lactate (perfusion driven,
+clearance only at MAP 65 or more and CRT 3 s or less, F20), CBG and potassium integrate (`LAB_RATES`, the
+`kinetics.py` JBDS rates without the old glucose floor, F18); triggers open branches and the **explicit cardiac-arrest
+state** (severity 1, MAP below 40 or SpO2 below 60 for 3 minutes, seeded VF, or a row harm). In arrest the vitals read
+zero, `bedside.pulse` is false and the notes give the ALS entry (ERC 2021); defibrillation restores circulation from
+VF, adrenaline plus a treated cause from PEA. The snapshot carries vitals, bedside (MAP, GCS, AVPU, CBG, K, lactate,
+CRT, mottling, skin, urine, airway, rhythm, pulse, fluid balance, NEWS2), phase (`stable`, `improving`,
+`deteriorating`, `peri_arrest`, `arrest`), processes, active diagnoses, harms, targets and findings.
+
+Treatment classes come from the catalogue code (`CODE_CLASSES`) or a whole-word classification of the row label
+(`normalize.classify_treatment`), never a substring: "beta-lactam" is not a beta-blocker (F08). `normalize.TREATMENT_CLASSES`
+gained loop diuretic, FRIII, dextrose, potassium, thrombolytic, antiplatelet, anticoagulant, corticosteroid,
+antihistamine, IV beta-blocker, glucagon, naloxone, NIV, antiemetic and insulin-glucose (F22), with allowed effect signs
+(`ALLOWED_SIGNS`, F21) and IM inference for adrenaline 0.5 mg or less (F23).
+
+### 6.3 Director nodes
+
+`CaseState.from_spec(spec)` resolves the condition, builds the course input (arrival vitals plus bedside values from the
+spec labs, structured allergies parsed from the allergy text, flags from PMH and medications such as heart failure,
+renal failure, COPD, beta-blockade, PDE-5 use, CURB-65, seed) and the initial snapshot. Rows carry an explicit role
+(`definitive`, `supportive`, `diagnostic`, `omission`; F29).
+
+* **perceive**: facts for question, exam and order; an order or position change becomes a course event (lumbar
+  puncture before CT with red flags is a harm); a treatment becomes a course event with its row, classes, spectrum,
+  allergen class and volume. Omission rows ("delay antibiotics") are noted, never administered.
+* **physiology**: `course.simulate` from 0 to `t_ms` over all events (server authoritative; the client never sends vitals).
+* **complications**: diffs the snapshot against the previous one; targets met (`target 'x' met (complication averted)`)
+  or breached (`missed_target` error, `complications_fired`), harms (error kind = harm id, for example `fluid_overload`,
+  `gtn_hypotension`, `insulin_low_k`), branches (`branch: pneumonia_cap -> septic_shock` with why), arrest
+  (`cardiac_arrest`) and ROSC, inadequate spectrum, and new findings added to `facts_by_trigger` so re-examining shows them.
+  Affect follows GCS (alert 14 to 15, drowsy 9 to 13, unresponsive 8 or less or no pulse).
+* **narrate**: the branch's own line ("I can't get my breath and I'm freezing"), a relative's voice at GCS 12 or less,
+  "(no pulse, not breathing)" in arrest; the model prompt carries the active diagnoses and GCS.
+* **emit**: `patient_visible_changes = {t_ms, vitals, affect, utterance_en, utterance_tr, new_facts, complications_fired,
+  bedside, phase, severity, active_diagnoses, events, targets, results, trace}`; `results` is what the results engine
+  reads (`director.results_view`).
+
+API: `next_state` and `anext_state` as before, plus `director_step(store, thread_id, action, spec=None, llm=None)`, which
+reads the Director state from the CaseStore record for `thread_id` (key `director`, the generated `spec` for the first
+step) and writes it back. `CaseStoreLike` is the get/put protocol of `server/orchestration/store.py`;
+`default_case_store()` uses that module when present and an in-memory adapter otherwise.
+
+### 6.4 Results engine and client mirror
+
+`server/results/engine.py` reads `case_state["director"]` (the `results` view): severity, vitals, MAP and shock replace
+the ESI estimate, lactate, CBG and potassium come from the live state, and an opened branch switches the lab profile
+(F19). `scripts/gen_course_tables.py` generates `web/src/domain/courseTables.generated.ts` and the parity fixture
+`server/tests/fixtures/course_parity.json`; `test_course_parity.py` fails when either is stale and
+`clinicalCourseParity.test.ts` requires the browser engine to match the Director within 1 unit at t10, t30, t60 and t120
+(06b acceptance test 10). A generated case is bound to the model through `CaseInstance.course`; in Live mode the
+overlay renders the server state (arrest included) and passes the Director's `results` view to the results engine.
 
 ## 7. HTTP surface (`server/orchestration/routes.py`, mounted in `server/app.py`)
 
@@ -188,7 +252,7 @@ Persona. `getPersonaLiveContext` gives `InterviewTab` the Director's sanctioned 
 
 ## 9. Tests
 
-`python -m pytest server/tests -q`: graph topology, model-sourced happy path with trace and cost, safety veto with one repair, repair bound at two with safety overrides, SpO2 over 100 caught by the consistency judge, model-phase majority without veto, grounding drops unknown ids, author retry on bad JSON, learner memory anti-repeat and weak-system steering, SQLite persistence of checkpoints and memory, judge unit checks, aggregator, Director bounds and complications, narrator fallback, routes (503 unreachable, 503 under AIRGAPPED with a hosted endpoint, template labelling, SSE order, checkpoint read, director step with memory). Model-dependent tests use `server/tests/openai_double.py`, an in-process OpenAI-compatible FastAPI app reached through `httpx.ASGITransport`. `test_orchestration_live.py` is marked `live` and runs only when `CASEGEN_BASE_URL` is set. `test_case_quality.py` replays the two live-run outputs (section 11): code mapping, onset clamping, gap fill, complaint index and adherence, evidence binding, parallel judges, repair caps, scaled timing, amortised cost, telemetry rows and the Qwen3 thinking switch on patient turns, plus every catalog template passing the deterministic council after normalisation.
+`python -m pytest server/tests -q`: graph topology, model-sourced happy path with trace and cost, safety veto with one repair, repair bound at two with safety overrides, SpO2 over 100 caught by the consistency judge, model-phase majority without veto, grounding drops unknown ids, author retry on bad JSON, learner memory anti-repeat and weak-system steering, SQLite persistence of checkpoints and memory, judge unit checks, aggregator, Director bounds, guideline targets and arrest, narrator fallback, the ten 06b acceptance tests (`test_course_acceptance_06b.py`), the reviewers' minute-by-minute simulation as regression tests (`director_sim.py`, `test_director_sim_06b.py`), server and browser table parity (`test_course_parity.py`), routes (503 unreachable, 503 under AIRGAPPED with a hosted endpoint, template labelling, SSE order, checkpoint read, director step with memory). Model-dependent tests use `server/tests/openai_double.py`, an in-process OpenAI-compatible FastAPI app reached through `httpx.ASGITransport`. `test_orchestration_live.py` is marked `live` and runs only when `CASEGEN_BASE_URL` is set. `test_case_quality.py` replays the two live-run outputs (section 11): code mapping, onset clamping, gap fill, complaint index and adherence, evidence binding, parallel judges, repair caps, scaled timing, amortised cost, telemetry rows and the Qwen3 thinking switch on patient turns, plus every catalog template passing the deterministic council after normalisation.
 
 ## 10. Open items
 

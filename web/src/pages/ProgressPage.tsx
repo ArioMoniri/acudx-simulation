@@ -783,7 +783,7 @@ function EpaRow({ epa }: { epa: EpaProgress }) {
                     className={cn(
                       "grid h-5 w-5 shrink-0 place-items-center rounded-full font-mono text-[10px] font-semibold",
                       reached
-                        ? "bg-brand text-white"
+                        ? "bg-brand text-on-brand"
                         : "border border-border bg-surface text-muted",
                     )}
                     aria-hidden
@@ -921,7 +921,7 @@ function BadgesSection() {
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div className="flex items-center gap-2">
           <Trophy weight="bold" className="h-5 w-5 text-brand" aria-hidden />
-          <h2 className="text-lg font-semibold tracking-tight text-fg">
+          <h2 className="text-xl text-fg">
             {t("progress.badges.heading")}
           </h2>
         </div>
@@ -1519,7 +1519,7 @@ function ReviewSection() {
             className="h-5 w-5 text-brand"
             aria-hidden
           />
-          <h2 className="text-lg font-semibold tracking-tight text-fg">
+          <h2 className="text-xl text-fg">
             {t("progress.review.heading")}
           </h2>
           {dueCount > 0 ? (
@@ -2053,7 +2053,7 @@ export function ProgressPage() {
       <motion.section {...mastery} aria-label={t("progress.mastery.heading")}>
         <div className="flex items-center gap-2">
           <Target weight="bold" className="h-5 w-5 text-brand" aria-hidden />
-          <h2 className="text-lg font-semibold tracking-tight text-fg">
+          <h2 className="text-xl text-fg">
             {t("progress.mastery.heading")}
           </h2>
         </div>
@@ -2132,7 +2132,7 @@ export function ProgressPage() {
       <motion.section {...trajectory}>
         <div className="flex items-center gap-2">
           <TrendDown weight="bold" className="h-5 w-5 text-brand" aria-hidden />
-          <h2 className="text-lg font-semibold tracking-tight text-fg">
+          <h2 className="text-xl text-fg">
             {t("progress.trajectory.heading")}
           </h2>
         </div>

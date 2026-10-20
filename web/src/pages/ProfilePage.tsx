@@ -225,7 +225,7 @@ function ProfileForm({
                   {selected ? (
                     <span
                       aria-hidden="true"
-                      className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-brand text-white"
+                      className="absolute -right-0.5 -top-0.5 grid h-4 w-4 place-items-center rounded-full bg-brand text-on-brand"
                     >
                       <Check weight="bold" className="h-2.5 w-2.5" />
                     </span>

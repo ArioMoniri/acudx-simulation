@@ -32,7 +32,7 @@ export function RoleSwitcher({ actingRole, aiRoles = [], onSwitch }: RoleSwitche
     >
       <div className="flex items-center gap-2">
         <UserSwitch weight="bold" className="h-4 w-4 text-brand" aria-hidden />
-        <h2 className="text-sm font-semibold text-fg">
+        <h2 className="text-[1.0625rem] text-fg">
           {t("roomscollab.acting.as", { role: t(`roomscollab.roles.${actingRole}`) })}
         </h2>
       </div>

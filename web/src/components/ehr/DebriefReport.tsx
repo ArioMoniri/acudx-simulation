@@ -195,7 +195,7 @@ export function DebriefReport({ debrief, caseInstance, onClose, onViewReport }: 
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="eyebrow text-brand">{t("debrief.eyebrow", { defaultValue: "After-action" })}</p>
-            <h2 id={titleId} className="mt-0.5 truncate text-lg font-semibold tracking-tight text-fg">
+            <h2 id={titleId} className="mt-0.5 truncate text-xl text-fg">
               {t("debrief.title", { defaultValue: "Attending debrief" })}
             </h2>
             <p className="mt-0.5 truncate text-sm text-muted">

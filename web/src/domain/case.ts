@@ -13,6 +13,7 @@
  * Education only. No real patient data path.
  */
 
+import type { CaseCourseBinding } from "@/domain/clinicalCourse";
 import type { Bilingual, Lang } from "@/data/schema";
 import type {
   AllergyIntolerance,
@@ -251,6 +252,12 @@ export interface CaseInstance {
   treatmentResponses?: TreatmentResponse[];
   /** Provenance: 'seed' (curated) or 'generated' (caseGen). */
   provenance: "seed" | "generated";
+  /**
+   * Review 06b: binding to the shared course model (condition rule, arrival
+   * bedside state, patient factors, seed). Set from the generated spec; absent
+   * for cases whose condition has no course rule.
+   */
+  course?: CaseCourseBinding;
 }
 
 /* -------------------------------------------------------------------------- */

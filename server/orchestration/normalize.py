@@ -178,6 +178,106 @@ TREATMENT_CLASSES: dict[str, dict[str, Any]] = {
         "source": "ESC 2023 ACS (reperfusion pain relief ~90 min after PCI activation) "
                   "https://doi.org/10.1093/eurheartj/ehad191",
     },
+    # Review 06b F22: classes that had none, so unclassified treatments skipped
+    # every onset and cap check. Classes with empty ``caps`` act on the disease
+    # rate or a lab (server/orchestration/course.py), never on a vital in session.
+    "loop_diuretic": {
+        "keywords": ("furosemide", "frusemide", "bumetanide", "loop diuretic", "iv diuretic", "diuretic", "furosemid"),
+        "onset": (5 * _MIN, 60 * _MIN), "caps": {"rr": 4, "spo2": 4},
+        "source": "ESC 2021 HF (venodilation first, diuresis 30 to 60 min) https://doi.org/10.1093/eurheartj/ehab368",
+    },
+    "insulin_frii": {
+        "keywords": ("fixed rate insulin", "fixed-rate insulin", "friii", "insulin infusion", "insulin", "insülin"),
+        "onset": (30 * _MIN, 6 * _H), "caps": {},
+        "source": "JBDS-IP DKA 2023 (CBG -3 mmol/L/h, K -0.5 mmol/L/h; lab effect only) "
+                  "https://abcd.care/sites/default/files/site_uploads/JBDS_Guidelines_Current/JBDS_02_DKA_Guideline_with_QR_code_March_2023.pdf",
+    },
+    "dextrose": {
+        "keywords": ("dextrose", "10 % glucose", "10% glucose", "glucose 10", "iv glucose", "oral glucose", "glucose gel", "glukoz"),
+        "onset": (5 * _MIN, 15 * _MIN), "caps": {},
+        "source": "JBDS-IP DKA 2023 (add 10 % glucose when CBG below 14 mmol/L) https://abcd.care/sites/default/files/site_uploads/JBDS_Guidelines_Current/JBDS_02_DKA_Guideline_with_QR_code_March_2023.pdf",
+    },
+    "potassium": {
+        "keywords": ("potassium chloride", "kcl", "potassium replacement", "k replacement", "potasyum replasmanı"),
+        "onset": (30 * _MIN, 6 * _H), "caps": {},
+        "source": "JBDS-IP DKA 2023 (40 mmol/L when K 3.5 to 5.5 after the first litre) https://abcd.care/sites/default/files/site_uploads/JBDS_Guidelines_Current/JBDS_02_DKA_Guideline_with_QR_code_March_2023.pdf",
+    },
+    "thrombolytic": {
+        "keywords": ("alteplase", "tenecteplase", "reteplase", "thrombolysis", "thrombolytic", "fibrinolysis", "fibrinolytic", "tromboliz"),
+        "onset": (30 * _MIN, 90 * _MIN), "caps": {"systolic": 25, "diastolic": 12, "hr": 20, "pain": 5},
+        "source": "ESC 2019 PE https://doi.org/10.1093/eurheartj/ehz405 ; ESC 2023 ACS https://doi.org/10.1093/eurheartj/ehad191",
+    },
+    "antiplatelet": {
+        "keywords": ("aspirin", "clopidogrel", "ticagrelor", "prasugrel", "p2y12", "antiplatelet", "antiplatelet loading"),
+        "onset": (6 * _H, 72 * _H), "caps": {},
+        "source": "ESC 2023 ACS (no in-session vital or analgesic effect) https://doi.org/10.1093/eurheartj/ehad191",
+    },
+    "anticoagulant": {
+        "keywords": ("heparin", "enoxaparin", "lmwh", "fondaparinux", "anticoagulation", "anticoagulant", "apixaban", "rivaroxaban", "antikoagülasyon"),
+        "onset": (6 * _H, 72 * _H), "caps": {},
+        "source": "ESC 2019 PE (stops propagation; no vital change) https://doi.org/10.1093/eurheartj/ehz405",
+    },
+    "corticosteroid": {
+        "keywords": ("hydrocortisone", "dexamethasone", "prednisolone", "methylprednisolone", "corticosteroid", "steroid", "steroids", "kortikosteroid"),
+        "onset": (4 * _H, 72 * _H), "caps": {},
+        "source": "RCUK 2021 anaphylaxis (steroids are not first-line) https://www.resus.org.uk/library/additional-guidance/guidance-anaphylaxis/emergency-treatment",
+    },
+    "antihistamine": {
+        "keywords": ("chlorphenamine", "chlorpheniramine", "cetirizine", "antihistamine", "antihistaminik"),
+        "onset": (4 * _H, 72 * _H), "caps": {},
+        "source": "RCUK 2021 anaphylaxis https://www.resus.org.uk/library/additional-guidance/guidance-anaphylaxis/emergency-treatment",
+    },
+    "beta_blocker_iv": {
+        "keywords": ("metoprolol", "esmolol", "labetalol", "propranolol", "bisoprolol", "beta blocker", "beta blockade", "beta bloker"),
+        "onset": (5 * _MIN, 15 * _MIN), "caps": {"hr": 25, "systolic": 30, "diastolic": 15},
+        "source": "COMMIT, Lancet 2005 https://doi.org/10.1016/S0140-6736(05)67661-1",
+    },
+    "glucagon": {
+        "keywords": ("glucagon", "glukagon"),
+        "onset": (5 * _MIN, 15 * _MIN), "caps": {"systolic": 15, "diastolic": 6},
+        "source": "RCUK 2021 anaphylaxis (beta-blocked patients) https://www.resus.org.uk/library/additional-guidance/guidance-anaphylaxis/emergency-treatment",
+    },
+    "naloxone": {
+        "keywords": ("naloxone", "nalokson"),
+        "onset": (1 * _MIN, 5 * _MIN), "caps": {"rr": 10, "spo2": 12, "hr": 10},
+        "source": "Clarke SFJ, EMJ 2005 (duration shorter than most opioids) https://doi.org/10.1136/emj.2004.019240",
+    },
+    "niv": {
+        "keywords": ("niv", "cpap", "bipap", "non invasive ventilation", "noninvasive ventilation"),
+        "onset": (5 * _MIN, 20 * _MIN), "caps": {"spo2": 8, "rr": 6, "hr": 6},
+        "source": "ESC 2021 HF; BTS/ICS 2016 NIV https://doi.org/10.1136/thoraxjnl-2015-208209",
+    },
+    "insulin_dextrose": {
+        "keywords": ("insulin dextrose", "insulin glucose", "insulin and glucose", "insulin with glucose"),
+        "onset": (15 * _MIN, 60 * _MIN), "caps": {},
+        "source": "UKKA 2023 hyperkalaemia (K falls 0.6 to 1.2 mmol/L in 30 to 60 min; lab effect only) https://ukkidney.org/health-professionals/guidelines/treatment-acute-hyperkalaemia-adults",
+    },
+    "antiemetic": {
+        "keywords": ("ondansetron", "metoclopramide", "cyclizine", "antiemetic", "antiemetik"),
+        "onset": (5 * _MIN, 30 * _MIN), "caps": {},
+        "source": "BNF antiemetics (no vital effect) https://bnf.nice.org.uk/",
+    },
+}
+
+# Review 06b F21: the direction each class may move a vital (+1 up, -1 down);
+# a key absent here may move either way. Oxygen never lowers SpO2, fluids never
+# lower SBP, opioids never raise RR.
+ALLOWED_SIGNS: dict[str, dict[str, int]] = {
+    "oxygen": {"spo2": 1},
+    "niv": {"spo2": 1, "rr": -1},
+    "fluids": {"systolic": 1, "diastolic": 1, "hr": -1},
+    "antipyretic": {"tempC": -1, "hr": -1, "pain": -1},
+    "opioid": {"pain": -1, "rr": -1, "hr": -1, "spo2": -1},
+    "analgesia": {"pain": -1, "hr": -1},
+    "nitrate": {"systolic": -1, "diastolic": -1, "pain": -1},
+    "bronchodilator": {"rr": -1, "spo2": 1, "hr": 1},
+    "adrenaline_im": {"systolic": 1, "diastolic": 1, "spo2": 1, "rr": -1},
+    "vasopressor": {"systolic": 1, "diastolic": 1},
+    "loop_diuretic": {"rr": -1, "spo2": 1},
+    "beta_blocker_iv": {"hr": -1, "systolic": -1, "diastolic": -1},
+    "glucagon": {"systolic": 1, "diastolic": 1},
+    "naloxone": {"rr": 1, "spo2": 1},
+    "thrombolytic": {"systolic": 1, "diastolic": 1, "hr": -1, "pain": -1},
 }
 
 # Any effect, whatever its class, takes at least this long (a bolus is not
@@ -211,13 +311,36 @@ def _phrase_in(phrase: str, text: str) -> bool:
 
 def classify_treatment(text: str) -> list[str]:
     """Treatment classes named in a label or code (several for combined items)."""
+    # Whole-word phrases only (06b F08: "beta" in "beta-lactam" matched the
+    # beta-blocker row); "beta-lactam" tokenises to "beta lactam", never to
+    # "beta blocker".
     out = [name for name, row in TREATMENT_CLASSES.items() if any(_phrase_in(k, text) for k in row["keywords"])]
+    # NIV and CPAP are their own class, not plain oxygen.
+    if "niv" in out and "oxygen" in out and not any(_phrase_in(k, text) for k in ("oxygen", "o2", "high flow")):
+        out.remove("oxygen")
+    # 06b F23: adrenaline given IM, or at a dose of 0.5 mg or less outside an
+    # infusion, is the anaphylaxis class, not an IV pressor.
+    if ("adrenaline_im" not in out and (_phrase_in("adrenaline", text) or _phrase_in("epinephrine", text))
+            and (_phrase_in("im", text) or _phrase_in("intramuscular", text) or _small_adrenaline_dose(text))
+            and not _phrase_in("infusion", text)):
+        out.append("adrenaline_im")
     # Intramuscular adrenaline is its own class; a bare "adrenaline" is the IV pressor.
     if "adrenaline_im" in out and "vasopressor" in out:
         out.remove("vasopressor")
     if not out and (_phrase_in("adrenaline", text) or _phrase_in("epinephrine", text)):
         out.append("vasopressor")
+    # Combined insulin-glucose for hyperkalaemia is a shift therapy, not FRIII.
+    if "insulin_frii" in out and "dextrose" in out and not _phrase_in("fixed rate", text):
+        out = [c for c in out if c not in ("insulin_frii", "dextrose")] + ["insulin_dextrose"]
     return out
+
+
+def _small_adrenaline_dose(text: str) -> bool:
+    m = re.search(r"(\d+(?:\.\d+)?)\s*(mg|mcg|micrograms?)\b", (text or "").lower())
+    if not m:
+        return False
+    val = float(m.group(1))
+    return val <= 0.5 if m.group(2) == "mg" else val <= 500
 
 
 def _treatment_text(t: dict[str, Any]) -> str:
@@ -325,7 +448,25 @@ def effect_problems(t: dict[str, Any]) -> list[str]:
         cap = max(r["caps"][key] for r in allowing)
         if delta > cap:
             out.append(f"treatment {label}: effect {key} delta {delta:g} exceeds {cap:g} for {'/'.join(classes)}")
+        sign = _sign_problem(classes, key, float(eff.get("delta", 0) or 0))
+        if sign:
+            out.append(f"treatment {label}: {sign}")
     return out
+
+
+def _sign_problem(classes: list[str], key: str, delta: float) -> str:
+    """06b F21: an effect moving a vital the wrong way for its class."""
+    if delta == 0:
+        return ""
+    for c in classes:
+        want = ALLOWED_SIGNS.get(c, {}).get(key)
+        if want is not None and (delta > 0) != (want > 0):
+            # A combined item may legitimately move it through another class.
+            if any(ALLOWED_SIGNS.get(o, {}).get(key, 0) * delta > 0 or key not in ALLOWED_SIGNS.get(o, {})
+                   for o in classes if o != c and key in TREATMENT_CLASSES.get(o, {}).get("caps", {})):
+                continue
+            return f"a {c} treatment cannot move {key} {'up' if delta > 0 else 'down'}"
+    return ""
 
 
 def clamp_effects(t: dict[str, Any]) -> list[str]:
@@ -355,6 +496,9 @@ def clamp_effects(t: dict[str, Any]) -> list[str]:
             cap = max(r["caps"][key] for r in allowing)
             if abs(new_delta) > cap:
                 new_delta = cap if new_delta > 0 else -cap
+            if _sign_problem(classes, key, new_delta):
+                notes.append(f"{label}: dropped {key} effect {new_delta:g} (wrong direction for {'/'.join(classes)})")
+                continue
         if new_onset != onset or new_delta != delta:
             notes.append(f"{label}: effect {key} {delta:g}@{int(onset)}ms clamped to {new_delta:g}@{int(new_onset)}ms")
         kept.append({**eff, "key": key, "delta": new_delta, "onsetMs": int(new_onset)})
@@ -589,7 +733,7 @@ def normalize_draft(draft: dict[str, Any], cond: dict[str, Any], *, seed: int) -
 
 
 __all__ = [
-    "MIN_ONSET_MS", "TREATMENT_CLASSES", "WEB_CODES", "WEB_TREATMENT_CATALOG", "all_fixture_codes",
+    "ALLOWED_SIGNS", "MIN_ONSET_MS", "TREATMENT_CLASSES", "WEB_CODES", "WEB_TREATMENT_CATALOG", "all_fixture_codes",
     "clamp_effects", "classify_treatment", "condition_treatments", "effect_problems", "known_treatment_code",
     "lab_unit_problems", "normalize_draft", "normalize_labs", "resolve_treatment_code", "unit_matches",
 ]

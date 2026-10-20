@@ -582,7 +582,7 @@ function MobileRailDrawer({
         )}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-fg">{title}</h2>
+          <h2 className="text-[1.0625rem] text-fg">{title}</h2>
           <button
             ref={closeRef}
             type="button"

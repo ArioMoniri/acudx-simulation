@@ -118,7 +118,7 @@ export function CreateRoomDialog({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 id={titleId} className="text-lg font-semibold tracking-tight text-fg">
+            <h2 id={titleId} className="text-xl text-fg">
               {t("rooms.create.title")}
             </h2>
             <p className="mt-1 text-sm text-muted">{t("rooms.create.subtitle")}</p>

@@ -119,7 +119,7 @@ def test_formulary_ceftriaxone_counts_as_the_indicated_antibiotic_row() -> None:
     assert "averted" in text, text
     assert not any(c.fired_at_ms for c in state.pending_complications)
     state, visible, _ = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=3_600_000))
-    assert visible["complications_fired"] == []
+    assert "abx_1h" not in visible["complications_fired"]  # 06b F06: on target; dexamethasone is scored separately
 
 
 def test_formulary_paracetamol_lowers_a_fever() -> None:
@@ -214,7 +214,12 @@ def test_d18_paracetamol_does_not_avert_the_sepsis_deadline_but_an_antibiotic_do
     assert "antipyretic" not in comp.required_any_of and "cultures" not in comp.required_any_of
     state, _, notes = D.next_state(state, D.Action(kind="treatment", ref="161", elapsed_ms=60_000))
     assert not any("averted" in n["note"] for n in notes)
+    # 06b F11: vancomycin alone has no Gram-negative cover, so it does not
+    # meet the sepsis antimicrobial target; adding gentamicin completes it.
     state, _, notes = D.next_state(state, D.Action(kind="treatment", ref="11124", elapsed_ms=60_000))
+    assert not any("averted" in n["note"] for n in notes), notes
+    assert any("inadequate spectrum" in n["note"] for n in notes), notes
+    state, _, notes = D.next_state(state, D.Action(kind="treatment", ref="4413", elapsed_ms=60_000))
     assert any("averted" in n["note"] for n in notes), notes
 
 

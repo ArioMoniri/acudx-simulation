@@ -451,7 +451,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
                                   "px-2 py-0.5 text-[11px] font-medium transition-colors",
                                   active
                                     ? lk === "leading"
-                                      ? "bg-brand text-white"
+                                      ? "bg-brand text-on-brand"
                                       : "bg-fg-subtle/15 text-fg"
                                     : "bg-surface text-muted hover:bg-bg-subtle",
                                 )}
@@ -470,7 +470,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
                             "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium",
                             "transition-colors duration-200 ease-out active:scale-[0.98]",
                             isWorking
-                              ? "bg-brand text-white"
+                              ? "bg-brand text-on-brand"
                               : "border border-border bg-surface text-fg hover:bg-brand-tint hover:text-brand",
                           )}
                         >
@@ -703,7 +703,7 @@ function Stage({
       <div className="flex items-start gap-3">
         <span
           aria-hidden
-          className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand font-mono text-[13px] font-semibold tabular-nums text-white"
+          className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand font-mono text-[13px] font-semibold tabular-nums text-on-brand"
         >
           {n}
         </span>

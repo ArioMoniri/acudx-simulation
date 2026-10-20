@@ -110,7 +110,7 @@ function SelectMark({
     return (
       <span
         className={cn(
-          "grid shrink-0 place-items-center rounded-full bg-brand text-white",
+          "grid shrink-0 place-items-center rounded-full bg-brand text-on-brand",
           size === "sm" ? "h-4 w-4" : "h-5 w-5",
         )}
         aria-hidden
@@ -261,7 +261,7 @@ function StepHeading({
         <span>{eyebrow}</span>
       </SectionLabel>
       <div>
-        <h2 id={id} className="text-lg font-semibold tracking-tight text-fg">
+        <h2 id={id} className="text-xl text-fg">
           {title}
         </h2>
         <p className="text-sm text-muted">{hint}</p>

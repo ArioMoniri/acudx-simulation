@@ -205,6 +205,28 @@ export interface DirectorAffect {
   mood_tr: string;
 }
 
+/** Bedside state the Director derives every step (review 06b section 4.1). */
+export interface DirectorBedside {
+  map: number;
+  gcs: number;
+  avpu: string;
+  cbg: number;
+  k: number;
+  lactate: number;
+  crt_s: number;
+  mottling: number;
+  skin: string;
+  urine_ml_h: number;
+  pain: number;
+  airway: string;
+  rhythm: string;
+  /** False in cardiac arrest: the vitals then read zero (no pulse, no trace). */
+  pulse: boolean;
+  fluid_in_ml: number;
+  o2: boolean;
+  news2: number;
+}
+
 export interface PatientVisibleChanges {
   t_ms: number;
   vitals: DirectorVitals;
@@ -214,6 +236,15 @@ export interface PatientVisibleChanges {
   new_facts: string[];
   complications_fired: string[];
   trace: TraceEvent[];
+  bedside?: DirectorBedside;
+  phase?: "stable" | "improving" | "deteriorating" | "peri_arrest" | "arrest";
+  severity?: number;
+  active_diagnoses?: string[];
+  /** Targets met or breached, harms, branches, arrest and ROSC this step, each with why. */
+  events?: Array<{ id: string; kind: string; at_ms: number; reason: string; say_en?: string; say_tr?: string }>;
+  targets?: Array<Record<string, unknown>>;
+  /** What the results engine should read from the live Director (06b F19). */
+  results?: Record<string, unknown>;
 }
 
 export interface DirectorNote {

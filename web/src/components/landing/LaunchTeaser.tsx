@@ -49,7 +49,7 @@ export function LaunchTeaser({ className }: { className?: string }) {
     <section aria-labelledby="landing-film" className={cn("grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:gap-14", className)}>
       <div className="lg:pt-1">
         <SectionLabel>{t("landing3.film.eyebrow")}</SectionLabel>
-        <h2 id="landing-film" className="mt-2 text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
+        <h2 id="landing-film" className="mt-2 text-[1.75rem] text-fg sm:text-3xl">
           {t("landing3.film.heading")}
         </h2>
         <p className="mt-3 max-w-md text-base text-muted">{t("landing3.film.sub")}</p>

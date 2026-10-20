@@ -459,7 +459,7 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
             <Link to="/rooms">{t("rooms.inroom.backToLobby")}</Link>
           </Button>
           <span className="hidden text-muted sm:inline" aria-hidden>·</span>
-          <h1 className="text-lg font-semibold tracking-tight text-fg">{room.title[lang]}</h1>
+          <h1 className="text-xl text-fg">{room.title[lang]}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <Badge tone="neutral">{t(`rooms.locale.${room.locale}`)}</Badge>

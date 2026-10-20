@@ -114,7 +114,7 @@ export function NewCaseMenu({
               onRandom();
               close();
             }}
-            className="flex w-full items-center gap-2.5 rounded-control bg-brand px-3 py-2.5 text-start text-sm font-semibold text-white transition-colors hover:bg-brand-hover focus-visible:outline-none"
+            className="flex w-full items-center gap-2.5 rounded-control bg-brand px-3 py-2.5 text-start text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none"
           >
             <Sparkle weight="fill" className="h-5 w-5 shrink-0" aria-hidden />
             <span className="min-w-0">

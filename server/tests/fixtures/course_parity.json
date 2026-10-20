@@ -1,0 +1,3847 @@
+{
+ "cases": [
+  {
+   "condition_id": "septic_shock",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 14.0,
+     "lactate": 5.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 43.0,
+      "hr": 128.0,
+      "rr": 27.0,
+      "spo2": 93.0,
+      "systolic": 78.0,
+      "tempC": 39.2
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 3.0,
+     "lactate": 6.6,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 39.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 13.0,
+     "lactate": 5.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 40.0,
+      "hr": 131.0,
+      "rr": 28.0,
+      "spo2": 92.0,
+      "systolic": 74.0,
+      "tempC": 39.2
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 11.0,
+     "lactate": 6.0,
+     "phase": "peri_arrest",
+     "vitals": {
+      "diastolic": 37.0,
+      "hr": 136.0,
+      "rr": 30.0,
+      "spo2": 91.0,
+      "systolic": 69.0,
+      "tempC": 39.2
+     }
+    }
+   },
+   "input": {
+    "condition_id": "septic_shock",
+    "events": [],
+    "patient": {
+     "age": 28.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 2,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 5,
+     "diastolic": 44.0,
+     "gcs": 14,
+     "hr": 126.0,
+     "lactate": 5.73,
+     "mottle": 2,
+     "rr": 26.0,
+     "spo2": 93.0,
+     "systolic": 80.0,
+     "tempC": 39.2,
+     "urine": 15
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "septic_shock",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 14.0,
+     "lactate": 5.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 45.0,
+      "hr": 125.0,
+      "rr": 27.0,
+      "spo2": 93.0,
+      "systolic": 82.0,
+      "tempC": 39.2
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 3.0,
+     "lactate": 6.6,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 39.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 13.0,
+     "lactate": 5.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 46.0,
+      "hr": 124.0,
+      "rr": 28.0,
+      "spo2": 92.0,
+      "systolic": 86.0,
+      "tempC": 39.2
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 11.0,
+     "lactate": 6.0,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 39.0,
+      "hr": 133.0,
+      "rr": 30.0,
+      "spo2": 91.0,
+      "systolic": 74.0,
+      "tempC": 39.2
+     }
+    }
+   },
+   "input": {
+    "condition_id": "septic_shock",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 300000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 28.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 2,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 5,
+     "diastolic": 44.0,
+     "gcs": 14,
+     "hr": 126.0,
+     "lactate": 5.73,
+     "mottle": 2,
+     "rr": 26.0,
+     "spo2": 93.0,
+     "systolic": 80.0,
+     "tempC": 39.2,
+     "urine": 15
+    }
+   },
+   "label": "fluids only"
+  },
+  {
+   "condition_id": "septic_shock",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 14.0,
+     "lactate": 5.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 45.0,
+      "hr": 125.0,
+      "rr": 27.0,
+      "spo2": 93.0,
+      "systolic": 82.0,
+      "tempC": 39.2
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 12.0,
+     "lactate": 3.7,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 54.0,
+      "hr": 136.0,
+      "rr": 29.0,
+      "spo2": 92.0,
+      "systolic": 97.0,
+      "tempC": 39.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 13.0,
+     "lactate": 5.6,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 53.0,
+      "hr": 122.0,
+      "rr": 28.0,
+      "spo2": 92.0,
+      "systolic": 98.0,
+      "tempC": 39.2
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 11.0,
+     "lactate": 4.9,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 53.0,
+      "hr": 130.0,
+      "rr": 30.0,
+      "spo2": 91.0,
+      "systolic": 98.0,
+      "tempC": 39.2
+     }
+    }
+   },
+   "input": {
+    "condition_id": "septic_shock",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 300000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "iv_fluids",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 0,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "penicillin",
+      "appropriateness": "indicated",
+      "at_ms": 600000,
+      "classes": [
+       "antibiotic"
+      ],
+      "code": "abx",
+      "effects": [],
+      "kind": "treatment",
+      "row": "abx",
+      "seq": 1,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 1200000,
+      "classes": [
+       "fluids",
+       "vasopressor"
+      ],
+      "code": "vasopressor",
+      "effects": [
+       {
+        "delta": 18.0,
+        "key": "systolic",
+        "onsetMs": 600000
+       },
+       {
+        "delta": 10.0,
+        "key": "diastolic",
+        "onsetMs": 600000
+       }
+      ],
+      "kind": "treatment",
+      "row": "vasopressor",
+      "seq": 2,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 28.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 2,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 5,
+     "diastolic": 44.0,
+     "gcs": 14,
+     "hr": 126.0,
+     "lactate": 5.73,
+     "mottle": 2,
+     "rr": 26.0,
+     "spo2": 93.0,
+     "systolic": 80.0,
+     "tempC": 39.2,
+     "urine": 15
+    }
+   },
+   "label": "bundle"
+  },
+  {
+   "condition_id": "septic_shock",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 14.0,
+     "lactate": 5.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 49.0,
+      "hr": 127.0,
+      "rr": 27.0,
+      "spo2": 93.0,
+      "systolic": 89.0,
+      "tempC": 39.2
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "septic_shock",
+      "refractory_shock"
+     ],
+     "gcs": 3.0,
+     "lactate": 5.7,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 39.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 13.0,
+     "lactate": 5.5,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 53.0,
+      "hr": 127.0,
+      "rr": 28.0,
+      "spo2": 92.0,
+      "systolic": 98.0,
+      "tempC": 39.2
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 11.0,
+     "lactate": 5.1,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 53.0,
+      "hr": 136.0,
+      "rr": 30.0,
+      "spo2": 91.0,
+      "systolic": 97.0,
+      "tempC": 39.2
+     }
+    }
+   },
+   "input": {
+    "condition_id": "septic_shock",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 300000,
+      "classes": [
+       "fluids",
+       "vasopressor"
+      ],
+      "code": "vasopressor",
+      "effects": [
+       {
+        "delta": 18.0,
+        "key": "systolic",
+        "onsetMs": 600000
+       },
+       {
+        "delta": 10.0,
+        "key": "diastolic",
+        "onsetMs": 600000
+       }
+      ],
+      "kind": "treatment",
+      "row": "vasopressor",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 28.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 2,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 5,
+     "diastolic": 44.0,
+     "gcs": 14,
+     "hr": 126.0,
+     "lactate": 5.73,
+     "mottle": 2,
+     "rr": 26.0,
+     "spo2": 93.0,
+     "systolic": 80.0,
+     "tempC": 39.2,
+     "urine": 15
+    }
+   },
+   "label": "noradrenaline only"
+  },
+  {
+   "condition_id": "septic_shock",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 14.0,
+     "lactate": 5.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 48.0,
+      "hr": 122.0,
+      "rr": 27.0,
+      "spo2": 93.0,
+      "systolic": 88.0,
+      "tempC": 39.2
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 3.0,
+     "lactate": 6.2,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 39.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 13.0,
+     "lactate": 5.5,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 62.0,
+      "hr": 106.0,
+      "rr": 28.0,
+      "spo2": 90.0,
+      "systolic": 118.0,
+      "tempC": 39.2
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 11.0,
+     "lactate": 5.3,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 48.0,
+      "hr": 123.0,
+      "rr": 30.0,
+      "spo2": 81.0,
+      "systolic": 90.0,
+      "tempC": 39.2
+     }
+    }
+   },
+   "input": {
+    "condition_id": "septic_shock",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 120000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 0,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 360000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 1,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 600000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 2,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 840000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 3,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 1080000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 4,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 1320000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 5,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 1560000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 6,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 1800000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 7,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 2040000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 8,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 2280000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [
+       {
+        "delta": 14.0,
+        "key": "systolic",
+        "onsetMs": 900000
+       },
+       {
+        "delta": -10.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_fluids",
+      "seq": 9,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 28.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 2,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 5,
+     "diastolic": 44.0,
+     "gcs": 14,
+     "hr": 126.0,
+     "lactate": 5.73,
+     "mottle": 2,
+     "rr": 26.0,
+     "spo2": 93.0,
+     "systolic": 80.0,
+     "tempC": 39.2,
+     "urine": 15
+    }
+   },
+   "label": "10 boluses"
+  },
+  {
+   "condition_id": "sepsis_uncomplicated",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.6,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 61.0,
+      "hr": 114.0,
+      "rr": 24.0,
+      "spo2": 95.0,
+      "systolic": 104.0,
+      "tempC": 38.9
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 11.0,
+     "lactate": 4.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 41.0,
+      "hr": 135.0,
+      "rr": 31.0,
+      "spo2": 91.0,
+      "systolic": 74.0,
+      "tempC": 38.9
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 58.0,
+      "hr": 117.0,
+      "rr": 25.0,
+      "spo2": 94.0,
+      "systolic": 100.0,
+      "tempC": 38.9
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 14.0,
+     "lactate": 3.1,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 55.0,
+      "hr": 122.0,
+      "rr": 26.0,
+      "spo2": 94.0,
+      "systolic": 95.0,
+      "tempC": 38.9
+     }
+    }
+   },
+   "input": {
+    "condition_id": "sepsis_uncomplicated",
+    "events": [],
+    "patient": {
+     "age": 28.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 3,
+     "diastolic": 62.0,
+     "gcs": 15,
+     "hr": 112.0,
+     "lactate": 2.57,
+     "mottle": 0,
+     "rr": 23.0,
+     "spo2": 95.0,
+     "systolic": 106.0,
+     "tempC": 38.9,
+     "urine": 40
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "sepsis_uncomplicated",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.6,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 61.0,
+      "hr": 113.0,
+      "rr": 24.0,
+      "spo2": 95.0,
+      "systolic": 104.0,
+      "tempC": 38.8
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "septic_shock"
+     ],
+     "gcs": 11.0,
+     "lactate": 4.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 41.0,
+      "hr": 127.0,
+      "rr": 31.0,
+      "spo2": 91.0,
+      "systolic": 74.0,
+      "tempC": 38.1
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 58.0,
+      "hr": 114.0,
+      "rr": 25.0,
+      "spo2": 94.0,
+      "systolic": 100.0,
+      "tempC": 38.6
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 14.0,
+     "lactate": 3.1,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 55.0,
+      "hr": 115.0,
+      "rr": 26.0,
+      "spo2": 94.0,
+      "systolic": 95.0,
+      "tempC": 38.2
+     }
+    }
+   },
+   "input": {
+    "condition_id": "sepsis_uncomplicated",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 300000,
+      "classes": [
+       "antipyretic"
+      ],
+      "code": "161",
+      "effects": [
+       {
+        "delta": -0.8,
+        "key": "tempC",
+        "onsetMs": 2700000
+       }
+      ],
+      "kind": "treatment",
+      "row": "antipyretic",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 28.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 3,
+     "diastolic": 62.0,
+     "gcs": 15,
+     "hr": 112.0,
+     "lactate": 2.57,
+     "mottle": 0,
+     "rr": 23.0,
+     "spo2": 95.0,
+     "systolic": 106.0,
+     "tempC": 38.9,
+     "urine": 40
+    }
+   },
+   "label": "paracetamol only"
+  },
+  {
+   "condition_id": "sepsis_uncomplicated",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.6,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 61.0,
+      "hr": 114.0,
+      "rr": 24.0,
+      "spo2": 95.0,
+      "systolic": 104.0,
+      "tempC": 38.9
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 14.0,
+     "lactate": 3.9,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 56.0,
+      "hr": 121.0,
+      "rr": 26.0,
+      "spo2": 94.0,
+      "systolic": 96.0,
+      "tempC": 38.9
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 58.0,
+      "hr": 117.0,
+      "rr": 25.0,
+      "spo2": 94.0,
+      "systolic": 100.0,
+      "tempC": 38.9
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "sepsis_uncomplicated"
+     ],
+     "gcs": 14.0,
+     "lactate": 3.1,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 55.0,
+      "hr": 122.0,
+      "rr": 26.0,
+      "spo2": 94.0,
+      "systolic": 95.0,
+      "tempC": 38.9
+     }
+    }
+   },
+   "input": {
+    "condition_id": "sepsis_uncomplicated",
+    "events": [
+     {
+      "agents": [
+       "gram_pos",
+       "gram_neg",
+       "cns"
+      ],
+      "allergy_class": "cephalosporin",
+      "appropriateness": "indicated",
+      "at_ms": 600000,
+      "classes": [
+       "antibiotic"
+      ],
+      "code": "2193",
+      "effects": [],
+      "kind": "treatment",
+      "row": "abx",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 28.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 3,
+     "diastolic": 62.0,
+     "gcs": 15,
+     "hr": 112.0,
+     "lactate": 2.57,
+     "mottle": 0,
+     "rr": 23.0,
+     "spo2": 95.0,
+     "systolic": 106.0,
+     "tempC": 38.9,
+     "urine": 40
+    }
+   },
+   "label": "ceftriaxone"
+  },
+  {
+   "condition_id": "pneumonia_cap",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "pneumonia_cap"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 66.0,
+      "hr": 109.0,
+      "rr": 26.0,
+      "spo2": 91.0,
+      "systolic": 113.0,
+      "tempC": 39.0
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "pneumonia_cap"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.6,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 62.0,
+      "hr": 116.0,
+      "rr": 30.0,
+      "spo2": 88.0,
+      "systolic": 108.0,
+      "tempC": 39.0
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "pneumonia_cap"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 110.0,
+      "rr": 27.0,
+      "spo2": 90.0,
+      "systolic": 112.0,
+      "tempC": 39.0
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "pneumonia_cap"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 64.0,
+      "hr": 112.0,
+      "rr": 28.0,
+      "spo2": 89.0,
+      "systolic": 111.0,
+      "tempC": 39.0
+     }
+    }
+   },
+   "input": {
+    "condition_id": "pneumonia_cap",
+    "events": [],
+    "patient": {
+     "age": 33.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "pruritus"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [
+      "copd",
+      "hypercapnic_target"
+     ],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 66.0,
+     "hr": 108.0,
+     "lactate": 1.8,
+     "rr": 26.0,
+     "spo2": 91.0,
+     "systolic": 114.0,
+     "tempC": 39.0
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "pneumonia_cap",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "pneumonia_cap"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 66.0,
+      "hr": 109.0,
+      "rr": 26.0,
+      "spo2": 91.0,
+      "systolic": 113.0,
+      "tempC": 39.0
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "pneumonia_cap"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.4,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 111.0,
+      "rr": 27.0,
+      "spo2": 93.0,
+      "systolic": 112.0,
+      "tempC": 39.0
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "pneumonia_cap"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 110.0,
+      "rr": 27.0,
+      "spo2": 94.0,
+      "systolic": 112.0,
+      "tempC": 39.0
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "pneumonia_cap"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.6,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 64.0,
+      "hr": 112.0,
+      "rr": 28.0,
+      "spo2": 93.0,
+      "systolic": 111.0,
+      "tempC": 39.0
+     }
+    }
+   },
+   "input": {
+    "condition_id": "pneumonia_cap",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "penicillin",
+      "appropriateness": "indicated",
+      "at_ms": 600000,
+      "classes": [
+       "antibiotic"
+      ],
+      "code": "severity_abx",
+      "effects": [],
+      "kind": "treatment",
+      "row": "severity_abx",
+      "seq": 0,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 600000,
+      "classes": [
+       "oxygen"
+      ],
+      "code": "oxygen",
+      "effects": [
+       {
+        "delta": 3.0,
+        "key": "spo2",
+        "onsetMs": 300000
+       }
+      ],
+      "kind": "treatment",
+      "row": "oxygen",
+      "seq": 1,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 33.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "pruritus"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [
+      "copd",
+      "hypercapnic_target"
+     ],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 66.0,
+     "hr": 108.0,
+     "lactate": 1.8,
+     "rr": 26.0,
+     "spo2": 91.0,
+     "systolic": 114.0,
+     "tempC": 39.0
+    }
+   },
+   "label": "abx+o2"
+  },
+  {
+   "condition_id": "bacterial_meningitis",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "bacterial_meningitis"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 69.0,
+      "hr": 113.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 117.0,
+      "tempC": 39.4
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "bacterial_meningitis",
+      "status_epilepticus"
+     ],
+     "gcs": 4.0,
+     "lactate": 1.1,
+     "phase": "peri_arrest",
+     "vitals": {
+      "diastolic": 81.0,
+      "hr": 140.0,
+      "rr": 14.0,
+      "spo2": 85.0,
+      "systolic": 140.0,
+      "tempC": 39.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "bacterial_meningitis"
+     ],
+     "gcs": 13.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 68.0,
+      "hr": 115.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 115.0,
+      "tempC": 39.5
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "bacterial_meningitis"
+     ],
+     "gcs": 11.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 67.0,
+      "hr": 118.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 112.0,
+      "tempC": 39.7
+     }
+    }
+   },
+   "input": {
+    "condition_id": "bacterial_meningitis",
+    "events": [],
+    "patient": {
+     "age": 20.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 70.0,
+     "gcs": 14,
+     "hr": 112.0,
+     "rr": 20.0,
+     "spo2": 96.0,
+     "systolic": 118.0,
+     "tempC": 39.4
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "bacterial_meningitis",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "bacterial_meningitis"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 69.0,
+      "hr": 113.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 117.0,
+      "tempC": 39.4
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "bacterial_meningitis",
+      "status_epilepticus"
+     ],
+     "gcs": 4.0,
+     "lactate": 1.1,
+     "phase": "peri_arrest",
+     "vitals": {
+      "diastolic": 82.0,
+      "hr": 139.0,
+      "rr": 14.0,
+      "spo2": 85.0,
+      "systolic": 141.0,
+      "tempC": 39.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "bacterial_meningitis"
+     ],
+     "gcs": 13.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 68.0,
+      "hr": 115.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 115.0,
+      "tempC": 39.5
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "bacterial_meningitis"
+     ],
+     "gcs": 11.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 67.0,
+      "hr": 118.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 112.0,
+      "tempC": 39.7
+     }
+    }
+   },
+   "input": {
+    "condition_id": "bacterial_meningitis",
+    "events": [
+     {
+      "agents": [
+       "gram_pos",
+       "gram_neg",
+       "cns"
+      ],
+      "allergy_class": "cephalosporin",
+      "appropriateness": "indicated",
+      "at_ms": 3000000,
+      "classes": [
+       "antibiotic"
+      ],
+      "code": "2193",
+      "effects": [],
+      "kind": "treatment",
+      "row": "immediate_ceftriaxone",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 20.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 70.0,
+     "gcs": 14,
+     "hr": 112.0,
+     "rr": 20.0,
+     "spo2": 96.0,
+     "systolic": 118.0,
+     "tempC": 39.4
+    }
+   },
+   "label": "ceftriaxone at 50min"
+  },
+  {
+   "condition_id": "pyelonephritis",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "pyelonephritis"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.6,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 74.0,
+      "hr": 105.0,
+      "rr": 18.0,
+      "spo2": 97.0,
+      "systolic": 121.0,
+      "tempC": 39.0
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "pyelonephritis"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.4,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 69.0,
+      "hr": 112.0,
+      "rr": 20.0,
+      "spo2": 97.0,
+      "systolic": 116.0,
+      "tempC": 39.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "pyelonephritis"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.6,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 73.0,
+      "hr": 106.0,
+      "rr": 19.0,
+      "spo2": 97.0,
+      "systolic": 120.0,
+      "tempC": 39.1
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "pyelonephritis"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.5,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 72.0,
+      "hr": 108.0,
+      "rr": 19.0,
+      "spo2": 97.0,
+      "systolic": 119.0,
+      "tempC": 39.1
+     }
+    }
+   },
+   "input": {
+    "condition_id": "pyelonephritis",
+    "events": [],
+    "patient": {
+     "age": 21.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "pruritus"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 74.0,
+     "hr": 104.0,
+     "lactate": 1.6,
+     "rr": 18.0,
+     "spo2": 97.0,
+     "systolic": 122.0,
+     "tempC": 39.0
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "pyelonephritis",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "pyelonephritis"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.6,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 74.0,
+      "hr": 105.0,
+      "rr": 18.0,
+      "spo2": 97.0,
+      "systolic": 121.0,
+      "tempC": 39.0
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "pyelonephritis"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.3,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 72.0,
+      "hr": 107.0,
+      "rr": 19.0,
+      "spo2": 97.0,
+      "systolic": 119.0,
+      "tempC": 39.1
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "pyelonephritis"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.5,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 73.0,
+      "hr": 106.0,
+      "rr": 19.0,
+      "spo2": 97.0,
+      "systolic": 120.0,
+      "tempC": 39.1
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "pyelonephritis"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.4,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 72.0,
+      "hr": 108.0,
+      "rr": 19.0,
+      "spo2": 97.0,
+      "systolic": 119.0,
+      "tempC": 39.1
+     }
+    }
+   },
+   "input": {
+    "condition_id": "pyelonephritis",
+    "events": [
+     {
+      "agents": [
+       "gram_pos",
+       "gram_neg",
+       "cns"
+      ],
+      "allergy_class": "cephalosporin",
+      "appropriateness": "indicated",
+      "at_ms": 900000,
+      "classes": [
+       "antibiotic"
+      ],
+      "code": "2193",
+      "effects": [
+       {
+        "delta": -6.0,
+        "key": "hr",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_abx_fluids",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 21.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "pruritus"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 74.0,
+     "hr": 104.0,
+     "lactate": 1.6,
+     "rr": 18.0,
+     "spo2": 97.0,
+     "systolic": 122.0,
+     "tempC": 39.0
+    }
+   },
+   "label": "ceftriaxone"
+  },
+  {
+   "condition_id": "dka",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.0,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 60.0,
+      "hr": 119.0,
+      "rr": 28.0,
+      "spo2": 98.0,
+      "systolic": 101.0,
+      "tempC": 36.8
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 13.0,
+     "lactate": 1.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 54.0,
+      "hr": 128.0,
+      "rr": 32.0,
+      "spo2": 98.0,
+      "systolic": 92.0,
+      "tempC": 36.8
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.9,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 59.0,
+      "hr": 121.0,
+      "rr": 29.0,
+      "spo2": 98.0,
+      "systolic": 100.0,
+      "tempC": 36.8
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 57.0,
+      "hr": 123.0,
+      "rr": 30.0,
+      "spo2": 98.0,
+      "systolic": 97.0,
+      "tempC": 36.8
+     }
+    }
+   },
+   "input": {
+    "condition_id": "dka",
+    "events": [],
+    "patient": {
+     "age": 17.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "cbg": 23.7,
+     "diastolic": 60.0,
+     "hr": 118.0,
+     "k": 5.15,
+     "lactate": 2.0,
+     "rr": 28.0,
+     "spo2": 98.0,
+     "systolic": 102.0,
+     "tempC": 36.8
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "dka",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.0,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 60.0,
+      "hr": 119.0,
+      "rr": 28.0,
+      "spo2": 98.0,
+      "systolic": 101.0,
+      "tempC": 36.8
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 13.0,
+     "lactate": 1.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 54.0,
+      "hr": 128.0,
+      "rr": 32.0,
+      "spo2": 98.0,
+      "systolic": 92.0,
+      "tempC": 36.8
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.9,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 59.0,
+      "hr": 121.0,
+      "rr": 29.0,
+      "spo2": 98.0,
+      "systolic": 100.0,
+      "tempC": 36.8
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.8,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 57.0,
+      "hr": 123.0,
+      "rr": 30.0,
+      "spo2": 98.0,
+      "systolic": 97.0,
+      "tempC": 36.8
+     }
+    }
+   },
+   "input": {
+    "condition_id": "dka",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "contraindicated",
+      "at_ms": 300000,
+      "classes": [
+       "fluids",
+       "insulin_frii"
+      ],
+      "code": "insulin_bolus_first",
+      "effects": [],
+      "kind": "treatment",
+      "row": "insulin_bolus_first",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 17.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "cbg": 23.7,
+     "diastolic": 60.0,
+     "hr": 118.0,
+     "k": 5.15,
+     "lactate": 2.0,
+     "rr": 28.0,
+     "spo2": 98.0,
+     "systolic": 102.0,
+     "tempC": 36.8
+    }
+   },
+   "label": "insulin bolus first"
+  },
+  {
+   "condition_id": "dka",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.0,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 62.0,
+      "hr": 117.0,
+      "rr": 28.0,
+      "spo2": 98.0,
+      "systolic": 105.0,
+      "tempC": 36.8
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.5,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 64.0,
+      "hr": 114.0,
+      "rr": 29.0,
+      "spo2": 98.0,
+      "systolic": 111.0,
+      "tempC": 36.8
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.9,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 114.0,
+      "rr": 29.0,
+      "spo2": 98.0,
+      "systolic": 112.0,
+      "tempC": 36.8
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "dka"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.7,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 63.0,
+      "hr": 116.0,
+      "rr": 30.0,
+      "spo2": 98.0,
+      "systolic": 109.0,
+      "tempC": 36.8
+     }
+    }
+   },
+   "input": {
+    "condition_id": "dka",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 300000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "fluids_first",
+      "effects": [
+       {
+        "delta": -8.0,
+        "key": "hr",
+        "onsetMs": 600000
+       }
+      ],
+      "kind": "treatment",
+      "row": "fluids_first",
+      "seq": 0,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 1200000,
+      "classes": [
+       "insulin_frii",
+       "potassium"
+      ],
+      "code": "fixed_insulin",
+      "effects": [],
+      "kind": "treatment",
+      "row": "fixed_insulin",
+      "seq": 1,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 17.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "cbg": 23.7,
+     "diastolic": 60.0,
+     "hr": 118.0,
+     "k": 5.15,
+     "lactate": 2.0,
+     "rr": 28.0,
+     "spo2": 98.0,
+     "systolic": 102.0,
+     "tempC": 36.8
+    }
+   },
+   "label": "fluids then FRIII"
+  },
+  {
+   "condition_id": "acs_stemi",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 82.0,
+      "hr": 98.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 135.0,
+      "tempC": 36.9
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 77.0,
+      "hr": 102.0,
+      "rr": 21.0,
+      "spo2": 95.0,
+      "systolic": 126.0,
+      "tempC": 36.9
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 81.0,
+      "hr": 99.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 134.0,
+      "tempC": 36.9
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 79.0,
+      "hr": 100.0,
+      "rr": 21.0,
+      "spo2": 96.0,
+      "systolic": 131.0,
+      "tempC": 36.9
+     }
+    }
+   },
+   "input": {
+    "condition_id": "acs_stemi",
+    "events": [],
+    "patient": {
+     "age": 51.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 82.0,
+     "hr": 98.0,
+     "pain": 8,
+     "rr": 20.0,
+     "spo2": 96.0,
+     "systolic": 136.0,
+     "tempC": 36.9
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "acs_stemi",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 82.0,
+      "hr": 98.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 135.0,
+      "tempC": 36.9
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 77.0,
+      "hr": 102.0,
+      "rr": 21.0,
+      "spo2": 95.0,
+      "systolic": 126.0,
+      "tempC": 36.9
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 81.0,
+      "hr": 99.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 134.0,
+      "tempC": 36.9
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 79.0,
+      "hr": 100.0,
+      "rr": 21.0,
+      "spo2": 96.0,
+      "systolic": 131.0,
+      "tempC": 36.9
+     }
+    }
+   },
+   "input": {
+    "condition_id": "acs_stemi",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 300000,
+      "classes": [
+       "antiplatelet"
+      ],
+      "code": "asa_p2y12",
+      "effects": [],
+      "kind": "treatment",
+      "row": "asa_p2y12",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 51.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 82.0,
+     "hr": 98.0,
+     "pain": 8,
+     "rr": 20.0,
+     "spo2": 96.0,
+     "systolic": 136.0,
+     "tempC": 36.9
+    }
+   },
+   "label": "aspirin only"
+  },
+  {
+   "condition_id": "acs_stemi",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 82.0,
+      "hr": 98.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 135.0,
+      "tempC": 36.9
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 77.0,
+      "hr": 102.0,
+      "rr": 21.0,
+      "spo2": 95.0,
+      "systolic": 126.0,
+      "tempC": 36.9
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 81.0,
+      "hr": 99.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 134.0,
+      "tempC": 36.9
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 79.0,
+      "hr": 100.0,
+      "rr": 21.0,
+      "spo2": 96.0,
+      "systolic": 131.0,
+      "tempC": 36.9
+     }
+    }
+   },
+   "input": {
+    "condition_id": "acs_stemi",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "contraindicated",
+      "at_ms": 180000,
+      "classes": [
+       "oxygen"
+      ],
+      "code": "routine_o2",
+      "effects": [],
+      "kind": "treatment",
+      "row": "routine_o2",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 51.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 82.0,
+     "hr": 98.0,
+     "pain": 8,
+     "rr": 20.0,
+     "spo2": 96.0,
+     "systolic": 136.0,
+     "tempC": 36.9
+    }
+   },
+   "label": "routine o2"
+  },
+  {
+   "condition_id": "acs_stemi",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 82.0,
+      "hr": 98.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 135.0,
+      "tempC": 36.9
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "stable",
+     "vitals": {
+      "diastolic": 78.0,
+      "hr": 83.0,
+      "rr": 17.0,
+      "spo2": 97.0,
+      "systolic": 128.0,
+      "tempC": 36.9
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 81.0,
+      "hr": 99.0,
+      "rr": 20.0,
+      "spo2": 96.0,
+      "systolic": 134.0,
+      "tempC": 36.9
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "acs_stemi"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 78.0,
+      "hr": 83.0,
+      "rr": 17.0,
+      "spo2": 97.0,
+      "systolic": 128.0,
+      "tempC": 36.9
+     }
+    }
+   },
+   "input": {
+    "condition_id": "acs_stemi",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 300000,
+      "classes": [
+       "antiplatelet"
+      ],
+      "code": "asa_p2y12",
+      "effects": [],
+      "kind": "treatment",
+      "row": "asa_p2y12",
+      "seq": 0,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 480000,
+      "classes": [
+       "procedure"
+      ],
+      "code": "primary_pci",
+      "effects": [
+       {
+        "delta": -3.0,
+        "key": "pain",
+        "onsetMs": 5400000
+       }
+      ],
+      "kind": "treatment",
+      "row": "primary_pci",
+      "seq": 1,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 51.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 82.0,
+     "hr": 98.0,
+     "pain": 8,
+     "rr": 20.0,
+     "spo2": 96.0,
+     "systolic": 136.0,
+     "tempC": 36.9
+    }
+   },
+   "label": "aspirin+pci"
+  },
+  {
+   "condition_id": "pulmonary_embolism",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "pulmonary_embolism"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 68.0,
+      "hr": 116.0,
+      "rr": 26.0,
+      "spo2": 89.0,
+      "systolic": 108.0,
+      "tempC": 37.2
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "pulmonary_embolism"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 66.0,
+      "hr": 121.0,
+      "rr": 27.0,
+      "spo2": 87.0,
+      "systolic": 105.0,
+      "tempC": 37.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "pulmonary_embolism"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 68.0,
+      "hr": 117.0,
+      "rr": 26.0,
+      "spo2": 89.0,
+      "systolic": 107.0,
+      "tempC": 37.2
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "pulmonary_embolism"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 67.0,
+      "hr": 119.0,
+      "rr": 27.0,
+      "spo2": 88.0,
+      "systolic": 107.0,
+      "tempC": 37.2
+     }
+    }
+   },
+   "input": {
+    "condition_id": "pulmonary_embolism",
+    "events": [],
+    "patient": {
+     "age": 33.0,
+     "allergies": [
+      {
+       "agent_class": "contrast",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 68.0,
+     "hr": 116.0,
+     "rr": 26.0,
+     "spo2": 89.0,
+     "systolic": 108.0,
+     "tempC": 37.2
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "pulmonary_embolism",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "pulmonary_embolism"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 68.0,
+      "hr": 116.0,
+      "rr": 26.0,
+      "spo2": 89.0,
+      "systolic": 108.0,
+      "tempC": 37.2
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "pulmonary_embolism"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "stable",
+     "vitals": {
+      "diastolic": 68.0,
+      "hr": 116.0,
+      "rr": 26.0,
+      "spo2": 89.0,
+      "systolic": 108.0,
+      "tempC": 37.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "pulmonary_embolism"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "stable",
+     "vitals": {
+      "diastolic": 68.0,
+      "hr": 116.0,
+      "rr": 26.0,
+      "spo2": 89.0,
+      "systolic": 108.0,
+      "tempC": 37.2
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "pulmonary_embolism"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "stable",
+     "vitals": {
+      "diastolic": 68.0,
+      "hr": 116.0,
+      "rr": 26.0,
+      "spo2": 89.0,
+      "systolic": 108.0,
+      "tempC": 37.2
+     }
+    }
+   },
+   "input": {
+    "condition_id": "pulmonary_embolism",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 600000,
+      "classes": [
+       "anticoagulant"
+      ],
+      "code": "anticoag",
+      "effects": [],
+      "kind": "treatment",
+      "row": "anticoag",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 33.0,
+     "allergies": [
+      {
+       "agent_class": "contrast",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 68.0,
+     "hr": 116.0,
+     "rr": 26.0,
+     "spo2": 89.0,
+     "systolic": 108.0,
+     "tempC": 37.2
+    }
+   },
+   "label": "anticoag"
+  },
+  {
+   "condition_id": "pulmonary_embolism",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "pulmonary_embolism"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 69.0,
+      "hr": 115.0,
+      "rr": 26.0,
+      "spo2": 89.0,
+      "systolic": 110.0,
+      "tempC": 37.2
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "pe_high_risk"
+     ],
+     "gcs": 3.0,
+     "lactate": 3.2,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 37.2
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "pe_high_risk"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 56.0,
+      "hr": 115.0,
+      "rr": 27.0,
+      "spo2": 88.0,
+      "systolic": 85.0,
+      "tempC": 37.2
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "pe_high_risk"
+     ],
+     "gcs": 3.0,
+     "lactate": 1.9,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 37.2
+     }
+    }
+   },
+   "input": {
+    "condition_id": "pulmonary_embolism",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 300000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 0,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 600000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 1,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 900000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 2,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 1200000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 3,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 33.0,
+     "allergies": [
+      {
+       "agent_class": "contrast",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 0,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 68.0,
+     "hr": 116.0,
+     "rr": 26.0,
+     "spo2": 89.0,
+     "systolic": 108.0,
+     "tempC": 37.2
+    }
+   },
+   "label": "2 L fluid"
+  },
+  {
+   "condition_id": "anaphylaxis",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 12.0,
+     "lactate": 3.1,
+     "phase": "peri_arrest",
+     "vitals": {
+      "diastolic": 38.0,
+      "hr": 136.0,
+      "rr": 31.0,
+      "spo2": 84.0,
+      "systolic": 68.0,
+      "tempC": 36.9
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 3.0,
+     "lactate": 5.3,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 36.9
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 3.0,
+     "lactate": 3.6,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 36.9
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 3.0,
+     "lactate": 4.2,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 36.9
+     }
+    }
+   },
+   "input": {
+    "condition_id": "anaphylaxis",
+    "events": [],
+    "patient": {
+     "age": 19.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "pruritus"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 4,
+     "diastolic": 46.0,
+     "hr": 128.0,
+     "lactate": 3.0,
+     "rr": 28.0,
+     "spo2": 91.0,
+     "systolic": 82.0,
+     "tempC": 36.9
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "anaphylaxis",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 15.0,
+     "lactate": 3.1,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 60.0,
+      "hr": 114.0,
+      "rr": 20.0,
+      "spo2": 97.0,
+      "systolic": 111.0,
+      "tempC": 36.9
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.1,
+     "phase": "stable",
+     "vitals": {
+      "diastolic": 69.0,
+      "hr": 94.0,
+      "rr": 17.0,
+      "spo2": 96.0,
+      "systolic": 114.0,
+      "tempC": 36.9
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.9,
+     "phase": "stable",
+     "vitals": {
+      "diastolic": 71.0,
+      "hr": 93.0,
+      "rr": 16.0,
+      "spo2": 97.0,
+      "systolic": 117.0,
+      "tempC": 36.9
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 15.0,
+     "lactate": 2.6,
+     "phase": "stable",
+     "vitals": {
+      "diastolic": 69.0,
+      "hr": 94.0,
+      "rr": 17.0,
+      "spo2": 96.0,
+      "systolic": 114.0,
+      "tempC": 36.9
+     }
+    }
+   },
+   "input": {
+    "condition_id": "anaphylaxis",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 180000,
+      "classes": [
+       "adrenaline_im"
+      ],
+      "code": "3992-im",
+      "effects": [],
+      "kind": "treatment",
+      "row": "im_adrenaline",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 19.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "pruritus"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 4,
+     "diastolic": 46.0,
+     "hr": 128.0,
+     "lactate": 3.0,
+     "rr": 28.0,
+     "spo2": 91.0,
+     "systolic": 82.0,
+     "tempC": 36.9
+    }
+   },
+   "label": "IM adrenaline"
+  },
+  {
+   "condition_id": "anaphylaxis",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 12.0,
+     "lactate": 3.1,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 41.0,
+      "hr": 133.0,
+      "rr": 31.0,
+      "spo2": 84.0,
+      "systolic": 74.0,
+      "tempC": 36.9
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 3.0,
+     "lactate": 5.6,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 36.9
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 3.0,
+     "lactate": 3.6,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 36.9
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "anaphylaxis"
+     ],
+     "gcs": 3.0,
+     "lactate": 4.4,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 36.9
+     }
+    }
+   },
+   "input": {
+    "condition_id": "anaphylaxis",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 180000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "iv_fluid_bolus",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 19.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "pruritus"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "crt": 4,
+     "diastolic": 46.0,
+     "hr": 128.0,
+     "lactate": 3.0,
+     "rr": 28.0,
+     "spo2": 91.0,
+     "systolic": 82.0,
+     "tempC": 36.9
+    }
+   },
+   "label": "fluids only"
+  },
+  {
+   "condition_id": "heart_failure_acute",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 93.0,
+      "hr": 118.0,
+      "rr": 31.0,
+      "spo2": 86.0,
+      "systolic": 163.0,
+      "tempC": 36.8
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 3.0,
+     "lactate": 1.1,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 36.8
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 13.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 94.0,
+      "hr": 121.0,
+      "rr": 32.0,
+      "spo2": 83.0,
+      "systolic": 165.0,
+      "tempC": 36.8
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 9.0,
+     "lactate": 1.2,
+     "phase": "peri_arrest",
+     "vitals": {
+      "diastolic": 96.0,
+      "hr": 126.0,
+      "rr": 33.0,
+      "spo2": 79.0,
+      "systolic": 169.0,
+      "tempC": 36.8
+     }
+    }
+   },
+   "input": {
+    "condition_id": "heart_failure_acute",
+    "events": [],
+    "patient": {
+     "age": 51.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 92.0,
+     "hr": 116.0,
+     "rr": 30.0,
+     "spo2": 87.0,
+     "systolic": 162.0,
+     "tempC": 36.8
+    }
+   },
+   "label": "none"
+  },
+  {
+   "condition_id": "heart_failure_acute",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 93.0,
+      "hr": 118.0,
+      "rr": 32.0,
+      "spo2": 85.0,
+      "systolic": 163.0,
+      "tempC": 36.8
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 3.0,
+     "lactate": 2.4,
+     "phase": "arrest",
+     "vitals": {
+      "diastolic": 0.0,
+      "hr": 0.0,
+      "rr": 0.0,
+      "spo2": 0.0,
+      "systolic": 0.0,
+      "tempC": 36.8
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 10.0,
+     "lactate": 1.2,
+     "phase": "peri_arrest",
+     "vitals": {
+      "diastolic": 94.0,
+      "hr": 121.0,
+      "rr": 48.0,
+      "spo2": 71.0,
+      "systolic": 165.0,
+      "tempC": 36.8
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 9.0,
+     "lactate": 1.2,
+     "phase": "peri_arrest",
+     "vitals": {
+      "diastolic": 96.0,
+      "hr": 126.0,
+      "rr": 57.0,
+      "spo2": 61.0,
+      "systolic": 169.0,
+      "tempC": 36.8
+     }
+    }
+   },
+   "input": {
+    "condition_id": "heart_failure_acute",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 300000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 0,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 600000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 1,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 900000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 2,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 1200000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 3,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 1500000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 4,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 1800000,
+      "classes": [
+       "fluids"
+      ],
+      "code": "313002",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 5,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 51.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 92.0,
+     "hr": 116.0,
+     "rr": 30.0,
+     "spo2": 87.0,
+     "systolic": 162.0,
+     "tempC": 36.8
+    }
+   },
+   "label": "3 L fluid"
+  },
+  {
+   "condition_id": "heart_failure_acute",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 85.0,
+      "hr": 118.0,
+      "rr": 25.0,
+      "spo2": 91.0,
+      "systolic": 148.0,
+      "tempC": 36.8
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "stable",
+     "vitals": {
+      "diastolic": 85.0,
+      "hr": 101.0,
+      "rr": 11.0,
+      "spo2": 100.0,
+      "systolic": 145.0,
+      "tempC": 36.8
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 85.0,
+      "hr": 114.0,
+      "rr": 18.0,
+      "spo2": 98.0,
+      "systolic": 148.0,
+      "tempC": 36.8
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "heart_failure_acute"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 85.0,
+      "hr": 102.0,
+      "rr": 11.0,
+      "spo2": 100.0,
+      "systolic": 146.0,
+      "tempC": 36.8
+     }
+    }
+   },
+   "input": {
+    "condition_id": "heart_failure_acute",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 300000,
+      "classes": [
+       "nitrate",
+       "niv"
+      ],
+      "code": "niv_nitrate",
+      "effects": [
+       {
+        "delta": 4.0,
+        "key": "spo2",
+        "onsetMs": 300000
+       }
+      ],
+      "kind": "treatment",
+      "row": "niv_nitrate",
+      "seq": 0,
+      "volume_ml": 500.0
+     },
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 600000,
+      "classes": [
+       "loop_diuretic"
+      ],
+      "code": "iv_diuretic",
+      "effects": [
+       {
+        "delta": -4.0,
+        "key": "rr",
+        "onsetMs": 900000
+       },
+       {
+        "delta": 3.0,
+        "key": "spo2",
+        "onsetMs": 900000
+       }
+      ],
+      "kind": "treatment",
+      "row": "iv_diuretic",
+      "seq": 1,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 51.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 92.0,
+     "hr": 116.0,
+     "rr": 30.0,
+     "spo2": 87.0,
+     "systolic": 162.0,
+     "tempC": 36.8
+    }
+   },
+   "label": "decongestion"
+  }
+ ],
+ "marks": [
+  10,
+  30,
+  60,
+  120
+ ]
+}

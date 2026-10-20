@@ -23,6 +23,7 @@ import { CODE_SYSTEMS, type Observation as FhirObservation } from "@/domain/fhir
 import type { GeneratedCaseSpec, SpecLab, SpecTreatment } from "@/lib/liveCaseGen";
 import type {
   DirectorAffect,
+  DirectorBedside,
   DirectorVitals,
   PatientVisibleChanges,
 } from "@/lib/caseGenV2";
@@ -160,13 +161,17 @@ export function resultsCaseState(
   c: CaseInstance,
   treatments: AdministeredTreatment[],
   labels: Record<string, string> = {},
+  director: Record<string, unknown> | null = null,
 ): ResultsCaseState {
   const given: TreatmentGiven[] = treatments.map((t) => ({
     code: t.code,
     label: labels[t.code] ?? t.code,
     at_ms: t.at,
   }));
-  return { ...(caseInstanceToSpec(c) as ResultsCaseState), treatments_given: given };
+  // Review 06b F19: in Live mode the results engine reads the Director's live
+  // state (severity, MAP, perfusion lactate, CBG, K, branch) instead of ESI.
+  const base = { ...(caseInstanceToSpec(c) as ResultsCaseState), treatments_given: given };
+  return director ? ({ ...base, director } as ResultsCaseState) : base;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -219,6 +224,12 @@ export interface DirectorOverlay {
   complications: string[];
   /** Last in-character line (persona colour, never a clinical fact). */
   utterance: { en: string; tr: string } | null;
+  /** Review 06b: the Director's bedside state, phase and active diagnoses at `atMs`. */
+  bedside?: DirectorBedside | null;
+  phase?: PatientVisibleChanges["phase"] | null;
+  activeDiagnoses?: string[];
+  /** Live state for the results engine (06b F19). */
+  results?: Record<string, unknown> | null;
 }
 
 /**
@@ -233,7 +244,12 @@ export function applyDirectorChanges(
   localAtStep: CurrentVitals,
   atMs: number,
 ): DirectorOverlay {
-  const vitals = clampDirectorVitals(changes.vitals ?? localAtStep);
+  // Review 06b: in cardiac arrest the server reports no pulse and zero vitals;
+  // render that state as it is instead of clamping it to a living range.
+  const arrest = changes.bedside?.pulse === false;
+  const vitals = arrest
+    ? { hr: 0, systolic: 0, diastolic: 0, rr: 0, spo2: 0, tempC: finite(changes.vitals?.tempC, localAtStep.tempC) }
+    : clampDirectorVitals(changes.vitals ?? localAtStep);
   const delta = {} as CurrentVitals;
   for (const k of VITAL_KEYS) {
     const b = DIRECTOR_BOUNDS[k];
@@ -257,12 +273,18 @@ export function applyDirectorChanges(
     sanctionedFacts: Array.from(facts),
     complications: Array.from(comps),
     utterance,
+    bedside: changes.bedside ?? prev?.bedside ?? null,
+    phase: changes.phase ?? prev?.phase ?? null,
+    activeDiagnoses: changes.active_diagnoses ?? prev?.activeDiagnoses ?? [],
+    results: changes.results ?? prev?.results ?? null,
   };
 }
 
 /** Local course vitals with the Director overlay applied and clamped. */
 export function overlayVitals(local: CurrentVitals, overlay: DirectorOverlay | null): CurrentVitals {
   if (!overlay) return local;
+  // The server is authoritative: an arrest it reported stays on the monitor.
+  if (overlay.bedside?.pulse === false) return { ...overlay.vitals };
   const merged = {} as CurrentVitals;
   for (const k of VITAL_KEYS) merged[k] = local[k] + overlay.delta[k];
   return clampDirectorVitals(merged);

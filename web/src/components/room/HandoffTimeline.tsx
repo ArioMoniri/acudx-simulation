@@ -40,7 +40,7 @@ export function HandoffTimeline({ roomId, state, actingRole, lang }: HandoffTime
     >
       <div className="flex items-center gap-2">
         <ArrowsLeftRight weight="bold" className="h-4 w-4 text-brand" aria-hidden />
-        <h2 className="text-sm font-semibold text-fg">{t("roomscollab.handoff.title")}</h2>
+        <h2 className="text-[1.0625rem] text-fg">{t("roomscollab.handoff.title")}</h2>
       </div>
 
       {/* Who holds control now */}

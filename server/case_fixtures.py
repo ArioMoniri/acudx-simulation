@@ -513,7 +513,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             # Review 02 finding 37: thrombolysis BP gate <185/110 before and <180/105
             # after alteplase/tenecteplase; glucose exclusion <2.8 or >22 mmol/L.
             # AHA/ASA 2019 https://doi.org/10.1161/STR.0000000000000211
-            ("bp_gate_lysis", "Lower BP to below 185/110 before thrombolysis (then keep below 180/105)", "Tromboliz öncesi TA'yı 185/110 altına düşür (sonra 180/105 altında tut)", "indicated", [("systolic", -15.0, 600000)], "Thrombolysis is allowed only with BP below 185/110 and glucose between 2.8 and 22 mmol/L.", "Tromboliz yalnızca TA 185/110 altında ve glukoz 2.8-22 mmol/L arasında iken verilir."),
+            ("bp_gate_lysis", "Lower BP to below 185/110 before lysis (then keep below 180/105)", "Litik tedavi öncesi TA'yı 185/110 altına düşür (sonra 180/105 altında tut)", "indicated", [("systolic", -15.0, 600000)], "Thrombolysis is allowed only with BP below 185/110 and glucose between 2.8 and 22 mmol/L.", "Tromboliz yalnızca TA 185/110 altında ve glukoz 2.8-22 mmol/L arasında iken verilir."),
         ],
     },
     "intracerebral_hemorrhage": {
@@ -742,7 +742,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
                     "Hiperkalemik değişiklikleri tarayın.",
                     "adrenal crisis ECG hyperkalemia", "adrenal kriz EKG hiperkalemi"),
         "treatments": [
-            ("hydrocortisone", "IV hydrocortisone", "IV hidrokortizon", "indicated", [("systolic", 10.0, 600000)], "Immediate steroid replacement.", "Hemen steroid replasmanı."),
+            ("hydrocortisone", "IV hydrocortisone", "IV hidrokortizon", "indicated", [], "Immediate steroid replacement; pressure recovers over the next hour (Endocrine Society 2016).", "Hemen steroid replasmanı."),
             ("fluids_dextrose", "IV fluids + dextrose", "IV sıvı + dekstroz", "indicated", [("hr", -8.0, 600000)], "Resuscitate and correct glucose.", "Resüsite edin ve glukozu düzeltin."),
             ("delay_steroid", "Delay steroids pending tests", "Testler için steroidi ertele", "contraindicated", [], "Do not delay steroids for confirmation.", "Doğrulama için steroidi geciktirmeyin."),
         ],
@@ -2280,3 +2280,1788 @@ def draw_allergy(rng: Any, pool: list[tuple[str, str]]) -> tuple[str, str]:
         if x <= 0:
             return a
     return items[-1][0]
+
+
+# =========================================================================== #
+# Review 06b F03: treatment fixtures for the 47 ESI 1 to 2 conditions that     #
+# had none and so inherited generic system rows ("A-to-E assessment",          #
+# "analgesia"). Each fixture names the definitive therapy the course rule      #
+# (CONDITION_COURSE below) requires, a supportive row and one specific         #
+# contraindicated distractor. Sources are cited in the narrative and guide.    #
+# =========================================================================== #
+def _t(code: str, en: str, tr: str, appr: str, nen: str, ntr: str, effects: list | None = None) -> tuple:
+    return (code, en, tr, appr, effects or [], nen, ntr)
+
+
+ESI12_FIXTURES: dict[str, dict[str, Any]] = {
+    "anaphylaxis": {"treatments": [
+        _t("im_adrenaline", "IM adrenaline 0.5 mg anterolateral thigh, repeat after 5 min if no improvement",
+           "İ.M. adrenalin 0.5 mg uyluk anterolateral, düzelme yoksa 5 dk sonra tekrar", "indicated",
+           "First-line treatment; acts within minutes (RCUK 2021).", "Birinci basamak tedavi; dakikalar içinde etki eder (RCUK 2021)."),
+        _t("high_flow_o2", "High-flow oxygen 15 L/min via reservoir mask", "Rezervuarlı maske ile 15 L/dk yüksek akım oksijen", "indicated",
+           "Supportive; does not treat the reaction.", "Destekleyici; reaksiyonu tedavi etmez."),
+        _t("iv_fluid_bolus", "IV crystalloid 500 mL bolus for hypotension", "Hipotansiyon için İ.V. 500 mL kristaloid bolus", "indicated",
+           "Supportive volume; no improvement without adrenaline (RCUK 2021).", "Destekleyici sıvı; adrenalin olmadan düzelme olmaz (RCUK 2021)."),
+        _t("antihistamine_instead", "Antihistamine and steroid instead of adrenaline", "Adrenalin yerine antihistaminik ve steroid", "contraindicated",
+           "Antihistamines and steroids are not first-line and never replace adrenaline (RCUK 2021).",
+           "Antihistaminik ve steroid birinci basamak değildir, adrenalinin yerini tutmaz (RCUK 2021)."),
+    ], "guide": ("RCUK", "Resuscitation Council UK 2021 Emergency treatment of anaphylaxis",
+                 "Give IM adrenaline 500 micrograms immediately and repeat after 5 minutes if there is no improvement.",
+                 "Hemen İ.M. 500 mikrogram adrenalin verin ve 5 dakika sonra düzelme yoksa tekrarlayın.")},
+    "cardiac_arrest": {"treatments": [
+        _t("cpr_defib", "High-quality CPR 30:2, rhythm check and immediate defibrillation if VF/pVT",
+           "Yüksek kaliteli KPR 30:2, ritim kontrolü, VF/nVT ise hemen defibrilasyon", "indicated",
+           "Early defibrillation is the key intervention in shockable arrest (ERC 2021).", "Şoklanabilir arrestte erken defibrilasyon temel girişimdir (ERC 2021)."),
+        _t("adrenaline_1mg", "Adrenaline 1 mg IV every 3 to 5 min", "Her 3-5 dakikada İ.V. 1 mg adrenalin", "indicated",
+           "Non-shockable: as soon as possible; shockable: after the third shock (ERC 2021).", "Şoklanamayan ritimde hemen; şoklanabilirde 3. şoktan sonra (ERC 2021)."),
+        _t("amiodarone_300", "Amiodarone 300 mg IV after three shocks", "Üç şoktan sonra İ.V. 300 mg amiodaron", "indicated",
+           "Refractory VF/pVT (ERC 2021).", "Dirençli VF/nVT (ERC 2021)."),
+        _t("long_pauses", "Prolonged pauses in compressions for intubation", "Entübasyon için göğüs basısına uzun ara", "contraindicated",
+           "Pauses over 5 seconds reduce survival (ERC 2021).", "5 saniyeden uzun aralar sağkalımı azaltır (ERC 2021)."),
+    ], "guide": ("ERC", "European Resuscitation Council Guidelines 2021: Adult advanced life support",
+                 "Minimise interruptions in chest compressions and defibrillate shockable rhythms immediately.",
+                 "Göğüs basısı kesintilerini en aza indirin ve şoklanabilir ritimleri hemen defibrile edin.")},
+    "major_trauma": {"treatments": [
+        _t("haemorrhage_control", "Control catastrophic haemorrhage first (tourniquet, packing, pelvic binder)", "Önce masif kanamayı kontrol edin (turnike, tampon, pelvik kuşak)", "indicated",
+           "<C>ABCDE: catastrophic haemorrhage first (NICE NG39).", "<C>ABCDE: önce masif kanama (NICE NG39)."),
+        _t("txa", "Tranexamic acid 1 g IV within 3 h of injury", "Yaralanmadan sonraki 3 saat içinde İ.V. 1 g traneksamik asit", "indicated",
+           "Reduces bleeding death when given within 3 h (CRASH-2).", "3 saat içinde verildiğinde kanama ölümünü azaltır (CRASH-2)."),
+        _t("blood_products", "Major haemorrhage protocol: red cells and plasma 1:1", "Masif kanama protokolü: eritrosit ve plazma 1:1", "indicated",
+           "Blood products, not crystalloid, for haemorrhagic shock (NICE NG39).", "Hemorajik şokta kristaloid değil kan ürünü (NICE NG39)."),
+        _t("crystalloid_large", "Large-volume crystalloid resuscitation (2 L or more)", "Büyük hacimli kristaloid resüsitasyonu (2 L veya fazla)", "contraindicated",
+           "Excess crystalloid dilutes clotting factors; use blood products (NICE NG39).", "Fazla kristaloid pıhtılaşma faktörlerini seyreltir; kan ürünü kullanın (NICE NG39)."),
+    ], "guide": ("NICE", "NICE NG39 Major trauma: assessment and initial management",
+                 "Use tranexamic acid as soon as possible in major trauma with suspected active bleeding.",
+                 "Aktif kanama düşünülen majör travmada traneksamik asidi mümkün olan en kısa sürede kullanın.")},
+    "heat_stroke": {"treatments": [
+        _t("active_cooling", "Rapid active cooling (cold-water immersion or evaporative) to 38.5 to 39 C", "38.5-39 C'ye hızlı aktif soğutma (soğuk su veya evaporatif)", "indicated",
+           "Cool first; outcome worsens with time above 40.5 C (ACSM 2023).", "Önce soğutun; 40.5 C üzerinde geçen süreyle sonuç kötüleşir (ACSM 2023)."),
+        _t("iv_fluids", "IV crystalloid for hypotension", "Hipotansiyon için İ.V. kristaloid", "indicated",
+           "Supportive volume.", "Destekleyici sıvı."),
+        _t("antipyretic_cooling", "Paracetamol as the cooling strategy", "Soğutma yöntemi olarak parasetamol", "contraindicated",
+           "Antipyretics do not lower a non-pyrogenic temperature (ACSM 2023).", "Antipiretikler pirojenik olmayan ateşi düşürmez (ACSM 2023)."),
+    ], "guide": ("ACSM", "ACSM Expert Consensus Statement on Exertional Heat Illness 2023",
+                 "Begin whole-body cooling immediately; cool first, transport second.",
+                 "Hemen tüm vücut soğutmasına başlayın; önce soğutun, sonra nakledin.")},
+    "hypothermia": {"treatments": [
+        _t("active_rewarming", "Active external and minimally invasive rewarming (forced air, warmed IV fluids)", "Aktif dış ve minimal invaziv ısıtma (sıcak hava, ısıtılmış İ.V. sıvı)", "indicated",
+           "Rewarm while monitoring for arrhythmia (ERC 2021).", "Aritmi izlemi altında ısıtın (ERC 2021)."),
+        _t("gentle_handling", "Gentle horizontal handling and cardiac monitoring", "Nazik, yatay pozisyonda taşıma ve kardiyak monitörizasyon", "indicated",
+           "Rough handling can trigger VF in severe hypothermia (ERC 2021).", "Ağır hipotermide kaba hareket VF tetikleyebilir (ERC 2021)."),
+        _t("rough_handling", "Rapid upright transfer and vigorous handling", "Hızlı dik pozisyona alma ve kaba taşıma", "contraindicated",
+           "Risk of VF in a cold myocardium (ERC 2021).", "Soğuk miyokardda VF riski (ERC 2021)."),
+    ], "guide": ("ERC", "ERC Guidelines 2021: Cardiac arrest in special circumstances (hypothermia)",
+                 "Handle severely hypothermic patients gently and rewarm actively.",
+                 "Ağır hipotermik hastaları nazik taşıyın ve aktif olarak ısıtın.")},
+    "drowning": {"treatments": [
+        _t("ventilate_o2", "Airway and high-flow oxygen; ventilate if breathing is inadequate", "Hava yolu ve yüksek akım oksijen; solunum yetersizse ventile edin", "indicated",
+           "Hypoxia causes drowning arrest; oxygenate first (ERC 2021).", "Boğulmada arrestin nedeni hipoksidir; önce oksijenlendirin (ERC 2021)."),
+        _t("cpap_niv", "CPAP or NIV for persistent hypoxaemia", "Süren hipoksemide CPAP veya NIV", "indicated",
+           "Recruits flooded alveoli.", "Sıvıyla dolu alveolleri açar."),
+        _t("abdominal_thrusts", "Abdominal thrusts to drain water", "Suyu boşaltmak için abdominal bası", "contraindicated",
+           "Delays ventilation and risks aspiration (ERC 2021).", "Ventilasyonu geciktirir ve aspirasyon riski taşır (ERC 2021)."),
+    ], "guide": ("ERC", "ERC Guidelines 2021: Drowning",
+                 "Oxygenation and ventilation are the priority after drowning.",
+                 "Boğulma sonrası öncelik oksijenlenme ve ventilasyondur.")},
+    "electrical_injury": {"treatments": [
+        _t("ecg_monitor", "12-lead ECG and cardiac monitoring", "12 derivasyonlu EKG ve kardiyak monitörizasyon", "indicated",
+           "Arrhythmia is the early risk (ERC 2021).", "Erken risk aritmidir (ERC 2021)."),
+        _t("fluids_rhabdo", "IV fluids for deep tissue injury with a urine output target", "Derin doku hasarı için idrar hedefli İ.V. sıvı", "indicated",
+           "Protects against myoglobinuric AKI.", "Miyoglobinürik ABH'ye karşı korur."),
+        _t("discharge_no_ecg", "Discharge without an ECG", "EKG çekmeden taburcu", "contraindicated",
+           "High-voltage injury needs an ECG and monitoring.", "Yüksek voltaj yaralanmasında EKG ve izlem gerekir."),
+    ], "guide": ("ERC", "ERC Guidelines 2021: Cardiac arrest in special circumstances (electrocution)",
+                 "Monitor rhythm after high-voltage or lightning injury.",
+                 "Yüksek voltaj veya yıldırım yaralanmasından sonra ritmi izleyin.")},
+    "undiff_chest_pain": {"treatments": [
+        _t("ecg_10min", "12-lead ECG within 10 minutes of arrival", "Gelişten sonraki 10 dakika içinde 12 derivasyonlu EKG", "indicated",
+           "ESC 2023: ECG within 10 min of first medical contact.", "ESC 2023: ilk tıbbi temastan sonra 10 dk içinde EKG."),
+        _t("aspirin_if_acs", "Aspirin 300 mg if ACS is suspected and there is no contraindication", "AKS düşünülüyor ve kontrendikasyon yoksa 300 mg aspirin", "indicated",
+           "Antiplatelet loading as soon as ACS is suspected (ESC 2023).", "AKS düşünüldüğü anda antiplatelet yükleme (ESC 2023)."),
+        _t("serial_trop", "High-sensitivity troponin 0 h / 1 h", "Yüksek duyarlıklı troponin 0/1. saat", "indicated",
+           "Rule-in / rule-out algorithm (ESC 2023).", "Dahil etme / dışlama algoritması (ESC 2023)."),
+        _t("discharge_before_trop", "Discharge before ECG and troponin", "EKG ve troponin öncesi taburcu", "contraindicated",
+           "Misses ACS, PE and dissection.", "AKS, PE ve diseksiyonu atlar."),
+    ], "guide": ("ESC", "2023 ESC Guidelines for the management of acute coronary syndromes",
+                 "Record and interpret a 12-lead ECG within 10 minutes of first medical contact.",
+                 "İlk tıbbi temastan sonra 10 dakika içinde 12 derivasyonlu EKG çekip yorumlayın.")},
+    "undiff_dyspnea": {"treatments": [
+        _t("o2_titrated", "Oxygen titrated to SpO2 94 to 98 % (88 to 92 % if hypercapnic risk)", "SpO2 %94-98'e titre oksijen (hiperkapni riskinde %88-92)", "indicated",
+           "Target-range oxygen (BTS 2017).", "Hedef aralıklı oksijen (BTS 2017)."),
+        _t("abg_cxr_ecg", "Blood gas, chest X-ray and ECG", "Kan gazı, akciğer grafisi ve EKG", "indicated",
+           "Find the cause before specific therapy.", "Özgül tedaviden önce nedeni bulun."),
+        _t("sedation_dyspnoea", "Sedation for distress before a diagnosis", "Tanı konmadan sıkıntı için sedasyon", "contraindicated",
+           "Suppresses respiratory drive.", "Solunum dürtüsünü baskılar."),
+    ], "guide": ("BTS", "BTS guideline for oxygen use in adults in healthcare and emergency settings 2017",
+                 "Prescribe oxygen to a target saturation of 94 to 98 %, or 88 to 92 % if at risk of hypercapnia.",
+                 "Oksijeni %94-98 hedef satürasyonla, hiperkapni riski varsa %88-92 ile reçeteleyin.")},
+    "poisoning_unknown": {"treatments": [
+        _t("abcde_glucose_ecg", "ABCDE, capillary glucose, ECG and toxidrome screen", "ABCDE, kapiller glukoz, EKG ve toksidrom taraması", "indicated",
+           "Treat what threatens life first (AHA 2023 toxicology).", "Önce yaşamı tehdit edeni tedavi edin (AHA 2023 toksikoloji)."),
+        _t("airway_support", "Airway support and close observation", "Hava yolu desteği ve yakın izlem", "indicated",
+           "Supportive care is the mainstay.", "Destek tedavisi temeldir."),
+        _t("empirical_flumazenil", "Empirical flumazenil", "Ampirik flumazenil", "contraindicated",
+           "Can precipitate seizures, especially with co-ingested tricyclics (AHA 2023).", "Özellikle trisiklik birlikte alındıysa nöbet tetikleyebilir (AHA 2023)."),
+    ], "guide": ("AHA", "2023 AHA Focused Update on the Management of Patients With Cardiac Arrest or Life-Threatening Toxicity Due to Poisoning",
+                 "Do not routinely give flumazenil to patients with undifferentiated coma.",
+                 "Ayırıcı tanısı yapılmamış komada rutin flumazenil vermeyin.")},
+    "acute_agitation": {"treatments": [
+        _t("verbal_deesc", "Verbal de-escalation in a safe environment", "Güvenli ortamda sözel yatıştırma", "indicated",
+           "First step (NICE NG10).", "İlk adım (NICE NG10)."),
+        _t("exclude_organic", "Exclude hypoglycaemia, hypoxia and intoxication", "Hipoglisemi, hipoksi ve zehirlenmeyi dışlayın", "indicated",
+           "Agitation may be organic.", "Ajitasyon organik olabilir."),
+        _t("rapid_tranq", "Offer oral, then IM rapid tranquillisation per protocol", "Protokole göre önce oral, sonra İ.M. hızlı sakinleştirme", "indicated",
+           "Only after de-escalation fails (NICE NG10).", "Yalnızca yatıştırma başarısız olursa (NICE NG10)."),
+        _t("prone_restraint", "Prolonged prone restraint", "Uzun süreli yüzüstü fiziksel tespit", "contraindicated",
+           "Positional asphyxia risk (NICE NG10).", "Pozisyonel asfiksi riski (NICE NG10)."),
+    ], "guide": ("NICE", "NICE NG10 Violence and aggression: short-term management",
+                 "Use de-escalation first; avoid prolonged prone restraint.",
+                 "Önce yatıştırma kullanın; uzun yüzüstü tespitten kaçının.")},
+    "hemoptysis": {"treatments": [
+        _t("bleeding_side_down", "Lie bleeding side down, secure the airway, oxygen", "Kanayan taraf altta yatırın, hava yolunu güvenceye alın, oksijen", "indicated",
+           "Protects the non-bleeding lung.", "Kanamayan akciğeri korur."),
+        _t("txa_hemoptysis", "Tranexamic acid", "Traneksamik asit", "indicated",
+           "Reduces bleeding volume.", "Kanama miktarını azaltır."),
+        _t("bae", "Urgent CT angiography and bronchial artery embolisation", "Acil BT anjiyografi ve bronşiyal arter embolizasyonu", "indicated",
+           "Definitive control of massive haemoptysis (Kathuria 2020).", "Masif hemoptizinin kesin kontrolü (Kathuria 2020)."),
+        _t("anticoag_hemoptysis", "Start anticoagulation", "Antikoagülasyon başlatma", "contraindicated",
+           "Worsens haemorrhage.", "Kanamayı artırır."),
+    ], "guide": ("J Intensive Care", "Kathuria H et al. Management of life-threatening hemoptysis. J Intensive Care 2020",
+                 "Protect the airway, position bleeding side down and arrange bronchial artery embolisation.",
+                 "Hava yolunu koruyun, kanayan tarafı alta alın ve bronşiyal arter embolizasyonu planlayın.")},
+    "aspiration_pneumonitis": {"treatments": [
+        _t("o2_suction", "Oxygen, suction and supportive care", "Oksijen, aspirasyon ve destek tedavisi", "indicated",
+           "Chemical pneumonitis is treated supportively (Mandell 2019).", "Kimyasal pnömonit destekle tedavi edilir (Mandell 2019)."),
+        _t("withhold_abx_48h", "Withhold antibiotics unless pneumonia develops", "Pnömoni gelişmedikçe antibiyotik vermeyin", "indicated",
+           "Early antibiotics do not help pneumonitis (Mandell 2019).", "Erken antibiyotik pnömonite yarar sağlamaz (Mandell 2019)."),
+        _t("routine_steroid", "Routine corticosteroids", "Rutin kortikosteroid", "contraindicated",
+           "No benefit (Mandell 2019).", "Yarar yoktur (Mandell 2019)."),
+    ], "guide": ("NEJM", "Mandell LA, Niederman MS. Aspiration pneumonia. NEJM 2019",
+                 "Treat aspiration pneumonitis supportively; antibiotics only if pneumonia develops.",
+                 "Aspirasyon pnömonitini destekle tedavi edin; antibiyotik yalnızca pnömoni gelişirse.")},
+    "ards": {"treatments": [
+        _t("lung_protective", "Intubation and lung-protective ventilation (6 mL/kg PBW, plateau below 30 cmH2O)", "Entübasyon ve akciğer koruyucu ventilasyon (6 mL/kg İVA, plato 30 cmH2O altı)", "indicated",
+           "Lowers mortality (ESICM 2023).", "Mortaliteyi azaltır (ESICM 2023)."),
+        _t("prone", "Prone positioning 12 h or more if PaO2/FiO2 below 150", "PaO2/FiO2 150 altıysa 12 saat veya fazla prone pozisyon", "indicated",
+           "ESICM 2023 strong recommendation.", "ESICM 2023 güçlü öneri."),
+        _t("conservative_fluid", "Conservative fluid strategy", "Kısıtlı sıvı stratejisi", "indicated",
+           "More ventilator-free days.", "Daha fazla ventilatörsüz gün."),
+        _t("high_tidal", "High tidal volume ventilation (10 to 12 mL/kg)", "Yüksek tidal hacimli ventilasyon (10-12 mL/kg)", "contraindicated",
+           "Ventilator-induced lung injury (ESICM 2023).", "Ventilatöre bağlı akciğer hasarı (ESICM 2023)."),
+    ], "guide": ("ESICM", "ESICM guidelines on acute respiratory distress syndrome 2023",
+                 "Use low tidal volume ventilation and prone positioning in moderate to severe ARDS.",
+                 "Orta-ağır ARDS'de düşük tidal hacim ve prone pozisyon kullanın.")},
+    "perforated_ulcer": {"treatments": [
+        _t("ppi_abx", "NBM, IV PPI and IV broad-spectrum antibiotics", "Ağızdan bir şey vermeyin, İ.V. PPI ve İ.V. geniş spektrumlu antibiyotik", "indicated",
+           "Peritonitis needs Gram-negative and anaerobic cover (WSES 2020).", "Peritonit Gram-negatif ve anaerop kapsam gerektirir (WSES 2020)."),
+        _t("iv_fluids", "IV fluid resuscitation", "İ.V. sıvı resüsitasyonu", "indicated",
+           "Restores perfusion.", "Perfüzyonu düzeltir."),
+        _t("emergency_surgery", "Emergency laparoscopic or open repair", "Acil laparoskopik veya açık onarım", "indicated",
+           "Source control; delay raises mortality (WSES 2020).", "Kaynak kontrolü; gecikme mortaliteyi artırır (WSES 2020)."),
+        _t("discharge_analgesia", "Discharge with analgesia", "Analjeziyle taburcu", "contraindicated",
+           "Free air with peritonism is a surgical emergency.", "Peritonizmle serbest hava cerrahi acildir."),
+    ], "guide": ("WSES", "Tarasconi A et al. Perforated and bleeding peptic ulcer: WSES guidelines 2020",
+                 "Operate on a perforated peptic ulcer as soon as possible, with antibiotics and resuscitation.",
+                 "Perfore peptik ülseri antibiyotik ve resüsitasyonla birlikte mümkün olan en kısa sürede ameliyat edin.")},
+    "mesenteric_ischemia": {"treatments": [
+        _t("ct_angio", "Urgent CT angiography", "Acil BT anjiyografi", "indicated",
+           "Diagnosis without delay (WSES 2022).", "Gecikmeden tanı (WSES 2022)."),
+        _t("heparin_fluids_abx", "IV heparin, fluids and broad-spectrum antibiotics", "İ.V. heparin, sıvı ve geniş spektrumlu antibiyotik", "indicated",
+           "Limits propagation and translocation (WSES 2022).", "Yayılmayı ve translokasyonu sınırlar (WSES 2022)."),
+        _t("revascularisation", "Emergency revascularisation and/or laparotomy", "Acil revaskülarizasyon ve/veya laparotomi", "indicated",
+           "Bowel viability depends on time.", "Bağırsak canlılığı zamana bağlıdır."),
+        _t("delay_ct_lactate", "Delay imaging because the lactate is normal", "Laktat normal diye görüntülemeyi geciktirme", "contraindicated",
+           "A normal lactate does not exclude ischaemia (WSES 2022).", "Normal laktat iskemiyi dışlamaz (WSES 2022)."),
+    ], "guide": ("WSES", "Bala M et al. Acute mesenteric ischemia: updated WSES guidelines 2022",
+                 "Perform CT angiography without delay when acute mesenteric ischaemia is suspected.",
+                 "Akut mezenter iskemi düşünüldüğünde gecikmeden BT anjiyografi yapın.")},
+    "tia": {"treatments": [
+        _t("aspirin_300", "Aspirin 300 mg immediately", "Hemen 300 mg aspirin", "indicated",
+           "NICE NG128: aspirin 300 mg unless contraindicated.", "NICE NG128: kontrendike değilse 300 mg aspirin."),
+        _t("specialist_24h", "Specialist assessment within 24 h", "24 saat içinde uzman değerlendirmesi", "indicated",
+           "NICE NG128.", "NICE NG128."),
+        _t("discharge_no_plan", "Discharge without antiplatelet or follow-up", "Antiplatelet veya kontrol olmadan taburcu", "contraindicated",
+           "Early stroke risk is highest in the first days.", "Erken inme riski ilk günlerde en yüksektir."),
+    ], "guide": ("NICE", "NICE NG128 Stroke and transient ischaemic attack in over 16s",
+                 "Offer aspirin 300 mg immediately to people with suspected TIA and refer for specialist assessment within 24 hours.",
+                 "TİA şüphesinde hemen 300 mg aspirin verin ve 24 saat içinde uzmana yönlendirin.")},
+    "gbs": {"treatments": [
+        _t("fvc_monitor", "Serial FVC; ICU review if FVC below 20 mL/kg", "Seri FVC; FVC 20 mL/kg altındaysa YBÜ değerlendirmesi", "indicated",
+           "Respiratory failure develops in about a quarter (EAN/PNS 2023).", "Hastaların yaklaşık dörtte birinde solunum yetmezliği gelişir (EAN/PNS 2023)."),
+        _t("ivig", "IVIg 0.4 g/kg/day for 5 days (or plasma exchange)", "5 gün 0.4 g/kg/gün İVİG (veya plazmaferez)", "indicated",
+           "Hastens recovery (EAN/PNS 2023).", "İyileşmeyi hızlandırır (EAN/PNS 2023)."),
+        _t("steroid_gbs", "Corticosteroids", "Kortikosteroid", "contraindicated",
+           "No benefit in GBS (EAN/PNS 2023).", "GBS'de yararı yoktur (EAN/PNS 2023)."),
+    ], "guide": ("EAN/PNS", "van Doorn PA et al. EAN/PNS Guillain-Barre syndrome guideline 2023",
+                 "Treat with IVIg or plasma exchange and monitor respiratory function closely.",
+                 "İVİG veya plazmaferezle tedavi edin ve solunum fonksiyonunu yakından izleyin.")},
+    "myasthenic_crisis": {"treatments": [
+        _t("airway_niv", "NIV or intubation for respiratory failure", "Solunum yetmezliği için NIV veya entübasyon", "indicated",
+           "Ventilatory failure is the threat.", "Asıl tehdit ventilatuvar yetmezliktir."),
+        _t("ivig_plex", "IVIg or plasma exchange", "İVİG veya plazmaferez", "indicated",
+           "International consensus 2016.", "Uluslararası uzlaşı 2016."),
+        _t("aminoglycoside_mg", "Aminoglycoside, fluoroquinolone or magnesium", "Aminoglikozit, florokinolon veya magnezyum", "contraindicated",
+           "Worsen neuromuscular transmission (Sanders 2016).", "Nöromüsküler iletimi bozar (Sanders 2016)."),
+    ], "guide": ("Neurology", "Sanders DB et al. International consensus guidance for management of myasthenia gravis 2016",
+                 "Treat myasthenic crisis with IVIg or plasma exchange and ventilatory support.",
+                 "Miyastenik krizi İVİG veya plazmaferez ve solunum desteğiyle tedavi edin.")},
+    "spinal_cord_compression": {"treatments": [
+        _t("dexamethasone_16", "Dexamethasone 16 mg", "16 mg deksametazon", "indicated",
+           "NICE NG234 for MSCC with neurological deficit.", "Nörolojik defisitli MSKB için NICE NG234."),
+        _t("mri_24h", "Whole-spine MRI within 24 h", "24 saat içinde tüm omurga MR", "indicated",
+           "Within 24 h if neurological symptoms (NICE NG234).", "Nörolojik belirti varsa 24 saat içinde (NICE NG234)."),
+        _t("spinal_referral", "Urgent spinal surgery or radiotherapy referral", "Acil omurga cerrahisi veya radyoterapi konsültasyonu", "indicated",
+           "Definitive decompression.", "Kesin dekompresyon."),
+        _t("mobilise_unstable", "Mobilise before spinal stability is assessed", "Omurga stabilitesi değerlendirilmeden mobilize etme", "contraindicated",
+           "Risk of further cord injury.", "Ek omurilik hasarı riski."),
+    ], "guide": ("NICE", "NICE NG234 Spinal metastases and metastatic spinal cord compression 2023",
+                 "Arrange MRI within 24 hours for suspected MSCC with neurological symptoms.",
+                 "Nörolojik belirtili MSKB şüphesinde 24 saat içinde MR planlayın.")},
+    "encephalitis": {"treatments": [
+        _t("aciclovir", "IV aciclovir 10 mg/kg 8-hourly immediately", "Hemen 8 saatte bir İ.V. 10 mg/kg asiklovir", "indicated",
+           "Start within 6 h of admission (ABN/BIA 2012).", "Yatıştan sonraki 6 saat içinde başlayın (ABN/BIA 2012)."),
+        _t("ct_then_lp", "CT head then lumbar puncture when safe", "BT sonrası güvenliyse lomber ponksiyon", "indicated",
+           "CSF confirms the diagnosis.", "BOS tanıyı doğrular."),
+        _t("delay_aciclovir", "Delay aciclovir until the LP result", "LP sonucuna kadar asikloviri geciktirme", "contraindicated",
+           "Delay worsens outcome (ABN/BIA 2012).", "Gecikme sonucu kötüleştirir (ABN/BIA 2012)."),
+    ], "guide": ("ABN/BIA", "Solomon T et al. Management of suspected viral encephalitis in adults (ABN/BIA) 2012",
+                 "Start IV aciclovir within 6 hours of admission in suspected encephalitis.",
+                 "Ensefalit şüphesinde yatıştan sonraki 6 saat içinde İ.V. asiklovir başlayın.")},
+    "tetanus": {"treatments": [
+        _t("htig", "Human tetanus immunoglobulin", "İnsan tetanoz immünoglobulini", "indicated",
+           "Neutralises unbound toxin (Yen 2019).", "Bağlanmamış toksini nötralize eder (Yen 2019)."),
+        _t("metronidazole_debride", "Metronidazole and wound debridement", "Metronidazol ve yara debridmanı", "indicated",
+           "Removes the toxin source.", "Toksin kaynağını uzaklaştırır."),
+        _t("benzo_mag_quiet", "Benzodiazepine or magnesium for spasms in a quiet dark room", "Sessiz karanlık odada spazmlar için benzodiazepin veya magnezyum", "indicated",
+           "Spasm and airway control.", "Spazm ve hava yolu kontrolü."),
+        _t("stimulation", "Repeated stimulation in a noisy bay", "Gürültülü alanda tekrarlayan uyarım", "contraindicated",
+           "Triggers spasms and laryngospasm.", "Spazm ve laringospazm tetikler."),
+    ], "guide": ("Lancet", "Yen LM, Thwaites CL. Tetanus. Lancet 2019",
+                 "Give antitoxin, debride the wound and control spasms.",
+                 "Antitoksin verin, yarayı debride edin ve spazmları kontrol edin.")},
+    "myxedema_coma": {"treatments": [
+        _t("iv_levothyroxine_hc", "IV levothyroxine plus hydrocortisone after a cortisol sample", "Kortizol örneği sonrası İ.V. levotiroksin ve hidrokortizon", "indicated",
+           "ATA 2014.", "ATA 2014."),
+        _t("supportive_passive", "Passive rewarming, ventilatory support and glucose", "Pasif ısıtma, solunum desteği ve glukoz", "indicated",
+           "Supportive care.", "Destek tedavisi."),
+        _t("aggressive_rewarm", "Aggressive active external rewarming", "Agresif aktif dış ısıtma", "contraindicated",
+           "Vasodilatation and hypotension (ATA 2014).", "Vazodilatasyon ve hipotansiyon (ATA 2014)."),
+    ], "guide": ("ATA", "Jonklaas J et al. ATA guidelines for the treatment of hypothyroidism 2014",
+                 "Treat myxoedema coma with IV thyroid hormone and glucocorticoid until adrenal insufficiency is excluded.",
+                 "Miksödem komasını adrenal yetmezlik dışlanana kadar İ.V. tiroid hormonu ve glukokortikoidle tedavi edin.")},
+    "hyponatremia": {"treatments": [
+        _t("hypertonic_bolus", "150 mL 3 % hypertonic saline over 20 min, repeat up to twice", "20 dakikada 150 mL %3 hipertonik salin, iki kez tekrar", "indicated",
+           "Aim for a 5 mmol/L rise in the first hour (European guideline 2014).", "İlk saatte 5 mmol/L artış hedefleyin (Avrupa kılavuzu 2014)."),
+        _t("limit_correction", "Limit correction to 10 mmol/L in 24 h", "24 saatte düzeltmeyi 10 mmol/L ile sınırlayın", "indicated",
+           "Prevents osmotic demyelination.", "Osmotik demiyelinizasyonu önler."),
+        _t("rapid_correction", "Correct by more than 10 to 12 mmol/L in 24 h", "24 saatte 10-12 mmol/L'den fazla düzeltme", "contraindicated",
+           "Osmotic demyelination risk (Spasovski 2014).", "Osmotik demiyelinizasyon riski (Spasovski 2014)."),
+    ], "guide": ("ESE/ESICM/ERBP", "Spasovski G et al. Clinical practice guideline on hyponatraemia 2014",
+                 "Give 150 mL 3 % hypertonic saline over 20 minutes for severe symptomatic hyponatraemia.",
+                 "Ağır semptomatik hiponatremide 20 dakikada 150 mL %3 hipertonik salin verin.")},
+    "pheochromocytoma": {"treatments": [
+        _t("alpha_blockade", "IV alpha-blockade (phentolamine) first", "Önce İ.V. alfa blokaj (fentolamin)", "indicated",
+           "Endocrine Society 2014.", "Endokrin Derneği 2014."),
+        _t("hdu_art_line", "Arterial line and HDU monitoring", "Arter hattı ve yoğun izlem", "indicated",
+           "Labile pressures.", "Değişken basınçlar."),
+        _t("beta_first", "Beta-blocker before alpha-blockade", "Alfa blokajdan önce beta bloker", "contraindicated",
+           "Unopposed alpha stimulation worsens hypertension (Endocrine Society 2014).", "Karşılanmamış alfa uyarımı hipertansiyonu kötüleştirir (Endokrin Derneği 2014)."),
+    ], "guide": ("Endocrine Society", "Lenders JWM et al. Pheochromocytoma and paraganglioma guideline 2014",
+                 "Block alpha receptors before beta receptors.",
+                 "Beta reseptörlerden önce alfa reseptörleri bloke edin.")},
+    "hyperkalemia_esrd": {"treatments": [
+        _t("calcium", "IV calcium gluconate 10 % 30 mL for ECG changes", "EKG değişikliği için İ.V. %10 kalsiyum glukonat 30 mL", "indicated",
+           "Stabilises the myocardium within minutes (UKKA 2023).", "Miyokardı dakikalar içinde stabilize eder (UKKA 2023)."),
+        _t("insulin_dextrose", "Insulin 10 units with 25 g glucose IV", "İ.V. 10 ünite insülin ve 25 g glukoz", "indicated",
+           "Shifts potassium into cells (UKKA 2023).", "Potasyumu hücre içine kaydırır (UKKA 2023)."),
+        _t("urgent_dialysis", "Urgent haemodialysis", "Acil hemodiyaliz", "indicated",
+           "Definitive removal in end-stage renal disease.", "Son dönem böbrek hastalığında kesin uzaklaştırma."),
+        _t("k_fluids", "Potassium-containing IV fluids", "Potasyum içeren İ.V. sıvılar", "contraindicated",
+           "Raises potassium further.", "Potasyumu daha da artırır."),
+    ], "guide": ("UKKA", "UK Kidney Association: Treatment of Acute Hyperkalaemia in Adults 2023",
+                 "Give IV calcium for hyperkalaemia with ECG changes, then insulin-glucose.",
+                 "EKG değişikliği olan hiperkalemide İ.V. kalsiyum, ardından insülin-glukoz verin.")},
+    "testicular_torsion": {"treatments": [
+        _t("urology_exploration", "Immediate urology review and scrotal exploration", "Hemen üroloji değerlendirmesi ve skrotal eksplorasyon", "indicated",
+           "Salvage falls after 6 h of symptoms (EAU 2023).", "Semptomların 6. saatinden sonra kurtarma oranı düşer (EAU 2023)."),
+        _t("analgesia", "IV analgesia", "İ.V. analjezi", "indicated",
+           "Comfort while theatre is arranged.", "Ameliyathane ayarlanırken rahatlık."),
+        _t("await_ultrasound", "Delay surgery for a Doppler ultrasound", "Doppler USG için cerrahiyi geciktirme", "contraindicated",
+           "Do not delay exploration for imaging (EAU 2023).", "Görüntüleme için eksplorasyonu geciktirmeyin (EAU 2023)."),
+    ], "guide": ("EAU", "EAU Guidelines on Paediatric Urology 2023 (testicular torsion)",
+                 "Testicular torsion is an emergency requiring immediate surgical exploration.",
+                 "Testis torsiyonu acil cerrahi eksplorasyon gerektirir.")},
+    "priapism": {"treatments": [
+        _t("aspiration_phenylephrine", "Corporal aspiration then intracavernosal phenylephrine", "Korporal aspirasyon ardından intrakavernöz fenilefrin", "indicated",
+           "First-line for ischaemic priapism (AUA/SMSNA 2022).", "İskemik priapizmde birinci basamak (AUA/SMSNA 2022)."),
+        _t("penile_block", "Analgesia and penile block", "Analjezi ve penil blok", "indicated",
+           "Comfort for the procedure.", "İşlem için rahatlık."),
+        _t("wait_resolution", "Wait for spontaneous resolution beyond 4 h", "4 saati aşan kendiliğinden düzelme beklentisi", "contraindicated",
+           "Ischaemia beyond 4 h causes fibrosis (AUA/SMSNA 2022).", "4 saati aşan iskemi fibroza yol açar (AUA/SMSNA 2022)."),
+    ], "guide": ("AUA/SMSNA", "Bivalacqua TJ et al. AUA/SMSNA guideline on priapism 2022",
+                 "Treat ischaemic priapism lasting more than 4 hours as an emergency.",
+                 "4 saati aşan iskemik priapizmi acil olarak tedavi edin.")},
+    "suicidal_ideation": {"treatments": [
+        _t("safe_observation", "Safe environment and continuous observation", "Güvenli ortam ve sürekli gözlem", "indicated",
+           "NICE NG225.", "NICE NG225."),
+        _t("psychosocial_assessment", "Psychosocial assessment and safety plan with mental health liaison", "Ruh sağlığı ekibiyle psikososyal değerlendirme ve güvenlik planı", "indicated",
+           "NICE NG225.", "NICE NG225."),
+        _t("discharge_unassessed", "Discharge before psychosocial assessment", "Psikososyal değerlendirme öncesi taburcu", "contraindicated",
+           "NICE NG225.", "NICE NG225."),
+    ], "guide": ("NICE", "NICE NG225 Self-harm: assessment, management and preventing recurrence 2022",
+                 "Offer a psychosocial assessment before discharge.",
+                 "Taburculuktan önce psikososyal değerlendirme önerin.")},
+    "acute_psychosis": {"treatments": [
+        _t("organic_screen", "Exclude an organic cause (glucose, infection, intoxication, delirium)", "Organik nedeni dışlayın (glukoz, enfeksiyon, zehirlenme, deliryum)", "indicated",
+           "NICE CG178.", "NICE CG178."),
+        _t("deesc_oral", "De-escalation and oral antipsychotic if needed", "Yatıştırma ve gerekirse oral antipsikotik", "indicated",
+           "NICE NG10.", "NICE NG10."),
+        _t("high_dose_im_combo", "High-dose IM antipsychotic combination as the first step", "İlk adım olarak yüksek doz İ.M. antipsikotik kombinasyonu", "contraindicated",
+           "Arrhythmia and dystonia risk (NICE NG10).", "Aritmi ve distoni riski (NICE NG10)."),
+    ], "guide": ("NICE", "NICE CG178 Psychosis and schizophrenia in adults",
+                 "Assess for physical causes of a first presentation of psychosis.",
+                 "İlk psikoz başvurusunda fiziksel nedenleri değerlendirin.")},
+    "serotonin_syndrome": {"treatments": [
+        _t("stop_agent_cool", "Stop serotonergic drugs, supportive care and active cooling", "Serotonerjik ilaçları kesin, destek tedavisi ve aktif soğutma", "indicated",
+           "Boyer 2005.", "Boyer 2005."),
+        _t("benzo", "Benzodiazepines for agitation and clonus", "Ajitasyon ve klonus için benzodiazepin", "indicated",
+           "Reduce muscle activity and heat.", "Kas aktivitesini ve ısıyı azaltır."),
+        _t("restraint_antipsychotic", "Physical restraint or haloperidol", "Fiziksel tespit veya haloperidol", "contraindicated",
+           "Isometric contraction raises temperature (Boyer 2005).", "İzometrik kasılma ateşi artırır (Boyer 2005)."),
+    ], "guide": ("NEJM", "Boyer EW, Shannon M. The serotonin syndrome. NEJM 2005",
+                 "Stop serotonergic agents, give benzodiazepines and cool; avoid physical restraint.",
+                 "Serotonerjik ajanları kesin, benzodiazepin verin ve soğutun; fiziksel tespitten kaçının.")},
+    "nms": {"treatments": [
+        _t("stop_antipsychotic", "Stop the antipsychotic, cool and give IV fluids", "Antipsikotiği kesin, soğutun ve İ.V. sıvı verin", "indicated",
+           "Berman 2011.", "Berman 2011."),
+        _t("benzo_dantrolene", "Benzodiazepine; consider bromocriptine or dantrolene", "Benzodiazepin; bromokriptin veya dantrolen düşünün", "indicated",
+           "Berman 2011.", "Berman 2011."),
+        _t("more_antipsychotic", "Further antipsychotic for agitation", "Ajitasyon için ek antipsikotik", "contraindicated",
+           "Worsens NMS.", "NMS'yi kötüleştirir."),
+    ], "guide": ("Neurohospitalist", "Berman BD. Neuroleptic malignant syndrome: a review. Neurohospitalist 2011",
+                 "Discontinue the causative agent and give supportive care.",
+                 "Neden olan ajanı kesin ve destek tedavisi verin.")},
+    "delirium_tremens": {"treatments": [
+        _t("benzo_titrated", "IV benzodiazepine titrated to light sedation", "Hafif sedasyona titre İ.V. benzodiazepin", "indicated",
+           "NICE CG100.", "NICE CG100."),
+        _t("thiamine_iv", "IV thiamine (Pabrinex) before glucose", "Glukozdan önce İ.V. tiamin (Pabrinex)", "indicated",
+           "Prevents Wernicke encephalopathy (NICE CG100).", "Wernicke ensefalopatisini önler (NICE CG100)."),
+        _t("fluids_electrolytes", "IV fluids, magnesium and potassium", "İ.V. sıvı, magnezyum ve potasyum", "indicated",
+           "Correct losses.", "Kayıpları düzeltir."),
+        _t("antipsychotic_alone", "Antipsychotic as monotherapy", "Tek başına antipsikotik", "contraindicated",
+           "Lowers the seizure threshold; benzodiazepines are first-line (NICE CG100).", "Nöbet eşiğini düşürür; benzodiazepin birinci basamaktır (NICE CG100)."),
+    ], "guide": ("NICE", "NICE CG100 Alcohol-use disorders: diagnosis and management of physical complications",
+                 "Offer a benzodiazepine for delirium tremens.",
+                 "Deliryum tremenste benzodiazepin önerin.")},
+    "tumor_lysis": {"treatments": [
+        _t("hydration_tls", "IV hydration (3 L/m2/day) with a urine output target", "İdrar çıkışı hedefli İ.V. hidrasyon (3 L/m2/gün)", "indicated",
+           "Howard 2011.", "Howard 2011."),
+        _t("rasburicase", "Rasburicase (no G6PD deficiency)", "Rasburikaz (G6PD eksikliği yoksa)", "indicated",
+           "Lowers uric acid within hours.", "Ürik asidi saatler içinde düşürür."),
+        _t("treat_hyperk_renal", "Treat hyperkalaemia and refer to renal", "Hiperkalemiyi tedavi edin ve nefrolojiye danışın", "indicated",
+           "Arrhythmia risk.", "Aritmi riski."),
+        _t("potassium_fluids", "Potassium-containing fluids", "Potasyum içeren sıvılar", "contraindicated",
+           "Hyperkalaemia.", "Hiperkalemi."),
+    ], "guide": ("NEJM", "Howard SC et al. The tumor lysis syndrome. NEJM 2011",
+                 "Hydrate aggressively and lower uric acid; monitor potassium.",
+                 "Agresif hidrasyon yapın ve ürik asidi düşürün; potasyumu izleyin.")},
+    "dic": {"treatments": [
+        _t("treat_cause", "Treat the underlying cause (sepsis, obstetric, malignancy)", "Altta yatan nedeni tedavi edin (sepsis, obstetrik, malignite)", "indicated",
+           "BCSH 2009: the cornerstone.", "BCSH 2009: temel taş."),
+        _t("blood_products_dic", "Platelets, FFP and cryoprecipitate if bleeding", "Kanama varsa trombosit, TDP ve kriyopresipitat", "indicated",
+           "Product support for bleeding (BCSH 2009).", "Kanamada ürün desteği (BCSH 2009)."),
+        _t("txa_dic", "Tranexamic acid in sepsis-associated DIC", "Sepsise bağlı YDP'de traneksamik asit", "contraindicated",
+           "Generally not recommended (BCSH 2009).", "Genellikle önerilmez (BCSH 2009)."),
+    ], "guide": ("BCSH", "Levi M et al. Guidelines for the diagnosis and management of DIC. Br J Haematol 2009",
+                 "Treat the underlying condition; give blood products to bleeding patients.",
+                 "Altta yatan durumu tedavi edin; kanayan hastalara kan ürünü verin.")},
+    "acute_leukemia": {"treatments": [
+        _t("haematology_urgent", "Urgent haematology referral and blood film", "Acil hematoloji konsültasyonu ve periferik yayma", "indicated",
+           "ELN 2022.", "ELN 2022."),
+        _t("tls_prophylaxis", "Hydration and tumour lysis prophylaxis", "Hidrasyon ve tümör lizis profilaksisi", "indicated",
+           "Prevents TLS.", "TLS'yi önler."),
+        _t("transfuse_hyperleuk", "Red cell transfusion in hyperleukocytosis", "Hiperlökositozda eritrosit transfüzyonu", "contraindicated",
+           "Worsens hyperviscosity.", "Hiperviskoziteyi kötüleştirir."),
+    ], "guide": ("ELN", "Dohner H et al. ELN 2022 recommendations for AML. Blood 2022",
+                 "Refer new acute leukaemia urgently and prevent tumour lysis.",
+                 "Yeni akut lösemiyi acilen yönlendirin ve tümör lizisini önleyin.")},
+    "hemophilia_bleed": {"treatments": [
+        _t("factor_now", "Factor concentrate immediately, before imaging", "Görüntülemeden önce hemen faktör konsantresi", "indicated",
+           "WFH 2020: treat suspected bleeds without delay.", "WFH 2020: şüpheli kanamayı gecikmeden tedavi edin."),
+        _t("haemophilia_centre", "Contact the haemophilia centre", "Hemofili merkezine danışın", "indicated",
+           "Dose and monitoring.", "Doz ve izlem."),
+        _t("im_nsaid", "IM injections or NSAIDs", "İ.M. enjeksiyon veya NSAİİ", "contraindicated",
+           "Haematoma and platelet dysfunction (WFH 2020).", "Hematom ve trombosit disfonksiyonu (WFH 2020)."),
+    ], "guide": ("WFH", "Srivastava A et al. WFH Guidelines for the Management of Hemophilia 2020",
+                 "Give factor replacement as soon as a serious bleed is suspected.",
+                 "Ciddi kanama düşünüldüğünde hemen faktör replasmanı yapın.")},
+    "transfusion_reaction": {"treatments": [
+        _t("stop_transfusion", "Stop the transfusion and keep the line open with saline", "Transfüzyonu durdurun, hattı salinle açık tutun", "indicated",
+           "BSH 2012 acute transfusion reactions.", "BSH 2012 akut transfüzyon reaksiyonları."),
+        _t("im_adrenaline", "IM adrenaline 0.5 mg if anaphylaxis features", "Anafilaksi bulgusu varsa İ.M. 0.5 mg adrenalin", "indicated",
+           "RCUK 2021.", "RCUK 2021."),
+        _t("report_unit", "Return the unit and report to the blood bank and SHOT", "Üniteyi iade edin, kan bankasına ve SHOT'a bildirin", "indicated",
+           "Haemovigilance.", "Hemovijilans."),
+        _t("continue_slower", "Continue the transfusion at a slower rate", "Transfüzyona daha yavaş hızda devam", "contraindicated",
+           "Continued exposure worsens the reaction (BSH 2012).", "Maruziyetin sürmesi reaksiyonu kötüleştirir (BSH 2012)."),
+    ], "guide": ("BSH", "Tinegate H et al. Guideline on the investigation and management of acute transfusion reactions. Br J Haematol 2012",
+                 "Stop the transfusion immediately when a severe reaction is suspected.",
+                 "Ağır reaksiyon düşünüldüğünde transfüzyonu hemen durdurun.")},
+    "ovarian_torsion": {"treatments": [
+        _t("gyn_laparoscopy", "Urgent gynaecology laparoscopy and detorsion", "Acil jinekoloji laparoskopisi ve detorsiyon", "indicated",
+           "ACOG CO 783.", "ACOG CO 783."),
+        _t("analgesia_antiemetic", "IV analgesia and antiemetic", "İ.V. analjezi ve antiemetik", "indicated",
+           "Comfort.", "Rahatlık."),
+        _t("discharge_doppler", "Discharge because Doppler flow is present", "Doppler akım var diye taburcu", "contraindicated",
+           "Flow does not exclude torsion (ACOG CO 783).", "Akım torsiyonu dışlamaz (ACOG CO 783)."),
+    ], "guide": ("ACOG", "ACOG Committee Opinion 783 Adnexal torsion in adolescents 2019",
+                 "Proceed to surgery when torsion is suspected; Doppler flow does not exclude it.",
+                 "Torsiyon düşünülüyorsa cerrahiye gidin; Doppler akımı torsiyonu dışlamaz.")},
+    "eclampsia": {"treatments": [
+        _t("magnesium_load", "Magnesium sulfate 4 g IV over 5 to 15 min, then 1 g/h", "5-15 dakikada İ.V. 4 g magnezyum sülfat, ardından 1 g/saat", "indicated",
+           "Prevents recurrent fits better than diazepam (Eclampsia Trial 1995).", "Tekrarlayan nöbeti diazepamdan iyi önler (Eklampsi Çalışması 1995)."),
+        _t("antihypertensive", "IV labetalol or hydralazine for SBP 160 or more", "SKB 160 ve üzerinde İ.V. labetalol veya hidralazin", "indicated",
+           "NICE NG133.", "NICE NG133."),
+        _t("left_lateral_airway", "Left lateral position, airway and oxygen", "Sol lateral pozisyon, hava yolu ve oksijen", "indicated",
+           "Protects the airway and uterine flow.", "Hava yolunu ve uterin akımı korur."),
+        _t("diazepam_first", "Diazepam or phenytoin instead of magnesium", "Magnezyum yerine diazepam veya fenitoin", "contraindicated",
+           "Inferior to magnesium (Eclampsia Trial 1995).", "Magnezyumdan daha az etkili (Eklampsi Çalışması 1995)."),
+    ], "guide": ("NICE", "NICE NG133 Hypertension in pregnancy",
+                 "Give magnesium sulfate to women with eclampsia.",
+                 "Eklampside magnezyum sülfat verin.")},
+    "placental_abruption": {"treatments": [
+        _t("resus_mhp", "Major obstetric haemorrhage protocol with left lateral tilt", "Sol lateral tilt ile majör obstetrik kanama protokolü", "indicated",
+           "RCOG GTG 63.", "RCOG GTG 63."),
+        _t("ctg_delivery", "Continuous CTG and urgent delivery decision", "Sürekli NST ve acil doğum kararı", "indicated",
+           "Delivery is definitive (RCOG GTG 63).", "Doğum kesin tedavidir (RCOG GTG 63)."),
+        _t("tocolysis", "Tocolysis", "Tokoliz", "contraindicated",
+           "Contraindicated in abruption (RCOG GTG 63).", "Dekolmanda kontrendikedir (RCOG GTG 63)."),
+    ], "guide": ("RCOG", "RCOG Green-top Guideline 63 Antepartum haemorrhage",
+                 "Resuscitate and expedite delivery when abruption compromises mother or fetus.",
+                 "Dekolman anne veya fetüsü tehdit ediyorsa resüsite edin ve doğumu hızlandırın.")},
+    "open_fracture": {"treatments": [
+        _t("iv_abx_1h", "IV antibiotics within 1 h of injury (co-amoxiclav or cefuroxime)", "Yaralanmadan sonra 1 saat içinde İ.V. antibiyotik (ko-amoksiklav veya sefuroksim)", "indicated",
+           "BOAST 4: within 1 h.", "BOAST 4: 1 saat içinde."),
+        _t("photo_dressing_splint", "Photograph, saline-soaked dressing, splint and tetanus status", "Fotoğraf, salinli pansuman, atel ve tetanoz durumu", "indicated",
+           "BOAST 4.", "BOAST 4."),
+        _t("ed_washout", "Formal washout in the ED", "Acil serviste formal yıkama", "contraindicated",
+           "Debridement belongs in theatre (BOAST 4).", "Debridman ameliyathanede yapılır (BOAST 4)."),
+    ], "guide": ("BOA", "BOAST 4 The management of severe open lower limb fractures",
+                 "Give IV antibiotics within 1 hour of injury.",
+                 "Yaralanmadan sonraki 1 saat içinde İ.V. antibiyotik verin.")},
+    "tca_overdose": {"treatments": [
+        _t("sodium_bicarb", "IV sodium bicarbonate 8.4 % 50 to 100 mL for QRS above 100 ms or arrhythmia", "QRS 100 ms üzerinde veya aritmide İ.V. %8.4 sodyum bikarbonat 50-100 mL", "indicated",
+           "AHA 2023 toxicology.", "AHA 2023 toksikoloji."),
+        _t("airway_benzo", "Airway protection; benzodiazepine for seizures", "Hava yolu koruması; nöbet için benzodiazepin", "indicated",
+           "Seizures worsen acidosis.", "Nöbet asidozu kötüleştirir."),
+        _t("physostigmine_flumazenil", "Physostigmine or flumazenil", "Fizostigmin veya flumazenil", "contraindicated",
+           "Asystole and seizures in TCA poisoning (AHA 2023).", "TSA zehirlenmesinde asistoli ve nöbet (AHA 2023)."),
+    ], "guide": ("AHA", "2023 AHA Focused Update on Poisoning (sodium channel blockers)",
+                 "Give sodium bicarbonate for QRS widening or ventricular arrhythmia from tricyclic poisoning.",
+                 "Trisiklik zehirlenmesine bağlı QRS genişlemesi veya ventriküler aritmide sodyum bikarbonat verin.")},
+    "anticholinergic_tox": {"treatments": [
+        _t("benzo_cooling", "Benzodiazepine, cooling and supportive care", "Benzodiazepin, soğutma ve destek tedavisi", "indicated",
+           "Dawson 2016.", "Dawson 2016."),
+        _t("physostigmine_expert", "Physostigmine with toxicology advice (normal QRS)", "Toksikoloji danışmanlığıyla fizostigmin (QRS normal)", "indicated",
+           "Reverses delirium (Dawson 2016).", "Deliryumu geri çevirir (Dawson 2016)."),
+        _t("haloperidol", "Haloperidol for agitation", "Ajitasyon için haloperidol", "contraindicated",
+           "Anticholinergic and lowers the seizure threshold.", "Antikolinerjik etkili ve nöbet eşiğini düşürür."),
+    ], "guide": ("BJCP", "Dawson AH, Buckley NA. Pharmacological management of anticholinergic delirium. Br J Clin Pharmacol 2016",
+                 "Use benzodiazepines first; physostigmine with expert advice.",
+                 "Önce benzodiazepin; uzman önerisiyle fizostigmin.")},
+    "rhabdomyolysis": {"treatments": [
+        _t("fluids_uo", "IV crystalloid targeting urine output 200 to 300 mL/h", "200-300 mL/saat idrar hedefli İ.V. kristaloid", "indicated",
+           "Bosch 2009.", "Bosch 2009."),
+        _t("ck_k_monitor", "Monitor CK, potassium and creatinine; treat hyperkalaemia", "CK, potasyum ve kreatinini izleyin; hiperkalemiyi tedavi edin", "indicated",
+           "Arrhythmia and AKI risk.", "Aritmi ve ABH riski."),
+        _t("nephrotoxins", "NSAIDs or other nephrotoxins", "NSAİİ veya diğer nefrotoksinler", "contraindicated",
+           "Worsen AKI.", "ABH'yi kötüleştirir."),
+    ], "guide": ("NEJM", "Bosch X et al. Rhabdomyolysis and acute kidney injury. NEJM 2009",
+                 "Start early aggressive fluid resuscitation.",
+                 "Erken agresif sıvı resüsitasyonu başlatın.")},
+    "salicylate_od": {"treatments": [
+        _t("bicarb_alkalinise", "IV sodium bicarbonate to a urine pH of 7.5 to 8.5", "İdrar pH 7.5-8.5 hedefli İ.V. sodyum bikarbonat", "indicated",
+           "Enhances elimination (EXTRIP 2015).", "Atılımı artırır (EXTRIP 2015)."),
+        _t("charcoal_levels", "Activated charcoal if within 1 h; serial salicylate levels", "1 saat içindeyse aktif kömür; seri salisilat düzeyi", "indicated",
+           "Absorption continues for hours.", "Emilim saatlerce sürer."),
+        _t("haemodialysis_referral", "Haemodialysis referral if severe", "Ağırsa hemodiyaliz konsültasyonu", "indicated",
+           "EXTRIP 2015 criteria.", "EXTRIP 2015 ölçütleri."),
+        _t("intubate_no_hypervent", "Intubate without matching the patient's minute ventilation", "Hastanın dakika ventilasyonunu karşılamadan entübasyon", "contraindicated",
+           "Acidaemia worsens and can cause arrest (EXTRIP 2015).", "Asidemi kötüleşir ve arreste yol açabilir (EXTRIP 2015)."),
+    ], "guide": ("EXTRIP", "Juurlink DN et al. EXTRIP recommendations for salicylate poisoning 2015",
+                 "Use extracorporeal treatment in severe salicylate poisoning.",
+                 "Ağır salisilat zehirlenmesinde ekstrakorporeal tedavi kullanın.")},
+    "organophosphate_poisoning": {"treatments": [
+        _t("atropine_double", "Atropine 1 to 2 mg IV, doubling every 5 min until the chest is clear", "Göğüs temizlenene kadar 5 dakikada bir ikiye katlanan İ.V. 1-2 mg atropin", "indicated",
+           "Targets: clear chest, HR above 80, SBP above 80 (Eddleston 2008).", "Hedefler: temiz göğüs, KH 80 üzeri, SKB 80 üzeri (Eddleston 2008)."),
+        _t("decontaminate_ppe", "Decontaminate with PPE and remove clothing", "KKD ile dekontaminasyon ve kıyafetleri çıkarma", "indicated",
+           "Stops ongoing absorption.", "Süren emilimi durdurur."),
+        _t("suxamethonium", "Suxamethonium for intubation", "Entübasyon için süksinilkolin", "contraindicated",
+           "Prolonged paralysis (Eddleston 2008).", "Uzamış paralizi (Eddleston 2008)."),
+    ], "guide": ("Lancet", "Eddleston M et al. Management of acute organophosphorus pesticide poisoning. Lancet 2008",
+                 "Give atropine rapidly, doubling the dose until atropinisation.",
+                 "Atropinizasyona kadar dozu ikiye katlayarak hızla atropin verin.")},
+}
+CONDITION_FIXTURES.update(ESI12_FIXTURES)
+
+# Existing fixtures gain the definitive row the 06b course rule needs.
+CONDITION_FIXTURES["ectopic_pregnancy"]["treatments"].append(_t(
+    "emergency_surgery", "Emergency laparoscopy or laparotomy (gynaecology)", "Acil laparoskopi veya laparotomi (jinekoloji)", "indicated",
+    "Ruptured ectopic pregnancy with haemodynamic instability needs surgery (NICE NG126).",
+    "Hemodinamik instabiliteli rüptüre ektopik gebelik cerrahi gerektirir (NICE NG126)."))
+
+
+# =========================================================================== #
+# Review 06b: the dynamic course rule library.                                 #
+#                                                                              #
+# A rule says how a disease behaves, not what a case contains: the case is     #
+# still generated on request, and the Director (server/orchestration/course.py)#
+# runs the rule against what the learner does. Each rule has                   #
+#                                                                              #
+# * a severity process: s0 at arrival, rise per hour while untreated           #
+#   (``rate_h``), fall per hour once every disease-modifying group is met      #
+#   (``recover_h``) after ``lag_min``; vitals move from the patient's own      #
+#   arrival values toward ``peri`` (severity 1, peri-arrest) or ``well``;      #
+# * treatment groups (``groups``): all-of requirements, each group met by a   #
+#   case row code or a treatment class, antimicrobials only with adequate     #
+#   spectrum (``needs``);                                                      #
+# * guideline targets (``targets``) scored against the group, separate from   #
+#   the physiological consequence;                                             #
+# * branches (new diagnoses), seeded hazards, row-specific harms and exam     #
+#   findings that appear over time.                                            #
+#                                                                              #
+# Rates, anchors and seeded probabilities that no guideline states as a       #
+# number are simulation design choices (06b section 5 conventions) and are    #
+# marked ``"basis": "design"`` on the target or noted in COURSE_SOURCES.       #
+# web/src/domain/courseTables.generated.ts is generated from these tables     #
+# (scripts/gen_course_tables.py) and a test diffs the two.                    #
+# =========================================================================== #
+
+SSC21 = "SSC 2021 https://doi.org/10.1097/CCM.0000000000005337"
+NG253 = "NICE NG253 https://www.nice.org.uk/guidance/ng253"
+NG240 = "NICE NG240 https://www.nice.org.uk/guidance/ng240"
+NG250 = "NICE NG250 https://www.nice.org.uk/guidance/ng250"
+NG111 = "NICE NG111 https://www.nice.org.uk/guidance/ng111"
+JBDS23 = ("JBDS-IP DKA 2023 https://abcd.care/sites/default/files/site_uploads/JBDS_Guidelines_Current/"
+          "JBDS_02_DKA_Guideline_with_QR_code_March_2023.pdf")
+ADA24 = "ADA/EASD hyperglycaemic crises 2024 https://doi.org/10.2337/dci24-0032"
+ESC23 = "ESC 2023 ACS https://doi.org/10.1093/eurheartj/ehad191"
+ESC19PE = "ESC 2019 PE https://doi.org/10.1093/eurheartj/ehz405"
+ESC21HF = "ESC 2021 HF https://doi.org/10.1093/eurheartj/ehab368"
+RCUK21 = "RCUK 2021 https://www.resus.org.uk/library/additional-guidance/guidance-anaphylaxis/emergency-treatment"
+ERC21 = "ERC 2021 ALS https://doi.org/10.1016/j.resuscitation.2021.02.009"
+ERC21SC = "ERC 2021 special circumstances https://doi.org/10.1016/j.resuscitation.2021.02.011"
+BTS17 = "BTS 2017 oxygen https://doi.org/10.1136/thoraxjnl-2016-209729"
+ESI_HB = "ESI v4 handbook https://www.ena.org/enau/education/esi"
+
+_MIN_LABEL = {"en": "", "tr": ""}
+
+
+def _c(k: str, op: str, v: Any) -> dict[str, Any]:
+    """One condition: state key, comparison, value (all conditions in a list are ANDed)."""
+    return {"k": k, "op": op, "v": v}
+
+
+def _grp(gid: str, codes: tuple = (), classes: tuple = (), *, needs: tuple = (), modifies: bool = True,
+         active_min: int | None = None, recover_h: float | None = None, lag_min: int | None = None,
+         en: str = "", tr: str = "") -> dict[str, Any]:
+    return {"id": gid, "codes": list(codes), "classes": list(classes), "needs": list(needs), "modifies": modifies,
+            "active_min": active_min, "recover_h": recover_h, "lag_min": lag_min, "label_en": en, "label_tr": tr}
+
+
+def _tgt(tid: str, group: str, by_min: int, source: str, *, basis: str = "guideline") -> dict[str, Any]:
+    return {"id": tid, "group": group, "by_min": by_min, "source": source, "basis": basis}
+
+
+def _br(bid: str, to: str, when: list, *, p: float = 1.0, window: tuple | None = None, supersede: bool = True,
+        s_start: float | None = None, lactate_min: float | None = None, arrest: str | None = None,
+        rate_h: float | None = None, why_en: str, why_tr: str, say_en: str = "", say_tr: str = "") -> dict[str, Any]:
+    return {"id": bid, "to": to, "when": when, "p": p, "window": list(window) if window else None,
+            "supersede": supersede, "s_start": s_start, "lactate_min": lactate_min, "arrest": arrest, "rate_h": rate_h,
+            "why_en": why_en, "why_tr": why_tr, "say_en": say_en, "say_tr": say_tr}
+
+
+def _fd(fid: str, exam: str, when: list, en: str, tr: str) -> dict[str, Any]:
+    return {"id": fid, "exam": exam, "when": when, "en": en, "tr": tr}
+
+
+def _harm(effects: dict | None = None, *, onset_min: int = 5, rate_mult: float = 1.0, arrest: str | None = None,
+          p: float = 1.0, branch: str | None = None, en: str, tr: str) -> dict[str, Any]:
+    """Specific harm of a contraindicated row (replaces the old generic HR +12, SBP -10)."""
+    return {"effects": effects or {}, "onset_min": onset_min, "rate_mult": rate_mult, "arrest": arrest, "p": p,
+            "branch": branch, "en": en, "tr": tr}
+
+
+# Vitals at severity 1 (``peri``) and at full recovery (``well``) per pattern.
+# Absolute adult values; keys left out are not moved by the disease (DKA and
+# meningitis do not desaturate, review 06b F14).
+COURSE_PATTERNS: dict[str, dict[str, Any]] = {
+    "distributive_shock": {
+        "s0": 0.5, "rate_h": 0.26, "recover_h": 0.15, "floor": 0.3, "lag_min": 60, "arrest_rhythm": "PEA",
+        "fluid": "responsive", "o2_response": 0.4,
+        "peri": {"hr": 145, "systolic": 58, "diastolic": 30, "rr": 34, "spo2": 89, "gcs": 9, "crt": 6, "mottle": 4, "urine": 5},
+        "well": {"hr": 92, "systolic": 112, "diastolic": 66, "rr": 18, "spo2": 96, "gcs": 15, "crt": 2, "mottle": 0, "urine": 50},
+        "bedside0": {"gcs": 14, "crt": 5, "mottle": 2, "urine": 15, "lactate": 5.0},
+    },
+    "sepsis": {
+        "s0": 0.3, "rate_h": 0.3, "recover_h": 0.1, "floor": 0.15, "lag_min": 60, "arrest_rhythm": "PEA",
+        "fluid": "responsive", "o2_response": 0.4,
+        "peri": {"hr": 135, "systolic": 80, "diastolic": 45, "rr": 30, "spo2": 92, "gcs": 13, "crt": 4, "mottle": 2, "urine": 15},
+        "well": {"hr": 88, "systolic": 118, "diastolic": 70, "rr": 16, "spo2": 97, "gcs": 15, "crt": 2, "mottle": 0, "urine": 50},
+        "bedside0": {"gcs": 15, "crt": 3, "mottle": 0, "urine": 40, "lactate": 2.8},
+    },
+    "infection_local": {
+        "s0": 0.3, "rate_h": 0.1, "recover_h": 0.05, "floor": 0.2, "lag_min": 60, "arrest_rhythm": None,
+        "fluid": "responsive", "o2_response": 0.4,
+        "peri": {"hr": 132, "systolic": 100, "diastolic": 58, "rr": 26, "tempC": 39.8, "gcs": 14},
+        "well": {"hr": 85, "systolic": 124, "diastolic": 76, "rr": 16, "tempC": 37.2, "gcs": 15},
+        "bedside0": {"lactate": 1.6},
+    },
+    "pneumonia": {
+        "s0": 0.3, "rate_h": 0.1, "recover_h": 0.05, "floor": 0.2, "lag_min": 60, "arrest_rhythm": "PEA",
+        "fluid": "responsive", "o2_response": 0.5,
+        "peri": {"hr": 136, "systolic": 92, "diastolic": 52, "rr": 40, "spo2": 80, "gcs": 12},
+        "well": {"hr": 88, "systolic": 120, "diastolic": 72, "rr": 18, "spo2": 95, "gcs": 15},
+        "bedside0": {"lactate": 1.8},
+    },
+    "haemorrhagic_shock": {
+        "s0": 0.45, "rate_h": 0.3, "recover_h": 0.3, "floor": 0.25, "lag_min": 15, "arrest_rhythm": "PEA",
+        "fluid": "haemorrhage", "fluid_limit_ml": 1000, "o2_response": 0.4,
+        "peri": {"hr": 150, "systolic": 55, "diastolic": 30, "rr": 32, "spo2": 92, "gcs": 9, "crt": 6, "mottle": 4, "urine": 5},
+        "well": {"hr": 90, "systolic": 115, "diastolic": 70, "rr": 16, "spo2": 97, "gcs": 15, "crt": 2, "mottle": 0, "urine": 50},
+        "bedside0": {"gcs": 14, "crt": 4, "mottle": 1, "urine": 20, "lactate": 4.0},
+    },
+    "obstructive_shock": {
+        "s0": 0.55, "rate_h": 0.6, "recover_h": 3.0, "floor": 0.2, "lag_min": 0, "arrest_rhythm": "PEA",
+        "fluid": "neutral", "o2_response": 0.3,
+        "peri": {"hr": 150, "systolic": 50, "diastolic": 30, "rr": 38, "spo2": 78, "gcs": 8, "crt": 6, "mottle": 3},
+        "well": {"hr": 95, "systolic": 115, "diastolic": 70, "rr": 18, "spo2": 95, "gcs": 15, "crt": 2, "mottle": 0},
+        "bedside0": {"crt": 4, "mottle": 1, "lactate": 3.5},
+    },
+    "cardiogenic": {
+        "s0": 0.5, "rate_h": 0.2, "recover_h": 0.2, "floor": 0.3, "lag_min": 30, "arrest_rhythm": "VF",
+        "fluid": "pulmonary_oedema", "o2_response": 0.35,
+        "peri": {"hr": 125, "systolic": 62, "diastolic": 40, "rr": 34, "spo2": 84, "gcs": 10, "crt": 5, "mottle": 3, "urine": 5},
+        "well": {"hr": 85, "systolic": 115, "diastolic": 70, "rr": 18, "spo2": 95, "gcs": 15, "crt": 2, "mottle": 0, "urine": 50},
+        "bedside0": {"crt": 4, "mottle": 1, "urine": 20, "lactate": 3.0},
+    },
+    "acute_coronary": {
+        "s0": 0.4, "rate_h": 0.06, "recover_h": 3.0, "floor": 0.1, "lag_min": 0, "arrest_rhythm": "VF",
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"hr": 118, "systolic": 88, "diastolic": 55, "rr": 26, "spo2": 92, "pain": 9},
+        "well": {"hr": 78, "systolic": 125, "diastolic": 76, "rr": 16, "spo2": 97, "pain": 1},
+        "bedside0": {"pain": 8},
+    },
+    "pulmonary_oedema": {
+        "s0": 0.4, "rate_h": 0.3, "recover_h": 0.4, "floor": 0.15, "lag_min": 10, "arrest_rhythm": "PEA",
+        "fluid": "pulmonary_oedema", "o2_response": 0.35,
+        "peri": {"hr": 135, "systolic": 175, "diastolic": 100, "rr": 36, "spo2": 71, "gcs": 9},
+        "well": {"hr": 92, "systolic": 135, "diastolic": 80, "rr": 18, "spo2": 95, "gcs": 15},
+    },
+    "pe_intermediate": {
+        "s0": 0.4, "rate_h": 0.05, "recover_h": 0.0, "floor": 0.4, "lag_min": 0, "arrest_rhythm": "PEA",
+        "fluid": "rv", "o2_response": 0.5,
+        "peri": {"hr": 146, "systolic": 92, "diastolic": 58, "rr": 34, "spo2": 80},
+        "well": {"hr": 95, "systolic": 118, "diastolic": 72, "rr": 18, "spo2": 95},
+    },
+    "hypoxic_resp": {
+        "s0": 0.4, "rate_h": 0.15, "recover_h": 0.2, "floor": 0.2, "lag_min": 30, "arrest_rhythm": "PEA",
+        "fluid": "neutral", "o2_response": 0.5,
+        "peri": {"hr": 140, "systolic": 100, "diastolic": 58, "rr": 40, "spo2": 70, "gcs": 8},
+        "well": {"hr": 90, "systolic": 120, "diastolic": 72, "rr": 18, "spo2": 95, "gcs": 15},
+    },
+    "hypercapnic_resp": {
+        "s0": 0.4, "rate_h": 0.15, "recover_h": 0.3, "floor": 0.2, "lag_min": 30, "arrest_rhythm": "PEA",
+        "fluid": "neutral", "o2_response": 0.5, "hypercapnic": True,
+        "peri": {"hr": 125, "systolic": 150, "diastolic": 85, "rr": 10, "spo2": 80, "gcs": 7},
+        "well": {"hr": 90, "systolic": 130, "diastolic": 78, "rr": 18, "spo2": 92, "gcs": 15},
+    },
+    "bronchospasm": {
+        "s0": 0.4, "rate_h": 0.25, "recover_h": 0.6, "floor": 0.15, "lag_min": 0, "arrest_rhythm": "PEA",
+        "fluid": "neutral", "o2_response": 0.5,
+        "peri": {"hr": 140, "systolic": 100, "diastolic": 60, "rr": 36, "spo2": 82, "gcs": 10},
+        "well": {"hr": 90, "systolic": 120, "diastolic": 75, "rr": 16, "spo2": 97, "gcs": 15},
+    },
+    "upper_airway": {
+        "s0": 0.5, "rate_h": 1.11, "recover_h": 1.5, "floor": 0.05, "lag_min": 0, "arrest_rhythm": "PEA",
+        "fluid": "responsive", "o2_response": 0.4, "resolve_below": 0.2,
+        "peri": {"hr": 150, "systolic": 45, "diastolic": 25, "rr": 36, "spo2": 72, "gcs": 7, "crt": 6, "mottle": 3},
+        "well": {"hr": 90, "systolic": 118, "diastolic": 72, "rr": 16, "spo2": 97, "gcs": 15, "crt": 2, "mottle": 0},
+        "bedside0": {"crt": 4, "lactate": 3.0},
+    },
+    "neuro_infective": {
+        "s0": 0.3, "rate_h": 0.3, "recover_h": 0.05, "floor": 0.25, "lag_min": 60, "arrest_rhythm": None,
+        "fluid": "responsive", "o2_response": 0.4,
+        "peri": {"hr": 125, "systolic": 105, "diastolic": 62, "gcs": 8, "tempC": 40.0},
+        "well": {"hr": 90, "systolic": 120, "diastolic": 72, "gcs": 15, "tempC": 37.5},
+        "bedside0": {"gcs": 14},
+    },
+    "neuro_bleed": {
+        "s0": 0.35, "rate_h": 0.12, "recover_h": 0.0, "floor": 0.35, "lag_min": 0, "arrest_rhythm": "PEA",
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"gcs": 5, "hr": 55, "systolic": 200, "diastolic": 110, "rr": 10},
+        "well": {"gcs": 15, "hr": 80, "systolic": 150, "diastolic": 85, "rr": 16},
+        "bedside0": {"gcs": 13},
+    },
+    "neuro_ischaemic": {
+        "s0": 0.4, "rate_h": 0.2, "recover_h": 0.1, "floor": 0.2, "lag_min": 30, "arrest_rhythm": None,
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"gcs": 11}, "well": {"gcs": 15},
+    },
+    "seizure": {
+        "s0": 0.6, "rate_h": 0.3, "recover_h": 3.0, "floor": 0.05, "lag_min": 2, "arrest_rhythm": "PEA",
+        "fluid": "neutral", "o2_response": 0.4, "resolve_below": 0.2,
+        "peri": {"gcs": 3, "hr": 145, "systolic": 165, "diastolic": 95, "rr": 10, "spo2": 78, "tempC": 38.6},
+        "well": {"gcs": 14, "hr": 90, "systolic": 130, "diastolic": 80, "rr": 16, "spo2": 96, "tempC": 37.2},
+        "bedside0": {"gcs": 3},
+    },
+    "metabolic_coma": {
+        "s0": 0.4, "rate_h": 0.1, "recover_h": 0.6, "floor": 0.05, "lag_min": 10, "arrest_rhythm": "PEA",
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"gcs": 5, "hr": 110, "rr": 10, "spo2": 88},
+        "well": {"gcs": 15, "hr": 85, "rr": 16, "spo2": 97},
+        "bedside0": {"gcs": 12},
+    },
+    "dka": {
+        "s0": 0.4, "rate_h": 0.15, "recover_h": 0.15, "floor": 0.15, "lag_min": 60, "arrest_rhythm": "PEA",
+        "fluid": "responsive", "fluid_persistent": True, "o2_response": 0.4, "metabolic": "dka",
+        "peri": {"hr": 138, "rr": 36, "systolic": 82, "diastolic": 48, "gcs": 11},
+        "well": {"hr": 90, "rr": 16, "systolic": 120, "diastolic": 72, "gcs": 15},
+        "bedside0": {"cbg": 28.0, "k": 5.3, "lactate": 2.0},
+    },
+    "metabolic_slow": {
+        "s0": 0.3, "rate_h": 0.06, "recover_h": 0.1, "floor": 0.15, "lag_min": 60, "arrest_rhythm": None,
+        "fluid": "responsive", "o2_response": 0.4,
+        "peri": {"hr": 125, "systolic": 85, "diastolic": 50, "gcs": 10, "urine": 5},
+        "well": {"hr": 85, "systolic": 120, "diastolic": 72, "gcs": 15, "urine": 50},
+    },
+    "brady": {
+        "s0": 0.5, "rate_h": 0.25, "recover_h": 4.0, "floor": 0.1, "lag_min": 0, "arrest_rhythm": "asystole",
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"hr": 24, "systolic": 55, "diastolic": 32, "gcs": 8, "crt": 5},
+        "well": {"hr": 72, "systolic": 118, "diastolic": 72, "gcs": 15, "crt": 2},
+    },
+    "tachy_arrhythmia": {
+        "s0": 0.45, "rate_h": 0.2, "recover_h": 6.0, "floor": 0.05, "lag_min": 0, "arrest_rhythm": "VF",
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"hr": 210, "systolic": 65, "diastolic": 40, "gcs": 10, "crt": 5},
+        "well": {"hr": 88, "systolic": 120, "diastolic": 75, "gcs": 15, "crt": 2},
+    },
+    "hyperthermia": {
+        "s0": 0.5, "rate_h": 0.2, "recover_h": 1.0, "floor": 0.1, "lag_min": 0, "arrest_rhythm": "VF",
+        "fluid": "responsive", "o2_response": 0.4,
+        "peri": {"tempC": 42.5, "hr": 165, "systolic": 70, "diastolic": 40, "rr": 36, "gcs": 6},
+        "well": {"tempC": 37.8, "hr": 95, "systolic": 120, "diastolic": 72, "rr": 18, "gcs": 15},
+    },
+    "hypothermic": {
+        "s0": 0.6, "rate_h": 0.05, "recover_h": 0.18, "floor": 0.05, "lag_min": 0, "arrest_rhythm": "VF",
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"tempC": 26.0, "hr": 25, "systolic": 55, "diastolic": 30, "rr": 5, "gcs": 5},
+        "well": {"tempC": 36.0, "hr": 70, "systolic": 118, "diastolic": 70, "rr": 14, "gcs": 15},
+    },
+    "tox_cardiac": {
+        "s0": 0.5, "rate_h": 0.3, "recover_h": 0.6, "floor": 0.15, "lag_min": 5, "arrest_rhythm": "VF",
+        "fluid": "responsive", "o2_response": 0.4,
+        "peri": {"hr": 150, "systolic": 60, "diastolic": 35, "rr": 8, "gcs": 4},
+        "well": {"hr": 90, "systolic": 118, "diastolic": 72, "rr": 16, "gcs": 15},
+    },
+    "tox_resp_depression": {
+        "s0": 0.6, "rate_h": 0.4, "recover_h": 3.0, "floor": 0.05, "lag_min": 0, "arrest_rhythm": "PEA",
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"rr": 3, "spo2": 60, "gcs": 3, "hr": 50, "systolic": 80, "diastolic": 45},
+        "well": {"rr": 16, "spo2": 97, "gcs": 15, "hr": 80, "systolic": 120, "diastolic": 75},
+    },
+    "hypertensive_crisis": {
+        "s0": 0.4, "rate_h": 0.15, "recover_h": 0.3, "floor": 0.15, "lag_min": 10, "arrest_rhythm": None,
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"systolic": 235, "diastolic": 135, "hr": 120, "gcs": 9},
+        "well": {"systolic": 150, "diastolic": 90, "hr": 85, "gcs": 15},
+    },
+    "electrolyte_arrhythmia": {
+        "s0": 0.5, "rate_h": 0.15, "recover_h": 0.6, "floor": 0.1, "lag_min": 0, "arrest_rhythm": "asystole",
+        "fluid": "renal", "o2_response": 0.4, "metabolic": "hyperk",
+        "peri": {"hr": 30, "systolic": 70, "diastolic": 40, "gcs": 9},
+        "well": {"hr": 78, "systolic": 125, "diastolic": 76, "gcs": 15},
+        "bedside0": {"k": 7.2},
+    },
+    "local_time_critical": {
+        "s0": 0.3, "rate_h": 0.12, "recover_h": 0.5, "floor": 0.1, "lag_min": 0, "arrest_rhythm": None,
+        "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"pain": 10, "hr": 110}, "well": {"pain": 2, "hr": 80},
+        "bedside0": {"pain": 8},
+    },
+    "psych_risk": {
+        "s0": 0.3, "rate_h": 0.0, "recover_h": 0.2, "floor": 0.1, "lag_min": 0, "arrest_rhythm": None,
+        "fluid": "neutral", "o2_response": 0.4, "peri": {}, "well": {},
+    },
+    "arrest": {
+        "s0": 0.8, "rate_h": 0.02, "recover_h": 0.1, "floor": 0.5, "lag_min": 0, "arrest_rhythm": "VF",
+        "start_arrest": "VF", "fluid": "neutral", "o2_response": 0.4,
+        "peri": {"hr": 120, "systolic": 80, "diastolic": 45, "rr": 24, "spo2": 90, "gcs": 3},
+        "well": {"hr": 90, "systolic": 115, "diastolic": 70, "rr": 16, "spo2": 96, "gcs": 10},
+    },
+    "stable": {
+        "s0": 0.3, "rate_h": 0.0, "recover_h": 0.0, "floor": 0.3, "lag_min": 0, "arrest_rhythm": None,
+        "fluid": "neutral", "o2_response": 0.4, "peri": {}, "well": {},
+    },
+}
+
+_GP_GN = ("gram_pos", "gram_neg")
+_SAY_SHOCK = ("I feel so cold and dizzy... where am I?", "Çok üşüyorum, başım dönüyor... neredeyim?")
+_WHY_SHOCK = ("MAP below 65 mmHg or lactate 4 mmol/L or more: sepsis has progressed to septic shock (Sepsis-3; SSC 2021)",
+              "OAB 65 mmHg altında veya laktat 4 mmol/L ve üzeri: sepsis septik şoka ilerledi (Sepsis-3; SSC 2021)")
+
+
+def _to_shock(bid: str = "septic_shock", to: str = "septic_shock", extra: list | None = None) -> list[dict[str, Any]]:
+    return [
+        _br(bid, to, [_c("map", "<", 65)] + (extra or []), s_start=0.5, lactate_min=4.5, rate_h=0.4,
+            why_en=_WHY_SHOCK[0], why_tr=_WHY_SHOCK[1], say_en=_SAY_SHOCK[0], say_tr=_SAY_SHOCK[1]),
+        _br(bid + "_lactate", to, [_c("lactate", ">=", 4.0)] + (extra or []), s_start=0.5, lactate_min=4.5, rate_h=0.4,
+            why_en=_WHY_SHOCK[0], why_tr=_WHY_SHOCK[1], say_en=_SAY_SHOCK[0], say_tr=_SAY_SHOCK[1]),
+    ]
+
+
+_SEIZURE = _br("seizure", "status_epilepticus", [], p=0.15, window=(30, 100), supersede=False, s_start=0.6,
+               why_en="Seeded seizure (seizures occur in about 17 % of adult bacterial meningitis; Zoons 2008)",
+               why_tr="Tohumlanmış nöbet (erişkin bakteriyel menenjitte yaklaşık %17; Zoons 2008)",
+               say_en="(the relative shouts) He's shaking all over!", say_tr="(yakını bağırır) Her yeri titriyor!")
+_MOTTLING = _fd("mottling", "general-inspection", [_c("mottle", ">=", 2)],
+                "Mottling over both knees (mottling score 2); cold peripheries, capillary refill 4 to 5 s.",
+                "Her iki dizde alacalanma (skor 2); soğuk ekstremiteler, kapiller dolum 4-5 sn.")
+_MOTTLING_HIGH = _fd("mottling_thighs", "general-inspection", [_c("mottle", ">=", 4)],
+                     "Mottling now extends over the thighs (score 4); capillary refill 6 s at the sternum.",
+                     "Alacalanma artık uyluklara yayıldı (skor 4); sternumda kapiller dolum 6 sn.")
+_CONFUSED = _fd("confusion", "neurological", [_c("gcs", "<=", 12)],
+                "Confused and mumbling; the family now gives the history.",
+                "Konfüze ve mırıldanıyor; öyküyü artık ailesi veriyor.")
+
+CONDITION_COURSE: dict[str, dict[str, Any]] = {
+    # ---- 06b section 5.2 ------------------------------------------------- #
+    "septic_shock": {
+        "pattern": "distributive_shock",
+        "groups": [_grp("antimicrobial", ("abx",), ("antibiotic",), needs=_GP_GN, en="Appropriate antimicrobial", tr="Uygun antimikrobiyal"),
+                   _grp("circulation", ("iv_fluids", "vasopressor"), ("fluids", "vasopressor"), modifies=False,
+                        en="Fluids or vasopressor", tr="Sıvı veya vazopresör")],
+        "targets": [_tgt("abx_1h", "antimicrobial", 60, SSC21), _tgt("circulation_3h", "circulation", 180, SSC21)],
+        "branches": [
+            _br("refractory_shock", "refractory_shock", [_c("s", ">=", 0.85), _c("pressor_on", "==", 1)], supersede=False,
+                why_en="MAP below 65 on noradrenaline: refractory shock; add vasopressin (SSC 2021)",
+                why_tr="Noradrenaline rağmen OAB 65 altı: dirençli şok; vazopressin ekleyin (SSC 2021)"),
+            _br("ards", "ards", [_c("t_min", ">=", 360), _c("s", ">=", 0.6)], supersede=False,
+                why_en="Time-skip: bilateral infiltrates with P/F below 300 on PEEP 5 (Berlin 2012)",
+                why_tr="Zaman atlaması: PEEP 5'te P/F 300 altı bilateral infiltrat (Berlin 2012)")],
+        "findings": [_MOTTLING, _MOTTLING_HIGH, _CONFUSED],
+        "harm_rules": ["starch"],
+    },
+    # ---- 06b section 5.1 ------------------------------------------------- #
+    "sepsis_uncomplicated": {
+        "pattern": "sepsis",
+        "groups": [_grp("antimicrobial", ("abx",), ("antibiotic",), needs=_GP_GN, en="Appropriate antimicrobial", tr="Uygun antimikrobiyal"),
+                   _grp("circulation", ("iv_fluids",), ("fluids",), modifies=False, en="Fluids", tr="Sıvı")],
+        "targets": [_tgt("abx_1h", "antimicrobial", 60, NG253)],
+        "branches": _to_shock(),
+        "findings": [_CONFUSED],
+    },
+    # ---- 06b section 5.3 ------------------------------------------------- #
+    "pneumonia_cap": {
+        "pattern": "pneumonia",
+        "groups": [_grp("antimicrobial", ("severity_abx",), ("antibiotic",), needs=("gram_pos",), en="Antibiotic by CURB-65", tr="CURB-65'e göre antibiyotik")],
+        "targets": [_tgt("abx_4h", "antimicrobial", 240, NG250)],
+        "branches": [
+            _br("septic_shock", "septic_shock", [_c("curb65", ">=", 3), _c("unmet:antimicrobial", "==", 1)], p=0.3, window=(60, 120),
+                s_start=0.5, lactate_min=4.5, rate_h=0.6,
+                why_en="CURB-65 3 or more and no antibiotic by 60 min: pulmonary sepsis progressed to septic shock (NICE NG250; SSC 2021)",
+                why_tr="CURB-65 3 ve üzeri, 60. dakikada antibiyotik yok: pulmoner sepsis septik şoka ilerledi (NICE NG250; SSC 2021)",
+                say_en="I can't get my breath and I'm freezing.", say_tr="Nefes alamıyorum ve donuyorum."),
+            _br("ards", "ards", [_c("t_min", ">=", 360), _c("s", ">=", 0.6)], supersede=False,
+                why_en="Time-skip: bilateral infiltrates with P/F below 300 on PEEP 5 (Berlin 2012)",
+                why_tr="Zaman atlaması: PEEP 5'te P/F 300 altı bilateral infiltrat (Berlin 2012)")],
+        "findings": [_fd("crackles", "respiratory", [_c("spo2", "<", 88)], "Crackles now extend to the mid-zone; speaking in phrases.",
+                         "Raller artık orta zona uzanıyor; cümle yerine kelime gruplarıyla konuşuyor.")],
+    },
+    # ---- 06b section 5.4 ------------------------------------------------- #
+    "bacterial_meningitis": {
+        "pattern": "neuro_infective",
+        "groups": [_grp("antimicrobial", ("immediate_ceftriaxone",), ("antibiotic",), needs=("cns",), en="CNS-penetrant antimicrobial", tr="SSS'ye geçen antimikrobiyal"),
+                   _grp("dexamethasone", ("3264", "immediate_ceftriaxone"), ("corticosteroid",), modifies=False, en="Dexamethasone", tr="Deksametazon")],
+        "targets": [_tgt("abx_1h", "antimicrobial", 60, NG240),
+                    _tgt("dexamethasone", "dexamethasone", 60, "de Gans 2002 https://doi.org/10.1056/NEJMoa021334 ; " + NG240)],
+        "branches": [_SEIZURE],
+        "findings": [_fd("neck", "neurological", [_c("gcs", "<=", 12)], "Confused and repetitive; neck stiffness and photophobia persist.",
+                         "Konfüze ve tekrarlayıcı; ense sertliği ve fotofobi sürüyor."),
+                     _fd("groans", "neurological", [_c("gcs", "<=", 9)], "Only groans to pain; airway at risk.",
+                         "Yalnızca ağrıya inliyor; hava yolu risk altında.")],
+        "harm_rules": ["lp_before_ct"],
+    },
+    "meningococcemia": {
+        "pattern": "distributive_shock", "rate_h": 0.4,
+        "groups": [_grp("antimicrobial", ("immediate_ceftriaxone",), ("antibiotic",), needs=("cns",), en="CNS-penetrant antimicrobial", tr="SSS'ye geçen antimikrobiyal"),
+                   _grp("circulation", ("fluid_resus",), ("fluids", "vasopressor"), modifies=False, en="Fluids", tr="Sıvı")],
+        "targets": [_tgt("abx_immediate", "antimicrobial", 30, NG240 + " (immediately; 30 min teaching target)", basis="design")],
+        "findings": [_fd("purpura", "skin", [_c("pt_min", ">=", 30), _c("unmet:antimicrobial", "==", 1)],
+                         "The purpura has spread over the trunk and legs and does not blanch under a glass.",
+                         "Purpura gövde ve bacaklara yayıldı, bardak testinde solmuyor."), _MOTTLING],
+    },
+    # ---- 06b section 5.5 ------------------------------------------------- #
+    "pyelonephritis": {
+        "pattern": "infection_local",
+        "groups": [_grp("antimicrobial", ("iv_abx_fluids",), ("antibiotic",), needs=("gram_neg",), en="Gram-negative cover", tr="Gram-negatif kapsam")],
+        "targets": [_tgt("abx", "antimicrobial", 60, NG111 + " (without delay; 60 min teaching target)", basis="design")],
+        "branches": [
+            _br("urosepsis_obstructed", "urosepsis", [], p=0.2, window=(60, 120), s_start=0.45, lactate_min=4.0,
+                why_en="Obstructed infected kidney (seeded): severity rises despite antibiotics; needs decompression (EAU)",
+                why_tr="Obstrüktif enfekte böbrek (tohumlanmış): antibiyotiğe rağmen ağırlaşıyor; dekompresyon gerekir (EAU)",
+                say_en="The shaking won't stop and I feel faint.", say_tr="Titreme durmuyor ve bayılacak gibiyim."),
+            _br("urosepsis", "urosepsis", [_c("s", ">=", 0.55), _c("unmet:antimicrobial", "==", 1)], s_start=0.45, lactate_min=4.0,
+                why_en="Untreated pyelonephritis progressed to urosepsis (NICE NG111; SSC 2021)",
+                why_tr="Tedavisiz piyelonefrit ürosepsise ilerledi (NICE NG111; SSC 2021)",
+                say_en="The shaking won't stop and I feel faint.", say_tr="Titreme durmuyor ve bayılacak gibiyim.")],
+    },
+    "urosepsis": {
+        "pattern": "distributive_shock", "s0": 0.45,
+        "groups": [_grp("antimicrobial", ("iv_abx_fluids",), ("antibiotic",), needs=("gram_neg",), en="Gram-negative cover", tr="Gram-negatif kapsam"),
+                   _grp("decompression", ("drain_obstruction",), ("procedure",), en="Decompression (nephrostomy or stent)", tr="Dekompresyon (nefrostomi veya stent)"),
+                   _grp("circulation", (), ("fluids", "vasopressor"), modifies=False, en="Fluids or vasopressor", tr="Sıvı veya vazopresör")],
+        "targets": [_tgt("abx_1h", "antimicrobial", 60, SSC21),
+                    _tgt("decompression", "decompression", 120, "EAU urological infections https://uroweb.org/guidelines/urological-infections (urgent)", basis="design")],
+        "findings": [_MOTTLING],
+    },
+    # ---- 06b section 5.6 ------------------------------------------------- #
+    "dka": {
+        "pattern": "dka",
+        "groups": [_grp("fluids", ("fluids_first",), ("fluids",), en="IV fluids", tr="İ.V. sıvı"),
+                   _grp("insulin", ("fixed_insulin",), ("insulin_frii",), en="Fixed-rate insulin", tr="Sabit hızlı insülin")],
+        "targets": [_tgt("fluids_1h", "fluids", 60, JBDS23), _tgt("insulin_1h", "insulin", 60, JBDS23)],
+        "row_classes": {"fixed_insulin": ["insulin_frii", "potassium"], "fluids_first": ["fluids"], "insulin_bolus_first": ["insulin_bolus"],
+                        "insulin_low_k": ["insulin_frii"]},
+        "row_harms": {"insulin_bolus_first": _harm({}, en="IV insulin bolus before fluids: potassium falls and the circulation is not restored (JBDS 2023)",
+                                                   tr="Sıvıdan önce İ.V. insülin bolusu: potasyum düşer, dolaşım düzelmez (JBDS 2023)")},
+        "branches": [_br("cerebral_oedema", "cerebral_oedema_dka", [_c("age", "<=", 25), _c("fluid_ml_60", ">=", 2000)], window=(60, 180),
+                         supersede=False, s_start=0.35,
+                         why_en="Over-rapid fluid (2 L or more in the first hour) in a patient aged 25 or under: cerebral oedema (JBDS 2023; ISPAD 2022)",
+                         why_tr="25 yaş ve altında ilk saatte 2 L veya fazla sıvı: serebral ödem (JBDS 2023; ISPAD 2022)",
+                         say_en="My head is pounding... I feel so sleepy.", say_tr="Başım zonkluyor... çok uykum var.")],
+        "findings": [_fd("kussmaul", "respiratory", [], "Deep sighing (Kussmaul) breathing; acetone on the breath.",
+                         "Derin iç çeker gibi (Kussmaul) solunum; nefeste aseton kokusu.")],
+        "harm_rules": ["insulin_low_k"],
+    },
+    "hhs": {
+        "pattern": "dka", "rate_h": 0.08, "bedside0": {"cbg": 40.0, "k": 4.5, "lactate": 2.0},
+        "groups": [_grp("fluids", ("cautious_fluids",), ("fluids",), en="Cautious IV fluids", tr="Dikkatli İ.V. sıvı")],
+        "targets": [_tgt("fluids_1h", "fluids", 60, "JBDS HHS 2022 https://abcd.care/resource/current-guidelines", basis="design")],
+        "row_classes": {"low_rate_insulin": ["insulin_frii"]},
+    },
+    "hypoglycemia": {
+        "pattern": "metabolic_coma", "rate_h": 0.0, "metabolic": "hypo", "bedside0": {"cbg": 2.0, "gcs": 15},
+        "groups": [_grp("glucose", ("glucose",), ("dextrose", "glucagon"), en="Glucose", tr="Glukoz")],
+        "targets": [_tgt("glucose", "glucose", 15, "JBDS hypoglycaemia 2022 https://abcd.care/resource/current-guidelines (treat immediately)", basis="design")],
+        "row_classes": {"glucose": ["dextrose"], "insulin": ["insulin_bolus"]},
+    },
+    "herniation": {
+        "pattern": "neuro_bleed", "rate_h": 0.4, "s0": 0.5,
+        "groups": [_grp("osmotherapy", ("mannitol", "hypertonic_saline"), (), en="Osmotherapy and neurosurgery", tr="Ozmoterapi ve nöroşirürji")],
+        "targets": [_tgt("osmotherapy", "osmotherapy", 30, "IDSA 2004 meningitis https://doi.org/10.1086/425368", basis="design")],
+    },
+    "cerebral_oedema_dka": {
+        "pattern": "neuro_bleed", "rate_h": 0.4, "s0": 0.35,
+        "groups": [_grp("osmotherapy", ("mannitol", "hypertonic_saline"), (), en="Mannitol or hypertonic saline", tr="Mannitol veya hipertonik salin")],
+        "targets": [_tgt("osmotherapy", "osmotherapy", 30, "ISPAD 2022 https://doi.org/10.1111/pedi.13406", basis="design")],
+    },
+    # ---- 06b section 5.7 ------------------------------------------------- #
+    "acs_stemi": {
+        "pattern": "acute_coronary",
+        "groups": [_grp("antiplatelet", ("asa_p2y12",), ("antiplatelet",), modifies=False, en="Antiplatelet loading", tr="Antiplatelet yükleme"),
+                   _grp("reperfusion", ("primary_pci",), ("thrombolytic", "reperfusion"), lag_min=45, en="Reperfusion (PCI or fibrinolysis)", tr="Reperfüzyon (PKG veya fibrinoliz)")],
+        "targets": [_tgt("antiplatelet", "antiplatelet", 30, ESC23 + " (as soon as possible; 30 min teaching target)", basis="design"),
+                    _tgt("reperfusion", "reperfusion", 30, ESC23 + " (diagnosis-to-wire 60 min or less; activation by 30 min)", basis="design")],
+        "branches": [
+            _br("vf", "", [_c("unmet:reperfusion", "==", 1)], p=0.06, window=(5, 90), arrest="VF",
+                why_en="Ventricular fibrillation before reperfusion (5.7 % in primary PCI cohorts; Mehta 2009)",
+                why_tr="Reperfüzyon öncesi ventriküler fibrilasyon (primer PKG kohortlarında %5.7; Mehta 2009)"),
+            _br("cardiogenic_shock", "cardiogenic_shock", [_c("unmet:reperfusion", "==", 1)], p=0.1, window=(60, 120),
+                why_en="Large anterior infarct without reperfusion by 60 min: cardiogenic shock (ESC 2023: 6 to 10 % of STEMI)",
+                why_tr="60. dakikada reperfüzyonsuz geniş anterior infarkt: kardiyojenik şok (ESC 2023: STEMI'nin %6-10'u)",
+                say_en="I can't breathe lying flat.", say_tr="Düz yatınca nefes alamıyorum.")],
+        "harm_rules": ["beta_blocker_killip", "gtn_hypotension"],
+    },
+    "cardiogenic_shock": {
+        "pattern": "cardiogenic",
+        "groups": [_grp("reperfusion", ("primary_pci",), ("thrombolytic", "reperfusion"), lag_min=45, en="Reperfusion", tr="Reperfüzyon"),
+                   _grp("support", (), ("vasopressor",), modifies=False, en="Vasopressor or inotrope", tr="Vazopresör veya inotrop")],
+        "targets": [_tgt("reperfusion", "reperfusion", 30, ESC23, basis="design")],
+        "findings": [_fd("crackles", "respiratory", [], "Bibasal crackles; cold, clammy peripheries.", "Bibaziler raller; soğuk, nemli ekstremiteler.")],
+    },
+    "acs_nstemi": {
+        "pattern": "acute_coronary", "rate_h": 0.03, "s0": 0.3, "bedside0": {"pain": 6},
+        "groups": [_grp("antiplatelet", ("asa_p2y12",), ("antiplatelet",), en="Antiplatelet", tr="Antiplatelet"),
+                   _grp("anticoagulant", ("anticoag",), ("anticoagulant",), modifies=False, en="Anticoagulation", tr="Antikoagülasyon")],
+        "targets": [_tgt("antiplatelet", "antiplatelet", 60, ESC23, basis="design")],
+        "row_harms": {"thrombolysis": _harm({}, en="Thrombolysis without ST elevation: bleeding risk, no benefit (ESC 2023)",
+                                            tr="ST yükselmesi olmadan tromboliz: kanama riski, yarar yok (ESC 2023)")},
+    },
+    "unstable_angina": {
+        "pattern": "acute_coronary", "rate_h": 0.02, "s0": 0.25, "bedside0": {"pain": 5},
+        "groups": [_grp("antiplatelet", ("antiplatelet",), ("antiplatelet",), en="Antiplatelet", tr="Antiplatelet")],
+        "targets": [_tgt("antiplatelet", "antiplatelet", 60, ESC23, basis="design")],
+    },
+    # ---- 06b section 5.8 ------------------------------------------------- #
+    "pulmonary_embolism": {
+        "pattern": "pe_intermediate",
+        "groups": [_grp("anticoagulant", ("anticoag",), ("anticoagulant",), en="Anticoagulation", tr="Antikoagülasyon")],
+        "targets": [_tgt("anticoag", "anticoagulant", 60, ESC19PE + " (without delay; 60 min teaching target)", basis="design")],
+        "branches": [
+            _br("obstructive_shock", "pe_high_risk", [_c("sbp", "<", 90)], s_start=0.55,
+                why_en="SBP below 90 mmHg: high-risk PE with obstructive shock (ESC 2019)",
+                why_tr="SKB 90 mmHg altı: obstrüktif şoklu yüksek riskli PE (ESC 2019)",
+                say_en="I'm going to faint.", say_tr="Bayılacağım."),
+            _br("decompensation", "pe_high_risk", [_c("difficulty", ">=", 4)], p=0.05, window=(30, 120), s_start=0.55,
+                why_en="Seeded haemodynamic decompensation (about 5 % at 7 days in PEITHO)",
+                why_tr="Tohumlanmış hemodinamik bozulma (PEITHO'da 7 günde yaklaşık %5)",
+                say_en="I'm going to faint.", say_tr="Bayılacağım.")],
+        "harm_rules": ["thrombolysis_intermediate_pe"],
+        "findings": [_fd("jvp", "cardiovascular", [_c("sbp", "<", 95)], "Raised JVP; cold peripheries.", "Yükselmiş JVB; soğuk ekstremiteler.")],
+    },
+    "pe_high_risk": {
+        "pattern": "obstructive_shock", "rate_h": 0.4, "recover_h": 1.0, "lag_min": 30,
+        "groups": [_grp("thrombolysis", ("thrombolysis_high_risk",), ("thrombolytic",), en="Systemic thrombolysis", tr="Sistemik tromboliz"),
+                   _grp("anticoagulant", ("anticoag",), ("anticoagulant",), modifies=False, en="Anticoagulation", tr="Antikoagülasyon")],
+        "targets": [_tgt("thrombolysis", "thrombolysis", 60, ESC19PE, basis="design")],
+        "fluid": "rv",
+    },
+    # ---- 06b section 5.9 ------------------------------------------------- #
+    "anaphylaxis": {
+        "pattern": "upper_airway",
+        "groups": [_grp("adrenaline", ("im_adrenaline",), ("adrenaline_im",), active_min=25, recover_h=1.5, en="IM adrenaline", tr="İ.M. adrenalin")],
+        "targets": [_tgt("adrenaline_5min", "adrenaline", 5, RCUK21),
+                    {"id": "adrenaline_repeat", "type": "repeat", "group": "adrenaline", "after_min": 5, "grace_min": 5,
+                     "when": [_c("sbp", "<", 90)], "source": RCUK21, "basis": "guideline", "by_min": 0}],
+        "findings": [_fd("stridor", "respiratory", [_c("s", ">=", 0.7)], "Audible inspiratory stridor; hoarse whisper.", "Duyulabilir inspiratuvar stridor; kısık fısıltı."),
+                     _fd("silent", "respiratory", [_c("s", ">=", 0.9)], "Silent chest with minimal air entry.", "Sessiz göğüs, minimal hava girişi."),
+                     _fd("hives", "skin", [], "Generalised urticaria and lip swelling.", "Yaygın ürtiker ve dudak şişliği.")],
+        "harm_rules": ["iv_adrenaline_bolus", "posture"],
+    },
+    "anaphylaxis_iatrogenic": {
+        "pattern": "upper_airway", "s0": 0.45, "rate_h": 2.2,
+        "groups": [_grp("adrenaline", ("im_adrenaline",), ("adrenaline_im",), active_min=25, recover_h=1.5, en="IM adrenaline", tr="İ.M. adrenalin")],
+        "targets": [_tgt("adrenaline_5min", "adrenaline", 5, RCUK21)],
+        "findings": [_fd("hives", "skin", [], "New generalised urticaria and lip swelling after the drug.", "İlaçtan sonra yeni yaygın ürtiker ve dudak şişliği."),
+                     _fd("stridor", "respiratory", [_c("s", ">=", 0.7)], "Audible stridor and wheeze.", "Duyulabilir stridor ve hışıltı.")],
+        "harm_rules": ["iv_adrenaline_bolus", "posture"],
+    },
+    # ---- 06b section 5.10 ------------------------------------------------ #
+    "heart_failure_acute": {
+        "pattern": "pulmonary_oedema",
+        "groups": [_grp("decongestion", ("iv_diuretic", "niv_nitrate"), ("loop_diuretic", "nitrate", "niv"), en="Decongestion (NIV, nitrate, diuretic)", tr="Dekonjesyon (NIV, nitrat, diüretik)")],
+        "targets": [_tgt("decongestion", "decongestion", 60, ESC21HF + " (early; 60 min teaching target)", basis="design")],
+        "row_classes": {"niv_nitrate": ["niv", "nitrate"], "iv_diuretic": ["loop_diuretic"], "fluid_bolus": ["fluids"]},
+        "findings": [_fd("frothy", "respiratory", [_c("spo2", "<", 80)], "Pink frothy sputum; crackles to the apices.", "Pembe köpüklü balgam; apekslere kadar raller.")],
+        "harm_rules": ["gtn_hypotension"],
+    },
+    # ---- the other ESI 1 to 2 conditions -------------------------------- #
+    "aortic_dissection": {
+        "pattern": "haemorrhagic_shock", "s0": 0.35, "rate_h": 0.1, "fluid": "neutral",
+        "peri": {"hr": 130, "systolic": 70, "diastolic": 40, "gcs": 10, "pain": 10},
+        "groups": [_grp("impulse_control", ("bp_hr_control",), ("beta_blocker_iv",), recover_h=0.0, en="HR and BP control", tr="KH ve KB kontrolü"),
+                   _grp("surgery", ("surgery_referral",), (), modifies=False, en="Cardiothoracic surgery", tr="Kalp-damar cerrahisi")],
+        "targets": [_tgt("impulse_control", "impulse_control", 30, "ESC 2014 aortic diseases https://doi.org/10.1093/eurheartj/ehu281", basis="design"),
+                    _tgt("surgery", "surgery", 60, "ESC 2014 aortic diseases https://doi.org/10.1093/eurheartj/ehu281", basis="design")],
+        "row_harms": {"thrombolysis": _harm({}, rate_mult=3.0, en="Thrombolysis in dissection: haemorrhage and rupture (ESC 2014)",
+                                            tr="Diseksiyonda tromboliz: kanama ve rüptür (ESC 2014)")},
+    },
+    "afib_rvr": {
+        "pattern": "tachy_arrhythmia", "s0": 0.3, "rate_h": 0.05, "recover_h": 0.5, "peri": {"hr": 175, "systolic": 85, "diastolic": 50, "gcs": 13},
+        "groups": [_grp("rate_control", ("rate_control", "dc_cardioversion"), ("beta_blocker_iv", "rhythm"), en="Rate or rhythm control", tr="Hız veya ritim kontrolü")],
+        "targets": [_tgt("rate_control", "rate_control", 60, "ESC 2020 AF https://doi.org/10.1093/eurheartj/ehaa612", basis="design")],
+    },
+    "svt": {
+        "pattern": "tachy_arrhythmia", "s0": 0.35, "rate_h": 0.05, "peri": {"hr": 220, "systolic": 80, "diastolic": 50, "gcs": 13},
+        "groups": [_grp("termination", ("vagal", "adenosine", "cardioversion"), ("rhythm",), en="Vagal manoeuvre, adenosine or cardioversion", tr="Vagal manevra, adenozin veya kardiyoversiyon")],
+        "targets": [_tgt("termination", "termination", 30, ERC21, basis="design")],
+        "row_harms": {"verapamil_hypotension": _harm({"systolic": -25, "diastolic": -12}, onset_min=5,
+                                                     en="Verapamil in a hypotensive patient: further hypotension (ERC 2021)",
+                                                     tr="Hipotansif hastada verapamil: hipotansiyon derinleşir (ERC 2021)")},
+    },
+    "vt": {
+        "pattern": "tachy_arrhythmia",
+        "groups": [_grp("cardioversion", ("sync_cardioversion", "defib_pulseless", "amiodarone"), ("rhythm",), en="Synchronised DC cardioversion", tr="Senkronize DC kardiyoversiyon")],
+        "targets": [_tgt("cardioversion", "cardioversion", 10, ERC21 + " (unstable: shock without delay)", basis="design")],
+        "row_harms": {"verapamil": _harm({"systolic": -30, "diastolic": -15}, onset_min=3, arrest="VF", p=0.5,
+                                         en="Verapamil in VT: collapse and VF (ERC 2021)", tr="VT'de verapamil: kollaps ve VF (ERC 2021)"),
+                      "sync_on_pulseless": _harm({}, en="Synchronised shock in pulseless VT delays defibrillation (ERC 2021)",
+                                                 tr="Nabızsız VT'de senkronize şok defibrilasyonu geciktirir (ERC 2021)")},
+    },
+    "complete_heart_block": {
+        "pattern": "brady",
+        "groups": [_grp("pacing", ("pacing",), ("rhythm",), en="Pacing", tr="Pacing")],
+        "targets": [_tgt("pacing", "pacing", 15, ERC21 + " (bradycardia algorithm)", basis="design")],
+        "row_harms": {"av_blockers": _harm({"hr": -10, "systolic": -15, "diastolic": -8}, onset_min=10,
+                                           en="AV-nodal blocker in complete heart block: slower rate, lower pressure",
+                                           tr="Tam blokta AV düğüm blokeri: daha yavaş hız, daha düşük basınç")},
+    },
+    "cardiac_tamponade": {
+        "pattern": "obstructive_shock", "fluid": "responsive",
+        "groups": [_grp("pericardiocentesis", ("pericardiocentesis",), ("procedure",), en="Pericardiocentesis", tr="Perikardiyosentez")],
+        "targets": [_tgt("pericardiocentesis", "pericardiocentesis", 30, "ESC 2015 pericardial diseases https://doi.org/10.1093/eurheartj/ehv318", basis="design")],
+        "row_harms": {"aggressive_diuresis": _harm({"systolic": -15, "diastolic": -8}, onset_min=20, rate_mult=1.5,
+                                                   en="Diuresis in tamponade lowers preload and pressure (ESC 2015)",
+                                                   tr="Tamponadda diürez ön yükü ve basıncı düşürür (ESC 2015)")},
+    },
+    "hypertensive_emergency": {
+        "pattern": "hypertensive_crisis",
+        "groups": [_grp("iv_antihypertensive", ("controlled_iv_antihtn",), (), en="Controlled IV antihypertensive", tr="Kontrollü İ.V. antihipertansif")],
+        "targets": [_tgt("iv_antihypertensive", "iv_antihypertensive", 60, "ESC/ESH 2018 hypertension https://doi.org/10.1093/eurheartj/ehy339", basis="design")],
+        "row_harms": {"rapid_normalise": _harm({"systolic": -45, "diastolic": -25, "gcs": -3}, onset_min=10,
+                                               en="Rapid normalisation of BP: cerebral and renal hypoperfusion (ESC/ESH 2018: lower MAP by 25 % or less in the first hours)",
+                                               tr="KB'nin hızla normale çekilmesi: serebral ve renal hipoperfüzyon (ESC/ESH 2018)")},
+    },
+    "infective_endocarditis": {
+        "pattern": "sepsis", "rate_h": 0.08,
+        "groups": [_grp("antimicrobial", ("prolonged_abx",), ("antibiotic",), needs=("gram_pos",), en="Empirical antibiotics after cultures", tr="Kültür sonrası ampirik antibiyotik")],
+        "targets": [_tgt("abx", "antimicrobial", 180, "ESC 2023 endocarditis https://doi.org/10.1093/eurheartj/ehad193", basis="design")],
+        "branches": _to_shock(),
+    },
+    "myocarditis": {
+        "pattern": "cardiogenic", "rate_h": 0.04, "s0": 0.3,
+        "groups": [_grp("supportive", ("supportive_monitor", "treat_hf"), ("loop_diuretic",), en="Monitoring and heart-failure therapy", tr="İzlem ve kalp yetmezliği tedavisi")],
+        "targets": [],
+    },
+    "asthma_exacerbation": {
+        "pattern": "bronchospasm",
+        "groups": [_grp("bronchodilator", ("neb_salbutamol",), ("bronchodilator", "adrenaline_im"), active_min=60, recover_h=0.6, en="Nebulised bronchodilator", tr="Nebül bronkodilatör"),
+                   _grp("steroid", ("systemic_steroid",), ("corticosteroid",), lag_min=240, en="Systemic corticosteroid", tr="Sistemik kortikosteroid")],
+        "targets": [_tgt("bronchodilator", "bronchodilator", 10, "BTS/SIGN 2019 asthma (immediately)", basis="design"),
+                    _tgt("steroid_1h", "steroid", 60, "BTS/SIGN 2019 asthma (steroids in all acute asthma)", basis="design")],
+        "row_harms": {"sedation": _harm({"rr": -6, "spo2": -6, "gcs": -2}, onset_min=5,
+                                        en="Sedation in acute asthma suppresses respiratory drive (BTS/SIGN 2019)",
+                                        tr="Akut astımda sedasyon solunum dürtüsünü baskılar (BTS/SIGN 2019)")},
+        "findings": [_fd("silent_chest", "respiratory", [_c("s", ">=", 0.8)], "Silent chest; exhausted, cannot complete words.", "Sessiz göğüs; bitkin, kelimeleri tamamlayamıyor.")],
+    },
+    "copd_exacerbation": {
+        "pattern": "hypercapnic_resp",
+        "groups": [_grp("niv", ("niv",), ("niv",), lag_min=30, en="NIV", tr="NIV"),
+                   _grp("bronchodilator", ("neb_steroid_abx",), ("bronchodilator",), active_min=60, recover_h=0.2, en="Bronchodilator", tr="Bronkodilatör")],
+        "targets": [_tgt("niv_1h", "niv", 60, "BTS/ICS 2016 NIV https://doi.org/10.1136/thoraxjnl-2015-208209 (start within 60 min of the gas)")],
+        "row_harms": {"untitrated_high_o2": _harm({}, branch="type2_respiratory_failure",
+                                                  en="Untitrated high-flow oxygen in COPD: rising PaCO2 (BTS 2017; Austin 2010)",
+                                                  tr="KOAH'ta titre edilmemiş yüksek akım oksijen: PaCO2 yükselir (BTS 2017; Austin 2010)")},
+    },
+    "type2_respiratory_failure": {
+        "pattern": "hypercapnic_resp", "s0": 0.3, "rate_h": 0.4,
+        "groups": [_grp("niv", ("niv",), ("niv",), lag_min=30, en="NIV", tr="NIV")],
+        "targets": [_tgt("niv_1h", "niv", 60, "BTS/ICS 2016 NIV https://doi.org/10.1136/thoraxjnl-2015-208209")],
+        "findings": [_fd("asterixis", "neurological", [_c("gcs", "<=", 13)], "Drowsy with a flapping tremor; slurred speech.", "Uykulu, flapping tremor; peltek konuşma.")],
+    },
+    "tension_pneumothorax": {
+        "pattern": "obstructive_shock", "s0": 0.6, "rate_h": 1.2, "recover_h": 4.0,
+        "groups": [_grp("decompression", ("decompression", "chest_drain"), ("procedure",), en="Needle or finger decompression", tr="İğne veya parmak dekompresyonu")],
+        "targets": [_tgt("decompression", "decompression", 5, "ATLS 10th edition; BTS 2023 pleural https://doi.org/10.1136/thorax-2022-219784 (immediate)", basis="design")],
+    },
+    "carbon_monoxide": {
+        "pattern": "metabolic_coma", "rate_h": 0.05, "recover_h": 0.6,
+        "groups": [_grp("oxygen", ("high_flow_o2", "remove_source"), ("oxygen", "niv"), en="High-flow oxygen", tr="Yüksek akım oksijen")],
+        "targets": [_tgt("oxygen", "oxygen", 10, "Weaver LK, NEJM 2009 https://doi.org/10.1056/NEJMcp0808928 (COHb half-life about 74 min on 100 % oxygen)", basis="design")],
+    },
+    "pancreatitis": {
+        "pattern": "distributive_shock", "s0": 0.3, "rate_h": 0.06, "fluid_limit_ml": 2000, "bedside0": {"gcs": 15, "crt": 3, "mottle": 0, "urine": 30, "lactate": 2.0},
+        "groups": [_grp("fluids", ("moderate_fluids",), ("fluids",), modifies=False, en="Moderate fluids", tr="Ilımlı sıvı")],
+        "targets": [_tgt("fluids", "fluids", 60, "WATERFALL, NEJM 2022 https://doi.org/10.1056/NEJMoa2202884", basis="design")],
+        "row_harms": {"aggressive_fluids": _harm({"spo2": -3, "rr": 3}, onset_min=30,
+                                                 en="Aggressive fluid in pancreatitis: more fluid overload, no benefit (WATERFALL 2022)",
+                                                 tr="Pankreatitte agresif sıvı: daha fazla sıvı yüklenmesi, yarar yok (WATERFALL 2022)")},
+    },
+    "upper_gi_bleed": {
+        "pattern": "haemorrhagic_shock", "rate_h": 0.2,
+        "groups": [_grp("resuscitation", ("resus_transfuse",), ("fluids",), modifies=False, en="Resuscitation and transfusion", tr="Resüsitasyon ve transfüzyon"),
+                   _grp("endoscopy", ("ppi_endoscopy",), (), lag_min=30, en="Endoscopy", tr="Endoskopi")],
+        "targets": [_tgt("resuscitation", "resuscitation", 30, "NICE CG141 https://www.nice.org.uk/guidance/cg141", basis="design"),
+                    _tgt("endoscopy_24h", "endoscopy", 1440, "NICE CG141 https://www.nice.org.uk/guidance/cg141")],
+    },
+    "bowel_obstruction": {
+        "pattern": "distributive_shock", "s0": 0.3, "rate_h": 0.05, "bedside0": {"gcs": 15, "crt": 3, "mottle": 0, "urine": 25, "lactate": 2.0},
+        "groups": [_grp("decompression", ("nbm_ngt",), (), en="NBM and NG decompression", tr="Ağızdan bir şey vermeme ve NG dekompresyon"),
+                   _grp("fluids", ("iv_fluids",), ("fluids",), modifies=False, en="IV fluids", tr="İ.V. sıvı")],
+        "targets": [_tgt("fluids", "fluids", 60, "WSES ASBO 2017 https://doi.org/10.1186/s13017-018-0185-2", basis="design")],
+    },
+    "ascending_cholangitis": {
+        "pattern": "sepsis",
+        "groups": [_grp("antimicrobial", ("abx_fluids",), ("antibiotic",), needs=("gram_neg", "anaerobe"), en="Gram-negative and anaerobic cover", tr="Gram-negatif ve anaerop kapsam"),
+                   _grp("drainage", ("biliary_drainage",), ("procedure",), en="Biliary drainage", tr="Biliyer drenaj")],
+        "targets": [_tgt("abx_1h", "antimicrobial", 60, "Tokyo Guidelines 2018 https://doi.org/10.1002/jhbp.509 ; " + SSC21),
+                    _tgt("drainage_24h", "drainage", 1440, "Tokyo Guidelines 2018 https://doi.org/10.1002/jhbp.509")],
+        "branches": _to_shock(),
+    },
+    "ischemic_stroke": {
+        "pattern": "neuro_ischaemic",
+        "groups": [_grp("reperfusion", ("thrombolysis_window", "thrombectomy"), ("thrombolytic",), en="Thrombolysis or thrombectomy", tr="Tromboliz veya trombektomi")],
+        "targets": [_tgt("door_to_needle", "reperfusion", 60, "AHA/ASA 2019 https://doi.org/10.1161/STR.0000000000000211")],
+        "harm_rules": ["lysis_bp_gate"],
+        "row_harms": {"early_antihtn": _harm({"systolic": -30, "diastolic": -15}, onset_min=15, rate_mult=1.5,
+                                             en="Aggressive early BP lowering in ischaemic stroke extends the infarct (AHA/ASA 2019)",
+                                             tr="İskemik inmede erken agresif KB düşürme infarktı genişletir (AHA/ASA 2019)")},
+    },
+    "intracerebral_hemorrhage": {
+        "pattern": "neuro_bleed",
+        "groups": [_grp("bp_control", ("bp_control",), (), en="SBP control", tr="SKB kontrolü"),
+                   _grp("reversal", ("reverse_anticoag",), (), en="Anticoagulant reversal", tr="Antikoagülan geri çevirme")],
+        "targets": [_tgt("bp_1h", "bp_control", 60, "AHA/ASA 2022 ICH https://doi.org/10.1161/STR.0000000000000407"),
+                    _tgt("reversal", "reversal", 60, "AHA/ASA 2022 ICH https://doi.org/10.1161/STR.0000000000000407", basis="design")],
+        "row_harms": {"thrombolysis": _harm({}, rate_mult=3.0, en="Thrombolysis in ICH: haematoma expansion (AHA/ASA 2022)",
+                                            tr="İSK'da tromboliz: hematom genişlemesi (AHA/ASA 2022)")},
+    },
+    "subarachnoid_hemorrhage": {
+        "pattern": "neuro_bleed", "rate_h": 0.05,
+        "groups": [_grp("neurosurgery", ("neurosurgery_referral",), (), en="Neurosurgical referral", tr="Nöroşirürji konsültasyonu"),
+                   _grp("nimodipine", ("nimodipine",), (), modifies=False, en="Nimodipine", tr="Nimodipin")],
+        "targets": [_tgt("neurosurgery", "neurosurgery", 60, "AHA/ASA 2023 aSAH https://doi.org/10.1161/STR.0000000000000436", basis="design")],
+        "branches": [_br("rebleed", "sah_rebleed", [_c("unmet:neurosurgery", "==", 1)], p=0.05, window=(30, 120),
+                         why_en="Seeded aneurysmal rebleed (4 to 14 % in the first 24 h; AHA/ASA 2023)",
+                         why_tr="Tohumlanmış anevrizmal yeniden kanama (ilk 24 saatte %4-14; AHA/ASA 2023)")],
+        "row_harms": {"antiplatelet": _harm({}, rate_mult=2.0, en="Antiplatelet in SAH raises the rebleed risk (AHA/ASA 2023)",
+                                            tr="SAK'ta antiplatelet yeniden kanama riskini artırır (AHA/ASA 2023)")},
+    },
+    "sah_rebleed": {
+        "pattern": "neuro_bleed", "rate_h": 0.6, "s0": 0.5,
+        "groups": [_grp("neurosurgery", ("neurosurgery_referral",), (), en="Neurosurgical referral", tr="Nöroşirürji konsültasyonu")],
+        "targets": [],
+    },
+    "status_epilepticus": {
+        "pattern": "seizure",
+        "groups": [_grp("benzodiazepine", ("benzodiazepine",), ("benzodiazepine",), en="Benzodiazepine", tr="Benzodiazepin")],
+        "targets": [_tgt("benzo_5min", "benzodiazepine", 5, "NICE NG217 https://www.nice.org.uk/guidance/ng217", basis="design")],
+        "row_classes": {"second_line_aed": ["benzodiazepine"]},
+    },
+    "nec_fasciitis": {
+        "pattern": "distributive_shock", "s0": 0.45,
+        "groups": [_grp("antimicrobial", ("broad_abx",), ("antibiotic",), needs=("gram_pos", "gram_neg", "anaerobe"), en="Broad cover including anaerobes", tr="Anaeropları da kapsayan geniş spektrum"),
+                   _grp("debridement", ("surgical_debridement",), ("procedure",), en="Surgical debridement", tr="Cerrahi debridman")],
+        "targets": [_tgt("abx_1h", "antimicrobial", 60, SSC21),
+                    _tgt("debridement", "debridement", 120, "IDSA 2014 SSTI https://doi.org/10.1093/cid/ciu296", basis="design")],
+        "findings": [_fd("spread", "skin", [_c("pt_min", ">=", 30), _c("unmet:debridement", "==", 1)], "Dusky skin and crepitus now spread beyond the marked margin.",
+                         "Morumsu cilt ve krepitasyon işaretlenen sınırın ötesine yayıldı.")],
+    },
+    "malaria": {
+        "pattern": "sepsis", "rate_h": 0.2,
+        "groups": [_grp("antimalarial", ("artesunate",), ("antimalarial",), lag_min=120, en="IV artesunate", tr="İ.V. artesunat")],
+        "targets": [_tgt("artesunate", "antimalarial", 60, "WHO malaria guidelines 2023 https://www.who.int/publications/i/item/guidelines-for-malaria", basis="design")],
+        "branches": _to_shock(),
+    },
+    "septic_arthritis": {
+        "pattern": "infection_local", "rate_h": 0.05,
+        "groups": [_grp("antimicrobial", ("abx_joint",), ("antibiotic",), needs=("gram_pos",), en="Anti-staphylococcal antibiotic", tr="Anti-stafilokokal antibiyotik")],
+        "targets": [_tgt("abx", "antimicrobial", 60, "BSR 2006 septic arthritis https://doi.org/10.1093/rheumatology/kel163", basis="design")],
+    },
+    "thyroid_storm": {
+        "pattern": "hyperthermia", "rate_h": 0.1,
+        "groups": [_grp("antithyroid", ("antithyroid_then_iodine",), (), lag_min=60, en="Antithyroid drug then iodine", tr="Antitiroid ilaç ardından iyot"),
+                   _grp("beta_blocker", ("beta_blocker",), ("beta_blocker_iv",), modifies=False, en="Beta-blocker", tr="Beta bloker")],
+        "targets": [_tgt("antithyroid", "antithyroid", 60, "ATA 2016 https://doi.org/10.1089/thy.2016.0229", basis="design")],
+        "row_harms": {"iodine_first": _harm({}, rate_mult=1.5, en="Iodine before a thionamide fuels hormone synthesis (ATA 2016)",
+                                            tr="Tiyonamidden önce iyot hormon sentezini artırır (ATA 2016)"),
+                      "unmonitored_bb_hf": _harm({"systolic": -25, "diastolic": -12}, onset_min=10,
+                                                 en="Unmonitored beta-blockade with heart failure: hypotension",
+                                                 tr="Kalp yetmezliğinde izlemsiz beta blokaj: hipotansiyon")},
+    },
+    "adrenal_crisis": {
+        "pattern": "distributive_shock", "s0": 0.45, "lag_min": 30, "recover_h": 0.4,
+        "groups": [_grp("hydrocortisone", ("hydrocortisone",), ("corticosteroid",), en="Hydrocortisone 100 mg IV", tr="İ.V. 100 mg hidrokortizon"),
+                   _grp("circulation", ("fluids_dextrose",), ("fluids",), modifies=False, en="Fluids and dextrose", tr="Sıvı ve dekstroz")],
+        "targets": [_tgt("hydrocortisone", "hydrocortisone", 30, "Endocrine Society 2016 adrenal insufficiency https://doi.org/10.1210/jc.2015-1710 (immediately)", basis="design")],
+    },
+    "hyperkalemia": {
+        "pattern": "electrolyte_arrhythmia",
+        "groups": [_grp("calcium", ("calcium",), (), active_min=45, en="IV calcium", tr="İ.V. kalsiyum"),
+                   _grp("shift", ("insulin_dextrose",), ("insulin_dextrose",), active_min=120, en="Insulin-glucose", tr="İnsülin-glukoz"),
+                   _grp("removal", ("dialysis_referral",), (), lag_min=60, en="Potassium removal", tr="Potasyum uzaklaştırma")],
+        "targets": [_tgt("calcium", "calcium", 10, "UKKA 2023 https://ukkidney.org/health-professionals/guidelines/treatment-acute-hyperkalaemia-adults", basis="design"),
+                    _tgt("shift", "shift", 30, "UKKA 2023 https://ukkidney.org/health-professionals/guidelines/treatment-acute-hyperkalaemia-adults", basis="design")],
+        "row_classes": {"insulin_dextrose": ["insulin_dextrose"]},
+        "row_harms": {"k_fluids": _harm({}, rate_mult=1.5, en="Potassium-containing fluid raises potassium further",
+                                        tr="Potasyum içeren sıvı potasyumu daha da artırır")},
+    },
+    "aki": {
+        "pattern": "metabolic_slow", "rate_h": 0.03, "fluid": "renal",
+        "groups": [_grp("cause", ("treat_cause_stop_nephrotoxins", "fluids_or_relieve"), (), en="Treat the cause", tr="Nedeni tedavi edin")],
+        "targets": [],
+    },
+    "alcohol_withdrawal": {
+        "pattern": "hyperthermia", "s0": 0.3, "rate_h": 0.1, "recover_h": 0.4, "arrest_rhythm": None,
+        "peri": {"hr": 140, "systolic": 175, "diastolic": 100, "tempC": 38.8, "gcs": 12},
+        "groups": [_grp("benzodiazepine", ("benzodiazepine",), ("benzodiazepine",), en="Benzodiazepine", tr="Benzodiazepin"),
+                   _grp("thiamine", ("thiamine_early",), (), modifies=False, en="Thiamine", tr="Tiamin")],
+        "targets": [_tgt("benzo", "benzodiazepine", 60, "NICE CG100 https://www.nice.org.uk/guidance/cg100", basis="design"),
+                    _tgt("thiamine", "thiamine", 60, "NICE CG100 https://www.nice.org.uk/guidance/cg100", basis="design")],
+        "branches": [_br("withdrawal_seizure", "status_epilepticus", [_c("unmet:benzodiazepine", "==", 1)], p=0.1, window=(30, 120), supersede=False,
+                         why_en="Seeded withdrawal seizure without benzodiazepine cover (NICE CG100)",
+                         why_tr="Benzodiazepin koruması olmadan tohumlanmış yoksunluk nöbeti (NICE CG100)")],
+    },
+    "opioid_overdose": {
+        "pattern": "tox_resp_depression",
+        "groups": [_grp("naloxone", ("naloxone_titrated",), ("naloxone",), active_min=45, en="Titrated naloxone", tr="Titre nalokson"),
+                   _grp("airway", ("airway_support",), ("oxygen",), modifies=False, en="Airway and ventilation", tr="Hava yolu ve ventilasyon")],
+        "targets": [_tgt("naloxone", "naloxone", 5, "AHA 2020 opioid emergency https://www.ahajournals.org/doi/10.1161/CIR.0000000000000916", basis="design")],
+        "row_harms": {"large_bolus": _harm({"hr": 25, "systolic": 30, "diastolic": 15}, onset_min=2,
+                                           en="Large naloxone bolus: precipitated withdrawal, agitation and vomiting (Clarke 2005)",
+                                           tr="Büyük nalokson bolusu: ani yoksunluk, ajitasyon ve kusma (Clarke 2005)")},
+    },
+    "febrile_neutropenia": {
+        "pattern": "sepsis",
+        "groups": [_grp("antimicrobial", ("immediate_abx",), ("antibiotic",), needs=("gram_neg", "pseudomonas"), en="Antipseudomonal cover", tr="Antipsödomonal kapsam")],
+        "targets": [_tgt("abx_1h", "antimicrobial", 60, "NICE CG151 https://www.nice.org.uk/guidance/cg151")],
+        "branches": _to_shock(),
+    },
+    "sickle_crisis": {
+        "pattern": "local_time_critical", "rate_h": 0.05,
+        "groups": [_grp("analgesia", ("analgesia",), ("opioid", "analgesia"), en="Analgesia", tr="Analjezi")],
+        "targets": [_tgt("analgesia_30", "analgesia", 30, "NICE CG143 https://www.nice.org.uk/guidance/cg143")],
+    },
+    "ectopic_pregnancy": {
+        "pattern": "haemorrhagic_shock",
+        "groups": [_grp("surgery", ("emergency_surgery",), ("procedure",), lag_min=30, recover_h=0.5, en="Emergency surgery", tr="Acil cerrahi"),
+                   _grp("resuscitation", ("iv_group_save",), ("fluids",), modifies=False, en="IV access and resuscitation", tr="Damar yolu ve resüsitasyon")],
+        "targets": [_tgt("surgery", "surgery", 60, "NICE NG126 https://www.nice.org.uk/guidance/ng126 (immediately if unstable)", basis="design")],
+    },
+    "preeclampsia": {
+        "pattern": "hypertensive_crisis", "rate_h": 0.1,
+        "groups": [_grp("antihypertensive", ("antihypertensive",), (), en="Antihypertensive", tr="Antihipertansif"),
+                   _grp("magnesium", ("magnesium",), (), modifies=False, en="Magnesium sulfate", tr="Magnezyum sülfat")],
+        "targets": [_tgt("antihypertensive", "antihypertensive", 60, "ACOG CO 767 https://www.acog.org/clinical/clinical-guidance/committee-opinion/articles/2019/02/emergent-therapy-for-acute-onset-severe-hypertension-during-pregnancy-and-the-postpartum-period"),
+                    _tgt("magnesium", "magnesium", 60, "NICE NG133 https://www.nice.org.uk/guidance/ng133", basis="design")],
+        "branches": [_br("eclampsia", "eclampsia", [_c("unmet:magnesium", "==", 1)], p=0.1, window=(30, 120),
+                         why_en="Seeded eclamptic seizure without magnesium (Eclampsia Trial 1995)",
+                         why_tr="Magnezyum olmadan tohumlanmış eklamptik nöbet (Eklampsi Çalışması 1995)")],
+    },
+    "pph": {
+        "pattern": "haemorrhagic_shock", "rate_h": 0.45,
+        "groups": [_grp("uterotonic", ("uterotonics",), (), lag_min=10, recover_h=0.5, en="Uterotonics", tr="Uterotonik"),
+                   _grp("txa", ("tranexamic_acid",), (), modifies=False, en="Tranexamic acid", tr="Traneksamik asit"),
+                   _grp("resuscitation", ("resus_transfuse",), ("fluids",), modifies=False, en="Resuscitation and transfusion", tr="Resüsitasyon ve transfüzyon")],
+        "targets": [_tgt("uterotonic", "uterotonic", 15, "WHO 2012 PPH https://www.who.int/publications/i/item/9789241548502", basis="design"),
+                    _tgt("txa_3h", "txa", 180, "WHO 2017 TXA in PPH https://www.who.int/publications/i/item/WHO-RHR-17.21")],
+    },
+    "cauda_equina": {
+        "pattern": "local_time_critical", "rate_h": 0.05,
+        "groups": [_grp("mri", ("urgent_mri",), (), modifies=False, en="Emergency MRI", tr="Acil MR"),
+                   _grp("decompression", ("surgical_decompression",), (), en="Surgical decompression", tr="Cerrahi dekompresyon")],
+        "targets": [_tgt("mri_4h", "mri", 240, "GIRFT National Suspected Cauda Equina Syndrome Pathway 2023 https://gettingitrightfirsttime.co.uk")],
+    },
+    "compartment_syndrome": {
+        "pattern": "local_time_critical", "rate_h": 0.2,
+        "groups": [_grp("fasciotomy", ("fasciotomy",), ("procedure",), en="Fasciotomy", tr="Fasyotomi"),
+                   _grp("release", ("release_dressings",), (), modifies=False, en="Release dressings", tr="Sargıları gevşetme")],
+        "targets": [_tgt("fasciotomy_1h", "fasciotomy", 60, "BOAST 10 compartment syndrome https://www.boa.ac.uk/resource/boast-10-pdf.html")],
+        "row_harms": {"elevate_above_heart": _harm({}, rate_mult=1.5, en="Elevation above the heart lowers perfusion pressure (BOAST 10)",
+                                                   tr="Kalp seviyesinin üzerine kaldırma perfüzyon basıncını düşürür (BOAST 10)")},
+    },
+    "paracetamol_od": {
+        "pattern": "stable",
+        "groups": [_grp("nac", ("nac",), (), en="Acetylcysteine", tr="Asetilsistein")],
+        "targets": [_tgt("nac_8h", "nac", 240, "MHRA 2012 / TOXBASE: NAC within 8 h of ingestion (arrival assumed 4 h after ingestion) https://www.toxbase.org", basis="design")],
+    },
+    # ---- the 47 conditions that had no fixture (06b F03) ---------------- #
+    "cardiac_arrest": {
+        "pattern": "arrest",
+        "groups": [_grp("defibrillation", ("cpr_defib",), ("rhythm",), en="Defibrillation", tr="Defibrilasyon"),
+                   _grp("adrenaline", ("adrenaline_1mg",), ("adrenaline_iv",), modifies=False, en="Adrenaline 1 mg IV", tr="İ.V. 1 mg adrenalin")],
+        "targets": [_tgt("defibrillation", "defibrillation", 2, ERC21 + " (shock without delay)", basis="design")],
+    },
+    "major_trauma": {
+        "pattern": "haemorrhagic_shock", "s0": 0.5, "rate_h": 0.35,
+        "groups": [_grp("haemorrhage_control", ("haemorrhage_control",), ("procedure",), lag_min=5, recover_h=0.4, en="Haemorrhage control", tr="Kanama kontrolü"),
+                   _grp("txa", ("txa",), (), modifies=False, en="Tranexamic acid", tr="Traneksamik asit"),
+                   _grp("blood", ("blood_products",), (), modifies=False, en="Blood products", tr="Kan ürünleri")],
+        "targets": [_tgt("haemorrhage_control", "haemorrhage_control", 10, "NICE NG39 https://www.nice.org.uk/guidance/ng39", basis="design"),
+                    _tgt("txa_3h", "txa", 180, "CRASH-2, Lancet 2010 https://doi.org/10.1016/S0140-6736(10)60835-5 ; NICE NG39")],
+        "row_classes": {"crystalloid_large": ["fluids"], "blood_products": ["blood"]},
+    },
+    "heat_stroke": {
+        "pattern": "hyperthermia", "s0": 0.55, "rate_h": 0.25, "recover_h": 1.2,
+        "groups": [_grp("cooling", ("active_cooling",), (), en="Active cooling", tr="Aktif soğutma")],
+        "targets": [_tgt("cooling", "cooling", 30, "ACSM 2023 exertional heat illness https://doi.org/10.1249/JSR.0000000000001058 (cool first)", basis="design")],
+    },
+    "hypothermia": {
+        "pattern": "hypothermic",
+        "groups": [_grp("rewarming", ("active_rewarming", "gentle_handling"), (), en="Active rewarming", tr="Aktif ısıtma")],
+        "targets": [_tgt("rewarming", "rewarming", 30, ERC21SC, basis="design")],
+        "row_harms": {"rough_handling": _harm({}, arrest="VF", p=0.5, en="Rough handling of a cold heart can trigger VF (ERC 2021)",
+                                              tr="Soğuk kalbin kaba hareketi VF tetikleyebilir (ERC 2021)")},
+    },
+    "drowning": {
+        "pattern": "hypoxic_resp", "s0": 0.5, "rate_h": 0.3,
+        "groups": [_grp("oxygenation", ("ventilate_o2", "cpap_niv"), ("oxygen", "niv"), lag_min=5, recover_h=0.3, en="Oxygenation and ventilation", tr="Oksijenlenme ve ventilasyon")],
+        "targets": [_tgt("oxygenation", "oxygenation", 5, "ERC 2021 drowning https://doi.org/10.1016/j.resuscitation.2021.02.011", basis="design")],
+    },
+    "electrical_injury": {
+        "pattern": "stable",
+        "groups": [_grp("ecg", ("ecg_monitor", "11524-6"), (), modifies=False, en="ECG and monitoring", tr="EKG ve monitörizasyon")],
+        "targets": [_tgt("ecg", "ecg", 10, ERC21SC, basis="design")],
+        "branches": [_br("vf", "", [_c("unmet:ecg", "==", 1)], p=0.02, window=(0, 60), arrest="VF",
+                         why_en="Seeded delayed ventricular arrhythmia after high-voltage injury (ERC 2021)",
+                         why_tr="Yüksek voltaj sonrası tohumlanmış gecikmiş ventriküler aritmi (ERC 2021)")],
+    },
+    "undiff_chest_pain": {
+        "pattern": "stable",
+        "groups": [_grp("ecg", ("ecg_10min", "11524-6"), (), modifies=False, en="12-lead ECG", tr="12 derivasyonlu EKG")],
+        "targets": [_tgt("ecg_10min", "ecg", 10, ESC23)],
+    },
+    "undiff_dyspnea": {
+        "pattern": "hypoxic_resp", "rate_h": 0.08, "s0": 0.3,
+        "groups": [_grp("oxygen", ("o2_titrated",), ("oxygen", "niv"), modifies=False, en="Titrated oxygen", tr="Titre oksijen")],
+        "targets": [_tgt("oxygen", "oxygen", 15, BTS17, basis="design")],
+        "row_harms": {"sedation_dyspnoea": _harm({"rr": -6, "spo2": -6, "gcs": -2}, onset_min=5, en="Sedation suppresses respiratory drive",
+                                                 tr="Sedasyon solunum dürtüsünü baskılar")},
+    },
+    "poisoning_unknown": {
+        "pattern": "tox_resp_depression", "s0": 0.4, "rate_h": 0.1,
+        "groups": [_grp("assessment", ("abcde_glucose_ecg", "airway_support"), (), modifies=False, en="ABCDE, glucose and ECG", tr="ABCDE, glukoz ve EKG")],
+        "targets": [_tgt("abcde", "assessment", 10, "AHA 2023 poisoning https://doi.org/10.1161/CIR.0000000000001161", basis="design")],
+        "row_harms": {"empirical_flumazenil": _harm({}, branch="status_epilepticus", p=0.3, en="Flumazenil can precipitate seizures (AHA 2023)",
+                                                    tr="Flumazenil nöbet tetikleyebilir (AHA 2023)")},
+    },
+    "acute_agitation": {
+        "pattern": "psych_risk",
+        "groups": [_grp("organic", ("exclude_organic",), (), modifies=False, en="Exclude organic causes", tr="Organik nedenleri dışlayın")],
+        "targets": [_tgt("organic", "organic", 30, "NICE NG10 https://www.nice.org.uk/guidance/ng10", basis="design")],
+        "row_harms": {"prone_restraint": _harm({"spo2": -10, "hr": 20}, onset_min=5, arrest="PEA", p=0.1,
+                                               en="Prolonged prone restraint: positional asphyxia (NICE NG10)",
+                                               tr="Uzun yüzüstü tespit: pozisyonel asfiksi (NICE NG10)")},
+    },
+    "hemoptysis": {
+        "pattern": "hypoxic_resp", "s0": 0.45, "rate_h": 0.25,
+        "groups": [_grp("embolisation", ("bae",), ("procedure",), lag_min=30, en="Bronchial artery embolisation", tr="Bronşiyal arter embolizasyonu"),
+                   _grp("position", ("bleeding_side_down",), (), modifies=False, en="Position and airway", tr="Pozisyon ve hava yolu")],
+        "targets": [_tgt("embolisation", "embolisation", 120, "Kathuria 2020 https://doi.org/10.1186/s40560-020-00441-8", basis="design")],
+        "row_harms": {"anticoag_hemoptysis": _harm({}, rate_mult=2.0, en="Anticoagulation worsens haemoptysis", tr="Antikoagülasyon hemoptiziyi kötüleştirir")},
+    },
+    "aspiration_pneumonitis": {
+        "pattern": "hypoxic_resp", "s0": 0.35, "rate_h": 0.08, "recover_h": 0.1,
+        "groups": [_grp("supportive", ("o2_suction",), ("oxygen", "niv"), en="Oxygen and supportive care", tr="Oksijen ve destek")],
+        "targets": [_tgt("oxygen", "supportive", 15, "Mandell 2019 https://doi.org/10.1056/NEJMra1714562", basis="design")],
+    },
+    "ards": {
+        "pattern": "hypoxic_resp", "s0": 0.6, "rate_h": 0.15, "recover_h": 0.1, "o2_response": 0.15,
+        "groups": [_grp("ventilation", ("lung_protective", "prone"), (), lag_min=30, en="Lung-protective ventilation", tr="Akciğer koruyucu ventilasyon")],
+        "targets": [_tgt("ventilation", "ventilation", 60, "ESICM 2023 https://doi.org/10.1007/s00134-023-07050-7", basis="design")],
+        "row_harms": {"high_tidal": _harm({}, rate_mult=1.5, en="High tidal volumes injure the lung (ESICM 2023)", tr="Yüksek tidal hacim akciğeri hasarlar (ESICM 2023)")},
+    },
+    "perforated_ulcer": {
+        "pattern": "sepsis", "rate_h": 0.25,
+        "groups": [_grp("antimicrobial", ("ppi_abx",), ("antibiotic",), needs=("gram_neg", "anaerobe"), en="Gram-negative and anaerobic cover", tr="Gram-negatif ve anaerop kapsam"),
+                   _grp("surgery", ("emergency_surgery",), ("procedure",), en="Emergency repair", tr="Acil onarım")],
+        "targets": [_tgt("abx_1h", "antimicrobial", 60, SSC21),
+                    _tgt("surgery", "surgery", 180, "WSES 2020 https://doi.org/10.1186/s13017-019-0283-9 (as soon as possible)", basis="design")],
+        "branches": _to_shock(),
+        "findings": [_fd("peritonism", "abdominal", [], "Board-like rigidity with rebound tenderness: generalised peritonism.",
+                         "Tahta gibi sertlik ve rebound hassasiyet: yaygın peritonizm.")],
+    },
+    "mesenteric_ischemia": {
+        "pattern": "sepsis", "s0": 0.35, "rate_h": 0.2,
+        "groups": [_grp("revascularisation", ("revascularisation",), ("procedure",), en="Revascularisation or laparotomy", tr="Revaskülarizasyon veya laparotomi"),
+                   _grp("ct", ("ct_angio",), (), modifies=False, en="CT angiography", tr="BT anjiyografi")],
+        "targets": [_tgt("ct", "ct", 60, "WSES 2022 https://doi.org/10.1186/s13017-022-00443-x", basis="design"),
+                    _tgt("revascularisation", "revascularisation", 360, "WSES 2022 https://doi.org/10.1186/s13017-022-00443-x", basis="design")],
+        "branches": _to_shock(),
+        "findings": [_fd("peritonism", "abdominal", [_c("s", ">=", 0.6)], "New guarding and rebound: the pain-out-of-proportion phase has become peritonism.",
+                         "Yeni defans ve rebound: orantısız ağrı evresi peritonizme döndü.")],
+    },
+    "tia": {
+        "pattern": "stable",
+        "groups": [_grp("aspirin", ("aspirin_300",), ("antiplatelet",), modifies=False, en="Aspirin 300 mg", tr="300 mg aspirin")],
+        "targets": [_tgt("aspirin", "aspirin", 60, "NICE NG128 https://www.nice.org.uk/guidance/ng128 (immediately)", basis="design")],
+    },
+    "gbs": {
+        "pattern": "hypercapnic_resp", "s0": 0.3, "rate_h": 0.04, "hypercapnic": False,
+        "groups": [_grp("ivig", ("ivig",), (), lag_min=600, en="IVIg or plasma exchange", tr="İVİG veya plazmaferez")],
+        "targets": [_tgt("ivig", "ivig", 1440, "EAN/PNS 2023 https://doi.org/10.1111/ene.16073", basis="design")],
+    },
+    "myasthenic_crisis": {
+        "pattern": "hypercapnic_resp", "s0": 0.5, "rate_h": 0.15, "hypercapnic": False,
+        "groups": [_grp("ventilation", ("airway_niv",), ("niv",), lag_min=10, en="NIV or intubation", tr="NIV veya entübasyon")],
+        "targets": [_tgt("ventilation", "ventilation", 30, "Sanders 2016 https://doi.org/10.1212/WNL.0000000000002790", basis="design")],
+        "row_harms": {"aminoglycoside_mg": _harm({}, rate_mult=1.5, en="Aminoglycoside or magnesium worsens weakness (Sanders 2016)",
+                                                 tr="Aminoglikozit veya magnezyum güçsüzlüğü artırır (Sanders 2016)")},
+    },
+    "spinal_cord_compression": {
+        "pattern": "local_time_critical", "rate_h": 0.02,
+        "groups": [_grp("mri", ("mri_24h",), (), modifies=False, en="Whole-spine MRI", tr="Tüm omurga MR"),
+                   _grp("decompression", ("spinal_referral",), (), en="Spinal surgery or radiotherapy", tr="Omurga cerrahisi veya radyoterapi")],
+        "targets": [_tgt("mri_24h", "mri", 1440, "NICE NG234 https://www.nice.org.uk/guidance/ng234")],
+    },
+    "encephalitis": {
+        "pattern": "neuro_infective",
+        "groups": [_grp("antiviral", ("aciclovir",), ("antiviral",), lag_min=120, en="IV aciclovir", tr="İ.V. asiklovir")],
+        "targets": [_tgt("aciclovir_6h", "antiviral", 360, "ABN/BIA 2012 https://doi.org/10.1016/j.jinf.2011.11.013")],
+        "branches": [_br("seizure", "status_epilepticus", [], p=0.2, window=(30, 110), supersede=False, s_start=0.6,
+                         why_en="Seeded seizure in encephalitis (ABN/BIA 2012)", why_tr="Ensefalitte tohumlanmış nöbet (ABN/BIA 2012)")],
+    },
+    "tetanus": {
+        "pattern": "hypercapnic_resp", "s0": 0.4, "rate_h": 0.1, "hypercapnic": False,
+        "groups": [_grp("spasm_control", ("benzo_mag_quiet",), ("benzodiazepine",), recover_h=0.2, en="Spasm control", tr="Spazm kontrolü"),
+                   _grp("antitoxin", ("htig",), (), modifies=False, en="Antitoxin", tr="Antitoksin")],
+        "targets": [_tgt("antitoxin", "antitoxin", 60, "Yen & Thwaites, Lancet 2019 https://doi.org/10.1016/S0140-6736(19)31894-6", basis="design")],
+        "row_harms": {"stimulation": _harm({"rr": -6, "spo2": -8}, onset_min=2, rate_mult=1.5, en="Stimulation triggers spasm and laryngospasm",
+                                           tr="Uyarım spazm ve laringospazm tetikler")},
+    },
+    "myxedema_coma": {
+        "pattern": "hypothermic", "s0": 0.5, "rate_h": 0.05, "recover_h": 0.05,
+        "peri": {"tempC": 30.0, "hr": 35, "systolic": 70, "diastolic": 40, "rr": 6, "gcs": 5},
+        "groups": [_grp("thyroid_hormone", ("iv_levothyroxine_hc",), ("corticosteroid",), lag_min=120, en="IV levothyroxine and hydrocortisone", tr="İ.V. levotiroksin ve hidrokortizon")],
+        "targets": [_tgt("thyroid_hormone", "thyroid_hormone", 60, "ATA 2014 https://doi.org/10.1089/thy.2014.0028", basis="design")],
+        "row_harms": {"aggressive_rewarm": _harm({"systolic": -20, "diastolic": -10}, onset_min=15, en="Active rewarming vasodilates: hypotension (ATA 2014)",
+                                                 tr="Aktif ısıtma vazodilatasyon yapar: hipotansiyon (ATA 2014)")},
+    },
+    "hyponatremia": {
+        "pattern": "metabolic_coma", "rate_h": 0.1, "lag_min": 20, "recover_h": 0.4,
+        "groups": [_grp("hypertonic", ("hypertonic_bolus",), (), en="Hypertonic saline bolus", tr="Hipertonik salin bolusu")],
+        "targets": [_tgt("hypertonic", "hypertonic", 30, "Spasovski 2014 https://doi.org/10.1530/EJE-13-1020 (immediately)", basis="design")],
+        "branches": [_br("seizure", "status_epilepticus", [_c("unmet:hypertonic", "==", 1)], p=0.2, window=(15, 90), supersede=False,
+                         why_en="Seeded hyponatraemic seizure without hypertonic saline (Spasovski 2014)",
+                         why_tr="Hipertonik salin olmadan tohumlanmış hiponatremik nöbet (Spasovski 2014)")],
+        "row_harms": {"rapid_correction": _harm({}, en="Over-rapid correction risks osmotic demyelination days later (Spasovski 2014)",
+                                                tr="Aşırı hızlı düzeltme günler sonra osmotik demiyelinizasyon riski taşır (Spasovski 2014)")},
+    },
+    "pheochromocytoma": {
+        "pattern": "hypertensive_crisis",
+        "groups": [_grp("alpha_blockade", ("alpha_blockade",), (), recover_h=0.4, en="Alpha-blockade", tr="Alfa blokaj")],
+        "targets": [_tgt("alpha_blockade", "alpha_blockade", 30, "Endocrine Society 2014 https://doi.org/10.1210/jc.2014-1498", basis="design")],
+        "row_harms": {"beta_first": _harm({"systolic": 30, "diastolic": 15}, onset_min=10, rate_mult=1.5,
+                                          en="Beta-blocker before alpha-blockade: unopposed alpha vasoconstriction (Endocrine Society 2014)",
+                                          tr="Alfa blokajdan önce beta bloker: karşılanmamış alfa vazokonstriksiyonu (Endokrin Derneği 2014)")},
+    },
+    "hyperkalemia_esrd": {
+        "pattern": "electrolyte_arrhythmia",
+        "groups": [_grp("calcium", ("calcium",), (), active_min=45, en="IV calcium", tr="İ.V. kalsiyum"),
+                   _grp("shift", ("insulin_dextrose",), ("insulin_dextrose",), active_min=120, en="Insulin-glucose", tr="İnsülin-glukoz"),
+                   _grp("removal", ("urgent_dialysis",), (), lag_min=60, en="Haemodialysis", tr="Hemodiyaliz")],
+        "targets": [_tgt("calcium", "calcium", 10, "UKKA 2023 https://ukkidney.org/health-professionals/guidelines/treatment-acute-hyperkalaemia-adults", basis="design"),
+                    _tgt("shift", "shift", 30, "UKKA 2023 https://ukkidney.org/health-professionals/guidelines/treatment-acute-hyperkalaemia-adults", basis="design")],
+        "row_classes": {"insulin_dextrose": ["insulin_dextrose"]},
+        "row_harms": {"k_fluids": _harm({}, rate_mult=1.5, en="Potassium-containing fluid raises potassium further",
+                                        tr="Potasyum içeren sıvı potasyumu daha da artırır")},
+    },
+    "testicular_torsion": {
+        "pattern": "local_time_critical",
+        "groups": [_grp("exploration", ("urology_exploration",), ("procedure",), en="Scrotal exploration", tr="Skrotal eksplorasyon")],
+        "targets": [_tgt("exploration", "exploration", 60, "EAU Paediatric Urology 2023 https://uroweb.org/guidelines/paediatric-urology (salvage best within 6 h)", basis="design")],
+    },
+    "priapism": {
+        "pattern": "local_time_critical", "rate_h": 0.1,
+        "groups": [_grp("aspiration", ("aspiration_phenylephrine",), (), en="Aspiration and phenylephrine", tr="Aspirasyon ve fenilefrin")],
+        "targets": [_tgt("aspiration", "aspiration", 60, "AUA/SMSNA 2022 https://doi.org/10.1097/JU.0000000000002236", basis="design")],
+    },
+    "suicidal_ideation": {
+        "pattern": "psych_risk",
+        "groups": [_grp("observation", ("safe_observation",), (), modifies=False, en="Safe observation", tr="Güvenli gözlem")],
+        "targets": [_tgt("observation", "observation", 15, "NICE NG225 https://www.nice.org.uk/guidance/ng225", basis="design")],
+    },
+    "acute_psychosis": {
+        "pattern": "psych_risk",
+        "groups": [_grp("organic", ("organic_screen",), (), modifies=False, en="Organic screen", tr="Organik tarama")],
+        "targets": [_tgt("organic", "organic", 60, "NICE CG178 https://www.nice.org.uk/guidance/cg178", basis="design")],
+    },
+    "serotonin_syndrome": {
+        "pattern": "hyperthermia", "s0": 0.4, "rate_h": 0.15, "recover_h": 0.5,
+        "groups": [_grp("stop_cool", ("stop_agent_cool", "benzo"), ("benzodiazepine",), en="Stop agent, benzodiazepine, cool", tr="Ajanı kesin, benzodiazepin, soğutun")],
+        "targets": [_tgt("stop_cool", "stop_cool", 30, "Boyer 2005 https://doi.org/10.1056/NEJMra041867", basis="design")],
+        "row_harms": {"restraint_antipsychotic": _harm({"tempC": 0.5}, onset_min=20, rate_mult=1.5, en="Restraint raises muscle heat production (Boyer 2005)",
+                                                       tr="Tespit kas ısı üretimini artırır (Boyer 2005)")},
+    },
+    "nms": {
+        "pattern": "hyperthermia", "s0": 0.4, "rate_h": 0.1, "recover_h": 0.3,
+        "groups": [_grp("stop", ("stop_antipsychotic", "benzo_dantrolene"), ("benzodiazepine",), en="Stop the antipsychotic", tr="Antipsikotiği kesin")],
+        "targets": [_tgt("stop", "stop", 30, "Berman 2011 https://doi.org/10.1177/1941875210386491", basis="design")],
+        "row_harms": {"more_antipsychotic": _harm({"tempC": 0.4}, onset_min=30, rate_mult=1.5, en="More antipsychotic worsens NMS", tr="Ek antipsikotik NMS'yi kötüleştirir")},
+    },
+    "delirium_tremens": {
+        "pattern": "hyperthermia", "s0": 0.45, "rate_h": 0.2, "recover_h": 0.4,
+        "peri": {"hr": 150, "systolic": 180, "diastolic": 105, "tempC": 39.5, "gcs": 9, "rr": 28},
+        "groups": [_grp("benzodiazepine", ("benzo_titrated",), ("benzodiazepine",), en="Benzodiazepine", tr="Benzodiazepin"),
+                   _grp("thiamine", ("thiamine_iv",), (), modifies=False, en="IV thiamine", tr="İ.V. tiamin")],
+        "targets": [_tgt("benzo", "benzodiazepine", 30, "NICE CG100 https://www.nice.org.uk/guidance/cg100", basis="design"),
+                    _tgt("thiamine", "thiamine", 60, "NICE CG100 https://www.nice.org.uk/guidance/cg100", basis="design")],
+        "branches": [_br("withdrawal_seizure", "status_epilepticus", [_c("unmet:benzodiazepine", "==", 1)], p=0.2, window=(20, 100), supersede=False,
+                         why_en="Seeded withdrawal seizure (NICE CG100)", why_tr="Tohumlanmış yoksunluk nöbeti (NICE CG100)")],
+    },
+    "tumor_lysis": {
+        "pattern": "electrolyte_arrhythmia", "s0": 0.35, "rate_h": 0.08, "bedside0": {"k": 6.2},
+        "groups": [_grp("hydration", ("hydration_tls", "rasburicase"), ("fluids",), en="Hydration and rasburicase", tr="Hidrasyon ve rasburikaz")],
+        "targets": [_tgt("hydration", "hydration", 60, "Howard 2011 https://doi.org/10.1056/NEJMra0904569", basis="design")],
+    },
+    "dic": {
+        "pattern": "haemorrhagic_shock", "s0": 0.35, "rate_h": 0.1,
+        "groups": [_grp("cause", ("treat_cause",), (), en="Treat the cause", tr="Nedeni tedavi edin"),
+                   _grp("products", ("blood_products_dic",), (), modifies=False, en="Blood products", tr="Kan ürünleri")],
+        "targets": [_tgt("cause", "cause", 60, "BCSH 2009 https://doi.org/10.1111/j.1365-2141.2009.07600.x", basis="design")],
+    },
+    "acute_leukemia": {
+        "pattern": "sepsis", "s0": 0.25, "rate_h": 0.05,
+        "groups": [_grp("referral", ("haematology_urgent",), (), modifies=False, en="Urgent haematology", tr="Acil hematoloji")],
+        "targets": [_tgt("referral", "referral", 240, "ELN 2022 https://doi.org/10.1182/blood.2022016867", basis="design")],
+    },
+    "hemophilia_bleed": {
+        "pattern": "haemorrhagic_shock", "s0": 0.35, "rate_h": 0.15,
+        "groups": [_grp("factor", ("factor_now",), (), lag_min=15, en="Factor concentrate", tr="Faktör konsantresi")],
+        "targets": [_tgt("factor", "factor", 30, "WFH 2020 https://doi.org/10.1111/hae.14046 (as soon as possible)", basis="design")],
+    },
+    "transfusion_reaction": {
+        "pattern": "distributive_shock", "s0": 0.4, "rate_h": 0.6, "recover_h": 0.6, "lag_min": 0,
+        "groups": [_grp("stop", ("stop_transfusion",), (), en="Stop the transfusion", tr="Transfüzyonu durdurun")],
+        "targets": [_tgt("stop", "stop", 5, "BSH 2012 https://doi.org/10.1111/bjh.12017 (immediately)", basis="design")],
+        "row_harms": {"continue_slower": _harm({}, rate_mult=1.5, en="Continuing the transfusion continues the exposure (BSH 2012)",
+                                               tr="Transfüzyona devam etmek maruziyeti sürdürür (BSH 2012)")},
+    },
+    "ovarian_torsion": {
+        "pattern": "local_time_critical",
+        "groups": [_grp("laparoscopy", ("gyn_laparoscopy",), ("procedure",), en="Laparoscopy and detorsion", tr="Laparoskopi ve detorsiyon")],
+        "targets": [_tgt("laparoscopy", "laparoscopy", 120, "ACOG CO 783 https://www.acog.org/clinical/clinical-guidance/committee-opinion/articles/2019/08/adnexal-torsion-in-adolescents", basis="design")],
+    },
+    "eclampsia": {
+        "pattern": "seizure", "s0": 0.5,
+        "peri": {"gcs": 3, "hr": 140, "systolic": 200, "diastolic": 120, "rr": 10, "spo2": 80},
+        "well": {"gcs": 14, "hr": 95, "systolic": 150, "diastolic": 95, "rr": 16, "spo2": 96},
+        "groups": [_grp("magnesium", ("magnesium_load",), (), lag_min=5, recover_h=1.0, en="Magnesium sulfate", tr="Magnezyum sülfat"),
+                   _grp("antihypertensive", ("antihypertensive",), (), modifies=False, en="Antihypertensive", tr="Antihipertansif")],
+        "targets": [_tgt("magnesium", "magnesium", 15, "Eclampsia Trial, Lancet 1995 https://doi.org/10.1016/S0140-6736(95)91034-3 ; NICE NG133", basis="design"),
+                    _tgt("antihypertensive", "antihypertensive", 60, "ACOG CO 767 https://www.acog.org/clinical/clinical-guidance/committee-opinion/articles/2019/02/emergent-therapy-for-acute-onset-severe-hypertension-during-pregnancy-and-the-postpartum-period")],
+    },
+    "placental_abruption": {
+        "pattern": "haemorrhagic_shock", "s0": 0.5, "rate_h": 0.3,
+        "groups": [_grp("delivery", ("ctg_delivery",), (), lag_min=30, en="Urgent delivery", tr="Acil doğum"),
+                   _grp("resuscitation", ("resus_mhp",), ("fluids",), modifies=False, en="Resuscitation", tr="Resüsitasyon")],
+        "targets": [_tgt("delivery", "delivery", 60, "RCOG GTG 63 https://www.rcog.org.uk/guidance/browse-all-guidance/green-top-guidelines/antepartum-haemorrhage-green-top-guideline-no-63/", basis="design")],
+        "row_harms": {"tocolysis": _harm({}, rate_mult=1.3, en="Tocolysis is contraindicated in abruption (RCOG GTG 63)", tr="Dekolmanda tokoliz kontrendikedir (RCOG GTG 63)")},
+    },
+    "open_fracture": {
+        "pattern": "local_time_critical", "rate_h": 0.05,
+        "groups": [_grp("antimicrobial", ("iv_abx_1h",), ("antibiotic",), needs=("gram_pos",), modifies=False, en="IV antibiotics", tr="İ.V. antibiyotik")],
+        "targets": [_tgt("abx_1h", "antimicrobial", 60, "BOAST 4 https://www.boa.ac.uk/resource/boast-4-pdf.html")],
+    },
+    "tca_overdose": {
+        "pattern": "tox_cardiac",
+        "groups": [_grp("bicarbonate", ("sodium_bicarb",), (), en="Sodium bicarbonate", tr="Sodyum bikarbonat")],
+        "targets": [_tgt("bicarbonate", "bicarbonate", 15, "AHA 2023 poisoning https://doi.org/10.1161/CIR.0000000000001161", basis="design")],
+        "branches": [_br("vf", "", [_c("unmet:bicarbonate", "==", 1)], p=0.15, window=(20, 100), arrest="VF",
+                         why_en="Seeded ventricular arrhythmia with QRS widening and no bicarbonate (AHA 2023)",
+                         why_tr="QRS genişlemesi ve bikarbonat yokken tohumlanmış ventriküler aritmi (AHA 2023)")],
+        "row_harms": {"physostigmine_flumazenil": _harm({}, arrest="asystole", p=0.5, en="Physostigmine or flumazenil in TCA poisoning: asystole or seizures (AHA 2023)",
+                                                        tr="TSA zehirlenmesinde fizostigmin veya flumazenil: asistoli veya nöbet (AHA 2023)")},
+    },
+    "anticholinergic_tox": {
+        "pattern": "hyperthermia", "s0": 0.35, "rate_h": 0.08, "recover_h": 0.4, "arrest_rhythm": None,
+        "groups": [_grp("benzo", ("benzo_cooling", "physostigmine_expert"), ("benzodiazepine",), en="Benzodiazepine and cooling", tr="Benzodiazepin ve soğutma")],
+        "targets": [_tgt("benzo", "benzo", 60, "Dawson 2016 https://doi.org/10.1111/bcp.12619", basis="design")],
+    },
+    "rhabdomyolysis": {
+        "pattern": "metabolic_slow", "rate_h": 0.05, "metabolic": "hyperk", "bedside0": {"k": 5.6}, "fluid_limit_ml": 6000,
+        "groups": [_grp("fluids", ("fluids_uo",), ("fluids",), en="IV fluids", tr="İ.V. sıvı")],
+        "targets": [_tgt("fluids", "fluids", 60, "Bosch 2009 https://doi.org/10.1056/NEJMra0801327", basis="design")],
+    },
+    "salicylate_od": {
+        "pattern": "metabolic_slow", "rate_h": 0.12, "arrest_rhythm": "PEA",
+        "peri": {"hr": 140, "rr": 40, "systolic": 85, "diastolic": 50, "gcs": 8, "tempC": 38.8},
+        "groups": [_grp("alkalinisation", ("bicarb_alkalinise",), (), lag_min=30, recover_h=0.2, en="Urinary alkalinisation", tr="İdrar alkalinizasyonu")],
+        "targets": [_tgt("alkalinisation", "alkalinisation", 60, "EXTRIP 2015 https://doi.org/10.1016/j.annemergmed.2015.03.032", basis="design")],
+        "row_harms": {"intubate_no_hypervent": _harm({}, arrest="PEA", p=0.5, en="Intubation without matched ventilation: acidaemia and arrest (EXTRIP 2015)",
+                                                     tr="Ventilasyonu karşılanmadan entübasyon: asidemi ve arrest (EXTRIP 2015)")},
+    },
+    "organophosphate_poisoning": {
+        "pattern": "hypercapnic_resp", "s0": 0.55, "rate_h": 0.3, "recover_h": 1.5, "hypercapnic": False,
+        "peri": {"hr": 35, "systolic": 70, "diastolic": 40, "rr": 6, "spo2": 70, "gcs": 6},
+        "groups": [_grp("atropine", ("atropine_double",), (), lag_min=2, en="Atropine", tr="Atropin")],
+        "targets": [_tgt("atropine", "atropine", 10, "Eddleston 2008 https://doi.org/10.1016/S0140-6736(07)61202-1", basis="design")],
+        "row_harms": {"suxamethonium": _harm({}, rate_mult=1.5, en="Suxamethonium: prolonged paralysis (Eddleston 2008)", tr="Süksinilkolin: uzamış paralizi (Eddleston 2008)")},
+    },
+    # Branch-only labels.
+    "refractory_shock": {"pattern": "stable", "groups": [], "targets": []},
+}
+
+# Antimicrobial spectrum by formulary code (review 06b F11). An abstract case
+# row ("Broad-spectrum IV antibiotics") is taken as adequate for its own
+# condition; a named formulary agent is checked against the rule's ``needs``.
+# Sources: NICE NG240 (ceftriaxone and chloramphenicol cross the blood-brain
+# barrier; vancomycin is an add-on), IDSA meningitis 2004
+# https://doi.org/10.1086/425368 , Tokyo Guidelines 2018, NICE CG151, BNF
+# treatment summaries https://bnf.nice.org.uk/treatment-summaries/
+AGENT_COVERAGE: dict[str, list[str]] = {
+    "2193": ["gram_pos", "gram_neg", "cns"],
+    "pip-tazo": ["gram_pos", "gram_neg", "anaerobe", "pseudomonas"],
+    "29561": ["gram_pos", "gram_neg", "anaerobe", "pseudomonas", "cns"],
+    "11124": ["gram_pos", "mrsa"],
+    "4413": ["gram_neg", "pseudomonas"],
+    "82122": ["gram_pos", "gram_neg", "atypical"],
+    "21212": ["atypical"],
+    "3640": ["atypical", "gram_pos"],
+    "2582": ["gram_pos", "anaerobe"],
+    "6922": ["anaerobe"],
+    "2348": ["gram_pos", "gram_neg", "anaerobe", "cns"],
+}
+
+# Allergen class by formulary code (06b section 4.3).
+AGENT_ALLERGY_CLASS: dict[str, str] = {
+    "pip-tazo": "penicillin", "2193": "cephalosporin", "29561": "carbapenem", "1191": "nsaid", "7052": "opioid",
+}
+
+# Treatment class of each formulary code (normalize.WEB_TREATMENT_CATALOG, F08:
+# classes come from the catalogue, never from a substring such as "beta").
+CODE_CLASSES: dict[str, list[str]] = {
+    "7806": ["oxygen"], "313002": ["fluids"], "1191": ["antiplatelet"], "4917": ["nitrate"], "7052": ["opioid"],
+    "2193": ["antibiotic"], "pip-tazo": ["antibiotic"], "29561": ["antibiotic"], "11124": ["antibiotic"],
+    "4413": ["antibiotic"], "82122": ["antibiotic"], "21212": ["antibiotic"], "3640": ["antibiotic"],
+    "2582": ["antibiotic"], "6922": ["antibiotic"], "2348": ["antibiotic"], "artesunate": ["antimalarial"],
+    "260101": ["antiviral"], "3264": ["corticosteroid"], "435": ["bronchodilator"], "448": ["rhythm"],
+    "5856": ["insulin_frii"], "7242": ["naloxone"], "6470": ["benzodiazepine"], "161": ["antipyretic"],
+    "26225": ["antiemetic"], "3992-im": ["adrenaline_im"], "3992": ["adrenaline_iv"], "8410": ["thrombolytic"],
+}
+
+# Vital effect curve per treatment class (06b section 4.1). ``onset`` is the
+# ramp to full effect in minutes, ``wane`` the minutes after administration
+# over which it fades to nothing (None: lasts while running). Context rules
+# (oxygen dose response, fluid responsiveness, titrated pressor, nitrate and
+# adrenaline gates) live in course.py; the numbers live here.
+CLASS_EFFECTS: dict[str, dict[str, Any]] = {
+    "fluids": {"effects": {"systolic": 12, "diastolic": 6, "hr": -7, "crt": -1}, "onset": 15, "wane": [30, 75],
+               "source": "Glassford 2014 https://doi.org/10.1186/s13054-014-0696-5 ; NICE CG174"},
+    "adrenaline_im": {"effects": {"systolic": 20, "diastolic": 8, "spo2": 5, "rr": -5, "hr": -5}, "onset": 4, "wane": [10, 30],
+                      "source": RCUK21 + " ; Simons 2001 https://doi.org/10.1067/mai.2001.119411"},
+    "adrenaline_iv_bolus": {"effects": {"systolic": 60, "diastolic": 25, "hr": 40}, "onset": 1, "wane": [5, 15], "source": RCUK21},
+    "nitrate": {"effects": {"systolic": -15, "diastolic": -8}, "onset": 3, "wane": [20, 40], "source": ESC21HF},
+    "nitrate_harm": {"effects": {"systolic": -35, "diastolic": -15, "hr": 15}, "onset": 3, "wane": [20, 45],
+                     "source": ESC23 + " ; AHA ACS 2025 https://doi.org/10.1161/CIR.0000000000001309"},
+    "loop_diuretic": {"effects": {"rr": -4, "spo2": 3, "urine": 100}, "onset": 30, "wane": None, "source": ESC21HF},
+    "niv": {"effects": {"spo2": 6, "rr": -4}, "onset": 10, "wane": None, "source": ESC21HF + " ; BTS/ICS 2016"},
+    "bronchodilator": {"effects": {"rr": -4, "spo2": 3, "hr": 8}, "onset": 5, "wane": [60, 120], "source": "BTS/SIGN 2019 asthma"},
+    "opioid": {"effects": {"pain": -3, "rr": -2}, "onset": 5, "wane": [120, 240], "source": "AHA 2020 opioid emergency"},
+    "opioid_harm": {"effects": {"rr": -6, "spo2": -6, "gcs": -2}, "onset": 5, "wane": [60, 120], "source": "AHA 2020 opioid emergency"},
+    "analgesia": {"effects": {"pain": -3}, "onset": 15, "wane": [180, 300], "source": "NICE CG143"},
+    "naloxone": {"effects": {"rr": 8, "spo2": 10, "gcs": 6, "hr": 5}, "onset": 2, "wane": [30, 75],
+                 "source": "Clarke 2005 https://doi.org/10.1136/emj.2004.019240"},
+    "antipyretic": {"effects": {"tempC": -0.8, "hr": -8}, "onset": 60, "wane": [240, 360],
+                    "source": "OFIRMEV label https://www.accessdata.fda.gov/drugsatfda_docs/label/2010/022450lbl.pdf"},
+    "beta_blocker_iv": {"effects": {"hr": -20, "systolic": -15, "diastolic": -8}, "onset": 10, "wane": None,
+                        "source": "COMMIT 2005 https://doi.org/10.1016/S0140-6736(05)67661-1"},
+    "glucagon": {"effects": {"systolic": 15, "diastolic": 6}, "onset": 10, "wane": [20, 40], "source": RCUK21},
+    "thrombolytic_pe": {"effects": {"systolic": 20, "diastolic": 10, "hr": -15}, "onset": 60, "wane": None, "source": ESC19PE},
+}
+
+# Lab kinetics the Director integrates minute by minute (shared with kinetics.py
+# rates). mmol/L per hour unless stated.
+LAB_RATES: dict[str, Any] = {
+    "dka_cbg_untreated_h": 0.5, "dka_cbg_fluids_h": -1.0, "dka_cbg_insulin_h": -3.0, "dextrose_offset_h": 2.5,
+    "dka_k_insulin_h": -0.5, "dka_k_insulin_late_h": -0.2, "k_replacement_h": 0.5,
+    "hypo_cbg_untreated_h": -0.3, "dextrose_bolus_mmol": 6.0, "dextrose_bolus_min": 10, "post_dextrose_h": -1.0,
+    "hyperk_untreated_h": 0.1, "insulin_dextrose_k": -1.0, "insulin_dextrose_min": 60, "dialysis_k_h": -1.5,
+    "lactate_plateau_tau_min": 240, "lactate_half_life_min": 120,
+    "source": JBDS23 + " ; " + ADA24 + " ; UKKA 2023 ; kinetics.py lactate (Vincent 2016, Nguyen 2004)",
+}
+
+# Anything else the engine needs to cite.
+COURSE_SOURCES: dict[str, str] = {
+    "arrest": ERC21 + " ; AHA 2020 ACLS https://www.ahajournals.org/doi/10.1161/CIR.0000000000000916",
+    "fluid_overload": ESC21HF + " ; " + SSC21 + " ; Glassford 2014",
+    "allergy": "NICE CG183 https://www.nice.org.uk/guidance/cg183 ; AAAAI/ACAAI 2022 https://doi.org/10.1016/j.jaci.2022.08.028 ; Pumphrey 2000 https://pubmed.ncbi.nlm.nih.gov/10931122/",
+    "gcs": "NICE CG50 https://www.nice.org.uk/guidance/cg50 ; RCP NEWS2",
+    "news2": "RCP NEWS2 https://www.rcp.ac.uk/improving-care/resources/national-early-warning-score-news-2/",
+    "mottling": "Ait-Oufella 2011 https://doi.org/10.1007/s00134-011-2162-y",
+    "lactate": "ANDROMEDA-SHOCK 2019 https://doi.org/10.1001/jama.2019.0071 ; " + SSC21,
+    "oxygen": BTS17 + " ; DETO2X https://doi.org/10.1056/NEJMoa1706222",
+    "design": "Rates, anchors and seeded probabilities without a guideline number follow 06b section 5 conventions (design).",
+}

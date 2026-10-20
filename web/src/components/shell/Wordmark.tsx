@@ -10,9 +10,9 @@ import { cn } from "@/lib/cn";
  * (viewBox 256: a rounded tile, 12 to 244 with rx 58, split in two by one
  * 60 degree deflection of a monitor trace; the trace is real negative space,
  * so the two pieces are explicit outlines). It is inlined so it follows
- * `currentColor` and therefore the theme: `--axis-clinical` is the brand blue
- * (#2563eb) on light and the lightened clinical blue (#60a5fa) on dark, which
- * is exactly the light/dark pair the brand files use. The tile is sized to
+ * `currentColor` and therefore the theme: `--brand-mark` is Pulse cobalt on
+ * paper and the lightened cobalt on dark and on the ink rail (where the ink
+ * scope re-points the token). The tile is sized to
  * 1.16 x the cap height and spaced 0.2 cap from the name, matching
  * `acudx-lockup-horizontal.svg`. Brand rules, clear space and the full file
  * set live in `web/public/brand/README.md` and
@@ -37,15 +37,15 @@ export function Wordmark({
   return (
     <span
       className={cn(
-        "display inline-flex items-center gap-[0.12em] font-extrabold leading-none tracking-[-0.05em]",
+        "wordmark inline-flex items-center gap-[0.12em] leading-none",
         sz,
         className,
       )}
     >
-      {mark ?? <AcuDxMark className="h-[0.92em] w-[0.92em] text-axis-clinical" />}
+      {mark ?? <AcuDxMark className="h-[0.92em] w-[0.92em] text-brand-mark" />}
       <span>
         <span className="text-fg">Acu</span>
-        <span className="text-axis-clinical">Dx</span>
+        <span className="text-brand-mark">Dx</span>
       </span>
     </span>
   );

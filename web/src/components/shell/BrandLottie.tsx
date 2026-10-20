@@ -91,7 +91,7 @@ export function BrandLottie({
   if (reduced || failed) {
     return (
       <AcuDxMark
-        className={cn("text-axis-clinical", className)}
+        className={cn("text-brand-mark", className)}
         title={title}
       />
     );
@@ -102,7 +102,7 @@ export function BrandLottie({
       ref={host}
       role="img"
       aria-label={title}
-      className={cn("shrink-0 text-axis-clinical", className)}
+      className={cn("shrink-0 text-brand-mark", className)}
       style={{ width: size, height: size }}
     />
   );
@@ -118,7 +118,7 @@ function prefersReducedMotion(): boolean {
 /** The current `--axis-clinical` token as a CSS colour string (falls back to brand blue). */
 function readStrokeColour(): string {
   if (typeof window === "undefined") return "#2563eb";
-  const v = getComputedStyle(document.documentElement).getPropertyValue("--axis-clinical").trim();
+  const v = getComputedStyle(document.documentElement).getPropertyValue("--brand-mark").trim();
   return v || "#2563eb";
 }
 
