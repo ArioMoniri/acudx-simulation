@@ -36,7 +36,7 @@ test("live model: fever case through the streaming generator", async ({ page }) 
   let shots = 0;
   while (Date.now() - t0 < 600_000) {
     if (await strip.isVisible().catch(() => false)) break;
-    const panel = page.getByRole("status", { name: /Generating a case/ });
+    const panel = page.getByRole("status", { name: /Writing your case|Generating a case/ });
     const text = ((await panel.textContent().catch(() => "")) ?? "").replace(/\s+/g, " ").trim();
     if (text && text !== last) {
       timeline.push(`${Math.round((Date.now() - t0) / 1000)}s: ${text.slice(0, 220)}`);
@@ -46,13 +46,13 @@ test("live model: fever case through the streaming generator", async ({ page }) 
         shots += 1;
       }
     }
-    if (await page.getByRole("button", { name: /^Use template case/ }).isVisible().catch(() => false)) break;
+    if (await page.getByRole("button", { name: "Retry model generation" }).isVisible().catch(() => false)) break;
     await page.waitForTimeout(5_000);
   }
   const elapsed = Math.round((Date.now() - t0) / 1000);
   const opened = await strip.isVisible().catch(() => false);
   const s = await shot(page, "live-after-generation");
-  check("L1", "Student (live)", "Streaming progress panel", "Stage-by-stage progress while the model authors and the council judges", timeline.length > 0, `${elapsed}s; ${timeline.join(" || ")}`, s);
+  check("L1", "Student (live)", "Streaming progress panel", "The opening streams field by field and the chart opens on opening.ready", timeline.length > 0, `${elapsed}s; ${timeline.join(" || ")}`, s);
 
   if (!opened) {
     check("L2", "Student (live)", "Case opens in the chart", "A model case opens", false, `no chart after ${elapsed}s`);
