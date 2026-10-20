@@ -1,6 +1,8 @@
 # 02: AcuDx Brand Identity
 
-**Status:** Logo and brand-mark specification. Companion to `00-design-system.md` (tokens, type, gradient discipline) and the files in `web/public/brand/` (usage rules in `web/public/brand/README.md`). Built with the `logo-design` skill process: brief, research, concept longlist, three built concepts, tests, one chosen direction, kit.
+**Status:** Logo and brand-mark specification. Companion to `00-design-system.md` (tokens, type, gradient discipline) and the files in `web/public/brand/` (usage rules in `web/public/brand/README.md`). Built with the `logo-design` skill process: brief, research, concept longlist, built concepts, tests, one chosen direction, kit.
+
+**Current mark: the pulse seal (round two, section 8).** Sections 3 to 7 are the round one record (the monoline "acute trace" A), kept for the reasoning and because round two was judged against it. The brief (1) and research (2) still apply.
 
 ---
 
@@ -74,7 +76,7 @@ Three were built in black, audited with `svg_audit.py` (scores 98 to 99), and te
 
 **Decision:** A. It is the only concept that is specific to the name, carries the instrument language already in the product, and passes every small-size and one-colour test without a compromise.
 
-## 4. Construction (final)
+## 4. Construction (round one, superseded by section 8)
 
 Canvas 256 x 256, grid unit 4, stroke 32 (1/8 of the canvas), round caps.
 
@@ -102,7 +104,7 @@ Trace: M14 158  H242                (crossbar height, 2/3 down the letter)
 
 Brand blue on white is 5.2:1, well above the 3:1 required for non-text graphics. Print: use the one-colour files; the blue approximates Pantone 2728 C / CMYK 85 65 0 0 (proof before print).
 
-## 6. Test results
+## 6. Test results (round one)
 
 Final sheet: `web/public/brand/concepts/test-sheet-final.png`.
 
@@ -113,12 +115,101 @@ Final sheet: `web/public/brand/concepts/test-sheet-final.png`.
 - `svg_audit.py`: 99/100 mark, 98/100 small cut, 90 to 91 for the lockups (the only warnings are Manrope's own diagonal angles on A and x, which are type, not construction errors).
 - Chrome headless was the only renderer available; cairosvg and librsvg were not installed. PNGs were produced with it.
 
-## 7. Open items
+## 7. Open items (round one)
 
 1. Trademark search and reverse image search before public launch (not done; cannot be done from here).
-2. A stacked lockup (symbol over wordmark) for square social avatars, if marketing wants one.
-3. Expanding strokes to filled outlines in a vector editor for embroidery and vinyl masters.
-4. Decide whether the landing page hero should use `BrandLottie` once on first load (the component is ready; nothing uses it yet).
+2. A stacked lockup (symbol over wordmark) for square social avatars, if marketing wants one. Done in round two.
+3. Expanding strokes to filled outlines in a vector editor for embroidery and vinyl masters. Moot in round two: the seal is filled outlines.
+4. Decide whether the landing page hero should use `BrandLottie` once on first load (the component is ready; nothing uses it yet). Done: see section 9.
+
+## 8. Round two: the pulse seal
+
+**Why a second round.** The owner asked for a stronger, more distinctive and more premium mark than the monoline A. The round one A is honest but light: a letter on a line is a common construction (the library alone has six A letterforms and two "letter as pulse line" marks), it has no mass, and as an app icon it needed a tile under it.
+
+### 8.1 Research
+
+`search_library.py` was used to study 30+ real marks: the education set (23: Khan Academy, Udemy, Udacity, Coursera, Treehouse, IEEE and others), the AI and health sets (Google Fit is the only health mark in the library, so the medical category relied on category knowledge: crosses, hearts, caducei, stethoscopes, pulse-in-a-circle), the exemplary negative-space set (Kotlin, Rocky Linux, Snowpack, npm, Zendesk, CircleCI, Auth0, Doctrine), the triangle set (Vercel, Prisma, Atlassian, Unity), the pulse and wave sets (codebeat, Morpheus, Amplitude, Tailwind) and the letter A, D and x sets. Conventions worth departing from: blue is 43 percent of education marks, hexagons and containment are common, and every pulse mark in the library is a QRS-style zigzag inside a circle. What the strongest negative-space marks share: one solid, one cut, and the cut is the idea.
+
+### 8.2 Longlist (one sentence each, none a plain A with a line)
+
+1. **Pulse seal**: a rounded tile split in two by one acute deflection of the trace; the trace is the negative space. (built, A)
+2. **Dx monogram**: a solid D whose counter is the x of Dx. (built, B)
+3. **Differential**: a solid inverted triangle with two slits, three strands narrowing to one point. (built, C)
+4. **Apex**: the spike of the trace as one solid shape on its baseline bar, fast rise and a 30 degree return, like an action potential. (built, D)
+5. Acuity lens: two arcs forming a lens with an acute spike as the pupil. Dropped: reads as an eye, an optometry cliche.
+6. Sharpened disc: a circle extended to one tangent point at the top, pierced by a horizontal slit. Dropped: an inverted map pin.
+7. Pulse-in-a-disc: the seal idea on a circle. Dropped: codebeat and Morpheus already own the pulse-in-a-circle.
+8. Caliper x: an x whose two bars are calipers closing on a dot. Dropped: too small an idea at 16 px, and an x reads as "close".
+9. Stacked traces: two baselines, the upper one deflected, with the A implied between them. Dropped: a letter A again, and the gap closes at 16 px.
+10. Wedge notch: a solid tile with a single acute triangular notch cut from the bottom edge. Dropped: reads as a speech bubble or an arrow, says nothing about a trace.
+
+Scored for idea clarity, distinction, simplicity, relevance and small-size strength; the four built were the four highest and the four most different from each other. All four are in `docs/design/brand-src/round2_concepts.py` and `web/public/brand/concepts/round2/src/`.
+
+### 8.3 Tests
+
+![Round two concept sheet](../../web/public/brand/concepts/round2/concept-sheet-round2.png)
+
+All four were audited with `svg_audit.py` (A 100, B 100, C 99, D 99 after one fix: the first build of A offset the channel apex by h/cos 30 instead of h/sin 30, so the channel walls were 2.5 degrees off parallel; the audit caught it). The five-way sheet (`concepts/round2/test-sheet-round2.png`) put round one's A beside the four at the size ladder down to 16 px, the pixel test, light, dark, brand, photo and pattern backgrounds, one colour, reversed, 2 px blur, mirror, 180 degree rotation, favicon, app icon, avatar, header and business card contexts, and a shelf against Rocky Linux, Kotlin, Khan Academy, Amplitude, Morpheus and codebeat.
+
+- **A, pulse seal.** Survives 16 px (the channel is 1.75 px at 16 px on the master and 2.4 px on the small cut; the pixel test keeps it open). Reversed is not heavier. Blur keeps a distinct silhouette (a block with a peak through it). Mirror is identical; 180 degrees gives a V in a tile, benign. Only concept that stands out on the shelf as a solid mass. **Chosen.**
+- **B, Dx monogram.** Reads as a "delete" or "close" badge at every size, the exact risk round one found with its Dx reticle. Dropped.
+- **C, differential.** Reads as a trident, a funnel or "III" in a V; rotated it is a crown. Says nothing specific. Dropped.
+- **D, apex.** Alone it reads as a fin or a hat; the medical reading (an action potential) needs explaining. Dropped, though its asymmetry is worth remembering for motion.
+- **Round one A** next to them: lighter, less ownable, and the only one needing a tile for the app icon.
+
+### 8.4 Rationale
+
+The pulse seal keeps the one idea of round one (one acute deflection on a calm trace: acute, and the instrument language of the product) and gives it mass and a container of its own. Three things make it ownable: the deflection is one clean 60 degree spike, not a QRS zigzag; the trace is negative space that splits the tile in two, so the mark is read as two solid pieces rather than a line on a badge; and the tile is a rounded square, not the circle every pulse mark uses. It is its own app icon (gradient fills the two pieces edge to edge, the channel stays white), its own favicon, and it holds as a solid on embroidery and engraving without expanding strokes. Against the brief's adjectives: precise (one angle, one channel width), calm (a flat trace on both sides), clinical (a monitor trace), trustworthy (mass, symmetry), modern (negative space, no outline), open (the channel runs out of both edges).
+
+### 8.5 Construction (final)
+
+Canvas 256 x 256. Tile 12 to 244 (232 units, rx 58, 25 percent). Trace centreline flat at y 172, one 60 degree spike to y 72 (half-width at the base 57.7). Channel width 28. The two pieces are explicit outlines, offset 14 either side of the centreline with a mitred apex (offset 28 along the vertical, h / sin 30):
+
+```
+upper: M12 158 H62.2 L128 44  L193.8 158 H244 V70  A58 58 0 0 0 186 12  H70 A58 58 0 0 0 12 70  Z
+lower: M12 186 H78.3 L128 100 L177.7 186 H244 V186 A58 58 0 0 1 186 244 H70 A58 58 0 0 1 12 186 Z
+```
+
+- Thinnest solid: 32 units above the apex (2 px at 16 px). Bottom band 58 units.
+- **Small cut** (`acudx-mark-small.svg`, favicon and anything at or below 32 px): channel 38, flat at y 176, apex at y 86.
+- **Favicon:** the small cut with inset 4 and rx 60, so the tile fills the 16 px square.
+- **App icon:** the small-cut geometry with inset 0 and rx 56 (22 percent), the two pieces filled with the 135 degree teal to blue to pink gradient on white. The apex of the channel sits 84 units from the centre, inside the maskable safe zone.
+- **Wordmark:** unchanged from round one (Manrope wght 800, tracking -0.035 em, kerned "A c" and "D x", outlined; "Acu" in `--fg`, "Dx" in brand blue).
+- **Horizontal lockup:** tile at full size, wordmark cap height 200 centred on the tile (tile = 1.16 x cap), gap 40 from the tile's right edge. The flat of the trace runs through the lower third of the letters.
+- **Stacked lockup:** 512 wide; tile centred over the wordmark at cap height 120, gap 48.
+- **Clear space:** one channel width (28) on all sides.
+- **Animation (`acudx-mark.lottie.json`):** 256 composition, 60 fps, 84 frames (1.4 s), 3.8 KB. Each piece's outline draws along its edge with a trim path, starting at the left end of the trace so the deflection is seen first (upper frames 0 to 48, lower 8 to 56); the fills fade in and the outlines fade out over frames 30 to 66. AcuDx ease throughout. `BrandLottie.tsx` recolours fills and strokes to the live `--axis-clinical` token and re-reads it when the theme flips; `MarkScene.tsx` in the film plays the same file.
+- **In React:** `AcuDxMark` in `Wordmark.tsx` carries the two master paths in `currentColor`; the shell lockup sizes the SVG to 0.92 em with a 0.12 em gap, which reproduces the 1.16 x cap and 0.2 cap spacing of the lockup file.
+
+### 8.6 Colour
+
+As round one (section 5): brand blue `#2563eb` on light, `#60a5fa` on dark (4.5:1 on `#0b1120`), black and white for one colour, the gradient only on the app icon. The channel is never painted; it is the ground.
+
+### 8.7 Test results (final files)
+
+Final sheet: `web/public/brand/concepts/round2/test-sheet-final.png` (master, small cut and horizontal lockup, with the same shelf references).
+
+- `svg_audit.py`: 100/100 for the mark, the small cut and the reversed mark; 91 for the lockups (the only warnings are Manrope's own A and x diagonals); 98 favicon; 92 app icon (the gradient is deliberate and the one sanctioned surface).
+- 16 px: the channel and the peak read on white and on dark; the favicon uses the small cut.
+- One colour black and reversed white pass without a thinned file; the negative channel does the irradiation work.
+- Blur, mirror and 180 degree rotation: no unintended reading.
+- The Lottie was rendered frame by frame with lottie-web (frames 12, 30, 48, 83) to confirm the outline, the handoff to the fill and the final frame match the static SVG exactly.
+- Renderer: the Playwright Chromium headless shell under `/opt/pw-browsers` through the skill's `render_png.py` (`docs/design/brand-src/render_kit.sh` documents the wrapper). cairosvg and librsvg were not installed.
+
+### 8.8 Trademark risk note
+
+Web searches (October 2026) for the construction in medical education and health found no mark that is a rounded tile split by a single acute deflection. Nearest shapes, all different enough in construction: Rocky Linux (a circle cut by a mountain chevron, no trace), Bozeman Health (three mountain peaks with an H in the negative space), and the many generic "heartbeat in a square" app icons and templates, which use a QRS zigzag line drawn in positive, not a single spike cut through a solid. Name-wise, "AccuDx" (two c's) is a San Diego surgical-instrument company; the spelling, class and audience differ, but the phonetic overlap is the one item to put in front of counsel. No clearance has been done: a professional trademark search (USPTO, EUIPO, TURKPATENT, Nice classes 9, 41 and 42) and a reverse image search of the mark are still required before public launch.
+
+### 8.9 Reproduce the kit
+
+```
+pip install fonttools brotli uharfbuzz          # once
+npm --prefix web ci                              # Manrope lives in web/node_modules
+python3 docs/design/brand-src/round2_concepts.py # concept sources (optional)
+sh docs/design/brand-src/render_kit.sh [path/to/logo-design/scripts]
+```
+
+`render_kit.sh` runs `build_brand.py` and `make_lottie.py`, rasterises the icons, the favicon and the OG image, and copies the files the launch film reads into `video/public/brand/`.
 
 ## 9. Motion: the brand moment and the launch film
 

@@ -36,7 +36,7 @@ export function MarkScene({ compact = false }: { compact?: boolean }) {
       .catch((err: unknown) => cancelRender(err));
   }, [handle]);
 
-  // The Lottie is 1.5 s; the name arrives as the apex lands.
+  // The Lottie is 1.4 s (outline traces the deflection, then the fill settles); the name arrives as the upper outline closes.
   const nameStart = 42;
   const name = interpolate(frame, [nameStart, nameStart + 18], [0, 1], {
     extrapolateLeft: "clamp",

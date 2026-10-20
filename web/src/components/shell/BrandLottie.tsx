@@ -4,16 +4,18 @@ import { cn } from "@/lib/cn";
 import { AcuDxMark } from "./Wordmark";
 
 /**
- * BrandLottie — the AcuDx mark drawing itself in (trace first, then the
- * acute deflection), from `/brand/acudx-mark.lottie.json`.
+ * BrandLottie — the AcuDx pulse seal drawing itself in (each piece's outline
+ * traces along the deflection first, then the solid fill settles in), from
+ * `/brand/acudx-mark.lottie.json`.
  *
  * - Plays once with lottie-web's light SVG renderer (self-hosted, no CDN or
  *   WASM fetch, which keeps the on-prem / privacy stance of the design system).
  * - Honors `prefers-reduced-motion`: readers who opt out get the static inline
  *   SVG mark instead, so nothing moves. The static mark is also the fallback
  *   while the JSON loads and if the fetch fails.
- * - Recolours the strokes to the current `--axis-clinical` token (brand blue on
- *   light, lightened blue on dark) and re-reads it when the `.dark` class flips.
+ * - Recolours every fill and stroke to the current `--axis-clinical` token
+ *   (brand blue on light, lightened blue on dark) and re-reads it when the
+ *   `.dark` class flips.
  */
 export function BrandLottie({
   className,
@@ -71,7 +73,10 @@ export function BrandLottie({
       const svg = el.querySelector("svg");
       if (!svg) return;
       const colour = readStrokeColour();
-      svg.querySelectorAll<SVGElement>("path[stroke]").forEach((p) => p.setAttribute("stroke", colour));
+      svg.querySelectorAll<SVGElement>("path").forEach((p) => {
+        if (p.getAttribute("stroke") && p.getAttribute("stroke") !== "none") p.setAttribute("stroke", colour);
+        if (p.getAttribute("fill") && p.getAttribute("fill") !== "none") p.setAttribute("fill", colour);
+      });
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
@@ -117,7 +122,7 @@ function readStrokeColour(): string {
   return v || "#2563eb";
 }
 
-/** Set every stroke in the Lottie document to `colour` before it is parsed. */
+/** Set every fill and stroke in the Lottie document to `colour` before it is parsed. */
 function recolour(data: unknown, colour: string): unknown {
   const rgb = hexToRgb01(colour);
   if (!rgb) return data;
@@ -128,7 +133,7 @@ function recolour(data: unknown, colour: string): unknown {
     }
     if (node && typeof node === "object") {
       const o = node as Record<string, unknown>;
-      if (o.ty === "st" && o.c && typeof o.c === "object") {
+      if ((o.ty === "st" || o.ty === "fl") && o.c && typeof o.c === "object") {
         (o.c as Record<string, unknown>).k = [...rgb, 1];
       }
       Object.values(o).forEach(walk);

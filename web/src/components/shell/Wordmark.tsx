@@ -2,16 +2,20 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * Wordmark — the AcuDx logo lockup for the shell: the "acute trace" mark
+ * Wordmark — the AcuDx logo lockup for the shell: the "pulse seal" mark
  * followed by the name set in Manrope with tight tracking, "Dx" (diagnosis)
  * in the single brand accent.
  *
  * The mark is the master geometry from `web/public/brand/acudx-mark.svg`
- * (viewBox 256, stroke 32, round caps, mitred 60 degree apex), inlined so it
- * follows `currentColor` and therefore the theme: `--axis-clinical` is the
- * brand blue (#2563eb) on light and the lightened clinical blue (#60a5fa) on
- * dark, which is exactly the light/dark pair the brand files use. Brand rules, clear space and the full
- * file set live in `web/public/brand/README.md` and
+ * (viewBox 256: a rounded tile, 12 to 244 with rx 58, split in two by one
+ * 60 degree deflection of a monitor trace; the trace is real negative space,
+ * so the two pieces are explicit outlines). It is inlined so it follows
+ * `currentColor` and therefore the theme: `--axis-clinical` is the brand blue
+ * (#2563eb) on light and the lightened clinical blue (#60a5fa) on dark, which
+ * is exactly the light/dark pair the brand files use. The tile is sized to
+ * 1.16 x the cap height and spaced 0.2 cap from the name, matching
+ * `acudx-lockup-horizontal.svg`. Brand rules, clear space and the full file
+ * set live in `web/public/brand/README.md` and
  * `docs/design/02-brand-identity.md`.
  */
 export function Wordmark({
@@ -33,12 +37,12 @@ export function Wordmark({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-[0.3em] font-extrabold leading-none tracking-[-0.05em] [font-family:var(--font-display)]",
+        "inline-flex items-center gap-[0.12em] font-extrabold leading-none tracking-[-0.05em] [font-family:var(--font-display)]",
         sz,
         className,
       )}
     >
-      {mark ?? <AcuDxMark className="h-[1.15em] w-[1.15em] text-axis-clinical" />}
+      {mark ?? <AcuDxMark className="h-[0.92em] w-[0.92em] text-axis-clinical" />}
       <span>
         <span className="text-fg">Acu</span>
         <span className="text-axis-clinical">Dx</span>
@@ -68,18 +72,9 @@ export function AcuDxMark({
       focusable="false"
     >
       {title ? <title>{title}</title> : null}
-      <g
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="32"
-        strokeLinecap="round"
-      >
-        <path
-          d="M31 212 L128 44 L225 212"
-          strokeLinejoin="miter"
-          strokeMiterlimit="4"
-        />
-        <path d="M14 158 H242" />
+      <g fill="currentColor">
+        <path d="M12 158 H62.2 L128 44 L193.8 158 H244 V70 A58 58 0 0 0 186 12 H70 A58 58 0 0 0 12 70 Z" />
+        <path d="M12 186 H78.3 L128 100 L177.7 186 H244 V186 A58 58 0 0 1 186 244 H70 A58 58 0 0 1 12 186 Z" />
       </g>
     </svg>
   );

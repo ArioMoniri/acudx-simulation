@@ -7,11 +7,9 @@
       <stop offset="1" stop-color="#f472b6"/>
     </linearGradient>
   </defs>
-  <rect width="256" height="256" rx="56" fill="url(#g)"/>
-  <g transform="translate(39.68 38.01) scale(0.69)">
-  <g fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round">
-    <path d="M34.5 214 L128 52 L221.5 214" stroke-linejoin="miter" stroke-miterlimit="4"/>
-    <path d="M26 164 H230"/>
-  </g>
+  <rect width="256" height="256" rx="56" fill="#ffffff"/>
+  <g fill="url(#g)">
+    <path id="upper" d="M0 157 H65.1 L128 48 L190.9 157 H256 V56 A56 56 0 0 0 200 0 H56 A56 56 0 0 0 0 56 Z"/>
+    <path id="lower" d="M0 195 H87 L128 124 L169 195 H256 V200 A56 56 0 0 1 200 256 H56 A56 56 0 0 1 0 200 Z"/>
   </g>
 </svg>
