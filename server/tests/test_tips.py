@@ -15,6 +15,9 @@ REQUIRED_FAMILIES = [
     "appendicitis", "cholecystitis", "pancreatitis", "upper_gi_bleed", "aki", "hyperkalemia", "paracetamol_od",
     "opioid_overdose", "status_epilepticus", "spontaneous_pneumothorax", "pph", "ectopic_pregnancy",
     "panic_disorder", "suicidal_ideation",
+    # Acceptance 2026-10-20 D-24: every febrile family in the catalog has a verified tip.
+    "sepsis_uncomplicated", "bacterial_meningitis", "pyelonephritis", "cellulitis", "ascending_cholangitis",
+    "septic_arthritis", "malaria", "influenza", "covid19", "pid", "acute_prostatitis", "febrile_neutropenia",
 ]
 
 
