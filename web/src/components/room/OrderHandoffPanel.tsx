@@ -12,6 +12,7 @@ import {
   Prohibit,
   Prescription,
   ArrowRight,
+  ShieldWarning,
 } from "@phosphor-icons/react";
 
 import { Badge, Button, SectionLabel, type BadgeProps } from "@/components/ui";
@@ -22,6 +23,8 @@ import { canPlaceOrder, PROTOCOL_ITEM_LABELS, protocolDetailFor } from "@/domain
 import { primaryCode } from "@/domain/case";
 import type { Lang } from "@/data/schema";
 import type { ClinicalRole } from "@/data/rooms";
+import { TreatmentTableNotice } from "@/components/ehr/TreatmentTableNotice";
+import { treatmentsLocked, useEncounterState } from "@/state/encounterStore";
 import {
   placeOrderAs,
   claimTask,
@@ -53,12 +56,18 @@ const STATUS_META: Record<
  * doctor composes orders from the medication catalog + the case's expected
  * workup; each order lands in the executing role's queue as a task with a
  * realistic turnaround. The nurse (or whoever holds that seat) claims and
- * completes it: administering a medication feeds the shared clinical-course
- * engine so the patient's live vitals respond, while a diagnostic resolves its
- * result after its turnaround. Every state is carried by an icon + text label.
+ * completes it. Administering a medication follows the solo encounter's rules on the
+ * room's thread (five rights, allergy band, MAR, a Director step on the server that every
+ * member's monitor follows) and is disabled, with the TreatmentTableNotice, while the
+ * thread's treatment table is being written or was rejected by the safety review (06b F30).
+ * A diagnostic resolves its result after its turnaround. Every state is carried by an
+ * icon + text label.
  */
 export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHandoffPanelProps) {
   const { t } = useTranslation();
+  // The room's thread has no safe treatment table yet: nothing can be administered.
+  const locked = treatmentsLocked(useEncounterState());
+  const hasMedTask = state.tasks.some((task) => task.kind === "medication" && task.status !== "done");
   // Review 02 findings 24 and 25: the doctor orders anything; the nurse may
   // initiate standing-protocol items (12-lead ECG, POC glucose, IV access,
   // oxygen, urine hCG, standard bloods) and the paramedic the prehospital
@@ -192,6 +201,12 @@ export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHand
           </div>
         </div>
 
+        {locked && hasMedTask ? (
+          <div className="mt-3">
+            <TreatmentTableNotice />
+          </div>
+        ) : null}
+
         {tasks.length === 0 ? (
           <p className="mt-4 rounded-control border border-dashed border-border bg-bg-subtle px-3 py-6 text-center text-sm text-muted">
             {t("roomscollab.task.empty")}
@@ -255,6 +270,7 @@ export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHand
                           </Button>
                           <ExecuteButton
                             isMed={isMed}
+                            disabled={isMed && locked}
                             onClick={() => completeTask(roomId, actingRole, task.id)}
                             label={task.label[lang]}
                           />
@@ -273,6 +289,7 @@ export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHand
                         {mine ? (
                           <ExecuteButton
                             isMed={isMed}
+                            disabled={isMed && locked}
                             onClick={() => completeTask(roomId, actingRole, task.id)}
                             label={task.label[lang]}
                           />
@@ -288,6 +305,12 @@ export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHand
                             role: task.completedByAi ? t("rooms.seat.aiHeld") : roleName(task.completedBy ?? task.assignedRole),
                           })}
                         </span>
+                        {isMed && task.withheld ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-fg">
+                            <ShieldWarning weight="fill" className="h-3 w-3 text-[color:var(--state-caution)]" aria-hidden />
+                            {t("roomscollab.task.withheld")}
+                          </span>
+                        ) : null}
                         {!isMed ? (
                           resultReady ? (
                             <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-fg">
@@ -318,10 +341,13 @@ function ExecuteButton({
   isMed,
   onClick,
   label,
+  disabled = false,
 }: {
   isMed: boolean;
   onClick: () => void;
   label: string;
+  /** No safe treatment table on the thread yet (06b F30). */
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -329,6 +355,7 @@ function ExecuteButton({
       size="sm"
       variant="primary"
       onClick={onClick}
+      disabled={disabled}
       aria-label={
         isMed
           ? t("roomscollab.task.administerAria", { name: label })

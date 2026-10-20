@@ -348,11 +348,13 @@ event: layer.ready    {layer, data, spec}
 event: judge          {layer, decision, issues?, patch?, spec?, blocking?}
 event: error          {stage, error, status, retryable, fatal?, reason?, issues?, thread_id}
 event: done           {thread_id, spec, timings}
-event: layer.rendered {layer, locale, data, spec}   a TR rendering landed (12.7)
+event: layer.rendered {layer, locale, data, spec}   a rendering landed (12.7, 12.8)
+event: task           {thread_id, op, task, client_id}   a room member ordered, claimed or completed (12.8)
 event: director       {thread_id, client_id, action, case_state, patient_visible_changes, director_notes}
 GET  /v2/case/{thread_id}/events?after=<n>     reconnect (or Last-Event-ID); &follow=1 stays open after done
 POST /v2/case/{thread_id}/layer/{layer}        lazy layer (awaits an in-flight one); debrief takes {diagnosis}
-POST /v2/case/{thread_id}/layer/{layer}/render {locale: "tr"}: TR rendering of a layer seen (or "opening")
+POST /v2/case/{thread_id}/layer/{layer}/render {locale: "tr"|"en"}: rendering of a layer seen (or "opening") in the other locale
+POST /v2/case/{thread_id}/task                 room order and task loop {op: order|claim|complete, task, role, mar?} (12.8)
 POST /v2/case/{thread_id}/room                 the owner binds the thread to a room {room_code}
 POST /v2/case/{thread_id}/join                 a room member joins {room_code}; 404 for a wrong code
 GET  /v2/cases/mine                            the caller's own encounter summaries
@@ -398,4 +400,12 @@ Findings. (1) The worker decodes guided JSON at 10 to 15 tokens per second for o
 
 Tests: `server/tests/test_staged_followups.py` (12), `web/src/lib/caseSession.followups.test.ts` (6), `web/e2e/rooms.spec.ts` (member follow, two contexts), `web/e2e/on-request.spec.ts` (F30 panel). `StagedRuntime.tail` now reads the log again before waiting, so a replay without `done` no longer idles 15 s.
 
-Open: the room's collaborative order and task loop (`roomCaseStore`) still uses the client course engine, so its Administer action in `OrderHandoffPanel` is not yet gated by the thread's treatment table; renderings cover EN to TR only (a TR case switched to EN keeps its source text).
+Open (closed in 12.8): the room's order and task loop on the client course engine, and EN to TR only renderings.
+
+### 12.8 Room order and task loop on the thread, TR to EN renderings (2026-10-21)
+
+**Room administration follows the solo rules.** The room's order and task loop (`web/src/components/room/roomCaseStore.ts`) no longer runs a client course: the store holds no treatments and computes no vitals (`useRoomVitals`, `roomVitalsAt` and `roomCourseStatusAt` are gone, and a unit test fails if they return). Every order, claim and completion is posted to the thread, `POST /v2/case/{t}/task {op, task, role, client_id, mar?}` (members only, the same 404 as the other thread routes for anyone else), stored on the thread record (`room_tasks`, status moves forward only, a repeated transition is answered without a new event) and logged as a `task` event that every member's follow stream applies once (`applyThreadTask`, idempotent). A medication task is administered on the executing member's device through `administerTreatment` (the solo path: five rights, allergy band, a MAR line with `administeredBy` set to the room role, then a Director treatment step on the thread); the step's `director` event moves every member's monitor to the same server vitals, and `applyThreadDirector` also records another member's treatment in the shared course so the ramps match from then on. A dose the bedside check blocks is done but withheld (`mar.outcome: "blocked"`, nothing enters the course, no Director step). While the thread's treatment table is pending or rejected, `OrderHandoffPanel` disables Administer and shows `TreatmentTableNotice`; the server refuses the same completion and a Director treatment step with 409 `treatments_locked` (staged threads only). A member replaying the thread log takes the layer statuses from `opening.ready`, so a member's device is locked exactly when the owner's is. `RoomPage` follows gateway reachability like the solo encounter (`setLiveEnabled`), its monitor reads the encounter store (`getCurrentVitals`), and AI backfill drives only a seat no person holds (`setRoomAiRoles`), from the device that placed the order, through the same path.
+
+**TR to EN on demand.** `RENDER_LOCALES` is `("tr", "en")`: a TR case played with an English UI renders the opening and every layer seen into English with `POST /v2/case/{t}/layer/{layer}/render {locale: "en"}`, cached on the thread (`state.renderings.en`). `assemble_spec` keeps the source text in the slot of the case's own locale and fills only the other slot from the rendering; `staged.source_spec(state)` assembles the case without renderings, and the Director (first step and `refresh_director`), the judges and the layer ledger read it, so a rendering never reaches grading. The client renders into whatever the UI language is when it differs from the case's (`syncRenderings`), the debrief included (`debrief.rendered.en`).
+
+Tests: `server/tests/test_room_tasks_and_renderings.py` (5), `web/src/components/room/roomCaseStore.test.ts` (7), `web/src/lib/caseSession.followups.test.ts` (TR to EN), `web/e2e/rooms.spec.ts` (two contexts: the doctor orders, the nurse's Administer is disabled until the table lands, then administers; one Director treatment step on the thread; both monitors show the same vitals). Live verification: `docs/review/07-live-room-acceptance.md`.

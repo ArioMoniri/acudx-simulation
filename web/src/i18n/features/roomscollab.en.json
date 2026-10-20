@@ -55,6 +55,7 @@
       "collectAria": "Collect and send {{name}}",
       "doneBy": "Executed by {{role}}",
       "resultPending": "In the lab — result processing",
+      "withheld": "Withheld at the bedside check (MAR)",
       "resultReady": "Result available",
       "notYours": "Switch to the {{role}} seat to execute this task.",
       "status": {

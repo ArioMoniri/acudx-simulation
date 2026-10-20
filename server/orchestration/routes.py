@@ -48,7 +48,7 @@ import json
 import os
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Optional
+from typing import Literal, Any, AsyncIterator, Optional
 
 import httpx
 from fastapi import APIRouter, Depends, Request
@@ -64,7 +64,7 @@ from server.orchestration.llm import StructuredLLM, WorkerCostSource
 from server.orchestration.memory import LearnerMemory, memory_store
 from server.orchestration.staged import (
     StagedRuntime, debrief_extra, director_state_from_spec, layers_for_action, refresh_director, renderable,
-    valid_layer,
+    source_spec, valid_layer,
 )
 from server.orchestration.store import CaseStore, DirectorStoreView, set_case_store
 from server.orchestration.trace import summarize
@@ -283,6 +283,41 @@ class RenderRequest(BaseModel):
     locale: str = "tr"
 
 
+ROOM_ROLES = ("doctor", "nurse", "paramedic", "pharmacist", "student")
+TASK_STATUS_RANK = {"pending": 0, "claimed": 1, "done": 2}
+
+
+class RoomTaskBody(BaseModel):
+    """One order of the room's order and task loop. Only ``id`` is needed after the order."""
+
+    id: str = Field(min_length=1, max_length=96)
+    code: str | None = Field(default=None, max_length=64)
+    kind: Literal["medication", "diagnostic", "intervention"] | None = None
+    label_en: str | None = Field(default=None, max_length=160)
+    label_tr: str | None = Field(default=None, max_length=160)
+    detail_en: str | None = Field(default=None, max_length=240)
+    detail_tr: str | None = Field(default=None, max_length=240)
+    ordered_by: Literal[ROOM_ROLES] | None = None  # type: ignore[valid-type]
+    assigned_role: Literal[ROOM_ROLES] | None = None  # type: ignore[valid-type]
+    ai: bool = False
+
+
+class MarSummary(BaseModel):
+    outcome: Literal["given", "flagged", "blocked"]
+    failures: list[str] = Field(default_factory=list, max_length=12)
+    allergy_conflict: bool = False
+
+
+class RoomTaskRequest(BaseModel):
+    op: Literal["order", "claim", "complete"]
+    task: RoomTaskBody
+    role: Literal[ROOM_ROLES] | None = None  # type: ignore[valid-type]
+    client_id: str | None = Field(default=None, max_length=64)
+    # A medication completion carries the bedside check the executing role ran (five rights,
+    # allergy band): "blocked" means withheld, nothing entered the course.
+    mar: MarSummary | None = None
+
+
 def _error(status: int, code: str, detail: str, **extra: Any) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": code, "detail": detail, **extra})
 
@@ -417,6 +452,73 @@ async def join_room_thread(thread_id: str, body: RoomRequest, request: Request,
     events = rt.cases.events(thread_id)
     return JSONResponse(content={"thread_id": thread_id, "member": True,
                                  "last_event_id": events[-1][0] if events else 0})
+
+
+def treatments_locked(st: dict[str, Any]) -> bool:
+    """True while the thread has no safe treatment table (being written, or rejected by the
+    safety review): nothing is administered until it lands (06b F30)."""
+    if not st.get("opening") or "treatments" not in (st.get("layer_order") or []):
+        return False        # not a staged thread (faculty-stored spec): its table is in the spec
+    entry = (st.get("layers") or {}).get("treatments") or {}
+    return entry.get("status") != "ready"
+
+
+@router.post("/case/{thread_id}/task")
+async def room_task(thread_id: str, body: RoomTaskRequest, request: Request,
+                    user: Principal = Depends(current_user)) -> JSONResponse:
+    """The room's order and task loop on the thread (doc 15 12.8): a member orders, another
+    claims and completes. Every transition lands on the thread log as a ``task`` event, so every
+    member sees the same queue. A medication given while the treatment table is missing or
+    rejected is refused (``treatments_locked``); its effect on the patient is the Director step
+    the executing member sends with the same rules as the solo encounter."""
+    rt = await get_runtime(request)
+    st = _thread_for(rt, thread_id, user)
+    if st is None:
+        return _error(404, "thread_not_found", f"no case thread {thread_id!r}")
+    tid = body.task.id
+    known = (st.get("room_tasks") or {}).get(tid)
+    if body.op == "order":
+        if known is None and (not body.task.code or not body.task.kind or not body.task.assigned_role):
+            return _error(422, "invalid_task", "an order needs code, kind and assigned_role")
+    elif known is None:
+        return _error(409, "unknown_task", f"no order {tid!r} on this thread")
+    kind = (known or {}).get("kind") or body.task.kind
+    if (body.op == "complete" and kind == "medication" and (body.mar is None or body.mar.outcome != "blocked")
+            and treatments_locked(st)):
+        return _error(409, "treatments_locked",
+                      "no safe treatment table for this patient yet; nothing can be administered until it lands")
+    t_ms = int(((st.get("director") or {}).get("t_ms")) or 0)
+    out: dict[str, Any] = {}
+    changed: list[bool] = []
+
+    def write(s: dict[str, Any]) -> None:
+        tasks = dict(s.get("room_tasks") or {})
+        cur = dict(tasks.get(tid) or {})
+        before = dict(cur)
+        if not cur:
+            cur = {**body.task.model_dump(exclude_none=True), "status": "pending", "ordered_t_ms": t_ms}
+        rank = TASK_STATUS_RANK.get(str(cur.get("status")), 0)
+        if body.op == "claim" and rank < 1:
+            cur.update(status="claimed", claimed_by=body.role or cur.get("assigned_role"), claimed_ai=body.task.ai)
+        elif body.op == "complete" and rank < 2:
+            cur.setdefault("claimed_by", body.role or cur.get("assigned_role"))
+            cur.update(status="done", completed_by=body.role or cur.get("assigned_role"), completed_ai=body.task.ai,
+                       completed_t_ms=t_ms)
+            if body.mar is not None:
+                cur["mar"] = body.mar.model_dump()
+        tasks[tid] = cur
+        s["room_tasks"] = dict(list(tasks.items())[-200:])
+        out.update(cur)
+        if cur != before:
+            changed.append(True)
+
+    rt.cases.update(thread_id, write)
+    # A transition already applied (a replayed claim, a second Administer) is answered with the
+    # stored task and not logged again.
+    if changed:
+        rt.staged.emit(thread_id, "task", {"thread_id": thread_id, "op": body.op, "task": out,
+                                           "client_id": body.client_id})
+    return JSONResponse(content={"thread_id": thread_id, "task": out})
 
 
 @router.post("/case/generate")
@@ -605,6 +707,11 @@ async def director_step(req: DirectorStepRequest, request: Request,
             except (asyncio.TimeoutError, KeyError):
                 pending_layers.append(name)
     st = rt.cases.get(req.thread_id) or st
+    # The same rule as the solo encounter (06b F30): no Director treatment step while the
+    # thread has no safe treatment table.
+    if action.kind == "treatment" and treatments_locked(st):
+        return _error(409, "treatments_locked",
+                      "no safe treatment table for this patient yet; nothing can be administered until it lands")
     before = st.get("director")
     try:
         prev_state = CaseState.model_validate(before) if isinstance(before, dict) else None
@@ -614,7 +721,9 @@ async def director_step(req: DirectorStepRequest, request: Request,
     # only that key, so a layer landing during the narrator call is never overwritten.
     view = DirectorStoreView(rt.cases)
     try:
-        new_state, visible, notes = await D.director_step(view, req.thread_id, action, llm=llm)
+        # A first step builds the Director from the source text, never from a rendering.
+        first = source_spec(st) if not isinstance(before, dict) and st.get("opening") and st.get("condition") else None
+        new_state, visible, notes = await D.director_step(view, req.thread_id, action, spec=first, llm=llm)
     except LookupError as exc:
         return _error(409, "opening_not_ready", str(exc)[:200])
     fired_now = [c for c in (visible.get("complications_fired") or []) if c]
