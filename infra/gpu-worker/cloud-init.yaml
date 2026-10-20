@@ -62,7 +62,10 @@ write_files:
             - /opt/acudx/Caddyfile:/etc/caddy/Caddyfile:ro
             - /opt/acudx/caddy:/data
 runcmd:
-  - mkdir -p /opt/acudx/hf /opt/acudx/caddy
+  - mkdir -p /opt/acudx/caddy
+  - |
+    FS=$(ls -d /lambda/nfs/* 2>/dev/null | head -1)
+    if [ -n "$FS" ]; then mkdir -p "$FS/hf" && rm -rf /opt/acudx/hf && ln -s "$FS/hf" /opt/acudx/hf; else mkdir -p /opt/acudx/hf; fi
   # The public IP is not known before launch, so the manager renders
   # WORKER_DOMAIN=auto and the worker derives <ip-with-dashes>.sslip.io itself
   # (the manager derives the identical name from the API-reported IP).

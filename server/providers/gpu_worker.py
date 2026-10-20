@@ -88,6 +88,9 @@ class WorkerPolicy(BaseModel):
     allowlist: list[str] = Field(default_factory=lambda: list(DEFAULT_ALLOWLIST), min_length=1)
     llm_model: str = Field(default="Qwen/Qwen3-32B-AWQ", min_length=1)
     region_preference: list[str] = Field(default_factory=list)
+    # Optional Lambda filesystem (same region) mounted on the worker; the cloud-init keeps the
+    # HF cache there so later boots skip the model download.
+    file_system_name: str | None = None
 
 
 class WorkerRecord(BaseModel):
@@ -286,6 +289,7 @@ class WorkerManager:
             idle_minutes=settings.gpu_idle_minutes, daily_budget_usd=settings.gpu_daily_budget_usd,
             allowlist=settings.gpu_instance_allowlist or DEFAULT_ALLOWLIST, llm_model=settings.gpu_llm_model,
             region_preference=settings.gpu_region_preference,
+            file_system_name=settings.gpu_file_system_name or None,
         )
 
     # -- policy -------------------------------------------------------------- #
@@ -462,7 +466,17 @@ class WorkerManager:
     async def _launch(self) -> WorkerRecord:
         api = self._lambda()
         offers = await api.list_instance_types()
-        choice = pick_cheapest(offers, self.policy.allowlist, self.policy.region_preference)
+        region_pref = list(self.policy.region_preference)
+        fs_names: list[str] = []
+        if self.policy.file_system_name:
+            for fs in await api.list_file_systems():
+                if fs.get("name") == self.policy.file_system_name:
+                    fs_region = (fs.get("region") or {}).get("name")
+                    if fs_region:
+                        region_pref = [fs_region]
+                        fs_names = [self.policy.file_system_name]
+                    break
+        choice = pick_cheapest(offers, self.policy.allowlist, region_pref)
         if choice is None:
             raise NoCapacity(f"no capacity for any allow-listed type {self.policy.allowlist}"
                              + (f" in regions {self.policy.region_preference}" if self.policy.region_preference else ""))
@@ -477,6 +491,7 @@ class WorkerManager:
             region_name=choice.region_name, instance_type_name=choice.instance_type_name,
             ssh_key_name=self.settings.lambda_ssh_key_name or "", name=f"acudx-worker-{int(now)}",
             user_data=user_data, tags=[{"key": "acudx", "value": "gpu-worker"}],
+            file_system_names=fs_names or None,
         )
         if not ids:
             raise WorkerFailed("launch returned no instance id")

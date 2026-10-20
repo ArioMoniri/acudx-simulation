@@ -160,6 +160,11 @@ class LambdaCloudClient:
         data = await self._request("GET", "/instance-types")
         return {name: InstanceTypeOffer.model_validate(v) for name, v in (data or {}).items()}
 
+    async def list_file_systems(self) -> list[dict]:
+        """GET /file-systems -> [{name, region:{name}, ...}] (raw dicts; only name/region are used)."""
+        data = await self._request("GET", "/file-systems")
+        return list(data or [])
+
     async def list_instances(self) -> list[Instance]:
         data = await self._request("GET", "/instances")
         return [Instance.model_validate(i) for i in (data or [])]

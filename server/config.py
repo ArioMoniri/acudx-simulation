@@ -167,6 +167,7 @@ class Settings(BaseSettings):
     gpu_idle_minutes: int = 20
     # Cold boot of a worker pulls the vLLM image plus ~19 GB of weights; 45 min by default.
     gpu_ready_timeout_s: float = 2700.0
+    gpu_file_system_name: str | None = None
     gpu_boot_timeout_s: float = 900.0
     gpu_daily_budget_usd: float = 25.0
     gpu_llm_model: str = "Qwen/Qwen3-32B-AWQ"
