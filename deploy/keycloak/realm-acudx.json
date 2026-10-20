@@ -1,0 +1,190 @@
+{
+  "realm": "acudx",
+  "displayName": "AcuDx (development realm)",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "defaultSignatureAlgorithm": "RS256",
+  "roles": {
+    "realm": [
+      { "name": "student", "description": "Learner track: medical student" },
+      { "name": "nurse", "description": "Learner track: nursing" },
+      { "name": "paramedic", "description": "Learner track: prehospital" },
+      { "name": "resident", "description": "Learner with advanced cases", "composite": true, "composites": { "realm": ["student"] } },
+      { "name": "faculty", "description": "Authors and reviews cases, grades with co-sign", "composite": true, "composites": { "realm": ["resident"] } },
+      { "name": "dean", "description": "Org-wide analytics and accreditation export", "composite": true, "composites": { "realm": ["faculty"] } },
+      { "name": "admin", "description": "Org settings, identity provider, user roles", "composite": true, "composites": { "realm": ["dean"] } },
+      { "name": "super_admin", "description": "Platform-wide operator", "composite": true, "composites": { "realm": ["admin"] } }
+    ]
+  },
+  "defaultRoles": ["student", "offline_access", "uma_authorization"],
+  "clients": [
+    {
+      "clientId": "acudx-web",
+      "name": "AcuDx web app",
+      "description": "Public PKCE client for the React app (src/lib/auth.ts). No client secret.",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "rootUrl": "http://localhost:5173",
+      "baseUrl": "/",
+      "redirectUris": [
+        "http://localhost:5173/auth/callback",
+        "http://127.0.0.1:5173/auth/callback",
+        "http://localhost:4173/auth/callback",
+        "https://${DOMAIN:-sim.example.edu}/auth/callback"
+      ],
+      "webOrigins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173", "+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://127.0.0.1:5173/*##http://localhost:4173/*",
+        "access.token.lifespan": "900",
+        "use.refresh.tokens": "true",
+        "client.use.lightweight.access.token.enabled": "false"
+      },
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["openid", "profile", "email", "roles", "web-origins", "acudx-org"],
+      "optionalClientScopes": ["offline_access"],
+      "protocolMappers": [
+        {
+          "name": "acudx-web audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "acudx-web",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "acudx-org",
+      "description": "Maps the user attribute `org` onto the `org` claim the AcuDx server reads as the tenant.",
+      "protocol": "openid-connect",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
+      "protocolMappers": [
+        {
+          "name": "org attribute",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "org",
+            "claim.name": "org",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "student.dev",
+      "email": "student.dev@acudx.local",
+      "firstName": "Selin",
+      "lastName": "Student",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": { "org": ["acudx-dev-med"] },
+      "realmRoles": ["student"],
+      "credentials": [{ "type": "password", "value": "student-dev-only", "temporary": false }]
+    },
+    {
+      "username": "resident.dev",
+      "email": "resident.dev@acudx.local",
+      "firstName": "Rauf",
+      "lastName": "Resident",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": { "org": ["acudx-dev-med"] },
+      "realmRoles": ["resident"],
+      "credentials": [{ "type": "password", "value": "resident-dev-only", "temporary": false }]
+    },
+    {
+      "username": "nurse.dev",
+      "email": "nurse.dev@acudx.local",
+      "firstName": "Nilay",
+      "lastName": "Nurse",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": { "org": ["acudx-dev-med"] },
+      "realmRoles": ["nurse"],
+      "credentials": [{ "type": "password", "value": "nurse-dev-only", "temporary": false }]
+    },
+    {
+      "username": "paramedic.dev",
+      "email": "paramedic.dev@acudx.local",
+      "firstName": "Pelin",
+      "lastName": "Paramedic",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": { "org": ["acudx-dev-med"] },
+      "realmRoles": ["paramedic"],
+      "credentials": [{ "type": "password", "value": "paramedic-dev-only", "temporary": false }]
+    },
+    {
+      "username": "faculty.dev",
+      "email": "faculty.dev@acudx.local",
+      "firstName": "Ferda",
+      "lastName": "Faculty",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": { "org": ["acudx-dev-med"] },
+      "realmRoles": ["faculty"],
+      "credentials": [{ "type": "password", "value": "faculty-dev-only", "temporary": false }]
+    },
+    {
+      "username": "dean.dev",
+      "email": "dean.dev@acudx.local",
+      "firstName": "Deniz",
+      "lastName": "Dean",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": { "org": ["acudx-dev-med"] },
+      "realmRoles": ["dean"],
+      "credentials": [{ "type": "password", "value": "dean-dev-only", "temporary": false }]
+    },
+    {
+      "username": "admin.dev",
+      "email": "admin.dev@acudx.local",
+      "firstName": "Aylin",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": { "org": ["acudx-dev-med"] },
+      "realmRoles": ["admin"],
+      "credentials": [{ "type": "password", "value": "admin-dev-only", "temporary": false }]
+    },
+    {
+      "username": "superadmin.dev",
+      "email": "superadmin.dev@acudx.local",
+      "firstName": "Sami",
+      "lastName": "Superadmin",
+      "enabled": true,
+      "emailVerified": true,
+      "attributes": { "org": ["acudx-platform"] },
+      "realmRoles": ["super_admin"],
+      "credentials": [{ "type": "password", "value": "superadmin-dev-only", "temporary": false }]
+    }
+  ]
+}

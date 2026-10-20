@@ -1,0 +1,176 @@
+{
+  "admin": {
+    "tabs": { "users": "Users" },
+    "users": {
+      "title": "Users and roles",
+      "description": "Server-side role grants keyed by the identity provider subject. Granted roles are unioned with the roles in the person's verified token, so faculty and deans can be promoted here even when the university IdP sends no role claim.",
+      "filterOrg": "Filter by org",
+      "filterOrgHint": "Leave empty for every org.",
+      "newSub": "Add a user by subject",
+      "newSubHint": "The IdP sub (Keycloak user id, Supabase uid). The row is created with the student role.",
+      "newOrg": "Org for the new user",
+      "add": "Add",
+      "saved": "Roles saved for {{sub}}.",
+      "failed": "The change was not saved ({{error}}).",
+      "empty": "No users yet. A user appears after their first verified request, or when you add one by subject.",
+      "col": { "user": "User", "org": "Org", "roles": "Granted roles", "lastSeen": "Last seen", "actions": "Actions" },
+      "grantedBy": "granted by {{by}}",
+      "neverSeen": "not seen yet",
+      "remove": "Remove {{sub}}"
+    }
+  },
+  "panels": {
+    "common": { "refresh": "Refresh", "retry": "Retry", "close": "Close" },
+    "dean": {
+      "eyebrow": "Dean's office",
+      "title": "Institution dashboard",
+      "lede": "Every learner's completed encounters for your organisation, aggregated on the server from the hash-chained event log. Learners appear as masked handles; nothing here is a learner's private ego-data.",
+      "privacy": "Aggregate view for {{org}}. Handles are masked; chain integrity is verified on every load.",
+      "window": { "label": "Window", "7d": "7 days", "30d": "30 days", "90d": "90 days", "all": "All" },
+      "chain": { "ok": "Chain verified ({{count}} batches)", "broken": "Chain broken at batch {{id}}" },
+      "charts": "Charts",
+      "kpi": {
+        "sectionLabel": "Cohort headline metrics",
+        "learners": "Learners",
+        "learnersHint": "Distinct learners with a completed encounter in the window",
+        "encounters": "Encounters",
+        "encountersHint": "Completed encounters received by the server",
+        "dxAccuracy": "Diagnostic accuracy",
+        "dxAccuracyHint": "Share of encounters with the correct final diagnosis",
+        "safetyMiss": "Safety-miss rate",
+        "safetyMissHint": "Encounters with a safety-critical timing miss or unchecked allergies",
+        "brier": "Mean Brier",
+        "brierHint": "Calibration error across scored domains, lower is better",
+        "atRisk": "At-risk learners",
+        "atRiskHint": "Flagged by safety, competence, diagnosis or calibration rules"
+      },
+      "risk": {
+        "title": "At-risk learners and remediation",
+        "subtitle": "Learners the server flagged from their own recorded encounters. Assigning a remediation case closes the loop: the assignment completes when the learner's next encounter for that case is received.",
+        "count": "{{count}} at risk",
+        "none": "No learner meets an at-risk rule in this window.",
+        "listLabel": "At-risk learners",
+        "flag": "At risk",
+        "summary": "{{encounters}} encounters, {{misses}} safety misses, {{dx}}% diagnostic accuracy",
+        "reason": { "safety": "Safety", "competence": "Competence", "diagnosis": "Diagnosis", "calibration": "Calibration" },
+        "weakest": "Weakest: {{domain}}",
+        "assign": "Assign remediation",
+        "assignTitle": "Remediation: {{domain}}",
+        "general": "general practice",
+        "assigned": "Remediation assigned to {{handle}}.",
+        "assignFailed": "The assignment was not saved.",
+        "noSub": "This learner is not in the roster yet, so no assignment can be addressed to them.",
+        "loopNote": "Assignments and completions are visible to faculty on the Faculty page."
+      },
+      "grid": {
+        "title": "Cohort competency grid",
+        "subtitle": "Each learner's mean competence per domain, banded. The band word and fill level carry the meaning; colour is secondary.",
+        "caption": "Learners by competency domain",
+        "learner": "Learner",
+        "lastActive": "Last active",
+        "encounters": "encounters",
+        "empty": "No completed encounters in this window yet."
+      },
+      "bands": {
+        "title": "Band distribution by domain",
+        "subtitle": "How many scored encounters fell in each band, per domain.",
+        "empty": "No scored domains yet."
+      },
+      "activity": { "title": "Activity ({{window}})", "encounters": "Encounters", "learners": "Active learners" },
+      "calibration": {
+        "heading": "Aggregate calibration",
+        "headingSub": "Decisiveness against measured competence, aggregated per domain across the cohort.",
+        "title": "Calibration by domain",
+        "subtitle": "Mean absolute gap between confidence and competence, and how many encounters ran over-, well- or under-confident.",
+        "domain": "Domain",
+        "meanGap": "Mean gap",
+        "empty": "No calibration evidence yet."
+      },
+      "export": {
+        "title": "Accreditation export (server)",
+        "subtitle": "A de-identified JSON file built on the server from the same chained rows: masked handles, per-domain bands, outcome flags and the chain head for audit.",
+        "cta": "Download export ({{window}})",
+        "done": "Downloaded {{rows}} rows. Chain head",
+        "failed": "The export could not be generated."
+      },
+      "fallback": {
+        "title": "Showing your on-device records only",
+        "body": "The institution data source did not answer ({{error}}). Cohort analytics need the AcuDx gateway; the panels below use this browser's own records.",
+        "forbidden": "Your current identity is not allowed to read cohort data. Sign in with an institution account that holds the dean role."
+      },
+      "footer": "Generated for {{name}} from server data for {{org}}."
+    },
+    "faculty": {
+      "eyebrow": "Faculty",
+      "title": "Faculty workspace",
+      "lede": "Review authored cases and flagged encounters, manage your roster and assign cases. Every grading override is co-signed and recorded on the server.",
+      "pending": "{{count}} pending",
+      "forbidden": "Your current identity is not allowed to use the faculty workspace. Sign in with an account that holds the faculty role.",
+      "unavailable": "The faculty API did not answer ({{error}}).",
+      "tabs": { "queue": "Review queue", "roster": "Roster", "assignments": "Assignments" },
+      "reasons": { "safety_miss": "Safety miss", "diagnosis_incorrect": "Wrong diagnosis" },
+      "cases": {
+        "heading": "Authored cases awaiting review ({{count}})",
+        "empty": "No cases waiting for review.",
+        "approve": "Approve",
+        "return": "Return to author"
+      },
+      "flagged": {
+        "heading": "Encounters flagged for review ({{count}})",
+        "empty": "No encounters are flagged."
+      },
+      "recent": { "heading": "Recent reviews" },
+      "review": {
+        "open": "Review",
+        "decision": "Decision",
+        "upheld": "Upheld",
+        "overridden": "Overridden",
+        "points": "Exam points (0 to {{max}})",
+        "pointsHint": "Optional summative points override for this case.",
+        "pointsError": "Enter a whole number between 0 and {{max}}.",
+        "overrideBands": "Per-domain band overrides",
+        "currentBand": "Scored: {{band}}",
+        "keep": "Keep scored band",
+        "note": "Note to the learner's record",
+        "cosign": "I co-sign this review",
+        "cosignAs": "Signed as {{name}}, {{role}}, {{institution}}.",
+        "notCredentialed": "Only a credentialed teaching role (faculty, dean or admin) can co-sign.",
+        "submit": "Record review",
+        "needOverride": "Set at least one band or a points value to override.",
+        "failed": "The review was not recorded ({{error}}).",
+        "cosignedShort": "co-signed"
+      },
+      "roster": {
+        "heading": "Roster ({{count}})",
+        "empty": "No learners in your organisation yet.",
+        "name": "Learner",
+        "roles": "Roles",
+        "encounters": "Encounters",
+        "safetyMisses": "Safety misses",
+        "open": "Open assignments",
+        "lastActive": "Last active",
+        "noRoles": "no granted roles"
+      },
+      "assign": {
+        "title": "Assign a case",
+        "caseId": "Case id",
+        "caseIdHint": "The case the learner must complete; the assignment closes when their encounter for it arrives.",
+        "caseTitle": "Title shown to the learner",
+        "everyone": "Assign to every learner in the organisation",
+        "pick": "Or pick learners",
+        "submit": "Assign",
+        "done": "Assigned to {{count}} learner(s).",
+        "failed": "The assignment was not saved ({{error}})."
+      },
+      "assignments": {
+        "empty": "No assignments yet.",
+        "case": "Case",
+        "learner": "Learner",
+        "status": "Status",
+        "created": "Created",
+        "completed": "Completed",
+        "openStatus": "Open"
+      }
+    }
+  }
+}

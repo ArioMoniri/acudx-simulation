@@ -178,6 +178,12 @@ class Settings(BaseSettings):
     admin_token: str | None = None               # guards /admin/*; 503 when unset
     acudx_db_path: str = "server/data/acudx.db"  # SQLite: worker state + cost ledger + registry + telemetry
 
+    # --- Identity (server/auth, docs/architecture/19) --- #
+    # "local": air-gapped default, unverified local profiles (every response carries
+    # X-Auth-Mode: local). "oidc": a verified bearer JWT from the registry's identity
+    # provider is required. The registry setting `auth_mode` overrides this value.
+    auth_mode: Literal["local", "oidc"] = "local"
+
     # --- Provider registry + telemetry (server/registry, server/telemetry) --- #
     # Fernet key sealing provider API keys at rest. Unset => keys cannot be stored
     # (the registry refuses, it never falls back to plaintext). Generate with

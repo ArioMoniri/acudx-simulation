@@ -7,3 +7,4 @@ export { GpuSection } from "./GpuSection";
 export { TelemetrySection } from "./TelemetrySection";
 export { SettingsSection } from "./SettingsSection";
 export { ChartFrame } from "./ChartFrame";
+export { UsersSection } from "./UsersSection";

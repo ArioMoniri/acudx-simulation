@@ -43,12 +43,14 @@ const NAV_BY_ROLE: Record<ViewAsRole, NavItem[]> = {
   educator: [
     { to: "/", key: "nav.home", end: true },
     { to: "/cases", key: "nav.cases" },
+    { to: "/faculty", key: "nav.faculty", defaultLabel: "Faculty" },
     { to: "/authoring", key: "nav.authoring" },
     { to: "/atlas", key: "nav.atlas", defaultLabel: "Atlas" },
   ],
   dean: [
     { to: "/", key: "nav.home", end: true },
-    { to: "/institution", key: "nav.institution" },
+    { to: "/dean", key: "nav.institution" },
+    { to: "/faculty", key: "nav.faculty", defaultLabel: "Faculty" },
     { to: "/authoring", key: "nav.authoring" },
     { to: "/atlas", key: "nav.atlas", defaultLabel: "Atlas" },
   ],
@@ -57,7 +59,8 @@ const NAV_BY_ROLE: Record<ViewAsRole, NavItem[]> = {
   admin: [
     { to: "/", key: "nav.home", end: true },
     { to: "/admin", key: "nav.admin", defaultLabel: "Admin" },
-    { to: "/institution", key: "nav.institution" },
+    { to: "/dean", key: "nav.institution" },
+    { to: "/faculty", key: "nav.faculty", defaultLabel: "Faculty" },
     { to: "/authoring", key: "nav.authoring" },
   ],
 };

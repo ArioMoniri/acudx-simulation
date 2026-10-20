@@ -436,8 +436,33 @@ function setState(next: ProgressState): void {
 /* Actions                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Listeners told about every NEW record (not replacements), with the raw event
+ * log when the caller had it. The server event sync (src/lib/eventSync.ts)
+ * subscribes here so dean / faculty panels aggregate real server-side data.
+ */
+export type EncounterRecordedListener = (record: EncounterRecord, events: EncounterEvent[]) => void;
+const recordedListeners = new Set<EncounterRecordedListener>();
+
+export function onEncounterRecorded(listener: EncounterRecordedListener): () => void {
+  recordedListeners.add(listener);
+  return () => {
+    recordedListeners.delete(listener);
+  };
+}
+
+function notifyRecorded(record: EncounterRecord, events: EncounterEvent[]): void {
+  for (const l of recordedListeners) {
+    try {
+      l(record, events);
+    } catch {
+      /* a sync failure never breaks local progress */
+    }
+  }
+}
+
 /** Append (or replace, by sourceKey) a completed-encounter record. */
-export function recordEncounter(record: EncounterRecord): void {
+export function recordEncounter(record: EncounterRecord, events: EncounterEvent[] = []): void {
   const existing = state.records.find((r) => r.sourceKey === record.sourceKey);
   if (existing) {
     // Same encounter already recorded and unchanged — no-op to avoid churn.
@@ -450,6 +475,7 @@ export function recordEncounter(record: EncounterRecord): void {
   }
   const records = [...state.records, record].sort((a, b) => a.at - b.at);
   setState({ ...state, records });
+  notifyRecorded(record, events);
 }
 
 /**
@@ -466,7 +492,7 @@ export function recordFromEncounter(
   const existing = state.records.find((r) => r.sourceKey === sourceKey);
   if (existing) return existing;
   const record = buildEncounterRecord(events, caseInstance, sourceKey, at);
-  recordEncounter(record);
+  recordEncounter(record, events);
   return record;
 }
 

@@ -23,3 +23,5 @@ python-multipart>=0.0.20,<1.0
 trafilatura>=1.8,<3.0
 lxml>=5.0,<7.0
 pypdf>=4.0,<7.0
+# Bearer JWT verification against the registry identity provider (server/auth/jwks.py).
+PyJWT>=2.8,<3.0

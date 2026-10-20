@@ -42,41 +42,47 @@ const STORAGE_KEY = "acudx-view-as";
  */
 export function profileRoleToViewAs(role: ProfileRole): ViewAsRole {
   switch (role) {
-    case "educator":
+    case "faculty":
       return "educator";
     case "dean":
       return "dean";
     case "admin":
+    case "super_admin":
       return "admin";
     case "student":
     case "resident":
+    case "nurse":
+    case "paramedic":
     default:
       return "learner";
   }
 }
 
 /**
- * SINGLE SOURCE OF TRUTH for ROLE → PERMITTED VANTAGES. `profile.role` is the
- * permission source today; a future Supabase wave replaces the argument with a
- * server-verified claim without touching a single consumer. Lists are ordered
- * ascending (learner < educator < dean) so the LAST element is the highest
- * permitted vantage:
+ * SINGLE SOURCE OF TRUTH for ROLE -> PERMITTED VANTAGES. The argument is the
+ * profile role, which in OIDC mode is derived from the server-verified principal
+ * (profileStore.applyVerifiedIdentity) and in local mode is the self-declared,
+ * unverified role. Lists are ordered ascending (learner < educator < dean <
+ * admin) so the LAST element is the highest permitted vantage:
  *
- *   student / resident → learner
- *   educator           → learner, educator
- *   dean               → learner, educator, dean
- *   admin              → learner, educator, dean, admin (operator console at /admin)
+ *   student / resident / nurse / paramedic -> learner
+ *   faculty                                -> learner, educator
+ *   dean                                   -> learner, educator, dean
+ *   admin / super_admin                    -> learner, educator, dean, admin
  */
 export function permittedVantages(role: ProfileRole): ViewAsRole[] {
   switch (role) {
     case "admin":
+    case "super_admin":
       return ["learner", "educator", "dean", "admin"];
     case "dean":
       return ["learner", "educator", "dean"];
-    case "educator":
+    case "faculty":
       return ["learner", "educator"];
     case "student":
     case "resident":
+    case "nurse":
+    case "paramedic":
     default:
       return ["learner"];
   }

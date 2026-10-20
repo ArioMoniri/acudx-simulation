@@ -12,11 +12,12 @@ import {
   ProvidersSection,
   SettingsSection,
   TelemetrySection,
+  UsersSection,
   useAdminSession,
 } from "@/components/admin";
 import { useEntry } from "@/lib/useLang";
 
-const TABS = ["overview", "providers", "gpu", "telemetry", "settings"] as const;
+const TABS = ["overview", "providers", "users", "gpu", "telemetry", "settings"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_KEY = "acudx-admin-tab";
 
@@ -78,6 +79,9 @@ function Console() {
             </TabsContent>
             <TabsContent value="providers">
               <ProvidersSection />
+            </TabsContent>
+            <TabsContent value="users">
+              <UsersSection />
             </TabsContent>
             <TabsContent value="gpu">
               <GpuSection />

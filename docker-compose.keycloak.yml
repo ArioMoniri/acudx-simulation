@@ -1,0 +1,42 @@
+# Keycloak 26 development overlay for AcuDx identity (docs/architecture/19).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up -d keycloak
+#
+# Imports deploy/keycloak/realm-acudx.json on first start (realm `acudx`, public
+# PKCE client `acudx-web`, the eight AcuDx roles and one throwaway test user per
+# role). DEV ONLY: start-dev, embedded database, admin bootstrap password from
+# the environment. For production run `start` behind TLS with Postgres and
+# register the realm as an identity provider in the AcuDx admin console:
+#   kind=identity, base_url=https://<keycloak-host>/realms/acudx,
+#   extra={"client_id":"acudx-web","flavor":"keycloak"}
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm", "--http-port=8080"]
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=${KC_ADMIN:-admin}
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=${KC_ADMIN_PASSWORD:-change-me-dev-only}
+      - KC_HOSTNAME=${KC_HOSTNAME:-http://localhost:8080}
+      - KC_HTTP_ENABLED=true
+      - KC_HEALTH_ENABLED=true
+      - KC_PROXY_HEADERS=xforwarded
+    ports: ["8080:8080"]
+    volumes:
+      - ./deploy/keycloak:/opt/keycloak/data/import:ro
+      - keycloak_data:/opt/keycloak/data/h2
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  server:
+    environment:
+      # The gateway verifies bearer tokens against the registry identity provider.
+      # Switch to oidc once the realm is registered; local keeps air-gapped demos working.
+      - AUTH_MODE=${AUTH_MODE:-local}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+volumes:
+  keycloak_data:

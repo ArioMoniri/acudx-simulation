@@ -10,3 +10,6 @@ export { RoomPage } from "./RoomPage";
 export { InstitutionPage } from "./InstitutionPage";
 export { AtlasPage } from "./AtlasPage";
 export { AdminPage } from "./AdminPage";
+export { DeanPage } from "./DeanPage";
+export { FacultyPage } from "./FacultyPage";
+export { AuthCallbackPage } from "./AuthCallbackPage";

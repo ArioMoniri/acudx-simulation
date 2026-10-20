@@ -729,20 +729,23 @@ export interface ReviewerIdentity {
 export const ROLE_LABELS: Record<ProfileRole, Bilingual> = {
   student: { en: "Medical student", tr: "Tıp öğrencisi" },
   resident: { en: "Resident physician", tr: "Asistan hekim" },
-  educator: { en: "Clinician educator", tr: "Klinisyen eğitici" },
+  nurse: { en: "Nurse", tr: "Hemşire" },
+  paramedic: { en: "Paramedic", tr: "Paramedik" },
+  faculty: { en: "Clinician educator", tr: "Klinisyen eğitici" },
   dean: { en: "Faculty dean", tr: "Fakülte dekanı" },
   admin: { en: "Platform administrator", tr: "Platform yöneticisi" },
+  super_admin: { en: "Platform super administrator", tr: "Platform üst yöneticisi" },
 };
 
 /**
  * The roles that hold real teaching-faculty credentials and may co-sign +
  * publish a case. Co-signing attests a case is safe for learners, so it is
- * gated to educators and deans — a student or resident cannot sign off, even
- * with a completed profile. This mirrors `profile.role` (the client-side
- * permission source today; a Supabase wave later makes it server-verified).
+ * gated to faculty, deans and admins; a student, resident, nurse or paramedic
+ * cannot sign off, even with a completed profile. In OIDC mode `profile.role`
+ * is derived from the server-verified principal (profileStore).
  */
 export function isCredentialedRole(role: ProfileRole): boolean {
-  return role === "educator" || role === "dean";
+  return role === "faculty" || role === "dean" || role === "admin" || role === "super_admin";
 }
 
 /**

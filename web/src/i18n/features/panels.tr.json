@@ -1,0 +1,176 @@
+{
+  "admin": {
+    "tabs": { "users": "Kullanıcılar" },
+    "users": {
+      "title": "Kullanıcılar ve roller",
+      "description": "Kimlik sağlayıcı öznesine (sub) göre anahtarlanan sunucu tarafı rol atamaları. Atanan roller kişinin doğrulanmış belirtecindeki rollerle birleştirilir; üniversitenin kimlik sağlayıcısı rol bilgisi göndermese bile öğretim üyeleri ve dekanlar buradan yükseltilebilir.",
+      "filterOrg": "Kuruma göre filtrele",
+      "filterOrgHint": "Tüm kurumlar için boş bırakın.",
+      "newSub": "Özneye göre kullanıcı ekle",
+      "newSubHint": "Kimlik sağlayıcı sub değeri (Keycloak kullanıcı kimliği, Supabase uid). Satır öğrenci rolüyle oluşturulur.",
+      "newOrg": "Yeni kullanıcının kurumu",
+      "add": "Ekle",
+      "saved": "{{sub}} için roller kaydedildi.",
+      "failed": "Değişiklik kaydedilmedi ({{error}}).",
+      "empty": "Henüz kullanıcı yok. Bir kullanıcı ilk doğrulanmış isteğinden sonra veya özneye göre eklendiğinde görünür.",
+      "col": { "user": "Kullanıcı", "org": "Kurum", "roles": "Atanan roller", "lastSeen": "Son görülme", "actions": "İşlemler" },
+      "grantedBy": "atayan: {{by}}",
+      "neverSeen": "henüz görülmedi",
+      "remove": "{{sub}} kaldır"
+    }
+  },
+  "panels": {
+    "common": { "refresh": "Yenile", "retry": "Yeniden dene", "close": "Kapat" },
+    "dean": {
+      "eyebrow": "Dekanlık",
+      "title": "Kurum panosu",
+      "lede": "Kurumunuzdaki tüm öğrenenlerin tamamlanmış karşılaşmaları, zincirlenmiş olay günlüğünden sunucuda toplulaştırılır. Öğrenenler maskelenmiş kodlarla görünür; burada hiçbir öğrenenin özel verisi yoktur.",
+      "privacy": "{{org}} için toplu görünüm. Kodlar maskelenir; zincir bütünlüğü her yüklemede doğrulanır.",
+      "window": { "label": "Dönem", "7d": "7 gün", "30d": "30 gün", "90d": "90 gün", "all": "Tümü" },
+      "chain": { "ok": "Zincir doğrulandı ({{count}} paket)", "broken": "Zincir {{id}} numaralı pakette kırık" },
+      "charts": "Grafikler",
+      "kpi": {
+        "sectionLabel": "Kohort başlık metrikleri",
+        "learners": "Öğrenenler",
+        "learnersHint": "Dönem içinde tamamlanmış karşılaşması olan farklı öğrenenler",
+        "encounters": "Karşılaşmalar",
+        "encountersHint": "Sunucuya ulaşan tamamlanmış karşılaşmalar",
+        "dxAccuracy": "Tanı doğruluğu",
+        "dxAccuracyHint": "Doğru son tanıya ulaşan karşılaşmaların oranı",
+        "safetyMiss": "Güvenlik kaçırma oranı",
+        "safetyMissHint": "Kritik zamanlama kaçırması veya kontrol edilmemiş alerji içeren karşılaşmalar",
+        "brier": "Ortalama Brier",
+        "brierHint": "Puanlanan alanlardaki kalibrasyon hatası, düşük olması iyidir",
+        "atRisk": "Riskli öğrenenler",
+        "atRiskHint": "Güvenlik, yeterlik, tanı veya kalibrasyon kurallarıyla işaretlendi"
+      },
+      "risk": {
+        "title": "Riskli öğrenenler ve telafi",
+        "subtitle": "Sunucunun kendi kayıtlı karşılaşmalarından işaretlediği öğrenenler. Telafi vakası atamak döngüyü kapatır: öğrenenin o vaka için bir sonraki karşılaşması alındığında atama tamamlanır.",
+        "count": "{{count}} riskli",
+        "none": "Bu dönemde hiçbir öğrenen risk kuralına girmiyor.",
+        "listLabel": "Riskli öğrenenler",
+        "flag": "Riskli",
+        "summary": "{{encounters}} karşılaşma, {{misses}} güvenlik kaçırması, %{{dx}} tanı doğruluğu",
+        "reason": { "safety": "Güvenlik", "competence": "Yeterlik", "diagnosis": "Tanı", "calibration": "Kalibrasyon" },
+        "weakest": "En zayıf: {{domain}}",
+        "assign": "Telafi ata",
+        "assignTitle": "Telafi: {{domain}}",
+        "general": "genel uygulama",
+        "assigned": "{{handle}} için telafi atandı.",
+        "assignFailed": "Atama kaydedilmedi.",
+        "noSub": "Bu öğrenen henüz listede değil; atama yapılamıyor.",
+        "loopNote": "Atamalar ve tamamlanmalar Öğretim üyesi sayfasında görünür."
+      },
+      "grid": {
+        "title": "Kohort yeterlik tablosu",
+        "subtitle": "Her öğrenenin alan başına ortalama yeterliği, bantlanmış. Anlamı bant sözcüğü ve dolgu düzeyi taşır; renk ikincildir.",
+        "caption": "Yeterlik alanına göre öğrenenler",
+        "learner": "Öğrenen",
+        "lastActive": "Son etkinlik",
+        "encounters": "karşılaşma",
+        "empty": "Bu dönemde henüz tamamlanmış karşılaşma yok."
+      },
+      "bands": {
+        "title": "Alana göre bant dağılımı",
+        "subtitle": "Her alanda puanlanan karşılaşmaların hangi banda düştüğü.",
+        "empty": "Henüz puanlanmış alan yok."
+      },
+      "activity": { "title": "Etkinlik ({{window}})", "encounters": "Karşılaşmalar", "learners": "Etkin öğrenenler" },
+      "calibration": {
+        "heading": "Toplu kalibrasyon",
+        "headingSub": "Kohort genelinde alan başına kararlılık ile ölçülen yeterliğin karşılaştırması.",
+        "title": "Alana göre kalibrasyon",
+        "subtitle": "Güven ile yeterlik arasındaki ortalama mutlak fark ve kaç karşılaşmanın aşırı, iyi veya düşük güvenli olduğu.",
+        "domain": "Alan",
+        "meanGap": "Ortalama fark",
+        "empty": "Henüz kalibrasyon kanıtı yok."
+      },
+      "export": {
+        "title": "Akreditasyon dışa aktarımı (sunucu)",
+        "subtitle": "Aynı zincirlenmiş satırlardan sunucuda oluşturulan kimliksizleştirilmiş JSON dosyası: maskelenmiş kodlar, alan bantları, sonuç bayrakları ve denetim için zincir başı.",
+        "cta": "Dışa aktarımı indir ({{window}})",
+        "done": "{{rows}} satır indirildi. Zincir başı",
+        "failed": "Dışa aktarım oluşturulamadı."
+      },
+      "fallback": {
+        "title": "Yalnızca bu cihazdaki kayıtlar gösteriliyor",
+        "body": "Kurum veri kaynağı yanıt vermedi ({{error}}). Kohort analitiği AcuDx ağ geçidini gerektirir; aşağıdaki paneller bu tarayıcının kendi kayıtlarını kullanır.",
+        "forbidden": "Mevcut kimliğinizin kohort verisini okuma izni yok. Dekan rolüne sahip bir kurum hesabıyla giriş yapın."
+      },
+      "footer": "{{org}} için sunucu verisinden {{name}} adına oluşturuldu."
+    },
+    "faculty": {
+      "eyebrow": "Öğretim üyesi",
+      "title": "Öğretim üyesi çalışma alanı",
+      "lede": "Yazılan vakaları ve işaretlenen karşılaşmaları inceleyin, listenizi yönetin ve vaka atayın. Her not değişikliği ortak imzalanır ve sunucuda kaydedilir.",
+      "pending": "{{count}} bekliyor",
+      "forbidden": "Mevcut kimliğinizin öğretim üyesi çalışma alanını kullanma izni yok. Öğretim üyesi rolüne sahip bir hesapla giriş yapın.",
+      "unavailable": "Öğretim üyesi API'si yanıt vermedi ({{error}}).",
+      "tabs": { "queue": "İnceleme kuyruğu", "roster": "Liste", "assignments": "Atamalar" },
+      "reasons": { "safety_miss": "Güvenlik kaçırması", "diagnosis_incorrect": "Yanlış tanı" },
+      "cases": {
+        "heading": "İnceleme bekleyen yazılmış vakalar ({{count}})",
+        "empty": "İnceleme bekleyen vaka yok.",
+        "approve": "Onayla",
+        "return": "Yazara geri gönder"
+      },
+      "flagged": {
+        "heading": "İnceleme için işaretlenen karşılaşmalar ({{count}})",
+        "empty": "İşaretlenen karşılaşma yok."
+      },
+      "recent": { "heading": "Son incelemeler" },
+      "review": {
+        "open": "İncele",
+        "decision": "Karar",
+        "upheld": "Onaylandı",
+        "overridden": "Değiştirildi",
+        "points": "Sınav puanı (0 ile {{max}})",
+        "pointsHint": "Bu vaka için isteğe bağlı toplam puan değişikliği.",
+        "pointsError": "0 ile {{max}} arasında bir tam sayı girin.",
+        "overrideBands": "Alan başına bant değişiklikleri",
+        "currentBand": "Puanlanan: {{band}}",
+        "keep": "Puanlanan bandı koru",
+        "note": "Öğrenen kaydına not",
+        "cosign": "Bu incelemeyi ortak imzalıyorum",
+        "cosignAs": "{{name}}, {{role}}, {{institution}} olarak imzalandı.",
+        "notCredentialed": "Yalnızca yetkili bir eğitici rol (öğretim üyesi, dekan veya yönetici) ortak imzalayabilir.",
+        "submit": "İncelemeyi kaydet",
+        "needOverride": "Değiştirmek için en az bir bant veya puan değeri belirleyin.",
+        "failed": "İnceleme kaydedilmedi ({{error}}).",
+        "cosignedShort": "ortak imzalı"
+      },
+      "roster": {
+        "heading": "Liste ({{count}})",
+        "empty": "Kurumunuzda henüz öğrenen yok.",
+        "name": "Öğrenen",
+        "roles": "Roller",
+        "encounters": "Karşılaşmalar",
+        "safetyMisses": "Güvenlik kaçırmaları",
+        "open": "Açık atamalar",
+        "lastActive": "Son etkinlik",
+        "noRoles": "atanmış rol yok"
+      },
+      "assign": {
+        "title": "Vaka ata",
+        "caseId": "Vaka kimliği",
+        "caseIdHint": "Öğrenenin tamamlaması gereken vaka; o vaka için karşılaşması geldiğinde atama kapanır.",
+        "caseTitle": "Öğrenene gösterilen başlık",
+        "everyone": "Kurumdaki tüm öğrenenlere ata",
+        "pick": "Ya da öğrenen seçin",
+        "submit": "Ata",
+        "done": "{{count}} öğrenene atandı.",
+        "failed": "Atama kaydedilmedi ({{error}})."
+      },
+      "assignments": {
+        "empty": "Henüz atama yok.",
+        "case": "Vaka",
+        "learner": "Öğrenen",
+        "status": "Durum",
+        "created": "Oluşturuldu",
+        "completed": "Tamamlandı",
+        "openStatus": "Açık"
+      }
+    }
+  }
+}

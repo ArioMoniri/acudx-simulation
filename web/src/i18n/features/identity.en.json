@@ -1,0 +1,44 @@
+{
+  "nav": { "faculty": "Faculty", "dean": "Dean" },
+  "role": { "faculty": "Faculty" },
+  "profile": {
+    "roles": {
+      "nurse": "Nurse",
+      "paramedic": "Paramedic",
+      "faculty": "Faculty (clinician educator)",
+      "super_admin": "Platform super administrator"
+    }
+  },
+  "identity": {
+    "badge": {
+      "verified": "Verified by your institution",
+      "local": "Local, unverified",
+      "localHint": "This identity is a local profile stored only in this browser. The server runs in local mode and does not verify it."
+    },
+    "signIn": {
+      "ssoHeading": "Sign in with your institution",
+      "ssoLede": "Single sign-on through {{provider}}. Your name, role and institution come from your university identity provider and are verified by the AcuDx server.",
+      "ssoCta": "Sign in with your institution",
+      "ssoHint": "OpenID Connect with PKCE. No password is entered in AcuDx; the access token stays in memory only.",
+      "ssoUnavailable": "The identity provider did not publish an authorization endpoint. Ask your administrator to probe the identity provider in the admin console.",
+      "ssoNotConfigured": "This deployment requires institution sign-in, but no identity provider is configured yet. Ask your administrator to add one under Admin, Providers, kind identity.",
+      "callbackError": "The last sign-in attempt failed: {{reason}}",
+      "gatewayDown": "The AcuDx gateway could not be reached, so only the local profile is available right now.",
+      "localNote": "Local profiles are for air-gapped demos. Dean, faculty and admin surfaces opened from a local profile are not verified and the server marks every response X-Auth-Mode: local."
+    },
+    "callback": {
+      "eyebrow": "Institution sign-in",
+      "title": "Finishing sign-in",
+      "lede": "Exchanging the authorization code and loading your verified profile.",
+      "working": "Verifying with the AcuDx server",
+      "failedTitle": "Sign-in did not complete",
+      "failedLede": "Nothing was stored. You can try again from the sign-in screen.",
+      "reason": "Reason:",
+      "backToSignIn": "Back to sign in"
+    },
+    "profile": {
+      "managedByIdp": "Your name, role and institution are managed by your identity provider and cannot be edited here.",
+      "roleVerifiedHint": "Verified from your institution token. Ask an administrator to change it."
+    }
+  }
+}
