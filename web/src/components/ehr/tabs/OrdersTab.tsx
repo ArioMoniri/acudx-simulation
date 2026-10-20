@@ -283,7 +283,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
       {/* Live order tracker */}
       <motion.aside
         {...summaryReveal}
-        className="flex h-max flex-col gap-3 rounded-card border border-border bg-surface p-4"
+        className="flex h-max min-w-0 flex-col gap-3 rounded-card border border-border bg-surface p-4"
       >
         <div>
           <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">

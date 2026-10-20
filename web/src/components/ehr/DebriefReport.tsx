@@ -353,6 +353,40 @@ export function DebriefReport({ debrief, caseInstance, onClose, onViewReport }: 
           </section>
         ) : null}
 
+        {/* Clinical Director notes (Live mode): what changed and why */}
+        {debrief.directorNotes.length > 0 ? (
+          <>
+            <Divider className="mt-5" />
+            <section className="mt-4" aria-labelledby={`${titleId}-director`}>
+              <SectionLabel
+                id={`${titleId}-director`}
+                icon={<Clock weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+              >
+                {t("live2.debrief.directorHeading")}
+              </SectionLabel>
+              <p className="mt-1 text-xs text-muted">{t("live2.debrief.directorHint")}</p>
+              <ol className="mt-2 flex flex-col gap-1.5">
+                {debrief.directorNotes.map((n, i) => (
+                  <li key={`${n.atMs}-${i}`} className="flex items-start gap-2 text-xs text-fg">
+                    <span className="mt-px shrink-0 font-mono tabular-nums text-muted">
+                      {Math.round(n.atMs / 60000)} {t("debrief.minUnit")}
+                    </span>
+                    <span className="min-w-0 break-words">
+                      {n.complication ? (
+                        <Badge tone="caution" dot className="me-1.5">
+                          {t("live2.debrief.complication")}
+                        </Badge>
+                      ) : null}
+                      {n.note}
+                      {n.why ? <span className="text-muted"> ({n.why})</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </>
+        ) : null}
+
         <Divider className="mt-5" />
 
         {/* Teaching points */}

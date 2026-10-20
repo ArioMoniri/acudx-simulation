@@ -25,6 +25,13 @@ test.describe("encounter", () => {
     await page.goto("/encounter");
     await settle(page);
     const strip = page.getByRole("tablist", { name: "Chart sections" });
+    // A reachable gateway whose model endpoint is down answers 503: the
+    // workspace then shows the real error and asks the learner to choose. Take
+    // the labelled template so the flow goes on; offline, the on-device case
+    // starts at once and the strip is already there.
+    const useTemplate = page.getByRole("button", { name: /^Use template case/ });
+    await expect(strip.or(useTemplate)).toBeVisible({ timeout: 20_000 });
+    if (await useTemplate.isVisible()) await useTemplate.click();
     await expect(strip).toBeVisible();
 
     // Interview: three typed questions + one intent chip, each produces a reply.
@@ -85,6 +92,7 @@ test.describe("encounter", () => {
     const administer = page.getByRole("button", { name: /^Administer / }).first();
     await expect(administer).toBeVisible();
     await administer.click();
+    await page.getByRole("button", { name: /^Confirm and administer / }).first().click();
     // Treatments are repeatable, so the control keeps its "Administer" label
     // and the given-count badge + timestamp record the dose.
     await expect(page.getByText("1 given")).toBeVisible();
@@ -98,7 +106,9 @@ test.describe("encounter", () => {
     const dxName = (await add.getAttribute("aria-label"))!.replace(/^Add /, "").replace(/ to the differential$/, "");
     await add.click();
     await page.getByRole("button", { name: `Commit ${dxName} as the working diagnosis` }).click();
-    await expect(page.getByText(/Working diagnosis committed|Committed/).first()).toBeVisible();
+    // The verdict panel replaces the commit control; its debrief entry point is
+    // the stable signal that the diagnosis was committed.
+    await expect(page.getByRole("button", { name: "View attending debrief" })).toBeVisible();
 
     // Attending debrief -> full report (Feedback page).
     await page.getByRole("button", { name: "View attending debrief" }).click();

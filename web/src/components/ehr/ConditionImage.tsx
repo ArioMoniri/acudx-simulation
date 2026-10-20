@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowSquareOut,
@@ -8,11 +8,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/cn";
-import { Skeleton } from "@/components/ui";
-import {
-  resolveStudyImage,
-  type ConditionImage as ConditionImageData,
-} from "@/lib/openMedicalImages";
+import { resolveStudyImage } from "@/lib/openMedicalImages";
 
 export interface ConditionImageProps {
   /** Free-text condition to illustrate, e.g. "pneumonia" or "pneumothorax". */
@@ -31,20 +27,20 @@ export interface ConditionImageProps {
   className?: string;
 }
 
-type Phase = "loading" | "loaded" | "empty";
+type Phase = "loaded" | "empty";
 
 /**
- * ConditionImage — a PACS-style dark viewer that shows a REAL, openly-licensed
- * representative image of a condition fetched from Wikimedia Commons.
+ * ConditionImage: a PACS-style dark viewer that shows a REAL, openly-licensed
+ * representative image of a condition from the curated bundle
+ * (src/data/conditionImaging.ts). No runtime search: when the bundle has no
+ * verified image for the study, the viewer says so and the structured report
+ * stands alone. Live-mode results use the server engine's image through
+ * StudyViewer instead.
  *
  * Safety + licensing are non-negotiable: a permanent, always-visible banner
  * states the picture is representative and NOT the simulated patient, and the
  * footer always carries the license, attribution, and a link back to the
- * Commons source page. Nothing here is tooltip-only.
- *
- * The frame stays dark in both themes via the `--monitor-*` tokens, metadata is
- * monospace like real imaging software, and the loading Skeleton collapses its
- * shimmer under `prefers-reduced-motion`.
+ * source page. Nothing here is tooltip-only.
  */
 export function ConditionImage({
   query,
@@ -54,48 +50,15 @@ export function ConditionImage({
   className,
 }: ConditionImageProps) {
   const { t, i18n } = useTranslation();
-  const [phase, setPhase] = useState<Phase>("loading");
-  const [image, setImage] = useState<ConditionImageData | null>(null);
-  /** Bilingual teaching label from a curated match (null for live results). */
-  const [curatedCaption, setCuratedCaption] = useState<string | null>(null);
-
-  const searchText = [query, modality].filter(Boolean).join(" ").trim();
-
-  useEffect(() => {
-    if (!searchText) {
-      setPhase("empty");
-      setImage(null);
-      setCuratedCaption(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    let active = true;
-    setPhase("loading");
-    setImage(null);
-    setCuratedCaption(null);
-
-    const lang = i18n.language?.toLowerCase().startsWith("tr") ? "tr" : "en";
-    // PREFER a curated, individually-verified image; only fall back to the
-    // free-text live Commons lookup when nothing curated matches. Accuracy
-    // matters for a teaching tool (see resolveStudyImage).
-    void resolveStudyImage(query, modality, lang, controller.signal).then((result) => {
-      if (!active) return;
-      if (result) {
-        setImage(result);
-        setCuratedCaption(result.curated ? result.curatedCaption ?? null : null);
-        setPhase("loaded");
-      } else {
-        setImage(null);
-        setPhase("empty");
-      }
-    });
-
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [searchText, query, modality, i18n.language]);
+  const lang = i18n.language?.toLowerCase().startsWith("tr") ? "tr" : "en";
+  // Curated, individually verified bundle match or nothing. Synchronous and pure.
+  const image = useMemo(() => resolveStudyImage(query, modality, lang), [query, modality, lang]);
+  const curatedCaption = image?.curatedCaption ?? null;
+  // A bundled asset can still fail to load (blocked asset, broken path): fall
+  // back to the honest empty state rather than a broken image.
+  const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [image?.url]);
+  const phase: Phase = image && !broken ? "loaded" : "empty";
 
   const altText = modality
     ? t("imaging2.alt", { modality, query })
@@ -127,11 +90,7 @@ export function ConditionImage({
 
       {/* Image stage */}
       <div className="relative flex min-h-40 items-center justify-center bg-monitor-bg">
-        {phase === "loading" ? (
-          <div className="w-full p-3">
-            <Skeleton className="aspect-video w-full" />
-          </div>
-        ) : phase === "loaded" && image ? (
+        {phase === "loaded" && image ? (
           <>
             <img
               src={image.thumbUrl}
@@ -139,10 +98,7 @@ export function ConditionImage({
               loading="lazy"
               decoding="async"
               className="max-h-[28rem] max-w-full object-contain"
-              onError={() => {
-                setImage(null);
-                setPhase("empty");
-              }}
+              onError={() => setBroken(true)}
             />
             {/* MANDATORY disclaimer — real text, always visible (not a tooltip). */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-[color-mix(in_srgb,var(--monitor-bg)_82%,transparent)] px-3 py-1.5">
@@ -191,7 +147,7 @@ export function ConditionImage({
         ) : null}
 
         {/* Durable, non-overlay copy of the disclaimer so it stays visible in
-            the loading/empty phases where the on-image banner isn't rendered. */}
+            the empty phase where the on-image banner isn't rendered. */}
         {phase !== "loaded" ? (
           <p className="flex items-center gap-1.5 font-mono text-[11px] text-monitor-dim">
             <Warning weight="fill" className="h-3 w-3 shrink-0" aria-hidden />

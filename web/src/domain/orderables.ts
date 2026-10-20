@@ -2,6 +2,12 @@
  * AcuDx — comprehensive orderable catalog + synthetic within-normal-limits
  * results.
  *
+ * OFFLINE PATH ONLY for the synthetic values: when the gateway is reachable the
+ * encounter store resolves every order through the server results engine
+ * (src/lib/resultsApi.ts, docs/architecture/14) and these generators are not
+ * consulted. When it is not, the Results surface labels every value built here
+ * "offline synthetic normal" (meta.source = "offline-synthetic-normal").
+ *
  * The encounter's expected work-up (docs §4) only names the handful of tests a
  * strong clinician SHOULD order for that case. A real order-entry surface must
  * let the student order ANYTHING — a CBC, a blood gas, a culture, a CT — and get

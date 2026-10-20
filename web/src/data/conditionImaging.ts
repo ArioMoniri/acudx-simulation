@@ -3,10 +3,12 @@
  * studies (ECG / chest X-ray / CT / abdominal X-ray) mapped to the clinical
  * conditions AcuDx simulates.
  *
- * Why a curated bundle: the live Wikimedia Commons lookup (see
- * `src/lib/openMedicalImages.ts`) is a free-text search that can surface a
- * plausible-but-wrong film. For a teaching tool that is unacceptable — an
- * "anterior STEMI" case must show an anterior-STEMI ECG, not a random tracing.
+ * Why a curated bundle: a free-text search against a media repository can
+ * surface a plausible-but-wrong film (the runtime Commons search that once
+ * lived in `src/lib/openMedicalImages.ts` was removed for that reason; Live
+ * mode now takes the server engine's matched image). For a teaching tool that
+ * is unacceptable — an "anterior STEMI" case must show an anterior-STEMI ECG,
+ * not a random tracing.
  * Every entry here was individually verified on the file's Commons description
  * page to genuinely depict the stated condition + modality, and carries the
  * author + license + source URL required for CC-BY attribution. Nothing is a
@@ -21,7 +23,7 @@
  *   - `resolveCuratedImagingByText(query, modalityLabel?)` matches the free-text
  *     query + short modality label that `ConditionImage` already receives, so
  *     the curated bundle can be preferred without changing that component's API.
- * Both return the best match or `null` (→ caller falls back to live search).
+ * Both return the best match or `null` (the caller shows the report alone).
  */
 
 import type { CaseInstance } from "@/domain/case";

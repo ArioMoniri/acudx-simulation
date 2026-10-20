@@ -48,6 +48,19 @@ import {
   type MedicationOrder,
 } from "@/domain/medicationSafety";
 import { gateFor } from "@/domain/treatmentRules";
+import { directorStep, type DirectorAction, type DirectorAffect, type DirectorCaseState, type DirectorStepResult } from "@/lib/caseGenV2";
+import { resolveOrder as engineResolveOrder, type OrderResult } from "@/lib/resultsApi";
+import {
+  applyDirectorChanges,
+  caseInstanceToSpec,
+  overlayVitals,
+  resultsCaseState,
+  turnaroundLabel,
+  vitalsAdjectives,
+  type CaseGenerationMeta,
+  type DirectorOverlay,
+  type ResultSource,
+} from "@/lib/liveEncounter";
 
 /* -------------------------------------------------------------------------- */
 /* Event log + state shapes                                                    */
@@ -141,6 +154,8 @@ export type EncounterStage =
   | "closed";
 
 export interface PlacedOrder {
+  /** Stable per-placement id (serial re-orders of one code get distinct ids). */
+  id: string;
   /** The order/service code (matches OrderExpectation code + LabResult.orderCode). */
   code: string;
   /** Bilingual label captured at order time (from expectedWorkup or ad hoc). */
@@ -155,14 +170,42 @@ export interface PlacedOrder {
   /** Turnaround category the timing was derived from (orderCatalog). */
   category: OrderCategory;
   resolved: boolean;
+  /**
+   * Where the result will come from once resolved. "engine" is the server
+   * results engine (Live mode), "case" the authored ground truth, and
+   * "offline-synthetic-normal" the labelled on-device fallback.
+   */
+  source?: ResultSource;
+  /** The engine's own turnaround (sim ms) when it answered; drives the ETA label. */
+  engineTurnaroundMs?: number;
 }
 
 export interface ResolvedResult {
+  /** The PlacedOrder this result answers. */
+  orderId: string;
   code: string;
   datumKind: RevealDatumKind;
-  /** ids of the LabResult/ImagingResult revealed. */
+  /** ids of the LabResult/ImagingResult revealed (empty for engine/offline results). */
   datumIds: string[];
   at: number;
+  /** Provenance of the numbers (mirrors the result event's meta.source). */
+  source: ResultSource;
+  /** The server engine's full answer, present when source === "engine". */
+  engine?: OrderResult;
+}
+
+/** Client view of the Clinical Director (server/orchestration/director.py). */
+export interface DirectorSlice {
+  /** Opaque server state, round-tripped unchanged between steps. */
+  caseState: DirectorCaseState | null;
+  /** Generator checkpoint thread the Director run correlates with. */
+  threadId: string | null;
+  overlay: DirectorOverlay | null;
+  /** Steps taken so far (for the debrief and the status chip). */
+  steps: number;
+  status: "idle" | "busy" | "error";
+  /** Last error reason (network, timeout, http_503 ...), null when healthy. */
+  error: string | null;
 }
 
 export interface ProblemListEntry {
@@ -203,6 +246,11 @@ export interface EncounterState {
   guardEvents: GuardEvent[];
   /** Committed diagnosis code, if any. */
   committedDiagnosis: string | null;
+  /** Live mode: the gateway is reachable, so results and the Director run server-side. */
+  liveEnabled: boolean;
+  /** How the running case was produced (banner SimBadge provenance). */
+  generation: CaseGenerationMeta | null;
+  director: DirectorSlice;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -240,13 +288,33 @@ function initialState(): EncounterState {
     dialogue: [],
     guardEvents: [],
     committedDiagnosis: null,
+    liveEnabled,
+    generation: null,
+    director: initialDirector(),
   };
 }
+
+function initialDirector(): DirectorSlice {
+  return { caseState: null, threadId: null, overlay: null, steps: 0, status: "idle", error: null };
+}
+
+/** Module-level Live flag; survives resets so a new case starts in the right mode. */
+let liveEnabled = false;
 
 let state: EncounterState = initialState();
 let seqCounter = 0;
 const listeners = new Set<() => void>();
 const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
+/** In-flight results-engine requests keyed by PlacedOrder.id (Live mode). */
+const engineRequests = new Map<string, Promise<OrderResult | null>>();
+/** Serialised Director chain: one step at a time, in action order. */
+let directorChain: Promise<void> = Promise.resolve();
+let directorPending = 0;
+/** True while an "elapsed" tick is queued, so ticks never pile up. */
+let directorTickQueued = false;
+let directorClock: ReturnType<typeof setInterval> | null = null;
+/** Sim time the Director accounts for every cadence tick. */
+const DIRECTOR_TICK_MS = 60_000;
 
 function emit(): void {
   for (const l of listeners) l();
@@ -279,21 +347,56 @@ function revealDatumIds(datumIds: string[], current: ReadonlySet<string>): Set<s
 /* Actions                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Switch Live mode on or off. In Live mode orders resolve through the server
+ * results engine and every learner action steps the Clinical Director; off,
+ * the offline reveal graph answers and the on-device synthetic normal is used,
+ * labelled as such. Called by the workspace from the gateway health probe.
+ */
+export function setLiveEnabled(enabled: boolean): void {
+  if (liveEnabled === enabled) return;
+  liveEnabled = enabled;
+  setState({ ...state, liveEnabled: enabled });
+  if (enabled && state.caseInstance) startDirectorClock();
+  if (!enabled) stopDirectorClock();
+}
+
+export interface StartEncounterOptions {
+  /** Provenance of the case (model, template, offline, seed, published). */
+  generation?: CaseGenerationMeta;
+}
+
 /** Start (or restart) an encounter with a case. Captures the sim-clock start. */
-export function startEncounter(caseInstance: CaseInstance): void {
+export function startEncounter(caseInstance: CaseInstance, opts: StartEncounterOptions = {}): void {
   for (const t of pendingTimers) clearTimeout(t);
   pendingTimers.clear();
+  engineRequests.clear();
+  stopDirectorClock();
+  directorTickQueued = false;
   seqCounter = 0;
+  const generation: CaseGenerationMeta =
+    opts.generation ??
+    {
+      source: caseInstance.provenance === "seed" ? "seed" : "offline",
+      threadId: null,
+      council: null,
+      degraded: false,
+      model: null,
+      note: null,
+    };
   state = {
     ...initialState(),
     caseInstance,
     startTs: clock(),
     stage: "interview",
+    generation,
+    director: { ...initialDirector(), threadId: generation.threadId },
   };
   // Log the start as a stage event so timing metrics have an anchor.
-  const ev = appendEvent("stage", "interview", { started: true });
+  const ev = appendEvent("stage", "interview", { started: true, source: generation.source });
   state = { ...state, events: [ev] };
   emit();
+  if (liveEnabled) startDirectorClock();
 }
 
 /** Ask a history question by intent. Reveals matching history + logs the event. */
@@ -314,6 +417,7 @@ export function askQuestion(intent: QuestionIntent): void {
     discovered: hit ? revealDatumIds(datumIds, state.discovered) : state.discovered,
     events: [...state.events, ev],
   });
+  queueDirector({ kind: "question", ref: intent });
 }
 
 /**
@@ -387,6 +491,7 @@ export function requestExam(maneuver: ExamManeuver): void {
     stage: state.stage === "interview" ? "exam" : state.stage,
     events: [...state.events, ev],
   });
+  queueDirector({ kind: "exam", ref: maneuver });
 }
 
 /**
@@ -394,6 +499,11 @@ export function requestExam(maneuver: ExamManeuver): void {
  * PER-TEST simulated turnaround (orderCatalog: POC fast, cultures much later).
  * When the timer fires, the result is resolved (data revealed) and a `result`
  * event is appended.
+ *
+ * Live mode: the server results engine is asked at placement time (sim time =
+ * placedAt, with the treatments given so far and the earlier results of the
+ * same encounter as `prior`), so its turnaround drives the ETA the learner sees
+ * while the local playback timer stays the scheduler that reveals the answer.
  */
 export function placeOrder(
   code: string,
@@ -415,7 +525,10 @@ export function placeOrder(
   const timing = orderTiming(code, kind, { en: labelEn, tr: labelTr });
 
   const placedAt = nowOffset();
+  const hasGroundTruth =
+    c.groundTruth.labs.some((l) => l.orderCode === code) || resolvesToImaging;
   const order: PlacedOrder = {
+    id: `ord-${seqCounter}-${state.orders.length}`,
     code,
     labelEn,
     labelTr,
@@ -425,39 +538,130 @@ export function placeOrder(
     clinicalLabelTr: timing.clinicalLabel.tr,
     category: timing.category,
     resolved: false,
+    source: liveEnabled ? "engine" : hasGroundTruth ? "case" : "offline-synthetic-normal",
   };
   const indicated = c.expectedWorkup.some((w) => w.code.coding[0]?.code === code);
   const lowValue = c.expectedWorkup.some((w) => w.code.coding[0]?.code === code && w.lowValue);
-  const ev = appendEvent("order", code, { indicated, lowValue, category: timing.category });
+  const ev = appendEvent("order", code, { indicated, lowValue, category: timing.category, orderId: order.id });
   setState({ ...state, orders: [...state.orders, order], stage: "orders", events: [...state.events, ev] });
+
+  if (liveEnabled) requestEngineResult(order);
 
   const timer = setTimeout(() => {
     pendingTimers.delete(timer);
-    resolveOrder(code);
+    resolveOrder(order.id);
   }, timing.playbackMs);
   pendingTimers.add(timer);
+  queueDirector({ kind: "order", ref: code });
 }
 
-/** Resolve a placed order: reveal its result datum and append a result event. */
-function resolveOrder(code: string): void {
+/** Ask the server results engine for one placed order (Live mode). Never throws. */
+function requestEngineResult(order: PlacedOrder): void {
   const c = state.caseInstance;
   if (!c) return;
-  const resolved = resolveReveal(c, { kind: "order", ref: code });
-  if (!resolved) return;
-  const ev = appendEvent("result", code, {
-    datumKind: resolved.datumKind,
-    revealed: resolved.datumIds,
+  const prior = state.results
+    .filter((r) => r.engine)
+    .map((r) => r.engine as OrderResult);
+  const labels: Record<string, string> = {};
+  for (const ev of state.events) {
+    if (ev.type === "treatment" && typeof ev.meta?.display === "string") labels[ev.ref] = ev.meta.display;
+  }
+  const req = engineResolveOrder({
+    case_state: resultsCaseState(c, state.treatments, labels),
+    order_code: order.code,
+    sim_time_ms: order.placedAt,
+    prior: prior.length ? prior : null,
+    seed: c.seed,
+  }).then((res) => {
+    if (!res.ok) return null;
+    const data = res.data;
+    // The engine's turnaround is the clinical ETA the learner sees.
+    const eta = turnaroundLabel(data.turnaround.minutes);
+    if (state.orders.some((o) => o.id === order.id && !o.resolved)) {
+      setState({
+        ...state,
+        orders: state.orders.map((o) =>
+          o.id === order.id
+            ? { ...o, clinicalLabelEn: eta.en, clinicalLabelTr: eta.tr, engineTurnaroundMs: data.turnaround.ms }
+            : o,
+        ),
+      });
+    }
+    return data;
+  });
+  engineRequests.set(order.id, req);
+}
+
+/**
+ * Resolve a placed order: reveal its result datum and append a `result` event.
+ * Accepts a PlacedOrder id, or an order code (the earliest unresolved placement
+ * of that code). Every resolution appends a result event whose `meta.source`
+ * says where the numbers came from (engine, case, offline-synthetic-normal).
+ */
+function resolveOrder(idOrCode: string): void {
+  const c = state.caseInstance;
+  if (!c) return;
+  const order =
+    state.orders.find((o) => o.id === idOrCode && !o.resolved) ??
+    state.orders.find((o) => o.code === idOrCode && !o.resolved);
+  if (!order) return;
+
+  const pending = engineRequests.get(order.id);
+  if (liveEnabled && pending) {
+    // Live: wait for the engine answer (usually already here), then reveal.
+    void pending.then((engine) => {
+      engineRequests.delete(order.id);
+      if (!state.orders.some((o) => o.id === order.id && !o.resolved)) return;
+      if (engine) finalizeOrder(order, "engine", engine);
+      else finalizeOrder(order, hasCaseTruth(c, order.code) ? "case" : "offline-synthetic-normal");
+    });
+    return;
+  }
+  finalizeOrder(order, hasCaseTruth(c, order.code) ? "case" : "offline-synthetic-normal");
+}
+
+function hasCaseTruth(c: CaseInstance, code: string): boolean {
+  return resolveReveal(c, { kind: "order", ref: code }) != null;
+}
+
+function finalizeOrder(order: PlacedOrder, source: ResultSource, engine?: OrderResult): void {
+  const c = state.caseInstance;
+  if (!c) return;
+  const resolved = resolveReveal(c, { kind: "order", ref: order.code });
+  const datumKind: RevealDatumKind =
+    resolved?.datumKind ??
+    (engine?.kind === "imaging" || engine?.kind === "ecg" || order.category.startsWith("imaging") ? "imaging" : "lab");
+  // Authored case data stays revealed even when the engine answered: the engine
+  // already treats the authored value as ground truth at arrival.
+  const datumIds = resolved?.datumIds ?? [];
+  const ev = appendEvent("result", order.code, {
+    datumKind,
+    revealed: datumIds,
+    source,
+    orderId: order.id,
+    ...(engine
+      ? {
+          engineKind: engine.kind,
+          abnormal: Boolean(engine.abnormal),
+          critical: Boolean(engine.critical),
+          degraded: engine.meta.degraded,
+          status: engine.status,
+        }
+      : {}),
   });
   const result: ResolvedResult = {
-    code,
-    datumKind: resolved.datumKind,
-    datumIds: resolved.datumIds,
+    orderId: order.id,
+    code: order.code,
+    datumKind,
+    datumIds,
     at: nowOffset(),
+    source,
+    ...(engine ? { engine } : {}),
   };
   setState({
     ...state,
-    discovered: revealDatumIds(resolved.datumIds, state.discovered),
-    orders: state.orders.map((o) => (o.code === code ? { ...o, resolved: true } : o)),
+    discovered: datumIds.length ? revealDatumIds(datumIds, state.discovered) : state.discovered,
+    orders: state.orders.map((o) => (o.id === order.id ? { ...o, resolved: true, source } : o)),
     results: [...state.results, result],
     stage: "results",
     events: [...state.events, ev],
@@ -546,6 +750,7 @@ export function administerMedication(
     stage: prePlan ? "orders" : state.stage,
     events: [...state.events, marEv, ev],
   });
+  queueDirector({ kind: "treatment", ref: order.drug });
   return record;
 }
 
@@ -637,8 +842,123 @@ export function setStage(stage: EncounterStage): void {
 export function resetEncounter(): void {
   for (const t of pendingTimers) clearTimeout(t);
   pendingTimers.clear();
+  engineRequests.clear();
+  stopDirectorClock();
+  directorTickQueued = false;
   seqCounter = 0;
   setState(initialState());
+}
+
+/* -------------------------------------------------------------------------- */
+/* Clinical Director (Live mode)                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Queue one Director step for a learner action. Steps are serialised (one
+ * request at a time, in action order) and never block the UI: the store is
+ * updated when the answer lands. An "elapsed" tick is coalesced so a slow
+ * gateway never accumulates a backlog of cadence steps. Inert off Live mode.
+ */
+function queueDirector(action: DirectorAction): void {
+  if (!liveEnabled || !state.caseInstance) return;
+  if (action.kind === "elapsed") {
+    if (directorTickQueued) return;
+    directorTickQueued = true;
+  }
+  const caseId = state.caseInstance.id;
+  directorPending += 1;
+  directorChain = directorChain
+    .then(() => runDirectorStep(action, caseId))
+    .catch(() => {
+      /* runDirectorStep never throws; this keeps the chain alive regardless */
+    })
+    .finally(() => {
+      directorPending -= 1;
+      if (action.kind === "elapsed") directorTickQueued = false;
+    });
+}
+
+async function runDirectorStep(action: DirectorAction, caseId: string): Promise<void> {
+  const c = state.caseInstance;
+  if (!c || c.id !== caseId || !liveEnabled) return;
+  if (state.director.status !== "busy") {
+    setState({ ...state, director: { ...state.director, status: "busy" } });
+  }
+  const prevState = state.director.caseState;
+  const res = await directorStep({
+    ...(prevState ? { case_state: prevState } : { spec: caseInstanceToSpec(c) }),
+    action: { ...action, locale: c.locale },
+    use_model: true,
+  });
+  // The encounter may have changed under us; never apply a stale answer.
+  if (!state.caseInstance || state.caseInstance.id !== caseId) return;
+  if (!res.ok) {
+    setState({ ...state, director: { ...state.director, status: "error", error: res.error } });
+    return;
+  }
+  applyDirectorStep(res.data);
+}
+
+/** Fold a Director answer into the store: overlay, facts, notes, complications. */
+function applyDirectorStep(data: DirectorStepResult): void {
+  const c = state.caseInstance;
+  if (!c) return;
+  const at = nowOffset();
+  const localNow = currentVitals(c, at, state.treatments);
+  const overlay = applyDirectorChanges(state.director.overlay, data.patient_visible_changes, localNow, at);
+  const events = [...state.events];
+  for (const note of data.director_notes ?? []) {
+    events.push(
+      appendEvent("note", "director", {
+        director: true,
+        note: note.note,
+        why: note.why,
+        directorAtMs: note.at_ms,
+      }),
+    );
+  }
+  const before = new Set(state.director.overlay?.complications ?? []);
+  for (const comp of overlay.complications) {
+    if (before.has(comp)) continue;
+    events.push(appendEvent("stage", "director-complication", { director: true, complication: comp }));
+  }
+  setState({
+    ...state,
+    events,
+    director: {
+      ...state.director,
+      caseState: data.case_state,
+      overlay,
+      steps: state.director.steps + 1,
+      status: "idle",
+      error: null,
+    },
+  });
+}
+
+function startDirectorClock(): void {
+  stopDirectorClock();
+  // Sim-time cadence: every 60 s the Director advances physiology and checks
+  // deadlines even when the learner does nothing. This schedules a real server
+  // call; it does not simulate one.
+  directorClock = setInterval(() => {
+    queueDirector({ kind: "elapsed", elapsed_ms: DIRECTOR_TICK_MS });
+  }, DIRECTOR_TICK_MS);
+}
+
+function stopDirectorClock(): void {
+  if (directorClock != null) clearInterval(directorClock);
+  directorClock = null;
+}
+
+/** Wait for every queued Director step and engine request to settle (tests). */
+export async function __flushLive(): Promise<void> {
+  for (let i = 0; i < 8 && (directorPending > 0 || engineRequests.size > 0); i += 1) {
+    await directorChain;
+    await Promise.all(Array.from(engineRequests.values()));
+    await new Promise<void>((r) => queueMicrotask(r));
+  }
+  await directorChain;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -735,10 +1055,15 @@ export function getMar(s: EncounterState): MedicationAdministrationRecord[] {
   return s.mar;
 }
 
-/** The patient's effective vitals right now (baseline + treatment ramps). */
+/**
+ * The patient's effective vitals right now: baseline + treatment ramps, plus
+ * the Clinical Director's overlay in Live mode (deterioration or recovery the
+ * server decided), clamped to physiological bounds.
+ */
 export function getCurrentVitals(s: EncounterState): CurrentVitals | null {
   if (!s.caseInstance) return null;
-  return currentVitals(s.caseInstance, getEncounterClockMs(s), s.treatments);
+  const local = currentVitals(s.caseInstance, getEncounterClockMs(s), s.treatments);
+  return overlayVitals(local, s.director.overlay);
 }
 
 /** Coarse trend classification of the current course. */
@@ -752,7 +1077,56 @@ export function getVitalsSeries(
   s: EncounterState,
 ): Array<{ atMs: number } & CurrentVitals> {
   if (!s.caseInstance) return [];
-  return vitalsSeries(s.caseInstance, getEncounterClockMs(s), s.treatments);
+  const series = vitalsSeries(s.caseInstance, getEncounterClockMs(s), s.treatments);
+  const overlay = s.director.overlay;
+  if (!overlay) return series;
+  return series.map((p) => (p.atMs >= overlay.atMs ? { atMs: p.atMs, ...overlayVitals(p, overlay) } : p));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Live-mode selectors (generation provenance, Director, persona context)      */
+/* -------------------------------------------------------------------------- */
+
+/** Provenance of the running case (null before an encounter starts). */
+export function getGeneration(s: EncounterState): CaseGenerationMeta | null {
+  return s.generation;
+}
+
+/** The Clinical Director slice. */
+export function getDirector(s: EncounterState): DirectorSlice {
+  return s.director;
+}
+
+/** The engine's answer for one placed order, when it resolved through the engine. */
+export function getEngineResult(s: EncounterState, orderId: string): OrderResult | null {
+  return s.results.find((r) => r.orderId === orderId)?.engine ?? null;
+}
+
+export interface PersonaLiveContext {
+  /** Facts the Director has sanctioned so far (what the patient may volunteer). */
+  sanctioned_facts: string[];
+  /** Plain adjectives for the current vitals so the persona voices the trend. */
+  vitals_adjectives: string[];
+  vitals: CurrentVitals | null;
+  affect: DirectorAffect | null;
+  complications: string[];
+}
+
+/**
+ * What a persona turn must carry so the patient reflects deterioration or
+ * improvement: the Director's sanctioned facts, the current vitals and their
+ * adjectives, affect and fired complications. Empty-but-valid off Live mode.
+ */
+export function getPersonaLiveContext(s: EncounterState): PersonaLiveContext {
+  const vitals = getCurrentVitals(s);
+  const overlay = s.director.overlay;
+  return {
+    sanctioned_facts: overlay?.sanctionedFacts ?? [],
+    vitals_adjectives: vitals ? vitalsAdjectives(vitals, overlay?.affect ?? null) : [],
+    vitals,
+    affect: overlay?.affect ?? null,
+    complications: overlay?.complications ?? [],
+  };
 }
 
 /* -------------------------------------------------------------------------- */

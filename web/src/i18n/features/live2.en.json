@@ -1,0 +1,87 @@
+{
+  "live2": {
+    "sourceLabel": "Case source: {{source}}.",
+    "source": {
+      "model": "model generated",
+      "template": "template (not model generated)",
+      "offline": "offline generator",
+      "seed": "curated case",
+      "published": "published case"
+    },
+    "council": {
+      "accepted": "council accepted",
+      "repairing": "council repair pending ({{repairs}} repairs)",
+      "vetoed": "council veto, safety overrides applied"
+    },
+    "degraded": "degraded",
+    "gen": {
+      "title": "Generating a case on the model gateway",
+      "hint": "Sampling a condition, authoring, three-judge council review, grounding and finalizing. You can keep reading the chart.",
+      "failedTitle": "The model did not return a case",
+      "failedHint": "Nothing was substituted silently. Choose how to continue.",
+      "stagesLabel": "Generator stages",
+      "stage": {
+        "sampling": "Sampling",
+        "authoring": "Authoring",
+        "judging": "Council judging",
+        "repairing": "Repairing",
+        "grounding": "Grounding",
+        "finalizing": "Finalizing"
+      },
+      "error": {
+        "model_unreachable": "The case generator model could not be reached (gateway answered 503).",
+        "model_output_invalid": "The model returned an invalid case twice (gateway answered 502).",
+        "timeout": "The generator run timed out.",
+        "network": "The gateway could not be reached.",
+        "stream_incomplete": "The generator stream ended before a case was finalized.",
+        "no_spec": "The generator finished without a case.",
+        "cancelled": "Generation cancelled.",
+        "unknown": "Generation failed ({{code}})."
+      },
+      "retry": "Retry model generation",
+      "useTemplate": "Use template case (deterministic, not model generated)",
+      "templateHint": "The template is a fixed, reviewed case. It is labelled as a template in the patient banner and marked degraded."
+    },
+    "director": {
+      "hint": "Clinical Director: the server adapts vitals, facts and complications to your actions.",
+      "errorHint": "The Clinical Director step failed ({{reason}}); the local course continues.",
+      "error": "Director offline",
+      "busy": "Director thinking",
+      "steps_one": "Director: {{count}} step",
+      "steps_other": "Director: {{count}} steps"
+    },
+    "results": {
+      "findings": "Structured findings",
+      "noFindings": "No structured findings reported.",
+      "viewSource": "View source ({{bank}})",
+      "representative": "Representative image, not this patient",
+      "verified": "licence verified {{date}}",
+      "engineBadge": "Results engine",
+      "unavailable": "No licence-clean image matches this finding and side; the structured report stands alone.",
+      "ecgBadge": "12-lead",
+      "ecgLegend": "{{speed}} mm/s, {{gain}} mm/mV, 1 mm / 5 mm grid, calibration pulse at left",
+      "ecgSynthetic": "Synthetic tracing synthesized from the structured state (not a recording).",
+      "ecgAlt": "12-lead ECG printout, rate {{rate}} per minute, {{rhythm}}",
+      "ecgLoading": "Rendering the 12-lead strip",
+      "ecgFailed": "The strip could not be rendered; the measurements below stand alone.",
+      "axis": "Axis",
+      "rhythm": "Rhythm",
+      "offlineShort": "offline synthetic",
+      "source": {
+        "engine": "Results engine",
+        "case": "Case record",
+        "offline-synthetic-normal": "Offline synthetic normal"
+      },
+      "sourceHint": {
+        "engine": "Resolved by the server results engine: sourced reference ranges, kinetics at this sim time under the treatments given.",
+        "case": "Authored in the case record by the case author or the model.",
+        "offline-synthetic-normal": "Gateway unreachable: a deterministic within-normal value built on this device. Not measured, not model generated."
+      }
+    },
+    "debrief": {
+      "directorHeading": "Clinical Director notes",
+      "directorHint": "What the Director changed during the encounter and why, in encounter time.",
+      "complication": "Complication"
+    }
+  }
+}

@@ -26,6 +26,7 @@ import {
   recordDialogue,
   logGuardOutcome,
   getCurrentVitals,
+  getPersonaLiveContext,
   useEncounterState,
 } from "@/state/encounterStore";
 import {
@@ -570,12 +571,20 @@ export function InterviewTab({
       role: tt.role === "doctor" ? "user" : "assistant",
       content: tt[lang],
     }));
+    // Live mode: the Clinical Director's sanctioned facts, the current vitals
+    // and their adjectives ride along so the patient voices deterioration or
+    // improvement instead of the arrival state forever.
+    const directorCtx = getPersonaLiveContext(state);
     return {
       learner_msg: learnerMsg,
       case_state: {
         persona,
         narrative: [caseInstance.chiefComplaint[lang], ...answers],
-        sanctioned_facts: answers,
+        sanctioned_facts: [...answers, ...directorCtx.sanctioned_facts],
+        vitals: directorCtx.vitals,
+        vitals_adjectives: directorCtx.vitals_adjectives,
+        affect: directorCtx.affect,
+        complications: directorCtx.complications,
       },
       persona,
       history,

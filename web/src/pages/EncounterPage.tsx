@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
-import { List, X } from "@phosphor-icons/react";
+import { List, X, Brain, Warning } from "@phosphor-icons/react";
 import type { StartSelection } from "./StartPage";
 
 import { PageContainer } from "@/components/shell";
@@ -22,6 +22,13 @@ import {
   stageToTab,
 } from "@/components/ehr/ActivityTabs";
 import { CommandPalette, type Command } from "@/components/ehr/CommandPalette";
+import {
+  CaseGenProgress,
+  EMPTY_PROGRESS,
+  advanceProgress,
+  type GenFailure,
+  type GenProgress,
+} from "@/components/ehr/CaseGenProgress";
 import { PatientViewer } from "@/components/PatientViewer";
 import { cn } from "@/lib/cn";
 import { useHotkeys } from "@/lib/useHotkeys";
@@ -32,14 +39,25 @@ import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
 import { signsFromVitals } from "@/components/ehr";
 import type { CaseInstance } from "@/domain/case";
 import {
+  getDirector,
   resetEncounter,
+  setLiveEnabled,
   startEncounter,
+  useEncounterSelector,
   useEncounterState,
 } from "@/state/encounterStore";
 import type { EncounterStage as StoreStage } from "@/state/encounterStore";
 import type { EncounterStageMeta } from "@/data/mock";
 import { useLiveBackend } from "@/lib/liveBackend";
-import { fetchGeneratedCase } from "@/lib/liveCaseGen";
+import {
+  streamCaseGenV2,
+  templateCaseV2,
+  v2SpecToCaseInstance,
+  type CaseGenV2Meta,
+  type CaseGenV2Request,
+} from "@/lib/caseGenV2";
+import type { CaseGenerationMeta } from "@/lib/liveEncounter";
+import { noteServedCase } from "@/domain/caseGen";
 import { recordFromEncounter } from "@/state/progressStore";
 
 /* -------------------------------------------------------------------------- */
@@ -74,6 +92,44 @@ function progressIndexFor(stage: StoreStage): number {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Case provenance helpers                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Provenance record for a v2 spec (model or template), from its meta block. */
+function generationFromMeta(meta: CaseGenV2Meta, threadId: string | null): CaseGenerationMeta {
+  return {
+    source: meta.source === "template" ? "template" : "model",
+    threadId: meta.thread_id ?? threadId,
+    council: meta.council
+      ? { decision: meta.council.decision, vetoed: meta.council.vetoed, repairs: meta.council.repairs }
+      : null,
+    degraded: Boolean(meta.degraded) || meta.source === "template",
+    model: Array.isArray(meta.model) ? meta.model.join(", ") : meta.model ?? null,
+    note: meta.note ?? null,
+  };
+}
+
+/** Provenance for the on-device generator (gateway unreachable). */
+const OFFLINE_GENERATION: CaseGenerationMeta = {
+  source: "offline",
+  threadId: null,
+  council: null,
+  degraded: false,
+  model: null,
+  note: null,
+};
+
+interface GenState {
+  progress: GenProgress;
+  failure: GenFailure | null;
+  busy: boolean;
+  /** The request behind the last run, for Retry / Use template. */
+  request: CaseGenV2Request | null;
+}
+
+const GEN_IDLE: GenState = { progress: EMPTY_PROGRESS, failure: null, busy: false, request: null };
+
+/* -------------------------------------------------------------------------- */
 /* Page                                                                        */
 /* -------------------------------------------------------------------------- */
 
@@ -105,10 +161,18 @@ export function EncounterPage() {
   const providedCase = routeState?.caseInstance;
 
   const state = useEncounterState();
-  const { available: backendAvailable } = useLiveBackend();
+  const { available: backendAvailable, checking: backendChecking } = useLiveBackend();
+  const director = useEncounterSelector(getDirector);
   const [guidanceOn, setGuidanceOn] = useState(startSelection?.guidance ?? true);
   const [railOpen, setRailOpen] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [gen, setGen] = useState<GenState>(GEN_IDLE);
+  const genAbortRef = useRef<AbortController | null>(null);
+
+  // Live mode follows gateway reachability: the store resolves orders through
+  // the results engine and steps the Clinical Director only while it is on.
+  useEffect(() => {
+    setLiveEnabled(backendAvailable);
+  }, [backendAvailable]);
   // Command palette (⌘K) + the tab it steers, lifted here so the palette and
   // number hotkeys can drive ActivityTabs. Seeded from the store stage so the
   // controlled tab matches ActivityTabs' own initial pick.
@@ -127,16 +191,143 @@ export function EncounterPage() {
   // even during a stage transition. Source of truth is the store.
   const caseInstance = state.caseInstance;
 
-  // On mount, start the encounter. If the learner arrived from the Start page
-  // with constraints, generate a matching case; otherwise open the curated ACS
-  // seed. Reset on unmount so the store + its pending timers are cleared when
-  // leaving the workspace. Runs on every mount (including the StrictMode dev
-  // double-invoke) so the store is never left empty by a cleanup that outran
-  // its start.
+  const loadCase = useCallback((next: CaseInstance, generation?: CaseGenerationMeta) => {
+    genAbortRef.current?.abort();
+    genAbortRef.current = null;
+    setGen(GEN_IDLE);
+    startEncounter(next, generation ? { generation } : {});
+    setRailOpen(false);
+  }, []);
+
+  const v2Locale = lang === "tr" ? "tr" : "en";
+
+  /**
+   * Run the v2 generator over SSE with a stage-by-stage progress view. A
+   * finished spec becomes the running case with its provenance (model, council
+   * verdict, degraded flag). On 503 (model unreachable), a 502, a timeout or a
+   * broken stream the real error is shown and the learner chooses between the
+   * labelled template and a retry; nothing falls back silently.
+   */
+  const runLiveGeneration = useCallback(
+    (req: CaseGenV2Request) => {
+      genAbortRef.current?.abort();
+      const controller = new AbortController();
+      genAbortRef.current = controller;
+      setGen({ progress: EMPTY_PROGRESS, failure: null, busy: true, request: req });
+      void streamCaseGenV2(req, {
+        signal: controller.signal,
+        onEvent: (ev) => {
+          if (controller.signal.aborted) return;
+          if (ev.event === "start") {
+            setGen((g) => ({ ...g, progress: { ...g.progress, threadId: ev.thread_id } }));
+          } else if (ev.event === "node") {
+            setGen((g) => ({ ...g, progress: advanceProgress(g.progress, ev.node) }));
+          }
+        },
+      }).then((res) => {
+        if (controller.signal.aborted) return;
+        genAbortRef.current = null;
+        if (res.ok && res.data.spec) {
+          const spec = res.data.spec;
+          const adapted = v2SpecToCaseInstance(spec);
+          noteServedCase(adapted.case.correctDiagnosis.code.coding[0]?.code, adapted.case.patient.name);
+          startEncounter(adapted.case, { generation: generationFromMeta(spec.meta, res.data.thread_id) });
+          setRailOpen(false);
+          setGen(GEN_IDLE);
+          return;
+        }
+        const code = res.ok ? "no_spec" : res.error;
+        const status = res.ok ? undefined : res.status;
+        setGen((g) => ({ ...g, busy: false, failure: { code, ...(status ? { status } : {}) } }));
+      });
+    },
+    [],
+  );
+
+  /** The deterministic template, labelled as such (meta.source = "template"). */
+  const useTemplateCase = useCallback(() => {
+    const req = gen.request ?? { locale: v2Locale };
+    setGen((g) => ({ ...g, busy: true, failure: null }));
+    void templateCaseV2(req).then((res) => {
+      if (res.ok) {
+        const adapted = v2SpecToCaseInstance(res.data.spec);
+        loadCase(adapted.case, generationFromMeta(res.data.spec.meta, null));
+        return;
+      }
+      // Even the template route is unreachable: the on-device generator is the
+      // only path left, and the banner says so.
+      loadCase(
+        generateCase(
+          req.complaint
+            ? { seedMode: "constrained", chiefComplaint: req.complaint as ChiefComplaintFamily, difficulty: req.difficulty ?? undefined, locale: lang }
+            : { seedMode: "random", locale: lang },
+        ),
+        { ...OFFLINE_GENERATION, note: res.error },
+      );
+    });
+  }, [gen.request, v2Locale, loadCase, lang]);
+
+  const retryGeneration = useCallback(() => {
+    runLiveGeneration(gen.request ?? { locale: v2Locale });
+  }, [gen.request, runLiveGeneration, v2Locale]);
+
+  const cancelGeneration = useCallback(() => {
+    genAbortRef.current?.abort();
+    genAbortRef.current = null;
+    setGen((g) => ({ ...g, busy: false, failure: g.request ? { code: "cancelled" } : null }));
+  }, []);
+
+  // Record a COMPLETED encounter (a diagnosis was committed) into the per-user
+  // progress store before the log is cleared on unmount, so calibration /
+  // mastery plots fill from real work rather than fabricated data. Mount-only.
   useEffect(() => {
+    return () => {
+      const s = latestRef.current;
+      if (s.caseInstance && s.committedDiagnosis && s.startTs != null) {
+        try {
+          recordFromEncounter(s.events, s.caseInstance, s.startTs);
+        } catch {
+          /* recording is best-effort; never block teardown */
+        }
+      }
+      genAbortRef.current?.abort();
+      resetEncounter();
+      // Together with the store reset so StrictMode's double-invoke (and a real
+      // remount) starts a fresh encounter exactly once.
+      startedRef.current = false;
+    };
+  }, []);
+
+  // Start the encounter once the gateway probe has answered. A case handed over
+  // by the Case Library starts at once (it needs no generator). Otherwise the
+  // Start page constraints (or a random draw) go to the v2 generator when the
+  // gateway is reachable, and to the on-device generator, labelled "offline",
+  // when it is not. Runs on the probe's single checking -> answered transition
+  // only: a later change in reachability (a flapping probe) must never restart
+  // a running encounter, so `backendAvailable` is read through a ref here.
+  const startedRef = useRef(false);
+  const availableRef = useRef(backendAvailable);
+  availableRef.current = backendAvailable;
+  useEffect(() => {
+    if (startedRef.current) return;
     if (providedCase) {
-      // Exact case chosen from the Case Library.
-      startEncounter(providedCase);
+      startedRef.current = true;
+      startEncounter(providedCase, {
+        generation: {
+          ...OFFLINE_GENERATION,
+          source: providedCase.provenance === "seed" ? "seed" : "published",
+        },
+      });
+      return;
+    }
+    if (backendChecking) return;
+    startedRef.current = true;
+    if (availableRef.current) {
+      runLiveGeneration({
+        locale: v2Locale,
+        ...(startSelection?.chiefComplaint ? { complaint: startSelection.chiefComplaint } : {}),
+        ...(startSelection?.difficulty ? { difficulty: startSelection.difficulty } : {}),
+      });
     } else if (startSelection) {
       startEncounter(
         startSelection.chiefComplaint
@@ -147,51 +338,33 @@ export function EncounterPage() {
               locale: lang,
             })
           : generateCase({ seedMode: "random", locale: lang }),
+        { generation: OFFLINE_GENERATION },
       );
     } else {
-      startEncounter(chestPainNstemiCase);
+      startEncounter(chestPainNstemiCase, { generation: { ...OFFLINE_GENERATION, source: "seed" } });
     }
-    return () => {
-      // Record a COMPLETED encounter (a diagnosis was committed) into the
-      // per-user progress store before the log is cleared, so calibration /
-      // mastery plots fill from real work rather than fabricated data.
-      const s = latestRef.current;
-      if (s.caseInstance && s.committedDiagnosis && s.startTs != null) {
-        try {
-          recordFromEncounter(s.events, s.caseInstance, s.startTs);
-        } catch {
-          /* recording is best-effort; never block teardown */
-        }
-      }
-      resetEncounter();
-    };
-    // Intentionally mount-only: the selection is captured at arrival and a
-    // language change mid-encounter must not silently regenerate the case.
+    // The selection is captured at arrival; a language change mid-encounter must
+    // not regenerate the case, so only the probe's checking flag re-runs this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [backendChecking]);
 
-  const loadCase = useCallback((next: CaseInstance) => {
-    startEncounter(next);
-    setRailOpen(false);
-  }, []);
-
-  // "New random case" defaults to the pod's unlimited ICD/DSM generator when the
-  // backend is reachable (truly endless, realtime), and falls back instantly to
-  // the on-device generator when offline or on any error.
+  // "New random case" runs the v2 generator (SSE, with the stage view) when the
+  // gateway is reachable, and the on-device generator, labelled "offline", when
+  // it is not. A model failure is never papered over: see runLiveGeneration.
   const handleRandom = useCallback(() => {
     if (backendAvailable) {
-      setGenerating(true);
-      fetchGeneratedCase({ locale: lang })
-        .then(loadCase)
-        .catch(() => loadCase(generateCase({ seedMode: "random", locale: lang })))
-        .finally(() => setGenerating(false));
+      runLiveGeneration({ locale: v2Locale });
     } else {
-      loadCase(generateCase({ seedMode: "random", locale: lang }));
+      loadCase(generateCase({ seedMode: "random", locale: lang }), OFFLINE_GENERATION);
     }
-  }, [backendAvailable, loadCase, lang]);
+  }, [backendAvailable, runLiveGeneration, v2Locale, loadCase, lang]);
 
   const handleConstrained = useCallback(
     (chiefComplaint: ChiefComplaintFamily, difficulty: 1 | 2 | 3 | 4 | 5) => {
+      if (backendAvailable) {
+        runLiveGeneration({ locale: v2Locale, complaint: chiefComplaint, difficulty });
+        return;
+      }
       loadCase(
         generateCase({
           seedMode: "constrained",
@@ -199,15 +372,16 @@ export function EncounterPage() {
           difficulty,
           locale: lang,
         }),
+        OFFLINE_GENERATION,
       );
     },
-    [loadCase, lang],
+    [backendAvailable, runLiveGeneration, v2Locale, loadCase, lang],
   );
 
   const handleLoadSeed = useCallback(
     (id: string) => {
       const seed = getSeedCase(id);
-      if (seed) loadCase(seed);
+      if (seed) loadCase(seed, { ...OFFLINE_GENERATION, source: "seed" });
     },
     [loadCase],
   );
@@ -291,6 +465,22 @@ export function EncounterPage() {
 
   const currentIndex = progressIndexFor(state.stage);
 
+  if (!caseInstance && (gen.busy || gen.failure)) {
+    return (
+      <PageContainer width="wide" className="flex flex-col gap-4">
+        <CaseGenProgress
+          progress={gen.progress}
+          failure={gen.failure}
+          busy={gen.busy}
+          onRetry={retryGeneration}
+          onUseTemplate={useTemplateCase}
+          onCancel={cancelGeneration}
+        />
+        <SimBadge variant="bar" />
+      </PageContainer>
+    );
+  }
+
   if (!caseInstance) {
     return (
       <PageContainer
@@ -322,7 +512,30 @@ export function EncounterPage() {
   const toolbar = (
     <>
       <EncounterClock variant="chip" className="hidden sm:inline-flex" />
-      {generating ? (
+      {state.liveEnabled ? (
+        <span
+          role="status"
+          data-testid="director-chip"
+          className="hidden items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1 text-xs text-muted md:inline-flex"
+          title={
+            director.status === "error"
+              ? t("live2.director.errorHint", { reason: director.error ?? "" })
+              : t("live2.director.hint")
+          }
+        >
+          {director.status === "error" ? (
+            <Warning weight="fill" className="h-3.5 w-3.5 text-[color:var(--state-caution)]" aria-hidden />
+          ) : (
+            <Brain weight="bold" className="h-3.5 w-3.5" aria-hidden />
+          )}
+          {director.status === "error"
+            ? t("live2.director.error")
+            : director.status === "busy"
+              ? t("live2.director.busy")
+              : t("live2.director.steps", { count: director.steps })}
+        </span>
+      ) : null}
+      {gen.busy ? (
         <span
           role="status"
           className="inline-flex items-center rounded-control border border-border bg-surface px-2.5 py-1 text-xs text-muted"
@@ -354,6 +567,19 @@ export function EncounterPage() {
       <motion.div {...top}>
         <PatientBanner caseInstance={caseInstance} lang={lang} toolbar={toolbar} />
       </motion.div>
+
+      {/* A generator run in progress (or one that failed) while a case is open:
+          the stage view and the explicit template / retry choice. */}
+      {gen.busy || gen.failure ? (
+        <CaseGenProgress
+          progress={gen.progress}
+          failure={gen.failure}
+          busy={gen.busy}
+          onRetry={retryGeneration}
+          onUseTemplate={useTemplateCase}
+          onCancel={cancelGeneration}
+        />
+      ) : null}
 
       {/* Workflow ribbon — the stage stepper (wired to the store stage) + the
           case-meta line, framed as one dense chrome bar under the banner. */}

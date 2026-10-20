@@ -16,6 +16,28 @@ import {
   type StackMedia,
   type StudyAttribution,
 } from "@/data/studyMedia";
+import {
+  ecgStrip,
+  type EcgSummary,
+  type ImageProvenance,
+  type ImageRef,
+  type StructuredFinding,
+} from "@/lib/resultsApi";
+
+/**
+ * A study resolved by the server results engine (Live mode): the structured
+ * report with its matched, licence-clean image and provenance, or an ECG
+ * summary whose tracing is fetched from POST /v1/results/ecg.
+ */
+export interface EngineStudy {
+  status: "ok" | "unavailable";
+  image?: ImageRef | null;
+  provenance?: ImageProvenance | null;
+  findings: StructuredFinding[];
+  impression?: string;
+  reason?: string | null;
+  ecg?: EcgSummary | null;
+}
 
 export interface StudyViewerProps {
   /** Free-text study/finding to illustrate, e.g. "normal Echocardiogram (TTE)". */
@@ -26,6 +48,8 @@ export interface StudyViewerProps {
   caption?: string;
   /** When false, suppress interpretive text (learner reads the study). */
   showInterpretation?: boolean;
+  /** Server engine answer; when present it takes precedence over the bundle. */
+  engine?: EngineStudy | null;
   className?: string;
 }
 
@@ -46,9 +70,34 @@ export function StudyViewer({
   modality,
   caption,
   showInterpretation = true,
+  engine,
   className,
 }: StudyViewerProps) {
-  const media = useMemo(() => resolveStudyMedia(query, modality), [query, modality]);
+  const media = useMemo(() => (engine ? null : resolveStudyMedia(query, modality)), [engine, query, modality]);
+
+  if (engine) {
+    if (engine.ecg) {
+      return (
+        <EcgStripViewer
+          ecg={engine.ecg}
+          findings={engine.findings}
+          modality={modality}
+          caption={caption}
+          showInterpretation={showInterpretation}
+          className={className}
+        />
+      );
+    }
+    return (
+      <EngineImageViewer
+        study={engine}
+        modality={modality}
+        caption={caption}
+        showInterpretation={showInterpretation}
+        className={className}
+      />
+    );
+  }
 
   if (media?.kind === "cine") {
     return (
@@ -373,6 +422,270 @@ function StackViewer({
           </span>
         </div>
       ) : null}
+    </ViewerFrame>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Engine viewers (Live mode): server-selected image + provenance, ECG strip   */
+/* -------------------------------------------------------------------------- */
+
+/** Resolve a bank image source: the bundled local copy first, else the source URL. */
+function engineImageSrc(image: ImageRef): string {
+  const local = image.local_path ?? "";
+  const idx = local.indexOf("web/public/");
+  if (idx >= 0) return `${import.meta.env.BASE_URL}${local.slice(idx + "web/public/".length)}`;
+  return image.url;
+}
+
+function FindingsList({ findings, impression }: { findings: StructuredFinding[]; impression?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div className="px-3 py-3">
+      <p className="eyebrow text-monitor-dim">{t("live2.results.findings")}</p>
+      <ul className="mt-1.5 flex flex-col gap-1">
+        {findings.map((f, i) => (
+          <li key={`${f.finding}-${i}`} className="flex items-start gap-2 font-mono text-xs text-monitor-fg">
+            <span aria-hidden className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-monitor-online" />
+            <span>
+              {f.text}
+              {f.laterality && f.laterality !== "none" ? (
+                <span className="ms-1 text-monitor-dim">({f.laterality})</span>
+              ) : null}
+            </span>
+          </li>
+        ))}
+        {findings.length === 0 ? (
+          <li className="font-mono text-xs text-monitor-dim">{t("live2.results.noFindings")}</li>
+        ) : null}
+      </ul>
+      {impression ? (
+        <p className="mt-2 text-xs leading-snug text-monitor-fg">
+          <span className="text-monitor-dim">{t("ehr.results.impression")}: </span>
+          {impression}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ProvenanceRow({ provenance }: { provenance: ImageProvenance }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-monitor-dim">
+      <span>
+        <span className="text-monitor-dim">{t("imaging2.license")}:</span>{" "}
+        <a
+          href={provenance.license_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-monitor-fg underline decoration-dotted underline-offset-2"
+        >
+          {provenance.license}
+        </a>
+      </span>
+      <span className="min-w-0 max-w-full truncate">
+        <span className="text-monitor-dim">{t("imaging2.attribution")}:</span>{" "}
+        <span className="text-monitor-fg">{provenance.attribution_text || provenance.attribution}</span>
+      </span>
+      <a
+        href={provenance.source_page}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 rounded-chip text-monitor-online underline decoration-dotted underline-offset-2 hover:text-monitor-fg"
+      >
+        {t("live2.results.viewSource", { bank: provenance.source_bank })}
+        <ArrowSquareOut className="h-3 w-3" aria-hidden />
+      </a>
+      <span className="basis-full text-monitor-dim">
+        {t("live2.results.representative")}
+        {provenance.verified_at ? ` · ${t("live2.results.verified", { date: provenance.verified_at })}` : ""}
+      </span>
+    </div>
+  );
+}
+
+function EngineImageViewer({
+  study,
+  modality,
+  caption,
+  showInterpretation,
+  className,
+}: {
+  study: EngineStudy;
+  modality?: string;
+  caption?: string;
+  showInterpretation: boolean;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const [broken, setBroken] = useState(false);
+  const image = study.status === "ok" && study.image && !broken ? study.image : null;
+  const modalityLabel = modality?.trim() || t("imaging2.disclaimerShort");
+
+  return (
+    <ViewerFrame
+      className={className}
+      modalityLabel={modalityLabel}
+      badge={t("live2.results.engineBadge")}
+      badgeIcon={<ImageSquare weight="bold" className="h-3 w-3" aria-hidden />}
+      footer={
+        <>
+          {showInterpretation && caption ? (
+            <p className="text-xs leading-snug text-monitor-fg">{caption}</p>
+          ) : null}
+          {image && study.provenance ? (
+            <ProvenanceRow provenance={study.provenance} />
+          ) : (
+            <p className="flex items-center gap-1.5 font-mono text-[11px] text-monitor-dim">
+              <Warning weight="fill" className="h-3 w-3 shrink-0" aria-hidden />
+              {t("live2.results.unavailable")}
+              {study.reason ? ` (${study.reason})` : ""}
+            </p>
+          )}
+        </>
+      }
+    >
+      {image ? (
+        <div className="relative flex min-h-40 items-center justify-center bg-monitor-bg">
+          <img
+            src={engineImageSrc(image)}
+            alt={t("imaging2.alt", { modality: modalityLabel, query: image.caption_en })}
+            decoding="async"
+            className="max-h-[28rem] max-w-full object-contain"
+            onError={() => setBroken(true)}
+          />
+          <SafetyBanner text={t("imaging2.disclaimer")} />
+        </div>
+      ) : null}
+      {showInterpretation ? (
+        <FindingsList findings={study.findings} impression={study.impression} />
+      ) : (
+        <p className="px-3 py-3 text-xs italic text-monitor-dim">
+          {t("ehr.results.interpretYourself", {
+            defaultValue: "Interpret this study - enable Guidance for the read.",
+          })}
+        </p>
+      )}
+    </ViewerFrame>
+  );
+}
+
+type EcgPhase = "loading" | "ready" | "failed";
+
+/**
+ * EcgStripViewer: the 12-lead printout synthesized server-side at 25 mm/s and
+ * 10 mm/mV, rendered as an image (the SVG string never enters the DOM as
+ * markup). The legend states the calibration and that the tracing is synthetic.
+ */
+function EcgStripViewer({
+  ecg,
+  findings,
+  modality,
+  caption,
+  showInterpretation,
+  className,
+}: {
+  ecg: EcgSummary;
+  findings: StructuredFinding[];
+  modality?: string;
+  caption?: string;
+  showInterpretation: boolean;
+  className?: string;
+}) {
+  const { t } = useTranslation();
+  const [phase, setPhase] = useState<EcgPhase>("loading");
+  const [src, setSrc] = useState<string | null>(null);
+  const [calibration, setCalibration] = useState<{ speed: number; gain: number }>({ speed: 25, gain: 10 });
+  const req = ecg.request;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    setPhase("loading");
+    setSrc(null);
+    void ecgStrip(
+      {
+        pattern: req.pattern as Parameters<typeof ecgStrip>[0]["pattern"],
+        rate_bpm: req.rate_bpm,
+        seed: req.seed,
+        include_samples: false,
+        include_svg: true,
+      },
+      { signal: controller.signal },
+    ).then((res) => {
+      if (!active) return;
+      if (res.ok && res.data.svg) {
+        setSrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(res.data.svg)}`);
+        setCalibration({
+          speed: res.data.calibration?.paper_speed_mm_s ?? 25,
+          gain: res.data.calibration?.gain_mm_mV ?? 10,
+        });
+        setPhase("ready");
+      } else {
+        setPhase("failed");
+      }
+    });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [req.pattern, req.rate_bpm, req.seed]);
+
+  const m = ecg.measurements;
+  const modalityLabel = modality?.trim() || "ECG";
+
+  return (
+    <ViewerFrame
+      className={className}
+      modalityLabel={modalityLabel}
+      badge={t("live2.results.ecgBadge")}
+      badgeIcon={<FilmStrip weight="bold" className="h-3 w-3" aria-hidden />}
+      footer={
+        <>
+          {showInterpretation && caption ? (
+            <p className="text-xs leading-snug text-monitor-fg">{caption}</p>
+          ) : null}
+          <p className="font-mono text-[11px] text-monitor-dim">
+            {t("live2.results.ecgLegend", { speed: calibration.speed, gain: calibration.gain })}
+          </p>
+          <p className="font-mono text-[11px] text-monitor-dim">{t("live2.results.ecgSynthetic")}</p>
+        </>
+      }
+    >
+      <div className="relative flex min-h-40 items-center justify-center bg-white">
+        {phase === "ready" && src ? (
+          <img
+            src={src}
+            alt={t("live2.results.ecgAlt", { rate: m.rate_bpm, rhythm: m.rhythm })}
+            decoding="async"
+            className="max-h-[32rem] w-full object-contain"
+          />
+        ) : (
+          <p className="px-4 py-10 text-center font-mono text-xs text-monitor-bg/80">
+            {phase === "loading" ? t("live2.results.ecgLoading") : t("live2.results.ecgFailed")}
+          </p>
+        )}
+      </div>
+      {showInterpretation ? (
+        <div className="border-t border-monitor-border">
+          <dl className="grid grid-cols-3 gap-x-3 gap-y-1 px-3 py-2 font-mono text-[11px] sm:grid-cols-6">
+            <div><dt className="text-monitor-dim">HR</dt><dd className="text-monitor-fg">{m.rate_bpm}</dd></div>
+            <div><dt className="text-monitor-dim">PR</dt><dd className="text-monitor-fg">{m.pr_ms ?? "-"}</dd></div>
+            <div><dt className="text-monitor-dim">QRS</dt><dd className="text-monitor-fg">{m.qrs_ms}</dd></div>
+            <div><dt className="text-monitor-dim">QTc</dt><dd className="text-monitor-fg">{m.qtc_ms}</dd></div>
+            <div><dt className="text-monitor-dim">{t("live2.results.axis")}</dt><dd className="text-monitor-fg">{m.axis_deg}</dd></div>
+            <div><dt className="text-monitor-dim">{t("live2.results.rhythm")}</dt><dd className="truncate text-monitor-fg">{m.rhythm}</dd></div>
+          </dl>
+          <FindingsList findings={findings} impression={m.interpretation} />
+        </div>
+      ) : (
+        <p className="px-3 py-3 text-xs italic text-monitor-dim">
+          {t("ehr.results.interpretYourself", {
+            defaultValue: "Interpret this study - enable Guidance for the read.",
+          })}
+        </p>
+      )}
     </ViewerFrame>
   );
 }

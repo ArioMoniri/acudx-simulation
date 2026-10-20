@@ -29,7 +29,9 @@ import {
 } from "@/components/ui";
 import { useReveal, useStagger } from "@/lib/motion";
 import { stateMap } from "@/components/clinicalState";
-import { StudyViewer } from "@/components/ehr/StudyViewer";
+import { StudyViewer, type EngineStudy } from "@/components/ehr/StudyViewer";
+import { engineObservationToFhir, type ResultSource } from "@/lib/liveEncounter";
+import type { OrderResult } from "@/lib/resultsApi";
 import {
   conceptText,
   interpretationKey,
@@ -43,7 +45,7 @@ import {
   getEncounterClockMs,
   useEncounterState,
 } from "@/state/encounterStore";
-import type { PlacedOrder } from "@/state/encounterStore";
+import type { PlacedOrder, ResolvedResult } from "@/state/encounterStore";
 import {
   getOrderableByCode,
   isPanelOrder,
@@ -78,11 +80,16 @@ function useSecondTick(active: boolean): void {
   }, [active]);
 }
 
-/** A unified result row: ground-truth lab OR synthetic within-normal value. */
+/**
+ * A unified result row: engine observation, authored ground truth, or the
+ * offline synthetic normal. `synthetic` is true only for the offline fallback
+ * (labelled as such in the UI); `source` is the full provenance.
+ */
 interface ResultRow {
   id: string;
   observation: Observation;
   synthetic: boolean;
+  source: ResultSource;
 }
 
 /** A resulted lab/blood-gas/POC order rendered as a complete analyte panel. */
@@ -94,6 +101,7 @@ interface PanelGroup {
   clinicalEta: string;
   rows: ResultRow[];
   abnormalCount: number;
+  source: ResultSource;
 }
 
 /** One draw of one analyte in a serial trend. */
@@ -130,6 +138,7 @@ interface TrendGroup {
   clinicalEta: string;
   analytes: AnalyteTrend[];
   abnormalCount: number;
+  source: ResultSource;
 }
 
 /** A microbiology / narrative-report result (culture, viral panel, serology). */
@@ -142,9 +151,10 @@ interface MicroEntry {
   clinicalEta: string;
   synthetic: boolean;
   abnormal: boolean;
+  source: ResultSource;
 }
 
-/** A unified imaging entry: ground-truth study OR synthetic normal study. */
+/** A unified imaging entry: engine study, ground-truth study, or offline synthetic normal. */
 interface ImagingEntry {
   id: string;
   modality: Bilingual;
@@ -155,6 +165,9 @@ interface ImagingEntry {
   resultedAt: number;
   clinicalEta: string;
   synthetic: boolean;
+  source: ResultSource;
+  /** The server engine's structured study (Live mode). */
+  engine?: EngineStudy;
 }
 
 /** True when a placed order should render as imaging (shows a real image). */
@@ -210,8 +223,11 @@ function isAbnormal(obs: Observation): boolean {
  * ground truth takes precedence PER ANALYTE, so an abnormal creatinine sits
  * inside an otherwise-normal, fully-populated BMP. Microbiology / serology
  * orders render as narrative reports; every IMAGING order shows a REAL
- * representative image via ConditionImage. Any order the case carries no ground
- * truth for still resolves — as a plausible within-normal-limits result.
+ * representative image (the engine's matched, licensed image in Live mode, the
+ * curated bundle offline). Any order the case carries no ground truth for still
+ * resolves: through the server results engine in Live mode, or as the labelled
+ * "offline synthetic normal" when the gateway is unreachable. Every panel and
+ * study carries a provenance chip (engine, case record, offline synthetic).
  */
 export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
   const { t } = useTranslation();
@@ -220,9 +236,16 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
 
   const caseInstance = state.caseInstance;
   const nowMs = getEncounterClockMs(state);
-  const isResulted = (o: PlacedOrder) => o.resolved || nowMs >= o.resultsReadyAt;
+  // Live mode: an order is resulted only when the store resolved it (the engine
+  // answered or the labelled fallback ran). Offline, the playback ETA suffices.
+  const isResulted = (o: PlacedOrder) => o.resolved || (!state.liveEnabled && nowMs >= o.resultsReadyAt);
   const pending = state.orders.filter((o) => !isResulted(o));
   useSecondTick(pending.length > 0);
+  const resultByOrderId = useMemo(() => {
+    const m = new Map<string, ResolvedResult>();
+    for (const r of state.results) m.set(r.orderId, r);
+    return m;
+  }, [state.results]);
 
   const groundLabs = getDiscoveredLabs(state);
   const groundImaging = getDiscoveredImaging(state);
@@ -279,8 +302,13 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
       const clinicalEta = lang === "tr" ? last.clinicalLabelTr : last.clinicalLabelEn;
       const times = resultsByCode.get(code) ?? [];
       const resultedAtAt = (i: number): number => times[i] ?? draws[i].resultsReadyAt;
+      const engineAt = (i: number): OrderResult | undefined => resultByOrderId.get(draws[i].id)?.engine;
+      const lastEngine = engineAt(draws.length - 1);
 
-      // Imaging — a synthetic within-normal-limits study ONLY when the case
+      // Imaging. Live mode: the engine's structured study with its matched image
+      // (or "unavailable" with findings only) for every placed study, including
+      // one the case authored (the engine already honours authored findings).
+      // Offline: a synthetic within-normal-limits study ONLY when the case
       // carries no ground-truth imaging for this order. Ground truth is rendered
       // separately (groundImagingEntries); `ground` above is ground LABS, so
       // without this imaging-specific guard an ordered study that HAS ground
@@ -288,7 +316,9 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
       // ischaemia ECG shown next to a spurious "normal sinus rhythm" ECG).
       if (orderIsImaging(draws[0])) {
         const hasGroundImaging = groundImaging.some((im) => im.orderCode === code);
-        if (!hasGroundImaging) {
+        if (lastEngine) {
+          imaging.push(buildEngineImaging(last, orderable, lastEngine, lang, resultedAtAt(draws.length - 1)));
+        } else if (!hasGroundImaging) {
           const syn = syntheticResultAt(orderable, caseInstance, { dynamic: true });
           imaging.push(
             buildSyntheticImaging(last, orderable, syn.report?.conclusion, lang, resultedAtAt(draws.length - 1)),
@@ -300,7 +330,21 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
       // Microbiology / serology — narrative report (latest draw).
       if (orderable.category === "micro") {
         const resultedAt = resultedAtAt(draws.length - 1);
-        if (ground.length) {
+        if (lastEngine) {
+          const lines = (lastEngine.observations ?? []).map((o) => `${o.name}: ${o.value}${o.unit ? ` ${o.unit}` : ""}`);
+          const text = lines.join("; ") || lastEngine.reason || "";
+          micro.push({
+            id: `micro-${code}`,
+            title: orderable.label,
+            conclusion: text ? { en: text, tr: text } : undefined,
+            orderedAt: last.placedAt,
+            resultedAt,
+            clinicalEta,
+            synthetic: false,
+            abnormal: Boolean(lastEngine.abnormal),
+            source: "engine",
+          });
+        } else if (ground.length) {
           const g = ground[0];
           micro.push({
             id: `micro-${code}`,
@@ -311,6 +355,7 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
             clinicalEta,
             synthetic: false,
             abnormal: ground.some((l) => isAbnormal(l.observation)),
+            source: "case",
           });
         } else {
           const syn = syntheticResultAt(orderable, caseInstance, {
@@ -327,23 +372,32 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
             clinicalEta,
             synthetic: true,
             abnormal: !!syn.abnormal,
+            source: "offline-synthetic-normal",
           });
         }
         continue;
       }
 
-      // Labs / blood gas / POC — per-draw complete analyte panels.
-      const perDraw = draws.map((o, i) => ({
-        order: o,
-        resultedAt: resultedAtAt(i),
-        rows: buildDrawRows(code, orderable, ground, caseInstance, {
-          drawMs: o.placedAt,
-          treatments,
-          drawIndex: i,
-        }),
-      }));
+      // Labs / blood gas / POC — per-draw complete analyte panels. An engine
+      // answer renders its observations verbatim (flags, ranges and deltas are
+      // the server's); otherwise the authored / offline rows are built locally.
+      const perDraw = draws.map((o, i) => {
+        const engine = engineAt(i);
+        return {
+          order: o,
+          resultedAt: resultedAtAt(i),
+          rows: engine
+            ? engineRows(code, engine, caseInstance.patient.id, resultedAtAt(i), i)
+            : buildDrawRows(code, orderable, ground, caseInstance, {
+                drawMs: o.placedAt,
+                treatments,
+                drawIndex: i,
+              }),
+        };
+      });
       const populated = perDraw.filter((d) => d.rows.length > 0);
       if (populated.length === 0) continue;
+      const source = dominantSource(populated.flatMap((d) => d.rows));
 
       if (populated.length === 1) {
         const d0 = populated[0];
@@ -355,23 +409,42 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
           clinicalEta,
           rows: d0.rows,
           abnormalCount: d0.rows.filter((r) => isAbnormal(r.observation)).length,
+          source,
         });
       } else {
-        const tg = buildTrendGroup(code, orderable.label, clinicalEta, populated);
+        const tg = buildTrendGroup(code, orderable.label, clinicalEta, populated, source);
         if (tg) trends.push(tg);
       }
     }
 
     return { panelGroups: panels, trendGroups: trends, microEntries: micro, syntheticImaging: imaging };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseInstance, state.orders, state.results, treatments, groundByCode, resultsByCode, nowMs, lang]);
+  }, [caseInstance, state.orders, state.results, treatments, groundByCode, resultsByCode, resultByOrderId, nowMs, lang]);
+
+  // Engine observations outside normal (Live mode) join the authored flags in
+  // the summary badges and the critical callout.
+  const engineFlagged = useMemo(() => {
+    const abnormal: Array<{ id: string; label: string; value: string; unit: string }> = [];
+    const critical: Array<{ id: string; label: string; value: string; unit: string }> = [];
+    for (const r of state.results) {
+      for (const o of r.engine?.observations ?? []) {
+        const item = { id: `${r.orderId}-${o.loinc}`, label: o.short?.trim() || o.name, value: String(o.value), unit: o.unit };
+        if (o.flag !== "N") abnormal.push(item);
+        if (o.critical) critical.push(item);
+      }
+    }
+    return { abnormal, critical };
+  }, [state.results]);
 
   // Ground-truth imaging → unified entries (with dx-derived image queries).
+  // In Live mode a study the engine answered is already listed above, so its
+  // authored twin is skipped to avoid two readings of one order.
   const groundImagingEntries = useMemo<ImagingEntry[]>(() => {
     if (!caseInstance) return [];
-    return groundImaging.map((im) =>
-      buildGroundImaging(im, caseInstance, state.orders, state.results, nowMs, lang),
-    );
+    const engineCodes = new Set(state.results.filter((r) => r.engine).map((r) => r.code));
+    return groundImaging
+      .filter((im) => !engineCodes.has(im.orderCode))
+      .map((im) => buildGroundImaging(im, caseInstance, state.orders, state.results, nowMs, lang));
   }, [caseInstance, groundImaging, state.orders, state.results, nowMs, lang]);
 
   const imagingEntries = [...groundImagingEntries, ...syntheticImaging].sort(
@@ -385,6 +458,19 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
   const criticalLabs = useMemo(
     () => groundLabs.filter((l) => interpretationToState(l.observation.interpretation) === "critical"),
     [groundLabs],
+  );
+  const abnormalCount = abnormalLabs.length + engineFlagged.abnormal.length;
+  const criticalItems = useMemo(
+    () => [
+      ...criticalLabs.map((l) => ({
+        id: l.id,
+        label: conceptText(l.observation.code, lang),
+        value: String(l.observation.valueQuantity?.value ?? ""),
+        unit: l.observation.valueQuantity?.unit ?? "",
+      })),
+      ...engineFlagged.critical,
+    ],
+    [criticalLabs, engineFlagged.critical, lang],
   );
 
   // Abnormal-only view: keep only abnormal analytes / non-normal reports.
@@ -431,27 +517,27 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
                     total: state.orders.length,
                   })}
                 />
-                {pending.length > 0 || abnormalLabs.length > 0 || criticalLabs.length > 0 ? (
+                {pending.length > 0 || abnormalCount > 0 || criticalItems.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-1.5">
                     {pending.length > 0 ? (
                       <Badge tone="caution" icon={<Timer weight="fill" className="h-3.5 w-3.5" aria-hidden />}>
                         {t("ehr2.results.pendingCount", { count: pending.length })}
                       </Badge>
                     ) : null}
-                    {abnormalLabs.length > 0 ? (
+                    {abnormalCount > 0 ? (
                       <Badge tone="warning" icon={<WarningCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />}>
-                        {t("ehr2.results.abnormalCount", { count: abnormalLabs.length })}
+                        {t("ehr2.results.abnormalCount", { count: abnormalCount })}
                       </Badge>
                     ) : null}
-                    {criticalLabs.length > 0 ? (
+                    {criticalItems.length > 0 ? (
                       <Badge tone="critical" icon={<ShieldWarning weight="fill" className="h-3.5 w-3.5" aria-hidden />}>
-                        {t("ehr2.results.criticalCount", { count: criticalLabs.length })}
+                        {t("ehr2.results.criticalCount", { count: criticalItems.length })}
                       </Badge>
                     ) : null}
                   </div>
                 ) : null}
               </div>
-              {groundLabs.length > 0 ? (
+              {groundLabs.length > 0 || state.results.some((r) => r.engine) ? (
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <Switch
                     id="results-abnormal-only"
@@ -470,7 +556,7 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
       )}
 
       {/* Critical values callout */}
-      {criticalLabs.length > 0 ? (
+      {criticalItems.length > 0 ? (
         <motion.div {...criticalReveal}>
           <div
             className="rounded-card border p-4"
@@ -489,16 +575,12 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
               {t("ehr2.results.criticalHeading")}
             </h3>
             <ul className="mt-2 flex flex-col gap-1">
-              {criticalLabs.map((l) => (
+              {criticalItems.map((l) => (
                 <li key={l.id} className="flex items-baseline justify-between gap-3 text-sm text-fg">
-                  <span className="font-medium">{conceptText(l.observation.code, lang)}</span>
+                  <span className="font-medium">{l.label}</span>
                   <span className="font-mono tabular-nums">
-                    {l.observation.valueQuantity?.value}
-                    {l.observation.valueQuantity?.unit ? (
-                      <span className="ms-1 text-xs text-muted">
-                        {l.observation.valueQuantity.unit}
-                      </span>
-                    ) : null}
+                    {l.value}
+                    {l.unit ? <span className="ms-1 text-xs text-muted">{l.unit}</span> : null}
                   </span>
                 </li>
               ))}
@@ -625,17 +707,18 @@ function buildDrawRows(
     const key = analyteCode(l.observation);
     if (!groundByAnalyte.has(key)) groundByAnalyte.set(key, l.observation);
   }
+  const OFFLINE: ResultSource = "offline-synthetic-normal";
   const groundRow = (obs: Observation, key: string): ResultRow =>
     first
-      ? { id: `${code}-${key}`, observation: obs, synthetic: false }
-      : { id: `${code}-${key}-d${ctx.drawIndex}`, observation: evolveAnchor(obs, caseInstance, ctx), synthetic: true };
+      ? { id: `${code}-${key}`, observation: obs, synthetic: false, source: "case" }
+      : { id: `${code}-${key}-d${ctx.drawIndex}`, observation: evolveAnchor(obs, caseInstance, ctx), synthetic: true, source: OFFLINE };
 
   if (!isPanelOrder(code)) {
     // Bespoke / uncatalogued code: authored ground truth (evolved on re-draws),
     // else a single condition/time-tuned synthetic line.
     if (ground.length > 0) return ground.map((l) => groundRow(l.observation, l.id));
     const syn = syntheticResultAt(orderable, caseInstance, { dynamic: true, ...ctx });
-    return syn.observations.map((obs) => ({ id: `${code}-${obs.id}`, observation: obs, synthetic: true }));
+    return syn.observations.map((obs) => ({ id: `${code}-${obs.id}`, observation: obs, synthetic: true, source: OFFLINE }));
   }
 
   const syn = syntheticResultAt(orderable, caseInstance, { dynamic: true, ...ctx });
@@ -649,7 +732,7 @@ function buildDrawRows(
       consumed.add(key);
       rows.push(groundRow(gt, key));
     } else {
-      rows.push({ id: `${code}-${obs.id}`, observation: obs, synthetic: true });
+      rows.push({ id: `${code}-${obs.id}`, observation: obs, synthetic: true, source: OFFLINE });
     }
   }
 
@@ -660,12 +743,35 @@ function buildDrawRows(
     consumed.add(key);
     rows.push(
       first
-        ? { id: `${code}-extra-${l.id}`, observation: l.observation, synthetic: false }
-        : { id: `${code}-extra-${l.id}-d${ctx.drawIndex}`, observation: evolveAnchor(l.observation, caseInstance, ctx), synthetic: true },
+        ? { id: `${code}-extra-${l.id}`, observation: l.observation, synthetic: false, source: "case" }
+        : { id: `${code}-extra-${l.id}-d${ctx.drawIndex}`, observation: evolveAnchor(l.observation, caseInstance, ctx), synthetic: true, source: OFFLINE },
     );
   }
 
   return rows;
+}
+
+/** Rows for one draw answered by the server results engine (Live mode). */
+function engineRows(
+  code: string,
+  engine: OrderResult,
+  patientId: string,
+  resultedAt: number,
+  drawIndex: number,
+): ResultRow[] {
+  return (engine.observations ?? []).map((obs) => ({
+    id: `${code}-${obs.loinc}-e${drawIndex}`,
+    observation: engineObservationToFhir(obs, patientId, resultedAt, `${code}-e${drawIndex}`),
+    synthetic: false,
+    source: "engine",
+  }));
+}
+
+/** The provenance to label a group with: engine beats case beats offline. */
+function dominantSource(rows: ResultRow[]): ResultSource {
+  if (rows.some((r) => r.source === "engine")) return "engine";
+  if (rows.some((r) => r.source === "case")) return "case";
+  return "offline-synthetic-normal";
 }
 
 /** Trailing-decimal count of a numeric value, for consistent trend formatting. */
@@ -686,6 +792,7 @@ function buildTrendGroup(
   title: Bilingual,
   clinicalEta: string,
   perDraw: Array<{ order: PlacedOrder; resultedAt: number; rows: ResultRow[] }>,
+  source: ResultSource,
 ): TrendGroup | null {
   const seen = new Set<string>();
   const analyteOrder: string[] = [];
@@ -746,6 +853,7 @@ function buildTrendGroup(
     clinicalEta,
     analytes,
     abnormalCount: analytes.filter((a) => a.anyAbnormal).length,
+    source,
   };
 }
 
@@ -783,6 +891,44 @@ function buildGroundImaging(
     resultedAt: resolved?.at ?? order?.resultsReadyAt ?? nowMs,
     clinicalEta: order ? (lang === "tr" ? order.clinicalLabelTr : order.clinicalLabelEn) : "",
     synthetic: false,
+    source: "case",
+  };
+}
+
+/** An imaging or ECG study answered by the server engine, with its provenance. */
+function buildEngineImaging(
+  order: PlacedOrder,
+  orderable: Orderable,
+  engine: OrderResult,
+  lang: Lang,
+  resultedAt: number,
+): ImagingEntry {
+  const modalityEn = orderable.label.en;
+  const report = engine.report;
+  const ecg = engine.ecg ?? null;
+  const impression = ecg ? ecg.measurements.interpretation : report?.impression ?? engine.reason ?? "";
+  const study: EngineStudy = ecg
+    ? { status: "ok", findings: [], impression, ecg }
+    : {
+        status: report?.image_status ?? "unavailable",
+        image: report?.image ?? null,
+        provenance: report?.provenance ?? null,
+        findings: report?.findings ?? [],
+        impression,
+        reason: report?.image_reason ?? engine.reason ?? null,
+      };
+  return {
+    id: `engine-${order.id}`,
+    modality: orderable.label,
+    conclusion: impression ? { en: impression, tr: impression } : undefined,
+    query: `${impression} ${modalityEn}`.trim(),
+    modalityShort: ecg ? "ECG" : modalityShort(modalityEn),
+    orderedAt: order.placedAt,
+    resultedAt,
+    clinicalEta: lang === "tr" ? order.clinicalLabelTr : order.clinicalLabelEn,
+    synthetic: false,
+    source: "engine",
+    engine: study,
   };
 }
 
@@ -806,7 +952,19 @@ function buildSyntheticImaging(
     resultedAt,
     clinicalEta: lang === "tr" ? order.clinicalLabelTr : order.clinicalLabelEn,
     synthetic: true,
+    source: "offline-synthetic-normal",
   };
+}
+
+/** Provenance chip: results engine, authored case record, or the offline synthetic normal. */
+function SourceChip({ source }: { source: ResultSource }) {
+  const { t } = useTranslation();
+  const tone = source === "engine" ? "brand" : source === "case" ? "neutral" : "caution";
+  return (
+    <Badge tone={tone} variant="outline" className="shrink-0" title={t(`live2.results.sourceHint.${source}`)}>
+      {t(`live2.results.source.${source}`)}
+    </Badge>
+  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -856,6 +1014,7 @@ function PanelTable({ group, lang }: { group: PanelGroup; lang: Lang }) {
           <span className="font-mono text-[11px] font-normal tabular-nums text-subtle">
             {t("labs2.results.analytes", { count: group.rows.length })}
           </span>
+          <SourceChip source={group.source} />
         </h4>
         <span className="font-mono text-[11px] tabular-nums text-muted">
           {group.orderedAt != null
@@ -931,8 +1090,8 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
           "—"
         )}
         {row.synthetic ? (
-          <span className="ms-1.5 text-[10px] uppercase tracking-wide text-subtle" title={t("orders2.results.estimatedFull", { defaultValue: "Synthetic estimate (not measured)" })}>
-            {t("orders2.results.estimated", { defaultValue: "est." })}
+          <span className="ms-1.5 text-[10px] uppercase tracking-wide text-subtle" title={t("live2.results.sourceHint.offline-synthetic-normal")}>
+            {t("live2.results.offlineShort")}
           </span>
         ) : null}
       </Td>
@@ -985,6 +1144,7 @@ function TrendPanel({ group, lang }: { group: TrendGroup; lang: Lang }) {
           <span className="font-mono text-[11px] font-normal tabular-nums text-subtle">
             {t("labs2.results.serialDraws", { count: group.drawCount, defaultValue: "{{count}} serial draws" })}
           </span>
+          <SourceChip source={group.source} />
         </h4>
         <span className="font-mono text-[11px] tabular-nums text-muted">
           {t("orders2.results.timeline", {
@@ -1066,8 +1226,8 @@ function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
           "—"
         )}
         {latestSynthetic ? (
-          <span className="ms-1.5 text-[10px] uppercase tracking-wide text-subtle">
-            {t("orders2.results.estimated", { defaultValue: "est." })}
+          <span className="ms-1.5 text-[10px] uppercase tracking-wide text-subtle" title={t("live2.results.sourceHint.offline-synthetic-normal")}>
+            {t("live2.results.offlineShort")}
           </span>
         ) : null}
       </Td>
@@ -1130,9 +1290,10 @@ function MicroList({ entries, lang }: { entries: MicroEntry[]; lang: Lang }) {
             className="rounded-control border border-border bg-bg-subtle p-3"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5 text-sm font-medium text-fg">
+              <span className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-fg">
                 <Virus weight="bold" className="h-4 w-4 text-muted" aria-hidden />
                 {pick(e.title, lang)}
+                <SourceChip source={e.source} />
               </span>
               <span className="font-mono text-[11px] tabular-nums text-muted">
                 {e.orderedAt != null
@@ -1162,7 +1323,7 @@ function MicroList({ entries, lang }: { entries: MicroEntry[]; lang: Lang }) {
                   {pick(e.conclusion, lang)}
                   {e.synthetic ? (
                     <span className="ms-1 text-xs italic text-muted">
-                      ({e.abnormal ? t("orders2.results.estimated", { defaultValue: "est." }) : t("orders2.results.wnl")})
+                      ({t("live2.results.source.offline-synthetic-normal")})
                     </span>
                   ) : null}
                 </span>
@@ -1197,9 +1358,10 @@ function ImagingList({
           className="rounded-control border border-border bg-bg-subtle p-3"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-sm font-medium text-fg">
+            <span className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-fg">
               <Scan weight="bold" className="h-4 w-4 text-muted" aria-hidden />
               {pick(e.modality, lang)}
+              <SourceChip source={e.source} />
             </span>
             <span className="font-mono text-[11px] tabular-nums text-muted">
               {e.orderedAt != null
@@ -1228,7 +1390,7 @@ function ImagingList({
                 {pick(e.conclusion, lang)}
                 {e.synthetic ? (
                   <span className="ms-1 text-xs italic text-muted">
-                    ({t("orders2.results.wnl")})
+                    ({t("live2.results.source.offline-synthetic-normal")})
                   </span>
                 ) : null}
               </p>
@@ -1247,6 +1409,7 @@ function ImagingList({
             modality={e.modalityShort}
             caption={e.conclusion ? pick(e.conclusion, lang) : undefined}
             showInterpretation={guidanceOn}
+            engine={e.engine ?? null}
           />
         </motion.li>
       ))}
