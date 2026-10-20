@@ -5,6 +5,8 @@
  *   POST /v1/voice/tts           -> chunked audio stream + provenance headers
  *   POST /v1/voice/stt           -> { text, language, confidence, provider }
  *   POST /v1/voice/room          -> LiveKit room token when an avatar row is configured
+ *   POST /v1/voice/avatar/*      -> live patient video: session (portrait + TURN credentials or a
+ *                                   Tavus conversation), offer/answer, speak, end (server/voice/avatar)
  *
  * Every provider key stays server-side; the browser only ever sees audio and
  * provenance headers. Streaming playback goes through `playTtsStream`: MediaSource
@@ -37,11 +39,61 @@ export interface EngineCapabilities {
 export interface AvatarCapabilities {
   enabled: boolean;
   provider: string | null;
+  /** "webrtc" (GPU worker MuseTalk runner), "tavus", "livekit", or null. */
   transport: string | null;
-  renderer: "none" | "simli" | "anam" | "musetalk" | string;
+  renderer: "none" | "simli" | "anam" | "musetalk" | "tavus" | string;
   source?: string;
   reasons?: string[];
+  /** True only when a real lip-synced video stream can be served now. */
+  live_video?: boolean;
+  /** The GPU worker is not up yet; the first spoken reply launches it. */
+  pending_launch?: boolean;
+  /** Runner bring-up state on the worker (ready, building, waiting, starting, disabled). */
+  state?: string;
+  model?: string;
+  infer_fps?: number | null;
+  vram?: { name?: string; total_mb?: number; free_mb?: number; required_mb?: number; process_reserved_mb?: number };
 }
+
+/** POST /v1/voice/avatar/session (server/voice/avatar/routes.py). */
+export interface AvatarSession {
+  session_id: string;
+  provider: "musetalk" | "tavus" | string;
+  transport: "webrtc" | "tavus" | string;
+  renderer: string;
+  model?: string;
+  lang: string;
+  avatar_id?: string | null;
+  conversation_url?: string | null;
+  ice_servers?: RTCIceServer[];
+  ice_transport_policy?: "relay" | "all";
+  prepare_ms?: number;
+  worker?: { infer_fps?: number | null; sessions?: number; max_sessions?: number };
+}
+
+export interface AvatarSpeakResult {
+  provider: string;
+  adapter: string;
+  model: string;
+  voice_id: string;
+  source: string;
+  tts_ms: number;
+  queued_ms: number;
+  audio_bytes: number;
+  audio_duration_ms: number | null;
+}
+
+export interface AvatarUnavailable {
+  error: "avatar_unavailable";
+  state: string;
+  reasons: string[];
+  pending_launch?: boolean;
+}
+
+export type AvatarSessionResult =
+  | { ok: true; data: AvatarSession }
+  | { ok: false; error: "unavailable"; status: 503; detail: AvatarUnavailable }
+  | { ok: false; error: string; status?: number };
 
 export interface VoiceCapabilities {
   airgapped: boolean;
@@ -198,6 +250,8 @@ export interface VoiceApiOptions {
   baseUrl?: string;
   fetchFn?: typeof fetch;
   defaultTimeoutMs?: number;
+  /** Identity headers for the signed-in avatar routes; defaults to the app's profile. */
+  identity?: () => Promise<Record<string, string>>;
 }
 
 function composeSignal(opts: RequestOptions, timeoutMs: number): { signal: AbortSignal; clear: () => void } {
@@ -224,6 +278,16 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
   const base = (options.baseUrl ?? BACKEND_URL).replace(/\/$/, "");
   const fetchFn = options.fetchFn ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
   const defaultTimeout = options.defaultTimeoutMs ?? 20_000;
+  // Lazy: the profile store pulls in i18n and the DOM, which the pure helpers here do not need.
+  const identity = options.identity ?? (async () => (await import("@/lib/panelsApi")).identityHeaders());
+
+  async function identityOrNone(): Promise<Record<string, string>> {
+    try {
+      return await identity();
+    } catch {
+      return {}; // anonymous: the route answers 401 and the caller falls back
+    }
+  }
 
   async function json<T>(path: string, init: RequestInit, opts: RequestOptions): Promise<BackendResult<T>> {
     const { signal, clear } = composeSignal(opts, opts.timeoutMs ?? defaultTimeout);
@@ -236,6 +300,15 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
     } finally {
       clear();
     }
+  }
+
+  async function signedJson<T>(path: string, body: unknown, opts: RequestOptions): Promise<BackendResult<T>> {
+    const headers = await identityOrNone();
+    return json<T>(
+      path,
+      { method: "POST", headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify(body) },
+      opts,
+    );
   }
 
   return {
@@ -289,6 +362,49 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
       }
       if (!res.ok || !res.body) return { ok: false, error: `http_${res.status}`, status: res.status };
       return { ok: true, response: res, meta: parseTtsHeaders(res.headers) };
+    },
+
+    /**
+     * Start a live patient video call. A 503 carries `state` and `reasons` (worker starting,
+     * runner disabled for VRAM, no renderer) and comes back as `unavailable`.
+     */
+    async avatarSession(body: Record<string, unknown>, opts: RequestOptions = {}): Promise<AvatarSessionResult> {
+      const headers = await identityOrNone();
+      const { signal, clear } = composeSignal(opts, opts.timeoutMs ?? 150_000);
+      try {
+        const res = await fetchFn(`${base}/v1/voice/avatar/session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...headers },
+          body: JSON.stringify(body),
+          signal,
+        });
+        if (res.status === 503) {
+          const detail = (await res.json().catch(() => ({}))) as AvatarUnavailable;
+          return { ok: false, error: "unavailable", status: 503, detail };
+        }
+        if (!res.ok) return { ok: false, error: `http_${res.status}`, status: res.status };
+        return { ok: true, data: (await res.json()) as AvatarSession };
+      } catch (err) {
+        return failure(err, opts.signal);
+      } finally {
+        clear();
+      }
+    },
+
+    avatarOffer(
+      sessionId: string,
+      sdp: string,
+      opts: RequestOptions = {},
+    ): Promise<BackendResult<{ sdp: string; type: string; answer_ms: number }>> {
+      return signedJson("/v1/voice/avatar/offer", { session_id: sessionId, sdp, type: "offer" }, { timeoutMs: 60_000, ...opts });
+    },
+
+    avatarSpeak(sessionId: string, text: string, opts: RequestOptions = {}): Promise<BackendResult<AvatarSpeakResult>> {
+      return signedJson("/v1/voice/avatar/speak", { session_id: sessionId, text }, { timeoutMs: 60_000, ...opts });
+    },
+
+    avatarEnd(sessionId: string, opts: RequestOptions = {}): Promise<BackendResult<{ ok: boolean }>> {
+      return signedJson("/v1/voice/avatar/end", { session_id: sessionId }, opts);
     },
 
     /** A LiveKit room token for this encounter, when an avatar row is configured. */

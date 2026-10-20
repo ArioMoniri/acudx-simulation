@@ -1,0 +1,63 @@
+{
+  "captured_at": "2026-10-20T20:44:34.952Z",
+  "base_url": "http://127.0.0.1:4183",
+  "question": "When did the pain start, and where do you feel it?",
+  "metrics": {
+    "prepareMs": 39248.4,
+    "answerMs": 754,
+    "firstFrameMs": 1957,
+    "speechStartMs": 8686,
+    "lipLagMs": -240,
+    "ttsMs": 1412.4,
+    "provider": "worker-kokoro",
+    "samples": 183
+  },
+  "rtc": {
+    "audioPackets": 1119,
+    "audioEnergy": 0.2153591979062515,
+    "videoFrames": 419,
+    "videoFps": null,
+    "rttMs": 151
+  },
+  "offline": {
+    "audio_peak_rms": 0.10519883319714783,
+    "voiced_ms": 4040,
+    "frames": 545,
+    "audio_to_lip_lag_ms": -480,
+    "note": "positive = mouth motion follows the audio"
+  },
+  "caption": "You:When did the pain start, and where do you feel it?\n\nPatient:I don't have pain, doctor - it's more like wheezing and struggling to breathe. It started a few hours ago and woke me from sleep. It's in my chest and lungs.",
+  "provenance": "Voice: worker-kokoro\nVideo: musetalk\nFirst frame 1957 ms\nSpeech start 8686 ms\nVoice to lips -240 ms",
+  "reply_wait_ms": 71360,
+  "log": [
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "[warning] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+    "[warning] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "[warning] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.",
+    "[warning] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "2026-10-20T20:42:34.246Z tile visible",
+    "2026-10-20T20:43:21.403Z live video connected",
+    "2026-10-20T20:43:24.137Z question sent",
+    "2026-10-20T20:43:38.005Z frames captured",
+    "2026-10-20T20:43:44.239Z rtc {\"audioPackets\":1119,\"audioEnergy\":0.2153591979062515,\"videoFrames\":419,\"videoFps\":null,\"rttMs\":151}",
+    "2026-10-20T20:43:45.778Z metrics {\"prepareMs\":39248.4,\"answerMs\":754,\"firstFrameMs\":1957,\"speechStartMs\":8686,\"lipLagMs\":-240,\"ttsMs\":1412.4,\"provider\":\"worker-kokoro\",\"samples\":183}",
+    "2026-10-20T20:43:46.892Z recording saved",
+    "2026-10-20T20:44:34.950Z offline check {\"audio_peak_rms\":0.10519883319714783,\"voiced_ms\":4040,\"frames\":545,\"audio_to_lip_lag_ms\":-480,\"note\":\"positive = mouth motion follows the audio\"}"
+  ]
+}

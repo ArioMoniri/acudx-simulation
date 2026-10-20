@@ -101,6 +101,12 @@ WORKER_FIREWALL_RULES: list[FirewallRule] = [
                  description="acudx gpu-worker: boot diagnostics (token-scoped path, plain HTTP)"),
     FirewallRule(protocol="tcp", port_range=[443, 443], source_network="0.0.0.0/0",
                  description="acudx gpu-worker: HTTPS (LLM/TTS/STT behind bearer token)"),
+    # Live patient video: coturn relays the WebRTC media to the avatar runner; TURN REST
+    # credentials (short-lived, HMAC of the worker token) are required for every allocation.
+    FirewallRule(protocol="udp", port_range=[3478, 3478], source_network="0.0.0.0/0",
+                 description="acudx gpu-worker: TURN/UDP for the avatar call (credentials required)"),
+    FirewallRule(protocol="tcp", port_range=[3478, 3478], source_network="0.0.0.0/0",
+                 description="acudx gpu-worker: TURN/TCP for the avatar call (credentials required)"),
 ]
 
 

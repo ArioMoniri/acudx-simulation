@@ -15,7 +15,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { GuidanceCard } from "@/components/GuidanceCard";
-import { PatientCallTile } from "@/components/ehr/PatientCallTile";
+import { PatientCallTile, type PatientCallContext } from "@/components/ehr/PatientCallTile";
 import { stopTts, unlockTts } from "@/lib/tts";
 import { SymptomSummary, type VitalsLike } from "@/components/PatientViewer";
 import { Badge, Button, SectionLabel, Switch, TextInput } from "@/components/ui";
@@ -907,6 +907,15 @@ export function InterviewTab({
           utterance={lastPatientUtterance}
           learnerLine={lastLearnerLine}
           lang={lang}
+          callContext={() => {
+            // The live-video call answers from the same case state as the typed turn.
+            const r = buildPatientTurnRequest("");
+            return {
+              case_state: r.case_state as Record<string, unknown>,
+              persona: r.persona as Record<string, unknown> | undefined,
+              case_context: r.case_context as Record<string, unknown> | undefined,
+            };
+          }}
           voiceOn={voiceOn}
           onToggleVoice={() =>
             setVoiceOn((v) => {
@@ -1247,6 +1256,7 @@ function PatientPresence({
   voiceOn,
   onToggleVoice,
   lang,
+  callContext,
 }: {
   caseInstance: CaseInstance;
   vitals: VitalsLike;
@@ -1255,6 +1265,7 @@ function PatientPresence({
   voiceOn: boolean;
   onToggleVoice: () => void;
   lang: Lang;
+  callContext?: () => PatientCallContext;
 }) {
   const { t } = useTranslation();
   return (
@@ -1268,6 +1279,7 @@ function PatientPresence({
         onToggleVoice={onToggleVoice}
         lang={lang}
         encounterId={caseInstance.id}
+        callContext={callContext}
       />
       <section className="rounded-card border border-border bg-surface p-3">
         <SectionLabel className="mb-1.5">
