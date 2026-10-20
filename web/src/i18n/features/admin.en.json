@@ -1,7 +1,15 @@
 {
-  "nav": { "admin": "Admin" },
-  "role": { "admin": "Admin" },
-  "profile": { "roles": { "admin": "Platform administrator" } },
+  "nav": {
+    "admin": "Admin"
+  },
+  "role": {
+    "admin": "Admin"
+  },
+  "profile": {
+    "roles": {
+      "admin": "Platform administrator"
+    }
+  },
   "admin": {
     "eyebrow": "Operator console",
     "title": "Admin",
@@ -184,13 +192,18 @@
       "costByDay": "GPU cost per day (14 d)",
       "spent7d": "Spent (7 d)",
       "spent30d": "Spent (30 d)",
-      "spentToday": "Spent today"
+      "spentToday": "Spent today",
+      "noCap": "No cap"
     },
     "telemetry": {
       "title": "Model telemetry",
       "description": "One row per gateway call. Cost comes from the versioned price table ({{version}}); self-hosted endpoints are billed by the hour in the GPU ledger instead.",
       "window": "Window",
-      "windows": { "24h": "24 hours", "7d": "7 days", "30d": "30 days" },
+      "windows": {
+        "24h": "24 hours",
+        "7d": "7 days",
+        "30d": "30 days"
+      },
       "calls": "Calls",
       "cost": "Cost",
       "errors": "Errors",
@@ -209,9 +222,27 @@
       "shareOfCost": "Share of cost",
       "other": "other",
       "empty": "No model calls in this window.",
-      "series": { "ok": "Succeeded", "errors": "Failed", "cost": "Cost (USD)", "p50": "p50 (ms)", "p95": "p95 (ms)" },
-      "tableCol": { "bucket": "Bucket", "calls": "Calls", "errors": "Errors", "cost": "Cost", "p95": "p95" },
-      "breakdownCol": { "key": "Name", "calls": "Calls", "errors": "Errors", "cost": "Cost", "p95": "p95" }
+      "series": {
+        "ok": "Succeeded",
+        "errors": "Failed",
+        "cost": "Cost (USD)",
+        "p50": "p50 (ms)",
+        "p95": "p95 (ms)"
+      },
+      "tableCol": {
+        "bucket": "Bucket",
+        "calls": "Calls",
+        "errors": "Errors",
+        "cost": "Cost",
+        "p95": "p95"
+      },
+      "breakdownCol": {
+        "key": "Name",
+        "calls": "Calls",
+        "errors": "Errors",
+        "cost": "Cost",
+        "p95": "p95"
+      }
     },
     "settings": {
       "title": "Settings",

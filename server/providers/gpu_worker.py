@@ -4,7 +4,8 @@ Policy (docs/process/AGENT-PROTOCOL.md §2.4):
 
 * launch only when a request needs a GPU and no healthy worker exists;
 * terminate after ``idle_minutes`` without a request (idle reaper task);
-* hard daily budget cap in USD (projected next hour must fit);
+* optional daily budget cap in USD (None, the default, means no cap; the idle reaper
+  still stops every worker that is not in use);
 * cheapest allow-listed instance type that has capacity wins;
 * ``AIRGAPPED=true`` refuses to launch — fail closed, with a reason;
 * worker state and a cost ledger persist in SQLite (``ACUDX_DB_PATH``).
@@ -92,7 +93,8 @@ class WorkerFailed(WorkerRefused):
 # --------------------------------------------------------------------------- #
 class WorkerPolicy(BaseModel):
     idle_minutes: int = Field(default=20, ge=1, le=24 * 60)
-    daily_budget_usd: float = Field(default=25.0, ge=0)
+    # None = no spend cap (owner decision 2026-10-20). A number re-enables the cap.
+    daily_budget_usd: float | None = Field(default=None, ge=0)
     allowlist: list[str] = Field(default_factory=lambda: list(DEFAULT_ALLOWLIST), min_length=1)
     llm_model: str = Field(default="Qwen/Qwen3-14B-AWQ", min_length=1)
     region_preference: list[str] = Field(default_factory=list)
@@ -393,6 +395,8 @@ class WorkerManager:
         return self.store.spent_usd(_day_start(now), now)
 
     def _check_budget(self, price_cents_per_hour: int) -> None:
+        if self.policy.daily_budget_usd is None:
+            return
         spent = self.spent_today_usd()
         projected = spent + price_cents_per_hour / 100.0
         if projected > self.policy.daily_budget_usd:
@@ -426,7 +430,8 @@ class WorkerManager:
             "policy": self.policy.model_dump(),
             "worker": w.public() if w else None,
             "spent_today_usd": spent,
-            "budget_remaining_usd": round(max(0.0, self.policy.daily_budget_usd - spent), 6),
+            "budget_remaining_usd": (None if self.policy.daily_budget_usd is None
+                                     else round(max(0.0, self.policy.daily_budget_usd - spent), 6)),
             "reaper_running": self.reaper_running,
         }
 
@@ -491,7 +496,7 @@ class WorkerManager:
         if w.status == "ready" and await self.reconcile(w):
             return True
         spent = self.spent_today_usd()
-        if spent >= self.policy.daily_budget_usd:
+        if self.policy.daily_budget_usd is not None and spent >= self.policy.daily_budget_usd:
             log.warning("gpu worker %s: spent %.2f USD today >= budget %.2f USD; terminating", w.instance_id,
                         spent, self.policy.daily_budget_usd)
             await self.terminate(reason="budget")

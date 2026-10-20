@@ -1,7 +1,15 @@
 {
-  "nav": { "admin": "Yönetim" },
-  "role": { "admin": "Yönetici" },
-  "profile": { "roles": { "admin": "Platform yöneticisi" } },
+  "nav": {
+    "admin": "Yönetim"
+  },
+  "role": {
+    "admin": "Yönetici"
+  },
+  "profile": {
+    "roles": {
+      "admin": "Platform yöneticisi"
+    }
+  },
   "admin": {
     "eyebrow": "Operatör konsolu",
     "title": "Yönetim",
@@ -184,13 +192,18 @@
       "costByDay": "Günlük GPU maliyeti (14 g)",
       "spent7d": "Harcanan (7 g)",
       "spent30d": "Harcanan (30 g)",
-      "spentToday": "Bugün harcanan"
+      "spentToday": "Bugün harcanan",
+      "noCap": "Sınır yok"
     },
     "telemetry": {
       "title": "Model telemetrisi",
       "description": "Her ağ geçidi çağrısı için bir satır. Maliyet sürümlü fiyat tablosundan gelir ({{version}}); kendi barındırılan uç noktalar GPU defterinde saat başına faturalanır.",
       "window": "Pencere",
-      "windows": { "24h": "24 saat", "7d": "7 gün", "30d": "30 gün" },
+      "windows": {
+        "24h": "24 saat",
+        "7d": "7 gün",
+        "30d": "30 gün"
+      },
       "calls": "Çağrılar",
       "cost": "Maliyet",
       "errors": "Hatalar",
@@ -209,9 +222,27 @@
       "shareOfCost": "Maliyet payı",
       "other": "diğer",
       "empty": "Bu pencerede model çağrısı yok.",
-      "series": { "ok": "Başarılı", "errors": "Başarısız", "cost": "Maliyet (USD)", "p50": "p50 (ms)", "p95": "p95 (ms)" },
-      "tableCol": { "bucket": "Dilim", "calls": "Çağrılar", "errors": "Hatalar", "cost": "Maliyet", "p95": "p95" },
-      "breakdownCol": { "key": "Ad", "calls": "Çağrılar", "errors": "Hatalar", "cost": "Maliyet", "p95": "p95" }
+      "series": {
+        "ok": "Başarılı",
+        "errors": "Başarısız",
+        "cost": "Maliyet (USD)",
+        "p50": "p50 (ms)",
+        "p95": "p95 (ms)"
+      },
+      "tableCol": {
+        "bucket": "Dilim",
+        "calls": "Çağrılar",
+        "errors": "Hatalar",
+        "cost": "Maliyet",
+        "p95": "p95"
+      },
+      "breakdownCol": {
+        "key": "Ad",
+        "calls": "Çağrılar",
+        "errors": "Hatalar",
+        "cost": "Maliyet",
+        "p95": "p95"
+      }
     },
     "settings": {
       "title": "Ayarlar",

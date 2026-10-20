@@ -179,7 +179,7 @@ class Settings(BaseSettings):
     gpu_ready_timeout_s: float = 2700.0
     gpu_file_system_name: str | None = None
     gpu_boot_timeout_s: float = 900.0
-    gpu_daily_budget_usd: float = 25.0
+    gpu_daily_budget_usd: float | None = None  # None = no cap; set a number to cap daily GPU spend
     gpu_llm_model: str = "Qwen/Qwen3-32B-AWQ"
     gpu_instance_allowlist: CsvList = Field(default_factory=lambda: [
         "gpu_1x_a100_sxm4", "gpu_1x_a10", "gpu_1x_a100", "gpu_1x_h100_pcie",

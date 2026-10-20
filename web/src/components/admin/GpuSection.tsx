@@ -32,7 +32,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
   const { t } = useTranslation();
   const { api } = useAdminSession();
   const [idle, setIdle] = useState(String(policy.idle_minutes));
-  const [budget, setBudget] = useState(String(policy.daily_budget_usd));
+  const [budget, setBudget] = useState(policy.daily_budget_usd == null ? "" : String(policy.daily_budget_usd));
   const [allow, setAllow] = useState(policy.allowlist.join("\n"));
   const [model, setModel] = useState(policy.llm_model);
   const [regions, setRegions] = useState(policy.region_preference.join("\n"));
@@ -41,7 +41,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
 
   useEffect(() => {
     setIdle(String(policy.idle_minutes));
-    setBudget(String(policy.daily_budget_usd));
+    setBudget(policy.daily_budget_usd == null ? "" : String(policy.daily_budget_usd));
     setAllow(policy.allowlist.join("\n"));
     setModel(policy.llm_model);
     setRegions(policy.region_preference.join("\n"));
@@ -53,7 +53,8 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
     setMsg(null);
     const r = await api.putGpuPolicy({
       idle_minutes: Number.parseInt(idle, 10),
-      daily_budget_usd: Number.parseFloat(budget),
+      // Empty = no daily cap (the idle reaper still stops unused workers).
+      daily_budget_usd: budget.trim() === "" ? null : Number.parseFloat(budget),
       allowlist: lines(allow),
       llm_model: model.trim(),
       region_preference: lines(regions),
@@ -72,7 +73,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
           {(aria) => <TextInput {...aria} type="number" inputMode="numeric" min={1} max={1440} value={idle} onChange={(e) => setIdle(e.target.value)} />}
         </Field>
         <Field label={t("admin.gpu.dailyBudget")}>
-          {(aria) => <TextInput {...aria} type="number" inputMode="decimal" min={0} step="0.5" value={budget} onChange={(e) => setBudget(e.target.value)} />}
+          {(aria) => <TextInput {...aria} type="number" inputMode="decimal" min={0} step="0.5" value={budget} placeholder={t("admin.gpu.noCap", { defaultValue: "No cap" })} onChange={(e) => setBudget(e.target.value)} />}
         </Field>
       </div>
       <Field label={t("admin.gpu.model")}>

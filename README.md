@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<p align="center"><strong>Simulated patients. Real decisions.</strong><br>An open-source clinical reasoning simulator inside a real EHR, for health-professions education.</p>
+<p align="center"><strong>Simulated patients. Real decisions.</strong><br>A source-available clinical reasoning simulator inside a real EHR, for health-professions education.</p>
 
 <p align="center">
   <a href="https://github.com/ArioMoniri/acudx-simulation/actions/workflows/ci.yml"><img src="https://github.com/ArioMoniri/acudx-simulation/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -157,7 +157,11 @@ Shipped: the engines above, the redesigned EHR ([docs/design/03](docs/design/03-
 
 ## Contributing
 
-Issues and pull requests are welcome. Start with [docs/process/AGENT-PROTOCOL.md](docs/process/AGENT-PROTOCOL.md): write the failing test first, keep the fast gate green, add EN and TR strings for any UI text, and cite a verified `GuidelineStatement` for any clinical fact. No licence file is committed yet; the owner picks the licence before public release, and every bundled asset is CC0, CC BY, CC BY-SA or SIL OFL with its attribution recorded next to it.
+Issues and pull requests are welcome. Start with [docs/process/AGENT-PROTOCOL.md](docs/process/AGENT-PROTOCOL.md): write the failing test first, keep the fast gate green, add EN and TR strings for any UI text, and cite a verified `GuidelineStatement` for any clinical fact. Contributions are accepted under the project licence below.
+
+## License
+
+AcuDx is **source-available, not open for business use**. It is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE): universities, teaching hospitals, students and researchers may use, modify and share it for noncommercial purposes. Any commercial use (selling it, hosting it as a paid service, or using it inside a business) needs a separate commercial license from the copyright holders. Third-party components and bundled media keep their own licenses; see [NOTICE](NOTICE).
 
 ## Disclaimer
 

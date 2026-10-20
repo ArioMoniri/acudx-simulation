@@ -186,7 +186,8 @@ export interface JobStatus {
 
 export interface WorkerPolicy {
   idle_minutes: number;
-  daily_budget_usd: number;
+  /** null = no daily cap. */
+  daily_budget_usd: number | null;
   allowlist: string[];
   llm_model: string;
   region_preference: string[];

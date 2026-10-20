@@ -106,7 +106,7 @@ function GpuCard({ health, onChanged }: { health: HealthReport; onChanged: () =>
         <Stat
           size="sm"
           label={t("admin.overview.gpuBudget")}
-          value={formatUsd(health.gpu.budget_remaining_usd ?? 0, locale)}
+          value={health.gpu.budget_remaining_usd == null ? t("admin.gpu.noCap", { defaultValue: "No cap" }) : formatUsd(health.gpu.budget_remaining_usd, locale)}
           hint={w ? t("admin.overview.gpuLastUsed", { time: relativeTime(w.last_used_at, locale) }) : undefined}
         />
       </div>

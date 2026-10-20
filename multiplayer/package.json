@@ -2,11 +2,12 @@
   "name": "acudx-multiplayer",
   "type": "module",
   "private": true,
-  "description": "AcuDx local multiplayer relay — a dependency-light WebSocket message bus (no LLM, no game logic).",
+  "description": "AcuDx local multiplayer relay \u2014 a dependency-light WebSocket message bus (no LLM, no game logic).",
   "dependencies": {
     "ws": "^8.18.0"
   },
   "scripts": {
     "start": "node server.mjs"
-  }
+  },
+  "license": "PolyForm-Noncommercial-1.0.0"
 }

@@ -1,0 +1,17 @@
+AcuDx
+Copyright 2026 the AcuDx authors (https://github.com/ArioMoniri/acudx-simulation)
+
+The AcuDx source code is licensed under the PolyForm Noncommercial License 1.0.0
+(see LICENSE). Noncommercial use, including teaching, study and research at
+universities and public institutions, is permitted. Commercial use requires a
+separate license from the copyright holders.
+
+Third-party components keep their own licenses. In particular:
+- npm and PyPI dependencies: see web/package-lock.json, video/package-lock.json,
+  multiplayer/package-lock.json and server/requirements*.txt (MIT, Apache-2.0, BSD).
+- Imaging bank entries (server/results/imaging_bank.json, web/public/imaging): each
+  entry records its own license (CC0, public domain, CC BY, CC BY-SA) and attribution.
+- Anatomy atlas (web/public/atlas): derived from TotalSegmentator data, CC BY 4.0.
+- Guideline statements (server/guidelines/statements.verified.json): short quotations
+  with source citations; the source documents remain under their publishers' terms.
+- Fonts: Inter, Manrope, Geist Mono under the SIL Open Font License 1.1.
