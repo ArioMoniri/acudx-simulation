@@ -104,7 +104,7 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
         </div>
 
         {toolbar ? (
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          <div className="flex basis-full flex-wrap items-center gap-1.5 sm:basis-auto sm:shrink-0 sm:justify-end">
             {toolbar}
           </div>
         ) : null}

@@ -53,7 +53,8 @@ function resolveChromium(): string | undefined {
 }
 
 const executablePath = resolveChromium();
-const PORT = Number(process.env.PORT ?? 4173);
+// The web port: E2E_PORT or PORT (a private port keeps parallel runs apart).
+const PORT = Number(process.env.E2E_PORT ?? process.env.PORT ?? 4173);
 export const BASE_URL = `http://localhost:${PORT}`;
 
 const webCommand = process.env.E2E_PREVIEW
@@ -109,7 +110,8 @@ export default defineConfig({
       stderr: "ignore",
     },
     {
-      command: "node ../multiplayer/server.mjs",
+      // The relay reads PORT itself, so pin it to 8899 whatever the web port is.
+      command: "PORT=8899 node ../multiplayer/server.mjs",
       port: 8899,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
