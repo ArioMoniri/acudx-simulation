@@ -73,7 +73,7 @@ export function LandingPage() {
         </motion.div>
 
         <motion.figure {...media} className="m-0 min-w-0">
-          <div className="overflow-hidden rounded-card border border-border bg-surface">
+          <div className="overflow-hidden rounded-[6px] border border-ink-border bg-ink p-1.5 sm:p-2">
             <img
               src={theme === "dark" ? HERO_SHOT.dark : HERO_SHOT.light}
               width={1280}
@@ -81,7 +81,7 @@ export function LandingPage() {
               alt={t("landing3.hero.shotAlt", {
                 defaultValue: "The encounter workspace: patient banner, storyboard rail and the chart tabs",
               })}
-              className="block h-auto w-full"
+              className="block h-auto w-full rounded-[3px]"
               loading="eager"
               decoding="async"
             />
@@ -102,7 +102,7 @@ export function LandingPage() {
         <section aria-labelledby="landing-loop" className="grid gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-12">
           <div>
             <SectionLabel>{t("landing2.loop.eyebrow")}</SectionLabel>
-            <h2 id="landing-loop" className="mt-2 text-xl font-semibold tracking-tight text-fg sm:text-2xl">
+            <h2 id="landing-loop" className="mt-2 text-2xl text-fg sm:text-[2rem]">
               {t("landing2.loop.heading")}
             </h2>
             <p className="mt-2 max-w-md text-[0.9375rem] text-muted">{t("landing2.loop.sub")}</p>
@@ -117,7 +117,7 @@ export function LandingPage() {
         <section aria-labelledby="landing-platform" className="grid gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-12">
           <div>
             <SectionLabel>{t("landing2.platform.eyebrow")}</SectionLabel>
-            <h2 id="landing-platform" className="mt-2 text-xl font-semibold tracking-tight text-fg sm:text-2xl">
+            <h2 id="landing-platform" className="mt-2 text-2xl text-fg sm:text-[2rem]">
               {t("landing2.platform.heading")}
             </h2>
             <p className="mt-2 max-w-md text-[0.9375rem] text-muted">{t("landing2.platform.sub")}</p>
@@ -128,7 +128,7 @@ export function LandingPage() {
         {/* Closing line */}
         <section className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-base font-semibold tracking-tight text-fg">{t("landing.closing.heading")}</h2>
+            <h2 className="text-xl text-fg">{t("landing.closing.heading")}</h2>
             <p className="mt-1 max-w-2xl text-[0.8125rem] text-muted">{t("landing.closing.body")}</p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">

@@ -1,20 +1,25 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="web/public/brand/acudx-lockup-horizontal-dark.svg">
-    <img src="web/public/brand/acudx-lockup-horizontal.svg" alt="AcuDx" width="340">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/readme/lockup-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/media/readme/lockup-light.svg">
+    <img src="docs/media/readme/lockup-light.svg" alt="AcuDx" width="280">
   </picture>
 </p>
 
-<p align="center"><strong>Simulated patients. Real decisions.</strong><br>A source-available clinical reasoning simulator inside a real EHR, for health-professions education.</p>
+<h3 align="center">Simulated patients. Real decisions.</h3>
+
+<p align="center">A source-available clinical reasoning simulator inside a real EHR, for health-professions education.</p>
 
 <p align="center">
   <a href="https://github.com/ArioMoniri/acudx-simulation/actions/workflows/ci.yml"><img src="https://github.com/ArioMoniri/acudx-simulation/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/UI-English%20%7C%20T%C3%BCrk%C3%A7e-0f766e" alt="English and Turkish">
-  <img src="https://img.shields.io/badge/patients-synthetic%20only-596270" alt="Synthetic patients only">
+  <img src="https://img.shields.io/badge/UI-English%20%7C%20T%C3%BCrk%C3%A7e-2450c8" alt="English and Turkish">
+  <img src="https://img.shields.io/badge/patients-synthetic%20only-57534b" alt="Synthetic patients only">
 </p>
 
+<br>
+
 <p align="center">
-  <img src="docs/media/readme/hero-encounter.webp" alt="A learner interviews a synthetic patient with cough and fever in the AcuDx EHR" width="880">
+  <img src="docs/media/readme/hero-encounter.png" alt="The AcuDx encounter: the ink chart header with the patient banner, the storyboard, and the interview tab with the patient's replies" width="100%">
 </p>
 
 <p align="center"><sub>Education only. Synthetic patients. Not a medical device.</sub></p>

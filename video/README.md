@@ -15,7 +15,7 @@ Two families of film, both built with Remotion 4.0.537 (pinned):
 | `out/teaser-v2.mp4` | 1920 x 1080, 30 fps, 15 s (1.2 MB) | mark, four beats (interview, orders, results with ECG, calibration), end card |
 | `out/square.mp4` | 1080 x 1080, 30 fps, 30.7 s (1.6 MB) | social cut: nine beats with large captions above the frame |
 | `out/poster-v2.png` | 1920 x 1080 | dark lockup, promise, play affordance and one real frame (Results with the ECG) |
-| `../docs/media/readme/hero-encounter.webp` | 960 px, 15 fps, 7 s, animated WebP (1.0 MB) | README hero, taken from the walkthrough render |
+
 
 ### How it is made
 
@@ -23,8 +23,8 @@ Two families of film, both built with Remotion 4.0.537 (pinned):
 2. **Prepare** (`bash scripts/encode-media.sh prepare`, run by `npm run record`): the VP8 webm becomes a near-lossless H.264 with a keyframe every 10 frames, so `OffthreadVideo` seeks fast. The webm and mp4 are not committed (about 40 MB and 190 MB); the JSON timeline is.
 3. **Cut** (`src/walkthrough/timeline.ts`): skip spans are dropped, idle gaps over 2.6 s are trimmed to 1.7 s after the last action and 0.7 s before the next, and each chapter is sped up (at most 2.2x) to fit its budget in `src/Walkthrough.tsx`.
 4. **Camera**: every logged click, type, select or focus with a zoom above 1 becomes a shot that frames its box (the requested scale, reduced until the box fits with a margin, centre clamped inside the frame). Shots closer than 2.4 s chain into a pan; otherwise the camera holds 1.1 s and eases back to the full frame. Transitions use a critically damped spring, with scale interpolated in log space.
-5. **Render** (`npm run render:v2`): Walkthrough, Teaser, Square and PosterV2, then `scripts/encode-media.sh final` re-encodes at CRF 30 to 32 after a light temporal denoise (hqdn3d, adaptive quantisation) and exports the README hero.
-6. **README images** (`python3 scripts/readme-images.py`): crops of the chapter stills and redesign captures, palette-quantised PNG under 350 KB each, into `docs/media/readme/`.
+5. **Render** (`npm run render:v2`): Walkthrough, Teaser, Square and PosterV2, then `scripts/encode-media.sh final` re-encodes at CRF 30 to 32 after a light temporal denoise (hqdn3d, adaptive quantisation). The README hero and feature images are not cut from the film; they are plain captures of the running app (`scripts/design/capture-readme.mjs`, `scripts/design/readme-media.py`).
+6. **README images**: moved out of the film pipeline. `node scripts/design/capture-readme.mjs` and `python3 scripts/design/readme-media.py` (repository root) capture the renewed UI directly, uncropped, palette-quantised under 350 KB each, into `docs/media/readme/`.
 
 Captions are English, short and factual, and say what the offline path really shows (for example, the ECG is a labelled representative image with its licence, and an unverified guideline source shows as unavailable).
 
@@ -83,8 +83,7 @@ npm run render:all      # launch film plus the walkthrough family
 
 # walkthrough (needs the dev server: npm --prefix web run dev -- --port 4197)
 npm run record          # public/recording/walkthrough.{webm,json,mp4}
-npm run render:v2       # out/walkthrough.mp4, teaser-v2.mp4, square.mp4, poster-v2.png, README hero
-python3 scripts/readme-images.py
+npm run render:v2       # out/walkthrough.mp4, teaser-v2.mp4, square.mp4, poster-v2.png
 ```
 
 The scripts pass `--browser-executable /opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell`. Remotion needs the headless shell (or any Chrome that still has the old headless mode); the full Chromium binary refuses with "Old Headless mode has been removed". On a machine without that path, drop the flag and Remotion downloads its own headless shell.

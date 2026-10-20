@@ -291,7 +291,7 @@ export function ActivityTabs({
                   />
                   {t(`ehr.tabs.${camel(key)}`)}
                   {key === "results" && unseenResults > 0 ? (
-                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-chip bg-brand px-1 font-mono text-[0.625rem] font-semibold leading-4 text-white">
+                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-chip bg-brand px-1 font-mono text-[0.625rem] font-semibold leading-4 text-on-brand">
                       {t("ehr.tabs.unseenBadge", { count: unseenResults })}
                     </span>
                   ) : typeof count === "number" && count > 0 ? (

@@ -86,7 +86,7 @@ export function PipelineRail() {
                   className={cn(
                     "grid h-8 w-8 shrink-0 place-items-center rounded-control",
                     isActive
-                      ? "bg-brand text-white"
+                      ? "bg-brand text-on-brand"
                       : isDone
                         ? "bg-[color-mix(in_srgb,var(--state-normal)_14%,transparent)] text-[color:var(--state-normal)]"
                         : "bg-bg-subtle text-muted",
@@ -119,7 +119,7 @@ export function PipelineRail() {
                 className={cn(
                   "mt-auto inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
                   isActive
-                    ? "bg-brand text-white"
+                    ? "bg-brand text-on-brand"
                     : isDone
                       ? "text-[color:var(--state-normal)] bg-[color-mix(in_srgb,var(--state-normal)_14%,transparent)]"
                       : "bg-bg-subtle text-muted",

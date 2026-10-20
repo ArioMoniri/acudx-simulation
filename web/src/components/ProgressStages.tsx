@@ -50,7 +50,7 @@ export function ProgressStages({
                   className={cn(
                     "grid h-4 w-4 place-items-center rounded-chip font-mono text-[0.625rem] font-semibold",
                     status === "current" && "bg-bg/20 text-bg",
-                    status === "done" && "bg-brand text-white",
+                    status === "done" && "bg-brand text-on-brand",
                     status === "todo" && "border border-border-strong text-muted",
                   )}
                 >
