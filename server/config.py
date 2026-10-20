@@ -149,6 +149,10 @@ class Settings(BaseSettings):
 
     # --- httpx tuning ------------------------------------------------------- #
     request_timeout_s: float = 60.0
+    # Read budget for structured case generation and judges (server/orchestration/llm.py).
+    casegen_timeout_s: float = 300.0
+    # None = auto (Qwen3 family and the GPU worker's acudx-llm); true/false forces it.
+    casegen_disable_thinking: bool | None = None
     connect_timeout_s: float = 5.0
     probe_timeout_s: float = 2.0
     max_retries: int = 2

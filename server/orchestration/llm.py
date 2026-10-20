@@ -95,8 +95,12 @@ class StructuredLLM:
             "judge": settings.resolve_judge(),
         }
         self._transport = transport
+        # Structured case generation is long (thousands of tokens at tens of tokens per
+        # second on one GPU), so it gets its own read budget instead of the generic
+        # request timeout (live finding 2026-10-20: 60 s cut every author call short).
         self._timeout = httpx.Timeout(
-            timeout_s or settings.request_timeout_s, connect=settings.connect_timeout_s,
+            timeout_s or getattr(settings, "casegen_timeout_s", None) or settings.request_timeout_s,
+            connect=settings.connect_timeout_s,
         )
         self._retries = max(0, retries)
         self._client: httpx.AsyncClient | None = None
@@ -141,6 +145,10 @@ class StructuredLLM:
                 "json_schema": {"name": schema_name, "schema": schema, "strict": False},
             },
         }
+        if _wants_no_thinking(ep.model, self.settings):
+            # Qwen3-family models otherwise spend the token budget on hidden reasoning
+            # before the JSON; vLLM and SGLang accept chat_template_kwargs.
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
         headers = {"Content-Type": "application/json"}
         if ep.api_key:
             headers["Authorization"] = f"Bearer {ep.api_key}"
@@ -160,6 +168,12 @@ class StructuredLLM:
                 else:
                     data = resp.json()
                     break
+            except httpx.TimeoutException as exc:
+                # A read timeout on a long generation will time out again; do not
+                # triple the wait. Connect timeouts are retried below like other errors.
+                last = exc
+                if not isinstance(exc, httpx.ConnectTimeout):
+                    break
             except httpx.TransportError as exc:
                 last = exc
             except ValueError as exc:  # body not JSON
@@ -167,7 +181,7 @@ class StructuredLLM:
             if attempt < self._retries:
                 await asyncio.sleep(min(0.2 * (2 ** attempt), 1.0))
         if data is None:
-            raise ModelUnreachable(f"{url} unreachable: {last}")
+            raise ModelUnreachable(f"{url} unreachable: {type(last).__name__}: {last}")
         latency_ms = round((time.monotonic() - t0) * 1000.0, 1)
 
         choices = data.get("choices") or [{}]
@@ -215,3 +229,11 @@ def schema_of(model_cls: Any, *, drop: tuple[str, ...] = ()) -> dict[str, Any]:
 __all__ = [
     "LLMReply", "ModelOutputInvalid", "ModelUnreachable", "Role", "StructuredLLM", "schema_of",
 ]
+
+
+def _wants_no_thinking(model: str, settings: Settings) -> bool:
+    """True when the served model is a Qwen3-family reasoning model (or forced by setting)."""
+    forced = getattr(settings, "casegen_disable_thinking", None)
+    if forced is not None:
+        return bool(forced)
+    return "qwen3" in (model or "").lower() or (model or "") == "acudx-llm"
