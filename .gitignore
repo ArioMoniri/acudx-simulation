@@ -45,3 +45,4 @@ server/data/*.db-journal
 # Playwright
 web/playwright-report/
 web/test-results/
+server/data/*.db-*
