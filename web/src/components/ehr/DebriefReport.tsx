@@ -42,6 +42,7 @@ import type { Bilingual, Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
 import type { Debrief, DxVerdict, TeachingPoint, WorkupItem } from "@/domain/debrief";
 import { getDiagnosis } from "@/domain/diagnosisCatalog";
+import { CaseDebriefLayer } from "@/components/ehr/CaseDebriefLayer";
 
 /* -------------------------------------------------------------------------- */
 /* Verdict presentation                                                        */
@@ -412,6 +413,9 @@ export function DebriefReport({ debrief, caseInstance, onClose, onViewReport }: 
             ))}
           </ol>
         </section>
+
+        {/* The model-written debrief of this encounter (the thread's debrief layer) */}
+        <CaseDebriefLayer className="mt-4" />
 
         {/* Footer actions */}
         <div className="mt-6 flex items-center justify-end gap-2 print:hidden">

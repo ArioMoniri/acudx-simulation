@@ -659,6 +659,7 @@ def gate_layer(layer: str, data: dict[str, Any], state: dict[str, Any]) -> tuple
         anchors, _ = resolve_anchors(list((state.get("kernel") or {}).get("anchor_ids") or []), cond)
         data = {"teaching_points": points, "missed_cues": [str(c) for c in data.get("missed_cues") or []],
                 "anchors": [{"statement_id": a["statement_id"], "statement_en": a["statement_en"],
+                             "statement_tr": a.get("statement_tr") or "", "title": a.get("title") or "",
                              "source": a["source"], "citation": a["citation"]} for a in anchors]}
     return data, notes
 

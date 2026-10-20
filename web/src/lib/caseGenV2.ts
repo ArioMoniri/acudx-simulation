@@ -5,7 +5,10 @@
  *   POST /v2/case/generate/stream   -> SSE (review 06a 4.6): start, kernel, opening.delta*,
  *                                      opening.ready, layer.pending / layer.ready, judge, done
  *   GET  /v2/case/{thread_id}/events?after=<id>  -> SSE reconnect for the same thread
+ *        (`&follow=1`: stays open after done; room members, Director updates)
  *   POST /v2/case/{thread_id}/layer/{layer}      -> one layer, generated on first access
+ *   POST /v2/case/{thread_id}/layer/{layer}/render -> a TR rendering of a layer already seen
+ *   POST /v2/case/{thread_id}/room | /join       -> bind a thread to a room; join as a member
  *   POST /v2/case/generate          -> CaseGenV2Result (the staged run, core layers in)
  *   POST /v2/director/step          -> DirectorStepResult (bound to thread_id)
  *   GET  /v2/case/{thread_id}       -> CaseThreadResult (server-authoritative case state)
@@ -267,6 +270,8 @@ export interface DirectorStepRequest {
   learner_id?: string | null;
   /** Allow the bounded narrator model call (default true server-side). */
   use_model?: boolean;
+  /** This browser tab: echoed on the thread's `director` event so a step is applied once. */
+  client_id?: string;
 }
 
 export interface DirectorStepResult {
@@ -284,6 +289,34 @@ export interface CaseLayerResult {
   status: "ready";
   data: Record<string, unknown>;
   spec: CaseGenV2Spec;
+}
+
+/** A rendering of a layer in another UI language (the source text stays authoritative). */
+export interface CaseRenderResult extends CaseLayerResult {
+  locale: "tr";
+}
+
+/** The debrief layer (server/orchestration/staged.py, gate_layer "debrief"). */
+export interface DebriefAnchor {
+  statement_id: string;
+  statement_en: string;
+  statement_tr?: string;
+  title?: string;
+  source: string;
+  /** URL or DOI of the verified guideline statement. */
+  citation: string;
+}
+
+export interface DebriefLayerData {
+  teaching_points: string[];
+  missed_cues: string[];
+  anchors: DebriefAnchor[];
+}
+
+/** A Director step as it lands on the thread log for every room member. */
+export interface DirectorThreadEvent extends DirectorStepResult {
+  client_id?: string | null;
+  action: DirectorAction;
 }
 
 export interface MyCaseRow {
@@ -311,10 +344,24 @@ export type CaseGenV2Event = (
   | { event: "opening.ready"; thread_id: string; opening: Record<string, unknown>; spec: CaseGenV2Spec; timings?: Record<string, number> }
   | { event: "layer.pending"; layer: string; reason: string }
   | { event: "layer.ready"; layer: string; data: Record<string, unknown>; spec: CaseGenV2Spec }
+  | { event: "layer.rendered"; layer: string; locale: string; data: Record<string, unknown>; spec: CaseGenV2Spec }
+  | ({ event: "director" } & DirectorThreadEvent)
   | { event: "judge"; layer: string; decision: "accept" | "patched" | "noted" | "rejected"; issues?: string[]; spec?: CaseGenV2Spec; blocking?: boolean }
   | { event: "node"; node: string; status: string | null; trace: TraceEvent[]; council?: CouncilVerdict }
   | { event: "done"; thread_id: string; spec: CaseGenV2Spec | null; trace_summary?: TraceSummary; timings?: Record<string, number> }
-  | { event: "error"; error: string; status: number; detail?: string; thread_id?: string; stage?: string; retryable?: boolean; fatal?: boolean }
+  | {
+      event: "error";
+      error: string;
+      status: number;
+      detail?: string;
+      /** One plain sentence for a failed layer (safety_veto, model_unreachable, ...). */
+      reason?: string;
+      issues?: string[];
+      thread_id?: string;
+      stage?: string;
+      retryable?: boolean;
+      fatal?: boolean;
+    }
 ) & { id?: number };
 
 /* -------------------------------------------------------------------------- */
@@ -415,16 +462,65 @@ export function generateCaseV2(
   );
 }
 
+/** Body of a layer read: why it is read, and (debrief on commit) the committed diagnosis. */
+export interface LayerReadBody {
+  reason?: string;
+  diagnosis?: { code: string; display: string };
+}
+
 /** One layer of a case, generated on first access (or awaited while the continuation writes it). */
 export function readCaseLayer(
   threadId: string,
   layer: string,
-  opts: RequestOptions = {},
+  opts: RequestOptions & { body?: LayerReadBody } = {},
 ): Promise<BackendResult<CaseLayerResult>> {
   return request<CaseLayerResult>(
     `/v2/case/${encodeURIComponent(threadId)}/layer/${encodeURIComponent(layer)}`,
-    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ reason: "access" }) },
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(opts.body ?? { reason: "access" }) },
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.layer,
+    opts.signal,
+  );
+}
+
+/** A TR rendering of a layer the learner has seen (one model call per layer, cached on the thread). */
+export function renderCaseLayer(
+  threadId: string,
+  layer: string,
+  locale: "tr",
+  opts: RequestOptions = {},
+): Promise<BackendResult<CaseRenderResult>> {
+  return request<CaseRenderResult>(
+    `/v2/case/${encodeURIComponent(threadId)}/layer/${encodeURIComponent(layer)}/render`,
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ locale }) },
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.layer,
+    opts.signal,
+  );
+}
+
+/** The owner binds the thread to a team room by its join code (members may then read it). */
+export function bindRoomThread(
+  threadId: string,
+  roomCode: string,
+  opts: RequestOptions = {},
+): Promise<BackendResult<{ thread_id: string; room: boolean }>> {
+  return request<{ thread_id: string; room: boolean }>(
+    `/v2/case/${encodeURIComponent(threadId)}/room`,
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ room_code: roomCode }) },
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.read,
+    opts.signal,
+  );
+}
+
+/** A room member joins the room's thread with the room's join code. */
+export function joinRoomThread(
+  threadId: string,
+  roomCode: string,
+  opts: RequestOptions = {},
+): Promise<BackendResult<{ thread_id: string; member: boolean; last_event_id: number }>> {
+  return request<{ thread_id: string; member: boolean; last_event_id: number }>(
+    `/v2/case/${encodeURIComponent(threadId)}/join`,
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ room_code: roomCode }) },
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.read,
     opts.signal,
   );
 }
@@ -640,6 +736,63 @@ export async function streamCaseGenV2(
     }
   })();
   return opening;
+}
+
+export interface FollowOptions {
+  signal: AbortSignal;
+  onEvent: (event: CaseGenV2Event) => void;
+  /** Replay the log after this id (0: the whole thread). */
+  after?: number;
+  /** Pause between reconnects after the server cap or a dropped stream (ms). */
+  reconnectDelayMs?: number;
+}
+
+/**
+ * Follow a thread's event log (`GET /v2/case/{t}/events?follow=1`): every event after
+ * `after`, then later layers, renderings and Director steps, reconnecting from the last id
+ * until `signal` aborts. Resolves with the reason it stopped; never throws.
+ */
+export async function followCaseEvents(
+  threadId: string,
+  opts: FollowOptions,
+): Promise<"aborted" | "forbidden" | "error"> {
+  let lastId = opts.after ?? 0;
+  const delay = opts.reconnectDelayMs ?? 1_000;
+  let failures = 0;
+  while (!opts.signal.aborted) {
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/v2/case/${encodeURIComponent(threadId)}/events?after=${lastId}&follow=1`,
+        { headers: { ...(await identityHeaders()), accept: "text/event-stream" }, signal: opts.signal },
+      );
+      if (res.status === 404 || res.status === 401 || res.status === 403) return "forbidden";
+      if (!res.ok || !res.body) throw new Error(`http_${res.status}`);
+      failures = 0;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        const parsed = parseSseBuffer(buffer);
+        buffer = parsed.rest;
+        for (const ev of parsed.events) {
+          if (typeof ev.id === "number") lastId = Math.max(lastId, ev.id);
+          if (ev.event === "error" && ev.error === "stream_timeout") continue;
+          opts.onEvent(ev);
+        }
+      }
+    } catch {
+      if (opts.signal.aborted) return "aborted";
+      failures += 1;
+      if (failures > 5) return "error";
+    }
+    if (opts.signal.aborted) break;
+    // watchdog: allow pause between reconnects of a real server stream, not a simulated server
+    await new Promise((r) => setTimeout(r, delay * Math.max(1, failures)));
+  }
+  return "aborted";
 }
 
 /** Provenance guard (owner decision): a learner case must be model-generated on request. */

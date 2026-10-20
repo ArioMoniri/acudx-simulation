@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { ArrowClockwise, CircleNotch, Warning } from "@phosphor-icons/react";
 
-import { getCaseLayers, retryCaseLayer, useEncounterSelector } from "@/state/encounterStore";
+import { getCaseLayers, retryCaseLayer, useEncounterSelector, type EncounterState } from "@/state/encounterStore";
 import { cn } from "@/lib/cn";
 
 /**
@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 export function LayerStrip({ className }: { className?: string }) {
   const { t } = useTranslation();
   const layers = useEncounterSelector(getCaseLayers);
+  const errors = useEncounterSelector((s: EncounterState) => s.layerErrors);
   const open = Object.entries(layers).filter(([, s]) => s !== "ready");
   if (open.length === 0) return null;
   const nameOf = (layer: string) => {
@@ -32,7 +33,9 @@ export function LayerStrip({ className }: { className?: string }) {
         status === "failed" ? (
           <span key={layer} className="inline-flex items-center gap-1.5 rounded-control border border-border px-2 py-1">
             <Warning weight="fill" className="h-3.5 w-3.5 text-[color:var(--state-caution)]" aria-hidden />
-            {t("oncase.layers.failed", { layer: nameOf(layer) })}
+            {errors[layer]?.error === "safety_veto"
+              ? t("oncase.layers.rejected", { layer: nameOf(layer) })
+              : t("oncase.layers.failed", { layer: nameOf(layer) })}
             <button
               type="button"
               onClick={() => retryCaseLayer(layer)}
@@ -45,7 +48,9 @@ export function LayerStrip({ className }: { className?: string }) {
         ) : (
           <span key={layer} className="inline-flex items-center gap-1.5 rounded-control border border-dashed border-border px-2 py-1">
             <CircleNotch weight="bold" className="h-3.5 w-3.5 motion-safe:animate-spin" aria-hidden />
-            {t("oncase.layers.pending", { layer: nameOf(layer) })}
+            {layer === "treatments" && errors[layer]
+              ? t("oncase.treatments.regenerating")
+              : t("oncase.layers.pending", { layer: nameOf(layer) })}
           </span>
         ),
       )}

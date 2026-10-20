@@ -373,6 +373,61 @@ test.describe("cases are generated on request", () => {
     await expect.poll(async () => Math.abs((await read("SpO2")) - DIRECTOR_VITALS.spo2), { message: "SpO2 follows the Director", timeout: 15_000 }).toBeLessThanOrEqual(3);
   });
 
+  test("a vetoed treatment table blocks administration until a safe one lands (06b F30)", async ({ page }) => {
+    const gw = await signIn(page);
+    const rec = LIVE[0];
+    const threadId = "th-f30";
+    const spec = (treatments: string) => ({
+      ...rec.spec,
+      meta: { ...rec.spec.meta, source: "model", pipeline: "staged", thread_id: threadId, layers: { treatments } },
+    });
+    const layerReads: number[] = [];
+    let releaseFirst: () => void = () => undefined;
+    const firstHeld = new Promise<void>((r) => {
+      releaseFirst = r;
+    });
+    await page.route(
+      (url) => url.pathname === "/api/v2/case/generate/stream" || url.pathname === `/api/v2/case/${threadId}/layer/treatments`,
+      async (route) => {
+        const path = new URL(route.request().url()).pathname;
+        if (path.endsWith("/stream")) {
+          gw.calls.push({ method: "POST", path, body: null });
+          gw.served.push(rec);
+          return route.fulfill({
+            status: 200, headers: { "content-type": "text/event-stream" },
+            body: sse("start", { thread_id: threadId })
+              + sse("opening.ready", { thread_id: threadId, opening: {}, spec: spec("pending") })
+              + sse("layer.pending", { layer: "treatments", reason: "continuation" })
+              + sse("error", { stage: "treatments", error: "safety_veto", status: 502, retryable: true, thread_id: threadId,
+                               reason: "The safety review rejected the treatment table after the rewrite.", issues: ["unsafe dose"] }),
+          });
+        }
+        layerReads.push(layerReads.length + 1);
+        if (layerReads.length === 1) {
+          await firstHeld;
+          return route.fulfill({ status: 502, json: { error: "safety_veto", detail: "rejected again", retryable: true } });
+        }
+        return route.fulfill({ json: { thread_id: threadId, layer: "treatments", status: "ready", data: {}, spec: spec("ready") } });
+      },
+    );
+    await openEncounter(page, gw);
+    await openTab(page, "Orders");
+    await page.getByRole("tab", { name: /^Treatments/ }).click();
+    const notice = page.getByTestId("treatment-table-notice");
+    // Regenerated once on its own: nothing pre-made is shown and nothing can be given.
+    await expect(notice.getByText("Treatment options are being regenerated")).toBeVisible({ timeout: 15_000 });
+    const administer = page.getByRole("button", { name: /^Administer / }).first();
+    await expect(administer).toBeDisabled();
+    releaseFirst();
+    // Rejected again: the failure is shown with Retry for that layer only.
+    await expect(notice.getByText("The safety review rejected the treatment options for this patient")).toBeVisible();
+    await expect(administer).toBeDisabled();
+    await notice.getByRole("button", { name: "Retry" }).click();
+    await expect(notice).toHaveCount(0, { timeout: 15_000 });
+    await expect(administer).toBeEnabled();
+    expect(layerReads).toHaveLength(2);
+  });
+
   test("the patient reply reflects the Director's utterance", async ({ page }) => {
     const gw = await signIn(page);
     await openEncounter(page, gw);

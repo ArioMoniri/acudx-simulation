@@ -27,6 +27,7 @@ import {
 } from "@/components/ui";
 import { PatientBanner, SimBadge } from "@/components/ehr";
 import { InterviewTab } from "@/components/ehr/tabs/InterviewTab";
+import { LayerStrip } from "@/components/ehr/LayerStrip";
 import {
   RoomCard,
   CreateRoomDialog,
@@ -79,10 +80,11 @@ import { roomCase, effectiveHolder, type ClinicalRole, type Room } from "@/data/
 import {
   getEncounterSnapshot,
   resetEncounter,
+  setDirectorClockEnabled,
   startGeneratedEncounter,
   useEncounterState,
 } from "@/state/encounterStore";
-import { endCaseSession, requestCase } from "@/lib/caseSession";
+import { endCaseSession, followCase, requestCase } from "@/lib/caseSession";
 import type { ChiefComplaintFamily } from "@/domain/caseGen";
 
 /* -------------------------------------------------------------------------- */
@@ -303,6 +305,24 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.id, caseInstance == null, threadId]);
+  // Every member follows the room's thread (doc 15 12.7): the learner who requested it binds
+  // it to the room's code, the others join with the code; later layers, renderings and every
+  // member's Director steps then reach this device. Only the owner's clock ticks the course.
+  const joinCode = room.joinCode;
+  const following = Boolean(caseInstance && threadId);
+  useEffect(() => {
+    if (!following || !threadId || !joinCode) return;
+    const controller = new AbortController();
+    setDirectorClockEnabled(false);
+    void followCase(threadId, joinCode, {
+      signal: controller.signal,
+      onAccess: ({ owner }) => setDirectorClockEnabled(owner),
+    });
+    return () => {
+      controller.abort();
+      setDirectorClockEnabled(true);
+    };
+  }, [following, threadId, joinCode]);
   useEffect(() => () => {
     endCaseSession();
     resetEncounter();
@@ -440,6 +460,10 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
   }
 
   const affectLabel = t("encounter.affect.distress");
+  // The live case of the room's thread: the snapshot's opening plus every layer, rendering
+  // and Director update that reached this device on the thread (doc 15 12.7).
+  const shownCase =
+    threadId && state.generation?.threadId === threadId && state.caseInstance ? state.caseInstance : caseInstance;
   const loopStats = closedLoopStats(runtime.floor);
   const tally = taskTally(roomCaseState);
   const debriefLoop = {
@@ -507,7 +531,8 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
 
       {/* Sticky role-scoped patient banner (shared Case State) */}
       <motion.div {...top}>
-        <PatientBanner caseInstance={caseInstance} lang={lang} />
+        <PatientBanner caseInstance={shownCase} lang={lang} />
+        <LayerStrip className="mt-2" />
       </motion.div>
 
       {/* Workspace: main interaction + room rail */}
@@ -551,7 +576,7 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
             {actingRole === "doctor" ? (
               <TabsContent value="interview">
                 <InterviewTab
-                  caseInstance={caseInstance}
+                  caseInstance={shownCase}
                   lang={lang}
                   affectLabel={affectLabel}
                   guidanceOn={guidanceOn}

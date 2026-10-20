@@ -27,7 +27,8 @@
         "results": "Sonuçlar",
         "debrief": "Değerlendirme",
         "event": "Yatak başı olay"
-      }
+      },
+      "rejected": "{{layer}} güvenlik incelemesince reddedildi"
     },
     "unavailable": {
       "title": "Vaka üreticisine ulaşılamıyor",
@@ -54,6 +55,24 @@
     "recommended": {
       "hint": "Bunlardan birini açtığınızda yeni bir vaka yazılır.",
       "row": "{{family}}, zorluk {{difficulty}}"
+    },
+    "treatments": {
+      "writing": "Tedavi seçenekleri bu hasta için yazılıyor",
+      "regenerating": "Tedavi seçenekleri yeniden yazılıyor",
+      "rejected": "Güvenlik incelemesi bu hastanın tedavi seçeneklerini reddetti",
+      "failed": "Tedavi seçenekleri yazılamadı",
+      "safetyReason": "Güvenlik incelemesi güvenli olmayan bir ilaç ya da doz buldu ve tabloyu yeniden yazımdan sonra reddetti. Yerine başka bir şey gösterilmez.",
+      "blocked": "Tedavi tablosu gelene kadar uygulama yapılamaz."
+    },
+    "debrief": {
+      "title": "Bu karşılaşma için yazılan değerlendirme",
+      "writing": "Değerlendirmeniz bu karşılaşma için yazılıyor",
+      "failed": "Değerlendirme yazılamadı",
+      "teaching": "Öğretim noktaları",
+      "missed": "Yakalayabileceğiniz ipuçları",
+      "sources": "Kılavuz kaynakları",
+      "noSources": "Bu vakaya doğrulanmış bir kılavuz ifadesi bağlanmadı.",
+      "rendered": "Türkçe gösteriliyor; vaka İngilizce yazıldı."
     }
   }
 }
