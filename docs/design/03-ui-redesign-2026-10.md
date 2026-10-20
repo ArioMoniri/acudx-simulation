@@ -44,9 +44,9 @@ Not adopted on purpose: the dark marketing heroes (Vizcom, Norma, Craft) because
 
 - Type: Inter for all UI including headings; Manrope only on the `display` utility (landing headline and the wordmark); Geist Mono for codes, identifiers and values. Base size 14 px, line height 1.5. Scale: 11 (eyebrow), 12 (caption), 13 (table and secondary), 14 (body), 16 (section title), 18 and 20 (page title), 28 to 36 (display).
 - Spacing: a tighter 4 px grid. Cards use 12 to 16 px padding, tables 8 px by 12 px cells, page gutters 16 px on phone and 24 px from md.
-- Neutral surfaces: a true neutral ramp (`--bg` #f4f5f6, `--surface` #ffffff, `--bg-inset` #eceef0, `--border` #e2e4e8, `--border-strong` #cbd0d6, `--fg` #15181d, `--fg-muted` #596270, `--fg-subtle` #6b7280). Dark theme mirrors the ramp.
+- Neutral surfaces: a true neutral ramp (`--bg` #f4f5f6, `--surface` #ffffff, `--bg-inset` #eceef0, `--border` #e2e4e8, `--border-strong` #cbd0d6, `--fg` #15181d, `--fg-muted` #596270, `--fg-subtle` #626975). Dark theme mirrors the ramp.
 - One accent: `--brand-600` #0f766e (5.4:1 on white) with #2dd4bf on dark. The teal, blue and pink gradient variables are gone; chart series colours are now `--chart-1` to `--chart-4`.
-- Clinical colours: `--state-normal` #047857, `--state-caution` #b45309, `--state-warning` #c2410c, `--state-critical` #b91c1c. All four are at least 4.5:1 on white and on their 12 percent tints, so they can label text. Dark values are lightened and re-verified.
+- Clinical colours: `--state-normal` #04694a, `--state-caution` #9a4508, `--state-warning` #a83508, `--state-critical` #b01b1b. All four are at least 6.6:1 on white and at least 4.7:1 on their own 12 percent tint laid over the darkest ground (`--bg-inset`), so a chip can label text on any surface. Dark values are lightened and re-verified.
 - Radius: `--r-card` 6 px, `--r-control` 4 px, `--r-chip` 4 px. The pill radius remains only for the status dot.
 - Shadows: `--shadow-sm` none, `--shadow-md` a 1 px hairline lift, `--shadow-pop` for overlays only. No glow, no gradients, no backdrop blur.
 - Motion: `--dur-fast` 120 ms, `--dur-base` 160 ms, `--dur-slow` 200 ms. `lib/motion.ts` uses the same values, a 4 px travel and a 30 ms stagger. `prefers-reduced-motion` collapses everything.

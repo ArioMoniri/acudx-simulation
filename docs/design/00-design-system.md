@@ -67,26 +67,26 @@ All pairings below meet WCAG 2.2 AA (4.5:1 for body text, 3:1 for large text and
   --surface-2: #f8f9fa;   /* table head, striped rows */
   --fg: #15181d;
   --fg-muted: #596270;    /* 6.3:1 on white */
-  --fg-subtle: #6b7280;   /* 4.8:1 on white */
+  --fg-subtle: #626975;   /* 5.5:1 on white, 5.1:1 on the ground, 4.8:1 on inset */
   --border: #e2e4e8;
   --border-strong: #cbd0d6;
 
   /* Clinical semantic states (never colour alone, section 3.4) */
-  --state-normal: #047857;    /* 4.9:1 */
-  --state-caution: #b45309;   /* 4.9:1 */
-  --state-warning: #c2410c;   /* 5.0:1 */
-  --state-critical: #b91c1c;  /* 5.9:1 */
+  --state-normal: #04694a;    /* 6.7:1; 4.9:1 on its tint over inset */
+  --state-caution: #9a4508;   /* 6.9:1; 4.7:1 on its tint over inset */
+  --state-warning: #a83508;   /* 6.6:1; 4.7:1 on its tint over inset */
+  --state-critical: #b01b1b;  /* 7.0:1; 4.9:1 on its tint over inset */
 
   /* ESI ramp 1 to 5 */
-  --esi-1: #b91c1c; --esi-2: #c2410c; --esi-3: #b45309; --esi-4: #047857; --esi-5: #0e7490;
+  --esi-1: #b01b1b; --esi-2: #a83508; --esi-3: #9a4508; --esi-4: #04694a; --esi-5: #0e7490;
 
   /* Chart series (categorical, never decorative) */
-  --chart-1: #0f766e; --chart-2: #2563eb; --chart-3: #7c3aed; --chart-4: #b45309;
+  --chart-1: #0f766e; --chart-2: #2563eb; --chart-3: #7c3aed; --chart-4: #9a4508;
 
   /* Feedback dual-axis and calibration */
   --axis-clinical: #2563eb;
   --axis-communication: #7c3aed;
-  --calib-line: #15181d; --calib-over: #b45309; --calib-under: #2563eb; --calib-well: #047857;
+  --calib-line: #15181d; --calib-over: #9a4508; --calib-under: #2563eb; --calib-well: #04694a;
 
   /* Radius: 4 to 6 px; the pill radius is only for status dots */
   --r-card: 6px;
@@ -197,10 +197,10 @@ Every clinical state MUST carry **three** redundant channels: **colour + Phospho
 
 | State | Colour var | Phosphor icon | Text label (EN / TR) | ARIA |
 |---|---|---|---|---|
-| Normal | `--state-normal` #047857 | `CheckCircle` | "Normal" / "Normal" | `aria-label`, not an alert |
-| Caution / elevated | `--state-caution` #b45309 | `Eye` | "Watch" / "İzle" | `role="status"`, polite |
-| Warning / abnormal | `--state-warning` #c2410c | `Warning` | "Abnormal" / "Anormal" | `role="status"`, polite |
-| Critical | `--state-critical` #b91c1c | `WarningOctagon` | "Critical" / "Kritik" | `role="alert"`, assertive |
+| Normal | `--state-normal` #04694a | `CheckCircle` | "Normal" / "Normal" | `aria-label`, not an alert |
+| Caution / elevated | `--state-caution` #9a4508 | `Eye` | "Watch" / "İzle" | `role="status"`, polite |
+| Warning / abnormal | `--state-warning` #a83508 | `Warning` | "Abnormal" / "Anormal" | `role="status"`, polite |
+| Critical | `--state-critical` #b01b1b | `WarningOctagon` | "Critical" / "Kritik" | `role="alert"`, assertive |
 
 A vitals value out of range shows the arrow direction (`states.aboveRange` / `belowRange`) and the state icon and shifts numeral weight. Critical adds a pulsing ring (`pulse-ring`), static under reduced motion. Screen-reader announcement mirrors all channels.
 

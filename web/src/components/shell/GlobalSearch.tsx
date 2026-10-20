@@ -66,7 +66,7 @@ export function GlobalSearch({ className }: { className?: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label={t("nav.search", { defaultValue: "Search" })}
+        aria-keyshortcuts="Control+K Meta+K"
         className={cn(
           "inline-flex h-8 items-center gap-2 rounded-control border border-border bg-bg-subtle px-2.5",
           "text-[0.8125rem] text-muted transition-colors duration-[120ms] hover:border-border-strong hover:text-fg",
@@ -74,8 +74,9 @@ export function GlobalSearch({ className }: { className?: string }) {
         )}
       >
         <MagnifyingGlass weight="bold" className="h-4 w-4" aria-hidden />
-        <span className="hidden md:inline">{t("nav.search", { defaultValue: "Search" })}</span>
-        <kbd className="ms-1 hidden rounded-chip border border-border bg-surface px-1 font-mono text-[0.625rem] text-subtle md:inline">
+        {/* The visible label is the accessible name (sr-only on phones). */}
+        <span className="sr-only md:not-sr-only">{t("nav.search", { defaultValue: "Search" })}</span>
+        <kbd aria-hidden="true" className="ms-1 hidden rounded-chip border border-border bg-surface px-1 font-mono text-[0.625rem] text-subtle md:inline">
           {"⌘"}K
         </kbd>
       </button>

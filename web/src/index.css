@@ -33,28 +33,28 @@
   --surface-2: #f8f9fa; /* table head, striped rows */
   --fg: #15181d;
   --fg-muted: #596270; /* secondary text, 6.3:1 on white */
-  --fg-subtle: #6b7280; /* tertiary text, labels, 4.8:1 on white */
+  --fg-subtle: #626975; /* tertiary text, labels: 5.5:1 on white, 5.1:1 on the ground, 4.8:1 on inset */
   --border: #e2e4e8; /* default hairline */
   --border-strong: #cbd0d6; /* inputs, emphasised rules */
 
   /* ---- Clinical semantic states (NEVER colour alone) ---- */
-  --state-normal: #047857; /* 4.9:1 on white */
-  --state-caution: #b45309; /* 4.9:1 on white */
-  --state-warning: #c2410c; /* 5.0:1 on white */
-  --state-critical: #b91c1c; /* 5.9:1 on white */
+  --state-normal: #04694a; /* 6.7:1 on white, 4.9:1 on its tint over inset */
+  --state-caution: #9a4508; /* 6.9:1 on white, 4.7:1 on its tint over inset */
+  --state-warning: #a83508; /* 6.6:1 on white, 4.7:1 on its tint over inset */
+  --state-critical: #b01b1b; /* 7.0:1 on white, 4.9:1 on its tint over inset */
 
   /* ESI / triage acuity ramp (1 = resuscitation ... 5 = non-urgent) */
-  --esi-1: #b91c1c;
-  --esi-2: #c2410c;
-  --esi-3: #b45309;
-  --esi-4: #047857;
+  --esi-1: #b01b1b;
+  --esi-2: #a83508;
+  --esi-3: #9a4508;
+  --esi-4: #04694a;
   --esi-5: #0e7490;
 
   /* ---- Chart series (categorical, no decorative use) ---- */
   --chart-1: #0f766e;
   --chart-2: #2563eb;
   --chart-3: #7c3aed;
-  --chart-4: #b45309;
+  --chart-4: #9a4508;
 
   /* ---- Feedback dual-axis (orthogonal, always paired with icon) ---- */
   --axis-clinical: #2563eb;
@@ -62,9 +62,9 @@
 
   /* ---- Calibration (directional, never good/bad) ---- */
   --calib-line: #15181d;
-  --calib-over: #b45309;
+  --calib-over: #9a4508;
   --calib-under: #2563eb;
-  --calib-well: #047857;
+  --calib-well: #04694a;
 
   /* ---- Radius (4 to 6 px; pills only for status dots) ---- */
   --r-card: 6px;
@@ -225,6 +225,10 @@
   }
 
   html {
+    /* Keep scrolled-to targets clear of the 48 px top bar and, below lg, the
+       56 px bottom tab bar. */
+    scroll-padding-top: 3.5rem;
+    scroll-padding-bottom: 4rem;
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;

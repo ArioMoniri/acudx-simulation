@@ -74,7 +74,7 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
   return (
     <header
       aria-label={t("ehr.banner.label")}
-      className="sticky top-12 z-30 -mx-4 border-b border-border bg-surface md:-mx-6"
+      className="relative z-30 -mx-4 border-b border-border bg-surface md:sticky md:top-12 md:-mx-6"
     >
       {/* Identity row */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 md:px-6">

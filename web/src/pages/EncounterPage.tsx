@@ -564,7 +564,7 @@ export function EncounterPage() {
 
   return (
     <PageContainer width="wide" className="flex flex-col gap-3 pt-0 md:pt-0">
-      <motion.div {...top} className="sticky top-12 z-30">
+      <motion.div {...top} className="relative z-30 md:sticky md:top-12">
         <PatientBanner caseInstance={caseInstance} lang={lang} toolbar={toolbar} />
       </motion.div>
 

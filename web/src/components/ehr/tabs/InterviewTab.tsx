@@ -894,8 +894,10 @@ export function InterviewTab({
         </div>
       </div>
 
-      {/* Patient presence + ask / examine chips */}
-      <div className="flex flex-col gap-4">
+      {/* Patient presence + ask / examine chips. On lg+ the column is a sticky,
+          self-scrolling rail under the banner: the call tile stays pinned at its
+          top while the transcript scrolls, and the chips scroll inside it. */}
+      <div className="flex flex-col gap-4 lg:sticky lg:top-[10.5rem] lg:max-h-[calc(100dvh-11.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:pe-1">
         <PatientPresence
           caseInstance={caseInstance}
           vitals={vitals}
@@ -1253,7 +1255,7 @@ function PatientPresence({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-3 lg:sticky lg:top-[calc(3rem+var(--banner-h,7.5rem))]">
+    <div className="flex flex-col gap-3">
       <PatientCallTile
         caseInstance={caseInstance}
         vitals={vitals}

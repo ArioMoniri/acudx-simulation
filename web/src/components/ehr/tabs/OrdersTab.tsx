@@ -290,7 +290,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
       {/* Live order worklist */}
       <motion.aside
         {...summaryReveal}
-        className="flex h-max min-w-0 flex-col gap-2 lg:sticky lg:top-[calc(3rem+var(--banner-h,7.5rem))]"
+        className="flex h-max min-w-0 flex-col gap-2 lg:sticky lg:top-[10.5rem] lg:max-h-[calc(100dvh-11.5rem)] lg:overflow-y-auto"
       >
         <div className="flex items-baseline justify-between gap-2 border-b border-border pb-1.5">
           <h3 className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-fg">

@@ -18,7 +18,8 @@ export interface ProfileOptions {
  */
 export async function createProfile(page: Page, opts: ProfileOptions = {}): Promise<void> {
   await offlineGateway(page);
-  const role: Role = opts.role ?? "student";
+  // The profile form names the educator role "faculty" (profileStore PROFILE_ROLES).
+  const role = opts.role === "educator" ? "faculty" : (opts.role ?? "student");
   const fullName = opts.fullName ?? `E2E ${role} ${Date.now().toString(36)}`;
   const institution = opts.institution ?? "AcuDx E2E Faculty of Medicine";
 
