@@ -261,7 +261,12 @@ class StructuredLLM:
         role: Role,
         temperature: float,
         max_tokens: int,
+        on_text: Optional[Callable[[str], Any]] = None,
     ) -> LLMReply:
+        """One structured completion. With ``on_text`` the call streams (``stream: true``,
+        review 06a 4.4 item 6) and ``on_text(accumulated_text)`` runs after every
+        content delta, so a caller can parse partial JSON and show fields as they
+        arrive. The final reply is parsed exactly like a non-streamed one."""
         ep = self.endpoints[role]
         try:
             self.settings.guard_egress(ep.base_url)
@@ -273,12 +278,14 @@ class StructuredLLM:
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
-            "stream": False,
+            "stream": on_text is not None,
             "response_format": {
                 "type": "json_schema",
                 "json_schema": {"name": schema_name, "schema": schema, "strict": False},
             },
         }
+        if on_text is not None:
+            payload["stream_options"] = {"include_usage": True}
         if wants_no_thinking(ep.model, self.settings):
             # Qwen3-family models otherwise spend the token budget on hidden reasoning
             # before the JSON; vLLM and SGLang accept chat_template_kwargs.
@@ -294,7 +301,10 @@ class StructuredLLM:
         t0 = time.monotonic()
         cid = self._begin(ep.base_url)
         try:
-            data = await self._post_with_retries(client, url, payload, headers)
+            if on_text is not None:
+                data = await self._post_stream(client, url, payload, headers, on_text)
+            else:
+                data = await self._post_with_retries(client, url, payload, headers)
         except (ModelUnreachable, ModelOutputInvalid) as exc:
             latency_ms = round((time.monotonic() - t0) * 1000.0, 1)
             concurrency = self._end(ep.base_url, cid)
@@ -365,6 +375,79 @@ class StructuredLLM:
         if data is None:
             raise ModelUnreachable(f"{url} unreachable: {type(last).__name__}: {last}")
         return data
+
+    async def _post_stream(self, client: httpx.AsyncClient, url: str, payload: dict[str, Any],
+                           headers: dict[str, str], on_text: Callable[[str], Any]) -> dict[str, Any]:
+        """POST with ``stream: true`` and fold the OpenAI SSE chunks into one completion body.
+
+        Connection errors before the first byte are retried like a normal call; once
+        tokens have arrived a failure propagates (a half-streamed case is not replayed)."""
+        last: Exception | None = None
+        for attempt in range(self._retries + 1):
+            text = ""
+            usage: dict[str, Any] = {}
+            model = ""
+            finish = None
+            started = False
+            try:
+                async with client.stream("POST", url, json=payload,
+                                         headers={**headers, "Accept": "text/event-stream"}) as resp:
+                    if resp.status_code >= 500 or resp.status_code == 429:
+                        last = ModelUnreachable(f"{url} -> HTTP {resp.status_code}")
+                    elif resp.status_code >= 400:
+                        body = (await resp.aread()).decode("utf-8", "replace")
+                        raise ModelUnreachable(f"{url} -> HTTP {resp.status_code}: {body[:200]}")
+                    else:
+                        ctype = resp.headers.get("content-type", "")
+                        if "text/event-stream" not in ctype:
+                            # A server that ignored stream:true answered with one JSON body.
+                            data = json.loads((await resp.aread()).decode("utf-8"))
+                            choices = data.get("choices") or [{}]
+                            content = ((choices[0] or {}).get("message") or {}).get("content") or ""
+                            if content:
+                                res = on_text(content)
+                                if asyncio.iscoroutine(res):
+                                    await res
+                            return data
+                        async for line in resp.aiter_lines():
+                            if not line.startswith("data:"):
+                                continue
+                            chunk = line[5:].strip()
+                            if not chunk or chunk == "[DONE]":
+                                continue
+                            try:
+                                obj = json.loads(chunk)
+                            except json.JSONDecodeError:
+                                continue
+                            started = True
+                            model = str(obj.get("model") or model)
+                            if obj.get("usage"):
+                                usage = obj["usage"]
+                            for ch in obj.get("choices") or []:
+                                delta = (ch or {}).get("delta") or {}
+                                piece = delta.get("content")
+                                if piece:
+                                    text += piece
+                                    res = on_text(text)
+                                    if asyncio.iscoroutine(res):
+                                        await res
+                                if ch.get("finish_reason"):
+                                    finish = ch["finish_reason"]
+                        return {"model": model, "usage": usage,
+                                "choices": [{"message": {"content": text}, "finish_reason": finish}]}
+            except httpx.TimeoutException as exc:
+                last = exc
+                if started or not isinstance(exc, httpx.ConnectTimeout):
+                    break
+            except httpx.TransportError as exc:
+                last = exc
+                if started:
+                    break
+            except ValueError as exc:
+                raise ModelOutputInvalid(f"{url} returned a non-JSON body") from exc
+            if attempt < self._retries:
+                await asyncio.sleep(min(0.2 * (2 ** attempt), 1.0))
+        raise ModelUnreachable(f"{url} unreachable: {type(last).__name__}: {last}")
 
     async def probe(self, role: Role = "casegen") -> dict[str, Any]:
         """Reachability check used by the routes before starting a graph run."""

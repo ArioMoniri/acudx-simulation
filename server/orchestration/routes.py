@@ -1,30 +1,37 @@
-"""HTTP surface for the case generator v2 and the Clinical Director.
+"""HTTP surface for on-request case generation (staged, review 06a) and the Clinical Director.
 
-    POST /v2/case/generate          run the graph, return spec + trace summary
-    POST /v2/case/generate/stream   SSE: one event per graph node, then ``done``
-    POST /v2/case/template          deterministic template, meta.source="template"
-    POST /v2/director/step          one Director step for a learner action
-    GET  /v2/case/{thread_id}       checkpoint read (spec, status, trace)
-    GET  /v2/learner/{learner_id}   learner memory profile
+    POST /v2/case/generate/stream      SSE: start, kernel, opening.delta*, opening.ready, then the
+                                       same-thread continuation (layer.pending / layer.ready / judge)
+                                       and done. Contract: review 06a section 4.6.
+    GET  /v2/case/{thread_id}/events   SSE reconnect: replays the thread log after ``?after=<id>``
+    POST /v2/case/{thread_id}/layer/{layer}
+                                       one layer, generated on first access (or awaited when the
+                                       continuation is already writing it)
+    GET  /v2/case/{thread_id}          server-authoritative case state (CaseStore)
+    GET  /v2/cases/mine                the caller's own history of generated encounters
+    POST /v2/case/generate             the same staged run, answered when the core layers are in
+    POST /v2/director/step             one Director step, bound to ``thread_id`` (state from CaseStore)
+    GET  /v2/learner/{learner_id}      learner memory profile
+    POST /v2/case/template             410: templates are never served as learner cases
 
-Access (review 04 O3): ``GET /v2/learner/{learner_id}`` and ``GET /v2/case/{thread_id}``
-need a signed-in caller (``current_user``); a ``learner_id`` in a generate or Director body
+Owner decision (authoritative): every learner case is generated on request by the model
+pipeline and changes in flight. No pre-generated list, seed, curated or published library,
+or template is ever served to a learner as a case. Background continuation of deeper layers
+of the SAME requested case is allowed; nothing is generated ahead of a request.
+
+Access (review 04 O3): ``GET /v2/learner/{learner_id}`` and every ``/v2/case/{thread_id}``
+read need a signed-in caller (``current_user``); a ``learner_id`` in a generate or Director body
 needs one too. The caller may only name their own learner id (the principal ``sub``, which is
 the local profile id in local mode, or its ``user_hash``) unless they hold ``faculty`` or
-above. A checkpoint generated for a learner is readable by that learner and by faculty; for
+above. A thread generated for a learner is readable by that learner and by faculty; for
 anyone else it answers the same 404 as a missing thread.
 
-SSE streams are capped at ``SSE_MAX_DURATION_S`` (review 04 O11): a stuck node ends the
-stream with an ``error`` event (``stream_timeout``, 504) instead of holding the connection.
+SSE streams are capped at ``SSE_MAX_DURATION_S`` (review 04 O11): the stream then ends with an
+``error`` event (``stream_timeout``, 504) and the client reconnects with ``?after=``.
 
 Honesty rule: when the model endpoint is unreachable the generate routes answer
 ``503 model_unreachable``; when the model answers but not with a valid case,
-``502 model_output_invalid``. A template is never returned as a generated case.
-
-The :class:`OrchestrationRuntime` (checkpointer, store, LLM client, compiled
-graph) is created lazily on first use and cached on ``app.state`` so that
-``server/app.py`` only needs to mount the router. Tests build their own runtime
-with an in-process transport and swap it in.
+``502 model_output_invalid``. Nothing else is offered in its place.
 """
 
 from __future__ import annotations
@@ -39,36 +46,30 @@ from typing import Any, AsyncIterator, Optional
 import httpx
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.base import BaseStore
 from pydantic import BaseModel, Field
 
 from server.auth.deps import Principal, current_user, optional_user
 from server.config import EgressBlocked, Settings, get_settings
 from server.orchestration.director import Action, CaseState, anext_state
-from server.orchestration.graph import (
-    CaseGenDeps, build_casegen_graph, initial_state, template_spec,
-)
-from server.orchestration.llm import ModelOutputInvalid, ModelUnreachable, StructuredLLM, WorkerCostSource
+from server.orchestration.llm import StructuredLLM, WorkerCostSource
 from server.orchestration.memory import LearnerMemory, memory_store
+from server.orchestration.staged import (
+    StagedRuntime, director_state_from_spec, layers_for_action, refresh_director, valid_layer,
+)
+from server.orchestration.store import CaseStore
 from server.orchestration.trace import summarize
 from server.telemetry.events import bind_context, current_context, unbind_context
 
 router = APIRouter(prefix="/v2", tags=["orchestration"])
 
-# Hard server-side cap on one SSE generation stream (review 04 O11). It must
-# cover an author call, a judge round and one repair round at the 300 s
-# per-call budget of settings.casegen_timeout_s: at 180 s the acceptance run of
-# 2026-10-20 saw a live Qwen3-14B generation end in stream_timeout (504) at
-# 185 s, mid repair, so no model case ever reached the chart.
+# Hard server-side cap on one SSE connection (review 04 O11). The opening lands in well
+# under a minute; the continuation keeps writing layers after the cap and a client that
+# still wants them reconnects with GET /v2/case/{thread_id}/events?after=<last id>.
 SSE_MAX_DURATION_S = 600.0
 
-# Node order the SSE stream announces up front so a UI can render a progress rail.
-PIPELINE_NODES: tuple[str, ...] = (
-    "sample_condition", "author", "clinical_consistency", "safety_dosing", "pedagogy",
-    "aggregate", "repair", "ground", "finalize",
-)
+# How long a Director step or a layer read waits for a lazily generated layer.
+LAYER_WAIT_S = 60.0
 
 
 # --------------------------------------------------------------------------- #
@@ -78,12 +79,12 @@ PIPELINE_NODES: tuple[str, ...] = (
 class OrchestrationRuntime:
     settings: Settings
     llm: Optional[StructuredLLM]
-    checkpointer: BaseCheckpointSaver
     store: BaseStore
     memory: LearnerMemory
-    graph: Any
+    cases: CaseStore
+    staged: StagedRuntime
     db_path: Optional[str] = None
-    _conn: Any = field(default=None, repr=False)
+    _closed: bool = field(default=False, repr=False)
 
     @classmethod
     async def create(
@@ -92,11 +93,11 @@ class OrchestrationRuntime:
         *,
         transport: httpx.AsyncBaseTransport | None = None,
         db_path: str | None = None,
-        max_repairs: int = 2,
         in_memory: bool = False,
         telemetry: Any = None,
         worker_manager: Any = None,
-        time_budget_s: float | None = None,
+        continuation: bool = True,
+        **_legacy: Any,
     ) -> "OrchestrationRuntime":
         settings = settings or get_settings()
         llm: StructuredLLM | None
@@ -109,35 +110,23 @@ class OrchestrationRuntime:
             # routes report 503 for every model-backed call.
             llm = None
         path = None if in_memory else (db_path or settings.acudx_db_path)
-        conn = None
+        if path == ":memory:":
+            path = None
         if path:
-            import aiosqlite
-            from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-
             os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-            conn = await aiosqlite.connect(path)
-            checkpointer: BaseCheckpointSaver = AsyncSqliteSaver(conn)
-            await checkpointer.setup()
-        else:
-            checkpointer = InMemorySaver()
         store = memory_store(path)
         memory = LearnerMemory(store)
-        budget = time_budget_s if time_budget_s is not None else float(
-            getattr(settings, "casegen_time_budget_s", 120.0) or 120.0)
-        deps = CaseGenDeps(llm=llm, memory=memory, max_repairs=max_repairs, time_budget_s=budget)
-        graph = build_casegen_graph(deps).compile(checkpointer=checkpointer, store=store)
-        return cls(settings=settings, llm=llm, checkpointer=checkpointer, store=store,
-                   memory=memory, graph=graph, db_path=path, _conn=conn)
+        cases = CaseStore(path)
+        staged = StagedRuntime(llm, cases, memory, continuation=continuation)
+        return cls(settings=settings, llm=llm, store=store, memory=memory, cases=cases, staged=staged,
+                   db_path=path)
 
     async def aclose(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
         if self.llm is not None:
             await self.llm.aclose()
-        if self._conn is not None:
-            await self._conn.close()
-            self._conn = None
-
-    def config(self, thread_id: str) -> dict[str, Any]:
-        return {"configurable": {"thread_id": thread_id}}
 
 
 def _runtime_lock(state: Any) -> asyncio.Lock:
@@ -184,9 +173,33 @@ def _learner_guard(learner_id: str | None, user: Principal | None) -> JSONRespon
     return None
 
 
+def _thread_for(rt: OrchestrationRuntime, thread_id: str, user: Principal | None) -> dict[str, Any] | None:
+    """The thread state when ``user`` may read it; None for a missing or foreign thread.
+
+    A thread with an owner is readable by that owner and faculty. A thread generated
+    without a learner id is bound to the principal that requested it (``requester``),
+    so an anonymous or different caller cannot read another learner's case."""
+    st = rt.cases.get(thread_id)
+    if st is None or st.get("source") != "model":
+        return None
+    owner = st.get("owner") or st.get("requester")
+    if owner:
+        if user is None or not (owns_learner(user, str(owner))):
+            return None
+    return st
+
+
 # --------------------------------------------------------------------------- #
 # Wire models                                                                  #
 # --------------------------------------------------------------------------- #
+class Blueprint(BaseModel):
+    """Faculty generation constraints (never a fixed case): condition, difficulty, objectives."""
+
+    condition_id: str | None = None
+    difficulty: int | None = Field(default=None, ge=1, le=5)
+    objectives: list[str] = Field(default_factory=list)
+
+
 class GenerateV2Request(BaseModel):
     system: str | None = None
     difficulty: int | None = Field(default=None, ge=1, le=5)
@@ -196,14 +209,21 @@ class GenerateV2Request(BaseModel):
     learner_id: str | None = None
     session_id: str | None = None
     thread_id: str | None = None
+    blueprint: Blueprint | None = None
+    purpose: str | None = None     # "encounter" | "room" | "exam" | "authoring" (telemetry only)
 
 
 class DirectorStepRequest(BaseModel):
-    case_state: dict[str, Any] | None = None
-    spec: dict[str, Any] | None = None       # used to build the state when case_state is absent
+    thread_id: str | None = None
+    case_state: dict[str, Any] | None = None   # faculty diagnostics only
+    spec: dict[str, Any] | None = None         # faculty diagnostics only
     action: dict[str, Any]
     learner_id: str | None = None
     use_model: bool = True
+
+
+class LayerRequest(BaseModel):
+    reason: str | None = None
 
 
 def _error(status: int, code: str, detail: str, **extra: Any) -> JSONResponse:
@@ -215,110 +235,65 @@ def _unreachable(rt: OrchestrationRuntime, exc: Exception | None) -> JSONRespons
     return _error(
         503, "model_unreachable",
         "The case generator model endpoint could not be reached; no case was generated. "
-        "A deterministic template is available at POST /v2/case/template (meta.source=template).",
+        "Every case is generated on request by the model: retry when the model is reachable.",
         endpoint=(ep.base_url if ep else None), model=(ep.model if ep else None),
         cause=(f"{type(exc).__name__}: {str(exc)[:200]}" if exc else "AIRGAPPED blocks the configured endpoint"),
+        retryable=True,
     )
 
 
-# --------------------------------------------------------------------------- #
-# /v2/case/generate                                                            #
-# --------------------------------------------------------------------------- #
-@router.post("/case/generate")
-async def generate(req: GenerateV2Request, request: Request,
-                   user: Optional[Principal] = Depends(optional_user)) -> JSONResponse:
-    denied = _learner_guard(req.learner_id, user)
-    if denied is not None:
-        return denied
-    rt = await get_runtime(request)
+def _sse(event: str, data: dict[str, Any], eid: int | None = None) -> str:
+    head = f"id: {eid}\n" if eid is not None else ""
+    return f"{head}event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _gen_request(req: GenerateV2Request, user: Principal | None) -> dict[str, Any]:
+    body = req.model_dump(exclude={"thread_id", "blueprint"})
+    if req.blueprint is not None:
+        body["blueprint"] = req.blueprint.model_dump()
+    body["requester"] = user.sub if user is not None else None
+    return body
+
+
+async def _preflight(rt: OrchestrationRuntime) -> JSONResponse | None:
     if rt.llm is None:
         return _unreachable(rt, None)
-    thread_id = req.thread_id or str(uuid.uuid4())
-    state = initial_state(req.model_dump(exclude={"thread_id"}), thread_id)
-    try:
-        out = await rt.graph.ainvoke(state, rt.config(thread_id))
-    except ModelUnreachable as exc:
-        return _unreachable(rt, exc)
-    except ModelOutputInvalid as exc:
-        return _error(502, "model_output_invalid", str(exc)[:300], thread_id=thread_id)
-    trace = out.get("trace") or []
-    return JSONResponse(content={
-        "thread_id": thread_id,
-        "spec": out["spec"],
-        "trace_summary": summarize(trace),
-        "trace": trace,
-        "council": out.get("council"),
-    })
+    probe = await rt.llm.probe("casegen")
+    if not probe.get("reachable"):
+        return _unreachable(rt, None)
+    return None
 
 
-def _sse(event: str, data: dict[str, Any]) -> str:
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-
-async def _stream_events(rt: OrchestrationRuntime, req: GenerateV2Request,
-                         ctx: dict[str, Any] | None = None) -> AsyncIterator[str]:
+# --------------------------------------------------------------------------- #
+# Generation                                                                   #
+# --------------------------------------------------------------------------- #
+async def _tail_sse(rt: OrchestrationRuntime, thread_id: str, after: int,
+                    ctx: dict[str, Any] | None = None) -> AsyncIterator[str]:
     # The body runs after the request middleware returned, so the telemetry
     # context (route, tenant, user) captured in the handler is bound again here.
     token = bind_context(**(ctx or {"route": "/v2/case/generate/stream"}))
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + SSE_MAX_DURATION_S
+    last = after
+    finished = False
     try:
-        async for chunk in _stream_body(rt, req):
-            yield chunk
+        async for eid, name, data in rt.staged.tail(thread_id, after, cap_s=SSE_MAX_DURATION_S):
+            last = eid
+            yield _sse(name, data, eid)
+            if name == "done" or (name == "error" and data.get("fatal")):
+                finished = True
+        if not finished and loop.time() >= deadline - 0.05:
+            yield _sse("error", {"stage": "stream", "error": "stream_timeout", "status": 504, "retryable": True,
+                                 "thread_id": thread_id, "after": last,
+                                 "detail": f"stream exceeded the {SSE_MAX_DURATION_S:.0f} s cap; reconnect with "
+                                           f"GET /v2/case/{thread_id}/events?after={last}"})
     finally:
         unbind_context(token)
 
 
-async def _stream_body(rt: OrchestrationRuntime, req: GenerateV2Request) -> AsyncIterator[str]:
-    thread_id = req.thread_id or str(uuid.uuid4())
-    yield _sse("start", {"thread_id": thread_id, "pipeline": list(PIPELINE_NODES)})
-    state = initial_state(req.model_dump(exclude={"thread_id"}), thread_id)
-    final: dict[str, Any] | None = None
-    trace: list[dict[str, Any]] = []
-    loop = asyncio.get_running_loop()
-    deadline = loop.time() + SSE_MAX_DURATION_S
-    updates = rt.graph.astream(state, rt.config(thread_id), stream_mode="updates").__aiter__()
-    try:
-        while True:
-            # The cap wraps each pull, never a yield, so the timeout only ever cancels graph work.
-            remaining = deadline - loop.time()
-            if remaining <= 0:
-                raise TimeoutError
-            try:
-                update = await asyncio.wait_for(updates.__anext__(), remaining)
-            except StopAsyncIteration:
-                break
-            for node, payload in (update or {}).items():
-                if not isinstance(payload, dict):
-                    continue
-                events = payload.get("trace") or []
-                trace.extend(events)
-                data: dict[str, Any] = {"node": node, "status": payload.get("status"), "trace": events}
-                if node == "aggregate":
-                    data["council"] = payload.get("council")
-                if node == "finalize":
-                    final = payload.get("spec")
-                yield _sse("node", data)
-    except TimeoutError:
-        yield _sse("error", {"error": "stream_timeout", "status": 504, "thread_id": thread_id,
-                             "detail": f"generation exceeded the {SSE_MAX_DURATION_S:.0f} s stream cap"})
-        await _aclose_quietly(updates)
-        return
-    except ModelUnreachable as exc:
-        yield _sse("error", {"error": "model_unreachable", "status": 503, "detail": str(exc)[:300], "thread_id": thread_id})
-        return
-    except ModelOutputInvalid as exc:
-        yield _sse("error", {"error": "model_output_invalid", "status": 502, "detail": str(exc)[:300], "thread_id": thread_id})
-        return
-    yield _sse("done", {"thread_id": thread_id, "spec": final, "trace_summary": summarize(trace)})
-
-
-async def _aclose_quietly(it: Any) -> None:
-    close = getattr(it, "aclose", None)
-    if close is None:
-        return
-    try:
-        await close()
-    except (Exception, asyncio.CancelledError):  # noqa: BLE001 - a cancelled graph may raise on close
-        pass
+def _stream_response(body: AsyncIterator[str]) -> StreamingResponse:
+    return StreamingResponse(body, media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @router.post("/case/generate/stream")
@@ -328,46 +303,127 @@ async def generate_stream(req: GenerateV2Request, request: Request,
     if denied is not None:
         return denied
     rt = await get_runtime(request)
-    if rt.llm is None:
-        return _unreachable(rt, None)
-    probe = await rt.llm.probe("casegen")
-    if not probe.get("reachable"):
-        return _unreachable(rt, None)
+    blocked = await _preflight(rt)
+    if blocked is not None:
+        return blocked
+    if req.thread_id and rt.cases.get(req.thread_id) is not None:
+        return _error(409, "thread_exists", "a thread id names one request; reconnect with GET .../events")
+    thread_id = rt.staged.start(_gen_request(req, user), req.thread_id or str(uuid.uuid4()))
     ambient = current_context()
     ctx = {"route": ambient.route or request.url.path, "tenant": ambient.tenant,
            "user_hash": ambient.user_hash, "encounter_id": ambient.encounter_id}
-    return StreamingResponse(
-        _stream_events(rt, req, ctx), media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+    return _stream_response(_tail_sse(rt, thread_id, 0, ctx))
 
 
-@router.post("/case/template")
-async def template(req: GenerateV2Request) -> JSONResponse:
-    spec = template_spec(req.model_dump(exclude={"thread_id"}))
-    return JSONResponse(content={"spec": spec, "trace_summary": None})
+@router.get("/case/{thread_id}/events")
+async def case_events(thread_id: str, request: Request, after: int = 0,
+                      user: Optional[Principal] = Depends(optional_user)) -> Response:
+    rt = await get_runtime(request)
+    if _thread_for(rt, thread_id, user) is None:
+        return _error(404, "thread_not_found", f"no case thread {thread_id!r}")
+    last_id = request.headers.get("last-event-id") or ""
+    if last_id.isdigit():
+        after = max(after, int(last_id))
+    return _stream_response(_tail_sse(rt, thread_id, after))
+
+
+@router.post("/case/generate")
+async def generate(req: GenerateV2Request, request: Request,
+                   user: Optional[Principal] = Depends(optional_user)) -> JSONResponse:
+    """The staged run, answered when S1 and the core layers are in (authoring, API clients)."""
+    denied = _learner_guard(req.learner_id, user)
+    if denied is not None:
+        return denied
+    rt = await get_runtime(request)
+    if rt.llm is None:
+        return _unreachable(rt, None)
+    if req.thread_id and rt.cases.get(req.thread_id) is not None:
+        return _error(409, "thread_exists", "a thread id names one request")
+    thread_id = rt.staged.start(_gen_request(req, user), req.thread_id or str(uuid.uuid4()))
+    await rt.staged.wait(thread_id)
+    st = rt.cases.get(thread_id) or {}
+    if st.get("status") == "failed":
+        err = (st.get("error") or {}).get("error") or "model_output_invalid"
+        if err == "model_unreachable":
+            return _unreachable(rt, None)
+        return _error(502, err, "the model did not produce a usable case opening", thread_id=thread_id)
+    trace = st.get("trace") or []
+    return JSONResponse(content={
+        "thread_id": thread_id, "spec": st.get("spec"), "trace_summary": summarize(trace), "trace": trace,
+        "council": st.get("council"), "layers": _layer_status(st), "timings": st.get("timings"),
+    })
+
+
+def _layer_status(st: dict[str, Any]) -> dict[str, str]:
+    return {n: str((st.get("layers") or {}).get(n, {}).get("status")) for n in st.get("layer_order") or []}
+
+
+@router.get("/cases/mine")
+async def my_cases(request: Request, limit: int = 50, user: Principal = Depends(current_user)) -> JSONResponse:
+    rt = await get_runtime(request)
+    rows = rt.cases.list_for_owner(user.sub, limit)
+    if user.user_hash and user.user_hash != user.sub:
+        seen = {r["thread_id"] for r in rows}
+        rows += [r for r in rt.cases.list_for_owner(user.user_hash, limit) if r["thread_id"] not in seen]
+    rows.sort(key=lambda r: r.get("created_at") or 0, reverse=True)
+    return JSONResponse(content={"cases": rows[:limit]})
 
 
 @router.get("/case/{thread_id}")
 async def read_case(thread_id: str, request: Request, user: Principal = Depends(current_user)) -> JSONResponse:
     rt = await get_runtime(request)
-    snapshot = await rt.graph.aget_state(rt.config(thread_id))
-    values = snapshot.values if snapshot is not None else {}
-    owner = (values.get("request") or {}).get("learner_id") if values else None
-    if not values or (owner and not owns_learner(user, str(owner))):
-        # Someone else's checkpoint answers exactly like a missing one (no existence oracle).
-        return _error(404, "thread_not_found", f"no checkpoint for thread {thread_id!r}")
-    trace = values.get("trace") or []
+    st = _thread_for(rt, thread_id, user)
+    if st is None:
+        # Someone else's thread answers exactly like a missing one (no existence oracle).
+        return _error(404, "thread_not_found", f"no case thread {thread_id!r}")
+    trace = st.get("trace") or []
+    events = rt.cases.events(thread_id)
     return JSONResponse(content={
-        "thread_id": thread_id,
-        "status": values.get("status"),
-        "spec": values.get("spec"),
-        "council": values.get("council"),
-        "condition": values.get("condition"),
-        "trace_summary": summarize(trace),
-        "trace": trace,
-        "next": list(snapshot.next or ()) if snapshot is not None else [],
+        "thread_id": thread_id, "status": st.get("status"), "source": st.get("source"), "spec": st.get("spec"),
+        "opening": st.get("opening"), "layers": _layer_status(st), "council": st.get("council"),
+        "timings": st.get("timings"), "condition": st.get("condition"), "trace_summary": summarize(trace),
+        "trace": trace, "last_event_id": events[-1][0] if events else 0,
     })
+
+
+@router.post("/case/{thread_id}/layer/{layer}")
+async def read_layer(thread_id: str, layer: str, request: Request, body: LayerRequest | None = None,
+                     user: Optional[Principal] = Depends(optional_user)) -> JSONResponse:
+    rt = await get_runtime(request)
+    st = _thread_for(rt, thread_id, user)
+    if st is None:
+        return _error(404, "thread_not_found", f"no case thread {thread_id!r}")
+    if not valid_layer(layer):
+        return _error(422, "invalid_layer", f"unknown layer {layer!r}")
+    if not st.get("opening"):
+        return _error(409, "opening_not_ready", "the case opening is not ready yet")
+    try:
+        entry = await asyncio.wait_for(
+            rt.staged.ensure_layer(thread_id, layer, reason=(body.reason if body else None) or "access"),
+            LAYER_WAIT_S)
+    except asyncio.TimeoutError:
+        return _error(504, "layer_timeout", f"layer {layer} is still being written", retryable=True)
+    if entry.get("status") != "ready":
+        err = entry.get("error") or "layer_failed"
+        return _error(503 if err == "model_unreachable" else 502, err, f"layer {layer} could not be written",
+                      retryable=True)
+    _mark_seen(rt, thread_id, [layer])
+    now = rt.cases.get(thread_id) or {}
+    return JSONResponse(content={"thread_id": thread_id, "layer": layer, "status": "ready",
+                                 "data": entry.get("data"), "spec": now.get("spec")})
+
+
+def _mark_seen(rt: OrchestrationRuntime, thread_id: str, layers: list[str]) -> None:
+    if not layers:
+        return
+
+    def m(s: dict[str, Any]) -> None:
+        for name in layers:
+            entry = (s.get("layers") or {}).get(name)
+            if entry is not None:
+                entry["seen"] = True
+
+    rt.cases.update(thread_id, m)
 
 
 # --------------------------------------------------------------------------- #
@@ -380,6 +436,86 @@ async def director_step(req: DirectorStepRequest, request: Request,
     if denied is not None:
         return denied
     rt = await get_runtime(request)
+    try:
+        action = Action.model_validate(req.action)
+    except Exception as exc:  # pydantic.ValidationError
+        return _error(422, "invalid_action", str(exc)[:300])
+    llm = rt.llm if (req.use_model and rt.llm is not None) else None
+    if not req.thread_id:
+        return await _director_diagnostic(rt, req, action, llm, user)
+
+    st = _thread_for(rt, req.thread_id, user)
+    if st is None:
+        return _error(404, "thread_not_found", f"no case thread {req.thread_id!r}")
+    if not st.get("spec"):
+        return _error(409, "opening_not_ready", "the case opening is not ready yet")
+    # The action reads a layer that is not written yet: write it now (lazy), then step.
+    needed = layers_for_action(action.kind, action.ref)
+    pending_layers: list[str] = []
+    for name in needed:
+        entry = (st.get("layers") or {}).get(name) or {}
+        if entry.get("status") != "ready":
+            try:
+                await asyncio.wait_for(rt.staged.ensure_layer(req.thread_id, name, reason="action"), LAYER_WAIT_S)
+            except (asyncio.TimeoutError, KeyError):
+                pending_layers.append(name)
+    st = rt.cases.get(req.thread_id) or st
+    current = st.get("director")
+    if not isinstance(current, dict):
+        current = director_state_from_spec(st["spec"], req.thread_id)
+    try:
+        state = CaseState.model_validate(current)
+    except Exception as exc:  # noqa: BLE001 - the Director model changed shape under a stored state
+        return _error(409, "invalid_case_state", str(exc)[:300])
+    new_state, visible, notes = await anext_state(state, action, llm)
+    dumped = new_state.model_dump()
+    fired_now = [c for c in (visible.get("complications_fired") or []) if c]
+
+    def write(s: dict[str, Any]) -> None:
+        s["director"] = dumped
+        refresh_director(s)
+        for name in needed:
+            entry = (s.get("layers") or {}).get(name)
+            if entry is not None:
+                entry["seen"] = True
+
+    rt.cases.update(req.thread_id, write)
+    _record_errors(rt, req.learner_id, state, new_state)
+    # A branch opened: author its bedside event for THIS thread in the background (S6).
+    reasons = {str(getattr(c, "id", "")): str(getattr(c, "reason", "")) for c in
+               (getattr(new_state, "pending_complications", None) or [])}
+    branch_layers: list[str] = []
+    for comp in fired_now:
+        cid = str(comp.get("id") if isinstance(comp, dict) else comp)
+        layer = "event." + "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in cid.lower())[:64]
+        branch_layers.append(layer)
+        rt.staged.spawn(rt.staged.ensure_layer(req.thread_id, layer, reason="branch",
+                                               extra=reasons.get(cid) or cid, at_ms=int(new_state.t_ms)))
+    return JSONResponse(content={
+        "thread_id": req.thread_id,
+        "case_state": dumped,
+        "patient_visible_changes": visible,
+        "director_notes": notes,
+        "layers_pending": pending_layers + branch_layers,
+    })
+
+
+def _record_errors(rt: OrchestrationRuntime, learner_id: str | None, before: CaseState, after: CaseState) -> None:
+    if not learner_id:
+        return
+    known = {(e["at_ms"], e["kind"], e["detail"]) for e in before.errors}
+    for err in after.errors:
+        if (err["at_ms"], err["kind"], err["detail"]) not in known:
+            rt.memory.record_error(learner_id, err["kind"], err["detail"], after.system or after.condition_id)
+
+
+async def _director_diagnostic(rt: OrchestrationRuntime, req: DirectorStepRequest, action: Action,
+                               llm: StructuredLLM | None, user: Principal | None) -> JSONResponse:
+    """Faculty-only: step a supplied spec or state (debugging the Director). Never a learner path:
+    a learner encounter is always bound to the thread its case was generated in."""
+    if user is None or not user.has("faculty"):
+        return _error(422, "thread_required",
+                      "send the thread_id of a case generated on request; client-held cases are not accepted")
     if req.case_state is not None:
         try:
             state = CaseState.model_validate(req.case_state)
@@ -388,23 +524,11 @@ async def director_step(req: DirectorStepRequest, request: Request,
     elif req.spec is not None:
         state = CaseState.from_spec(req.spec)
     else:
-        return _error(422, "missing_case_state", "send case_state (from a previous step) or spec")
-    try:
-        action = Action.model_validate(req.action)
-    except Exception as exc:  # pydantic.ValidationError
-        return _error(422, "invalid_action", str(exc)[:300])
-    llm = rt.llm if (req.use_model and rt.llm is not None) else None
+        return _error(422, "missing_case_state", "send thread_id (learners) or case_state/spec (faculty)")
     new_state, visible, notes = await anext_state(state, action, llm)
-    if req.learner_id:
-        known = {(e["at_ms"], e["kind"], e["detail"]) for e in state.errors}
-        for err in new_state.errors:
-            if (err["at_ms"], err["kind"], err["detail"]) not in known:
-                rt.memory.record_error(req.learner_id, err["kind"], err["detail"], new_state.system or new_state.condition_id)
-    return JSONResponse(content={
-        "case_state": new_state.model_dump(),
-        "patient_visible_changes": visible,
-        "director_notes": notes,
-    })
+    _record_errors(rt, req.learner_id, state, new_state)
+    return JSONResponse(content={"case_state": new_state.model_dump(), "patient_visible_changes": visible,
+                                 "director_notes": notes, "diagnostic": True})
 
 
 @router.get("/learner/{learner_id}", response_model=None)
