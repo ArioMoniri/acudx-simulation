@@ -54,6 +54,18 @@ describe("D-17 non-beta-lactam antibiotics", () => {
     expect(fiveRightsCheck(order("82122"), ctx([PEN_ANAPHYLAXIS])).ok).toBe(true);
   });
 
+  it("a mild penicillin rash is a caution for ceftriaxone, not a block (NICE NG240 1.7.3)", () => {
+    const rash = {
+      ...PEN_ANAPHYLAXIS,
+      criticality: "low",
+      code: { coding: [], text: { en: "Penicillin: a rash with amoxicillin years ago", tr: "Penisilin: döküntü" } },
+    } as unknown as AllergyIntolerance;
+    const m = allergyCrossCheck("2193", [rash]);
+    expect(m.conflict).toBe(false);
+    expect(m.caution).toBe(true);
+    expect(allergyCrossCheck("2193", [PEN_ANAPHYLAXIS]).conflict).toBe(true);
+  });
+
   it("meropenem in penicillin allergy is a caution, not a block (AAAAI/ACAAI 2022)", () => {
     const m = allergyCrossCheck("29561", [PEN_ANAPHYLAXIS]);
     expect(m.conflict).toBe(false);

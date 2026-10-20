@@ -50,6 +50,8 @@ export interface FormularyEntry {
    * documented penicillin allergy: cross-reactivity under 1%).
    */
   allergyCaution?: string[];
+  /** A caution match becomes a block when the documented reaction was severe. */
+  cautionBlocksIfSevere?: boolean;
   /** Therapeutic group used to suggest allergy-safe alternatives. */
   group?: "antibacterial" | "antiviral" | "antiparasitic";
   routes: Route[];
@@ -194,7 +196,14 @@ export const FORMULARY: FormularyEntry[] = [
   {
     code: "2193",
     drug: { en: "Ceftriaxone", tr: "Seftriakson" },
-    allergyClass: ["ceftriaxone", "cephalosporin", "penicillin", "beta-lactam", "amoxicillin"],
+    allergyClass: ["ceftriaxone", "cephalosporin"],
+    // Acceptance 2026-10-20 (rerun): a penicillin RASH blocked ceftriaxone in a
+    // cholangitis patient. NICE NG240 1.7.3 gives ceftriaxone when the reaction
+    // was not severe; BNF: avoid cephalosporins after immediate (anaphylactic)
+    // penicillin hypersensitivity. A severe penicillin reaction blocks; a mild
+    // one is a caution.
+    allergyCaution: ["penicillin", "beta-lactam", "amoxicillin"],
+    cautionBlocksIfSevere: true,
     routes: ["IV", "IM"],
     defaultRoute: "IV",
     dose: { default: 2000, min: 1000, max: 2000, unit: "mg" },

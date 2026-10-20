@@ -102,6 +102,9 @@ export interface MedicationAdministrationRecord {
 /* Allergy cross-check                                                        */
 /* -------------------------------------------------------------------------- */
 
+/** Immediate, severe hypersensitivity wording (anaphylaxis, angioedema, SJS). */
+const SEVERE_REACTION = /anaphyla|angio|swelling|stevens|johnson|wheez|breath|anafilak|şişlik/i;
+
 const NO_KNOWN = /no known|nkda|bilinen.*yok|alerji yok|allergy.*none/i;
 
 function allergyTexts(a: AllergyIntolerance): string[] {
@@ -138,7 +141,12 @@ export function allergyCrossCheck(
       if (NO_KNOWN.test(text)) continue;
       const hay = text.toLowerCase();
       const kw = entry.allergyCaution?.find((k) => hay.includes(k.toLowerCase()));
-      if (kw) return { conflict: false, caution: true, matched: text, keyword: kw, criticality: a.criticality };
+      if (!kw) continue;
+      const severe = a.criticality === "high" || SEVERE_REACTION.test(allergyTexts(a).join(" "));
+      if (entry.cautionBlocksIfSevere && severe) {
+        return { conflict: true, matched: text, keyword: kw, criticality: a.criticality };
+      }
+      return { conflict: false, caution: true, matched: text, keyword: kw, criticality: a.criticality };
     }
   }
   return { conflict: false };

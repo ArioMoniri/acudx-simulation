@@ -434,8 +434,13 @@ async function workCase(n: number): Promise<void> {
       `CBC turnaround ${cbc ? Math.round((cbc.available_at_ms - cbc.sim_time_ms) / 60000) : "?"} sim-min, blood culture ${cult ? Math.round((cult.available_at_ms - cult.sim_time_ms) / 60000) : "?"} sim-min`,
     );
     const v = (o?: Obs) => (o ? `${o.value} ${o.unit} (${o.flag})` : "missing");
-    const plausible =
-      !!wbc && (run.conditionId === "febrile_neutropenia" ? Number(wbc.value) < 4 : Number(wbc.value) > 11) && !!crp && Number(crp.value) > 10 && !!lac && Number(lac.value) >= 1.0;
+    // Second pass: malaria and viral or HIV illness keep a normal or low white
+    // count (WHO malaria; section 5 of the report), so "raised" is bacterial only.
+    const notRaised = new Set(["malaria", "influenza", "covid19", "hiv_seroconversion"]);
+    const wbcOk = !!wbc && (run.conditionId === "febrile_neutropenia"
+      ? Number(wbc.value) < 4
+      : notRaised.has(run.conditionId ?? "") ? Number(wbc.value) <= 11 : Number(wbc.value) > 11);
+    const plausible = wbcOk && !!crp && Number(crp.value) > 10 && !!lac && Number(lac.value) >= 0.5;
     check(
       id("C10"),
       "Student",
