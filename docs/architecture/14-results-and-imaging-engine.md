@@ -1,6 +1,6 @@
 # 14. Results and Imaging Engine
 
-Status: implemented on the server (`server/results/`), routes mounted in `server/app.py`, typed client in `web/src/lib/resultsApi.ts`. The web store still uses its client-side `syntheticNormalResult` path; switching the store to the server engine is the next integration step (section 9).
+Status: implemented on the server (`server/results/`), routes mounted in `server/app.py`, typed client in `web/src/lib/resultsApi.ts`. The web encounter store resolves orders through the engine in Live mode (section 8); the client-side `syntheticNormalResult` remains only as the labelled offline fallback and the live Commons search is gone.
 
 ## 1. Problem
 
@@ -108,11 +108,25 @@ The engine hands the narrative layer a complete structured state: observations w
 
 ## 6. Next steps
 
-1. Switch `encounterStore` to `resolveOrder` when Live mode is on, keep `syntheticNormalResult` only as the labelled offline fallback (`meta.source: "offline"`), and remove the live Commons search.
+1. Done (2026-10-20, section 8): `encounterStore` resolves through `resolveOrder` in Live mode, `syntheticNormalResult` is the labelled offline fallback, and the live Commons search was removed.
 2. Import verified normals for the uncovered regions (section 3.4) and the first NIH ChestX-ray14 and MedPix 2.0 subsets with radiologist sign-off.
 3. Author paediatric reference bands from CALIPER and have a clinical pathologist sign `reference_ranges.json`.
 4. Replace the vitals interpolation with the Pulse Physiology Engine when it lands (docs/research/15, section 4.3), keeping this kinetics layer for the analytes Pulse does not model.
 5. Store ECGs as DICOM Waveform and render through dcmjs-ecg in the viewer; keep `render_svg` for printouts.
+
+## 8. Web integration (shipped 2026-10-20)
+
+Code: `web/src/state/encounterStore.ts`, `web/src/lib/liveEncounter.ts`, `web/src/components/ehr/tabs/ResultsTab.tsx`, `web/src/components/ehr/StudyViewer.tsx`, `web/src/lib/openMedicalImages.ts`. Tests: `web/src/state/encounterStoreLive.test.ts`, `web/src/lib/liveEncounter.test.ts`, `web/src/lib/openMedicalImages.test.ts`.
+
+Live mode is the gateway's reachability (`LiveBackendProvider` health probe), pushed into the store with `setLiveEnabled`. In Live mode:
+
+- `placeOrder` asks `POST /v1/results/resolve` at placement time with `case_state` built from the running `CaseInstance` (`caseInstanceToSpec`, plus `treatments_given` and the earlier engine results as `prior`), `sim_time_ms = placedAt`. The engine's `turnaround.minutes` becomes the ETA label the learner sees; the local playback timer stays the scheduler that reveals the answer. When the timer fires the stored engine answer becomes a `ResolvedResult` with `source: "engine"` and the full `OrderResult`, and the `result` event carries `meta.source = "engine"`, `engineKind`, `abnormal`, `critical`, `status`.
+- If the engine fails (5xx, timeout, network) the order still resolves, through the authored case datum (`meta.source = "case"`) or the on-device fallback (`meta.source = "offline-synthetic-normal"`). Nothing is silent: the Results tab shows a provenance chip on every panel, trend, culture and study (Results engine, Case record, Offline synthetic normal) and offline rows carry an "offline synthetic" tag.
+- `ResultsTab` renders engine observations through `engineObservationToFhir` (LOINC code, flag, range, unit) so the same panel and trend tables serve both paths. Engine abnormal and critical observations join the summary badges and the critical callout.
+- Imaging orders render the engine's `report`: the matched bank image with its provenance footer (licence with link, attribution text, source page, verification date, "Representative image, not this patient"), or, when `image_status` is `unavailable`, the structured findings and impression alone with the reason. ECG orders fetch the 12-lead printout from `POST /v1/results/ecg` (`include_svg`, no samples) and show it as an image with the legend "25 mm/s, 10 mm/mV" plus the measurements table; the SVG string never enters the DOM as markup.
+- Off Live mode the behaviour is the previous one, now labelled: authored data from the reveal graph, the curated image bundle (`src/data/conditionImaging.ts`) for pictures, and `syntheticNormalResult` values tagged as offline synthetic.
+
+`web/src/lib/openMedicalImages.ts` is bundle-only: `resolveStudyImage` is synchronous and returns a curated entry or null. The Wikimedia Commons search code was deleted; `openMedicalImages.test.ts` asserts that no `fetch` happens on the image path.
 
 ## 7. Citations
 
