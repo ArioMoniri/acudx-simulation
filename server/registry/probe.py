@@ -41,14 +41,28 @@ HEALTH_PATHS: dict[str, tuple[str, ...]] = {
 }
 
 
-def _auth_headers(kind: str, api_key: str | None) -> dict[str, str]:
+def _auth_headers(kind: str, api_key: str | None, base_url: str | None = None) -> dict[str, str]:
     if not api_key:
         return {}
+    # An OpenAI-compatible voice row (the GPU worker's Kokoro or Chatterbox behind Caddy,
+    # speaches, a local server) takes a bearer; the vendor schemes stay for the vendors.
+    if kind in ("stt", "tts") and base_url and _openai_compatible_voice(base_url):
+        return {"Authorization": f"Bearer {api_key}"}
     if kind == "stt":
         return {"Authorization": f"Token {api_key}"}      # Deepgram
     if kind == "tts":
         return {"xi-api-key": api_key}                     # ElevenLabs
     return {"Authorization": f"Bearer {api_key}"}
+
+
+def _openai_compatible_voice(base_url: str) -> bool:
+    return not any(h in base_url for h in ("elevenlabs.io", "deepgram.com"))
+
+
+def _is_tavus(rec: ProviderRecord) -> bool:
+    transport = str(rec.extra.get("transport") or "").lower()
+    return rec.kind == "avatar" and (transport == "tavus" or "tavusapi.com" in rec.base_url
+                                     or (not transport and rec.name.lower() == "tavus"))
 
 
 def _model_ids(data: Any) -> list[str]:
@@ -90,9 +104,14 @@ async def probe_provider(rec: ProviderRecord, *, api_key: str | None, settings: 
             _persist(store, rec.id, result)
             return result
 
-    headers = _auth_headers(rec.kind, api_key)
+    headers = _auth_headers(rec.kind, api_key, rec.base_url)
     base = rec.base_url.rstrip("/")
     paths = HEALTH_PATHS.get(rec.kind, ("/",))
+    if _is_tavus(rec):
+        # Tavus has no health route; List PALs (GET /v2/pals, x-api-key) checks reachability and
+        # the key in one call (https://docs.tavus.io/api-reference/pals/list-pals).
+        headers = {"x-api-key": api_key} if api_key else {}
+        paths = ("/v2/pals?limit=1",)
     last: dict[str, Any] = {}
     for path in paths:
         url = f"{base}{path}"

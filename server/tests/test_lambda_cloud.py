@@ -180,9 +180,10 @@ def test_merge_firewall_rules_keeps_existing_and_appends_missing(firewall_rules_
     merged, changed = merge_firewall_rules(existing, WORKER_FIREWALL_RULES)
     assert changed is True
     assert merged[:11] == existing
-    assert len(merged) == 13
+    assert len(merged) == 15
     assert {(r.protocol, tuple(r.port_range), r.source_network) for r in merged[11:]} == {
-        ("tcp", (80, 80), "0.0.0.0/0"), ("tcp", (443, 443), "0.0.0.0/0")}
+        ("tcp", (80, 80), "0.0.0.0/0"), ("tcp", (443, 443), "0.0.0.0/0"),
+        ("udp", (3478, 3478), "0.0.0.0/0"), ("tcp", (3478, 3478), "0.0.0.0/0")}
     # Idempotent: a second merge adds nothing.
     again, changed2 = merge_firewall_rules(merged, WORKER_FIREWALL_RULES)
     assert changed2 is False and again == merged

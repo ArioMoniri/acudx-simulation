@@ -214,7 +214,7 @@ async def test_capabilities_describe_hosted_rows_pending_worker_and_avatar(tmp_p
                            "model": "eleven_v4_turbo", "languages": ["en", "tr", "ar"], "reasons": []}
     assert caps["stt"]["enabled"] is True and caps["stt"]["pending_launch"] is True and "tr" in caps["stt"]["languages"]
     assert caps["avatar"] == {"enabled": True, "provider": "lk", "transport": "livekit", "renderer": "simli",
-                              "source": "registry"}
+                              "source": "registry", "live_video": True, "reasons": []}
     assert worker.ensure_calls == 0   # capabilities never launch a worker
 
 

@@ -10,7 +10,8 @@
         "textTimed": "Metne göre animasyon",
         "hold": "Beklemede",
         "ended": "Görüşme sona erdi",
-        "muted": "Sessiz"
+        "muted": "Sessiz",
+        "videoConnecting": "Video bağlanıyor"
       },
       "degraded": "Gerçek zamanlı video kullanılamıyor; konuşan yüz ses kaydını izliyor.",
       "noVoice": "Etkin bir ses sağlayıcısı yok. Yanıtlar metin olarak gösterilir.",
@@ -37,10 +38,20 @@
       "provenance": {
         "voice": "Ses: {{provider}}",
         "firstAudio": "İlk ses {{ms}} ms",
-        "renderer": "Video: {{renderer}}"
+        "renderer": "Video: {{renderer}}",
+        "firstFrame": "İlk kare {{ms}} ms",
+        "speechStart": "Konuşma başlangıcı {{ms}} ms",
+        "lipLag": "Sesten dudağa {{ms}} ms"
       },
       "signs": "Görünüm",
-      "endedNote": "Hasta hâlâ burada. Sesli görüşmeye devam etmek için yeniden katılın; yazmak her zaman çalışır."
+      "endedNote": "Hasta hâlâ burada. Sesli görüşmeye devam etmek için yeniden katılın; yazmak her zaman çalışır.",
+      "notLive": "Hareketli portre, canlı video değil",
+      "liveVideo": {
+        "preparing": "Hastanın yüzü canlı video için hazırlanıyor",
+        "connecting": "Canlı video bağlanıyor",
+        "workerStarting": "Canlı video GPU sunucusu açılınca başlar; hareketli portre gösteriliyor",
+        "unavailable": "Canlı video kullanılamıyor; hareketli portre gösteriliyor"
+      }
     }
   }
 }

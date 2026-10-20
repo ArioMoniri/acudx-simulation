@@ -7,6 +7,12 @@
 #                23 languages including Turkish; voice name carries the language)
 #   /tts-en/*    Kokoro FastAPI (English-only secondary, OpenAI-compatible /v1/audio/speech)
 #   /stt/*       speaches (faster-whisper large-v3-turbo, OpenAI-compatible /v1/audio/transcriptions)
+#   /avatar/*    AcuDx avatar runner: LiveTalking + MuseTalk 1.5 real-time talking head (WebRTC out,
+#                TTS audio in, the case portrait as the reference face); see avatar.sh
+#   /avatar-status/status.json  the runner's bring-up state (building | waiting | starting | ready |
+#                disabled with a reason such as insufficient_vram), readable while the runner is down
+# Plus coturn on 3478 UDP and TCP (host network): the WebRTC media path for browsers, with
+# TURN REST credentials derived from WORKER_TOKEN (server/voice/avatar/musetalk.py).
 #   /healthz     vLLM /health only (the TTS and STT side-cars never gate readiness)
 #   /diag/<s>/   final boot-diagnostics snapshot (see diag.sh)
 # Every route requires: Authorization: Bearer ${WORKER_TOKEN}. The check sits first inside
@@ -24,6 +30,13 @@
 #   ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4      (GHCR tags list)
 #   caddy:2.9.1                                   (Docker Hub; Caddyfile validated with 2.9.1)
 #   ghcr.io/astral-sh/uv:0.8.22                   (GHCR manifest, Chatterbox build stage)
+#   ghcr.io/coturn/coturn:4.18.0-debian           (GHCR; same tag as Docker Hub coturn/coturn, 2026-09-08)
+#   python:3.12-slim-bookworm                     (Docker Hub, avatar runner base)
+#   LiveTalking: github.com/lipku/LiveTalking commit c7269433a2b6ecebcd9342445d2ecc882c98b0da (main,
+#     2026-10-20, Apache-2.0), built here with torch 2.9.1 cu128 (the README's tested stack) and the
+#     constraint file below; MuseTalk 1.5 weights from Hugging Face pinned by revision in
+#     acudx_fetch_models.py (TMElyralab/MuseTalk 2bcb936e, stabilityai/sd-vae-ft-mse 31f26fde,
+#     openai/whisper-tiny 169d4a43, ManyOtherFunctions/face-parse-bisent 0073b233 sha256-checked).
 #   Chatterbox: travisvn/chatterbox-tts-api has no published multilingual image
 #     (Docker Hub tags v1.0.1 / latest / gpu all date from 2025-06-03, before the
 #     multilingual model landed), so the image is BUILT here from the pinned main
@@ -39,8 +52,11 @@
 #   Chatterbox    about 4 GB (Multilingual 500M, fp16)
 #   speaches      about 3 GB (large-v3-turbo fp16; the turbo decoder is 4 layers)
 #   Kokoro        under 1 GB
-#   headroom      about 8 GB for CUDA context, batching and a future MuseTalk stream
-# On an H100 80 GB raise vLLM to 0.75 and keep the same side-cars.
+#   headroom      about 8 GB for CUDA context, batching and the MuseTalk avatar runner
+#   avatar        MuseTalk 1.5 fp16 UNet + VAE + whisper-tiny + face detector, shared by every call;
+#                 avatar.sh starts it only when nvidia-smi shows AVATAR_REQUIRED_MB free after the
+#                 other side-cars loaded, else status.json says disabled / insufficient_vram and the
+#                 tile falls back to the animated portrait. An H100 80 GB always has the room.
 write_files:
   - path: /opt/acudx/.env
     permissions: "0600"
@@ -50,6 +66,9 @@ write_files:
       WORKER_DOMAIN=__WORKER_DOMAIN__
       HF_HOME=/opt/acudx/hf
       CHATTERBOX_REF=a5f466128e4baa8e4cceb3bba9b7ca9de6f7ec6b
+      LIVETALKING_REF=c7269433a2b6ecebcd9342445d2ecc882c98b0da
+      AVATAR_REQUIRED_MB=5000
+      AVATAR_MAX_SESSIONS=2
   - path: /opt/acudx/Caddyfile
     content: |
       # Port 80 belongs to the boot-diagnostics server (python, see diag.sh) until vLLM is
@@ -75,6 +94,13 @@ write_files:
           }
           handle_path /stt/* {
             reverse_proxy speaches:8000
+          }
+          handle_path /avatar/* {
+            reverse_proxy avatar:8010
+          }
+          handle /avatar-status/* {
+            root * /srv
+            file_server
           }
           handle /healthz {
             rewrite * /health
@@ -242,6 +268,44 @@ write_files:
             - /opt/acudx/caddy:/data
             # Final diagnostics snapshot, served at /diag/<secret>/ behind the bearer.
             - /opt/acudx/public/diag:/srv/diag:ro
+            - /opt/acudx/public/avatar-status:/srv/avatar-status:ro
+        # Avatar runner (avatar.sh starts it after the VRAM check). Media leaves through coturn.
+        avatar:
+          build:
+            context: /opt/acudx/livetalking
+            dockerfile: Dockerfile.acudx
+          image: acudx/avatar-runner:c726943-cu128
+          runtime: nvidia
+          deploy:
+            resources:
+              reservations:
+                devices:
+                  - driver: nvidia
+                    count: all
+                    capabilities: [gpu]
+          extra_hosts: [ "host.docker.internal:host-gateway" ]
+          environment:
+            - HF_HOME=/hf
+            - AVATAR_PORT=8010
+            - AVATAR_BATCH_SIZE=8
+            - AVATAR_MAX_SESSIONS=${AVATAR_MAX_SESSIONS}
+            - AVATAR_TURN_TCP_HOST=host.docker.internal
+            - LIVETALKING_REF=${LIVETALKING_REF}
+            - NVIDIA_VISIBLE_DEVICES=all
+            - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+          volumes:
+            - /opt/acudx/hf:/hf
+            - /opt/acudx/avatars:/app/data/avatars
+        # TURN for the avatar call (RFC 8656, coturn). Host networking so the relay ports reach
+        # the runner's container addresses; only 3478 is open publicly (lambda_cloud.py rules).
+        turn:
+          image: ghcr.io/coturn/coturn:4.18.0-debian
+          network_mode: host
+          command: >
+            -n --log-file=stdout --listening-port=3478 --fingerprint --use-auth-secret
+            --static-auth-secret=${TURN_SECRET} --realm=acudx --no-tls --relay-ip=${TURN_RELAY_IP}
+            --min-port=49160 --max-port=49260 --no-multicast-peers
+            --allowed-peer-ip=172.16.0.0-172.31.255.255 --allowed-peer-ip=${TURN_RELAY_IP}
   # Voice library seeding: Chatterbox picks the synthesis language from the voice's
   # metadata, so one voice per language is uploaded once the API is up. The reference
   # clip is the repository's bundled sample; institutions replace it with consented
@@ -274,7 +338,7 @@ write_files:
       snapshot() {
         { date -u
           echo "--- docker ps"; docker ps --format '{{.Names}} {{.Status}}' 2>&1
-          for svc in vllm caddy; do
+          for svc in vllm caddy avatar turn; do
             echo "--- $svc logs (last 40 lines, redacted)"
             $compose logs --no-color --tail 40 "$svc" 2>&1 | redact
           done
@@ -282,6 +346,10 @@ write_files:
           echo "--- vllm root-cause lines (errors and memory, redacted)"
           $compose logs --no-color vllm 2>&1 | grep -E 'Error|error|Exception|CUDA|memory|Memory|OOM|insufficient|ValueError|Traceback|raise ' | tail -60 | redact
           echo "--- chatterbox torch check"; redact < /var/log/acudx-chatterbox-gpu.log 2>/dev/null
+          echo "--- avatar status"; cat /opt/acudx/public/avatar-status/status.json 2>/dev/null
+          echo "--- avatar bring-up (last 20 lines)"; tail -20 /var/log/acudx-avatar.log 2>/dev/null | redact
+          echo "--- avatar image build (last 15 lines)"; tail -15 /var/log/acudx-avatar-build.log 2>/dev/null | redact
+          echo "--- nvidia-smi"; nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv 2>&1
         } > "$d/docker-status.txt.tmp"
         mv "$d/docker-status.txt.tmp" "$d/docker-status.txt"
         redact < /var/log/cloud-init-output.log > "$d/cloud-init-output.log.tmp" 2>/dev/null
@@ -319,8 +387,618 @@ write_files:
         curl -sf -X POST "$api/voices" -F "voice_name=$name" -F "language=$lang" -F "voice_file=@$sample" >/dev/null \
           || echo "acudx: voice $name already present or upload failed" >&2
       done
+  - path: /opt/acudx/avatar/Dockerfile.acudx
+    content: |
+      # AcuDx avatar runner: LiveTalking @ c7269433a2b6ecebcd9342445d2ecc882c98b0da + MuseTalk 1.5.
+      # Built on the worker from the pinned checkout (no published LiveTalking image). torch 2.9.1 cu128
+      # is what the LiveTalking README tests (Ubuntu 24.04, Python 3.12, CUDA 12.8); the wheels carry
+      # their own CUDA runtime, so the base is a plain Python image.
+      FROM python:3.12-slim-bookworm
+      ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 DEBIAN_FRONTEND=noninteractive PIP_NO_CACHE_DIR=1
+      RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libgl1 libglib2.0-0 curl ca-certificates \
+          && rm -rf /var/lib/apt/lists/*
+      WORKDIR /app
+      ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu128
+      ARG TORCH_VARIANT=+cu128
+      RUN pip install "torch==2.9.1${TORCH_VARIANT}" "torchvision==0.24.1${TORCH_VARIANT}" "torchaudio==2.9.1${TORCH_VARIANT}" \
+          --index-url "${TORCH_INDEX_URL}"
+      COPY acudx-constraints.txt /tmp/acudx-constraints.txt
+      COPY requirements.txt /tmp/livetalking-requirements.txt
+      RUN printf 'torch==2.9.1%s\ntorchvision==0.24.1%s\ntorchaudio==2.9.1%s\n' "${TORCH_VARIANT}" "${TORCH_VARIANT}" \
+            "${TORCH_VARIANT}" >> /tmp/acudx-constraints.txt \
+          && pip install -c /tmp/acudx-constraints.txt -r /tmp/livetalking-requirements.txt \
+             huggingface_hub dlib-bin face_recognition_models click pillow \
+          && pip install --no-deps -c /tmp/acudx-constraints.txt face_recognition
+      RUN python -c "import torch, aiortc, cv2, face_recognition, diffusers, transformers; print('torch', torch.__version__, 'cuda build', torch.version.cuda)"
+      COPY . /app
+      EXPOSE 8010
+      HEALTHCHECK --interval=20s --timeout=10s --start-period=15m --retries=3 CMD curl -sf http://localhost:8010/health || exit 1
+      CMD ["sh", "-c", "python acudx_fetch_models.py && exec python acudx_avatar_server.py"]
+  - path: /opt/acudx/avatar/acudx-constraints.txt
+    content: |
+      numpy==1.26.4
+      scipy==1.13.1
+      transformers==4.46.2
+      tokenizers==0.20.3
+      diffusers==0.31.0
+      accelerate==1.1.1
+      huggingface_hub==0.26.5
+      safetensors==0.4.5
+      librosa==0.10.2.post1
+      numba==0.60.0
+      resampy==0.4.3
+      soundfile==0.12.1
+      opencv-python-headless==4.10.0.84
+      aiortc==1.14.0
+      aiohttp==3.10.10
+      aiohttp_cors==0.7.0
+      edge_tts==7.3.1
+      openai==1.54.4
+      dashscope==1.20.14
+      websockets==12.0
+      flask==3.0.3
+      einops==0.8.0
+      tqdm==4.66.6
+      PyYAML==6.0.2
+      python-dotenv==1.0.1
+      dlib-bin==20.0.1.post1
+      face_recognition==1.3.0
+      face_recognition_models==0.3.0
+      click==8.1.7
+      pillow==11.0.0
+  - path: /opt/acudx/avatar/acudx_fetch_models.py
+    content: |
+      """Fetch the MuseTalk 1.5 weights the LiveTalking musetalk backend loads, pinned by revision.
+
+      Layout written under /app/models (what avatars/musetalk/utils/utils.py::load_all_model,
+      models/vae.py, whisper/audio2feature.py and utils/face_parsing expect):
+
+        musetalkV15/unet.pth, musetalkV15/musetalk.json   TMElyralab/MuseTalk @ 2bcb936e2fddb4d86db4c62fd45b387d0c061571
+        sd-vae/config.json, diffusion_pytorch_model.bin   stabilityai/sd-vae-ft-mse @ 31f26fdeee1355a5c34592e401dd41e45d25a493
+        whisper/config.json, pytorch_model.bin, preprocessor_config.json
+                                                          openai/whisper-tiny @ 169d4a4341b33bc18d8881c4b69c2e104e1cc0af
+        face-parse-bisent/79999_iter.pth, resnet18-5c106cde.pth
+                                                          ManyOtherFunctions/face-parse-bisent @ 0073b233a5a3c4b1377d4dbf49245017938a72b5
+                                                          (sha256 checked against the LFS oids)
+        avatars/musetalk/utils/face_detection/detection/sfd/s3fd.pth
+                                                          the face_alignment S3FD detector, sha256 prefix 619a316812 (its file name)
+
+      Files land in HF_HOME (the worker keeps it on the Lambda filesystem, so later boots skip the
+      download) and are linked into place. Exits non-zero on any mismatch.
+      """
+
+      from __future__ import annotations
+
+      import hashlib
+      import os
+      import shutil
+      import sys
+      import urllib.request
+
+      from huggingface_hub import hf_hub_download
+
+      APP = os.environ.get("LIVETALKING_DIR", "/app")
+      HF = [
+          ("TMElyralab/MuseTalk", "2bcb936e2fddb4d86db4c62fd45b387d0c061571",
+           [("musetalkV15/unet.pth", "musetalkV15/unet.pth"), ("musetalkV15/musetalk.json", "musetalkV15/musetalk.json")]),
+          ("stabilityai/sd-vae-ft-mse", "31f26fdeee1355a5c34592e401dd41e45d25a493",
+           [("config.json", "sd-vae/config.json"), ("diffusion_pytorch_model.bin", "sd-vae/diffusion_pytorch_model.bin")]),
+          ("openai/whisper-tiny", "169d4a4341b33bc18d8881c4b69c2e104e1cc0af",
+           [("config.json", "whisper/config.json"), ("pytorch_model.bin", "whisper/pytorch_model.bin"),
+            ("preprocessor_config.json", "whisper/preprocessor_config.json")]),
+          ("ManyOtherFunctions/face-parse-bisent", "0073b233a5a3c4b1377d4dbf49245017938a72b5",
+           [("79999_iter.pth", "face-parse-bisent/79999_iter.pth"),
+            ("resnet18-5c106cde.pth", "face-parse-bisent/resnet18-5c106cde.pth")]),
+      ]
+      SHA256 = {
+          "face-parse-bisent/79999_iter.pth": "468e13ca13a9b43cc0881a9f99083a430e9c0a38abd935431d1c28ee94b26567",
+          "face-parse-bisent/resnet18-5c106cde.pth": "5c106cde386e87d4033832f2996f5493238eda96ccf559d1d62760c4de0613f8",
+      }
+      S3FD_URL = "https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth"
+      S3FD_PREFIX = "619a316812"
+      S3FD_DEST = os.path.join(APP, "avatars/musetalk/utils/face_detection/detection/sfd/s3fd.pth")
+
+
+      def sha256(path: str) -> str:
+          h = hashlib.sha256()
+          with open(path, "rb") as f:
+              for block in iter(lambda: f.read(1 << 20), b""):
+                  h.update(block)
+          return h.hexdigest()
+
+
+      def link(src: str, dest: str) -> None:
+          os.makedirs(os.path.dirname(dest), exist_ok=True)
+          if os.path.lexists(dest):
+              os.remove(dest)
+          os.symlink(os.path.realpath(src), dest)
+
+
+      def main() -> int:
+          models = os.path.join(APP, "models")
+          for repo, rev, files in HF:
+              for remote, local in files:
+                  path = hf_hub_download(repo_id=repo, filename=remote, revision=rev)
+                  want = SHA256.get(local)
+                  if want and sha256(path) != want:
+                      print(f"acudx: sha256 mismatch for {repo}/{remote}", file=sys.stderr)
+                      return 1
+                  link(path, os.path.join(models, local))
+                  print(f"ok {repo}@{rev[:8]} {remote} -> models/{local}")
+          cache = os.path.join(os.environ.get("HF_HOME", "/hf"), "acudx-s3fd", "s3fd-619a316812.pth")
+          if not os.path.isfile(cache):
+              os.makedirs(os.path.dirname(cache), exist_ok=True)
+              tmp = cache + ".part"
+              with urllib.request.urlopen(S3FD_URL, timeout=120) as r, open(tmp, "wb") as f:
+                  shutil.copyfileobj(r, f)
+              os.replace(tmp, cache)
+          if not sha256(cache).startswith(S3FD_PREFIX):
+              print("acudx: s3fd checksum mismatch", file=sys.stderr)
+              return 1
+          link(cache, S3FD_DEST)
+          print("ok s3fd -> " + S3FD_DEST)
+          return 0
+
+
+      if __name__ == "__main__":
+          sys.exit(main())
+  - path: /opt/acudx/avatar/acudx_avatar_server.py
+    content: |
+      """AcuDx avatar runner: LiveTalking (pinned commit) + MuseTalk 1.5, WebRTC out, audio in.
+
+      Runs inside the LiveTalking checkout (cwd /app) on the GPU worker, behind Caddy's
+      bearer check at /avatar/*. The gateway (server/voice/avatar/musetalk.py) is the only
+      client of the control routes; the browser only ever sees the SDP answer and media.
+
+      Routes (all JSON unless noted):
+        GET  /health                 model, sessions, prepared avatars, VRAM, measured infer fps
+        GET  /avatars                prepared avatar ids
+        PUT  /avatars/{avatar_id}    body = portrait image bytes (jpeg/png); prepares the MuseTalk
+                                     latents, face box and blend mask for that face (one frame)
+        POST /offer                  {sdp, type, avatar} -> {sdp, type, sessionid} (LiveTalking RTCManager)
+        POST /humanaudio             multipart sessionid + file (wav or mp3): lip-sync and stream it
+        POST /interrupt_talk         {sessionid}
+        POST /is_speaking            {sessionid}
+        POST /close                  {sessionid}: stop the render threads and close the peer connection
+        GET  /turn                   WebSocket <-> TCP byte bridge to the worker's TURN server, for
+                                     clients whose network only allows HTTPS (see docs/architecture/18 6.3)
+
+      The avatar preparation below is a port of LiveTalking avatars/musetalk/genavatar.py
+      (Apache-2.0) that reuses the already-loaded VAE instead of loading a second UNet,
+      and writes the single portrait frame as 00000000.png (load_avatar sorts frames by
+      integer file name).
+      """
+
+      from __future__ import annotations
+
+      import asyncio
+      import copy
+      import json
+      import logging
+      import os
+      import pickle
+      import re
+      import sys
+      import threading
+      import time
+
+      AVATAR_PORT = int(os.environ.get("AVATAR_PORT", "8010"))
+      MAX_SESSIONS = int(os.environ.get("AVATAR_MAX_SESSIONS", "2"))
+      BATCH_SIZE = int(os.environ.get("AVATAR_BATCH_SIZE", "8"))
+      TURN_TCP_HOST = os.environ.get("AVATAR_TURN_TCP_HOST", "host.docker.internal")
+      TURN_TCP_PORT = int(os.environ.get("AVATAR_TURN_TCP_PORT", "3478"))
+      LIVETALKING_REF = os.environ.get("LIVETALKING_REF", "")
+      MAX_IMAGE_BYTES = 8 * 1024 * 1024
+      AVATAR_ID_RE = re.compile(r"^[a-z0-9_-]{1,64}$")
+      MAX_FRAME_H = 720
+
+      # LiveTalking parses its own argv; set it before importing anything from the checkout.
+      sys.argv = [sys.argv[0], "--config", "", "--model", "musetalk", "--avatar_id", "acudx_none",
+                  "--transport", "webrtc", "--stun", "", "--tts", "edgetts", "--max_session", str(MAX_SESSIONS),
+                  "--batch_size", str(BATCH_SIZE), "--listenport", str(AVATAR_PORT)]
+
+      import cv2  # noqa: E402
+      import numpy as np  # noqa: E402
+      import torch  # noqa: E402
+      from aiohttp import WSMsgType, web  # noqa: E402
+
+      from config import parse_args  # noqa: E402
+
+      opt = parse_args()
+
+      import registry  # noqa: E402
+      import avatars.musetalk_avatar as mt  # noqa: E402
+      from avatars.musetalk.utils.blending import get_crop_box, get_image_prepare_material  # noqa: E402
+      from avatars.musetalk.utils.face_parsing import FaceParsing  # noqa: E402
+      from avatars.musetalk.utils.preprocessing import coord_placeholder, get_landmark_and_bbox  # noqa: E402
+      from server.rtc_manager import RTCManager  # noqa: E402
+      from server.routes import humanaudio, interrupt_talk, is_speaking  # noqa: E402
+      from server.session_manager import MaxSessionError, session_manager  # noqa: E402
+
+      log = logging.getLogger("acudx.avatar")
+      logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
+      STATE: dict = {"infer_fps": None, "infer_fps_at": None, "started_at": time.time(), "ready": False,
+                     "prepare_ms": {}}
+
+
+      class _FpsTap(logging.Handler):
+          """LiveTalking logs '------actual avg infer fps:<x>' every 100 frames; keep the last value."""
+
+          def emit(self, record: logging.LogRecord) -> None:
+              msg = record.getMessage()
+              m = re.search(r"actual avg infer fps:([0-9.]+)", msg)
+              if m:
+                  STATE["infer_fps"] = round(float(m.group(1)), 2)
+                  STATE["infer_fps_at"] = time.time()
+
+
+      logging.getLogger("utils.logger").addHandler(_FpsTap())
+
+      # Media counters for /health: how many audio frames left for WebRTC and how many carried
+      # sound, and how many speaking frames could not be blended (each one would otherwise drop
+      # its video frame AND its two audio frames in LiveTalking's process_frames).
+      MEDIA = {"audio_frames": 0, "audio_frames_with_sound": 0, "audio_peak": 0, "video_frames": 0,
+               "blend_errors": 0}
+      import server.webrtc as _lt_webrtc  # noqa: E402
+
+      _orig_push_audio = _lt_webrtc.HumanPlayer.push_audio
+      _orig_push_video = _lt_webrtc.HumanPlayer.push_video
+
+
+      def _push_audio(self, frame, eventpoint=None):
+          MEDIA["audio_frames"] += 1
+          peak = int(np.abs(frame).max()) if frame.size else 0
+          if peak > 64:
+              MEDIA["audio_frames_with_sound"] += 1
+              MEDIA["audio_peak"] = max(MEDIA["audio_peak"], peak)
+          return _orig_push_audio(self, frame, eventpoint)
+
+
+      def _push_video(self, frame):
+          MEDIA["video_frames"] += 1
+          return _orig_push_video(self, frame)
+
+
+      _lt_webrtc.HumanPlayer.push_audio = _push_audio
+      _lt_webrtc.HumanPlayer.push_video = _push_video
+
+      t0 = time.monotonic()
+      MODEL = mt.load_model()
+      mt.warm_up(BATCH_SIZE, MODEL)
+      VAE = MODEL[0]
+      FACE_PARSER = FaceParsing(left_cheek_width=90, right_cheek_width=90)
+      STATE["model_load_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+      _orig_paste = mt.MuseReal.paste_back_frame
+
+
+      def _paste_back_frame(self, pred_frame, idx: int):
+          """Blend the generated mouth into the frame; on a blend failure keep the plain frame so the
+          frame and, above all, its audio still go out (upstream drops both on any exception)."""
+          try:
+              return _orig_paste(self, pred_frame, idx)
+          except Exception:  # noqa: BLE001 - counted and surfaced in /health
+              MEDIA["blend_errors"] += 1
+              return self.frame_list_cycle[idx].copy()
+
+
+      mt.MuseReal.paste_back_frame = _paste_back_frame
+      AVATARS: dict[str, tuple] = {}
+      PREP_LOCK = threading.Lock()
+      AVATAR_ROOT = "./data/avatars"
+
+
+      def _avatar_dir(avatar_id: str) -> str:
+          return os.path.join(AVATAR_ROOT, avatar_id)
+
+
+      def _is_prepared(avatar_id: str) -> bool:
+          return os.path.isfile(os.path.join(_avatar_dir(avatar_id), "latents.pt"))
+
+
+      def _load(avatar_id: str) -> tuple:
+          if avatar_id not in AVATARS:
+              AVATARS[avatar_id] = mt.load_avatar(avatar_id)
+          return AVATARS[avatar_id]
+
+
+      class NoFace(ValueError):
+          pass
+
+
+      @torch.no_grad()
+      def prepare_avatar(avatar_id: str, image_bytes: bytes) -> dict:
+          """Portrait -> MuseTalk avatar (latents, face box, blend mask) for one frame."""
+          started = time.monotonic()
+          img = cv2.imdecode(np.frombuffer(image_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+          if img is None:
+              raise ValueError("image could not be decoded")
+          h, w = img.shape[:2]
+          if h > MAX_FRAME_H:
+              scale = MAX_FRAME_H / h
+              img = cv2.resize(img, (int(w * scale), MAX_FRAME_H), interpolation=cv2.INTER_AREA)
+              h, w = img.shape[:2]
+          # H.264 and VP8 encoders want even dimensions.
+          img = img[: h - h % 2, : w - w % 2]
+          with PREP_LOCK:
+              root = _avatar_dir(avatar_id)
+              full_dir = os.path.join(root, "full_imgs")
+              mask_dir = os.path.join(root, "mask")
+              os.makedirs(full_dir, exist_ok=True)
+              os.makedirs(mask_dir, exist_ok=True)
+              frame_path = os.path.join(full_dir, "00000000.png")
+              for _attempt in range(3):
+                  cv2.imwrite(frame_path, img)
+                  coord_list, frame_list = get_landmark_and_bbox([frame_path], 0)
+                  if not coord_list or tuple(coord_list[0]) == tuple(coord_placeholder):
+                      raise NoFace("no face found in the portrait")
+                  x1, y1, x2, y2 = (int(v) for v in coord_list[0])
+                  frame = frame_list[0]
+                  y2 = min(y2 + 10, frame.shape[0])  # v1.5 extra_margin, as in genavatar.py
+                  coords = [x1, y1, x2, y2]
+                  # The blend step pastes into the face box expanded 1.5x (blending.get_crop_box). A
+                  # close-up portrait puts that box outside the frame, every speaking frame then fails
+                  # in paste_back_frame and is dropped together with its audio, so the call is silent.
+                  # Pad the portrait (edge replicate) until the expanded box fits, then detect again.
+                  (cx1, cy1, cx2, cy2), _s = get_crop_box(coords, 1.5)
+                  fh, fw = frame.shape[:2]
+                  pad = max(0, -cx1, -cy1, cx2 - fw, cy2 - fh)
+                  if pad == 0:
+                      break
+                  pad += 4
+                  img = cv2.copyMakeBorder(img, pad, pad, pad, pad, cv2.BORDER_REPLICATE)
+                  if img.shape[0] > MAX_FRAME_H:
+                      scale = MAX_FRAME_H / img.shape[0]
+                      img = cv2.resize(img, (int(img.shape[1] * scale), MAX_FRAME_H), interpolation=cv2.INTER_AREA)
+                  img = img[: img.shape[0] - img.shape[0] % 2, : img.shape[1] - img.shape[1] % 2]
+              else:
+                  raise NoFace("the face fills the portrait; no room for the blend box")
+              crop = cv2.resize(frame[y1:y2, x1:x2], (256, 256), interpolation=cv2.INTER_LANCZOS4)
+              latents = VAE.get_latents_for_unet(crop)
+              mask, crop_box = get_image_prepare_material(frame, coords, fp=FACE_PARSER, mode="jaw")
+              cv2.imwrite(os.path.join(mask_dir, "00000000.png"), mask)
+              with open(os.path.join(root, "mask_coords.pkl"), "wb") as f:
+                  pickle.dump([crop_box], f)
+              with open(os.path.join(root, "coords.pkl"), "wb") as f:
+                  pickle.dump([coords], f)
+              torch.save([latents], os.path.join(root, "latents.pt"))
+              with open(os.path.join(root, "avator_info.json"), "w") as f:
+                  json.dump({"avatar_id": avatar_id, "video_path": "portrait", "bbox_shift": 0}, f)
+              AVATARS.pop(avatar_id, None)
+              _load(avatar_id)
+          ms = round((time.monotonic() - started) * 1000.0, 1)
+          STATE["prepare_ms"][avatar_id] = ms
+          return {"avatar_id": avatar_id, "width": int(img.shape[1]), "height": int(img.shape[0]),
+                  "face_box": [int(v) for v in coords],
+                  "prepare_ms": ms}
+
+
+      def build_avatar_session(sessionid: str, params: dict):
+          o = copy.deepcopy(opt)
+          o.sessionid = sessionid
+          avatar_id = params["avatar"]
+          o.avatar_id = avatar_id
+          return registry.create("avatar", "musetalk", opt=o, model=MODEL, avatar=_load(avatar_id))
+
+
+      class TrackedRTCManager(RTCManager):
+          """RTCManager that remembers the peer connection per session so /close can end it."""
+
+          def __init__(self, o):
+              super().__init__(o)
+              self.by_session: dict = {}
+
+          async def _create_pc_and_answer(self, avatar_session, sessionid, offer):
+              pc = await super()._create_pc_and_answer(avatar_session, sessionid, offer)
+              self.by_session[sessionid] = pc
+              return pc
+
+
+      session_manager.set_max_session(MAX_SESSIONS)
+      session_manager.init_builder(build_avatar_session)
+      RTC = TrackedRTCManager(opt)
+
+
+      def _gpu() -> dict:
+          out: dict = {"cuda": torch.cuda.is_available()}
+          if torch.cuda.is_available():
+              free, total = torch.cuda.mem_get_info()
+              out.update({"name": torch.cuda.get_device_name(0), "total_mb": total // 2**20, "free_mb": free // 2**20,
+                          "process_reserved_mb": torch.cuda.memory_reserved() // 2**20,
+                          "process_allocated_mb": torch.cuda.memory_allocated() // 2**20})
+          return out
+
+
+      async def health(_request: web.Request) -> web.Response:
+          active = [k for k, v in session_manager.sessions.items() if v is not None]
+          prepared = sorted(d for d in os.listdir(AVATAR_ROOT) if _is_prepared(d)) if os.path.isdir(AVATAR_ROOT) else []
+          return web.json_response({
+              "ok": True, "model": "musetalk-1.5", "runner": "livetalking", "livetalking_ref": LIVETALKING_REF,
+              "transport": "webrtc", "fps": opt.fps, "batch_size": BATCH_SIZE, "sessions": len(active),
+              "max_sessions": MAX_SESSIONS, "avatars": prepared, "infer_fps": STATE["infer_fps"],
+              "model_load_ms": STATE["model_load_ms"], "gpu": _gpu(), "uptime_s": round(time.time() - STATE["started_at"]),
+              "media": dict(MEDIA),
+          })
+
+
+      async def list_avatars(_request: web.Request) -> web.Response:
+          prepared = sorted(d for d in os.listdir(AVATAR_ROOT) if _is_prepared(d)) if os.path.isdir(AVATAR_ROOT) else []
+          return web.json_response({"avatars": prepared})
+
+
+      async def put_avatar(request: web.Request) -> web.Response:
+          avatar_id = request.match_info["avatar_id"]
+          if not AVATAR_ID_RE.match(avatar_id):
+              return web.json_response({"error": "bad avatar_id"}, status=400)
+          body = await request.read()
+          if not body or len(body) > MAX_IMAGE_BYTES:
+              return web.json_response({"error": "image missing or larger than 8 MB"}, status=400)
+          try:
+              info = await asyncio.get_running_loop().run_in_executor(None, prepare_avatar, avatar_id, body)
+          except NoFace as exc:
+              return web.json_response({"error": "no_face", "detail": str(exc)}, status=422)
+          except ValueError as exc:
+              return web.json_response({"error": "bad_image", "detail": str(exc)}, status=400)
+          return web.json_response(info)
+
+
+      async def offer(request: web.Request) -> web.Response:
+          params = await request.json()
+          avatar_id = str(params.get("avatar") or "")
+          if not AVATAR_ID_RE.match(avatar_id) or not _is_prepared(avatar_id):
+              return web.json_response({"error": "avatar_not_prepared", "avatar": avatar_id}, status=409)
+          try:
+              await asyncio.get_running_loop().run_in_executor(None, _load, avatar_id)
+          except Exception as exc:  # noqa: BLE001 - a broken avatar dir is a client-visible error
+              return web.json_response({"error": "avatar_load_failed", "detail": type(exc).__name__}, status=500)
+          active = sum(1 for v in session_manager.sessions.values() if v is not None)
+          if active >= MAX_SESSIONS:
+              return web.json_response({"error": "max_sessions", "max_sessions": MAX_SESSIONS}, status=503)
+          try:
+              return await RTC.handle_offer(request)
+          except MaxSessionError:
+              return web.json_response({"error": "max_sessions", "max_sessions": MAX_SESSIONS}, status=503)
+
+
+      async def close(request: web.Request) -> web.Response:
+          params = await request.json()
+          sid = str(params.get("sessionid") or "")
+          session_manager.remove_session(sid)
+          pc = RTC.by_session.pop(sid, None)
+          if pc is not None:
+              await pc.close()
+              RTC.pcs.discard(pc)
+          return web.json_response({"ok": True, "closed": pc is not None})
+
+
+      async def turn_bridge(request: web.Request) -> web.WebSocketResponse:
+          """Pipe bytes between a WebSocket and the TURN server's TCP listener (TURN over TCP is a byte stream)."""
+          ws = web.WebSocketResponse(max_msg_size=1 << 20, heartbeat=20)
+          await ws.prepare(request)
+          try:
+              reader, writer = await asyncio.open_connection(TURN_TCP_HOST, TURN_TCP_PORT)
+          except OSError as exc:
+              await ws.close(code=1011, message=f"turn unreachable: {type(exc).__name__}".encode())
+              return ws
+
+          async def tcp_to_ws() -> None:
+              while True:
+                  data = await reader.read(65536)
+                  if not data:
+                      break
+                  await ws.send_bytes(data)
+
+          pump = asyncio.create_task(tcp_to_ws())
+          try:
+              async for msg in ws:
+                  if msg.type == WSMsgType.BINARY:
+                      writer.write(msg.data)
+                      await writer.drain()
+                  elif msg.type in (WSMsgType.CLOSE, WSMsgType.ERROR):
+                      break
+          finally:
+              pump.cancel()
+              writer.close()
+              await ws.close()
+          return ws
+
+
+      async def on_shutdown(_app: web.Application) -> None:
+          await RTC.shutdown()
+
+
+      def main() -> None:
+          os.makedirs(AVATAR_ROOT, exist_ok=True)
+          app = web.Application(client_max_size=32 * 1024 * 1024)
+          app["rtc_manager"] = RTC
+          app["opt"] = opt
+          app.on_shutdown.append(on_shutdown)
+          app.router.add_get("/health", health)
+          app.router.add_get("/avatars", list_avatars)
+          app.router.add_put("/avatars/{avatar_id}", put_avatar)
+          app.router.add_post("/offer", offer)
+          app.router.add_post("/humanaudio", humanaudio)
+          app.router.add_post("/interrupt_talk", interrupt_talk)
+          app.router.add_post("/is_speaking", is_speaking)
+          app.router.add_post("/close", close)
+          app.router.add_get("/turn", turn_bridge)
+          log.info("acudx avatar runner on :%d (batch %d, max sessions %d, model load %.0f ms)", AVATAR_PORT, BATCH_SIZE,
+                   MAX_SESSIONS, STATE["model_load_ms"])
+          web.run_app(app, host="0.0.0.0", port=AVATAR_PORT, access_log=None)
+
+
+      if __name__ == "__main__":
+          import torch.multiprocessing as tmp
+          tmp.set_start_method("spawn", force=True)
+          main()
+  - path: /opt/acudx/avatar.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      # Avatar runner bring-up (LiveTalking + MuseTalk 1.5 and the coturn TURN server).
+      # Started in the background right after the NVIDIA runtime is registered: the image
+      # builds while vLLM loads, and the containers start only after vLLM is healthy and the
+      # other GPU side-cars have taken their memory, so the VRAM check sees the real headroom.
+      # Progress and the final verdict go to /opt/acudx/public/avatar-status/status.json, which
+      # Caddy serves at /avatar-status/status.json behind the bearer (the gateway reads it
+      # when /avatar/health does not answer, and reports it in /v1/voice/capabilities).
+      set -u
+      cd /opt/acudx
+      set -a; . ./.env; set +a
+      st=/opt/acudx/public/avatar-status
+      compose="docker compose -f /opt/acudx/docker-compose.yml"
+      mkdir -p "$st" /opt/acudx/avatars
+      status() {
+        # state reason [total_mb free_mb]
+        printf '{"state":"%s","reason":"%s","total_mb":%s,"free_mb":%s,"required_mb":%s,"livetalking_ref":"%s","at":"%s"}\n' \
+          "$1" "$2" "${3:-null}" "${4:-null}" "$AVATAR_REQUIRED_MB" "$LIVETALKING_REF" "$(date -u +%FT%TZ)" > "$st/status.json.tmp"
+        mv "$st/status.json.tmp" "$st/status.json"
+        chmod 0644 "$st/status.json"
+        echo "acudx avatar: $1 $2 $(date -u)"
+      }
+      gpu_mem() { nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader,nounits | head -1 | tr -d ' ' | tr ',' ' '; }
+      status building ""
+      if [ ! -d /opt/acudx/livetalking/.git ]; then
+        git clone --filter=blob:none https://github.com/lipku/LiveTalking /opt/acudx/livetalking || { status disabled clone_failed; exit 1; }
+      fi
+      git -C /opt/acudx/livetalking checkout --quiet "$LIVETALKING_REF" || { status disabled checkout_failed; exit 1; }
+      install -m 0644 /opt/acudx/avatar/Dockerfile.acudx /opt/acudx/avatar/acudx-constraints.txt \
+        /opt/acudx/avatar/acudx_avatar_server.py /opt/acudx/avatar/acudx_fetch_models.py /opt/acudx/livetalking/
+      $compose build avatar >/var/log/acudx-avatar-build.log 2>&1 || { status disabled build_failed; exit 1; }
+      status waiting "vllm_health"
+      for _ in $(seq 1 240); do
+        $compose exec -T vllm curl -sf -o /dev/null http://localhost:8000/health >/dev/null 2>&1 && break
+        # A vLLM that exited will not come back by itself; measure VRAM without it rather than wait 40 min.
+        cid=$($compose ps -aq vllm 2>/dev/null)
+        [ -n "$cid" ] && [ "$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null)" = exited ] && break
+        sleep 10
+      done
+      status waiting "chatterbox_health"
+      for _ in $(seq 1 180); do
+        cid=$($compose ps -q chatterbox 2>/dev/null)
+        [ -n "$cid" ] && [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null)" = healthy ] && break
+        sleep 10
+      done
+      read -r total used <<< "$(gpu_mem)"
+      free=$((total - used))
+      if [ "$free" -lt "$AVATAR_REQUIRED_MB" ]; then
+        # 40 GB cards: vLLM 0.60 + Chatterbox + speaches + Kokoro may leave too little for MuseTalk.
+        status disabled insufficient_vram "$total" "$free"
+        exit 0
+      fi
+      status starting "" "$total" "$free"
+      $compose up -d turn avatar
+      for _ in $(seq 1 120); do
+        if $compose exec -T avatar curl -sf -o /dev/null http://localhost:8010/health >/dev/null 2>&1; then
+          read -r total2 used2 <<< "$(gpu_mem)"
+          status ready "used_by_avatar_mb=$((used2 - used))" "$total2" "$((total2 - used2))"
+          exit 0
+        fi
+        sleep 10
+      done
+      status disabled start_timeout "$total" "$free"
 runcmd:
-  - mkdir -p /opt/acudx/caddy /opt/acudx/chatterbox-cache /opt/acudx/chatterbox-voices /opt/acudx/public/diag
+  - mkdir -p /opt/acudx/caddy /opt/acudx/chatterbox-cache /opt/acudx/chatterbox-voices /opt/acudx/public/diag /opt/acudx/public/avatar-status /opt/acudx/avatars
   # Diagnostics secret: HMAC-SHA256(key=WORKER_TOKEN, "acudx-diag-v1"), hex, 32 characters.
   # The gateway derives the same value (server/providers/gpu_worker.py diag_secret).
   - |
@@ -329,6 +1007,16 @@ runcmd:
       s=$(printf '%s' acudx-diag-v1 | openssl dgst -sha256 -hmac "$WORKER_TOKEN" -r | cut -c1-32)
       [ ${#s} -eq 32 ] || { echo "acudx: could not derive the diagnostics secret" >&2; exit 1; }
       echo "WORKER_DIAG_SECRET=$s" >> /opt/acudx/.env
+    fi
+  # TURN secret for the avatar call: HMAC-SHA256(key=WORKER_TOKEN, "acudx-turn-v1"), hex, 32
+  # characters (server/voice/avatar/musetalk.py turn_secret); relay on the primary address.
+  - |
+    . /opt/acudx/.env
+    if ! grep -q '^TURN_SECRET=' /opt/acudx/.env; then
+      t=$(printf '%s' acudx-turn-v1 | openssl dgst -sha256 -hmac "$WORKER_TOKEN" -r | cut -c1-32)
+      [ ${#t} -eq 32 ] || { echo "acudx: could not derive the TURN secret" >&2; exit 1; }
+      echo "TURN_SECRET=$t" >> /opt/acudx/.env
+      echo "TURN_RELAY_IP=$(ip -4 route get 1.1.1.1 | awk '{for (i = 1; i < NF; i++) if ($i == "src") print $(i + 1)}')" >> /opt/acudx/.env
     fi
   - nohup /opt/acudx/diag.sh >/dev/null 2>&1 &
   - |
@@ -361,6 +1049,9 @@ runcmd:
   # name registered (boot log 2026-10-20: "unknown or invalid runtime name: nvidia");
   # register it and restart docker so both --gpus and device reservations work.
   - (command -v nvidia-ctk >/dev/null && nvidia-ctk runtime configure --runtime=docker && systemctl restart docker) || true
+  # The avatar image builds in parallel with the vLLM start; avatar.sh waits for vLLM and Chatterbox
+  # health and checks VRAM before starting the runner (it never blocks the steps below).
+  - nohup /opt/acudx/avatar.sh >/var/log/acudx-avatar.log 2>&1 &
   # vLLM reserves a fraction of the card at start-up and refuses to start when another
   # process already holds that memory (worker 10, 2026-10-20: once Chatterbox reached the
   # GPU, vLLM died with "Engine core initialization failed"). So vLLM starts alone and the

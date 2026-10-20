@@ -58,6 +58,9 @@ from server.rubric import grade_transcript
 from server.scope_guard import classify, crisis_resources
 from server.results_routes import router as results_router
 from server.telemetry.events import TelemetryRecorder, call_context
+from server.voice.avatar.routes import openai_router as patient_openai_router
+from server.voice.avatar.routes import router as avatar_router
+from server.voice.avatar.sessions import SessionStore
 from server.voice.routes import admin_router as voice_admin_router
 from server.voice.routes import router as voice_router
 from server.voice.service import VoiceService
@@ -144,6 +147,7 @@ async def lifespan(app: FastAPI):
     app.state.telemetry = telemetry
     app.state.worker_manager = worker_manager
     app.state.voice = voice
+    app.state.avatar_sessions = SessionStore()
     app.state.auth = auth
     app.state.learning = learning
     app.state.jobs = {"provider_probe": probe_job, "telemetry_retention": retention_job}
@@ -183,6 +187,8 @@ app.include_router(results_router)  # /v1/results/* and /v1/imaging/resolve (ser
 app.include_router(registry_router)
 app.include_router(voice_router)        # /v1/voice/* (server/voice/routes.py)
 app.include_router(voice_admin_router)  # /admin/voice/agent-config
+app.include_router(avatar_router)       # /v1/voice/avatar/* live patient video (server/voice/avatar)
+app.include_router(patient_openai_router)  # /v1/patient/openai/chat/completions (Tavus custom LLM)
 app.include_router(guidelines_router)  # /v1/guidelines/* + /admin/guidelines/verify
 app.include_router(auth_router)        # /v1/auth/config, /v1/auth/me (server/auth/routes.py)
 app.include_router(auth_admin_router)  # /admin/users, /admin/users/{sub}/roles

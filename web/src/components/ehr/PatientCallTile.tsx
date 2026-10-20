@@ -1,10 +1,17 @@
 /**
  * PatientCallTile: the patient as a video-call participant beside the chat.
  *
- * Two paths, chosen from the gateway's /v1/voice/capabilities:
- *  - realtime: an avatar row of kind `avatar` (LiveKit transport) exists, so the
- *    tile joins the encounter's room with a short-lived token and renders the
- *    renderer participant's video track (Simli / Anam / self-hosted MuseTalk);
+ * Paths, chosen from the gateway's /v1/voice/capabilities (avatar block):
+ *  - webrtc (live video, self-hosted): the GPU worker's LiveTalking + MuseTalk 1.5
+ *    runner takes the case portrait as the reference face; the tile opens a
+ *    receive-only WebRTC call through the gateway (TURN credentials, offer/answer)
+ *    and each patient line is spoken by the gateway TTS INTO the runner, so the
+ *    face's lips move with the patient voice on one synchronized stream
+ *    (lib/avatarCall.ts measures first frame, speech start and audio-to-lip lag);
+ *  - tavus (live video, hosted): a Tavus CVI conversation whose LLM is the gateway's
+ *    patient endpoint, embedded as the conversation room;
+ *  - realtime (LiveKit): an avatar row with LiveKit transport, joined with a room
+ *    token (Simli / Anam renderers);
  *  - local (the default and the AIRGAPPED fallback): the talking-head clip and a
  *    viseme overlay are driven by the ACTUAL patient audio through a Web Audio
  *    AnalyserNode (audioLipsync.ts), so the clip plays exactly as long as the
@@ -16,6 +23,10 @@
  * patient line and the learner's last line). Symptom overlays come from the live
  * vitals through the same `photoSignsFromVitals` / `SymptomSummary` the viewer
  * uses, so the face, the chips and the monitor never disagree.
+ *
+ * The local path is labelled "Animated portrait, not live video" on the picture, so
+ * the learner never mistakes it for a live stream; while the live video connects the
+ * status line says what is happening (preparing the face, connecting, worker starting).
  *
  * Reduced motion: the clip and overlay stay still (PatientPhoto already does
  * this); the status text carries the meaning. Education only, synthetic patient.
@@ -46,9 +57,18 @@ import { useSpeech, type MouthShape } from "@/lib/lipsync";
 import { createAnalyserEnvelope, overlayGeometry, type AnalyserEnvelope } from "@/lib/audioLipsync";
 import { getTtsAudioElement, pauseTts, resumeTts, setTtsMuted, speakAsPatient, stopTts, ttsMaybeAvailable } from "@/lib/tts";
 import { voiceApi, type VoiceCapabilities } from "@/lib/voiceApi";
+import { sessionBody, startAvatarCall, type AvatarCallHandle, type AvatarCallMetrics } from "@/lib/avatarCall";
 
 export type CallState = "connecting" | "live" | "hold" | "ended";
-export type CallMode = "realtime" | "local";
+export type CallMode = "realtime" | "webrtc" | "tavus" | "local";
+/** What the live-video path is doing right now (shown while it is not live). */
+export type LiveVideoPhase = "preparing" | "connecting" | "workerStarting" | "unavailable" | null;
+
+export interface PatientCallContext {
+  case_state?: Record<string, unknown>;
+  persona?: Record<string, unknown>;
+  case_context?: Record<string, unknown>;
+}
 
 export interface PatientCallTileProps {
   caseInstance: CaseInstance;
@@ -62,6 +82,8 @@ export interface PatientCallTileProps {
   lang: "en" | "tr";
   /** Encounter id used for the LiveKit room name (opaque hash server-side). */
   encounterId?: string;
+  /** Case state and persona for the live-video call (the same shapes as /v1/patient/turn). */
+  callContext?: () => PatientCallContext;
   className?: string;
 }
 
@@ -136,6 +158,7 @@ export function PatientCallTile({
   onToggleVoice,
   lang,
   encounterId,
+  callContext,
   className,
 }: PatientCallTileProps) {
   const { t } = useTranslation();
@@ -152,6 +175,11 @@ export function PatientCallTile({
   const [firstAudioMs, setFirstAudioMs] = useState<number | null>(null);
   const [audioDriven, setAudioDriven] = useState(false);
   const [frame, setFrame] = useState<{ jaw: number; shape: MouthShape }>({ jaw: 0, shape: "rest" });
+  const [livePhase, setLivePhase] = useState<LiveVideoPhase>(null);
+  const [liveMetrics, setLiveMetrics] = useState<AvatarCallMetrics | null>(null);
+  const [tavusUrl, setTavusUrl] = useState<string | null>(null);
+  const avatarRef = useRef<AvatarCallHandle | null>(null);
+  const contextRef = useRef(callContext);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -172,7 +200,83 @@ export function PatientCallTile({
     voiceRef.current = voiceOn;
     speakRef.current = speak;
     stopRef.current = stop;
-  }, [state, voiceOn, speak, stop]);
+    contextRef.current = callContext;
+  }, [state, voiceOn, speak, stop, callContext]);
+
+  /**
+   * Self-hosted live video: prepare the portrait on the worker runner, then connect.
+   * Resolves true when the first frame arrived; false (with a phase explaining why) to
+   * keep the honest local fallback.
+   */
+  const startLiveVideo = useCallback(
+    async (isCancelled: () => boolean): Promise<boolean> => {
+      if (!encounterId || !videoRef.current || !remoteAudioRef.current) return false;
+      setLivePhase("preparing");
+      const ses = await voiceApi.avatarSession(
+        sessionBody({
+          encounterId,
+          photoId: visual.photoId,
+          lang,
+          sex: visual.sexAtBirth,
+          age: visual.age,
+          context: contextRef.current?.(),
+        }),
+      );
+      if (isCancelled()) return false;
+      if (!ses.ok) {
+        setLivePhase("detail" in ses && ses.detail?.pending_launch ? "workerStarting" : "unavailable");
+        return false;
+      }
+      if (ses.data.transport === "tavus" && ses.data.conversation_url) {
+        setTavusUrl(ses.data.conversation_url);
+        avatarRef.current = {
+          session: ses.data,
+          metrics: { prepareMs: null, answerMs: null, firstFrameMs: null, speechStartMs: null, lipLagMs: null, ttsMs: null, provider: "tavus" },
+          samples: [],
+          speak: async () => false,
+          stats: async () => ({ audioPackets: 0, audioEnergy: 0, videoFrames: 0, videoFps: null, rttMs: null }),
+          end: () => void voiceApi.avatarEnd(ses.data.session_id),
+        };
+        setMode("tavus");
+        setLivePhase(null);
+        return true;
+      }
+      setLivePhase("connecting");
+      try {
+        const handle = await startAvatarCall({
+          api: voiceApi,
+          session: ses.data,
+          video: videoRef.current,
+          audio: remoteAudioRef.current,
+          onMetrics: (m) => {
+            if (!isCancelled()) setLiveMetrics(m);
+          },
+          onState: (st) => {
+            if (isCancelled()) return;
+            if (st === "failed" || st === "ended") {
+              setHasVideo(false);
+              setMode("local");
+            }
+          },
+        });
+        if (isCancelled()) {
+          handle.end();
+          return false;
+        }
+        avatarRef.current = handle;
+        if (typeof window !== "undefined") (window as unknown as { __acudxAvatarCall?: AvatarCallHandle }).__acudxAvatarCall = handle;
+        setLiveMetrics({ ...handle.metrics });
+        setHasVideo(true);
+        setMode("webrtc");
+        setLivePhase(null);
+        return true;
+      } catch {
+        if (!isCancelled()) setLivePhase("unavailable");
+        return false;
+      }
+    },
+    [encounterId, visual.photoId, visual.sexAtBirth, visual.age, lang],
+  );
 
   // 1. Capabilities once; decide the path. Realtime needs an avatar row AND a room token.
   useEffect(() => {
@@ -182,7 +286,17 @@ export function PatientCallTile({
       const res = await voiceApi.capabilities({ signal: ctl.signal, timeoutMs: 6000 });
       if (cancelled) return;
       if (res.ok) setCaps(res.data);
-      const wantRealtime = res.ok && res.data.avatar.enabled && !!encounterId;
+      const av = res.ok ? res.data.avatar : null;
+      const liveTransport = av?.enabled && (av.transport === "webrtc" || av.transport === "tavus");
+      if (liveTransport && encounterId) {
+        setState("live");
+        if (await startLiveVideo(() => cancelled)) return;
+        if (cancelled) return;
+        setMode("local");
+        return;
+      }
+      if (av?.pending_launch) setLivePhase("workerStarting");
+      const wantRealtime = !!av?.enabled && av.transport === "livekit" && !!encounterId;
       if (wantRealtime && videoRef.current && remoteAudioRef.current) {
         try {
           const handle = await joinLiveKit(encounterId!, videoRef.current, remoteAudioRef.current, (v) => {
@@ -210,8 +324,38 @@ export function PatientCallTile({
       ctl.abort();
       lkRef.current?.disconnect();
       lkRef.current = null;
+      avatarRef.current?.end();
+      avatarRef.current = null;
     };
-  }, [encounterId]);
+  }, [encounterId, startLiveVideo]);
+
+  // While the GPU worker boots (the first spoken reply launches it), re-check every 30 s
+  // and move from the animated portrait to the live video once the runner is ready.
+  useEffect(() => {
+    if (livePhase !== "workerStarting" || mode !== "local") return;
+    let cancelled = false;
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      if (tries > 40) {
+        clearInterval(timer);
+        return;
+      }
+      void voiceApi.capabilities({ timeoutMs: 6000 }).then(async (res) => {
+        if (cancelled || !res.ok) return;
+        setCaps(res.data);
+        const av = res.data.avatar;
+        if (av.enabled && (av.transport === "webrtc" || av.transport === "tavus") && stateRef.current === "live") {
+          clearInterval(timer);
+          await startLiveVideo(() => cancelled);
+        }
+      });
+    }, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [livePhase, mode, startLiveVideo]);
 
   // 2. Analyser loop: sample the shared patient <audio> while it plays.
   const stopLoop = useCallback(() => {
@@ -245,8 +389,14 @@ export function PatientCallTile({
   // 3. Each new patient line: speak it (local mode) and animate for exactly the audio.
   useEffect(() => {
     const text = utterance?.trim();
-    if (!text || mode === "realtime") return;
+    if (!text || mode === "realtime" || mode === "tavus") return;
     if (stateRef.current !== "live") return;
+    if (mode === "webrtc") {
+      // Live video: the gateway speaks the line into the runner; voice and lips arrive
+      // together on the WebRTC stream. Voice off keeps the face listening, captions on.
+      if (voiceRef.current) void avatarRef.current?.speak(text);
+      return;
+    }
     const textTimed = () => speakRef.current(text, { voice: false, lang });
     if (!voiceRef.current || !ttsMaybeAvailable()) {
       textTimed();
@@ -308,11 +458,13 @@ export function PatientCallTile({
     if (state === "hold") {
       setState("live");
       resumeTts();
-      if (videoRef.current && mode === "realtime") void videoRef.current.play().catch(() => {});
+      if (videoRef.current && (mode === "realtime" || mode === "webrtc")) void videoRef.current.play().catch(() => {});
+      if (remoteAudioRef.current && mode === "webrtc") void remoteAudioRef.current.play().catch(() => {});
     } else if (state === "live") {
       setState("hold");
       pauseTts();
-      if (videoRef.current && mode === "realtime") videoRef.current.pause();
+      if (videoRef.current && (mode === "realtime" || mode === "webrtc")) videoRef.current.pause();
+      if (remoteAudioRef.current && mode === "webrtc") remoteAudioRef.current.pause();
     }
   };
   const endCall = () => {
@@ -322,10 +474,18 @@ export function PatientCallTile({
     stop();
     lkRef.current?.disconnect();
     lkRef.current = null;
+    avatarRef.current?.end();
+    avatarRef.current = null;
+    setTavusUrl(null);
     setHasVideo(false);
   };
   const rejoin = () => {
     setState("live");
+    if ((mode === "webrtc" || mode === "tavus" || caps?.avatar.live_video) && encounterId) {
+      setMode("local");
+      void startLiveVideo(() => false);
+      return;
+    }
     if (mode === "realtime" && encounterId && videoRef.current && remoteAudioRef.current) {
       void joinLiveKit(encounterId, videoRef.current, remoteAudioRef.current, setHasVideo).then((h) => {
         lkRef.current = h;
@@ -336,7 +496,9 @@ export function PatientCallTile({
 
   // Derived labels ---------------------------------------------------------------
   const speaking = audioDriven ? frame.jaw > 0.02 || textSpeaking : textSpeaking;
-  const showRealtimeVideo = mode === "realtime" && hasVideo && state !== "ended";
+  const showRealtimeVideo = (mode === "realtime" || mode === "webrtc") && hasVideo && state !== "ended";
+  const showTavus = mode === "tavus" && !!tavusUrl && state !== "ended";
+  const liveVideo = showRealtimeVideo || showTavus;
   const ttsEnabled = caps?.tts.enabled ?? true;
   const statusKey =
     state === "connecting"
@@ -345,14 +507,16 @@ export function PatientCallTile({
         ? "hold"
         : state === "ended"
           ? "ended"
-          : showRealtimeVideo
+          : liveVideo
             ? "live"
-            : audioDriven
+            : livePhase === "preparing" || livePhase === "connecting"
+              ? "videoConnecting"
+              : audioDriven
               ? "audio"
               : "textTimed";
   const statusLabel = t(`voice2.tile.status.${statusKey}`);
   const geometry = useMemo(() => overlayGeometry(frame), [frame]);
-  const showOverlay = audioDriven && !reduced && state === "live" && !showRealtimeVideo;
+  const showOverlay = audioDriven && !reduced && state === "live" && !liveVideo;
   const providerLabel = caps?.tts.enabled ? caps.tts.provider : null;
 
   return (
@@ -375,7 +539,7 @@ export function PatientCallTile({
             )}
             role="status"
           >
-            {showRealtimeVideo ? (
+            {liveVideo ? (
               <VideoCamera weight="bold" className="h-3 w-3" aria-hidden />
             ) : state === "ended" ? (
               <WifiSlash weight="bold" className="h-3 w-3" aria-hidden />
@@ -408,7 +572,13 @@ export function PatientCallTile({
           {/* Realtime renderer track (hidden until a video track arrives) */}
           <video
             ref={videoRef}
-            className={cn("absolute inset-0 h-full w-full object-cover", !showRealtimeVideo && "hidden")}
+            // Transparent (not display:none) while connecting: a hidden element never presents
+            // frames, so requestVideoFrameCallback would not report the first frame.
+            className={cn(
+              "absolute inset-0 h-full w-full object-cover",
+              !showRealtimeVideo && "pointer-events-none opacity-[0.01]",
+            )}
+            data-testid="patient-live-video"
             autoPlay
             playsInline
             muted
@@ -416,8 +586,18 @@ export function PatientCallTile({
           />
           <audio ref={remoteAudioRef} autoPlay className="hidden" />
 
+          {/* Hosted live video (Tavus CVI conversation room) */}
+          {showTavus ? (
+            <iframe
+              src={tavusUrl ?? undefined}
+              title={t("voice2.tile.heading")}
+              allow="camera; microphone; autoplay; fullscreen; display-capture"
+              className="absolute inset-0 h-full w-full border-0"
+            />
+          ) : null}
+
           {/* Local talking head: clip + physiology, speaking tied to the audio */}
-          {!showRealtimeVideo ? (
+          {!liveVideo ? (
             <PatientPhoto
               sex={visual.sexAtBirth}
               age={visual.age}
@@ -451,6 +631,16 @@ export function PatientCallTile({
           <div className="absolute left-2 top-2 max-w-[80%] rounded-control bg-surface/85 px-2 py-1 shadow-soft backdrop-blur-sm">
             <SymptomSummary vitals={vitals} variant="inline" className="text-fg" />
           </div>
+
+          {/* Honest label for the fallback: never mistaken for a live stream */}
+          {!liveVideo && state !== "ended" ? (
+            <div
+              className="absolute right-2 top-2 rounded-control bg-black/60 px-2 py-1 text-[11px] font-medium text-white"
+              data-testid="not-live-label"
+            >
+              {t("voice2.tile.notLive")}
+            </div>
+          ) : null}
 
           {/* Name plate */}
           <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-control bg-black/60 px-2 py-1 text-[11px] font-medium text-white">
@@ -541,10 +731,26 @@ export function PatientCallTile({
       <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted">
         {caps && !ttsEnabled ? <span>{t("voice2.tile.noVoice")}</span> : null}
         {caps && ttsEnabled && !voiceOn ? <span>{t("voice2.tile.voiceOff")}</span> : null}
-        {caps && caps.avatar.enabled && !showRealtimeVideo && state === "live" ? <span>{t("voice2.tile.degraded")}</span> : null}
+        {caps && caps.avatar.enabled && !liveVideo && state === "live" && !livePhase ? <span>{t("voice2.tile.degraded")}</span> : null}
+        {livePhase && !liveVideo ? <span data-testid="live-phase">{t(`voice2.tile.liveVideo.${livePhase}`)}</span> : null}
         {providerLabel && voiceOn ? <span>{t("voice2.tile.provenance.voice", { provider: providerLabel })}</span> : null}
-        {showRealtimeVideo && caps ? <span>{t("voice2.tile.provenance.renderer", { renderer: caps.avatar.renderer })}</span> : null}
-        {firstAudioMs != null && voiceOn ? (
+        {liveVideo && caps ? <span>{t("voice2.tile.provenance.renderer", { renderer: caps.avatar.renderer })}</span> : null}
+        {showRealtimeVideo && liveMetrics?.firstFrameMs != null ? (
+          <span className="font-mono tabular-nums" data-testid="first-frame-ms">
+            {t("voice2.tile.provenance.firstFrame", { ms: liveMetrics.firstFrameMs })}
+          </span>
+        ) : null}
+        {showRealtimeVideo && liveMetrics?.speechStartMs != null ? (
+          <span className="font-mono tabular-nums" data-testid="speech-start-ms">
+            {t("voice2.tile.provenance.speechStart", { ms: liveMetrics.speechStartMs })}
+          </span>
+        ) : null}
+        {showRealtimeVideo && liveMetrics?.lipLagMs != null ? (
+          <span className="font-mono tabular-nums" data-testid="lip-lag-ms">
+            {t("voice2.tile.provenance.lipLag", { ms: liveMetrics.lipLagMs })}
+          </span>
+        ) : null}
+        {firstAudioMs != null && voiceOn && !liveVideo ? (
           <span className="font-mono tabular-nums">{t("voice2.tile.provenance.firstAudio", { ms: firstAudioMs })}</span>
         ) : null}
       </p>

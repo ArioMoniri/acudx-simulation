@@ -10,7 +10,8 @@
         "textTimed": "Text-timed animation",
         "hold": "On hold",
         "ended": "Call ended",
-        "muted": "Muted"
+        "muted": "Muted",
+        "videoConnecting": "Connecting video"
       },
       "degraded": "Realtime video unavailable; the talking head follows the voice audio.",
       "noVoice": "No voice provider is enabled. Replies are shown as text.",
@@ -37,10 +38,20 @@
       "provenance": {
         "voice": "Voice: {{provider}}",
         "firstAudio": "First audio {{ms}} ms",
-        "renderer": "Video: {{renderer}}"
+        "renderer": "Video: {{renderer}}",
+        "firstFrame": "First frame {{ms}} ms",
+        "speechStart": "Speech start {{ms}} ms",
+        "lipLag": "Voice to lips {{ms}} ms"
       },
       "signs": "Presentation",
-      "endedNote": "The patient is still here. Rejoin to continue the voice call; typing always works."
+      "endedNote": "The patient is still here. Rejoin to continue the voice call; typing always works.",
+      "notLive": "Animated portrait, not live video",
+      "liveVideo": {
+        "preparing": "Preparing the patient's face for live video",
+        "connecting": "Connecting live video",
+        "workerStarting": "Live video starts when the GPU worker is up; showing the animated portrait",
+        "unavailable": "Live video unavailable; showing the animated portrait"
+      }
     }
   }
 }
