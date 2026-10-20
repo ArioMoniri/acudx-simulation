@@ -20,10 +20,17 @@ server/voice/profiles.py        sex + age band + language -> voice id, overridab
 server/voice/service.py         VoiceService: candidates, language skipping, worker fallback, telemetry rows
 server/voice/livekit.py         room tokens (livekit-api when installed, stdlib HS256 otherwise), opaque room names
 server/voice/routes.py          /v1/voice/tts, /v1/voice/stt, /v1/voice/capabilities, /v1/voice/room, /admin/voice/agent-config
+server/voice/avatar/            live patient video: sessions (case state per call), musetalk (GPU worker runner client,
+                                TURN REST credentials), tavus (Tavus CVI PAL + conversation), routes (/v1/voice/avatar/*,
+                                /v1/patient/openai/chat/completions)
 server/registry/resolve.py      endpoints(kind), resolve_worker(kind) for llm | tts | stt (worker /v1, /tts, /stt)
 server/telemetry/prices.py      VOICE_PRICE_TABLE (per 1k chars, per minute) + voice_cost_usd
 workers/voice_agent/            LiveKit Agents 1.8.8 worker: config, plugin selection, gateway patient turn, agent entrypoint
-infra/gpu-worker/cloud-init.yaml  vLLM + Chatterbox Multilingual (built from a pinned commit) + Kokoro + speaches behind Caddy
+infra/gpu-worker/cloud-init.yaml  vLLM + Chatterbox Multilingual (built from a pinned commit) + Kokoro + speaches behind Caddy,
+                                plus the avatar runner (LiveTalking + MuseTalk 1.5, built from a pinned commit) and coturn
+scripts/turn_ws_tunnel.py       TURN-over-TCP through a WebSocket, for test harnesses whose only egress is an HTTPS proxy
+web/src/lib/avatarCall.ts       receive-only WebRTC call, first frame, speech start, audio-to-lip lag (cross-correlation)
+web/e2e/capture/live-avatar.mjs the live capture behind docs/media/live-avatar/
 web/src/lib/voiceApi.ts         typed client, streaming playback (MediaSource or chunked blob), first-audio latency
 web/src/lib/audioLipsync.ts     AnalyserNode RMS -> jaw envelope -> MouthShape; overlay geometry
 web/src/lib/tts.ts, stt.ts      same exported names as before, internals call /api/v1/voice/*
@@ -40,6 +47,11 @@ web/src/i18n/features/voice2.{en,tr}.json
 | GET | /v1/voice/capabilities | | `{airgapped, tts, stt, avatar, gpu_worker}`; each engine block has `enabled, provider, source, adapter, model, languages, reasons, pending_launch?` |
 | POST | /v1/voice/room | `{encounter_id, identity?, name?}` | `{url (wss), token, room, identity, renderer, ttl_s}`; 404 when no LiveKit avatar row is eligible |
 | GET | /admin/voice/agent-config | `X-Admin-Token` | resolved stt / tts / avatar / livekit blocks with decrypted keys, for the agent worker only |
+| POST | /v1/voice/avatar/session | `{encounter_id, photo_id, lang, sex, age, case_state, persona, case_context, provider?: auto|musetalk|tavus}` (signed in) | musetalk: `{session_id, transport: "webrtc", ice_servers, ice_transport_policy: "relay", prepare_ms, worker}`; tavus: `{session_id, transport: "tavus", conversation_url}`; 503 `{error: "avatar_unavailable", state, reasons[], pending_launch?}` |
+| POST | /v1/voice/avatar/offer | `{session_id, sdp, type: "offer"}` | `{sdp, type: "answer", answer_ms}` (SDP proxied to the worker runner; the bearer stays server-side) |
+| POST | /v1/voice/avatar/speak | `{session_id, text}` | gateway TTS (registry row or worker Chatterbox) -> runner audio in; `{provider, model, voice_id, tts_ms, queued_ms, audio_bytes, audio_duration_ms}` |
+| POST | /v1/voice/avatar/interrupt, /end | `{session_id}` | stop the current line / end the call (runner session closed, or Tavus conversation ended and its PAL deleted) |
+| POST | /v1/patient/openai/chat/completions | OpenAI chat body, `Authorization: Bearer <per-call token>` | OpenAI `chat.completion` (or SSE chunks when `stream`): `/v1/patient/turn` with the call's stored case state, so the guard, persona and FactAssertionGate run on every Tavus turn; header `X-AcuDx-Routed-As` |
 
 503 `{error: "<kind>_unavailable", airgapped, reasons[]}` when nothing can serve. The reasons name every refused row ("eleven: refused by AIRGAPPED (non-local https://api.elevenlabs.io)") and the worker refusal (`gpu-worker: airgapped | not_configured | budget_exceeded | no_capacity`), so the console and the tile can say why.
 

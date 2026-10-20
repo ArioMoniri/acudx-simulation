@@ -186,6 +186,13 @@ class Settings(BaseSettings):
     ])
     gpu_region_preference: CsvList = Field(default_factory=list)
     admin_token: str | None = None               # guards /admin/*; 503 when unset
+    # --- Live patient video (server/voice/avatar, docs/architecture/18 section 6) --- #
+    # The gateway's internet-reachable origin; Tavus's custom LLM calls back
+    # <PUBLIC_BASE_URL>/v1/patient/openai/chat/completions. Unset = Tavus cannot be used.
+    public_base_url: str | None = None
+    # TURN URLs handed to the browser for the GPU worker's avatar call, replacing the default
+    # turn:<worker>:3478 (udp, tcp) pair, e.g. a TLS terminator on 443 or a local tunnel.
+    avatar_turn_urls: CsvList = Field(default_factory=list)
     acudx_db_path: str = "server/data/acudx.db"  # SQLite: worker state + cost ledger + registry + telemetry
 
     # --- Identity (server/auth, docs/architecture/19) --- #
@@ -210,7 +217,7 @@ class Settings(BaseSettings):
 
     @field_validator(
         "local_allowlist", "cors_origins", "gpu_instance_allowlist", "gpu_region_preference",
-        mode="before",
+        "avatar_turn_urls", mode="before",
     )
     @classmethod
     def _split_csv(cls, v: object) -> object:

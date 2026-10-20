@@ -236,7 +236,17 @@ class VoiceService:
                                       timeout=WORKER_PROBE_TIMEOUT_S)
         except httpx.HTTPError as exc:
             return False, f"unreachable ({type(exc).__name__})"
-        return (True, "ok") if r.status_code == 200 else (False, f"HTTP {r.status_code}")
+        if r.status_code != 200:
+            return False, f"HTTP {r.status_code}"
+        # Chatterbox answers 200 on /health even when its model failed to initialize
+        # (2026-10-20: "initialization_state": "error"); trust the body when it says so.
+        try:
+            body = r.json()
+        except ValueError:
+            return True, "ok"
+        if isinstance(body, dict) and (body.get("model_loaded") is False or body.get("status") == "error"):
+            return False, f"model not loaded ({body.get('initialization_error') or body.get('status')})"
+        return True, "ok"
 
     async def capabilities(self, *, probe_worker: bool = False) -> dict[str, Any]:
         """What is enabled now. ``probe_worker`` also counts a launchable GPU worker (never launches one)."""
@@ -275,13 +285,49 @@ class VoiceService:
                 elif out["gpu_worker"].get("refusal"):
                     reasons.append(f"gpu-worker: {out['gpu_worker']['refusal']['reason']}")
             out[kind] = self._describe(kind, ep, reasons, worker_launchable=launchable)
-        avatars = self.resolver.endpoints("avatar")
-        if avatars:
-            av = avatars[0]
-            out["avatar"] = {"enabled": True, "provider": av.name, "transport": av.extra.get("transport") or "livekit",
-                             "renderer": av.extra.get("avatar") or "none", "source": av.source}
-        else:
-            refused = [r.name for r in self.resolver.refused("avatar")]
-            out["avatar"] = {"enabled": False, "provider": None, "transport": None, "renderer": "none",
-                             "reasons": [f"{n}: refused by AIRGAPPED" for n in refused]}
+        out["avatar"] = await self._avatar_capabilities(out.get("gpu_worker"), probe_worker=probe_worker)
         return out
+
+    async def _avatar_capabilities(self, gpu: dict[str, Any] | None, *, probe_worker: bool) -> dict[str, Any]:
+        """Live patient video, in order: a Tavus row, a LiveKit row, the GPU worker's MuseTalk runner."""
+        from server.voice.avatar import musetalk as mt  # noqa: PLC0415 - avatar imports this module
+        from server.voice.avatar import tavus as tv  # noqa: PLC0415
+
+        reasons = [f"{r.name}: refused by AIRGAPPED" for r in self.resolver.refused("avatar")]
+        for av in self.resolver.endpoints("avatar"):
+            if tv.is_tavus_endpoint(av):
+                if not av.api_key:
+                    reasons.append(f"{av.name}: no Tavus API key stored")
+                    continue
+                return {"enabled": True, "provider": av.name, "transport": "tavus", "renderer": "tavus",
+                        "source": av.source, "live_video": True, "reasons": reasons}
+            return {"enabled": True, "provider": av.name, "transport": av.extra.get("transport") or "livekit",
+                    "renderer": av.extra.get("avatar") or "none", "source": av.source, "live_video": True,
+                    "reasons": reasons}
+        wm = self.resolver.worker_manager
+        base = {"enabled": False, "provider": None, "transport": None, "renderer": "none", "live_video": False}
+        if wm is None:
+            return {**base, "reasons": reasons}
+        worker = mt.worker_from_endpoint(wm.llm_endpoint())
+        if worker is None:
+            can_launch = bool(gpu and gpu.get("can_launch"))
+            if can_launch:
+                reasons.append("gpu-worker: not running; it starts on demand (the first spoken reply launches it)")
+            elif gpu and gpu.get("refusal"):
+                reasons.append(f"gpu-worker: {gpu['refusal']['reason']}")
+            return {**base, "provider": "gpu-worker", "transport": "webrtc", "renderer": mt.RENDERER,
+                    "source": "gpu_worker", "pending_launch": bool(probe_worker and can_launch), "reasons": reasons}
+        h = await mt.health(self.client, worker)
+        block: dict[str, Any] = {"provider": "gpu-worker", "transport": "webrtc", "renderer": mt.RENDERER,
+                                 "model": mt.MODEL, "source": "gpu_worker", "state": h.get("state")}
+        if h.get("ok"):
+            gpu_info = h.get("gpu") or {}
+            return {**block, "enabled": True, "live_video": True, "reasons": reasons,
+                    "sessions": h.get("sessions"), "max_sessions": h.get("max_sessions"),
+                    "infer_fps": h.get("infer_fps"),
+                    "vram": {k: gpu_info.get(k) for k in ("name", "total_mb", "free_mb", "process_reserved_mb")}}
+        detail = h.get("reason") or h.get("detail") or ""
+        reasons.append(f"gpu-worker avatar: {h.get('state')}{(' (' + str(detail) + ')') if detail else ''}")
+        vram = {k: h[k] for k in ("total_mb", "free_mb", "required_mb") if k in h}
+        return {**block, "enabled": False, "live_video": False, "reasons": reasons,
+                **({"vram": vram} if vram else {})}
