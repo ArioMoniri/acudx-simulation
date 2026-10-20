@@ -10,22 +10,14 @@ import {
   Lifebuoy,
   Check,
   X,
-  SpeakerHigh,
-  SpeakerSlash,
   Microphone,
   User,
 } from "@phosphor-icons/react";
 
 import { GuidanceCard } from "@/components/GuidanceCard";
-import { PatientPhoto } from "@/components/PatientPhoto";
-import { useSpeech } from "@/lib/lipsync";
-import { speakAsPatient, stopTts, unlockTts } from "@/lib/tts";
-import {
-  SymptomSummary,
-  photoSignsFromVitals,
-  type VitalsLike,
-} from "@/components/PatientViewer";
-import { resolvePatientVisual } from "@/domain/patientIdentity";
+import { PatientCallTile } from "@/components/ehr/PatientCallTile";
+import { stopTts, unlockTts } from "@/lib/tts";
+import { SymptomSummary, type VitalsLike } from "@/components/PatientViewer";
 import { Badge, Button, SectionLabel, Switch, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import {
@@ -391,6 +383,13 @@ export function InterviewTab({
   const lastPatientUtterance = useMemo(() => {
     for (let i = allTurns.length - 1; i >= 0; i--) {
       if (allTurns[i].role === "patient") return allTurns[i][lang];
+    }
+    return "";
+  }, [allTurns, lang]);
+  // The learner's most recent line, shown as the "You" caption on the call tile.
+  const lastLearnerLine = useMemo(() => {
+    for (let i = allTurns.length - 1; i >= 0; i--) {
+      if (allTurns[i].role === "doctor") return allTurns[i][lang];
     }
     return "";
   }, [allTurns, lang]);
@@ -881,6 +880,8 @@ export function InterviewTab({
           caseInstance={caseInstance}
           vitals={vitals}
           utterance={lastPatientUtterance}
+          learnerLine={lastLearnerLine}
+          lang={lang}
           voiceOn={voiceOn}
           onToggleVoice={() =>
             setVoiceOn((v) => {
@@ -1196,157 +1197,52 @@ function GuardNoticeBody({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Patient presence — the talking, symptom-aware avatar                        */
+/* Patient presence: the video-call tile beside the dialogue                    */
 /* -------------------------------------------------------------------------- */
 
 /**
- * PatientPresence — the person the learner is interviewing, shown beside the
- * dialogue: the realistic, demographic-matched, symptom-tinted patient PHOTO,
- * matched to the case name. Each reply plays a brief "speaking" treatment on the
- * photo; the voice toggle opts into spoken audio (Web Speech API) for that reply.
- * A concise live clinical-sign line sits beneath, tied to the current vitals.
+ * PatientPresence: the person the learner is interviewing, as a call participant.
+ * PatientCallTile owns the voice (gateway TTS through /api/v1/voice), the
+ * audio-driven lip-sync or the realtime LiveKit video, the call controls and the
+ * captions; the live clinical-sign chips sit beneath, tied to the current vitals.
  */
 function PatientPresence({
   caseInstance,
   vitals,
   utterance,
+  learnerLine,
   voiceOn,
   onToggleVoice,
+  lang,
 }: {
   caseInstance: CaseInstance;
   vitals: VitalsLike;
   utterance: string;
+  learnerLine: string;
   voiceOn: boolean;
   onToggleVoice: () => void;
+  lang: Lang;
 }) {
-  const { t, i18n } = useTranslation();
-  const visual = resolvePatientVisual(caseInstance);
-  const signs = photoSignsFromVitals(vitals);
-
-  // Drive a transient "speaking" state (and the optional spoken audio) from each
-  // reply WITHOUT rendering an avatar: useSpeech runs the timeline so the photo's
-  // speaking treatment plays for the duration of the reply, and — when the voice
-  // toggle is on — voices it via the Web Speech API. voiceOn is read from a ref so
-  // the effect fires once per new reply (a mid-reply toggle applies to the next).
-  const { speak, stop, speaking } = useSpeech();
-  const speakRef = useRef(speak);
-  speakRef.current = speak;
-  const stopRef = useRef(stop);
-  stopRef.current = stop;
-  const voiceRef = useRef(voiceOn);
-  voiceRef.current = voiceOn;
-  // Patient identity for voice selection, in a ref so the per-utterance effect
-  // fires exactly once per new reply (a mid-reply toggle applies to the next).
-  const voiceMetaRef = useRef({ sex: visual.sexAtBirth, age: visual.age });
-  voiceMetaRef.current = { sex: visual.sexAtBirth, age: visual.age };
-  const speechLang = i18n.language?.startsWith("tr") ? "tr" : "en";
-  // Each new reply plays the "speaking" treatment on the patient. When the
-  // learner enabled voice, the talking animation is sized to the REAL ElevenLabs
-  // audio — its duration drives the clip (onStart) and its end stops it (onEnded)
-  // — so the patient talks for exactly as long as the voice lasts instead of
-  // looping. With voice off, the reply's text length estimates the duration.
-  useEffect(() => {
-    const text = utterance?.trim();
-    if (!text) return;
-    const { sex, age } = voiceMetaRef.current;
-    if (voiceRef.current) {
-      let cancelled = false;
-      void speakAsPatient(text, {
-        sex,
-        age,
-        onStart: (durationMs) => {
-          if (cancelled) return;
-          speakRef.current(text, {
-            voice: false,
-            lang: speechLang,
-            durationMs: durationMs > 0 ? durationMs : undefined,
-          });
-        },
-        onEnded: () => {
-          if (!cancelled) stopRef.current();
-        },
-      }).then((ok) => {
-        // No audio (no key / blocked / error): fall back to the text estimate so
-        // the patient still visibly talks.
-        if (!ok && !cancelled) {
-          speakRef.current(text, { voice: false, lang: speechLang });
-        }
-      });
-      return () => {
-        cancelled = true;
-        stopTts();
-        stopRef.current();
-      };
-    }
-    // Voice off — estimate the talking duration from the reply text.
-    speakRef.current(text, { voice: false, lang: speechLang });
-    return () => stopRef.current();
-  }, [utterance, speechLang]);
-  // Stop any patient audio the instant the learner turns voice off.
-  useEffect(() => {
-    if (!voiceOn) stopTts();
-  }, [voiceOn]);
-
+  const { t } = useTranslation();
   return (
-    <section className="rounded-card border border-border bg-surface p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="eyebrow">
-          {t("ehr.interview.patient.heading", { defaultValue: "Patient" })}
-        </h3>
-        <button
-          type="button"
-          onClick={onToggleVoice}
-          aria-pressed={voiceOn}
-          title={t("ehr.interview.patient.voiceToggle", {
-            defaultValue: "Toggle spoken audio for patient replies",
-          })}
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
-            "transition-colors",
-            voiceOn
-              ? "border-transparent bg-brand-tint text-brand"
-              : "border-border bg-bg-subtle text-muted hover:text-fg",
-          )}
-        >
-          {voiceOn ? (
-            <SpeakerHigh weight="bold" className="h-3.5 w-3.5" aria-hidden />
-          ) : (
-            <SpeakerSlash weight="bold" className="h-3.5 w-3.5" aria-hidden />
-          )}
-          {voiceOn
-            ? t("ehr.interview.patient.voiceOn", { defaultValue: "Voice on" })
-            : t("ehr.interview.patient.voiceOff", { defaultValue: "Voice off" })}
-        </button>
-      </div>
-
-      {/* Primary: the realistic, symptom-tinted patient, matched to the case
-          name; the speaking treatment plays as each reply lands. Presented in a
-          matted, hairline-framed portrait consistent with the banner — the
-          talk-video / still + physiology animation + Speaking pill are intact. */}
-      <div className="mt-3 overflow-hidden rounded-card border border-border bg-bg-subtle p-1">
-        <PatientPhoto
-          sex={visual.sexAtBirth}
-          age={visual.age}
-          photoId={visual.photoId}
-          signs={signs}
-          rr={vitals.rr}
-          speaking={speaking}
-          alt={t("patientviewer.syntheticNote")}
-          caption={caseInstance.patient.name}
-          className="aspect-[4/5] w-full rounded-control"
-        />
-      </div>
-
-      {/* Live presentation — the concise clinical-sign summary as calm chips. */}
-      <div className="mt-3">
+    <div className="flex flex-col gap-3">
+      <PatientCallTile
+        caseInstance={caseInstance}
+        vitals={vitals}
+        utterance={utterance}
+        learnerLine={learnerLine}
+        voiceOn={voiceOn}
+        onToggleVoice={onToggleVoice}
+        lang={lang}
+        encounterId={caseInstance.id}
+      />
+      <section className="rounded-card border border-border bg-surface p-3">
         <SectionLabel className="mb-1.5">
-          {t("ehr.interview.patient.presentation", {
-            defaultValue: "Presentation",
-          })}
+          {t("ehr.interview.patient.presentation", { defaultValue: "Presentation" })}
         </SectionLabel>
         <SymptomSummary vitals={vitals} variant="pills" />
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
 

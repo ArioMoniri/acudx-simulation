@@ -5,7 +5,7 @@ Cascade per docs/architecture/03 and 18: Silero VAD + LiveKit audio turn detecto
 (gateway ``POST /v1/patient/turn``) -> TTS plugin -> room, or to the avatar renderer
 when one is configured (``AvatarSession`` for Simli / Anam, ``DataStreamAudioOutput``
 for the self-hosted MuseTalk runner). Everything is chosen from the admin registry
-through ``GET /admin/voice/agent-config``; nothing here hardcodes a vendor.
+through ``GET /admin/voice/agent-config``; no vendor name is fixed in code.
 
 Job metadata (set by the browser when it requests a room through
 ``POST /v1/voice/room``, see ``server/voice/routes.py``) carries ``encounter_id``;
