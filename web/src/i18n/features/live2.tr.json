@@ -1,0 +1,87 @@
+{
+  "live2": {
+    "sourceLabel": "Vaka kaynağı: {{source}}.",
+    "source": {
+      "model": "model tarafından üretildi",
+      "template": "şablon (model üretimi değil)",
+      "offline": "çevrimdışı üretici",
+      "seed": "seçilmiş vaka",
+      "published": "yayımlanmış vaka"
+    },
+    "council": {
+      "accepted": "konsey onayladı",
+      "repairing": "konsey onarımı bekliyor ({{repairs}} onarım)",
+      "vetoed": "konsey vetosu, güvenlik düzeltmeleri uygulandı"
+    },
+    "degraded": "kısıtlı",
+    "gen": {
+      "title": "Model ağ geçidinde vaka üretiliyor",
+      "hint": "Durum örnekleniyor, yazılıyor, üç hakemli konsey inceliyor, kaynaklara bağlanıyor ve sonlandırılıyor. Bu sırada dosyayı okuyabilirsiniz.",
+      "failedTitle": "Model bir vaka döndürmedi",
+      "failedHint": "Hiçbir şey sessizce yerine konmadı. Nasıl devam edileceğini seçin.",
+      "stagesLabel": "Üretici aşamaları",
+      "stage": {
+        "sampling": "Örnekleme",
+        "authoring": "Yazım",
+        "judging": "Konsey değerlendirmesi",
+        "repairing": "Onarım",
+        "grounding": "Kaynaklandırma",
+        "finalizing": "Sonlandırma"
+      },
+      "error": {
+        "model_unreachable": "Vaka üretici modele ulaşılamadı (ağ geçidi 503 yanıtı verdi).",
+        "model_output_invalid": "Model iki kez geçersiz vaka döndürdü (ağ geçidi 502 yanıtı verdi).",
+        "timeout": "Üretim zaman aşımına uğradı.",
+        "network": "Ağ geçidine ulaşılamadı.",
+        "stream_incomplete": "Üretim akışı vaka tamamlanmadan sona erdi.",
+        "no_spec": "Üretici bir vaka olmadan bitti.",
+        "cancelled": "Üretim iptal edildi.",
+        "unknown": "Üretim başarısız oldu ({{code}})."
+      },
+      "retry": "Model üretimini yeniden dene",
+      "useTemplate": "Şablon vakayı kullan (deterministik, model üretimi değil)",
+      "templateHint": "Şablon sabit, gözden geçirilmiş bir vakadır. Hasta başlığında şablon olarak etiketlenir ve kısıtlı olarak işaretlenir."
+    },
+    "director": {
+      "hint": "Klinik Yönetmen: sunucu, vitalleri, bulguları ve komplikasyonları eylemlerinize göre uyarlar.",
+      "errorHint": "Klinik Yönetmen adımı başarısız oldu ({{reason}}); yerel seyir devam eder.",
+      "error": "Yönetmen çevrimdışı",
+      "busy": "Yönetmen düşünüyor",
+      "steps_one": "Yönetmen: {{count}} adım",
+      "steps_other": "Yönetmen: {{count}} adım"
+    },
+    "results": {
+      "findings": "Yapılandırılmış bulgular",
+      "noFindings": "Yapılandırılmış bulgu bildirilmedi.",
+      "viewSource": "Kaynağı görüntüle ({{bank}})",
+      "representative": "Temsili görüntü, bu hasta değil",
+      "verified": "lisans doğrulandı {{date}}",
+      "engineBadge": "Sonuç motoru",
+      "unavailable": "Bu bulgu ve tarafa uyan lisansı temiz bir görüntü yok; yapılandırılmış rapor tek başına durur.",
+      "ecgBadge": "12 derivasyon",
+      "ecgLegend": "{{speed}} mm/s, {{gain}} mm/mV, 1 mm / 5 mm kareli, solda kalibrasyon işareti",
+      "ecgSynthetic": "Yapılandırılmış durumdan sentezlenen sentetik trase (kayıt değil).",
+      "ecgAlt": "12 derivasyonlu EKG çıktısı, hız dakikada {{rate}}, {{rhythm}}",
+      "ecgLoading": "12 derivasyonlu trase çiziliyor",
+      "ecgFailed": "Trase çizilemedi; aşağıdaki ölçümler tek başına durur.",
+      "axis": "Aks",
+      "rhythm": "Ritim",
+      "offlineShort": "çevrimdışı sentetik",
+      "source": {
+        "engine": "Sonuç motoru",
+        "case": "Vaka kaydı",
+        "offline-synthetic-normal": "Çevrimdışı sentetik normal"
+      },
+      "sourceHint": {
+        "engine": "Sunucu sonuç motoru tarafından çözüldü: kaynaklı referans aralıkları, verilen tedaviler altında bu simülasyon zamanındaki kinetik.",
+        "case": "Vaka kaydında vaka yazarı veya model tarafından yazıldı.",
+        "offline-synthetic-normal": "Ağ geçidine ulaşılamıyor: bu cihazda üretilen deterministik normal değer. Ölçülmedi, model üretimi değil."
+      }
+    },
+    "debrief": {
+      "directorHeading": "Klinik Yönetmen notları",
+      "directorHint": "Yönetmenin karşılaşma sırasında neyi neden değiştirdiği, karşılaşma zamanına göre.",
+      "complication": "Komplikasyon"
+    }
+  }
+}

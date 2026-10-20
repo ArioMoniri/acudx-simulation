@@ -82,6 +82,8 @@ export interface SpecDemographics {
   age?: number;
   sex?: string;
   name_hint?: string;
+  /** Optional; the results engine uses it for volume kinetics. */
+  weight_kg?: number;
 }
 
 export interface SpecHpi {
