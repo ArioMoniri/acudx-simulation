@@ -177,14 +177,18 @@ write_files:
                   - driver: nvidia
                     count: all
                     capabilities: [gpu]
+          runtime: nvidia
           ipc: host
-          environment: [ "HF_HOME=/hf" ]
+          environment:
+            - HF_HOME=/hf
+            - NVIDIA_VISIBLE_DEVICES=all
+            - NVIDIA_DRIVER_CAPABILITIES=compute,utility
           volumes: [ "/opt/acudx/hf:/hf" ]
           # 0.60 leaves room for Chatterbox (about 4 GB), speaches (about 3 GB) and Kokoro
           # on a 40 GB card; see the VRAM budget in the header comment.
-          # --enforce-eager: on 2026-10-20 every A100 boot (workers 11 and avatar-1) died in
-          # CUDA graph capture with "CUDA error: operation not permitted" (capture_model);
-          # eager mode skips the capture at some decode-speed cost.
+          # --enforce-eager: on Lambda A100 SXM4 hosts CUDA graph capture fails with
+          # "CUDA error: operation not permitted" (workers 7, 11, 12 on 2026-10-20; the A10
+          # worker 9 served fine). Eager mode costs some decode speed but always starts.
           command: >
             --model ${WORKER_LLM_MODEL} --max-model-len 16384
             --gpu-memory-utilization 0.60 --enable-prefix-caching --enforce-eager
@@ -327,7 +331,10 @@ write_files:
       echo "acudx worker" > "$pub/index.html"
       echo "acudx worker diagnostics" > "$pub/diag/index.html"
       # Drop every line that could carry a credential before it reaches a served file.
-      redact() { grep -viE 'authorization|bearer|token|api[_-]?key|secret|passw' | grep -vF -- "$WORKER_TOKEN"; }
+      # Remove credentials, not words: the old filter dropped every line containing
+      # "token", which hid vLLM tokenizer errors (worker 11, 2026-10-20). Now only
+      # header-shaped lines and the literal secrets are removed.
+      redact() { grep -viE 'authorization:|bearer [A-Za-z0-9._-]{8,}|api[_-]?key[=:]|secret[=:]|password[=:]' | grep -vF -- "$WORKER_TOKEN" | grep -vF -- "$WORKER_DIAG_SECRET"; }
       snapshot() {
         { date -u
           echo "--- docker ps"; docker ps --format '{{.Names}} {{.Status}}' 2>&1
@@ -337,7 +344,7 @@ write_files:
           done
           # The root cause of a vLLM start-up failure sits far above the final traceback.
           echo "--- vllm root-cause lines (errors and memory, redacted)"
-          $compose logs --no-color vllm 2>&1 | grep -E 'Error|error|CUDA|memory|Memory|OOM|insufficient|ValueError' | tail -30 | redact
+          $compose logs --no-color vllm 2>&1 | grep -E 'Error|error|Exception|CUDA|memory|Memory|OOM|insufficient|ValueError|Traceback|raise ' | tail -60 | redact
           echo "--- chatterbox torch check"; redact < /var/log/acudx-chatterbox-gpu.log 2>/dev/null
           echo "--- avatar status"; cat /opt/acudx/public/avatar-status/status.json 2>/dev/null
           echo "--- avatar bring-up (last 20 lines)"; tail -20 /var/log/acudx-avatar.log 2>/dev/null | redact

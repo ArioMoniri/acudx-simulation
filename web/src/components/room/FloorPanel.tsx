@@ -63,7 +63,7 @@ export function FloorPanel({
     >
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
         <Broadcast weight="bold" className="h-4 w-4 text-brand" aria-hidden />
-        <h2 className="text-sm font-semibold text-fg">{t("rooms.inroom.floor")}</h2>
+        <h2 className="text-[1.0625rem] text-fg">{t("rooms.inroom.floor")}</h2>
       </div>
 
       <ol
@@ -129,7 +129,7 @@ export function FloorPanel({
                     className={cn(
                       "mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-control border px-3 text-xs font-medium",
                       "border-brand bg-brand-tint text-brand transition-colors duration-200",
-                      "hover:bg-brand hover:text-white focus-visible:outline-none active:scale-[0.98]",
+                      "hover:bg-brand hover:text-on-brand focus-visible:outline-none active:scale-[0.98]",
                     )}
                   >
                     <ArrowBendUpLeft weight="bold" className="h-3.5 w-3.5" aria-hidden />

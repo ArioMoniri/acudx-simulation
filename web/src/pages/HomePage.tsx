@@ -377,7 +377,7 @@ export function HomePage() {
         <section className="flex flex-col gap-4">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 border-b border-border pb-2">
             <div>
-              <h2 className="text-[0.9375rem] font-semibold tracking-tight text-fg">
+              <h2 className="text-lg text-fg">
                 {t("home.recommendedHeading")}
               </h2>
               <p className="mt-0.5 text-xs text-muted">
@@ -442,7 +442,7 @@ export function HomePage() {
         <aside className="flex flex-col gap-6">
           <section>
             <Card padding="md">
-              <h2 className="text-[0.8125rem] font-semibold tracking-tight text-fg">
+              <h2 className="text-[0.9375rem] text-fg">
                 {t("home.snapshotHeading")}
               </h2>
               <p className="mt-0.5 text-xs text-muted">
@@ -471,7 +471,7 @@ export function HomePage() {
           <section>
             <Card padding="none" className="overflow-hidden">
               <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
-                <h2 className="text-[0.8125rem] font-semibold tracking-tight text-fg">
+                <h2 className="text-[0.9375rem] text-fg">
                   {t("home.recentHeading")}
                 </h2>
                 <Link

@@ -2,9 +2,9 @@
 
 **Status:** Foundational design baseline. Governs every learner- and educator-facing surface. Traces to `../00-overview/01-requirements-and-constraints.md` (§3.5 accessibility, §3.6 clinical safety, §6 wedge) and `../research/06-regulatory-compliance.md` (WCAG 2.2 AA, AI-Act Art. 50 transparency) and `../research/09-localization-i18n-turkish.md` (TR as a first-class locale). Where a UI decision touches clinical safety, accessibility, or i18n, this file is **normative**, do not ship a component that violates a "MUST" here without amending it.
 
-**This document matches the implemented app in `web/`.** The tokens, fonts, icon family, component APIs and utilities described below are the ones actually shipped: React 18 + TypeScript + Vite + **Tailwind CSS v4** (CSS-first `@theme`), **Radix UI** primitives, **Inter** (UI), **Manrope** (display only) and **Geist Mono** (codes and values), all self-hosted via `@fontsource`, and **Phosphor** icons (one family). CSS custom properties in `web/src/index.css` are the single source of truth; components reference `var(...)` or the mapped Tailwind semantic classes only, never a raw hex.
+**This document matches the implemented app in `web/`.** The tokens, fonts, icon family, component APIs and utilities described below are the ones actually shipped: React 18 + TypeScript + Vite + **Tailwind CSS v4** (CSS-first `@theme`), **Radix UI** primitives, **Fraunces** (display serif, page and section titles), **Inter** (UI), **Manrope** (the wordmark only) and **Geist Mono** (codes and values), all self-hosted via `@fontsource`, and **Phosphor** icons (one family). CSS custom properties in `web/src/index.css` are the single source of truth; components reference `var(...)` or the mapped Tailwind semantic classes only, never a raw hex.
 
-**Design language (v3, October 2026):** a clinical instrument, not a marketing template. The reference points are AMBOSS (dense, editorial, confident typography, calm colour, information first) and Epic's chart (a banner that never scrolls away, a storyboard rail, activity tabs, orders and results as worklists). True neutral surfaces, one accent, 4 to 6 px radii, hairlines instead of shadows, no gradients, no glow, no blur, no emoji, no centred hero fluff, functional motion only. The one dark element remains the vitals monitor. The rationale and the Mobbin references are in `03-ui-redesign-2026-10.md`.
+**Design language (v4 "Ward ink", October 2026 renewal):** a warm paper canvas, an ink-dark navigation rail and chart header carrying the Pulse seal, one confident accent (Pulse cobalt), the Fraunces display serif for page and section titles beside Inter for UI and Geist Mono for data, 1 px rules instead of boxes, clinical colour only for meaning. Rationale, Mobbin references and captures: `04-visual-renewal.md`. It keeps the v3 structure below. **v3 (October 2026):** a clinical instrument, not a marketing template. The reference points are AMBOSS (dense, editorial, confident typography, calm colour, information first) and Epic's chart (a banner that never scrolls away, a storyboard rail, activity tabs, orders and results as worklists). True neutral surfaces, one accent, 4 to 6 px radii, hairlines instead of shadows, no gradients, no glow, no blur, no emoji, no centred hero fluff, functional motion only. The one dark element remains the vitals monitor. The rationale and the Mobbin references are in `03-ui-redesign-2026-10.md`.
 
 **Scope reminder:** the MVP surface is **solo, text-first, Emergency-Medicine roleplay + structured feedback + the Dunning-Kruger calibration plot**. Voice, 3D avatars, multiplayer rooms, and the dean's dashboard are gated fast-follows, but their tokens and component contracts are specified here so the system does not fork later.
 
@@ -47,95 +47,210 @@ Tokens live as CSS custom properties on `:root` (light, the default) and `.dark`
 
 All pairings below meet WCAG 2.2 AA (4.5:1 for body text, 3:1 for large text and UI per 1.4.11), verified for both themes.
 
-### 3.1 Accent, neutrals and text
+### 3.1 Accent, paper, ink and text (v4 "Ward ink")
+
+The v4 values below are copied from `web/src/index.css`. Rationale, references and before and after captures: `04-visual-renewal.md`.
 
 ```css
 :root {
   color-scheme: light;
 
-  /* Accent: the one accent (5.4:1 on white, white-on-fill 5.4:1) */
-  --brand-50: #eef7f6;
-  --brand-100: #d2ebe8;
-  --brand-600: #0f766e;
-  --brand-700: #0b5d57;
+  /* ---- Accent: Pulse cobalt (6.8:1 on paper, white on fill 7.1:1) ---- */
+  --brand-50: #edf1fc;
+  --brand-100: #d9e1f8;
+  --brand-600: #2450c8;
+  --brand-700: #1c3d9e;
+  /* The mark itself (Wordmark, seal): the accent on paper */
+  --brand-mark: #2450c8;
+  /* Text and glyphs on an accent fill */
+  --on-brand: #ffffff;
 
-  /* Neutral ramp (true neutral) */
-  --bg: #ffffff;
-  --bg-subtle: #f4f5f6;   /* app ground */
-  --bg-inset: #eceef0;    /* wells, tracks, code */
-  --surface: #ffffff;
-  --surface-2: #f8f9fa;   /* table head, striped rows */
-  --fg: #15181d;
-  --fg-muted: #596270;    /* 6.3:1 on white */
-  --fg-subtle: #626975;   /* 5.5:1 on white, 5.1:1 on the ground, 4.8:1 on inset */
-  --border: #e2e4e8;
-  --border-strong: #cbd0d6;
+  /* ---- Warm paper ramp ---- */
+  --bg: #fbfaf7; /* reading paper */
+  --bg-subtle: #f5f3ee; /* app canvas */
+  --bg-inset: #ece8e0; /* wells, tracks, code */
+  --surface: #fffefb; /* raised sheet */
+  --surface-2: #f8f6f1; /* table head, striped rows */
+  --fg: #1a1916; /* warm ink, 17:1 */
+  --fg-muted: #57534b; /* 7.6:1 on surface, 6.3:1 on inset */
+  --fg-subtle: #5f5a51; /* 6.8:1 on surface, 5.6:1 on inset */
+  --border: #e2ddd3; /* the 1 px rule */
+  --border-strong: #c9c1b3; /* inputs, emphasised rules */
 
-  /* Clinical semantic states (never colour alone, section 3.4) */
-  --state-normal: #04694a;    /* 6.7:1; 4.9:1 on its tint over inset */
-  --state-caution: #9a4508;   /* 6.9:1; 4.7:1 on its tint over inset */
-  --state-warning: #a83508;   /* 6.6:1; 4.7:1 on its tint over inset */
-  --state-critical: #b01b1b;  /* 7.0:1; 4.9:1 on its tint over inset */
+  /* ---- Ink: the rail and the chart header (always dark, both themes) ---- */
+  --ink: #15171c;
+  --ink-2: #1f2229; /* hover */
+  --ink-3: #272b34; /* active row */
+  --ink-border: #2a2e37;
+  --ink-fg: #ece9e2; /* 14.8:1 on ink */
+  --ink-muted: #a6a198; /* 7.0:1 on ink, 5.5:1 on ink-3 */
+  --ink-accent: #9db0ff; /* 8.6:1 on ink */
 
-  /* ESI ramp 1 to 5 */
-  --esi-1: #b01b1b; --esi-2: #a83508; --esi-3: #9a4508; --esi-4: #04694a; --esi-5: #0e7490;
+  /* ---- Clinical semantic states (NEVER colour alone) ---- */
+  --state-normal: #04694a; /* 6.7:1 on surface, 4.6:1 on its tint over inset */
+  --state-caution: #8f3f06; /* 7.0:1, 5.0:1 on its tint over inset */
+  --state-warning: #a23206; /* 6.9:1, 4.8:1 on its tint over inset */
+  --state-critical: #b01b1b; /* 6.9:1, 4.7:1 on its tint over inset */
 
-  /* Chart series (categorical, never decorative) */
-  --chart-1: #0f766e; --chart-2: #2563eb; --chart-3: #7c3aed; --chart-4: #9a4508;
+  /* ESI / triage acuity ramp (1 = resuscitation ... 5 = non-urgent) */
+  --esi-1: #b01b1b;
+  --esi-2: #a23206;
+  --esi-3: #8f3f06;
+  --esi-4: #04694a;
+  --esi-5: #0a5f78;
 
-  /* Feedback dual-axis and calibration */
-  --axis-clinical: #2563eb;
-  --axis-communication: #7c3aed;
-  --calib-line: #15181d; --calib-over: #9a4508; --calib-under: #2563eb; --calib-well: #04694a;
+  /* ---- Chart series (categorical, no decorative use) ---- */
+  --chart-1: #2450c8;
+  --chart-2: #1b6079;
+  --chart-3: #6a3fc0;
+  --chart-4: #8f3f06;
 
-  /* Radius: 4 to 6 px; the pill radius is only for status dots */
-  --r-card: 6px;
+  /* ---- Feedback dual-axis (orthogonal, always paired with a glyph) ---- */
+  --axis-clinical: #1b6079;
+  --axis-communication: #6a3fc0;
+
+  /* ---- Calibration (directional, never good/bad) ---- */
+  --calib-line: #1a1916;
+  --calib-over: #8f3f06;
+  --calib-under: #1b6079;
+  --calib-well: #04694a;
+
+  /* ---- Radius: crisp. 2 px sheets, 4 px controls, pills for dots ---- */
+  --r-card: 2px;
   --r-control: 4px;
-  --r-chip: 4px;
+  --r-chip: 3px;
   --r-pill: 999px;
 
-  /* Shadows: none at rest, a hairline lift for popovers only */
+  /* ---- Shadows: none at rest, one soft lift for overlays ---- */
   --shadow-sm: 0 0 #0000;
-  --shadow-md: 0 1px 2px rgba(21, 24, 29, 0.06);
-  --shadow-pop: 0 8px 24px -8px rgba(21, 24, 29, 0.18), 0 0 0 1px var(--border);
+  --shadow-md: 0 1px 0 rgba(26, 25, 22, 0.04);
+  --shadow-pop: 0 12px 32px -12px rgba(26, 25, 22, 0.28), 0 0 0 1px var(--border);
 
-  /* Motion: functional only */
+  /* ---- Motion: functional only ---- */
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
   --dur-fast: 120ms;
   --dur-base: 160ms;
   --dur-slow: 200ms;
 
-  /* Fonts, self-hosted */
-  --font-display: "Manrope Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
+  /* ---- Fonts (self-hosted) ---- */
+  --font-display: "Fraunces Variable", "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --font-brand: "Manrope Variable", "Manrope", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
 
-  /* Vitals monitor: always dark */
-  --monitor-bg: #0b0f16; --monitor-border: #1f2630; --monitor-fg: #e8ecf1; --monitor-dim: #8a94a6; --monitor-online: #10b981;
+  /* ---- Vitals monitor: ALWAYS dark (both themes) ---- */
+  --monitor-bg: #0b0f16;
+  --monitor-border: #1f2630;
+  --monitor-fg: #e8ecf1;
+  --monitor-dim: #8a94a6; /* 6.1:1 on monitor-bg */
+  --monitor-online: #10b981;
 }
 ```
 
 ```css
 .dark {
   color-scheme: dark;
-  --brand-50: #0f2d2a; --brand-100: #134e4a; --brand-600: #2dd4bf; --brand-700: #5eead4;
-  --bg: #0b0f16; --bg-subtle: #0f141b; --bg-inset: #171d26; --surface: #12171f; --surface-2: #171d26;
-  --fg: #e8ecf1; --fg-muted: #9ba5b4; --fg-subtle: #8a94a3; --border: #232a35; --border-strong: #323b48;
-  --state-normal: #34d399; --state-caution: #fbbf24; --state-warning: #fb923c; --state-critical: #f87171;
-  --esi-1: #f87171; --esi-2: #fb923c; --esi-3: #fbbf24; --esi-4: #34d399; --esi-5: #22d3ee;
-  --chart-1: #2dd4bf; --chart-2: #60a5fa; --chart-3: #a78bfa; --chart-4: #fbbf24;
-  --axis-clinical: #60a5fa; --axis-communication: #a78bfa;
-  --calib-line: #e8ecf1; --calib-over: #fbbf24; --calib-under: #60a5fa; --calib-well: #34d399;
+
+  --brand-50: #1a2140;
+  --brand-100: #232d57;
+  --brand-600: #9db0ff; /* 8.4:1 on the dark sheet; dark ink on fill 9.2:1 */
+  --brand-700: #bccaff;
+  --brand-mark: #9db0ff;
+  --on-brand: #0f0f0d;
+
+  --bg: #0f0f0d;
+  --bg-subtle: #131311;
+  --bg-inset: #22211d;
+  --surface: #1a1a17;
+  --surface-2: #201f1c;
+  --fg: #ece9e2;
+  --fg-muted: #ada79c;
+  --fg-subtle: #9c968b; /* 5.9:1 on surface, 5.5:1 on inset */
+  --border: #2c2b27;
+  --border-strong: #3d3b36;
+
+  --ink: #0a0a09;
+  --ink-2: #171715;
+  --ink-3: #22221f;
+  --ink-border: #24231f;
+  --ink-fg: #ece9e2;
+  --ink-muted: #a6a198;
+  --ink-accent: #9db0ff;
+
+  --state-normal: #34d399;
+  --state-caution: #fbbf24;
+  --state-warning: #fb923c;
+  --state-critical: #f87171;
+
+  --esi-1: #f87171;
+  --esi-2: #fb923c;
+  --esi-3: #fbbf24;
+  --esi-4: #34d399;
+  --esi-5: #5fb8d4;
+
+  --chart-1: #9db0ff;
+  --chart-2: #5fb8d4;
+  --chart-3: #b39dfa;
+  --chart-4: #fbbf24;
+
+  --axis-clinical: #5fb8d4;
+  --axis-communication: #b39dfa;
+
+  --calib-line: #ece9e2;
+  --calib-over: #fbbf24;
+  --calib-under: #5fb8d4;
+  --calib-well: #34d399;
+
   --shadow-sm: 0 0 #0000;
-  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-pop: 0 12px 32px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border);
-  /* monitor tokens unchanged */
+  --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--border);
+
+  --monitor-bg: #0b0f16;
+  --monitor-border: #1f2630;
+  --monitor-fg: #e8ecf1;
+  --monitor-dim: #8a94a6;
+  --monitor-online: #10b981;
+}
+```
+
+**Ink scope.** The rail, the bottom tab bar, the phone top bar and the chart header's identity band are always ink-dark. Rather than a second component set, `.ink-scope` (and `.ink-scope-until-lg`, below 1024 px only) re-points the semantic tokens at the ink ramp so every primitive inside renders AA on the dark ground:
+
+```css
+.ink-scope {
+  color-scheme: dark;
+  --bg: var(--ink);
+  --bg-subtle: var(--ink-2);
+  --bg-inset: var(--ink-3);
+  --surface: var(--ink);
+  --surface-2: var(--ink-2);
+  --fg: var(--ink-fg);
+  --fg-muted: var(--ink-muted);
+  --fg-subtle: var(--ink-muted);
+  --border: var(--ink-border);
+  --border-strong: #3c414c;
+  --brand-50: #1d2440;
+  --brand-100: #27305a;
+  --brand-600: var(--ink-accent);
+  --brand-700: #c3cfff;
+  --brand-mark: var(--ink-accent);
+  --on-brand: var(--ink);
+  --state-normal: #34d399;
+  --state-caution: #fbbf24;
+  --state-warning: #fb923c;
+  --state-critical: #f87171;
+  --esi-1: #f87171;
+  --esi-2: #fb923c;
+  --esi-3: #fbbf24;
+  --esi-4: #34d399;
+  --esi-5: #5fb8d4;
+  --shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--ink-border);
+  color: var(--fg);
 }
 ```
 
 **Why the monitor is theme-invariant:** the vitals monitor reads as monitoring hardware, keeps clinical-line contrast constant, and prevents the vitals palette from being re-tuned per theme (a safety liability). Its tokens never change between `:root` and `.dark`.
 
-**Removed in v3:** the teal, blue and pink gradient variables and the `gradient-frame`, `gradient-text` and `gradient-mark` utilities. Chart series use `--chart-1` to `--chart-4`.
+**Removed in v3:** the teal, blue and pink gradient variables and the `gradient-frame`, `gradient-text` and `gradient-mark` utilities. **Changed in v4:** the accent moved from teal #0f766e to Pulse cobalt #2450c8 (the brand mark's blue, deepened); the clinical axis and the underconfident direction moved to petrol #1b6079 so they never read as the accent; the neutral ramp became warm paper; ink tokens and `--on-brand` were added.
 
 ### 3.2 Token to Tailwind mapping (CSS-first `@theme`)
 
@@ -156,7 +271,7 @@ All pairings below meet WCAG 2.2 AA (4.5:1 for body text, 3:1 for large text and
 
 ### 3.3 Typography
 
-**Three families, self-hosted, no CDN:** **Inter** for every UI surface including headings (semibold, tracking -0.012em), **Manrope** only through the `display` utility (the landing headline and the wordmark), and **Geist Mono** for codes, identifiers, timestamps and values (tabular, slashed zero).
+**Four families, self-hosted, no CDN:** **Fraunces** (variable, optical size axis) for `h1` and `h2`, the `display` and `serif` utilities, the patient's name in the chart header and headline KPI figures (lining tabular numerals); **Inter** for every UI surface and for `h3`/`h4` (semibold, tracking -0.012em); **Manrope** only through the `wordmark` utility (the AcuDx lockup); **Geist Mono** for codes, identifiers, timestamps and values (tabular, slashed zero).
 
 Base element styling (`@layer base`):
 
@@ -170,6 +285,7 @@ body {
   font-feature-settings: "cv05", "cv11", "ss03";
 }
 h1, h2, h3, h4 { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.012em; line-height: 1.25; text-wrap: balance; }
+h1, h2 { font-family: var(--font-display); font-weight: 560; font-optical-sizing: auto; letter-spacing: -0.01em; line-height: 1.15; }
 .font-mono { font-variant-numeric: tabular-nums slashed-zero; }
 ```
 
@@ -182,9 +298,10 @@ h1, h2, h3, h4 { font-family: var(--font-sans); font-weight: 600; letter-spacing
 | table cells, secondary UI, buttons | 0.8125rem (13) | `text-[0.8125rem]` |
 | **body** | **0.875rem (14)** | the base |
 | chat transcript, lede | 0.9375rem (15) | reading surfaces |
-| section title | 1rem (16) | `text-base` semibold |
-| page title | 1.125 to 1.25rem (18 to 20) | `PageHeader` |
-| display | 1.875 to 2.75rem (30 to 44) | `display` utility, landing only |
+| section title (h2) | 1.0625 to 1.25rem (17 to 20) | Fraunces through the h2 base rule |
+| KPI figure | 1.75 to 2.5rem (28 to 40) | `Stat` md and up, Fraunces, lining tabular |
+| page title | 1.625 to 2rem (26 to 32) | `PageHeader`, `display` utility |
+| display | 2.25 to 3.5rem (36 to 56) | `display` utility, landing |
 | vitals big-number | 1.25 to 2rem, mono | glanceable readout |
 
 **Rules:** the chat transcript never drops below 15 px. Reading panels (guidance, attending tips) use the `reference` utility: a 68ch measure, heading rhythm, tight bullets. Values and identifiers are mono. No italic emphasis in headings.
@@ -198,8 +315,8 @@ Every clinical state MUST carry **three** redundant channels: **colour + Phospho
 | State | Colour var | Phosphor icon | Text label (EN / TR) | ARIA |
 |---|---|---|---|---|
 | Normal | `--state-normal` #04694a | `CheckCircle` | "Normal" / "Normal" | `aria-label`, not an alert |
-| Caution / elevated | `--state-caution` #9a4508 | `Eye` | "Watch" / "İzle" | `role="status"`, polite |
-| Warning / abnormal | `--state-warning` #a83508 | `Warning` | "Abnormal" / "Anormal" | `role="status"`, polite |
+| Caution / elevated | `--state-caution` #8f3f06 | `Eye` | "Watch" / "İzle" | `role="status"`, polite |
+| Warning / abnormal | `--state-warning` #a23206 | `Warning` | "Abnormal" / "Anormal" | `role="status"`, polite |
 | Critical | `--state-critical` #b01b1b | `WarningOctagon` | "Critical" / "Kritik" | `role="alert"`, assertive |
 
 A vitals value out of range shows the arrow direction (`states.aboveRange` / `belowRange`) and the state icon and shifts numeral weight. Critical adds a pulsing ring (`pulse-ring`), static under reduced motion. Screen-reader announcement mirrors all channels.
@@ -211,7 +328,7 @@ A vitals value out of range shows the arrow direction (`states.aboveRange` / `be
 ### 3.6 Spacing, radius, elevation, motion
 
 - **Spacing:** a tight 4 px grid. Cards `p-3` to `p-4` (12 to 16 px), table cells `px-3 py-2`, page gutters 16 px on phone and 24 px from md, page gaps 20 to 24 px.
-- **Radius, one scale:** cards and tables `--r-card` 6 px, controls and chips 4 px. Only the status dot is round.
+- **Radius, one scale:** sheets and tables `--r-card` 2 px, controls 4 px, chips 3 px. Only the status dot is round.
 - **Elevation:** resting surfaces carry a hairline border, never a shadow. `--shadow-md` is a 1 px lift for segmented-control thumbs, `--shadow-pop` for popovers, menus and dialogs. No glow, no backdrop blur, no gradients.
 - **Motion:** `cubic-bezier(0.2, 0, 0, 1)`, 120 ms for hover and colour, 160 ms for entrances (4 px travel, 30 ms stagger), 200 ms for sheets. No scale on press, no hover lift. Continuous motion is limited to the vitals sweep and the critical `pulse-ring`, both suppressed under `prefers-reduced-motion`, which also collapses every transition globally.
 
@@ -219,17 +336,18 @@ A vitals value out of range shows the arrow direction (`states.aboveRange` / `be
 
 | Group | Tokens | Purpose |
 |---|---|---|
-| Accent | `--brand-50/100/600/700` | the one accent: primary action, active tab underline, links, focus ring |
-| Neutral base | `--bg`, `--bg-subtle`, `--bg-inset`, `--surface`, `--surface-2`, `--fg`, `--fg-muted`, `--fg-subtle`, `--border`, `--border-strong` | true neutral chrome |
+| Accent | `--brand-50/100/600/700`, `--brand-mark`, `--on-brand` | the one accent (Pulse cobalt): primary action, active tab underline, links, focus ring, the seal |
+| Paper base | `--bg`, `--bg-subtle`, `--bg-inset`, `--surface`, `--surface-2`, `--fg`, `--fg-muted`, `--fg-subtle`, `--border`, `--border-strong` | warm paper chrome |
+| Ink | `--ink`, `--ink-2`, `--ink-3`, `--ink-border`, `--ink-fg`, `--ink-muted`, `--ink-accent` | always-dark rail and chart header (`.ink-scope`) |
 | Clinical state | `--state-{normal,caution,warning,critical}`, `--esi-1..5` | semantic, always tri-channel (section 3.4) |
 | Chart | `--chart-1..4` | categorical series |
 | Dual-axis | `--axis-{clinical,communication}` | orthogonal feedback |
 | Calibration | `--calib-{line,over,under,well}` | directional, non-judgmental |
 | Monitor | `--monitor-{bg,border,fg,dim,online}` | always-dark vitals monitor |
-| Radius | `--r-card` 6, `--r-control` 4, `--r-chip` 4, `--r-pill` | one scale |
+| Radius | `--r-card` 2, `--r-control` 4, `--r-chip` 3, `--r-pill` | one scale |
 | Shadow | `--shadow-sm/md/pop` | none, lift, overlay |
 | Motion | `--ease-out`, `--dur-{fast,base,slow}` | 120 / 160 / 200 ms |
-| Type | `--font-sans` (Inter), `--font-display` (Manrope, display only), `--font-mono` (Geist Mono) | UI, display, data |
+| Type | `--font-display` (Fraunces), `--font-sans` (Inter), `--font-brand` (Manrope, wordmark only), `--font-mono` (Geist Mono) | titles, UI, lockup, data |
 
 ---
 
@@ -343,12 +461,12 @@ Icon button, light ⇄ dark, persisted (`acudx-theme`).
 
 ### 4.19 App shell (`web/src/components/shell/`)
 - **AppFrame:** `SideNav` (lg+) beside a column of `TopNav`, `main#main` and the education-only line; `BottomTabBar` below lg. A skip-to-content link (`nav.skipToContent`); wrapped in `TooltipProvider`. No gradient frame, no blur.
-- **SideNav:** the 220 px primary rail: wordmark, the role-scoped items from `lib/navigation.ts` (unit-tested), 32 px rows with a glyph and label, the active row filled with `bg-inset` and a `fill` glyph in the accent.
-- **TopNav:** a 48 px bar. Wordmark below lg, breadcrumb trail (`breadcrumbsFor`) on lg+; on the right `GlobalSearch` (opens the command palette, Ctrl or Cmd K outside the encounter), `GuidedTour`, `RoleSwitcher`, `LanguageSwitcher`, `ThemeToggle`, account. All controls are 32 px.
-- **BottomTabBar:** a fixed 56 px bar with up to four destinations plus "More", which opens a sheet with the remaining destinations and the vantage and language controls.
-- **PageHeader:** optional `breadcrumbs`, eyebrow, a 18 to 20 px title with the actions on the right and a hairline under the block. `tone="marketing"` switches the title to the `display` size (landing only).
+- **SideNav:** the 232 px ink rail (`.ink-scope`, dark in both themes): the Pulse seal lockup, the role-scoped items from `lib/navigation.ts` (unit-tested), 36 px rows with a glyph and label, the active row on `--ink-3` with a 2 px `--ink-accent` bar on its leading edge and a `fill` glyph.
+- **TopNav:** a 48 px bar on paper from lg up and ink below lg (`.ink-scope-until-lg`), so the phone shell is ink top and bottom. Wordmark below lg, breadcrumb trail (`breadcrumbsFor`) on lg+; on the right `GlobalSearch` (opens the command palette, Ctrl or Cmd K outside the encounter), `GuidedTour`, `RoleSwitcher`, `LanguageSwitcher`, `ThemeToggle`, account. All controls are 32 px.
+- **BottomTabBar:** a fixed 56 px ink bar with up to four destinations plus "More", which opens a sheet with the remaining destinations and the vantage and language controls.
+- **PageHeader:** optional `breadcrumbs`, eyebrow, a 26 to 32 px Fraunces title with the actions on the right and a hairline under the block. `tone="marketing"` switches the title to the `display` size (landing only).
 - **PageContainer:** 16 px gutters on phone, 24 px from md; `width="wide"` is 1600 px for the encounter and consoles.
-- **Wordmark:** the "pulse seal" mark (a rounded tile split in two by one 60 degree deflection of a monitor trace, inline SVG in `currentColor`, round two of the brand work) + "Acu**Dx**" in Manrope through the `display` utility, "Dx" and the mark in `--axis-clinical`. Full spec: `02-brand-identity.md`; files: `web/public/brand/`.
+- **Wordmark:** the "pulse seal" mark (a rounded tile split in two by one 60 degree deflection of a monitor trace, inline SVG in `currentColor`, round two of the brand work) + "Acu**Dx**" in Manrope through the `wordmark` utility, "Dx" and the mark in `--brand-mark` (Pulse cobalt on paper, light cobalt on ink and dark). Full spec: `02-brand-identity.md`; files: `web/public/brand/`.
 
 ### 4.20 DataTable (v1) & shared primitives
 Cohort analytics text-equivalents (`IN-1`): real `<table>` semantics (`<th scope>`, caption, `aria-sort`), band cells (not decimals), drill-down cohort→section→learner→encounter→evidence, role-gated columns, de-identified export; wide tables scroll inside their own `overflow-x:auto` container (never the page body). **Shared Radix primitives** (Dialog, Toast, Popover, Select, Progress) are restyled to the tokens and inherit focus (§6) + 24px targets.

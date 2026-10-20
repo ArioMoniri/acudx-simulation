@@ -257,11 +257,12 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
   return (
     <aside
       aria-label={t("ehr.storyboard.label")}
-      className="overflow-hidden rounded-card border border-border bg-surface"
+      className="overflow-hidden border border-border bg-surface"
     >
-      {/* Patient identity — realistic synthetic portrait on the monitor-dark
-          accent, matched to the demographic; physiology tints the face. */}
-      <div className="flex items-center gap-3 border-b border-border bg-monitor-bg px-3 py-3">
+      {/* Patient identity: the synthetic portrait on paper with the name in
+          the display serif, matched to the demographic; physiology tints the
+          face. */}
+      <div className="flex items-center gap-3 border-b border-border px-4 py-3.5">
         <PatientPhoto
           sex={visual.sexAtBirth}
           age={visual.age}
@@ -271,20 +272,20 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
           alt={t("ehr.storyboard.avatarAlt", {
             defaultValue: "Synthetic patient portrait — not a real individual",
           })}
-          className="h-16 w-16 shrink-0 rounded-control ring-1 ring-white/10"
+          className="h-16 w-16 shrink-0 rounded-control ring-1 ring-border"
           onClick={() => setViewerOpen(true)}
           expandLabel={t("patientviewer.expand")}
         />
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-monitor-fg">
+          <p className="serif truncate text-lg leading-tight text-fg">
             {patient.name}
           </p>
-          <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-monitor-dim">
-            <Heartbeat weight="fill" className="h-3 w-3 shrink-0 text-monitor-online" aria-hidden />
+          <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted">
+            <Heartbeat weight="fill" className="h-3 w-3 shrink-0 text-[color:var(--state-normal)]" aria-hidden />
             <span className="italic">{affectLabel}</span>
           </p>
           {/* Live clinical-sign summary derived from the current vitals course. */}
-          <SymptomSummary vitals={vitals} className="mt-1 text-monitor-dim" />
+          <SymptomSummary vitals={vitals} className="mt-1 text-muted" />
         </div>
       </div>
 

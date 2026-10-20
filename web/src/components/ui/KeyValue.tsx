@@ -51,7 +51,7 @@ export function KeyValue({ label, value, mono, className }: KeyValueProps) {
       className={cn(
         "gap-1 py-1.5",
         // rows layout: two-column; stacked layout: single column
-        "group-data-[layout=rows]/dl:grid group-data-[layout=rows]/dl:grid-cols-[minmax(7rem,auto)_1fr] group-data-[layout=rows]/dl:items-baseline group-data-[layout=rows]/dl:gap-x-4",
+        "group-data-[layout=rows]/dl:grid group-data-[layout=rows]/dl:grid-cols-[minmax(4.5rem,auto)_1fr] group-data-[layout=rows]/dl:items-baseline group-data-[layout=rows]/dl:gap-x-4",
         className,
       )}
     >
@@ -61,7 +61,7 @@ export function KeyValue({ label, value, mono, className }: KeyValueProps) {
       <dd
         className={cn(
           "font-medium text-fg group-data-[layout=rows]/dl:text-end",
-          mono && "font-mono tabular-nums",
+          mono && "whitespace-nowrap font-mono tabular-nums",
         )}
       >
         {value}

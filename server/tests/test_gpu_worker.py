@@ -495,8 +495,8 @@ def test_diag_server_is_redacted_secret_scoped_and_stops_once_vllm_is_healthy():
     # Only docker ps plus the last 40 lines of vllm and caddy, each through the redaction filter.
     assert 'logs --no-color --tail 40 "$svc" 2>&1 | redact' in diag and "for svc in vllm caddy" in diag
     assert "compose logs --tail" not in diag
-    assert "grep -viE 'authorization|bearer|token|api[_-]?key|secret|passw'" in diag
-    assert 'grep -vF -- "$WORKER_TOKEN"' in diag
+    assert 'grep -vF -- "$WORKER_TOKEN"' in diag and 'grep -vF -- "$WORKER_DIAG_SECRET"' in diag
+    _assert_redact_behaviour(diag)
     # The cloud-init log is copied through the filter, never symlinked raw.
     assert "ln -s" not in diag and "redact < /var/log/cloud-init-output.log" in diag
     # Self-stop after 300 s of consecutive vLLM /health 200s.
@@ -642,3 +642,67 @@ async def test_healthy_logs_the_http_status_of_a_failing_worker(tmp_path, caplog
     msgs = [r.getMessage() for r in caplog.records if "/healthz probe" in r.getMessage()]
     assert msgs == [f"gpu worker {INSTANCE_ID}: /healthz probe -> HTTP 502",
                     f"gpu worker {INSTANCE_ID}: /healthz probe -> HTTP 200"]
+
+
+def _assert_redact_behaviour(diag: str) -> None:
+    """Worker 11 (2026-10-20): the filter dropped every line with the word "token", which hid
+    the vLLM tokenizer error. Run the real function on sample lines: secrets and auth headers
+    go, ordinary error lines (tokenizer, KV cache) stay."""
+    import re
+    import subprocess
+    m = re.search(r"^\s*(redact\(\) \{.*\})\s*$", diag, flags=re.M)
+    assert m, "redact() definition not found"
+    script = (
+        "WORKER_TOKEN=tok_SECRET_123; WORKER_DIAG_SECRET=diag0123456789abcdef\n"
+        + m.group(1)
+        + "\nprintf '%s\\n' "
+        + " ".join(repr(x) for x in [
+            "ValueError: tokenizer for Qwen/Qwen3-14B-AWQ failed to load",
+            "Available KV cache memory: 13.75 GiB",
+            "Authorization: Bearer tok_SECRET_123",
+            "url /diag/diag0123456789abcdef/x",
+            "env api_key=sk-abcdef",
+            "plain bearer tokens mentioned in prose",
+        ])
+        + " | redact\n"
+    )
+    out = subprocess.run(["bash", "-c", script], capture_output=True, text=True, check=True).stdout
+    assert "tokenizer for Qwen" in out and "KV cache memory" in out and "mentioned in prose" in out
+    assert "tok_SECRET_123" not in out and "diag0123456789abcdef" not in out and "sk-abcdef" not in out
+
+
+async def test_stop_cancels_the_inflight_readiness_wait_so_a_new_launch_is_not_blocked(tmp_path):
+    """Live finding 2026-10-20: after /admin/gpu/stop the shielded readiness wait kept polling the
+    dead worker for its whole ready budget and every new /admin/gpu/start awaited it."""
+    import asyncio
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    try:
+        w = m.store.insert_worker(instance_id="i-dead", instance_type="gpu_1x_a100_sxm4", region="us-east-1",
+                                  token="t", status="booting", price_cents_per_hour=199,
+                                  launched_at=clock.t, last_used_at=clock.t)
+        m.store.update_worker(w.id, ip="1.2.3.4", domain="1-2-3-4.sslip.io")
+        m.store.open_ledger(w)
+
+        async def never_healthy(_w):
+            await asyncio.sleep(0)
+            return False
+
+        m._healthy = never_healthy  # type: ignore[method-assign]
+        m._inflight = asyncio.create_task(m._wait_ready(m.store.get_worker(w.id)))
+        await asyncio.sleep(0)
+
+        class _Api:
+            async def terminate(self, ids):
+                return ids
+
+        m._lambda = lambda: _Api()  # type: ignore[method-assign]
+        await m.terminate(reason="admin")
+        assert m._inflight is None
+        # A wait that is still running notices the row is no longer active and stops.
+        task = asyncio.create_task(m._wait_ready(m.store.get_worker(w.id)))
+        with pytest.raises(Exception) as exc:
+            await asyncio.wait_for(task, timeout=2)
+        assert "terminated" in str(exc.value) or "terminating" in str(exc.value)
+    finally:
+        await m.aclose()

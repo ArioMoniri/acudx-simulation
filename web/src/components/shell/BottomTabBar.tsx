@@ -54,7 +54,7 @@ export function BottomTabBar() {
     <>
       <nav
         aria-label={t("nav.primary", { defaultValue: "Primary" })}
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface lg:hidden"
+        className="ink-scope fixed inset-x-0 bottom-0 z-40 border-t border-ink-border bg-ink lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ul className="flex h-14 items-stretch">

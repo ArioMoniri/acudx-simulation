@@ -119,7 +119,7 @@ export function CaseGenProgress({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-fg">
+          <h2 className="text-[1.0625rem] text-fg">
             {failure ? t("live2.gen.failedTitle") : t("live2.gen.title")}
           </h2>
           <p className="mt-0.5 text-xs text-muted">

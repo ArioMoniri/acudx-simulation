@@ -150,31 +150,33 @@ export function AttendingTips({ className, defaultOpen = true, guidanceOn }: Att
     <Card variant="surface" padding="md" className={className} role="complementary" aria-label={t("guidance3.guide.title")}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center text-brand">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+          <span aria-hidden="true" className="grid h-7 w-6 shrink-0 place-items-center text-brand">
             <ChalkboardTeacher weight="fill" className="h-4 w-4" />
           </span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-semibold tracking-tight text-fg">{t("guidance3.guide.title")}</h3>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h3 className="serif text-lg leading-tight text-fg">{t("guidance3.guide.title")}</h3>
               <span className="rounded-chip bg-brand-tint px-1 text-[0.625rem] font-semibold uppercase leading-4 tracking-wide text-brand">
                 {t("guidance3.panel.education")}
               </span>
             </div>
-            <p className="text-xs text-muted">{t("guidance3.guide.subtitle")}</p>
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+              <p className="text-xs text-muted">{t("guidance3.guide.subtitle")}</p>
+              {!coachingOff ? (
+                <label className="flex items-center gap-1.5">
+                  <span className="eyebrow">{t("guidance3.guide.detail", { defaultValue: "Full outline" })}</span>
+                  <Switch
+                    checked={detailOpen}
+                    onCheckedChange={setDetailOpen}
+                    aria-label={t("guidance3.guide.detailAria", { defaultValue: "Show the full work-up outline" })}
+                  />
+                </label>
+              ) : null}
+            </div>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {!coachingOff ? (
-            <label className="flex items-center gap-1.5">
-              <span className="eyebrow">{t("guidance3.guide.detail", { defaultValue: "Full outline" })}</span>
-              <Switch
-                checked={detailOpen}
-                onCheckedChange={setDetailOpen}
-                aria-label={t("guidance3.guide.detailAria", { defaultValue: "Show the full work-up outline" })}
-              />
-            </label>
-          ) : null}
           <button
             type="button"
             onClick={() => setOpen(false)}

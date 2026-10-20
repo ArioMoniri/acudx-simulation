@@ -46,3 +46,4 @@ server/data/*.db-journal
 web/playwright-report/
 web/test-results/
 server/data/*.db-*
+docs/media/readme/raw/

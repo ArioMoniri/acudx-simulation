@@ -784,7 +784,7 @@ function CallButton({
         "inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-full border px-3 text-xs font-medium",
         "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50",
         tone === "danger" && "border-transparent bg-[color:var(--state-critical)] text-white hover:brightness-95",
-        tone === "brand" && "border-transparent bg-brand text-white hover:bg-brand-hover",
+        tone === "brand" && "border-transparent bg-brand text-on-brand hover:bg-brand-hover",
         tone === "default" && (pressed ? "border-transparent bg-brand-tint text-brand" : "border-border bg-surface text-fg hover:bg-bg-subtle"),
       )}
     >

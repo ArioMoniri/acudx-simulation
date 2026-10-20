@@ -53,7 +53,8 @@ export const TabsTrigger = forwardRef<
                 // Console section nav (Vercel settings, Whop admin): a left list.
                 "flex min-h-8 w-full items-center gap-2 rounded-control px-2.5 py-1.5 text-start",
                 "text-muted hover:bg-bg-inset hover:text-fg",
-                "data-[state=active]:bg-bg-inset data-[state=active]:text-fg data-[state=active]:font-semibold",
+                "data-[state=active]:bg-surface data-[state=active]:text-fg data-[state=active]:font-semibold",
+                "data-[state=active]:shadow-[inset_2px_0_0_var(--brand-600),0_0_0_1px_var(--border)]",
               ]
             : [
                 // Underline tabs: the EHR activity-tab treatment.

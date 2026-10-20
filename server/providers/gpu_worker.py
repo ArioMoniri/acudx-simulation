@@ -457,6 +457,10 @@ class WorkerManager:
 
     async def terminate(self, reason: str = "admin") -> WorkerRecord | None:
         w = self.store.active_worker()
+        inflight = self._inflight
+        if inflight is not None and not inflight.done() and asyncio.current_task() is not inflight:
+            inflight.cancel()
+            self._inflight = None
         if w is None:
             return None
         now = self._clock()
@@ -644,6 +648,11 @@ class WorkerManager:
                 raise WorkerFailed(f"instance {w.instance_id} did not become active in {self.boot_timeout_s:.0f}s")
         last_capture: float | None = None
         for _ in range(self._attempts(self.ready_timeout_s)):
+            current = self.store.get_worker(w.id)
+            if current is not None and current.status in ("terminating", "terminated", "failed"):
+                # Stopped from the admin panel or the reaper while we waited (live finding
+                # 2026-10-20: the wait kept polling a dead worker and blocked new launches).
+                raise WorkerFailed(f"worker {w.instance_id} was {current.status} while waiting for readiness")
             if await self._healthy(w):
                 now = self._clock()
                 await self.capture_boot_log(w)

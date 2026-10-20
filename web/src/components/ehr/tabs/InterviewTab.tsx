@@ -1037,7 +1037,7 @@ function ChatTurn({
           className={cn(
             "rounded-card px-3.5 py-2.5 text-sm leading-relaxed [overflow-wrap:anywhere]",
             isDoctor
-              ? "rounded-br-md bg-brand text-white"
+              ? "rounded-br-md bg-brand text-on-brand"
               : "rounded-bl-md border border-border bg-bg-subtle text-fg",
           )}
         >

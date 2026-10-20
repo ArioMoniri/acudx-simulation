@@ -37,9 +37,9 @@ export interface StatProps {
 
 const valueSize: Record<StatSize, string> = {
   sm: "text-base",
-  md: "text-xl",
-  lg: "text-2xl",
-  xl: "text-[2rem]",
+  md: "text-[1.75rem]",
+  lg: "text-[2rem]",
+  xl: "text-[2.5rem]",
 };
 
 function trendClasses(dir: TrendDir, goodUp: boolean): string {
@@ -55,7 +55,9 @@ const arrow: Record<TrendDir, string> = { up: "↑", down: "↓", flat: "→" };
 /**
  * Stat — a single labeled metric. Token-driven; the one canonical stat/KPI
  * tile (replaces HomePage `StatTile` and institution `KpiCard`). Numeric
- * values default to tabular monospace so digits do not jitter on update.
+ * values are tabular so digits do not jitter on update: headline sizes (md
+ * and up) set the figure in the Fraunces display serif with lining tabular
+ * numerals (the v4 KPI voice), `sm` keeps Geist Mono for dense readouts.
  */
 export function Stat({
   label,
@@ -86,9 +88,11 @@ export function Stat({
         <span className="flex items-baseline gap-1">
           <span
             className={cn(
-              "font-semibold leading-none tracking-tight text-fg",
+              "leading-none text-fg",
               valueSize[size],
-              mono && "font-mono",
+              size === "sm"
+                ? cn("font-semibold tracking-tight", mono && "font-mono")
+                : "serif tnum font-medium [font-feature-settings:'lnum'_1,'tnum'_1]",
             )}
           >
             {value}

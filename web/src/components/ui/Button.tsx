@@ -40,7 +40,7 @@ const base =
 
 const variants: Record<Variant, string> = {
   // The ONE locked accent CTA — flat, no float.
-  primary: "bg-brand text-white hover:bg-brand-hover",
+  primary: "bg-brand text-on-brand hover:bg-brand-hover",
   secondary: "bg-surface text-fg border border-border-strong hover:bg-bg-subtle",
   ghost: "bg-transparent text-fg hover:bg-bg-inset",
   danger:
@@ -112,7 +112,7 @@ function renderContent(
           aria-hidden="true"
           className={cn(
             "inline-flex shrink-0 items-center justify-center",
-            variant === "primary" || variant === "danger" ? "text-white" : "text-muted",
+            variant === "primary" ? "text-on-brand" : variant === "danger" ? "text-white" : "text-muted",
             circleSizes[size],
           )}
         >

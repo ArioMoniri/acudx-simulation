@@ -63,7 +63,7 @@ function RecoveryCard({ onReload }: { onReload: () => void }) {
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-control bg-brand-tint text-brand">
           <FirstAidKit weight="bold" className="h-6 w-6" aria-hidden="true" />
         </div>
-        <h1 className="mt-5 text-xl font-semibold tracking-tight text-fg">
+        <h1 className="mt-5 text-2xl text-fg">
           {t("status.boundary.title")}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
