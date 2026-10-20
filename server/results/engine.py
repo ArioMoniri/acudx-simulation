@@ -65,6 +65,8 @@ TURNAROUND: dict[str, dict[str, Any]] = {
 MICRO_CODES: dict[str, str] = {
     "blood-culture": "600-7", "urine-culture": "630-4", "sputum-culture": "sputum", "gram-stain": "gram",
     "resp-viral-panel": "rvp", "csf-studies": "csf", "hepatitis-panel": "hep", "hiv": "hiv", "monospot": "mono",
+    # Acceptance 2026-10-20 D-25: malaria films and rapid diagnostic test.
+    "malaria-film": "malaria", "malaria-rdt": "malaria_rdt",
 }
 
 
@@ -178,6 +180,16 @@ CONDITION_PROFILES: dict[str, dict[str, Any]] = {
     "pneumonia_cap": {"onset_h": 72.0, "labs": _SEPSIS_LABS, "ecg": "sinus_tachycardia", "imaging": _PNEUMONIA_IMG, "micro": {"600-7": ("Streptococcus pneumoniae", 0.25), "sputum": ("Streptococcus pneumoniae", 0.6)}},
     "aspiration_pneumonitis": {"onset_h": 12.0, "labs": _SEPSIS_LABS, "imaging": _PNEUMONIA_IMG, "ecg": "sinus_tachycardia"},
     "covid19": {"onset_h": 120.0, "labs": {"1988-5": ("crp",), "33959-8": ("pct", False), "731-0": ("mult", 0.5), "48065-7": ("mult", 2.0), "2703-7": ("oxy", "pao2"), "2708-6": ("oxy", "spo2")}, "imaging": {"xr:chest": ("consolidation", "bilateral", ["bilateral peripheral ground-glass opacities"], "Bilateral peripheral opacities consistent with viral pneumonitis.")}, "micro": {"rvp": ("SARS-CoV-2 RNA detected", 0.95)}, "ecg": "sinus_tachycardia"},
+    # Acceptance 2026-10-20 (section 5, D-25): malaria had no profile, so it got
+    # the default leucocytosis; P. falciparum gives a normal or low white count
+    # and thrombocytopenia (WHO Guidelines for malaria,
+    # https://www.who.int/publications/i/item/guidelines-for-malaria).
+    "malaria": {"onset_h": 120.0, "labs": {"777-3": ("mult", 0.25), "1975-2": ("static", 2.4), "1988-5": ("crp",)},
+                "micro": {"malaria": ("Plasmodium falciparum ring forms seen, parasitaemia 2%", 1.0),
+                          "malaria_rdt": ("P. falciparum HRP2 antigen detected", 0.95)}, "severity_cap": 0.4},
+    # Acute HIV: lymphopenia, mild thrombocytopenia, modest CRP (BHIVA/BASHH 2020).
+    "hiv_seroconversion": {"onset_h": 240.0, "labs": {"731-0": ("mult", 0.45), "777-3": ("mult", 0.5), "1742-6": ("mult", 2.0), "1988-5": ("crp",)},
+                           "micro": {"hiv": ("HIV-1/2 antigen/antibody reactive (p24 antigen positive)", 0.95)}, "severity_cap": 0.15},
     "influenza": {"onset_h": 48.0, "labs": {"1988-5": ("crp",), "33959-8": ("pct", False)}, "micro": {"rvp": ("Influenza A RNA detected", 0.9)}, "severity_cap": 0.3},
     "asthma_exacerbation": {"onset_h": 6.0, "labs": {"2703-7": ("oxy", "pao2"), "2708-6": ("oxy", "spo2"), "2019-8": ("static", 34.0)}, "imaging": {"xr:chest": ("hyperinflation", "bilateral", ["hyperinflated lungs", "no consolidation", "no pneumothorax"], "Hyperinflation without focal abnormality.")}, "ecg": "sinus_tachycardia"},
     "copd_exacerbation": {"onset_h": 48.0, "labs": {"2703-7": ("oxy", "pao2"), "2708-6": ("oxy", "spo2"), "2019-8": ("static", 58.0), "1963-8": ("static", 31.0), "1988-5": ("crp",)}, "imaging": {"xr:chest": ("hyperinflation", "bilateral", ["hyperinflation", "flattened diaphragms", "no consolidation"], "Changes of COPD without acute consolidation.")}, "ecg": "sinus_tachycardia"},
@@ -711,7 +723,13 @@ def _resolve_micro(ctx: CaseContext, order_code: str) -> dict[str, Any]:
     if abx_before and organism:
         p *= 0.5  # cultures drawn after antibiotics lose sensitivity (Lamy 2016)
     positive = organism is not None and _unit(ctx.seed, "micro", order_code) < p
-    if key in ("rvp", "csf", "hep", "hiv", "mono", "gram"):
+    if key in ("malaria", "malaria_rdt"):
+        # CDC malaria algorithm: films and RDT within hours; repeat films every
+        # 12-24 h (three sets) before excluding malaria.
+        result = organism if positive else ("No malaria parasites seen on thick and thin films; repeat in 12-24 h if still suspected"
+                                            if key == "malaria" else "Plasmodium antigen not detected")
+        tat = "haematology"
+    elif key in ("rvp", "csf", "hep", "hiv", "mono", "gram"):
         result = organism if positive else ("Not detected" if key in ("rvp", "hiv", "hep", "mono") else "No organisms seen" if key == "gram" else "Clear CSF: WBC 2/uL, protein 0.35 g/L, glucose 3.6 mmol/L")
         tat = "urine" if key in ("gram", "csf") else "inflammatory"
     else:

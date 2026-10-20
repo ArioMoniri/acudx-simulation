@@ -299,3 +299,33 @@ def test_malaria_and_hiv_counts_are_plausible() -> None:
     assert 4.0 <= mal["6690-2"] <= 11.0 and mal["777-3"] < 150
     hiv = {lab["code"]: lab["value"] for lab in _tspec("hiv_seroconversion")["labs"]}
     assert hiv["6690-2"] < 11.0 and hiv["1988-5"] < 50
+
+
+def test_d20_client_matcher_mirrors_the_director_stem_table() -> None:
+    """web/src/domain/treatmentMatch.ts must carry the same codes and stems."""
+    import re
+    from pathlib import Path
+
+    ts = (Path(__file__).resolve().parents[2] / "web/src/domain/treatmentMatch.ts").read_text(encoding="utf-8")
+    abx = set(re.findall(r'"([\w-]+)"', ts[ts.index("ANTIBIOTIC_CODES"):ts.index("]);")]))
+    assert abx == set(D.ANTIBIOTIC_CODES)
+    for code, stems in D.FORMULARY_ROW_STEMS.items():
+        assert f'"{code}"' in ts or f"{code}:" in ts, code
+        for st in stems:
+            assert f'"{st}"' in ts, (code, st)
+    for st in D.DIAGNOSTIC_ROW_STEMS:
+        assert f'"{st}"' in ts, st
+
+
+@pytest.mark.parametrize("rel", ["web/src/domain/conditionCitations.ts", "web/src/domain/formulary.ts",
+                                 "web/src/state/progressStore.ts"])
+def test_d11_every_client_citation_id_is_verified(rel: str) -> None:
+    """Feedback rows and allergy alternatives cite only verified statements."""
+    import re
+    from pathlib import Path
+
+    ts = (Path(__file__).resolve().parents[2] / rel).read_text(encoding="utf-8")
+    ids = set(re.findall(r'"(gs_[a-z0-9_]+)"', ts))
+    assert ids or rel.endswith("progressStore.ts")
+    verified = CG._verified_statements()
+    assert sorted(i for i in ids if i not in verified) == []

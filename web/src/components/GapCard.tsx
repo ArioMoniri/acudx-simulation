@@ -98,7 +98,7 @@ export function GapCard({ gap, lang }: GapCardProps) {
             {gap.remediation[lang]}
           </p>
           <div className="mt-2">
-            <CitationPill citationId={gap.citationId} lang={lang} />
+            {gap.citationId ? <CitationPill citationId={gap.citationId} lang={lang} /> : null}
           </div>
         </div>
       </div>

@@ -39,6 +39,7 @@
 
 import type { Bilingual } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
+import { ANTIBIOTIC_CODES } from "@/domain/treatmentMatch";
 import {
   CODE_SYSTEMS,
   type Coding,
@@ -474,6 +475,9 @@ export const ORDERABLES_BY_GROUP: Record<OrderCategory, Orderable[]> = {
     micro("hepatitis-panel", { en: "Hepatitis serology panel", tr: "Hepatit serolojisi paneli" }),
     micro("hiv", { en: "HIV Ag/Ab (4th-gen)", tr: "HIV Ag/Ab (4. jenerasyon)" }),
     micro("monospot", { en: "Monospot (EBV heterophile)", tr: "Monospot (EBV heterofil)" }),
+    // Acceptance 2026-10-20 D-25 (CDC malaria algorithm: films with an RDT).
+    micro("malaria-film", { en: "Malaria thick and thin blood films", tr: "Sıtma kalın ve ince kan yayması" }),
+    micro("malaria-rdt", { en: "Malaria rapid diagnostic test (antigen)", tr: "Sıtma hızlı tanı testi (antijen)" }),
   ],
   imaging: [
     img("cxr", { en: "Chest X-ray (CXR)", tr: "Akciğer grafisi (PA)" }),
@@ -521,6 +525,41 @@ export const ORDER_GROUPS: OrderCategory[] = [
   "imaging",
   "poc",
 ];
+
+/**
+ * Acceptance 2026-10-20 D-19: a case authored its chest film as LOINC 36643-5
+ * while the catalogue lists "cxr", so both appeared and ordering the catalogue
+ * item scored "Chest X-ray: Not ordered". Case codes are mapped to the
+ * catalogue code of the same test before the case is built.
+ */
+const CASE_CODE_ALIASES: Record<string, string> = {
+  "36643-5": "cxr",
+  "30799-1": "ct-head-noncon",
+  "5799-2": "ua",
+  "2110-5": "urine-hcg",
+  "32700-7": "malaria-film",
+  "56888-1": "hiv",
+};
+
+const LABEL_ALIASES: Array<[RegExp, string]> = [
+  [/chest x-?ray|chest radiograph|akciğer grafisi/i, "cxr"],
+  [/\bct head\b|beyin bt/i, "ct-head-noncon"],
+  [/bladder ultrasound|renal ultrasound|renal ultrason|mesane ultrason/i, "us-renal"],
+  [/biliary|mrcp|\bruq\b|safra yolu/i, "us-ruq"],
+  [/transvaginal|pelvic ultrasound|transvajinal/i, "us-pelvis"],
+  [/radiograph of the (knee|limb|joint)|diz düz grafisi/i, "xr-extremity"],
+];
+
+/** The catalogue code for a case-authored order code, or the code itself. */
+export function catalogCodeFor(code: string, label?: string): string {
+  if (ORDERABLE_BY_CODE.has(code)) return code;
+  const alias = CASE_CODE_ALIASES[code];
+  if (alias && ORDERABLE_BY_CODE.has(alias)) return alias;
+  if (label) {
+    for (const [re, target] of LABEL_ALIASES) if (re.test(label) && ORDERABLE_BY_CODE.has(target)) return target;
+  }
+  return code;
+}
 
 /** Look up a catalog orderable by its code (undefined if not catalogued). */
 export function getOrderableByCode(code: string): Orderable | undefined {
@@ -641,7 +680,19 @@ const MONOSPOT_NEG: Bilingual = {
   tr: "Heterofil antikor (Monospot) negatif.",
 };
 
+const MALARIA_FILM_NEG: Bilingual = {
+  en: "No malaria parasites seen on thick and thin films; repeat every 12-24 h (three sets) if still suspected.",
+  tr: "Kalın ve ince yaymada sıtma paraziti görülmedi; hâlâ düşünülüyorsa 12-24 saatte bir tekrarlayın (üç set).",
+};
+
+const MALARIA_RDT_NEG: Bilingual = {
+  en: "Plasmodium antigen not detected.",
+  tr: "Plasmodium antijeni saptanmadı.",
+};
+
 const MICRO_CONCLUSIONS: Record<string, Bilingual> = {
+  "malaria-film": MALARIA_FILM_NEG,
+  "malaria-rdt": MALARIA_RDT_NEG,
   "urine-culture": CULTURE_URINE_NORMAL,
   "sputum-culture": SPUTUM_NORMAL,
   "gram-stain": GRAM_NORMAL,
@@ -881,7 +932,7 @@ function illnessRatio(c: CaseInstance, drawMs: number, treatments: AdministeredT
   return clampNum((sevT + 1.5) / (sev0 + 1.5), 0.15, 1.3);
 }
 
-const isAbxCode = (code: string) => code === "2193" || /cef|penem|cillin|floxacin|micin|antibio|tazo/i.test(code);
+const isAbxCode = (code: string) => ANTIBIOTIC_CODES.has(code) || /cef|penem|cillin|floxacin|micin|antibio|tazo/i.test(code);
 const isInsulinCode = (code: string) => code === "5856" || /insulin|insülin/i.test(code);
 
 /** Earliest administration time (≤ drawMs) of a matching treatment, or null. */
@@ -1105,6 +1156,9 @@ function microResult(code: string, c: CaseInstance, dynamic: boolean): { conclus
   if (code === "csf-studies") {
     const abnormal = cachedTags(c).has("meningitis");
     return { conclusion: csfSynthetic(c, abnormal), abnormal };
+  }
+  if (code === "malaria-rdt" && /^b5[0-4]/i.test(c.correctDiagnosis.code.coding[0]?.code ?? "")) {
+    return { conclusion: { en: "P. falciparum HRP2 antigen detected.", tr: "P. falciparum HRP2 antijeni saptandı." }, abnormal: true };
   }
   return { conclusion: microConclusion(code), abnormal: false };
 }

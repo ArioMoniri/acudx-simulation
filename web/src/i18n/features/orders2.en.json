@@ -103,6 +103,12 @@
       "finalReport": "Final report",
       "normalHeading": "Additional results (normal)",
       "normalNote": "Ordered tests with no case-specific finding are reported here, within normal limits."
+    },
+    "allergy": {
+      "alternatives": "Allergy-safe alternatives in the formulary for this diagnosis:",
+      "none": "No allergy-safe alternative in this group; seek specialist advice.",
+      "caution": "Caution: documented {{allergy}}. Cross-reactivity is under 1%; give with monitoring.",
+      "cautionShort": "caution"
     }
   }
 }

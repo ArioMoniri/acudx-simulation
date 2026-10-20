@@ -75,6 +75,11 @@ export interface AllergyMatch {
   /** The formulary keyword that matched. */
   keyword?: string;
   criticality?: AllergyIntolerance["criticality"];
+  /**
+   * No conflict, but a documented allergy calls for caution (a carbapenem in
+   * penicillin allergy; AAAAI/ACAAI 2022). Shown to the learner, never a block.
+   */
+  caution?: boolean;
 }
 
 export type MarOutcome = "given" | "blocked" | "flagged";
@@ -116,7 +121,7 @@ export function allergyCrossCheck(
   allergies: AllergyIntolerance[],
   entry: FormularyEntry | undefined = formularyFor(drugCode),
 ): AllergyMatch {
-  if (!entry || entry.allergyClass.length === 0) return { conflict: false };
+  if (!entry || (entry.allergyClass.length === 0 && !entry.allergyCaution?.length)) return { conflict: false };
   for (const a of allergies) {
     for (const text of allergyTexts(a)) {
       if (NO_KNOWN.test(text)) continue;
@@ -128,7 +133,20 @@ export function allergyCrossCheck(
       }
     }
   }
+  for (const a of allergies) {
+    for (const text of allergyTexts(a)) {
+      if (NO_KNOWN.test(text)) continue;
+      const hay = text.toLowerCase();
+      const kw = entry.allergyCaution?.find((k) => hay.includes(k.toLowerCase()));
+      if (kw) return { conflict: false, caution: true, matched: text, keyword: kw, criticality: a.criticality };
+    }
+  }
   return { conflict: false };
+}
+
+/** Every documented allergy as text (for the alternatives lookup). */
+export function allergyTextList(allergies: AllergyIntolerance[]): string[] {
+  return allergies.flatMap(allergyTexts);
 }
 
 /* -------------------------------------------------------------------------- */

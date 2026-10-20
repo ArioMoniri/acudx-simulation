@@ -126,6 +126,8 @@ function detectCategory(code: string, label?: Bilingual): OrderCategory | null {
     wb(hay, "wbc") ||
     wb(hay, "crp") ||
     has(hay, "creatinine") ||
+    has(hay, "malaria") ||
+    has(hay, "sıtma") ||
     has(hay, "kreatinin") ||
     wb(hay, "bun")
   )

@@ -82,6 +82,12 @@
       "finalReport": "Nihai rapor",
       "normalHeading": "Ek sonuçlar (normal)",
       "normalNote": "Vakaya özgü bulgusu olmayan istenmiş tetkikler burada, normal sınırlar içinde raporlanır."
+    },
+    "allergy": {
+      "alternatives": "Bu tanı için formülerdeki alerji açısından güvenli alternatifler:",
+      "none": "Bu grupta alerji açısından güvenli alternatif yok; uzman görüşü alın.",
+      "caution": "Dikkat: belgelenmiş {{allergy}}. Çapraz reaksiyon %1'in altında; izlemle verin.",
+      "cautionShort": "dikkat"
     }
   }
 }
