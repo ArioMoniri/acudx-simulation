@@ -1253,7 +1253,7 @@ function PatientPresence({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 lg:sticky lg:top-[calc(3rem+var(--banner-h,7.5rem))]">
       <PatientCallTile
         caseInstance={caseInstance}
         vitals={vitals}

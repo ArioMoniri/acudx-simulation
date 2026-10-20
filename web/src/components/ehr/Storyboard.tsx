@@ -121,7 +121,7 @@ function Sparse({ text }: { text: string }) {
  * and stable React keys mean only newly mounted items animate — items already on
  * the rail stay put.
  */
-const ITEM_ENTER = "motion-safe:animate-[fade-up_0.28s_ease-out]";
+const ITEM_ENTER = "motion-safe:animate-[fade-up_0.16s_ease-out]";
 
 /** Compact vitals snapshot cell (mono, tabular). Shows the LIVE current value
  * (triage until the encounter clock starts). */
@@ -135,9 +135,9 @@ function MiniVital({
   unit?: string;
 }) {
   return (
-    <div className="rounded-control border border-border bg-bg-subtle px-2 py-1.5">
-      <p className="eyebrow text-[10px] leading-none">{label}</p>
-      <p className="mt-1 font-mono text-base font-semibold leading-none tabular-nums text-fg">
+    <div className="border-b border-e border-border px-2 py-1.5">
+      <p className="eyebrow text-[0.625rem] leading-none">{label}</p>
+      <p className="mt-1 font-mono text-sm font-semibold leading-none tabular-nums text-fg">
         {value}
         {unit ? <span className="ms-0.5 text-[10px] font-medium text-muted">{unit}</span> : null}
       </p>

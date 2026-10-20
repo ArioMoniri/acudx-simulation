@@ -260,10 +260,10 @@ export function ActivityTabs({
       onValueChange={handleValueChange}
       className="flex flex-col gap-4"
     >
-      {/* Chart nav bar — a framed EHR tab strip (Epic activity tabs): a surface
-          toolbar, dense icon+label tabs, a clear brand active state on the
-          baseline, and soft scroll fades when the strip overflows. */}
-      <div className="relative rounded-card border border-border bg-surface px-3 pt-1.5">
+      {/* Chart nav: a flat Epic-like activity strip. Dense icon+label tabs on a
+          hairline baseline, a 2 px accent underline on the active tab, mono
+          counts, and soft scroll fades when the strip overflows. */}
+      <div className="relative -mx-4 border-b border-border bg-surface px-4 md:-mx-6 md:px-6">
         <div
           ref={scrollRef}
           onScroll={syncEdges}
@@ -272,7 +272,7 @@ export function ActivityTabs({
           <TabsList
             aria-label={t("ehr.tabs.navLabel")}
             variant="underline"
-            className="w-max min-w-full gap-1 border-b-0"
+            className="w-max min-w-full gap-0 border-b-0"
           >
             {TABS.map(({ key, icon: TabIcon }) => {
               const count = (counts as Record<string, number>)[key];
@@ -282,20 +282,20 @@ export function ActivityTabs({
                   key={key}
                   value={key}
                   aria-current={isActive ? "page" : undefined}
-                  className="group relative whitespace-nowrap rounded-t-control px-3 py-2.5 text-muted data-[state=inactive]:hover:bg-bg-subtle data-[state=active]:text-brand"
+                  className="group relative whitespace-nowrap px-2.5 pb-2 pt-2.5 text-muted data-[state=inactive]:hover:text-fg data-[state=active]:text-fg"
                 >
                   <TabIcon
                     weight="bold"
-                    className="h-4 w-4 text-subtle transition-colors duration-200 ease-out group-data-[state=active]:text-brand"
+                    className="h-4 w-4 text-subtle transition-colors duration-[120ms] ease-out group-data-[state=active]:text-brand"
                     aria-hidden
                   />
                   {t(`ehr.tabs.${camel(key)}`)}
                   {key === "results" && unseenResults > 0 ? (
-                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-chip bg-brand px-1 font-mono text-[0.625rem] font-semibold leading-4 text-white">
                       {t("ehr.tabs.unseenBadge", { count: unseenResults })}
                     </span>
                   ) : typeof count === "number" && count > 0 ? (
-                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-full bg-brand-tint px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-brand">
+                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-chip bg-bg-inset px-1 font-mono text-[0.625rem] font-semibold leading-4 text-muted group-data-[state=active]:bg-brand-tint group-data-[state=active]:text-brand">
                       {count}
                     </span>
                   ) : null}
@@ -314,14 +314,14 @@ export function ActivityTabs({
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-px left-px w-8 rounded-l-card bg-gradient-to-r from-surface to-transparent transition-opacity duration-200",
+            "pointer-events-none absolute inset-y-px left-0 w-6 bg-surface transition-opacity duration-[120ms] [mask-image:linear-gradient(to_right,black,transparent)]",
             edges.start ? "opacity-100" : "opacity-0",
           )}
         />
         <span
           aria-hidden
           className={cn(
-            "pointer-events-none absolute inset-y-px right-px w-8 rounded-r-card bg-gradient-to-l from-surface to-transparent transition-opacity duration-200",
+            "pointer-events-none absolute inset-y-px right-0 w-6 bg-surface transition-opacity duration-[120ms] [mask-image:linear-gradient(to_left,black,transparent)]",
             edges.end ? "opacity-100" : "opacity-0",
           )}
         />
@@ -355,9 +355,10 @@ export function ActivityTabs({
         <ResultsTab lang={lang} guidanceOn={guidanceOn} />
       </TabsContent>
       <TabsContent value="guidance">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <RealtimeGuidance />
-          <AttendingTips defaultOpen />
+        {/* Reference reading layout: two 68ch columns on wide screens. */}
+        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
+          <RealtimeGuidance className="reference" />
+          <AttendingTips defaultOpen className="reference" />
         </div>
       </TabsContent>
       <TabsContent value="problem-list">

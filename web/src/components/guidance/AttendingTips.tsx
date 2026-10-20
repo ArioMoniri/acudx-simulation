@@ -128,7 +128,7 @@ export function AttendingTips({ className, defaultOpen = true, guidanceOn }: Att
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "inline-flex items-center gap-2 rounded-pill border border-border bg-surface px-3 py-1.5",
+          "inline-flex items-center gap-2 rounded-chip border border-border bg-surface px-3 py-1.5",
           "text-xs font-medium text-fg shadow-soft transition-colors hover:border-border-strong",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
           className,
@@ -151,13 +151,13 @@ export function AttendingTips({ className, defaultOpen = true, guidanceOn }: Att
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
-          <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-chip bg-brand-tint text-brand">
+          <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center text-brand">
             <ChalkboardTeacher weight="fill" className="h-4 w-4" />
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-semibold tracking-tight text-fg">{t("guidance3.guide.title")}</h3>
-              <span className="rounded-pill bg-brand-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+              <span className="rounded-chip bg-brand-tint px-1 text-[0.625rem] font-semibold uppercase leading-4 tracking-wide text-brand">
                 {t("guidance3.panel.education")}
               </span>
             </div>
@@ -358,7 +358,7 @@ function TipRow({ tip, lang, t }: { tip: AttendingTipView; lang: Lang; t: TFunc 
       ) : null}
       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
         {tip.timingHint ? (
-          <span className="inline-flex items-center gap-1 rounded-pill bg-bg-subtle px-2 py-0.5 text-[11px] font-medium text-muted">
+          <span className="inline-flex items-center gap-1 rounded-chip bg-bg-subtle px-2 py-0.5 text-[11px] font-medium text-muted">
             <Timer weight="bold" className="h-3 w-3" aria-hidden />
             {tip.timingHint}
           </span>
@@ -392,9 +392,9 @@ function CoverageProgress({ coverage, t }: { coverage: Coverage; t: TFunc }) {
         <span className="eyebrow">{t("guidance3.guide.progress", { defaultValue: "Your work-up so far" })}</span>
         <span className="tnum text-xs font-semibold text-fg">{t("guidance3.guide.pct", { defaultValue: "{{pct}}% covered", pct })}</span>
       </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-bg-inset" role="presentation">
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-chip bg-bg-inset" role="presentation">
         <div
-          className="h-full rounded-pill bg-brand transition-[width] duration-500 ease-out motion-reduce:transition-none"
+          className="h-full rounded-chip bg-brand transition-[width] duration-500 ease-out motion-reduce:transition-none"
           style={{ width: `${pct}%` }}
         />
       </div>
