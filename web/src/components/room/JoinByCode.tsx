@@ -1,13 +1,17 @@
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Keyhole, ArrowRight, Warning } from "@phosphor-icons/react";
+import { Keyhole, ArrowRight, Warning, CircleNotch } from "@phosphor-icons/react";
 
 import { Button, Card, TextInput } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 export interface JoinByCodeProps {
-  /** Resolve + join a room by code. Returns true on success, false if unknown. */
-  onJoin: (code: string) => boolean;
+  /**
+   * Resolve + join a room by code. Resolves true on success, false when no open
+   * room matches (synchronously for the local lobby, after a bounded relay wait
+   * for a room hosted on another device).
+   */
+  onJoin: (code: string) => boolean | Promise<boolean>;
 }
 
 /**
@@ -22,13 +26,30 @@ export function JoinByCode({ onJoin }: JoinByCodeProps) {
   const errorId = useId();
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
+  const [pending, setPending] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmed = code.trim();
-    if (!trimmed) return;
-    const ok = onJoin(trimmed);
-    setError(!ok);
+    if (!trimmed || pending) return;
+    setError(false);
+    setPending(true);
+    let ok = false;
+    try {
+      ok = await onJoin(trimmed);
+    } finally {
+      if (mounted.current) {
+        setPending(false);
+        setError(!ok);
+      }
+    }
   }
 
   return (
@@ -69,15 +90,26 @@ export function JoinByCode({ onJoin }: JoinByCodeProps) {
         </div>
         <Button
           type="submit"
-          disabled={!code.trim()}
-          trailingIcon={<ArrowRight weight="bold" className="h-3.5 w-3.5" />}
+          disabled={!code.trim() || pending}
+          aria-busy={pending || undefined}
+          trailingIcon={
+            pending ? (
+              <CircleNotch weight="bold" className="h-3.5 w-3.5 motion-safe:animate-spin" />
+            ) : (
+              <ArrowRight weight="bold" className="h-3.5 w-3.5" />
+            )
+          }
         >
           {t("rooms.join.action")}
         </Button>
       </form>
 
       <p id={errorId} role="status" aria-live="polite" className="min-h-0">
-        {error ? (
+        {pending ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted">
+            {t("rooms.join.searching")}
+          </span>
+        ) : error ? (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--state-warning)]">
             <Warning weight="fill" className="h-3.5 w-3.5" aria-hidden />
             {t("rooms.join.notFound")}

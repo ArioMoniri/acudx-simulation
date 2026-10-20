@@ -27,10 +27,10 @@ const PRESENCE_TONE: Record<Presence, StatusTone> = {
 import {
   effectiveHolder,
   CLINICAL_ROLE_ORDER,
-  ME,
   type Room,
   type ClinicalRole,
 } from "@/data/rooms";
+import { isSelfParticipant } from "./roomStore";
 
 export interface ParticipantsPanelProps {
   room: Room;
@@ -109,7 +109,9 @@ export function ParticipantsPanel({
           const RoleIcon = ROLE_ICON[role];
           const speaking = speakingRole === role;
           const hasFloor = floorHolder === role;
-          const isMe = holder?.id === ME.id || mine === role;
+          // "You" is THIS device only: its own per-tab id (or the legacy seed
+          // fixture). A remote joiner's seat shows the joiner's profile name.
+          const isMe = isSelfParticipant(holder) || mine === role;
           const isAi = holder?.kind === "ai";
           const isHandRaised = raisedHands.includes(role) && !hasFloor;
 
@@ -165,7 +167,7 @@ export function ParticipantsPanel({
                             aria-hidden="true"
                           />
                           <span className="truncate text-muted">
-                            {holder.id === ME.id ? t("rooms.you") : holder.name}
+                            {isSelfParticipant(holder) ? t("rooms.you") : holder.name}
                           </span>
                           <span className="text-muted" aria-hidden>·</span>
                           <span className="inline-flex items-center gap-1 text-muted">

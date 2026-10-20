@@ -106,8 +106,8 @@ function Lobby() {
   );
 
   const handleJoin = useCallback(
-    (code: string): boolean => {
-      const id = joinByCode(code);
+    async (code: string): Promise<boolean> => {
+      const id = await joinByCode(code);
       if (!id) return false;
       navigate(`/rooms/${id}`);
       return true;
@@ -158,7 +158,7 @@ function Lobby() {
             <p className="text-sm text-muted">{t("rooms.lobby.empty")}</p>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {openRooms.map((room) => (
               <RoomCard key={room.id} room={room} lang={lang} />
             ))}

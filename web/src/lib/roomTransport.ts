@@ -129,6 +129,14 @@ export function getStatus(): RoomTransportStatus {
   return status;
 }
 
+/**
+ * Can this device reach a relay at all (browser WebSocket + a resolvable URL)?
+ * False under SSR / tests without sockets, where a code-join cannot be proven.
+ */
+export function relayAvailable(): boolean {
+  return canUseSockets() && resolveRelayUrl().length > 0;
+}
+
 function clearReconnect(): void {
   if (reconnectTimer != null) {
     clearTimeout(reconnectTimer);

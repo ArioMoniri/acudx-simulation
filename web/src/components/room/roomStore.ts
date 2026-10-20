@@ -38,10 +38,12 @@ import { registerRoomCase } from "./roomCaseStore";
 import {
   connectRoom,
   disconnect as transportDisconnect,
+  relayAvailable,
   sendSnapshot,
   type RoomConnectionState,
   type RoomTransportStatus,
 } from "@/lib/roomTransport";
+import { getProfileState } from "@/state/profileStore";
 
 /* -------------------------------------------------------------------------- */
 /* Runtime shapes                                                              */
@@ -148,13 +150,47 @@ function resolveClientId(): string {
 
 const CLIENT_ID = resolveClientId();
 
-/** This device's seat identity — `ME` re-keyed so seats stay distinct per tab. */
-const SELF: Participant = { ...ME, id: CLIENT_ID };
+/** Two-letter initials from a display name ("Deniz Yılmaz" -> "DY"). */
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
+  return (first + last).toLocaleUpperCase() || ME.initials;
+}
+
+/**
+ * This device's seat identity, carried in every snapshot so the OTHER members
+ * see the real person: the signed-in profile's name + initials (never the "You"
+ * fixture, which is only ever correct on the device it belongs to) keyed by the
+ * stable per-tab id. Read at call time because the profile can change after the
+ * module loads (onboarding, account edits).
+ */
+function self(): Participant {
+  const profile = getProfileState().profile;
+  if (!profile?.onboarded) return { ...ME, id: CLIENT_ID };
+  return {
+    ...ME,
+    id: CLIENT_ID,
+    name: profile.fullName,
+    initials: initialsOf(profile.fullName),
+    affiliation: profile.institution
+      ? { en: profile.institution, tr: profile.institution }
+      : ME.affiliation,
+  };
+}
+
+/**
+ * Is this participant THIS device (its own per-tab id), or the legacy `ME`
+ * fixture the pre-seated seed rooms use? The UI labels only these seats "You".
+ */
+export function isSelfParticipant(p: Participant | null | undefined): boolean {
+  return p != null && (p.id === CLIENT_ID || p.id === ME.id);
+}
 
 /**
  * Which role (if any) THIS device currently sits in. Matches this device's own
- * `SELF.id`, and also the legacy `ME.id` so the pre-seated seed rooms (which use
- * the shared `ME` fixture) still resolve as "mine".
+ * id, and also the legacy `ME.id` so the pre-seated seed rooms (which use the
+ * shared `ME` fixture) still resolve as "mine".
  */
 function deriveMine(room: Room): ClinicalRole | null {
   return room.seats.find(isMine)?.role ?? null;
@@ -162,7 +198,7 @@ function deriveMine(room: Room): ClinicalRole | null {
 
 /** Is this seat held by THIS device (its own id, or the legacy ME fixture)? */
 function isMine(seat: Seat): boolean {
-  return seat.holder?.id === SELF.id || seat.holder?.id === ME.id;
+  return isSelfParticipant(seat.holder);
 }
 
 let joinCounter = 0;
@@ -219,7 +255,7 @@ function buildSeats(
   const myRole = CLINICAL_ROLE_ORDER.find((r) => humanRoles.includes(r)) ?? null;
   const seats = CLINICAL_ROLE_ORDER.map<Seat>((role) => {
     if (role === myRole) {
-      return { role, holder: SELF, ready: true, teamLead: true };
+      return { role, holder: self(), ready: true, teamLead: true };
     }
     return { role, holder: null, ready: false, teamLead: false };
   });
@@ -310,6 +346,10 @@ let activeRoomId: string | null = null;
 let applyingRemote = false;
 /** Rooms materialized from a code-join that should auto-seat once populated. */
 const pendingJoinSeat = new Set<string>();
+/** Code-joins waiting for the host's snapshot, keyed by channel (join code). */
+const pendingJoinResolvers = new Map<string, (roomId: string) => void>();
+/** How long a code-join waits for the relay before the code is called unknown. */
+const JOIN_TIMEOUT_MS = 4_000;
 
 // Connection status, surfaced to the UI via `useRoomConnection`.
 let connStatus: RoomTransportStatus = { state: "idle", peers: 0, channel: null };
@@ -392,6 +432,8 @@ function applyRemoteSnapshot(channel: string, raw: unknown): void {
       pendingJoinSeat.delete(id);
       queueMicrotask(() => joinRoom(id));
     }
+    // The snapshot is the proof the code names a real, open room.
+    pendingJoinResolvers.get(channel)?.(id);
   } finally {
     applyingRemote = false;
   }
@@ -462,7 +504,7 @@ export function createRoom(config: {
     chiefComplaint,
     status: "open",
     locale: config.locale ?? "tr",
-    host: SELF,
+    host: self(),
     joinCode,
     aiBackfill: config.aiBackfill,
     acuityESI: caseInstance.acuityESI,
@@ -515,75 +557,60 @@ export function joinRoom(id: string): void {
   if (role) takeSeat(id, role);
 }
 
-/** A minimal, valid room shown while a code-join waits for the host's snapshot. */
-function placeholderRuntime(id: string, code: string): RoomRuntime {
-  const room: Room = {
-    id,
-    title: { en: "Joining room…", tr: "Odaya katılınıyor…" },
-    // Coherent fallback for the solo interview until the snapshot lands.
-    caseId: "em-acs-001",
-    chiefComplaint: {
-      en: "Connecting to the host…",
-      tr: "Sunucuya bağlanılıyor…",
-    },
-    status: "open",
-    locale: "tr",
-    host: SELF,
-    joinCode: code,
-    aiBackfill: true,
-    acuityESI: 3,
-    seats: CLINICAL_ROLE_ORDER.map<Seat>((role) => ({
-      role,
-      holder: null,
-      ready: false,
-      teamLead: false,
-    })),
-  };
-  return {
-    room,
-    floor: [],
-    hands: [],
-    floorHolder: null,
-    mine: null,
-    loopsClosedByMe: 0,
-  };
-}
-
 /**
- * Resolve a join code to a room id and seat this device into the first seat a
- * teammate can take (an open or AI-held seat).
+ * Resolve a join code and seat this device into the first seat a teammate can
+ * take (an open or AI-held seat). Resolves to the room id, or to `null` when no
+ * open room matches the code:
  *
- * A room hosted on ANOTHER device (or another tab) is not present locally, so we
- * subscribe to its channel (= the code) and let the relay's cached snapshot
- * materialize it, auto-seating once it arrives. This is optimistic: an unknown /
- * unreachable code simply lands on a quiet "waiting" room rather than throwing.
- * Returns null only for empty input.
+ *   - a room present locally (a seed room, or one created on this device) joins
+ *     synchronously (the promise is already settled);
+ *   - otherwise the room lives on ANOTHER device, so this device subscribes to
+ *     the code's channel and waits a bounded {@link JOIN_TIMEOUT_MS} for the
+ *     relay's cached snapshot to prove the room exists. No snapshot in time, or
+ *     no relay reachable at all, means the code is unknown: nothing is
+ *     materialized and the lobby keeps the learner where they are.
  */
-export function joinByCode(code: string): string | null {
+export function joinByCode(code: string): Promise<string | null> {
   const wanted = normalizeCode(code);
-  if (!wanted) return null;
+  if (!wanted) return Promise.resolve(null);
 
-  // 1) Already present locally (a seed room, or one created on this device).
+  // 1) Already present locally.
   const localId = state.order.find(
     (rid) => normalizeCode(state.runtimes[rid]?.room.joinCode ?? "") === wanted,
   );
   if (localId) {
     joinRoom(localId);
-    return localId;
+    return Promise.resolve(localId);
   }
 
-  // 2) Remote room: materialize a placeholder + subscribe; the snapshot fills it.
+  // 2) Remote room: only a relay can prove it exists.
+  if (!relayAvailable()) return Promise.resolve(null);
   const id = roomIdForCode(wanted);
-  if (!state.runtimes[id]) {
-    state = {
-      order: [id, ...state.order],
-      runtimes: { ...state.runtimes, [id]: placeholderRuntime(id, wanted) },
-    };
-    emit();
-  }
-  pendingJoinSeat.add(id);
-  connect(id, wanted);
-  return id;
+  return new Promise((resolve) => {
+    let settled = false;
+    // watchdog: allow bounded wait for the relay's cached snapshot, not a simulated server
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      pendingJoinResolvers.delete(wanted);
+      pendingJoinSeat.delete(id);
+      if (activeChannel === wanted && !state.runtimes[id]) {
+        transportDisconnect();
+        activeChannel = null;
+        activeRoomId = null;
+      }
+      resolve(null);
+    }, JOIN_TIMEOUT_MS);
+    pendingJoinResolvers.set(wanted, (roomId) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      pendingJoinResolvers.delete(wanted);
+      resolve(roomId);
+    });
+    pendingJoinSeat.add(id);
+    connect(id, wanted);
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -595,7 +622,7 @@ export function takeSeat(id: string, role: ClinicalRole): void {
   const rt = state.runtimes[id];
   if (!rt) return;
   const room = withSeats(rt.room, (seat) => {
-    if (seat.role === role) return { ...seat, holder: SELF, ready: true };
+    if (seat.role === role) return { ...seat, holder: self(), ready: true };
     if (isMine(seat)) return { ...seat, holder: null, ready: false };
     return seat;
   });
