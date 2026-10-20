@@ -5,11 +5,15 @@ Everything the learner sees is a *layer* written by a short model call from the 
 in the requested locale only, and stored server-side in :class:`CaseStore`.
 
     S0  sample          condition from the taxonomy (+ learner steering, faculty blueprint)
-    S1  kernel+opening  ONE streamed call (cap S1_MAX_TOKENS): demographics, complaint, triage
-                        note and vitals, persona, three opening statements, then the hidden
-                        kernel (key positives and negatives, course, branches, red flags).
-                        Deterministic gate only (bounds, plausibility, no drug content), so
-                        the encounter opens on ``opening.ready`` without any judge.
+    S1  opening         ONE streamed call (cap S1_MAX_TOKENS): demographics, complaint, triage
+                        note and vitals, persona, two opening statements. Deterministic gate
+                        only (bounds, plausibility, no drug content), so the encounter opens on
+                        ``opening.ready`` without any judge.
+        kernel          ONE short call right after the opening, conditioned on it (cap
+                        MAX_TOKENS["kernel"]): key positives and negatives, course, branches,
+                        red flags, exam systems, anchor ids. Hidden; it seeds every layer.
+                        (Live 2026-10-20 on one A100 in eager mode: one combined call of about
+                        560 tokens took 40 to 48 s, so the kernel moved off the critical path.)
     S2  history.<cluster>   presenting | associated | background
     S3  exam.<system>       general | cardiovascular | respiratory | abdominal | neurological |
                             msk_skin | ent_special
@@ -33,9 +37,9 @@ rewritten under them, the issue is recorded as a correction note instead.
 SSE event log (``CaseStore.append_event``; contract in review 06a 4.6)::
 
     start          {thread_id, stages, eta_ms}
-    kernel         {status:"ready"}
     opening.delta  {path, value}
     opening.ready  {opening, spec, layers, timings}
+    kernel         {status:"ready"} (or error stage "kernel", non-fatal)
     layer.pending  {layer, reason}
     layer.ready    {layer, data, spec}
     judge          {layer, decision: accept|patched|noted, patch?, issues?}
@@ -48,7 +52,9 @@ Education only. Synthetic patients.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import os
 import random
 import re
 import statistics
@@ -72,12 +78,16 @@ from server.orchestration.trace import make_event
 # --------------------------------------------------------------------------- #
 # Budgets                                                                      #
 # --------------------------------------------------------------------------- #
-S1_MAX_TOKENS = 560
+S1_MAX_TOKENS = 380
 MAX_TOKENS: dict[str, int] = {
-    "history": 300, "exam": 180, "treatments": 440, "results": 400, "event": 200, "debrief": 260, "patch": 300,
+    "kernel": 320, "history": 360, "exam": 180, "treatments": 560, "results": 400, "event": 200, "debrief": 260, "patch": 300,
 }
 TEMPERATURE = {"s1": 0.7, "layer": 0.5, "patch": 0.3}
-LAYER_CONCURRENCY = 4          # short calls batch well on one vLLM instance
+# Background continuation calls in flight per runtime. Live 2026-10-20 (one A100, vLLM eager
+# mode, guided JSON): aggregate decode stayed at 10 to 15 tokens/s whether 1 or 4 calls ran,
+# so concurrency only delayed the FIRST layer; sequential continuation gets history.presenting
+# out first. Raise it (CASEGEN_LAYER_CONCURRENCY) on a worker that batches (CUDA graphs, xgrammar).
+LAYER_CONCURRENCY = max(1, int(os.environ.get("CASEGEN_LAYER_CONCURRENCY", "1") or "1"))
 CONTINUATION_CAP_S = 420.0     # wall-clock cap of the background continuation
 DEFAULT_ETA_MS = {"s1": 15_000, "history": 10_000, "exam": 6_000, "treatments": 15_000, "results": 8_000}
 
@@ -152,30 +162,31 @@ def _obj(props: dict[str, Any], required: Optional[list[str]] = None) -> dict[st
 
 _VITALS_SCHEMA = _obj({k: {"type": "number"} for k in VITAL_KEYS})
 
-S1_SCHEMA: dict[str, Any] = _obj({
-    # The visible opening comes first so its fields stream first.
-    "opening": _obj({
-        "demographics": _obj({"age": {"type": "integer"}, "sex": {"enum": ["male", "female"]},
-                              "name": _str(2, 60)}),
-        "chief_complaint": _str(4, 160),
-        "triage_note": _str(10, 320),
-        "triage_vitals": _VITALS_SCHEMA,
-        "persona": _obj({"affect": _str(3, 80), "communication": _str(3, 80),
-                         "health_literacy": {"enum": ["low", "average", "high"]}}),
-        "opening_statements": _arr(_obj({"intent": {"enum": list(HISTORY_CLUSTERS["presenting"])},
-                                         "text": _str(4, 220)}), 2, 3),
-    }),
-    "kernel": _obj({
-        "key_positives": _arr(_str(3, 120), 3, 6),
-        "key_negatives": _arr(_str(3, 120), 2, 5),
-        "severity": {"enum": ["mild", "moderate", "severe"]},
-        "course": {"enum": list(COURSES)},
-        "branches": _arr(_obj({"id": {"type": "string", "pattern": "^[a-z0-9_]{2,40}$"},
-                               "trigger": _str(4, 160), "effect": _str(4, 160)}), 1, 3),
-        "red_flags": _arr(_obj({"text": _str(3, 120), "channel": {"enum": ["patient", "clinician"]}}), 1, 3),
-        "exam_systems": _arr({"enum": [s for s in EXAM_SYSTEMS if s != "general"]}, 1, 2),
-        "anchor_ids": _arr({"type": "string"}, 0, 3),
-    }),
+_OPENING: dict[str, Any] = _obj({
+    "demographics": _obj({"age": {"type": "integer"}, "sex": {"enum": ["male", "female"]},
+                          "name": _str(2, 60)}),
+    "chief_complaint": _str(4, 120),
+    "triage_note": _str(10, 200),
+    "triage_vitals": _VITALS_SCHEMA,
+    "persona": _obj({"affect": _str(3, 40), "communication": _str(3, 40),
+                     "health_literacy": {"enum": ["low", "average", "high"]}}),
+    "opening_statements": _arr(_obj({"intent": {"enum": list(HISTORY_CLUSTERS["presenting"])},
+                                     "text": _str(4, 160)}), 2, 3),
+})
+
+# The S1 reply: the visible opening only (streamed field by field).
+S1_SCHEMA: dict[str, Any] = _obj({"opening": _OPENING})
+
+KERNEL_SCHEMA: dict[str, Any] = _obj({
+    "key_positives": _arr(_str(3, 80), 3, 5),
+    "key_negatives": _arr(_str(3, 80), 2, 4),
+    "severity": {"enum": ["mild", "moderate", "severe"]},
+    "course": {"enum": list(COURSES)},
+    "branches": _arr(_obj({"id": {"type": "string", "pattern": "^[a-z0-9_]{2,40}$"},
+                           "trigger": _str(4, 100), "effect": _str(4, 100)}), 1, 2),
+    "red_flags": _arr(_obj({"text": _str(3, 80), "channel": {"enum": ["patient", "clinician"]}}), 1, 2),
+    "exam_systems": _arr({"enum": [s for s in EXAM_SYSTEMS if s != "general"]}, 1, 2),
+    "anchor_ids": _arr({"type": "string"}, 0, 3),
 })
 
 
@@ -197,10 +208,10 @@ def exam_schema(system: str) -> dict[str, Any]:
 
 TREATMENT_SCHEMA: dict[str, Any] = _obj({
     "treatments": _arr(_obj({
-        "code": _str(1, 60), "label": _str(2, 80), "appropriateness": {"enum": list(APPROPRIATENESS)},
+        "code": _str(1, 40), "label": _str(2, 60), "appropriateness": {"enum": list(APPROPRIATENESS)},
         "effects": _arr(_obj({"key": {"enum": list(EFFECT_KEYS)}, "delta": {"type": "number"},
-                              "onsetMs": {"type": "integer"}}), 0, 3),
-        "narrative": _str(0, 200)}), 3, 5),
+                              "onsetMs": {"type": "integer"}}), 0, 2),
+        "narrative": _str(0, 120)}), 3, 5),
     "disposition": {"enum": list(DISPOSITIONS)},
 })
 
@@ -260,10 +271,8 @@ def _locale_rule(locale: str) -> str:
 
 def s1_messages(cond: dict[str, Any], *, locale: str, acuity: int, difficulty: int, candidates: list[str],
                 complaint: Optional[str], blueprint: Optional[dict[str, Any]] = None) -> list[dict[str, str]]:
+    """The opening (what the learner sees first). ``candidates`` is unused here (kernel stage)."""
     rf = "; ".join(r.get("en", "") for r in cond.get("red_flags") or []) or "(none)"
-    index = statement_index()
-    cands = "\n".join(f"- {sid}: {anchor_from_statement(index[sid])['statement_en'][:120]}"
-                      for sid in candidates if sid in index) or "- (none; return [])"
     age = cond.get("age") or (18, 80)
     sex = cond.get("sex") or "any"
     cc = (f"- the learner asked for a patient presenting with \"{complaint}\"; the chief complaint MUST "
@@ -272,20 +281,39 @@ def s1_messages(cond: dict[str, Any], *, locale: str, acuity: int, difficulty: i
     if blueprint and blueprint.get("objectives"):
         objectives = "- faculty learning objectives: " + "; ".join(str(o) for o in blueprint["objectives"][:5]) + "\n"
     user = (
-        "Write the OPENING (what the learner sees first) and the hidden KERNEL of one new case.\n\n"
+        "Write the OPENING of one new case: what the learner sees first.\n\n"
         f"CONDITION\n- condition_id: {cond['id']}\n- label: {cond['label_en']}\n- system: {cond['system']}\n"
         f"- typical complaint: {cond.get('typical_complaint_en', '')}\n- red flags: {rf}\n\n"
         f"CONSTRAINTS\n{cc}{objectives}- {_locale_rule(locale)}\n"
         f"- acuity_esi: {acuity} (1 most acute); difficulty: {difficulty} (1..5)\n"
         f"- age {age[0]}-{age[1]}; sex {sex if sex != 'any' else 'male or female'}\n"
         "- triage_vitals physiologically plausible for the acuity (spo2 <= 100, diastolic < systolic, tempC in C)\n"
-        "- triage_note: one or two sentences a triage nurse writes; no diagnosis, no drug, no dose\n"
-        "- opening_statements: what the patient says first, in their own words; no diagnosis\n"
-        "- kernel.branches: 1-3 ways THIS patient's course can change, each with a trigger tied to a learner "
-        "action or delay (for example no antibiotic by 60 min) and its effect\n"
-        "- kernel.anchor_ids: 0-3 ids ONLY from this list (never invent one):\n" + cands + "\n"
+        "- be terse: every string one short sentence or phrase\n"
+        "- triage_note: one sentence a triage nurse writes; no diagnosis, no drug, no dose\n"
+        "- opening_statements: two short lines the patient says first, in their own words, consistent with "
+        "the triage vitals (a temperature of 39 C is a high fever); no diagnosis\n"
     )
     return [{"role": "system", "content": "ROLE: author\n" + _CHARTER}, {"role": "user", "content": "STAGE: s1\n" + user}]
+
+
+def kernel_messages(cond: dict[str, Any], opening: dict[str, Any], *, locale: str, acuity: int,
+                    candidates: list[str]) -> list[dict[str, str]]:
+    """The hidden kernel, conditioned on the opening the learner already sees."""
+    index = statement_index()
+    cands = "\n".join(f"- {sid}: {anchor_from_statement(index[sid])['statement_en'][:120]}"
+                      for sid in candidates if sid in index) or "- (none; return [])"
+    user = (
+        "Write the hidden KERNEL of this case: the facts every later part must stay consistent with.\n\n"
+        f"CONDITION\n- condition_id: {cond['id']}\n- label: {cond['label_en']}\n- acuity_esi: {acuity}\n\n"
+        "OPENING (already shown to the learner, do not contradict it)\n"
+        + json.dumps(opening, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n\n"
+        f"CONSTRAINTS\n- {_locale_rule(locale)}\n- be terse: short phrases\n"
+        "- branches: 1-2 ways THIS patient's course can change, each with a trigger tied to a learner action "
+        "or delay (for example no antibiotic by 60 min) and its effect\n"
+        "- exam_systems: the 1-2 systems with the key findings\n"
+        "- anchor_ids: 0-3 ids ONLY from this list (never invent one):\n" + cands + "\n"
+    )
+    return [{"role": "system", "content": "ROLE: author\n" + _CHARTER}, {"role": "user", "content": "STAGE: kernel\n" + user}]
 
 
 def case_prefix(state: dict[str, Any]) -> str:
@@ -325,7 +353,7 @@ def layer_messages(state: dict[str, Any], layer: str, *, extra: str = "",
                 f"{', '.join(EXAM_SYSTEMS[sub])}) as a clinician documents them, consistent with the "
                 f"current state: {extra or 'arrival'}.")
     elif kind == "treatments":
-        task = ("Write the treatment table: 3-5 rows with at least one indicated and one contraindicated row; "
+        task = ("Write the treatment table: 3-4 short rows with at least one indicated and one contraindicated row; "
                 "code MUST be a catalogue code from REFERENCE; effects only on hr, systolic, diastolic, rr, "
                 "spo2, tempC, pain with modest signed deltas and onsetMs in MILLISECONDS of sim time "
                 "(oxygen 120000-600000, fluid bolus 300000-1800000, antipyretic 1800000-7200000; antibiotics "
@@ -368,13 +396,12 @@ def _num(v: Any, default: float) -> float:
 
 def gate_s1(draft: dict[str, Any], cond: dict[str, Any], *, acuity: int,
             complaint: Optional[str] = None) -> tuple[dict[str, Any], list[str]]:
-    """Deterministic S1 checks. Returns (draft, notes); raises LayerRejected when unusable."""
+    """Deterministic S1 (opening) checks. Returns (draft, notes); raises LayerRejected when unusable."""
     notes: list[str] = []
     issues: list[str] = []
     opening = draft.get("opening") if isinstance(draft.get("opening"), dict) else None
-    kernel = draft.get("kernel") if isinstance(draft.get("kernel"), dict) else None
-    if opening is None or kernel is None:
-        raise LayerRejected(["opening and kernel are both required"])
+    if opening is None:
+        raise LayerRejected(["the opening is required"])
     demo = opening.setdefault("demographics", {})
     lo, hi = cond.get("age") or (1, 105)
     age = int(_num(demo.get("age"), (lo + hi) / 2))
@@ -424,17 +451,23 @@ def gate_s1(draft: dict[str, Any], cond: dict[str, Any], *, acuity: int,
         if probs and not J.complaint_problems({"chief_complaint_en": visible}, complaint):
             probs = []
         issues.extend(probs[:1])
+    if issues:
+        raise LayerRejected(issues)
+    return {"opening": opening}, notes
+
+
+def gate_kernel(kernel: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Deterministic kernel checks (consistency with the condition is the async judges' job)."""
+    notes: list[str] = []
     if len([p for p in kernel.get("key_positives") or [] if str(p).strip()]) < 2:
-        issues.append("kernel.key_positives needs at least two findings")
+        raise LayerRejected(["key_positives needs at least two findings"])
     if kernel.get("course") not in COURSES:
         kernel["course"] = "stable"
         notes.append("kernel.course defaulted to stable")
     kernel["exam_systems"] = [s for s in kernel.get("exam_systems") or [] if s in EXAM_SYSTEMS and s != "general"][:2]
     kernel["branches"] = [b for b in kernel.get("branches") or []
                           if isinstance(b, dict) and re.fullmatch(r"[a-z0-9_]{2,40}", str(b.get("id") or ""))][:3]
-    if issues:
-        raise LayerRejected(issues)
-    return draft, notes
+    return kernel, notes
 
 
 def gate_layer(layer: str, data: dict[str, Any], state: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
@@ -491,6 +524,12 @@ def gate_layer(layer: str, data: dict[str, Any], state: dict[str, Any]) -> tuple
             seen.add(code)
             row["code"] = code
             notes.extend(N.clamp_effects(row))
+            for eff in row["effects"]:
+                cap = J.EFFECT_CAPS.get(str(eff.get("key") or ""))
+                d = _num(eff.get("delta"), 0.0)
+                if cap is not None and abs(d) > cap:
+                    eff["delta"] = cap if d > 0 else -cap
+                    notes.append(f"{code}: effect {eff.get('key')} clamped to {eff['delta']}")
             rows.append(row)
         draft = {"treatments": rows}
         det = J.check_safety_dosing(draft, cond)
@@ -842,6 +881,8 @@ class StagedRuntime:
 
     async def _run(self, thread_id: str) -> None:
         ok = await self._s1(thread_id)
+        if ok:
+            await self._kernel(thread_id)
         if ok and self.continuation:
             try:
                 await asyncio.wait_for(self._continue(thread_id), CONTINUATION_CAP_S)
@@ -922,14 +963,8 @@ class StagedRuntime:
             return False
         t_open = (time.monotonic() - t0) * 1000.0
         self._medians["s1"].append(t_open)
-        anchors, _dropped = resolve_anchors(list(draft["kernel"].get("anchor_ids") or []), cond)
-
         def apply(s: dict[str, Any]) -> None:
             s["opening"] = draft["opening"]
-            s["kernel"] = draft["kernel"]
-            s["anchors"] = [{"statement_id": a["statement_id"], "statement_en": a["statement_en"],
-                             "statement_tr": a["statement_tr"], "source": a["source"], "citation": a["citation"],
-                             "codes": a.get("codes", [])} for a in anchors]
             s["normalization"] = list(s.get("normalization") or []) + notes
             s["status"] = "playable"
             s["timings"] = {**(s.get("timings") or {}), "t_first_text_ms": round(first_text["t"] or t_open, 1),
@@ -941,10 +976,58 @@ class StagedRuntime:
         validate_spec(st["spec"])
         if req.get("learner_id") and self.memory is not None:
             self.memory.record_case(req["learner_id"], cond["id"], cond["system"])
-        self.emit(thread_id, "kernel", {"status": "ready"})
         self.emit(thread_id, "opening.ready", {"thread_id": thread_id, "opening": st["opening"], "spec": st["spec"],
                                                "layers": {}, "timings": st["timings"]})
         return True
+
+    async def _kernel(self, thread_id: str) -> None:
+        """The hidden kernel, right after the opening. A failure is not fatal: the layers are then
+        written from the opening alone, and the error is on the thread log."""
+        state = self.store.get(thread_id) or {}
+        cond = state["condition"]
+        started = time.monotonic()
+        messages = kernel_messages(cond, state.get("opening") or {}, locale=state["locale"], acuity=state["acuity"],
+                                   candidates=candidate_ids(cond))
+        kernel: Optional[dict[str, Any]] = None
+        notes: list[str] = []
+        issues: list[str] = []
+        for _attempt in range(self.layer_attempts):
+            msgs = messages if not issues else [messages[0], {"role": "user", "content": messages[1]["content"]
+                                                              + "\nFIX: " + "; ".join(issues)}]
+            try:
+                reply = await self._call(thread_id, "kernel", msgs, KERNEL_SCHEMA, max_tokens=MAX_TOKENS["kernel"],
+                                         temperature=TEMPERATURE["layer"])
+                kernel, notes = gate_kernel(dict(reply.data))
+                break
+            except LayerRejected as exc:
+                issues = exc.issues
+            except ModelOutputInvalid:
+                issues = ["the reply was not valid JSON"]
+            except ModelUnreachable as exc:
+                issues = [str(exc)[:120]]
+                break
+        if kernel is None:
+            self.emit(thread_id, "error", {"stage": "kernel", "error": "kernel_failed", "status": 502,
+                                           "retryable": True, "detail": "; ".join(issues)[:300],
+                                           "thread_id": thread_id})
+            return
+        anchors, _dropped = resolve_anchors(list(kernel.get("anchor_ids") or []), cond)
+        final = kernel
+
+        def apply(s: dict[str, Any]) -> None:
+            s["kernel"] = final
+            s["anchors"] = [{"statement_id": a["statement_id"], "statement_en": a["statement_en"],
+                             "statement_tr": a["statement_tr"], "source": a["source"], "citation": a["citation"],
+                             "codes": a.get("codes", [])} for a in anchors]
+            s["normalization"] = (list(s.get("normalization") or []) + notes)[-60:]
+            s["timings"] = {**(s.get("timings") or {}),
+                            "t_kernel_ms": round((time.time() - float(s.get("t0") or time.time())) * 1000.0, 1)}
+            s["spec"] = assemble_spec(s)
+
+        st = self.store.update(thread_id, apply)
+        if st is not None:
+            validate_spec(st["spec"])
+        self.emit(thread_id, "kernel", {"status": "ready", "latency_ms": round((time.monotonic() - started) * 1000, 1)})
 
     def _fail(self, thread_id: str, stage: str, code: str, status: int, detail: str) -> None:
         self.store.update(thread_id, lambda s: s.update(status="failed", error={"stage": stage, "error": code}))
@@ -1005,21 +1088,25 @@ class StagedRuntime:
         task = self._layer_tasks.get(key)
         if task is None or task.done():
             self._mark_pending(thread_id, layer, reason)
-            task = asyncio.create_task(self._generate_layer(thread_id, layer, extra=extra, at_ms=at_ms))
+            task = asyncio.create_task(self._generate_layer(thread_id, layer, extra=extra, at_ms=at_ms,
+                                                            background=(reason == "continuation")))
             self._layer_tasks[key] = task
         await asyncio.shield(task)
         state = self.store.get(thread_id) or {}
         return (state.get("layers") or {}).get(layer) or {}
 
     async def _generate_layer(self, thread_id: str, layer: str, *, extra: str = "",
-                              issues: Optional[list[str]] = None, at_ms: Optional[int] = None) -> None:
+                              issues: Optional[list[str]] = None, at_ms: Optional[int] = None,
+                              background: bool = True) -> None:
+        """Write one layer. Background continuation queues on the concurrency limit; a layer the
+        learner is waiting for (first access, a branch event) goes straight to the model."""
         kind = layer_kind(layer)
         started = time.monotonic()
         issues = list(issues or [])
         data: Optional[dict[str, Any]] = None
         notes: list[str] = []
         error: Optional[tuple[str, int, str]] = None
-        async with self._sem:
+        async with (self._sem if background else contextlib.nullcontext()):
             for attempt in range(self.layer_attempts):
                 state = self.store.get(thread_id) or {}
                 schema, cap = layer_schema(layer)
@@ -1242,7 +1329,7 @@ def layers_for_action(kind: str, ref: str) -> list[str]:
 
 __all__ = [
     "CORE_LAYERS_FIXED", "DIRECTOR_CONTENT_KEYS", "EXAM_SYSTEMS", "HISTORY_CLUSTERS", "LayerRejected",
-    "MAX_TOKENS", "S1_MAX_TOKENS", "S1_SCHEMA", "StagedRuntime", "assemble_spec", "case_prefix",
+    "KERNEL_SCHEMA", "MAX_TOKENS", "S1_MAX_TOKENS", "S1_SCHEMA", "gate_kernel", "kernel_messages", "StagedRuntime", "assemble_spec", "case_prefix",
     "derived_trajectory", "director_state_from_spec", "drug_bearing", "gate_layer", "gate_s1", "intent_cluster",
     "layer_messages", "layer_schema", "layers_for_action", "maneuver_system", "refresh_director", "s1_messages",
     "valid_layer", "validate_spec",

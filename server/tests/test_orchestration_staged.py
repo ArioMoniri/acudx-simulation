@@ -84,7 +84,10 @@ async def test_opening_streams_first_then_layers_continue_on_the_same_thread():
         st = rt.cases.get(tid)
         assert st["timings"]["t_first_text_ms"] <= st["timings"]["t_opening_ms"]
         # Exactly one S1 call, streamed, within its cap; every layer call is short and not streamed.
-        s1 = [c for c in sc.calls if c["role"] == "author"]
+        s1 = [c for c in sc.calls if c["role"] == "author" and c["user"].startswith("STAGE: s1")]
+        kernel = [c for c in sc.calls if c["role"] == "author" and c["user"].startswith("STAGE: kernel")]
+        assert len(kernel) == 1 and kernel[0]["stream"] is False and kernel[0]["max_tokens"] == S.MAX_TOKENS["kernel"]
+        assert names.index("kernel") > ready_at   # the kernel is off the critical path
         assert len(s1) == 1 and s1[0]["stream"] is True and s1[0]["max_tokens"] == S.S1_MAX_TOKENS
         layers = [c for c in sc.calls if c["role"] == "author.layer"]
         assert len(layers) == len(rt.staged.core_layers(st)) >= 6
@@ -124,7 +127,7 @@ async def test_s1_gate_rejects_a_dose_in_the_opening_and_retries_once():
         tid = rt.staged.start({}, "th-dose")
         await rt.staged.wait(tid)
         # Both attempts carried the dose: no opening is served, the error is honest and retryable.
-        assert len([c for c in sc.calls if c["role"] == "author"]) == 2
+        assert len([c for c in sc.calls if c["role"] == "author" and c["user"].startswith("STAGE: s1")]) == 2
         err = next(d for n, d in _events(rt, tid) if n == "error")
         assert err["stage"] == "s1" and err["retryable"] and err["fatal"]
         assert rt.cases.get(tid)["status"] == "failed"
@@ -138,7 +141,8 @@ async def test_s1_gate_retry_recovers_from_one_bad_reply():
     try:
         tid = rt.staged.start({}, "th-bad")
         await rt.staged.wait(tid)
-        assert "FIX: chief_complaint is empty" in [c for c in sc.calls if c["role"] == "author"][1]["user"]
+        s1 = [c for c in sc.calls if c["role"] == "author" and c["user"].startswith("STAGE: s1")]
+        assert "FIX: chief_complaint is empty" in s1[1]["user"]
         assert rt.cases.get(tid)["status"] == "playable"
     finally:
         await rt.aclose()

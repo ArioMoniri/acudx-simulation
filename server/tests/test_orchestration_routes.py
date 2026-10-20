@@ -82,8 +82,8 @@ async def test_generate_returns_model_spec_and_trace(client: httpx.AsyncClient):
     meta = body["spec"]["meta"]
     assert meta["source"] == "model" and meta["pipeline"] == "staged" and meta["thread_id"] == "th-1"
     nodes = [e["node"] for e in body["trace"]]
-    assert nodes[0] == "s1"
-    # S1 plus one short call per core layer (3 history clusters, 3 exam systems, treatments, results)
+    assert nodes[:2] == ["s1", "kernel"]
+    # S1, the kernel and one short call per core layer (3 history clusters, 3 exam systems, treatments, results)
     assert sum(1 for n in nodes if n.startswith("layer:")) == 8
     assert body["trace_summary"]["model_calls"] >= 9
     assert body["trace_summary"]["price_table_version"]
@@ -145,7 +145,7 @@ async def test_stream_event_order(client: httpx.AsyncClient):
     assert start["thread_id"] == "th-sse" and "s1" in start["stages"] and start["eta_ms"]["s1"] > 0
     first_ready = names.index("opening.ready")
     assert "opening.delta" in names[:first_ready], "the opening streams field by field"
-    assert names.index("kernel") < first_ready
+    assert names.index("kernel") > first_ready   # hidden kernel written right after the opening
     assert all(names.index(n) > first_ready for n in ("layer.pending", "layer.ready"))
     deltas = {d["path"]: d["value"] for n, d in events if n == "opening.delta"}
     assert "chief_complaint" in deltas and "triage_vitals.hr" in deltas

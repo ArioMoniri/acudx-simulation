@@ -27,6 +27,13 @@ def test_live_state_never_hands_the_persona_a_number_or_a_label():
     assert "hypoxic" not in text and "febrile" not in text
 
 
+def test_a_high_fever_is_never_voiced_as_low_grade():
+    """Live case 2026-10-20: triage 39.2 C, the patient said 'a low-grade fever'."""
+    block = _user_block({"vitals_adjectives": ["febrile", "high fever"]})
+    assert "high fever" in block and "never call it a low-grade fever" in block
+    assert "Never describe your symptoms as milder" in block
+
+
 def test_improvement_is_voiced_too():
     assert "the pain has eased a lot" in live_state_lines({"affect": {"pain": 1, "consciousness": "alert"}})
 

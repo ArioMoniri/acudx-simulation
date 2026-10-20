@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { replayLiveCases } from "./liveCase";
 
 export type Role = "student" | "resident" | "educator" | "dean";
 
@@ -51,6 +52,10 @@ export async function createProfile(page: Page, opts: ProfileOptions = {}): Prom
  */
 export async function offlineGateway(page: Page): Promise<void> {
   await page.context().route("**/api/**", (route) => route.abort("failed"));
+  // Every learner case is generated on request by the model (owner decision). With no
+  // model in the e2e run, the generate route replays a recorded live case
+  // (server/tests/fixtures/live) so an encounter can open; the rest of /api stays off.
+  await replayLiveCases(page.context());
 }
 
 /** Every route in web/src/App.tsx that a signed-in dean can render directly. */

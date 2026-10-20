@@ -260,7 +260,9 @@ def build_double(sc: Scenario) -> FastAPI:
             await asyncio.sleep(sc.author_delay_s)
         layer_m = _LAYER.search(user_text)
         if role == "author" and user_text.startswith("STAGE: s1"):
-            content = json.dumps(_s1_reply(user_text, sc))
+            content = json.dumps({"opening": _s1_reply(user_text, sc)["opening"]})
+        elif role == "author" and user_text.startswith("STAGE: kernel"):
+            content = json.dumps(_s1_reply(user_text, sc)["kernel"])
         elif role == "author.layer" and layer_m:
             layer = layer_m.group(1)
             if sc.layer_delay_s:

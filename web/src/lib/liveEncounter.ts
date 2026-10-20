@@ -288,6 +288,7 @@ export function vitalsAdjectives(v: CurrentVitals, affect: DirectorAffect | null
   if (v.spo2 < 94) out.push("hypoxic");
   if (v.spo2 < 86) out.push("severely hypoxic");
   if (v.tempC >= 38) out.push("febrile");
+  if (v.tempC >= 39) out.push("high fever");
   if (v.tempC < 35) out.push("hypothermic");
   if (affect) {
     if (affect.consciousness === "drowsy") out.push("drowsy");

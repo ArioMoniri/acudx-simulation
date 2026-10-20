@@ -1,12 +1,12 @@
 # 15. Case generator v2 and the Clinical Director
 
-**Status:** live-run hardening in section 11 (2026-10-20); first shipped on branch `worktree-agent-a9c18d0fa31dfef2b` (2026-10-19). **Owner:** AI engineer. **Code:** `server/orchestration/`, `web/src/lib/caseGenV2.ts`. **Tests:** `server/tests/test_orchestration_*.py`, `web/src/lib/caseGenV2.test.ts`.
+**Status:** on-request staged generation in section 12 supersedes the learner path of sections 4 and 8 (2026-10-20, review 06a); live-run hardening in section 11 (2026-10-20); first shipped on branch `worktree-agent-a9c18d0fa31dfef2b` (2026-10-19). **Owner:** AI engineer. **Code:** `server/orchestration/`, `web/src/lib/caseGenV2.ts`. **Tests:** `server/tests/test_orchestration_*.py`, `web/src/lib/caseGenV2.test.ts`.
 
 This document replaces the single-call generator of `server/case_generator.py` (kept untouched behind `POST /v1/case/generate`) with a LangGraph 1.2 pipeline, and adds the Clinical Director that adapts a live case to what the learner does, turn by turn. It realises the recommendation in `docs/research/16` section 1 (LangGraph core, three-judge panel with deterministic high-stakes checks, Store-backed learner memory, cost attribution from a versioned price table).
 
 ## 1. Why a graph
 
-The v1 generator makes one bounded model call and silently falls back to a template, so a learner could not tell a model-authored case from a deterministic one, and nothing checked the model's output beyond the pydantic shape. The v2 pipeline separates authoring from verification, makes every decision auditable through a persisted trace, and follows one honesty rule: **a case is returned only when a model authored it; otherwise the route says so (HTTP 503) and the template is available only at an endpoint that labels it `meta.source = "template"`.**
+The v1 generator makes one bounded model call and silently falls back to a template, so a learner could not tell a model-authored case from a deterministic one, and nothing checked the model's output beyond the pydantic shape. The v2 pipeline separates authoring from verification, makes every decision auditable through a persisted trace, and follows one honesty rule: **a case is returned only when a model authored it; otherwise the route says so (HTTP 503) and the learner is offered Retry, nothing else.** Since 2026-10-20 (section 12) the template is a faculty and admin diagnostic only (`POST /v2/case/template` answers 401 or 403 to learners) and is never served to a learner as a case.
 
 ## 2. Dependencies
 
@@ -165,7 +165,7 @@ API: `next_state(case_state, action)` (sync, deterministic) and `anext_state(cas
 |---|---|
 | `POST /v2/case/generate` | runs the graph on `thread_id` (given or new); 200 `{thread_id, spec, trace_summary, trace, council}`; 503 `model_unreachable`; 502 `model_output_invalid` |
 | `POST /v2/case/generate/stream` | probes the endpoint, then SSE: `start {thread_id, pipeline}`, one `node {node, status, trace, council?}` per executed node in execution order (the three judges arrive in any order), then `done {thread_id, spec, trace_summary}` or `error {error, status, detail}` |
-| `POST /v2/case/template` | deterministic template with `meta.source = "template"`, `degraded = true`; anchors still by existing id |
+| `POST /v2/case/template` | faculty and admin diagnostic only (401 anonymous, 403 student or resident): deterministic template with `meta.source = "template"`, `degraded = true`; never a learner case (section 12) |
 | `POST /v2/director/step` | `{case_state | spec, action, learner_id?, use_model?}` to `{case_state, patient_visible_changes, director_notes}`; new errors are written to learner memory |
 | `GET /v2/case/{thread_id}` | checkpoint read: `status`, `spec`, `council`, `condition`, `trace`, `next`; 404 when unknown |
 | `GET /v2/learner/{learner_id}` | memory profile |
@@ -174,15 +174,15 @@ API: `next_state(case_state, action)` (sync, deterministic) and `anext_state(cas
 
 ## 8. Web client (`web/src/lib/caseGenV2.ts`)
 
-Typed fetch helpers following `backend.ts` conventions (bounded timeout, `{ok, data} | {ok: false, error, status}`, never throws): `generateCaseV2`, `templateCaseV2`, `readCaseThread`, `directorStep`, and `streamCaseGenV2` with a pure `parseSseBuffer` for the POST-based SSE stream. `v2SpecToCaseInstance` reuses `specToCaseInstance` from `liveCaseGen.ts` and labels provenance from `meta.source`. The error code of a non-2xx answer (for example `model_unreachable`) is surfaced as `error` so the UI can explain the degraded state instead of guessing.
+Typed fetch helpers following `backend.ts` conventions (bounded timeout, `{ok, data} | {ok: false, error, status}`, never throws): `generateCaseV2`, `readCaseThread`, `readCaseLayer`, `listMyCases`, `directorStep`, and `streamCaseGenV2` with a pure `parseSseBuffer` for the POST-based SSE stream. `v2SpecToCaseInstance` reuses `specToCaseInstance` from `liveCaseGen.ts` and labels provenance from `meta.source`. The error code of a non-2xx answer (for example `model_unreachable`) is surfaced as `error` so the UI can explain the degraded state instead of guessing.
 
 ### 8.1 Encounter wiring (shipped 2026-10-20)
 
 Code: `web/src/pages/EncounterPage.tsx`, `web/src/components/ehr/CaseGenProgress.tsx`, `web/src/components/ehr/SimBadge.tsx`, `web/src/state/encounterStore.ts`, `web/src/lib/liveEncounter.ts`, `web/src/components/ehr/tabs/InterviewTab.tsx`, `web/src/domain/debrief.ts`. Strings: `web/src/i18n/features/live2.{en,tr}.json`.
 
-Generation. "New random case", the constrained menu and the Start page hand-over all call `streamCaseGenV2` when the gateway is reachable. `CaseGenProgress` shows the stages (sampling, authoring, council judging, repairing, grounding, finalizing) from the `node` events (`stageForNode`). A `done` spec is adapted with `v2SpecToCaseInstance` and started with a `CaseGenerationMeta` (`source: "model"`, thread id, council decision, veto and repairs, degraded flag, model). On 503 `model_unreachable`, 502, timeout or a broken stream the panel shows the real error and two labelled choices: "Use template case (deterministic, not model generated)" calls `POST /v2/case/template` and starts the case as `source: "template"`, `degraded: true`; "Retry" reruns the same request. The on-device generator runs only when the gateway is unreachable and is labelled `source: "offline"`. The banner `SimBadge` names the source for every case (model, template, offline, curated, published) with the council verdict and a degraded marker for model cases.
+Generation (superseded by section 12.5). "New random case", the constrained menu and the Start page hand-over all call `streamCaseGenV2` when the gateway is reachable. `CaseGenProgress` shows the stages (sampling, authoring, council judging, repairing, grounding, finalizing) from the `node` events (`stageForNode`). A `done` spec is adapted with `v2SpecToCaseInstance` and started with a `CaseGenerationMeta` (`source: "model"`, thread id, council decision, veto and repairs, degraded flag, model). On 503 `model_unreachable`, 502, timeout or a broken stream the panel shows the real error and two labelled choices: "Use template case (deterministic, not model generated)" calls `POST /v2/case/template` and starts the case as `source: "template"`, `degraded: true`; "Retry" reruns the same request. The on-device generator runs only when the gateway is unreachable and is labelled `source: "offline"`. The banner `SimBadge` names the source for every case (model, template, offline, curated, published) with the council verdict and a degraded marker for model cases.
 
-Director. In Live mode the store queues one `directorStep` per learner action (question, exam, order, treatment or medication) and every 60 s of sim time (`elapsed`, coalesced). Calls are serialised in action order and never block the UI. The first step sends `spec` (`caseInstanceToSpec`, so curated and offline cases get a Director too); later steps round-trip the opaque `case_state`. `patient_visible_changes` is folded into a client overlay (`applyDirectorChanges`): the delta between the Director's vitals and the local course at the step is applied on top of the running local ramps and clamped to the server bounds (`DIRECTOR_BOUNDS`), so `getCurrentVitals` and `getVitalsSeries`, and with them the monitor, flowsheet and PatientViewer, show the Director's deterioration or recovery. New facts and fired complications accumulate; each `director_notes` entry becomes a `note` event with `meta.director = true` and a fired complication a `stage` event, both listed in the debrief under "Clinical Director notes". A failed step sets `director.status = "error"` with the reason and the local course continues.
+Director (the first-step `spec` and round-tripped `case_state` described here are replaced by `thread_id`, section 12.4). In Live mode the store queues one `directorStep` per learner action (question, exam, order, treatment or medication) and every 60 s of sim time (`elapsed`, coalesced). Calls are serialised in action order and never block the UI. The first step sends `spec` (`caseInstanceToSpec`, so curated and offline cases get a Director too); later steps round-trip the opaque `case_state`. `patient_visible_changes` is folded into a client overlay (`applyDirectorChanges`): the delta between the Director's vitals and the local course at the step is applied on top of the running local ramps and clamped to the server bounds (`DIRECTOR_BOUNDS`), so `getCurrentVitals` and `getVitalsSeries`, and with them the monitor, flowsheet and PatientViewer, show the Director's deterioration or recovery. New facts and fired complications accumulate; each `director_notes` entry becomes a `note` event with `meta.director = true` and a fired complication a `stage` event, both listed in the debrief under "Clinical Director notes". A failed step sets `director.status = "error"` with the reason and the local course continues.
 
 Persona. `getPersonaLiveContext` gives `InterviewTab` the Director's sanctioned facts, the current vitals, their plain adjectives (`vitalsAdjectives`: tachycardic, hypotensive, hypoxic, drowsy, ...), affect and complications, which ride in `case_state` of `POST /v1/patient/turn`, so the patient voices the trend.
 
@@ -243,3 +243,66 @@ Measured with the in-process double scaled 1:100 (author 0.53 to 0.59 s, judge 0
 ### 11.8 Telemetry and patient-turn thinking
 
 `StructuredLLM` records every call, success or failure, through `app.state.telemetry` (`kind=llm`, provider `gpu-worker` for the worker or the host's billing slug, served model, tokens, latency, the amortised cost, error type), so `/admin/telemetry/summary` shows the author, judge, repair and Director narrator rows. The route comes from `call_context`; the SSE body re-binds the request's context because it runs after the middleware returned. The Qwen3 thinking rule moved to `model_gateway.wants_no_thinking` and is shared: `ModelGateway.chat` now sends `chat_template_kwargs: {"enable_thinking": false}` for Qwen3 and `acudx-llm`, so patient turns on the worker no longer spend their budget on hidden reasoning (live: 4 to 6 s and `had_reasoning: true` per turn).
+
+## 12. On-request staged generation (2026-10-20, review 06a)
+
+Owner decision (authoritative): every learner case is generated ON REQUEST by the model pipeline and changes in flight. No pre-generated case list, seed library, curated or published library or template is ever served to a learner as a case. Same-thread background continuation of deeper layers of the requested case is allowed; any pool or pre-generation ahead of a request is forbidden.
+
+### 12.1 Stages (`server/orchestration/staged.py`)
+
+| Stage | Trigger | Call | Cap (max_tokens) | Gate |
+|---|---|---|---|---|
+| S0 sample | request | none (catalog, learner steering, faculty blueprint `condition_id`) | none | deterministic |
+| S1 kernel and opening | request | one call, `stream: true`, opening fields first in the schema | 560 | deterministic only: vital bounds (clamped), ESI envelope note, age and sex plausibility, non-empty complaint and statements, no dose in the opening, complaint adherence; one retry with the issues |
+| `history.presenting`, `history.associated`, `history.background` | continuation or first question of the cluster | one call per intent cluster | 300 | intents coerced to the cluster, non-empty items |
+| `exam.<system>` (general plus the 1 to 2 kernel systems; the rest lazily) | continuation or first maneuver of the system | one call per system, conditioned on the current state | 180 | maneuvers coerced to the system |
+| `treatments` | continuation or first treatment | one call | 440 | codes resolved with `normalize.resolve_treatment_code`, effects clamped to the class table, `check_safety_dosing`, then the BLOCKING safety judge; a veto rewrites the layer once with the issues, the last attempt applies the fixture oracle (`apply_safety_overrides`) and marks the case degraded |
+| `results` | continuation or first order | one call | 400 | LOINC units normalised, flags recomputed from the reference interval |
+| `event.<id>` | a Director branch fired (`director_step` schedules it in the background) | one call | 200 | blocking safety judge only when the event names a drug or a dose (`drug_bearing`) |
+| `debrief` | first access | one call | 260 | anchors resolved by id only |
+
+Every call is single-locale (`Write every text field in English|Turkish only`); a Turkish UI requests the case with `locale: "tr"`. All layer calls of one thread share a byte-identical system block (charter, condition, kernel, opening, sorted keys) so vLLM prefix caching prefills only the per-layer delta. History and exam layers run concurrently (semaphore of 4) before the treatment table and results. A failed layer is regenerated or reported as failed with a retryable `error`; it is never filled from a fixture (`meta.gap_filled` stays empty on this path).
+
+Model judges are asynchronous: when the core layers are in, `clinical_consistency` and `pedagogy` review the assembled case. An issue that maps to a layer the learner has not seen regenerates that layer (`judge {decision: "patched", patch: [{op: "replace", path: "/layers/<name>"}]}`); an issue on a seen layer or the opening is recorded in `meta.corrections` (`decision: "noted"`) and never rewrites history under the learner. The 4 to 10 core HPI rule of the single-call author does not apply to a layered history.
+
+### 12.2 Server-authoritative case state (`server/orchestration/store.py`)
+
+`CaseStore` (SQLite at `ACUDX_DB_PATH`, in memory for tests) holds one document per thread: request, owner and requester, condition, kernel, opening, layers `{status, data, seen, attempts}`, layer order, the assembled spec, the Director state, timings, trace and the SSE event log. Interface: `get(thread_id)`, `put(thread_id, state)`, atomic `update(thread_id, mutator)`, `append_event`, `events(thread_id, after)`, `list_for_owner`. `put` refuses any state whose `source` is not `"model"`. Every learner read goes through it: `GET /v2/case/{thread_id}`, the layer route, the events route and the Director step. A thread is readable by its owner (or, without a learner id, the principal that requested it) and faculty; anyone else gets the same 404 as a missing thread.
+
+### 12.3 SSE contract
+
+```
+POST /v2/case/generate/stream                   id: <n> on every event
+event: start          {thread_id, stages, eta_ms}
+event: opening.delta  {path, value}             completed scalars from the streamed S1 JSON
+event: kernel         {status: "ready"}
+event: opening.ready  {thread_id, opening, spec, layers, timings}   encounter starts here
+event: layer.pending  {layer, reason}
+event: layer.ready    {layer, data, spec}
+event: judge          {layer, decision, issues?, patch?, spec?, blocking?}
+event: error          {stage, error, status, retryable, fatal?, thread_id}
+event: done           {thread_id, spec, timings}
+GET  /v2/case/{thread_id}/events?after=<n>     reconnect (or Last-Event-ID)
+POST /v2/case/{thread_id}/layer/{layer}        lazy layer (awaits an in-flight one)
+GET  /v2/cases/mine                            the caller's own encounter summaries
+POST /v2/case/generate                         same staged run, answered when the core layers are in
+```
+
+The stream is capped at `SSE_MAX_DURATION_S`; the cap ends it with `error {error: "stream_timeout", after: <last id>}` and the client reconnects. A reused `thread_id` never replays or overwrites a stored case: the new request gets a new thread.
+
+### 12.4 Director binding
+
+`POST /v2/director/step {thread_id, action}` loads the Director state from `CaseStore` (or builds it from the assembled spec), lazily writes the layer the action reads (`layers_for_action`) before stepping, writes the new state back, marks the layer seen, and schedules `event.<complication id>` for every fired branch (`layers_pending` in the answer). When a layer lands, `refresh_director` folds its facts and treatment rows into the stored Director state (`DIRECTOR_CONTENT_KEYS`) and keeps the dynamics. A client-held `case_state` is ignored when `thread_id` is present. The stateless path (no `thread_id`) is for faculty diagnostics and deterministic Director tests and refuses a spec whose `meta.source` is not `"model"` for non-faculty callers. The Director itself (`director.py`) is owned by the clinical-course engineer and binds through this interface.
+
+Persona: `server/persona.py` `live_state_lines` turns the Director's vitals adjectives, affect (pain, dyspnea, consciousness, mood) and fired complications into felt experience in the volatile user block (no numbers, no labels; the system prefix stays byte-stable). The web sends only facts sanctioned by questions actually asked (`web/src/lib/personaFacts.ts`), and the narrator line of a Director step reaches the transcript unless the persona already voiced the reply. The avatar and portrait affect follow the Director's live affect.
+
+### 12.5 Web client
+
+`web/src/lib/caseSession.ts` `requestCase` opens the stream, starts the encounter on `opening.ready` through `startGeneratedEncounter` (which throws unless `source === "model"` with a thread id), and merges every later `layer.ready`, patched `judge` and `done` spec of the same thread with `mergeGeneratedCase` (datum ids stable through `uid`, questions and exams that waited for a layer are answered when it lands). `LayerStrip` shows "being written for this patient" per pending layer and Retry for a failed one. `CaseGenProgress` shows the streamed opening fields, an elapsed timer and the server ETA; on failure it offers Retry only. Every entry point requests a case: Start, Cases (request form, one request row per presentation, the learner's own history), Home (a rail of requests), the New case menu, Exam (per station), Rooms (at creation, or on first entry of a lobby room) and Feedback (a harder variant). Faculty authoring drafts go through `POST /v2/case/generate` with a blueprint; a published case opens as a new request with its presentation and difficulty. `web/src/lib/provenanceGuard.test.ts` fails the build when a learner path imports the seed library, `generateCase`, a retired client or route, starts an encounter outside `startGeneratedEncounter`, or hands a built case through router state.
+
+### 12.6 Measurements
+
+In-process double (`server/tests/test_orchestration_staged.py`): one S1 call (streamed, cap 560), eight core layer calls (3 history, 3 exam, treatments, results), one blocking safety judge, two async judges; first text precedes the opening on every run.
+
+Live, one A100 (`gpu_1x_a100_sxm4`, Qwen3-14B-AWQ as `acudx-llm`), private gateway from the worktree pointed at the integration worker: see `MEASUREMENTS` below (filled from the run of 2026-10-20).
+

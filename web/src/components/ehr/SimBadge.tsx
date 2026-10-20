@@ -37,7 +37,7 @@ function ProvenanceTail({ generation }: { generation: CaseGenerationMeta }) {
       </span>
       <span className="text-fg/80">{t(`live2.source.${generation.source}`)}</span>
       {verdictKey ? (
-        <span className="hidden text-muted/80 sm:inline">
+        <span className="hidden text-muted sm:inline">
           {t(`live2.council.${verdictKey}`, { repairs: council?.repairs ?? 0 })}
         </span>
       ) : null}

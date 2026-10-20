@@ -186,6 +186,7 @@ _FELT: dict[str, str] = {
     "hypoxic": "you are struggling for breath",
     "severely hypoxic": "you can only get a few words out between breaths",
     "febrile": "you feel hot and shivery",
+    "high fever": "you have a high fever: you feel burning hot and shaky, never call it a low-grade fever",
     "hypothermic": "you feel very cold",
     "drowsy": "you are drowsy and slow to answer",
     "unresponsive": "you can only mumble",
@@ -304,6 +305,7 @@ def build_patient_turn(
     if now:
         user_parts.append("[HOW YOU ARE RIGHT NOW - let it show in how you speak, never as numbers]:")
         user_parts.extend(f"  - {line}" for line in now)
+        user_parts.append("  Never describe your symptoms as milder (or worse) than this; it is your real state now.")
         user_parts.append("")
     if facts:
         user_parts.append("[KNOWN CASE FACTS provided this turn — you MAY relay these]:")
