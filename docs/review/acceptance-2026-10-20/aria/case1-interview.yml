@@ -1,0 +1,169 @@
+- main:
+  - figure:
+    - img "Synthetic patient portrait - not a real individual"
+  - heading "Ruth M." [level=2]
+  - paragraph: 68 y, female MRNSIM-AI-QU1BKI
+  - 'note "Simulation. Synthetic patient. For education only. Case source: template (not model generated)."': SIM synthetic patient template (not model generated) degraded
+  - text: 00:09
+  - 'status "Clinical Director: the server adapts vitals, facts and complications to your actions."': "Director: 10 steps"
+  - button "New case"
+  - text: Chief complaint Fever days after chemotherapy Allergies
+  - group "Allergies, always visible": Penicillin - anaphylaxis as a child (carries a card).
+  - text: Code Full code Acuity ESI 2 · Abnormal Encounter Emergency (ED)
+  - navigation "Stage":
+    - list "Stage":
+      - listitem: Chart review
+      - listitem: Interview and exam
+      - listitem: Orders
+      - listitem: Results
+      - listitem: A and P
+  - paragraph: Difficulty 3/5 · template (not model generated)
+  - complementary "Storyboard":
+    - figure:
+      - img "Synthetic patient portrait - not a real individual"
+      - button "Enlarge patient view"
+    - paragraph: Ruth M.
+    - paragraph: In pain, anxious
+    - paragraph: Tachycardic · Diaphoretic · Pale · Febrile
+    - term: MRN
+    - definition: SIM-AI-QU1BKI
+    - term: Age
+    - definition: "68"
+    - term: Sex
+    - definition: female
+    - term: Acuity
+    - definition: ESI 2
+    - term: Weight
+    - definition: 58 kg
+    - paragraph: Fills in as you work the chart.
+    - heading "Problem list" [level=3]
+    - paragraph: No problems added yet. Build them in A and P.
+    - heading "Allergies" [level=3]
+    - list:
+      - listitem: Penicillin - anaphylaxis as a child (carries a card).
+    - heading "Vitals snapshot Live" [level=3]
+    - paragraph: HR
+    - paragraph: 117bpm
+    - paragraph: BP
+    - paragraph: 100/67
+    - paragraph: RR
+    - paragraph: 22/min
+    - paragraph: SpO2
+    - paragraph: 94%
+    - paragraph: Temp
+    - paragraph: 38.4°C
+    - heading "Medications and history 2" [level=3]
+    - list:
+      - listitem: Ondansetron and dexamethasone from the chemo pack.
+      - listitem: Ondansetron and dexamethasone from the chemo pack.
+    - heading "Exam findings" [level=3]
+    - paragraph: Request an exam maneuver and findings appear here.
+    - heading "Care team" [level=3]
+    - list:
+      - listitem: You Treating clinician
+      - listitem: Triage nurse Nursing
+      - listitem: Charge nurse Resuscitation support
+    - heading "Encounter clock" [level=3]
+    - text: 00:09
+  - tablist "Chart sections":
+    - tab "Chart Review"
+    - tab "Interview" [selected]
+    - tab "Flowsheets"
+    - tab "Monitor"
+    - tab "Orders"
+    - tab "Results"
+    - tab "Guidance"
+    - tab "Problem List / A&P"
+  - tabpanel "Interview":
+    - log "Encounter transcript":
+      - list:
+        - listitem: You When did the fever start? Onset
+        - listitem: Patient It started right after some exertion. In pain, anxious
+        - listitem: You Can you describe the fever, does it come and go? Character
+        - listitem: Patient It feels like fever days after chemotherapy. In pain, anxious
+        - listitem: You What other symptoms have you noticed? Associated symptoms
+        - listitem: Patient Could you be a little more specific about what you'd like to know? In pain, anxious
+        - listitem: You Have you had any shaking chills or rigors? Associated symptoms
+        - listitem: Patient I didn't quite follow - what would you like to ask me about? In pain, anxious
+        - listitem: You Any burning or pain when you pass urine, or passing urine more often? Associated symptoms
+        - listitem: Patient Could you be a little more specific about what you'd like to know? In pain, anxious
+        - listitem: You Do you have a cough, shortness of breath or chest pain when you breathe? Associated symptoms
+        - listitem: Patient Could you be a little more specific about what you'd like to know? In pain, anxious
+        - listitem: You Have you had a headache or a stiff neck, or does light hurt your eyes? Associated symptoms
+        - listitem: Patient I didn't quite follow - what would you like to ask me about? In pain, anxious
+        - listitem: You Have you travelled anywhere recently? Social history
+        - listitem: Patient I didn't quite follow - what would you like to ask me about? In pain, anxious
+        - listitem: You What medications do you take regularly? Medications
+        - listitem: Patient Ondansetron and dexamethasone from the chemo pack.
+        - listitem: Ondansetron and dexamethasone from the chemo pack. In pain, anxious
+        - listitem: You Do you have any allergies to medicines? Allergies
+        - listitem: Patient Penicillin - anaphylaxis as a child (carries a card).
+        - listitem: Penicillin - anaphylaxis as a child (carries a card). In pain, anxious
+    - status
+    - text: Ask the patient in your own words
+    - textbox "Ask the patient in your own words":
+      - /placeholder: Type a question to the patient, then press Enter
+    - button "Dictate"
+    - button "Send" [disabled]
+    - paragraph: Your message is screened for scope and safety before the patient hears it.
+    - text: Guidance
+    - switch "Guidance" [checked]
+    - text: "On"
+    - note "Guidance":
+      - paragraph: Guidance unavailable
+      - paragraph: No verified guideline statement could be served for this step. Nothing is shown rather than an unverified hint.
+    - paragraph: History and exam are extracted here. Objective data is ordered in the Orders tab.
+    - region "Patient call":
+      - heading "Patient call" [level=3]
+      - status: Text-timed animation
+      - button "Voice off"
+      - figure: Speaking
+      - paragraph: Tachycardic · Diaphoretic · Pale · Febrile
+      - text: Ruth M. Synthetic patient
+      - toolbar "Patient call":
+        - button "Mute patient"
+        - button "Hold"
+        - button "Hide captions" [pressed]
+        - button "End call"
+      - log "Live captions":
+        - paragraph: You:Do you have any allergies to medicines?
+        - paragraph: Patient:Penicillin - anaphylaxis as a child (carries a card).
+      - paragraph: No voice provider is enabled. Replies are shown as text.
+    - text: Presentation
+    - list "Clinical signs":
+      - listitem: Tachycardic
+      - listitem: Diaphoretic
+      - listitem: Pale
+      - listitem: Febrile
+    - heading "Ask the patient" [level=3]
+    - paragraph: Each question reveals only what you ask for.
+    - button "Onset" [pressed]
+    - button "Location"
+    - button "Character" [pressed]
+    - button "Radiation"
+    - button "Severity"
+    - button "Timing"
+    - button "Aggravating factors"
+    - button "Relieving factors"
+    - button "Associated symptoms" [pressed]
+    - button "Red flags"
+    - button "Past medical history"
+    - button "Medications" [pressed]
+    - button "Allergies" [pressed]
+    - button "Family history"
+    - button "Social history" [pressed]
+    - button "Risk factors"
+    - button "Ideas, concerns, expectations"
+    - heading "Exam maneuvers" [level=3]
+    - paragraph: Request a maneuver to reveal the finding.
+    - button "General inspection"
+    - button "Recheck vitals"
+    - button "Auscultate heart"
+    - button "Auscultate lungs"
+    - button "Palpate abdomen"
+    - button "Neurological exam"
+    - button "Musculoskeletal"
+    - button "Skin"
+    - button "ENT"
+    - button "Special tests"
+  - note "Simulation. Synthetic patient. For education only.": SIM synthetic patient education only

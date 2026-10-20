@@ -38,7 +38,7 @@ import {
   type EncounterState,
 } from "@/state/encounterStore";
 import { useLiveBackend } from "@/lib/liveBackend";
-import { ground, type GroundPassage } from "@/lib/backend";
+import { ground, type GroundPassage, type GroundResult } from "@/lib/backend";
 import {
   primeStatementCache,
   toCitationView,
@@ -471,6 +471,22 @@ export function mapLivePassages(passages: GroundPassage[] | undefined): Guidance
 }
 
 /**
+ * Turn a /v1/ground answer into the panel result. A degraded answer (the
+ * gateway could not reach its embed / rerank side-cars and ranked by a local
+ * hashing cosine, `degraded: true`) is refused: lexical hashing has no notion
+ * of clinical relevance, and the acceptance run of 2026-10-20 showed it
+ * serving postpartum-haemorrhage tranexamic acid and hyperkalaemia calcium as
+ * the "current focus" of a malaria case. Each passage is verified, but its
+ * relevance is not, so the panel says "unavailable" instead of guessing.
+ */
+export function groundingFromResponse(data: GroundResult | null | undefined): GroundingResult {
+  if (!data || data.degraded === true || data.grounded === false) return UNAVAILABLE;
+  const passages = mapLivePassages(data.passages);
+  if (passages.length === 0) return UNAVAILABLE;
+  return { passages, unavailable: false, degraded: false, loading: false };
+}
+
+/**
  * useLiveGrounding — verified guideline passages for the current focus.
  *
  * When the gateway is reachable it POSTs `/v1/ground` (debounced + abortable)
@@ -498,14 +514,7 @@ export function useLiveGrounding(focus: GroundingFocus): GroundingResult {
       void (async () => {
         const res = await ground(query, focus.country, lang, { signal: controller.signal });
         if (cancelled) return;
-        if (res.ok) {
-          const passages = mapLivePassages(res.data.passages);
-          if (passages.length > 0) {
-            setResult({ passages, unavailable: false, degraded: false, loading: false });
-            return;
-          }
-        }
-        setResult(UNAVAILABLE);
+        setResult(res.ok ? groundingFromResponse(res.data) : UNAVAILABLE);
       })();
     }, GROUND_DEBOUNCE_MS);
 

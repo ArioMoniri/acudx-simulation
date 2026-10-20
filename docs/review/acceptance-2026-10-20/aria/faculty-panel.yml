@@ -1,0 +1,12 @@
+- main:
+  - text: Faculty
+  - heading "Faculty workspace" [level=1]
+  - paragraph: Review authored cases and flagged encounters, manage your roster and assign cases. Every grading override is co-signed and recorded on the server.
+  - button "Refresh"
+  - paragraph: Your current identity is not allowed to use the faculty workspace. Sign in with an account that holds the faculty role. In local mode, faculty, dean and admin panels need the admin token or institution sign-in (SSO); a local profile alone has learner access only.
+  - button "Retry"
+  - tablist "Faculty workspace":
+    - tab "Review queue" [selected]
+    - tab "Roster"
+    - tab "Assignments"
+  - tabpanel "Review queue"

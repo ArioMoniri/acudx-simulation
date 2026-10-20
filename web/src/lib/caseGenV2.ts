@@ -242,8 +242,10 @@ export type CaseGenV2Event =
 /* -------------------------------------------------------------------------- */
 
 const DEFAULT_TIMEOUTS = {
-  // Author + three judges (+ up to two repairs) on a local model: generous.
-  generate: 240_000,
+  // Author + three judges (+ up to two repairs) on a local model: generous. Kept
+  // at the server SSE cap (SSE_MAX_DURATION_S, 600 s): at 240 s a live
+  // generation with one repair was cut off (acceptance 2026-10-20).
+  generate: 600_000,
   template: 8_000,
   director: 20_000,
   read: 8_000,

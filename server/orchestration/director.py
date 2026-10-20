@@ -286,6 +286,58 @@ def compute_vitals(state: CaseState) -> dict[str, float]:
     return clamp_vitals(v)
 
 
+# The web formulary (web/src/domain/treatments.ts TREATMENT_CATALOG) sends
+# RxNorm-style codes ("161", "2193") with no label, so the keyword table above
+# never matched them: the acceptance run of 2026-10-20 logged "0 effect(s) from
+# generic class table" for paracetamol at 38.9 C and for ceftriaxone in sepsis.
+FORMULARY_NAMES: dict[str, str] = {
+    "7806": "oxygen", "313002": "iv fluid bolus crystalloid", "1191": "aspirin", "4917": "nitroglycerin",
+    "7052": "morphine opioid analgesic", "2193": "ceftriaxone antibiotic", "435": "salbutamol nebuliser",
+    "448": "adenosine", "5856": "insulin infusion", "7242": "naloxone", "6470": "lorazepam",
+    "161": "paracetamol antipyretic analgesic", "26225": "ondansetron", "3992-im": "adrenaline im",
+    "3992": "adrenaline iv", "8410": "alteplase",
+}
+
+# Word stems that let a formulary drug stand for a case's abstract treatment row
+# ("IV antibiotics + fluids", "Immediate IV ceftriaxone + dexamethasone").
+# Only rows marked indicated or neutral are matched this way: giving an
+# antibiotic is never "Delay antibiotics pending cultures".
+FORMULARY_ROW_STEMS: dict[str, tuple[str, ...]] = {
+    "2193": ("antibiot", "abx", "ceftriax"),
+    "313002": ("fluid", "crystalloid", "saline"),
+    "7806": ("oxygen",),
+    "161": ("analges", "antipyr", "paracetam"),
+    "7052": ("analges", "opioid", "morphin"),
+    "435": ("bronchodil", "salbut", "saba"),
+    "3992-im": ("adrenaline", "epinephrine"),
+    "7242": ("naloxon",),
+    "5856": ("insulin",),
+    "1191": ("aspirin", "antiplatelet"),
+}
+
+
+def match_treatment_row(state: "CaseState", code: str) -> "TreatmentRow | None":
+    """The case-table row an administered code stands for: exact code first,
+    then a formulary drug matched to a non-contraindicated row by its stems."""
+    exact = next((t for t in state.treatments if t.code == code), None)
+    if exact is not None:
+        return exact
+    stems = FORMULARY_ROW_STEMS.get(code, ())
+    if not stems:
+        return None
+    for row in state.treatments:
+        if row.appropriateness == "contraindicated":
+            continue
+        hay = f"{row.code} {row.label_en}".lower()
+        # A combined "antibiotics + fluids" row is satisfied by the antibiotic,
+        # never by the fluid bolus or oxygen alone.
+        if code != "2193" and any(s in hay for s in FORMULARY_ROW_STEMS["2193"]):
+            continue
+        if any(s in hay for s in stems):
+            return row
+    return None
+
+
 def generic_effects_for(code: str, label: str, vitals: Vitals) -> list[Effect]:
     needle = f"{code} {label}".lower()
     for keywords, gate, effects in GENERIC_EFFECTS:
@@ -388,8 +440,8 @@ def node_perceive(run: DirectorRun) -> dict[str, Any]:
                           "why": "no authored datum behind this trigger (counts as low-value action)"})
 
     if action.kind == "treatment" and action.ref:
-        row = next((t for t in state.treatments if t.code == action.ref), None)
-        label = row.label_en if row else ""
+        row = match_treatment_row(state, action.ref)
+        label = " ".join(x for x in ((row.label_en if row else ""), FORMULARY_NAMES.get(action.ref, "")) if x)
         effects = _bounded(row.effects) if row and row.effects else _bounded(
             generic_effects_for(action.ref, label, state.vitals))
         for e in effects:
@@ -408,7 +460,8 @@ def node_perceive(run: DirectorRun) -> dict[str, Any]:
             notes.append({"at_ms": state.t_ms, "note": f"treatment {action.ref} applied ({appr})",
                           "why": f"{len(effects)} effect(s) from {'case table' if row and row.effects else 'generic class table'}"})
         for c in state.pending_complications:
-            if not c.cancelled and c.fired_at_ms is None and action.ref in c.required_any_of:
+            if not c.cancelled and c.fired_at_ms is None and (
+                    action.ref in c.required_any_of or (row is not None and row.code in c.required_any_of)):
                 c.cancelled = True
                 c.cancel_reason = f"{action.ref} given at {state.t_ms // 1000}s, before the {c.deadline_ms // 1000}s deadline"
                 notes.append({"at_ms": state.t_ms, "note": f"complication '{c.id}' averted", "why": c.cancel_reason})

@@ -226,6 +226,21 @@ describe("inferQuestionIntent", () => {
     );
   });
 
+  it("routes the febrile history questions of the acceptance run (2026-10-20)", () => {
+    // An allergy question names medicines too; the allergy check must be credited.
+    expect(inferQuestionIntent("Do you have any allergies to medicines?", chestCase)).toBe("allergies");
+    expect(inferQuestionIntent("What medications do you take regularly?", chestCase)).toBe("medications");
+    // Mid-sentence "when" is a conjunction, not an onset question.
+    expect(inferQuestionIntent("Any burning or pain when you pass urine?", chestCase)).toBe("associated-symptoms");
+    expect(inferQuestionIntent("Do you have a cough, or shortness of breath when you breathe?", chestCase)).toBe(
+      "associated-symptoms",
+    );
+    expect(inferQuestionIntent("Have you had any shaking chills or rigors?", chestCase)).toBe("associated-symptoms");
+    expect(inferQuestionIntent("Have you had a headache or a stiff neck?", chestCase)).toBe("associated-symptoms");
+    expect(inferQuestionIntent("Have you travelled anywhere recently?", chestCase)).toBe("social-history");
+    expect(inferQuestionIntent("When did the fever start?", chestCase)).toBe("onset");
+  });
+
   it("returns null when nothing scores", () => {
     expect(inferQuestionIntent("xyz qqq zzz", chestCase)).toBeNull();
     expect(inferQuestionIntent("", chestCase)).toBeNull();

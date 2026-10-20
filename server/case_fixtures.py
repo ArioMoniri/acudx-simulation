@@ -1157,6 +1157,42 @@ CONDITION_VITALS: dict[str, dict[str, Any]] = {
 
 
 # --------------------------------------------------------------------------- #
+# Febrile presentations without a full vitals envelope.                        #
+#                                                                              #
+# Acceptance test 2026-10-20 (docs/review/05): conditions whose typical        #
+# complaint is fever but which have no CONDITION_VITALS row drew temperature   #
+# from the ESI band (36.3-38.3 C at ESI 3), so osteomyelitis, septic arthritis #
+# and diverticulitis cases arrived at 36.6 C, identical to an afebrile case    #
+# with the same seed. Fever is a temperature of 38.0 C or more (NICE NG143,    #
+# NICE NG51 sepsis risk stratification uses 38 C as the threshold); the bands  #
+# below put every one of these presentations at or above 37.8 C. Only tempC    #
+# is set, so the other vitals keep their ESI band and the generic drift.       #
+# --------------------------------------------------------------------------- #
+FEBRILE_TEMP: dict[str, tuple[float, float]] = {
+    "undiff_fever": (38.2, 39.4),
+    "infective_endocarditis": (37.9, 39.0),
+    "diverticulitis": (37.8, 38.8),
+    "cholecystitis": (37.8, 38.8),
+    "bacterial_meningitis": (38.5, 40.0),
+    "encephalitis": (38.2, 39.6),
+    "influenza": (38.2, 39.6),
+    "covid19": (37.8, 39.2),
+    "cellulitis": (37.8, 38.9),
+    "nec_fasciitis": (38.3, 39.8),
+    "pyelonephritis": (38.4, 39.8),
+    "malaria": (38.5, 40.2),
+    "hiv_seroconversion": (38.0, 39.2),
+    "septic_arthritis": (38.0, 39.4),
+    "osteomyelitis": (37.9, 39.0),
+    "infectious_mononucleosis": (38.0, 39.2),
+    "epididymo_orchitis": (37.8, 38.9),
+    "acute_prostatitis": (38.3, 39.8),
+    "febrile_neutropenia": (38.3, 39.6),
+    "pid": (38.0, 39.0),
+}
+
+
+# --------------------------------------------------------------------------- #
 # Condition-coherent background: PMH / medications / allergies pools.          #
 #                                                                              #
 # Review 02 finding 2 (critical): every templated case said "Otherwise I am     #

@@ -1,0 +1,131 @@
+- main:
+  - figure:
+    - img "Synthetic patient portrait - not a real individual"
+  - heading "Ruth M." [level=2]
+  - paragraph: 68 y, female MRNSIM-AI-QU1BKI
+  - 'note "Simulation. Synthetic patient. For education only. Case source: template (not model generated)."': SIM synthetic patient template (not model generated) degraded
+  - text: 03:27
+  - 'status "Clinical Director: the server adapts vitals, facts and complications to your actions."': "Director: 27 steps"
+  - button "New case"
+  - text: Chief complaint Fever days after chemotherapy Allergies
+  - group "Allergies, always visible": Penicillin - anaphylaxis as a child (carries a card).
+  - text: Code Full code Acuity ESI 2 · Abnormal Encounter Emergency (ED)
+  - navigation "Stage":
+    - list "Stage":
+      - listitem: Chart review
+      - listitem: Interview and exam
+      - listitem: Orders
+      - listitem: Results
+      - listitem: A and P
+  - paragraph: Difficulty 3/5 · template (not model generated)
+  - complementary "Storyboard":
+    - figure:
+      - img "Synthetic patient portrait - not a real individual"
+      - button "Enlarge patient view"
+    - paragraph: Ruth M.
+    - paragraph: In pain, anxious
+    - paragraph: In distress · Tachycardic · Diaphoretic · Pale
+    - term: MRN
+    - definition: SIM-AI-QU1BKI
+    - term: Age
+    - definition: "68"
+    - term: Sex
+    - definition: female
+    - term: Acuity
+    - definition: ESI 2
+    - term: Weight
+    - definition: 58 kg
+    - paragraph: Fills in as you work the chart.
+    - heading "Problem list" [level=3]
+    - paragraph: No problems added yet. Build them in A and P.
+    - heading "Allergies" [level=3]
+    - list:
+      - listitem: Penicillin - anaphylaxis as a child (carries a card).
+    - heading "Vitals snapshot Live" [level=3]
+    - paragraph: HR
+    - paragraph: 121bpm
+    - paragraph: BP
+    - paragraph: 96/64
+    - paragraph: RR
+    - paragraph: 23/min
+    - paragraph: SpO2
+    - paragraph: 93%
+    - paragraph: Temp
+    - paragraph: 38.4°C
+    - heading "Medications and history 2" [level=3]
+    - list:
+      - listitem: Ondansetron and dexamethasone from the chemo pack.
+      - listitem: Ondansetron and dexamethasone from the chemo pack.
+    - heading "Exam findings 4" [level=3]
+    - list:
+      - listitem: General Uncomfortable but engaging with questions. Abnormal
+      - listitem: General Febrile 38.9C, rigors, PICC line site clean; no mucositis; no localising source. Abnormal
+      - listitem: Respiratory Clear chest. Within normal limits
+      - listitem: Vitals Vitals rechecked and trending as charted. Within normal limits
+    - heading "Care team" [level=3]
+    - list:
+      - listitem: You Treating clinician
+      - listitem: Triage nurse Nursing
+      - listitem: Charge nurse Resuscitation support
+    - heading "Encounter clock" [level=3]
+    - text: 03:27
+  - tablist "Chart sections":
+    - tab "Chart Review"
+    - tab "Interview"
+    - tab "Flowsheets"
+    - tab "Monitor"
+    - tab "Orders 7"
+    - tab "Results 7"
+    - tab "Guidance" [selected]
+    - tab "Problem List / A&P"
+  - tabpanel "Guidance":
+    - region "Clinical guidance":
+      - heading "Clinical guidance" [level=3]
+      - paragraph: Live, cited coaching for your work-up
+      - text: Guidance unavailable Current focus Education only
+      - paragraph: Fever days after chemotherapy · 11524-6
+      - status:
+        - paragraph: Guidance unavailable No verified guideline statement could be served for this step. Nothing is shown rather than an unverified hint.
+      - paragraph: "Red flags: 0/2 screened"
+      - text: Coverage 57% History 4/8 Examination 3/3 Work-up 1/3 Red flags 0/2
+      - list:
+        - listitem: Fever with neutropenia (oncologic emergency) - Not yet screened
+        - listitem: I had chemotherapy eight days ago and now I have a fever and chills. - Not yet screened
+      - paragraph: Education only - a guideline reference to structure the work-up, not medical advice or a diagnosis.
+    - complementary "Attending tips":
+      - heading "Attending tips" [level=3]
+      - text: Education only
+      - paragraph: A senior clinician, watching your process
+      - text: Full outline
+      - switch "Show the full work-up outline" [checked]
+      - button "Dismiss attending tips"
+      - text: Next best action Time-critical
+      - paragraph: Order Absolute neutrophil count
+      - text: within 30 min
+      - status: Source unavailable
+      - text: Your work-up so far 57% covered
+      - paragraph: History
+      - paragraph: 4/8
+      - paragraph: Examination
+      - paragraph: 3/3
+      - paragraph: Work-up
+      - paragraph: 1/3
+      - paragraph: 8 of 14 expected steps covered · Red flags 0/2 screened
+      - text: Attending tips
+      - paragraph: Short, actionable, each one traced to a verified guideline statement
+      - paragraph: Treatment and disposition tips unlock once you reach the assessment stage.
+      - text: What a strong work-up covers Do
+      - list:
+        - listitem:
+          - text: Absolute neutrophil count within 30 min Due
+          - status: Source unavailable
+        - listitem:
+          - text: Chest X-ray within 30 min Due
+          - status: Source unavailable
+      - text: Consider
+      - list:
+        - listitem:
+          - text: C-reactive protein within 30 min On time
+          - status: Source unavailable
+      - paragraph: Coaches your process, never the diagnosis.
+  - note "Simulation. Synthetic patient. For education only.": SIM synthetic patient education only

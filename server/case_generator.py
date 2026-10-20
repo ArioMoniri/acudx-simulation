@@ -683,10 +683,13 @@ def _vitals_envelope(acuity: int, cond: Optional[dict[str, Any]]) -> dict[str, A
     finding 1 (critical): heart block must be bradycardic, hypertensive
     emergency hypertensive, hypothermia cold, opioid overdose bradypnoeic."""
     b = dict(_ACUITY_BANDS.get(acuity, _ACUITY_BANDS[3]))
-    env = case_fixtures.CONDITION_VITALS.get((cond or {}).get("id", ""), {})
+    cid = (cond or {}).get("id", "")
+    env = case_fixtures.CONDITION_VITALS.get(cid, {})
     for key in ("hr", "systolic", "diastolic", "rr", "spo2", "tempC"):
         if key in env:
             b[key] = env[key]
+    if "tempC" not in env and cid in case_fixtures.FEBRILE_TEMP:
+        b["tempC"] = case_fixtures.FEBRILE_TEMP[cid]
     return b
 
 

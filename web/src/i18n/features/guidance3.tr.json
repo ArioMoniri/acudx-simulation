@@ -41,7 +41,8 @@
       "order": "{{label}} isteyin",
       "screenRedFlags": "Kalan kırmızı bayrakları tarayın",
       "complete": "Temel tetkik kapsandı — değerlendirmenizi pekiştirin",
-      "urgent": "Zaman-kritik"
+      "urgent": "Zaman-kritik",
+      "within": "{{minutes}} dk içinde"
     },
     "workup": {
       "title": "Güçlü bir tetkik neyi kapsar",

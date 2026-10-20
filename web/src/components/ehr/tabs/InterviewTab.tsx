@@ -48,6 +48,7 @@ import {
   cancelRecording,
 } from "@/lib/stt";
 import {
+  isDegradedPatientTurn,
   patientTurn as backendPatientTurn,
   type PatientTurnRequest,
 } from "@/lib/backend";
@@ -635,7 +636,9 @@ export function InterviewTab({
     setTyping(true);
     try {
       const tres = await backendPatientTurn(buildPatientTurnRequest(text));
-      if (!tres.ok || !tres.data.utterance) {
+      // A 200 carrying the gateway's scripted deflection (model unreachable)
+      // is a failure too: the reveal graph answers instead.
+      if (!tres.ok || isDegradedPatientTurn(tres.data)) {
         liveFallback(text);
         return;
       }

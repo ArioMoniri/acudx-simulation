@@ -1,0 +1,19 @@
+[
+  {
+    "id": "L1",
+    "actor": "Student (live)",
+    "step": "Streaming progress panel",
+    "expected": "Stage-by-stage progress while the model authors and the council judges",
+    "observed": "185s; 0s: Generating a case on the model gatewaySampling a condition, authoring, three-judge council review, grounding and finalizing. You can keep reading the chart.CancelSamplingAuthoringCouncil judgingGroundingFinalizing || 174s: Generating a case on the model gatewaySampling a condition, authoring, three-judge council review, grounding and finalizing. You can keep reading the chart.CancelSamplingAuthoringCouncil judgingRepairing ×1GroundingFinal || 185s: The model did not return a caseNothing was substituted silently. Choose how to continue.SamplingAuthoringCouncil judgingRepairing ×1GroundingFinalizingGeneration failed (stream_timeout).HTTP 504Retry model generationUse ",
+    "pass": true,
+    "screenshot": "04-live-after-generation.png"
+  },
+  {
+    "id": "L2",
+    "actor": "Student (live)",
+    "step": "Case opens in the chart",
+    "expected": "A model case opens",
+    "observed": "no chart after 185s",
+    "pass": false
+  }
+]

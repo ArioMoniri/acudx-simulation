@@ -40,6 +40,7 @@ import { signsFromVitals } from "@/components/ehr";
 import type { CaseInstance } from "@/domain/case";
 import {
   getDirector,
+  getGeneration,
   resetEncounter,
   setLiveEnabled,
   startEncounter,
@@ -56,7 +57,7 @@ import {
   type CaseGenV2Meta,
   type CaseGenV2Request,
 } from "@/lib/caseGenV2";
-import type { CaseGenerationMeta } from "@/lib/liveEncounter";
+import { caseMetaProvenanceKey, type CaseGenerationMeta } from "@/lib/liveEncounter";
 import { noteServedCase } from "@/domain/caseGen";
 import { recordFromEncounter } from "@/state/progressStore";
 
@@ -163,6 +164,7 @@ export function EncounterPage() {
   const state = useEncounterState();
   const { available: backendAvailable, checking: backendChecking } = useLiveBackend();
   const director = useEncounterSelector(getDirector);
+  const generation = useEncounterSelector(getGeneration);
   const [guidanceOn, setGuidanceOn] = useState(startSelection?.guidance ?? true);
   const [railOpen, setRailOpen] = useState(false);
   const [gen, setGen] = useState<GenState>(GEN_IDLE);
@@ -598,7 +600,7 @@ export function EncounterPage() {
         <p className="shrink-0 font-mono text-[0.6875rem] text-muted">
           {t("ehr.workspace.caseMeta", {
             difficulty: caseInstance.difficulty,
-            provenance: t(`ehr.provenance.${caseInstance.provenance}`),
+            provenance: t(caseMetaProvenanceKey(generation, caseInstance.provenance)),
           })}
         </p>
       </motion.div>

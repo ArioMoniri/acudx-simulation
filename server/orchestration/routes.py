@@ -57,8 +57,12 @@ from server.telemetry.events import bind_context, current_context, unbind_contex
 
 router = APIRouter(prefix="/v2", tags=["orchestration"])
 
-# Hard server-side cap on one SSE generation stream (review 04 O11).
-SSE_MAX_DURATION_S = 180.0
+# Hard server-side cap on one SSE generation stream (review 04 O11). It must
+# cover an author call, a judge round and one repair round at the 300 s
+# per-call budget of settings.casegen_timeout_s: at 180 s the acceptance run of
+# 2026-10-20 saw a live Qwen3-14B generation end in stream_timeout (504) at
+# 185 s, mid repair, so no model case ever reached the chart.
+SSE_MAX_DURATION_S = 600.0
 
 # Node order the SSE stream announces up front so a UI can render a progress rail.
 PIPELINE_NODES: tuple[str, ...] = (

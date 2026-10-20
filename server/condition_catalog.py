@@ -623,15 +623,65 @@ def _haystack(cond: dict[str, Any]) -> str:
     ]).lower()
 
 
+# The chief-complaint families of the web picker (web/src/domain/caseGen.ts
+# CHIEF_COMPLAINT_FAMILIES) arrive here as their ids ("renal-urology",
+# "infectious", ...). Matched as free text they misrouted: "renal-urology" hit
+# every neurology condition ("urology" is a substring of "neurology"),
+# "respiratory" hit opioid overdose through its red flag and missed pneumonia
+# (system "pulmonology"), and "infectious" missed sepsis (system "emergency").
+# Each family is therefore a set of systems and/or word stems matched at word
+# starts in the label and the typical complaint only (acceptance test
+# 2026-10-20, docs/review/05).
+COMPLAINT_FAMILIES: dict[str, dict[str, tuple[str, ...]]] = {
+    "chest-pain": {"systems": (), "stems": ("chest",)},
+    "headache": {"systems": (), "stems": ("headache", "head")},
+    "abdominal-pain": {"systems": (), "stems": ("abdom", "belly", "flank", "loin", "epigastr")},
+    "dyspnea": {"systems": (), "stems": ("breath", "dyspn", "wheez", "cough")},
+    "cardiology": {"systems": ("cardiology",), "stems": ()},
+    "respiratory": {"systems": ("pulmonology",), "stems": ()},
+    "gi-surgical": {"systems": ("gastroenterology",), "stems": ()},
+    "neurology": {"systems": ("neurology",), "stems": ()},
+    # Infections filed under other systems (sepsis is "emergency", pneumonia
+    # "pulmonology", ...); non-infective febrile mimics (NMS, thyroid storm)
+    # stay out of this family.
+    "infectious": {"systems": ("infectious",), "stems": (
+        "sepsis", "septic", "pneumon", "cholangitis", "mening", "endocarditis", "encephalitis",
+        "diverticulitis", "prostatitis", "orchitis", "pelvic inflammatory", "febrile neutropenia")},
+    "endocrine": {"systems": ("endocrine",), "stems": ()},
+    "renal-urology": {"systems": ("renal",), "stems": ("pyelo", "urinary", "kidney")},
+    "vascular": {"systems": (), "stems": ("aort", "aneurysm", "dissection", "embol", "thromb", "ischaemi", "ischemi", "limb")},
+    "allergy": {"systems": (), "stems": ("anaphyla", "allerg", "angioedema", "urticaria")},
+    "obgyn": {"systems": ("obstetrics-gynecology",), "stems": ()},
+    "rheumatology": {"systems": (), "stems": ("arteritis", "vasculitis", "lupus", "gout", "arthritis", "scleritis", "uveitis")},
+    "psychiatry": {"systems": ("psychiatry",), "stems": ()},
+}
+
+
+def _family_of(needle: str) -> Optional[dict[str, tuple[str, ...]]]:
+    return COMPLAINT_FAMILIES.get((needle or "").strip().lower())
+
+
+def _matches_family(cond: dict[str, Any], family: dict[str, tuple[str, ...]]) -> bool:
+    if cond["system"] in family["systems"]:
+        return True
+    text = f"{cond['label_en']} {cond['typical_complaint_en']}".lower()
+    return any(re.search(rf"\b{re.escape(stem)}", text) for stem in family["stems"])
+
+
 def _matches_complaint(cond: dict[str, Any], needle: str) -> bool:
     needle = (needle or "").strip().lower()
     if not needle:
         return True
+    family = _family_of(needle)
+    if family is not None:
+        return _matches_family(cond, family)
     hay = _haystack(cond)
     tokens = [t for t in _TOKEN_SPLIT.split(needle) if len(t) >= 3 and t not in _COMPLAINT_STOPWORDS]
     if not tokens:
         return needle in hay
-    return any(t in hay for t in tokens)
+    # Word-start match, so a token never hits the middle of another word
+    # ("urology" inside "neurology", "ear" inside "heart").
+    return any(re.search(rf"(?<![a-z0-9çğıöşü]){re.escape(t)}", hay) for t in tokens)
 
 
 def _rng_of(rng: Optional[Any]) -> random.Random:

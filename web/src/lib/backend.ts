@@ -138,6 +138,19 @@ export interface PatientTurnResult {
   meta: PatientTurnMeta | null;
 }
 
+/**
+ * True when /v1/patient/turn answered 200 but the persona model never ran: the
+ * gateway could not reach (or was air-gapped from) its model and returned its
+ * scripted deflection ("sorry, I'm finding it hard to answer just now") with a
+ * `gateway_degraded` flag. The acceptance run of 2026-10-20 got that line for
+ * every typed question, so the history could not be taken at all. The caller
+ * answers from the deterministic reveal graph instead.
+ */
+export function isDegradedPatientTurn(r: Pick<PatientTurnResult, "utterance" | "flags"> | null | undefined): boolean {
+  if (!r || !r.utterance || !r.utterance.trim()) return true;
+  return (r.flags ?? []).some((f) => f && f.type === "gateway_degraded");
+}
+
 /** Citation block on a grounded passage (server/grounding.py Citation). */
 export interface GroundCitation {
   body?: string;

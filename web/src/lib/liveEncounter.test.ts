@@ -6,6 +6,7 @@ import {
   DIRECTOR_BOUNDS,
   applyDirectorChanges,
   caseInstanceToSpec,
+  caseMetaProvenanceKey,
   clampDirectorVitals,
   engineObservationToFhir,
   overlayVitals,
@@ -164,5 +165,17 @@ describe("turnaroundLabel", () => {
   it("formats minutes and hours bilingually", () => {
     expect(turnaroundLabel(45)).toEqual({ en: "45 min", tr: "45 dk" });
     expect(turnaroundLabel(1440)).toEqual({ en: "24 h", tr: "24 sa" });
+  });
+});
+
+describe("caseMetaProvenanceKey", () => {
+  it("labels a template case as a template, not a generated case (acceptance 2026-10-20)", () => {
+    expect(caseMetaProvenanceKey({ source: "template" }, "generated")).toBe("live2.source.template");
+    expect(caseMetaProvenanceKey({ source: "model" }, "generated")).toBe("live2.source.model");
+    expect(caseMetaProvenanceKey({ source: "offline" }, "generated")).toBe("live2.source.offline");
+  });
+
+  it("falls back to the case provenance before an encounter has generation meta", () => {
+    expect(caseMetaProvenanceKey(null, "seed")).toBe("ehr.provenance.seed");
   });
 });

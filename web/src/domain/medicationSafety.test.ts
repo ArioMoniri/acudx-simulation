@@ -157,4 +157,13 @@ describe("five rights", () => {
     const r = fiveRightsCheck(order({ drug: "6470", dose: 4 }), { ...ctx([NKDA]), weightKg: 30 });
     expect(r.failures.map((f) => f.code)).toContain("dose-above-max");
   });
+
+  it("applies the paracetamol 15 mg/kg ceiling only under 50 kg (acceptance 2026-10-20)", () => {
+    // 1 g in a 60 kg adult was blocked as "exceeds 15 mg/kg (900 mg)".
+    const adult = fiveRightsCheck(order({ drug: "161", dose: 1000 }), { ...ctx([NKDA]), weightKg: 60 });
+    expect(adult.failures.map((f) => f.code)).not.toContain("dose-above-max");
+    expect(adult.ok).toBe(true);
+    const light = fiveRightsCheck(order({ drug: "161", dose: 1000 }), { ...ctx([NKDA]), weightKg: 45 });
+    expect(light.failures.map((f) => f.code)).toContain("dose-above-max");
+  });
 });

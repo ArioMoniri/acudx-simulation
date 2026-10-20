@@ -1,0 +1,144 @@
+# 05. Live acceptance test, 2026-10-20
+
+Tester role, playing a third-year medical student, then faculty, dean and admin. Education only, synthetic patients.
+
+## 1. Setup
+
+| Item | Value |
+|---|---|
+| Branch | `worktree-agent-a819c33dfc3dc9c4e`, merged with `origin/claude/clever-mendel-dtbc1n` at `fcd0f31` before the final run |
+| Gateway | `AIRGAPPED=true AUTH_MODE=local ADMIN_TOKEN=acceptance-admin ACUDX_DB_PATH=<scratch>/acceptance.db PORT=8931 uvicorn server.app:app --port 8931`, fresh database, Fernet `ACUDX_SECRET_KEY` |
+| Web | `API_PROXY_TARGET=http://127.0.0.1:8931 npm --prefix web run dev -- --port 4193` |
+| Model | none reachable (env row `http://127.0.0.1:3040/v1` refuses connections) |
+| Live model pass | second dev server on 4194 proxying the coordinator's model-backed gateway on `127.0.0.1:8890` (Qwen3-14B on the GPU worker), section 6 |
+| Script | `web/e2e/acceptance/acceptance.spec.ts` and `live-model.spec.ts`, config `web/playwright.acceptance.config.ts` (starts no server; skipped unless `ACCEPTANCE_BASE_URL` / `ACCEPTANCE_LIVE_BASE_URL` is set). Chromium from `/opt/pw-browsers`, 1280 x 800 |
+| Evidence | screenshots, `results.json` (machine-readable step table) and `aria/*.yml` snapshots in [acceptance-2026-10-20/](acceptance-2026-10-20/); live pass in [acceptance-2026-10-20/live/](acceptance-2026-10-20/live/) |
+
+Reproduce:
+
+```bash
+ACCEPTANCE_BASE_URL=http://localhost:4193 ACCEPTANCE_GATEWAY_URL=http://127.0.0.1:8931 \
+ACCEPTANCE_ADMIN_TOKEN=acceptance-admin npx --prefix web playwright test -c web/playwright.acceptance.config.ts acceptance.spec
+```
+
+The walk ran four times. Runs 1 and 2 (pre-merge code) found most defects; small fixes went in between runs (section 4). Run 4 (merged code, all fixes except D-16 which was found in run 4) is the one recorded below. The template path draws a random seed, so case identity differs per run; runs 1 to 3 covered sepsis, ascending cholangitis, acute HIV, febrile neutropenia and malaria.
+
+## 2. Result
+
+**56 recorded checks: 42 pass, 14 fail** (run 4). Live model pass: 1 pass, 1 fail. **Defects: 28** (9 critical, 8 major, 8 minor, 3 documentation or process), of which **11 fixed on this branch with tests** (7 of the 9 critical ones). UI text quoted in `results.json` and `aria/` has its dashes normalised to hyphens.
+
+The honesty contract held everywhere it was tested: `/v2/case/generate/stream` answered `503 model_unreachable`, the panel said "Nothing was substituted silently", the template button was labelled "deterministic, not model generated", and every case banner read "template (not model generated) degraded". Results always carried provenance. The dean chain verified. Where the walk failed, it failed on clinical content and on wiring between components that each pass their own tests.
+
+## 3. Step table (run 4)
+
+Screenshots are in `acceptance-2026-10-20/`. Case 1 was febrile neutropenia (D70.9, 2 tries), case 2 was sepsis (A41.9, 1 try).
+
+| Id | Step | Expected | Observed | Result | Screenshot |
+|---|---|---|---|---|---|
+| S1 | Create a profile through the UI | Profile created, lands on Home | "Welcome back, Deniz Acceptance" | PASS | 01 |
+| S2 | Constrain the case by chief complaint fever | A fever option, or a family that yields febrile cases | No Fever tile among 17; used "Infectious" (D-01) | FAIL | 02 |
+| S3, S3b | Generator with no model | 503 model_unreachable, failure named, template and retry offered | HTTP 503; "The model did not return a case. Nothing was substituted silently"; Retry and "Use template case (deterministic, not model generated)" | PASS | 03, 17 |
+| C0 | Febrile case within 6 tries | febrile presentation | FN after 2 tries (aspiration pneumonitis at 37.2 C rejected), sepsis after 1 | PASS x2 | |
+| C1 | Banner labels the source | template, degraded, nothing says "generated" | "Case source: template (not model generated)", "degraded", sub-line "Difficulty 3/5 · template (not model generated)" (after D-06 fix) | PASS x2 | 04, 18 |
+| C2 | Triage vitals show fever | Temp at or above 38.0 C | FN HR 114, BP 103/69, RR 21, SpO2 95, 38.4 C; sepsis HR 116, BP 119/75, RR 22, SpO2 95, 39.1 C | PASS x2 | 05, 19 |
+| C3 | 10 typed history questions | 10 case answers, no gateway deflection | 10 answers, 0 deflections (after D-05 fix); 8 rendered with the "Patient" label (the medication and allergy answers render as an extra unlabelled line) | FAIL x2 (count) | 06, 20 |
+| C3b | Typed questions reach a case answer | no "be more specific" for standard questions | 3 of 10 answered "Could you be a little more specific" or "I didn't quite follow" (rigors, urinary, respiratory, neck stiffness, travel): the template authors no datum for them (D-12) | FAIL x2 | |
+| C4 | Relevant exams | 6 findings for 7 maneuvers | 3 to 4 findings; heart, abdomen, neuro, skin "unlock nothing" in the template (D-12) | FAIL x2 | 07, 21 |
+| C5 | Order CBC, CRP, lactate, blood cultures, UA, CXR, ECG | 7 placed | 7 placed | PASS x2 | 08, 22 |
+| C6 | Paracetamol and an antibiotic through the dose form | dose form, five rights, both given | Dose form shown with range and NICE CKS source; paracetamol 1 g PO **blocked "dose-above-max"** (D-16, fixed after run 4); ceftriaxone **blocked "allergy-conflict"** (penicillin anaphylaxis in both patients, correct), and no non-beta-lactam antibiotic exists in the formulary (D-17) | FAIL x2 | 09, 10, 23, 24 |
+| C7 | Monitor reacts | temperature trends down, Director steps | FN: HR 120 -> 121, 24 Director steps; sepsis: unchanged (nothing was given) | PASS / FAIL | 11, 25 |
+| C8 | All results with provenance | 0 pending; each group has a provenance chip; every analyte a source | 7 of 7 resulted; "Results engine" chip on 4 lab groups and 3 reports; 21 of 21 analytes carry a source | PASS x2 | 12, 26 |
+| C9 | Cultures later than CBC | culture turnaround longer | CBC 40 sim-min, blood culture 2880 sim-min (48 h) | PASS x2 | |
+| C10 | WBC, CRP, lactate plausible | condition-consistent | FN: WBC 0.9 LL, CRP 150, lactate 7.8 HH; sepsis: WBC 12.0, CRP 70.8, lactate 5.5 HH, culture "No growth at 48 h". Direction correct, magnitudes questionable (section 5) | PASS x2 | |
+| C11 | Each attending tip has a citation chip to a real source | every tip card cited | Sepsis: 2 tip cards, both cited, 3 links all equal to the verified store's `source_url`. FN: the one FN tip is a treatment-stage tip and stays locked until assessment, so no card was shown | FAIL / PASS | 13, 27 |
+| C11b | Next best action and work-up outline cited | no "Source unavailable" | 4 rows per case show "Source unavailable" (D-11) | FAIL x2 | |
+| C12 | Guidance panel relevant or honestly unavailable | not live-labelled when retrieval is degraded | "Guidance unavailable" (after D-04 fix; before it, a malaria case showed postpartum tranexamic acid and hyperkalaemia calcium under "Live guideline grounding") | PASS x2 | |
+| C13 | Tip source URLs resolve | 2xx/3xx | sepsis: 200 SSC 2021, 200 NICE NG253; FN: no links | FAIL / PASS | |
+| C14 | Differential and working diagnosis | verdict panel | "pneumonia" + condition, condition committed, verdict shown | PASS x2 | 14, 28 |
+| C15 | Feedback: bands, calibration plot, gaps with citations | all three | 31 band words, calibration figure, 3 external citation links; several process rows "Source unavailable" | PASS x2 | 16, 30 |
+| C16 | Encounter posted to the server | POST /v1/events/encounter 201 with chain hash | 201, ids 1 and 2, chain hashes linked | PASS x2 | |
+| F1 | /faculty as the student | refused | redirected to Home without a message (D-21) | PASS | 31 |
+| F2a | Faculty panel with a local faculty profile | served, or refused with a way forward | 403; the page explains that local profiles have learner access only and the admin token or SSO is needed (D-15) | PASS | 32 |
+| F2 | Faculty vantage | nav shows Faculty, /faculty renders | yes, after Account -> Role -> Faculty and signing in to /admin in the same tab | PASS | 33 |
+| F3 | Review queue | 200, flagged encounters | 200; both encounters flagged `safety_miss` | PASS | 33 |
+| F4 | Roster | student with 2 encounters | Deniz Acceptance, 2 encounters, 2 safety misses | PASS | |
+| D1 | /dean cohort | 2 encounters, 1 learner, from the server | 200, encounters 2, learners 1 | PASS | 34 |
+| D2 | Chain badge | verified | "Chain verified (2 batches)", "Local, unverified" | PASS | 34 |
+| D3 | curl GET /v1/dean/cohort and /v1/dean/chain | 2 encounters, chain ok | 200 encounters=2; chain ok, length 2, broken_at null (needs `X-Admin-Token` plus local headers on merged code) | PASS | |
+| A1 | /admin with the token | tabs render | Overview, Providers, Users, GPU, Telemetry, Settings | PASS | 35 |
+| A2 | Overview | health tiles | database, providers, disk, secret storage tiles | PASS | 36 |
+| A3 | Providers | seeded rows | env-llm, env-embed, env-rerank, all last probe ConnectError | PASS | 37 |
+| A4 | GPU | policy readable, start refused | policy idle 20 min, budget 25 USD, allowlist; POST /admin/gpu/start 409 `airgapped` | PASS | 38 |
+| A5 | Telemetry 24 h | calls and costs from this session | 72 calls, all errors, cost 0: /v1/grade 48, /v1/patient/turn 20, /v1/ground 4 (rows exist only after the D-07 fix; before it, 0 calls) | PASS | 39 |
+| A6 | Users | list renders | renders | PASS | 40 |
+
+Calls that produce **no** telemetry row: `/v2/case/generate` and `/v2/case/generate/stream` (the orchestration LLM client is not instrumented, D-08), `/v2/case/template`, `/v2/director/step` (deterministic unless `use_model`), `/v1/results/resolve`, `/v1/results/ecg`, `/v1/guidelines/tips`, `/v1/events/encounter`, `/v1/voice/capabilities`, `/v1/auth/*`. Only the last group is expected: they make no model call.
+
+## 4. Defects
+
+Severity: critical (wrong clinical teaching or a blocked core flow), major (a step fails or misleads), minor (cosmetic or narrow), doc (documentation or process).
+
+### Fixed on this branch (with tests)
+
+| Id | Sev | Defect | Reproduction | Fix | Test |
+|---|---|---|---|---|---|
+| D-02 | critical | Constrained families misroute: `renal-urology` served strokes and SAH ("urology" is a substring of "neurology"); `respiratory` served opioid overdose (red-flag text) and never pneumonia (system `pulmonology`); `infectious` never served sepsis (system `emergency`) | `POST /v2/case/template {"complaint":"renal-urology"}` with seeds 1-8 | `server/condition_catalog.py`: `COMPLAINT_FAMILIES` maps each web family to systems and word stems; free-text tokens match at word starts | `server/tests/test_acceptance_fever.py` |
+| D-03 | critical | Febrile conditions without a vitals envelope arrived afebrile (septic arthritis 36.7 C, diverticulitis and osteomyelitis 36.6 C, the same vitals as any other condition with that seed) | `POST /v2/case/template {"complaint":"fever","seed":5}` | `server/case_fixtures.py` `FEBRILE_TEMP` (20 conditions, 37.8 to 40.2 C), applied in `case_generator._vitals_envelope` | same file |
+| D-04 | critical | Guidance panel showed hashing-fallback retrieval as "Live guideline grounding": a malaria case got NICE NG235 postpartum tranexamic acid and UKKA hyperkalaemia calcium as its "current focus" | any case with the embed side-car down; `POST /v1/ground {"query":"Cyclical fevers after tropical travel"}` returns `degraded: true, mode: hashing-fallback` | `web/src/lib/guidanceEngine.ts` `groundingFromResponse` refuses a degraded answer ("Guidance unavailable") | `web/src/lib/guidanceGrounding.test.ts` |
+| D-05 | critical | With the model down, every typed question got the gateway's 200 deflection "sorry, I'm finding it hard to answer just now" (flag `gateway_degraded`); the client accepted it, so no history could be taken | type any question with no model behind the gateway | `web/src/lib/backend.ts` `isDegradedPatientTurn`; `InterviewTab` falls back to the reveal graph | `web/src/lib/patientTurnDegraded.test.ts` |
+| D-07 | major | Calls refused in resolution (probe-failed local model, GPU worker refused under AIRGAPPED) left no telemetry row: the console showed 0 calls and 0 % errors for a session in which every model call failed | run 1 Telemetry tab: `calls=0` | `server/model_gateway.py` `_resolve_for_call` records `provider=unresolved, error=no_provider` | `server/tests/test_telemetry.py::test_gateway_records_a_row_when_no_provider_resolves` |
+| D-09 | critical | Formulary drugs never matched a case treatment row (the web sends RxNorm-style codes such as `2193`, the template authors `iv_abx_fluids`, `immediate_ceftriaxone`): ceftriaxone in sepsis scored neutral, the Director fired `missed_time_critical_treatment`, and paracetamol at 38.9 C had "0 effect(s)" | give ceftriaxone in a meningitis or pyelonephritis template case within the deadline; read `director_notes` | `server/orchestration/director.py` `FORMULARY_NAMES` and `match_treatment_row` (non-contraindicated rows only; a fluid bolus never satisfies an "antibiotics + fluids" row) | `test_acceptance_fever.py` (3 Director tests) |
+| D-10 | major | Typed "Do you have any allergies to medicines?" routed to medications, so "Checked allergies before prescribing: Missed" and a safety miss; mid-sentence "when" routed urinary and breathing questions to onset; rigors, neck stiffness and travel matched nothing | type those questions offline or with the model down | `web/src/domain/scopeGuard.ts`: allergy stem decides, mid-sentence "when" ignored, stems for rigors, urinary, breath, neck, travel (EN and TR) | `web/src/domain/scopeGuard.test.ts` |
+| D-06 | minor | The case-meta line read "Difficulty 3/5 · Generated case" for a template case while the banner said template | start any template case | `web/src/lib/liveEncounter.ts` `caseMetaProvenanceKey` | `web/src/lib/liveEncounter.test.ts` |
+| D-14 | minor | Raw i18n key `guidance3.nba.within` on the attending-tips next best action | open Guidance on any case | strings in `guidance3.{en,tr}.json` | `web/src/i18n/keys.test.ts` (every literal `t()` key resolves in EN and TR) |
+| D-13 | critical | Live gateway: SSE cap 180 s (`SSE_MAX_DURATION_S`) is below the 300 s per-call casegen budget, so a generation with one repair ends in `stream_timeout` (504) at 185 s; the client also gave up at 240 s | section 6 | `server/orchestration/routes.py` cap 600 s; `web/src/lib/caseGenV2.ts` generate timeout 600 s | `test_acceptance_fever.py::test_sse_stream_cap_covers_an_author_call_plus_a_repair_round` |
+| D-16 | critical | Paracetamol 1 g PO blocked "dose-above-max" in every adult under 66.7 kg: the 15 mg/kg ceiling applied at any weight although the formulary text says "15 mg/kg if under 50 kg" | run 4, both patients (65 kg) | `web/src/domain/formulary.ts` `perKgBelowKg: 50`, honoured in `medicationSafety.ts` | `web/src/domain/medicationSafety.test.ts` |
+
+Not re-run after the D-13 and D-16 fixes: the live gateway on 8890 belongs to another session and was not restarted, and the template walk was not repeated after D-16.
+
+### Open (documented, not fixed here)
+
+| Id | Sev | Defect | Reproduction | Suggested fix |
+|---|---|---|---|---|
+| D-01 | major | No "Fever" chief-complaint tile on Start or in the constrained menu; the closest is "Infectious", which also serves tetanus and lower UTI | Start page | add a `fever` family to `CHIEF_COMPLAINT_FAMILIES` (web) and `COMPLAINT_FAMILIES` (server stems `fever`, `febrile`, `rigor`) |
+| D-08 | major | The orchestration LLM client (`server/orchestration/llm.py`) writes no `model_calls` rows: case generation, judges and repairs are invisible in admin telemetry; on the live gateway a 3-minute generation produced no `/v2` row | Telemetry tab after a generation | route `StructuredLLM` through `TelemetryRecorder` with `route=/v2/case/generate` |
+| D-11 | major | Next best action, the work-up outline and several Feedback process rows show "Source unavailable"; the process section cites NICE NG185 (ACS) for allergy checking in sepsis and lists "Screened cardiac red flags" in a sepsis case | Guidance and Feedback of any sepsis case | anchor each expected action to a verified statement, and select the rubric by condition system |
+| D-12 | major | Templates author few HPI and exam data: rigors, urinary symptoms, cough, neck stiffness and travel get "Could you be a little more specific" or "I didn't quite follow", which tells the learner the phrasing was wrong; heart, abdomen, neuro and skin exams "unlock nothing" and are logged as low-value actions | 10 standard febrile questions on the sepsis template | author pertinent negatives per condition; reply "No, nothing like that" for a recognised intent with no datum |
+| D-15 | doc | Merged code caps local-mode header principals at resident (commit 11d5b57): faculty, dean and admin panels need the admin token in the same tab (or SSO). README and docs/architecture/19 section 2 still say local mode takes the role from `X-User-Role` | Account -> Role -> Faculty, open /faculty | update README "Configuration" and doc 19 section 2; offer the token gate on /faculty and /dean instead of only text |
+| D-17 | critical | Both template patients (sepsis and FN) drew "Penicillin - anaphylaxis as a child"; ceftriaxone is correctly blocked, but the formulary has no non-beta-lactam antibiotic (no vancomycin, meropenem, levofloxacin, gentamicin), so the learner cannot treat at all and the missed-antibiotic complication always fires | sepsis template, Treatments tab | add allergy-safe alternatives to `TREATMENT_CATALOG` and the formulary, or keep anaphylaxis out of the sepsis background pool |
+| D-18 | critical | `sepsis_uncomplicated` template treatments are "Structured A-to-E assessment" and "Analgesia as needed" (indicated) and "Discharge before a working diagnosis" (contraindicated): no antibiotics, fluids or cultures. With D-09 fixed, paracetamol now averts the sepsis deadline | `template_spec({"complaint":"Sepsis","seed":2})["treatments"]` | author a sepsis fixture (antibiotics within 1 h, 30 mL/kg crystalloid if hypotensive or lactate 4 or more, cultures before antibiotics), SSC 2021 and NICE NG51 |
+| D-19 | major | Duplicate orderables: the catalog "Chest X-ray (CXR)" and the case's "Chest X-ray (Indicated)" both appear; ordering the first scores "Chest X-ray: Not ordered", a safety-critical miss and a faculty flag | Orders, search "Chest X-ray"; Feedback "Process and timing" | dedupe case imaging against the catalog by modality/LOINC, or credit either code |
+| D-20 | major | Client appropriateness stays "neutral" for formulary drugs (`encounterStore` matches `treatmentResponses` by exact code), so the management score does not credit an indicated antibiotic even when the Director does | MAR event meta | share `match_treatment_row` logic with the client |
+| D-21 | minor | /faculty, /dean, /admin as a student redirect to Home with no message | open /faculty as a student | show a role-gate page naming the required role |
+| D-22 | minor | Result values are glued to units: "16.810*9/L", "23910*9/L" (WBC 16.8, platelets 239 x 10^9/L) | Results tab, CBC | render UCUM `10*9/L` as "x10^9/L" with a space |
+| D-23 | minor | CBC differential does not add up: malaria WBC 16.8 with neutrophils 3.9 and lymphocytes 2.2 (6.1 of 16.8) | malaria template, CBC | derive the differential from the total |
+| D-24 | minor | Malaria and febrile neutropenia have no attending tips; tips exist only for sepsis, CAP, pyelonephritis and a few others (`GET /v1/guidelines/tips?condition=B54` count 0) | Guidance tab | extend the tip store, starting with the febrile conditions above |
+| D-25 | minor | Malaria: no thick and thin film or RDT orderable, no artesunate in the formulary; differential suggestions "Gastroenteritis, GERD, Malaria" for cyclical fevers after travel | malaria template | add the orderables and drug; drop GERD from febrile suggestions |
+| D-26 | minor | With a gateway present, `page.goto` never reaches the `load` event within 30 s (DOMContentLoaded is fine); the acceptance spec uses `domcontentloaded` | `page.goto("/signin")` against 4193 | find the long-lived request that holds `load` |
+| D-27 | doc | Each order is "ETA 40 min" in sim time but "ready in ~15 s" in wall time with no legend explaining the compression | Order tracker | add a one-line legend |
+| D-28 | doc | The faculty and dean e2e specs in `web/e2e` run fully offline, so none caught D-15; this spec is the only live path | | keep `e2e/acceptance` in a nightly job against a seeded gateway |
+
+## 5. Clinical sanity of the two fever cases (run 4) and the earlier ones
+
+**Febrile neutropenia** (D70.9; 8 days after chemotherapy, PICC line, rigors). Triage HR 114, BP 103/69, RR 21, SpO2 95 %, 38.4 C: a clinician would accept these. Exam "Febrile 38.9 C, rigors, PICC line site clean; no mucositis; no localising source" fits, although it states 38.9 C while the chart says 38.4 C. Labs: WBC 0.9 (correct direction; an ANC is what matters and none is reported), CRP 150 (plausible), lactate 7.8 mmol/L with BP 103/69 and a MAP near 80 is not credible: a lactate near 8 is septic shock territory and would come with hypotension, confusion or mottling. Cultures "No growth at 48 h" are acceptable but a teaching case usually grows an organism. The only tip is locked to the treatment stage; nothing teaches "empirical antibiotics within 1 hour" during the work-up. A clinician would accept the vitals and exam, question the lactate, and reject the treatment experience: the patient has penicillin anaphylaxis, ceftriaxone is blocked, and no alternative exists (D-17).
+
+**Sepsis** (A41.9). Triage HR 116, BP 119/75, RR 22, SpO2 95 %, 39.1 C: plausible for sepsis without shock (NEWS2 around 5 to 6). Labs WBC 12.0, CRP 70.8 are plausible; lactate 5.5 HH with BP 119/75 meets the SSC hyperlactataemia threshold for fluids and would make this septic shock physiology in a normotensive patient (cryptic shock exists, but the template calls it "uncomplicated"). The tips are correct and cited: SSC 2021 (antimicrobials within 1 h for possible septic shock), NICE NG253 risk evaluation; both URLs answered 200. The treatment table is wrong (D-18): it rewards "A-to-E assessment" and "analgesia", not antibiotics, fluids and cultures. A clinician would accept the vitals and tips, flag the lactate, and reject the treatment logic and the faculty flag the student received.
+
+**Earlier runs.** Ascending cholangitis: HR 110 to 115, BP 99 to 104/60, 38.6 to 38.9 C, jaundiced sclerae and RUQ tenderness: accepted. Lactate 8.2 with MAP about 75 is again too high. The tip text is about cholecystitis ("Ultrasound is the first imaging test for suspected cholecystitis") with a WSES 2020 DOI: relevant but not specific to cholangitis (Tokyo Guidelines 2018 would be). Malaria: 38.0 to 39.4 C after the D-03 fix, but WBC 16.8 and platelets 239 are the opposite of the expected normal-to-low WBC and thrombocytopenia; no film or RDT and no artesunate. Acute HIV seroconversion: WBC 16.8 and CRP 120 are implausible (expect lymphopenia or a normal count, modest CRP).
+
+**Results engine overall.** Turnarounds (CBC 40 min, chemistry 45 min, ECG 10 min, blood culture 48 h) are sourced and realistic, every analyte carries a source, the synthetic ECG was "sinus tachycardia" at the patient's rate. The weakness is lactate: severity 0.8 maps to 5.5 to 8.2 mmol/L regardless of blood pressure.
+
+## 6. Live model pass (gateway on 8890, Qwen3-14B)
+
+| Id | Step | Observed | Result |
+|---|---|---|---|
+| L0 | First attempt with this branch's pre-merge web | "Generation failed (unauthenticated). HTTP 401" at once: the newer gateway binds learner memory to the caller and the pre-merge client sent `learner_id` without identity headers. Fixed upstream in `caseGenV2.ts` (merged here); re-run below | (finding, fixed upstream) |
+| L1 | Streaming progress panel, Start -> Infectious -> Begin | 0 s: "Generating a case on the model gateway. Sampling a condition, authoring, three-judge council review, grounding and finalizing. You can keep reading the chart." with Cancel. 174 s: the rail shows "Council judging", then "Repairing x1". 185 s: "The model did not return a case. Nothing was substituted silently." with "Generation failed (stream_timeout). HTTP 504", Retry and the labelled template (screens `live/01` to `live/04`) | PASS |
+| L2 | Case usable in the chart | No case: the server's 180 s SSE cap ended the stream mid repair (D-13, fixed here but not deployable to that process). No council or "degraded" badge was ever shown because no case finished | FAIL |
+| L3 | Admin telemetry on 8890 (`GET /admin/telemetry/summary?window=24h`) | 1511 calls, 1509 errors (99.9 %), cost 0: `/v1/grade` 816, `/v1/patient/turn` 537, `/v1/ground` 116, `/v1/case/generate` (v1) 42. By provider, `env-openai` (`http://127.0.0.1:9/v1`, a dead port) took 1393 calls and failed every one before `gpu-worker` served 2. **No row for `/v2/case/generate/stream`**, although the GPU worker spent 3 minutes on it (D-08). The env-openai row is preferred over the GPU worker because it is unprobed or its probe is stale; that is that gateway's configuration, reported, not changed | finding |
+
+The two API-generated cases saved by the coordinator were not re-opened in the UI; their known defects (empty treatment codes, empty labs, imaging and red flags, 1 s onsets, complaint not respected, strict judges) are assigned elsewhere.
+
+## 7. Gates
+
+After the merge and every fix: `npm --prefix web run typecheck` clean; `npm --prefix web test` 32 files, 337 tests passed; `npm --prefix web run lint` 0 errors (71 warnings, none new); `.venv/bin/python -m pytest server/tests -q` 1043 passed, 2 skipped. `scripts/watchdog.sh` on the touched files reports one hit, the pre-existing "hardcodes" comment at `web/src/lib/backend.ts:32`.

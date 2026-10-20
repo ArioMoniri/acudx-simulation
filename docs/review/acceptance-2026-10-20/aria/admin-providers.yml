@@ -1,0 +1,82 @@
+- main:
+  - text: Operator console
+  - heading "Admin" [level=1]
+  - paragraph: Providers, GPU policy, budgets and telemetry for this AcuDx deployment. Every change is saved on the server; no key ever reaches the browser.
+  - text: Admin session active
+  - button "Sign out of admin"
+  - tablist "Admin":
+    - tab "Overview"
+    - tab "Providers" [selected]
+    - tab "Users"
+    - tab "GPU"
+    - tab "Telemetry"
+    - tab "Settings"
+  - tabpanel "Providers":
+    - paragraph: Each kind resolves to the lowest priority enabled row that passes the air-gap guard and whose last probe did not fail. LLM falls back to the on-demand GPU worker.
+    - combobox "Kind":
+      - option "All kinds" [selected]
+      - option "LLM"
+      - option "Embeddings"
+      - option "Reranker"
+      - option "Speech to text"
+      - option "Text to speech"
+      - option "Avatar / video"
+      - option "Imaging bank"
+      - option "Identity provider"
+      - option "Telemetry sink"
+    - button "Add provider"
+    - table:
+      - rowgroup:
+        - row "Name Kind Endpoint Model Priority Key Last probe Enabled Actions":
+          - columnheader "Name"
+          - columnheader "Kind"
+          - columnheader "Endpoint"
+          - columnheader "Model"
+          - columnheader "Priority"
+          - columnheader "Key"
+          - columnheader "Last probe"
+          - columnheader "Enabled"
+          - columnheader "Actions"
+      - rowgroup:
+        - row "env-embed Embeddings http://127.0.0.1:8003 ytu-ce-cosmos/modernbert-tr-embed 0 no key Unreachable 20 ms, 8 minutes ago Enable env-embed Probe Edit env-embed Delete env-embed":
+          - cell "env-embed"
+          - cell "Embeddings"
+          - cell "http://127.0.0.1:8003"
+          - cell "ytu-ce-cosmos/modernbert-tr-embed"
+          - cell "0"
+          - cell "no key"
+          - cell "Unreachable 20 ms, 8 minutes ago"
+          - cell "Enable env-embed":
+            - switch "Enable env-embed" [checked]
+          - cell "Probe Edit env-embed Delete env-embed":
+            - button "Probe"
+            - button "Edit env-embed"
+            - button "Delete env-embed"
+        - row "env-llm LLM http://127.0.0.1:3040/v1 qwen2.5-7b-instruct 0 no key Unreachable 1 ms, 8 minutes ago Enable env-llm Probe Edit env-llm Delete env-llm":
+          - cell "env-llm"
+          - cell "LLM"
+          - cell "http://127.0.0.1:3040/v1"
+          - cell "qwen2.5-7b-instruct"
+          - cell "0"
+          - cell "no key"
+          - cell "Unreachable 1 ms, 8 minutes ago"
+          - cell "Enable env-llm":
+            - switch "Enable env-llm" [checked]
+          - cell "Probe Edit env-llm Delete env-llm":
+            - button "Probe"
+            - button "Edit env-llm"
+            - button "Delete env-llm"
+        - row "env-rerank Reranker http://127.0.0.1:8004 ytu-ce-cosmos/modernbert-tr-reranker 0 no key Unreachable 1 ms, 8 minutes ago Enable env-rerank Probe Edit env-rerank Delete env-rerank":
+          - cell "env-rerank"
+          - cell "Reranker"
+          - cell "http://127.0.0.1:8004"
+          - cell "ytu-ce-cosmos/modernbert-tr-reranker"
+          - cell "0"
+          - cell "no key"
+          - cell "Unreachable 1 ms, 8 minutes ago"
+          - cell "Enable env-rerank":
+            - switch "Enable env-rerank" [checked]
+          - cell "Probe Edit env-rerank Delete env-rerank":
+            - button "Probe"
+            - button "Edit env-rerank"
+            - button "Delete env-rerank"
