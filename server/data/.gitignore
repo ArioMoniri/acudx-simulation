@@ -1,0 +1,4 @@
+# Local SQLite guideline store (ACUDX_DB_PATH default). The verified evidence is committed
+# as server/guidelines/statements.verified.json, not as a binary database.
+*.db
+*.db-journal

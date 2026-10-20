@@ -238,11 +238,30 @@ const icd = (code: string, display: string): Coding => ({ system: CODE_SYSTEMS.i
 const lc = (code: string, display: string): Coding => ({ system: CODE_SYSTEMS.loinc, code, display });
 
 const TENSION_H: Bilingual = { en: "Tension-type headache", tr: "Gerilim tipi baş ağrısı" };
-const CITE_ACS = "esc-acs-2023";
+const CITE_ACS = "gs_nice_ng185_nstemi_assessment";
 // Non-contrast CT head for a suspected subarachnoid haemorrhage is grounded in
 // the NICE SAH guideline (NG228), NOT the NICE ACS guideline (NG185).
-const CITE_SAH = "nice-ng228";
+const CITE_SAH = "gs_nice_ng228_thunderclap";
+// Generic emergency-competency items have NO verified statement yet: the pill renders an
+// explicit "source unavailable" chip rather than an unverified citation (docs/architecture/16).
 const CITE_EM = "tepdad-em";
+const CITE_AAD = "gs_jcs2020_aad_ddimer_ct";
+const CITE_CAP = "gs_nice_ng250_cap_4h";
+const CITE_SEPSIS_ABX = "gs_ssc21_antimicrobials_1h";
+const CITE_SEPSIS_CULT = "gs_ssc21_lactate_cultures";
+const CITE_STROKE_CT = "gs_nice_ng128_ct_immediate";
+const CITE_STROKE_GLU = "gs_nice_ng128_fast_glucose";
+const CITE_APPY = "gs_wses2020_appy_scores";
+const CITE_ACC_US = "gs_wses2020_acc_ultrasound";
+const CITE_ACC_LFT = "gs_wses2020_acc_lfts";
+const CITE_PANC_DX = "gs_wses2019_panc_diagnosis";
+const CITE_PANC_CAUSE = "gs_nice_ng104_panc_cause";
+const CITE_COLIC = "gs_nice_ng118_ct_nsaid";
+const CITE_ECTOPIC_TEST = "gs_nice_ng126_ectopic_pregnancy_test";
+const CITE_ECTOPIC_REFER = "gs_nice_ng126_ectopic_refer";
+const CITE_DKA_DX = "gs_jbds_dka_diagnosis";
+const CITE_DKA_RX = "gs_jbds_dka_friii";
+const CITE_PYELO = "gs_nice_ng111_msu";
 
 const PRESENTATIONS: PresentationTemplate[] = [
   /* ===== CHEST PAIN family ===== */
@@ -338,7 +357,7 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "operating-room",
     criticalActions: [
-      { code: lc("ct-aortogram", "CT aortogram"), label: { en: "CT aortogram", tr: "BT aortografi" }, windowMin: 30, kind: "imaging", critical: true, citationId: CITE_EM },
+      { code: lc("ct-aortogram", "CT aortogram"), label: { en: "CT aortogram", tr: "BT aortografi" }, windowMin: 30, kind: "imaging", critical: true, citationId: CITE_AAD },
       { code: LOINC.ecg12, label: { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, windowMin: 10, kind: "imaging", critical: false, citationId: CITE_ACS },
     ],
     history: [
@@ -405,7 +424,7 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "admit-ward",
     criticalActions: [
-      { code: lc("cxr", "Chest X-ray"), label: { en: "Chest X-ray", tr: "Akciğer grafisi" }, windowMin: 30, kind: "imaging", critical: true, citationId: CITE_EM },
+      { code: lc("cxr", "Chest X-ray"), label: { en: "Chest X-ray", tr: "Akciğer grafisi" }, windowMin: 30, kind: "imaging", critical: true, citationId: CITE_CAP },
     ],
     history: [
       { intent: "onset", answer: { en: "It came on suddenly while I was resting.", tr: "Dinlenirken aniden başladı." }, redFlag: true },
@@ -497,8 +516,8 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "admit-icu",
     criticalActions: [
-      { code: lc("iv-antibiotics", "Empirical IV antibiotics"), label: { en: "Empirical IV antibiotics", tr: "Ampirik IV antibiyotik" }, windowMin: 30, kind: "procedure", critical: true, citationId: CITE_EM },
-      { code: LOINC.wbc, label: { en: "Bloods and cultures", tr: "Kan tetkikleri ve kültür" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_EM },
+      { code: lc("iv-antibiotics", "Empirical IV antibiotics"), label: { en: "Empirical IV antibiotics", tr: "Ampirik IV antibiyotik" }, windowMin: 30, kind: "procedure", critical: true, citationId: CITE_SEPSIS_ABX },
+      { code: LOINC.wbc, label: { en: "Bloods and cultures", tr: "Kan tetkikleri ve kültür" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_SEPSIS_CULT },
     ],
     history: [
       { intent: "onset", answer: { en: "Fever and headache came on over hours.", tr: "Ateş ve baş ağrısı saatler içinde geldi." } },
@@ -535,8 +554,8 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "admit-ward",
     criticalActions: [
-      { code: lc("ct-head-noncon", "CT head"), label: { en: "Urgent noncontrast CT head", tr: "Acil kontrastsız beyin BT" }, windowMin: 25, kind: "imaging", critical: true, citationId: CITE_EM },
-      { code: lc("2345-7", "Glucose"), label: { en: "Capillary glucose", tr: "Kapiller glukoz" }, windowMin: 10, kind: "laboratory", critical: false, citationId: CITE_EM },
+      { code: lc("ct-head-noncon", "CT head"), label: { en: "Urgent noncontrast CT head", tr: "Acil kontrastsız beyin BT" }, windowMin: 25, kind: "imaging", critical: true, citationId: CITE_STROKE_CT },
+      { code: lc("2345-7", "Glucose"), label: { en: "Capillary glucose", tr: "Kapiller glukoz" }, windowMin: 10, kind: "laboratory", critical: false, citationId: CITE_STROKE_GLU },
     ],
     history: [
       { intent: "onset", answer: { en: "My arm went weak suddenly this morning.", tr: "Bu sabah kolum aniden güçsüzleşti." }, redFlag: true },
@@ -604,7 +623,7 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "operating-room",
     criticalActions: [
-      { code: LOINC.wbc, label: { en: "FBC and CRP", tr: "Tam kan sayımı ve CRP" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_EM },
+      { code: LOINC.wbc, label: { en: "FBC and CRP", tr: "Tam kan sayımı ve CRP" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_APPY },
     ],
     history: [
       { intent: "onset", answer: { en: "It began near my navel and moved to the right.", tr: "Göbek çevresinde başladı, sağa göç etti." }, redFlag: true },
@@ -636,8 +655,8 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "admit-ward",
     criticalActions: [
-      { code: lc("us-abdomen", "Abdominal ultrasound"), label: { en: "Right upper quadrant ultrasound", tr: "Sağ üst kadran ultrasonu" }, windowMin: 60, kind: "imaging", critical: false, citationId: CITE_EM },
-      { code: LOINC.wbc, label: { en: "FBC and LFTs", tr: "Tam kan sayımı ve karaciğer testleri" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_EM },
+      { code: lc("us-abdomen", "Abdominal ultrasound"), label: { en: "Right upper quadrant ultrasound", tr: "Sağ üst kadran ultrasonu" }, windowMin: 60, kind: "imaging", critical: false, citationId: CITE_ACC_US },
+      { code: LOINC.wbc, label: { en: "FBC and LFTs", tr: "Tam kan sayımı ve karaciğer testleri" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_ACC_LFT },
     ],
     history: [
       { intent: "onset", answer: { en: "It started after a fatty dinner.", tr: "Yağlı bir akşam yemeğinden sonra başladı." }, redFlag: true },
@@ -669,8 +688,8 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "admit-ward",
     criticalActions: [
-      { code: lc("3040-3", "Lipase"), label: { en: "Serum lipase", tr: "Serum lipaz" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_EM },
-      { code: lc("us-abdomen", "Abdominal ultrasound"), label: { en: "Abdominal ultrasound", tr: "Karın ultrasonu" }, windowMin: 90, kind: "imaging", critical: false, citationId: CITE_EM },
+      { code: lc("3040-3", "Lipase"), label: { en: "Serum lipase", tr: "Serum lipaz" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_PANC_DX },
+      { code: lc("us-abdomen", "Abdominal ultrasound"), label: { en: "Abdominal ultrasound", tr: "Karın ultrasonu" }, windowMin: 90, kind: "imaging", critical: false, citationId: CITE_PANC_CAUSE },
     ],
     history: [
       { intent: "onset", answer: { en: "Severe pain came on across my upper belly.", tr: "Üst karnımda şiddetli ağrı başladı." }, redFlag: true },
@@ -702,8 +721,8 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "observation",
     criticalActions: [
-      { code: lc("5811-5", "Urinalysis"), label: { en: "Urinalysis", tr: "İdrar tetkiki" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_EM },
-      { code: lc("ct-kub", "CT KUB"), label: { en: "Noncontrast CT KUB", tr: "Kontrastsız BT ürografi" }, windowMin: 90, kind: "imaging", critical: false, citationId: CITE_EM },
+      { code: lc("5811-5", "Urinalysis"), label: { en: "Urinalysis", tr: "İdrar tetkiki" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_COLIC },
+      { code: lc("ct-kub", "CT KUB"), label: { en: "Noncontrast CT KUB", tr: "Kontrastsız BT ürografi" }, windowMin: 90, kind: "imaging", critical: false, citationId: CITE_COLIC },
     ],
     history: [
       { intent: "onset", answer: { en: "It came on suddenly and comes in waves.", tr: "Aniden başladı ve dalgalar halinde geliyor." }, redFlag: true },
@@ -775,8 +794,8 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "operating-room",
     criticalActions: [
-      { code: lc("19080-1", "Beta-hCG"), label: { en: "Serum beta-hCG", tr: "Serum beta-hCG" }, windowMin: 30, kind: "laboratory", critical: true, citationId: CITE_EM },
-      { code: lc("us-tv", "Transvaginal ultrasound"), label: { en: "Transvaginal ultrasound", tr: "Transvajinal ultrason" }, windowMin: 60, kind: "imaging", critical: true, citationId: CITE_EM },
+      { code: lc("19080-1", "Beta-hCG"), label: { en: "Serum beta-hCG", tr: "Serum beta-hCG" }, windowMin: 30, kind: "laboratory", critical: true, citationId: CITE_ECTOPIC_TEST },
+      { code: lc("us-tv", "Transvaginal ultrasound"), label: { en: "Transvaginal ultrasound", tr: "Transvajinal ultrason" }, windowMin: 60, kind: "imaging", critical: true, citationId: CITE_ECTOPIC_REFER },
     ],
     history: [
       { intent: "onset", answer: { en: "Sharp lower abdominal pain started today.", tr: "Bugün keskin alt karın ağrısı başladı." }, redFlag: true },
@@ -811,8 +830,8 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "admit-icu",
     criticalActions: [
-      { code: lc("2345-7", "Glucose"), label: { en: "Glucose, ketones and venous gas", tr: "Glukoz, keton ve venöz kan gazı" }, windowMin: 15, kind: "laboratory", critical: true, citationId: CITE_EM },
-      { code: lc("fluids-insulin", "Fluids and insulin"), label: { en: "IV fluids and insulin infusion", tr: "IV sıvı ve insülin infüzyonu" }, windowMin: 60, kind: "procedure", critical: true, citationId: CITE_EM },
+      { code: lc("2345-7", "Glucose"), label: { en: "Glucose, ketones and venous gas", tr: "Glukoz, keton ve venöz kan gazı" }, windowMin: 15, kind: "laboratory", critical: true, citationId: CITE_DKA_DX },
+      { code: lc("fluids-insulin", "Fluids and insulin"), label: { en: "IV fluids and insulin infusion", tr: "IV sıvı ve insülin infüzyonu" }, windowMin: 60, kind: "procedure", critical: true, citationId: CITE_DKA_RX },
     ],
     history: [
       { intent: "onset", answer: { en: "I have been very thirsty and weeing a lot for days.", tr: "Günlerdir çok susadım ve sık idrara çıkıyorum." }, redFlag: true },
@@ -882,7 +901,7 @@ const PRESENTATIONS: PresentationTemplate[] = [
     ],
     disposition: "admit-ward",
     criticalActions: [
-      { code: lc("iv-antibiotics", "IV antibiotics"), label: { en: "Urine culture and IV antibiotics", tr: "İdrar kültürü ve IV antibiyotik" }, windowMin: 45, kind: "procedure", critical: true, citationId: CITE_EM },
+      { code: lc("iv-antibiotics", "IV antibiotics"), label: { en: "Urine culture and IV antibiotics", tr: "İdrar kültürü ve IV antibiyotik" }, windowMin: 45, kind: "procedure", critical: true, citationId: CITE_PYELO },
       { code: LOINC.wbc, label: { en: "FBC, CRP and cultures", tr: "Tam kan sayımı, CRP ve kültür" }, windowMin: 30, kind: "laboratory", critical: false, citationId: CITE_EM },
     ],
     history: [

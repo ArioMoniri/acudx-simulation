@@ -7,9 +7,9 @@
  * app imports. The superseded single-case demo fixtures (the chest-pain case,
  * its transcript, and the static vitals series) have been REMOVED — encounters
  * now run on generated `CaseInstance`s and the live `encounterStore`. What
- * remains as VALUES is genuinely in use: the guideline `citations` (+
- * `getCitation`), the cited `guidanceHints`, and the `recommendedCases`
- * fallback rail.
+ * remains as a VALUE is genuinely in use: the `recommendedCases` fallback
+ * rail. Citations and guidance hints moved to the verified guideline API
+ * (src/lib/guidelinesApi.ts); nothing clinical is hard-coded here.
  *
  * Everything is education-only sample content. No real patient data.
  * Turkish strings use correct clinical terminology.
@@ -105,102 +105,23 @@ export interface VitalReading {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Guidance hints (cited)                                                     */
+/* Guidance citations (API-backed)                                            */
 /* -------------------------------------------------------------------------- */
 
-export interface Citation {
-  id: string;
-  /** Short label shown in callouts, e.g. "ESC ACS 2023". */
-  label: string;
-  source: Bilingual;
-  /** ISO date the guideline snapshot was last reviewed. */
-  lastReviewed: string;
-}
+/**
+ * Citations and guidance hints are NOT authored here any more. Every clinical
+ * sentence a learner sees comes from the verified GuidelineStatement store
+ * (server/guidelines) through src/lib/guidelinesApi.ts, which also carries the
+ * view-model types. The aliases below keep the shared schema importable from
+ * this hub; `citationId` fields across the app hold verified statement ids.
+ */
+import type {
+  CitationView as ApiCitationView,
+  GuidanceHint as ApiGuidanceHint,
+} from "@/lib/guidelinesApi";
 
-export interface GuidanceHint {
-  id: string;
-  stage: EncounterStageMeta["key"];
-  text: Bilingual;
-  citationId: string;
-}
-
-export const citations: Citation[] = [
-  {
-    id: "esc-acs-2023",
-    label: "ESC ACS 2023",
-    source: {
-      en: "2023 ESC Guidelines for the management of acute coronary syndromes.",
-      tr: "2023 ESC Akut Koroner Sendromların Yönetimi Kılavuzu.",
-    },
-    lastReviewed: "2024-11-02",
-  },
-  {
-    id: "nice-ng185",
-    label: "NICE NG185",
-    source: {
-      en: "NICE NG185: Acute coronary syndromes, diagnosis and early management.",
-      tr: "NICE NG185: Akut koroner sendromlar, tanı ve erken yönetim.",
-    },
-    lastReviewed: "2024-09-18",
-  },
-  {
-    id: "nice-ng228",
-    label: "NICE NG228",
-    source: {
-      en: "NICE NG228: Subarachnoid haemorrhage caused by a ruptured aneurysm, diagnosis and management.",
-      tr: "NICE NG228: Rüptüre anevrizmaya bağlı subaraknoid kanama, tanı ve yönetim.",
-    },
-    lastReviewed: "2025-01-20",
-  },
-  {
-    id: "tepdad-em",
-    label: "TEPDAD",
-    source: {
-      en: "TEPDAD national core competency framework, emergency presentations.",
-      tr: "TEPDAD ulusal çekirdek yeterlilik çerçevesi, acil başvurular.",
-    },
-    lastReviewed: "2024-06-30",
-  },
-  {
-    id: "titck-formulary",
-    label: "TİTCK",
-    source: {
-      en: "TİTCK national medicines formulary, drug interaction reference.",
-      tr: "TİTCK ulusal ilaç formüleri, ilaç etkileşim referansı.",
-    },
-    lastReviewed: "2025-03-12",
-  },
-];
-
-export const guidanceHints: GuidanceHint[] = [
-  {
-    id: "g1",
-    stage: "history",
-    text: {
-      en: "Characterise the pain and screen for cardiac risk factors early: onset, radiation, associated sweating or nausea.",
-      tr: "Ağrıyı erken karakterize edin ve kardiyak risk faktörlerini tarayın: başlangıç, yayılım, eşlik eden terleme veya bulantı.",
-    },
-    citationId: "nice-ng185",
-  },
-  {
-    id: "g2",
-    stage: "tests",
-    text: {
-      en: "Obtain a 12-lead ECG within 10 minutes of first medical contact and repeat if the first is non-diagnostic.",
-      tr: "İlk tıbbi temastan sonraki 10 dakika içinde 12 derivasyonlu EKG çekin ve ilki tanısal değilse tekrarlayın.",
-    },
-    citationId: "esc-acs-2023",
-  },
-  {
-    id: "g3",
-    stage: "tests",
-    text: {
-      en: "Use a high-sensitivity troponin 0/1-hour or 0/2-hour protocol to rule in or rule out myocardial infarction.",
-      tr: "Miyokart enfarktüsünü dışlamak veya doğrulamak için yüksek duyarlıklı troponin 0/1 saat veya 0/2 saat protokolü kullanın.",
-    },
-    citationId: "esc-acs-2023",
-  },
-];
+export type Citation = ApiCitationView;
+export type GuidanceHint = ApiGuidanceHint;
 
 /* -------------------------------------------------------------------------- */
 /* Feedback report                                                            */
@@ -438,14 +359,3 @@ export interface RecentFeedbackItem {
   daysAgo: number;
 }
 
-/* -------------------------------------------------------------------------- */
-/* Convenience lookups                                                        */
-/* -------------------------------------------------------------------------- */
-
-export function getCitation(id: string): Citation | undefined {
-  return citations.find((c) => c.id === id);
-}
-
-export function getCitationLabel(id: string): string {
-  return getCitation(id)?.label ?? id;
-}

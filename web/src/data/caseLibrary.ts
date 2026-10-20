@@ -15,6 +15,7 @@
 import type { Bilingual, Lang } from "@/data/mock";
 import { CODE_SYSTEMS } from "@/domain/fhir";
 import type { CaseInstance } from "@/domain/case";
+import { cachedCitation } from "@/lib/guidelinesApi";
 import { CHIEF_COMPLAINT_FAMILIES, type ChiefComplaintFamily } from "@/domain/caseGen";
 
 /* -------------------------------------------------------------------------- */
@@ -119,13 +120,6 @@ export function codeChipOf(c: CaseInstance): CaseCodeChip {
 /* Guideline tag                                                               */
 /* -------------------------------------------------------------------------- */
 
-/** Map a workup citationId to the short guideline label shown as a pill. */
-const CITATION_TAG: Record<string, string> = {
-  "esc-acs-2023": "ESC ACS 2023",
-  "nice-ng185": "NICE NG185",
-  "nice-ng228": "NICE NG228",
-  "tepdad-em": "TEPDAD",
-};
 
 /**
  * Pick the headline guideline tag: prefer the citation on the first critical
@@ -134,8 +128,10 @@ const CITATION_TAG: Record<string, string> = {
 export function guidelineTagOf(c: CaseInstance): string {
   const critical = c.expectedWorkup.find((w) => w.critical);
   const source = critical ?? c.expectedWorkup[0];
-  if (!source) return "TEPDAD";
-  return CITATION_TAG[source.citationId] ?? source.citationId;
+  if (!source) return "";
+  // The label comes from the verified statement cache (filled by the guideline
+  // API); without it there is no tag rather than a hard-coded one.
+  return cachedCitation(source.citationId)?.label ?? "";
 }
 
 /* -------------------------------------------------------------------------- */

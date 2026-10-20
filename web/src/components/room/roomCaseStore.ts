@@ -33,6 +33,7 @@ import {
   type RevealDatumKind,
 } from "@/domain/case";
 import { TREATMENT_CATALOG } from "@/domain/treatments";
+import { allergyCrossCheck } from "@/domain/medicationSafety";
 import { orderTiming, type OrderCategory } from "@/domain/orderCatalog";
 import {
   courseStatus,
@@ -445,8 +446,19 @@ export function placeOrderAs(
     category = timing.category;
   }
 
+  // Review 02 finding 9: a medication task always carries dose + route (the
+  // formulary adult default) so the executing role can verify the five rights.
+  const doseRoute: Bilingual | undefined =
+    treatment && treatment.defaultDose && treatment.route
+      ? {
+          en: `${treatment.defaultDose.amount} ${treatment.defaultDose.unit} ${treatment.route.en}`,
+          tr: `${treatment.defaultDose.amount} ${treatment.defaultDose.unit} ${treatment.route.tr}`,
+        }
+      : treatment?.route;
   const detail: Bilingual | undefined =
-    opts?.detail ?? (treatment?.route ? treatment.route : undefined);
+    opts?.detail && doseRoute
+      ? { en: `${doseRoute.en} · ${opts.detail.en}`, tr: `${doseRoute.tr} · ${opts.detail.tr}` }
+      : (opts?.detail ?? doseRoute);
 
   const task: RoomTask = {
     id: `${roomId}-t${s.tasks.length + 1}-${seqCounter}`,
@@ -538,6 +550,14 @@ export function completeTask(
 
   const at = elapsedMsOf(s);
 
+  // Review 02 finding 9: the executing role checks the patient's allergy band
+  // against the drug (and its cross-reacting class) BEFORE the dose is given. A
+  // conflict leaves the task done-but-withheld: the treatment never enters the
+  // course and the event records why, so the nurse's refusal is scorable.
+  const allergy =
+    target.kind === "medication" ? allergyCrossCheck(target.code, s.caseInstance.allergies) : { conflict: false };
+  const withheld = allergy.conflict;
+
   updateTask(
     roomId,
     taskId,
@@ -552,9 +572,15 @@ export function completeTask(
       completedByAi: ai,
       completedAt: at,
     }),
-    (t, st) => appendEvent(st, "complete", role, ai, t.id, { label: t.label }),
+    (t, st) =>
+      appendEvent(st, "complete", role, ai, t.id, {
+        label: t.label,
+        meta: withheld
+          ? { withheld: "allergy-conflict", allergy: allergy.matched ?? "" }
+          : { mar: true, detail: t.detail?.en ?? "" },
+      }),
     (t) =>
-      t.kind === "medication"
+      t.kind === "medication" && !withheld
         ? { treatments: [...s.treatments, { code: t.code, at }] }
         : {},
   );

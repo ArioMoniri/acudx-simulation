@@ -94,3 +94,64 @@ def firewall_rules_body() -> dict:
 @pytest.fixture
 def cloud_init_template() -> str:
     return CLOUD_INIT.read_text(encoding="utf-8")
+
+
+# ---- Guideline store / verifier / tips fixtures ----
+from server.guidelines.store import EXPORT_PATH, GuidelineStore  # noqa: E402
+
+
+@pytest.fixture()
+def fresh_store() -> GuidelineStore:
+    """An empty in-memory store (no seed, no evidence)."""
+    store = GuidelineStore(":memory:")
+    yield store
+    store.close()
+
+
+@pytest.fixture()
+def seeded_store() -> GuidelineStore:
+    """Drafts only: the legacy seed and the open seed migrated, nothing verified."""
+    store = GuidelineStore(":memory:")
+    store.seed()
+    yield store
+    store.close()
+
+
+@pytest.fixture()
+def evidence_store() -> GuidelineStore:
+    """The committed verification evidence (statements.verified.json) loaded offline."""
+    assert Path(EXPORT_PATH).exists(), "server/guidelines/statements.verified.json is missing"
+    store = GuidelineStore(":memory:")
+    store.import_json(EXPORT_PATH)
+    yield store
+    store.close()
+
+
+@pytest.fixture()
+def isolated_db(tmp_path, monkeypatch):
+    """Point the process-wide store at a temp DB (routes use get_store())."""
+    from server.guidelines import store as store_mod
+
+    path = tmp_path / "acudx-test.db"
+    monkeypatch.setenv("ACUDX_DB_PATH", str(path))
+    store_mod.reset_store()
+    yield path
+    store_mod.reset_store()
+
+
+def skip_live() -> bool:
+    return os.environ.get("ACUDX_SKIP_LIVE", "") in ("1", "true", "yes")
+
+
+# ---- App-level TestClient against the real server.app (health/guard routes) ----
+from collections.abc import Iterator  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+os.environ.setdefault("STATUS_DISK_PATH", "/")
+
+
+@pytest.fixture(scope="session")
+def client() -> Iterator[TestClient]:
+    from server.app import app  # noqa: PLC0415 — after env is set
+
+    with TestClient(app) as c:
+        yield c

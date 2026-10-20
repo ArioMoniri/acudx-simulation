@@ -39,3 +39,9 @@ __pycache__/
 .pytest_cache/
 server/data/*.db
 server/data/*.db-journal
+# Python venv
+.venv/
+
+# Playwright
+web/playwright-report/
+web/test-results/

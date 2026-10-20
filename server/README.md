@@ -129,6 +129,8 @@ asyncio task started in the app lifespan) terminates it after
 | `LAMBDA_KEY` (alias `LAMBDA_API_KEY`) | unset | Lambda Cloud API key |
 | `LAMBDA_SSH_KEY_NAME` | unset | name of exactly one registered ssh key |
 | `GPU_IDLE_MINUTES` | `20` | idle window before termination |
+| `GPU_READY_TIMEOUT_S` | `2700` | how long a fresh worker may take to pass /healthz before it is terminated (cold boot pulls the vLLM image and the model weights) |
+| `GPU_BOOT_TIMEOUT_S` | `900` | how long the provider may take to report the instance active with an IP |
 | `GPU_DAILY_BUDGET_USD` | `25.0` | hard daily cap |
 | `GPU_LLM_MODEL` | `Qwen/Qwen3-32B-AWQ` | model vLLM loads on the worker |
 | `GPU_INSTANCE_ALLOWLIST` | see above | CSV or JSON list |

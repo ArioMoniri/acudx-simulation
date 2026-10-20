@@ -130,22 +130,8 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
   const caseInstance = state.caseInstance;
   const chief = caseInstance ? caseInstance.chiefComplaint[lang] : "";
   const lastLabel = lastActionPhrase(state, caseInstance, lang, t);
-  const citationIds = useMemo(
-    () =>
-      caseInstance
-        ? Array.from(new Set(caseInstance.expectedWorkup.map((w) => w.citationId)))
-        : [],
-    [caseInstance],
-  );
-  const orderCodes = useMemo(
-    () =>
-      caseInstance
-        ? caseInstance.expectedWorkup.map((w) => w.code.coding[0]?.code ?? "")
-        : [],
-    [caseInstance],
-  );
   const query = [chief, lastLabel].filter(Boolean).join(" · ");
-  const grounding = useLiveGrounding({ query, locale: lang, citationIds, orderCodes });
+  const grounding = useLiveGrounding({ query, locale: lang });
 
   // Number the citations in appearance order for the footnotes block.
   const noted = useMemo(() => {
@@ -200,7 +186,7 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
             <p className="text-xs text-muted">{t("guidance3.panel.subtitle")}</p>
           </div>
         </div>
-        <ReferencePill degraded={grounding.degraded} loading={grounding.loading} />
+        <ReferencePill degraded={grounding.unavailable} loading={grounding.loading} />
       </div>
 
       {/* Lead cited guideline card — the focus of the moment. */}
@@ -223,7 +209,27 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
             {lead.passage.text}
             <FootnoteRef n={lead.n} />
           </p>
-        ) : null}
+        ) : grounding.loading ? (
+          <p className="mt-3 text-sm text-muted" aria-busy="true">
+            {t("guidance3.reference.loading")}
+          </p>
+        ) : (
+          <div
+            role="status"
+            className="mt-3 flex items-start gap-2 rounded-control border border-dashed border-border bg-bg-subtle p-2.5"
+          >
+            <CloudSlash weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" aria-hidden />
+            <p className="text-xs leading-relaxed text-muted">
+              <span className="font-semibold text-fg">
+                {t("guidance3.unavailable.title", { defaultValue: "Guidance unavailable" })}
+              </span>{" "}
+              {t("guidance3.unavailable.body", {
+                defaultValue:
+                  "No verified guideline statement could be served for this step. Nothing is shown rather than an unverified hint.",
+              })}
+            </p>
+          </div>
+        )}
 
         {/* High-yield inset: red-flag reminder */}
         {coverage.redFlags.total > 0 ? (
@@ -450,7 +456,7 @@ function ReferencePill({ degraded, loading }: { degraded: boolean; loading: bool
         ? t("guidance3.reference.loading")
         : live
           ? t("guidance3.reference.live")
-          : t("guidance3.reference.offline")}
+          : t("guidance3.unavailable.short", { defaultValue: "Guidance unavailable" })}
     </span>
   );
 }

@@ -93,6 +93,35 @@
       "skin": "Skin",
       "ent": "ENT",
       "focused-special": "Focused special test"
+    },
+    "citation": {
+      "loading": "Loading citation",
+      "unavailable": "Source unavailable",
+      "unavailableBody": "This source has not been verified against its document, so it is not shown. Nothing here is invented.",
+      "verified": "Verified {{date}}",
+      "unverifiedDate": "Verification date unknown"
+    },
+    "unavailable": {
+      "title": "Guidance unavailable",
+      "short": "Guidance unavailable",
+      "body": "No verified guideline statement could be served for this step. Nothing is shown rather than an unverified hint."
+    },
+    "tips": {
+      "title": "Attending tips",
+      "subtitle": "Short, actionable, each one traced to a verified guideline statement",
+      "pitfall": "Pitfall",
+      "timing": "Timing",
+      "empty": "No verified tips for this condition yet.",
+      "locked": "Treatment and disposition tips unlock once you reach the assessment stage.",
+      "loading": "Loading attending tips",
+      "stage": {
+        "triage": "Triage",
+        "history": "History",
+        "exam": "Examination",
+        "workup": "Work-up",
+        "treatment": "Treatment",
+        "disposition": "Disposition"
+      }
     }
   }
 }

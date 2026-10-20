@@ -39,6 +39,7 @@ from server.admin_routes import router as admin_router
 from server.case_generator import generate_case_spec
 from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
+from server.guidelines.routes import router as guidelines_router
 from server.model_gateway import GatewayError, ModelGateway
 from server.orchestration.routes import router as orchestration_v2_router
 from server.persona import build_patient_turn, fact_assertion_gate
@@ -108,7 +109,8 @@ async def lifespan(app: FastAPI):
     registry.seed_from_env(settings)
     telemetry = TelemetryRecorder(settings.acudx_db_path)
     # On-demand GPU worker manager + idle reaper (never always-on; see providers/gpu_worker.py).
-    worker_manager = WorkerManager(settings)
+    worker_manager = WorkerManager(settings, boot_timeout_s=settings.gpu_boot_timeout_s,
+                                   ready_timeout_s=settings.gpu_ready_timeout_s)
     resolver = RegistryResolver(registry, settings, worker_manager=worker_manager)
     gateway = ModelGateway(settings, resolver=resolver, telemetry=telemetry)  # may raise EgressBlocked under AIRGAPPED+api
     await gateway.start()
@@ -154,6 +156,7 @@ app.include_router(results_router)  # /v1/results/* and /v1/imaging/resolve (ser
 app.include_router(registry_router)
 app.include_router(voice_router)        # /v1/voice/* (server/voice/routes.py)
 app.include_router(voice_admin_router)  # /admin/voice/agent-config
+app.include_router(guidelines_router)  # /v1/guidelines/* + /admin/guidelines/verify
 
 
 # Telemetry context: every model call made while serving a request is tagged

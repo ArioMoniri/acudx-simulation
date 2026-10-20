@@ -39,6 +39,15 @@ import {
   type CourseStatus,
   type CurrentVitals,
 } from "@/domain/clinicalCourse";
+import {
+  allergyCrossCheck,
+  defaultOrderFor,
+  fiveRightsCheck,
+  marOutcome,
+  type MedicationAdministrationRecord,
+  type MedicationOrder,
+} from "@/domain/medicationSafety";
+import { gateFor } from "@/domain/treatmentRules";
 
 /* -------------------------------------------------------------------------- */
 /* Event log + state shapes                                                    */
@@ -50,6 +59,8 @@ export type EncounterEventType =
   | "order"
   | "result"
   | "treatment"
+  /** Medication administration record line (five rights + allergy check). */
+  | "mar"
   | "diagnosis"
   | "note"
   | "stage";
@@ -175,6 +186,12 @@ export interface EncounterState {
   results: ResolvedResult[];
   /** Treatments the learner has administered (drives the live vitals course). */
   treatments: AdministeredTreatment[];
+  /**
+   * Medication administration record: one line per attempted administration
+   * with its five-rights + allergy checks and outcome (given / flagged / blocked).
+   * Review 02 finding 9.
+   */
+  mar: MedicationAdministrationRecord[];
   problemList: ProblemListEntry[];
   events: EncounterEvent[];
   /**
@@ -217,6 +234,7 @@ function initialState(): EncounterState {
     orders: [],
     results: [],
     treatments: [],
+    mar: [],
     problemList: [],
     events: [],
     dialogue: [],
@@ -447,32 +465,112 @@ function resolveOrder(code: string): void {
 }
 
 /**
- * Administer a treatment by code. Appends a `treatment` event (with the
- * case-derived appropriateness) and records it so the live vitals course
- * (src/domain/clinicalCourse.ts) applies its effect from now on. Advances the
- * stage to "orders" if still pre-orders, otherwise keeps the current stage.
+ * Administer a complete medication order.
+ *
+ * Review 02 finding 9 (critical): every administration first passes the
+ * five-rights check (patient, drug, dose, route, time) and the allergy
+ * cross-check against `caseInstance.allergies`. A `mar` event is ALWAYS
+ * appended with the checks and outcome. Only when nothing blocks does the
+ * treatment enter the live course (a `treatment` event with the case-derived
+ * or gate-derived appropriateness, so a nitrate at SBP 86 is scored as a
+ * contraindicated choice — review 02 finding 8). Advances the stage to
+ * "orders" if still pre-orders, otherwise keeps the current stage.
+ *
+ * Returns the MAR line so the UI can show why an order was blocked / flagged.
  */
-export function administerTreatment(
-  code: string,
-  label?: { en: string; tr: string },
-): void {
+export function administerMedication(
+  order: MedicationOrder,
+  opts: { label?: { en: string; tr: string }; administeredBy?: string } = {},
+): MedicationAdministrationRecord | null {
   const c = state.caseInstance;
-  if (!c) return;
-  const resp = c.treatmentResponses?.find((r) => r.treatmentCode === code);
-  const appropriateness = resp?.appropriateness ?? "neutral";
+  if (!c) return null;
   const at = nowOffset();
-  const ev = appendEvent("treatment", code, {
+  const checks = fiveRightsCheck(order, {
+    orderedForPatientId: c.patient.id,
+    bedsidePatientId: c.patient.id,
+    allergies: c.allergies,
+    weightKg: order.weightKg ?? c.patient.weightKg,
+    priorMar: state.mar,
+    nowMs: at,
+  });
+  const allergy = allergyCrossCheck(order.drug, c.allergies);
+  const outcome = marOutcome(checks);
+  const record: MedicationAdministrationRecord = {
+    id: `mar-${seqCounter}`,
+    order,
+    patientId: c.patient.id,
+    administeredBy: opts.administeredBy ?? "doctor",
+    at,
+    checks,
+    allergy,
+    outcome,
+  };
+  const marEv = appendEvent("mar", order.drug, {
+    outcome,
+    dose: order.dose,
+    unit: order.unit,
+    route: order.route,
+    indication: order.indication,
+    administeredBy: record.administeredBy,
+    failures: checks.failures.map((f) => f.code),
+    allergyConflict: allergy.conflict,
+    ...(opts.label ? { display: opts.label.en } : {}),
+  });
+
+  if (outcome === "blocked") {
+    setState({ ...state, mar: [...state.mar, record], events: [...state.events, marEv] });
+    return record;
+  }
+
+  // Appropriateness: the case's bespoke response wins; otherwise the gate on the
+  // live vitals (review 02 finding 8); otherwise neutral.
+  const resp = c.treatmentResponses?.find((r) => r.treatmentCode === order.drug);
+  const vitals = currentVitals(c, at, state.treatments);
+  const gate = resp ? null : gateFor(order.drug, c, vitals, state.treatments, at);
+  const appropriateness = resp?.appropriateness ?? gate?.appropriateness ?? "neutral";
+  const ev = appendEvent("treatment", order.drug, {
     appropriateness,
-    ...(label ? { display: label.en } : {}),
+    ...(gate ? { reason: gate.reason, effective: gate.allowed } : {}),
+    dose: order.dose,
+    unit: order.unit,
+    route: order.route,
+    ...(outcome === "flagged" ? { flagged: checks.failures.map((f) => f.code) } : {}),
+    ...(opts.label ? { display: opts.label.en } : {}),
   });
   const prePlan =
     state.stage === "chart-review" || state.stage === "interview" || state.stage === "exam";
   setState({
     ...state,
-    treatments: [...state.treatments, { code, at }],
+    treatments: [...state.treatments, { code: order.drug, at }],
+    mar: [...state.mar, record],
     stage: prePlan ? "orders" : state.stage,
-    events: [...state.events, ev],
+    events: [...state.events, marEv, ev],
   });
+  return record;
+}
+
+/**
+ * Administer a treatment by code using the formulary's adult default dose and
+ * route (a protocol-default order). Kept for the one-click paths; it runs the
+ * same five-rights + allergy check as {@link administerMedication}. Codes
+ * absent from the formulary are blocked (an order without dose/route cannot be
+ * administered — review 02 finding 9).
+ */
+export function administerTreatment(
+  code: string,
+  label?: { en: string; tr: string },
+): MedicationAdministrationRecord | null {
+  const c = state.caseInstance;
+  if (!c) return null;
+  const order = defaultOrderFor(code, c.patient.weightKg) ?? {
+    drug: code,
+    dose: Number.NaN,
+    unit: "",
+    route: "IV" as const,
+    frequency: "",
+    indication: "",
+  };
+  return administerMedication(order, { label });
 }
 
 /** Commit a working diagnosis by code + display. */
@@ -630,6 +728,11 @@ export function getEncounterClockMs(s: EncounterState): number {
 /** Treatments the learner has administered so far. */
 export function getTreatments(s: EncounterState): AdministeredTreatment[] {
   return s.treatments;
+}
+
+/** The medication administration record (every attempted administration). */
+export function getMar(s: EncounterState): MedicationAdministrationRecord[] {
+  return s.mar;
 }
 
 /** The patient's effective vitals right now (baseline + treatment ramps). */

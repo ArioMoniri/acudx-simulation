@@ -280,6 +280,26 @@ class Lab(_Base):
     ref_high: float | str | None = None
     flag: str = "N"
     category: str = "chemistry"
+    # Review 02 finding 39: qualitative results (dipstick, xanthochromia) carry
+    # their word here and map to the client's qualitative analyte spec.
+    qualitative: Optional[str] = None
+    # Review 02 finding 38: time since ingestion for nomogram-interpreted levels.
+    hours_post_ingestion: Optional[float] = None
+
+
+class RedFlag(_Base):
+    """A structured red flag. ``channel`` says who can know it: ``patient``
+    (lay-language symptom the patient can report) or ``clinician`` (a sign or
+    result surfaced only through exam, monitor or results). Review 02 finding 3."""
+    en: str
+    tr: str
+    channel: str = "clinician"
+
+    @field_validator("channel", mode="before")
+    @classmethod
+    def _channel(cls, v: Any) -> str:
+        s = str(v or "").strip().lower()
+        return s if s in ("patient", "clinician") else "clinician"
 
 
 class Imaging(_Base):
@@ -358,6 +378,7 @@ class GeneratedCaseSpec(_Base):
     treatments: list[Treatment] = []
     disposition: str = "observation"
     guideline_anchors: list[GuidelineAnchor] = []
+    red_flags: list[RedFlag] = []
 
     @field_validator("acuity_esi", "difficulty", mode="before")
     @classmethod
@@ -403,6 +424,11 @@ def _resolve_fixture(cond: dict[str, Any]) -> dict[str, Any]:
         for key in ("labs", "imaging", "treatments", "guide"):
             if key in fixture:
                 prof[key] = fixture[key]
+    # Review 02 finding 4: condition-specific exam findings win over the
+    # system-level non-revealing default.
+    exam = case_fixtures.CONDITION_EXAM.get(cond.get("id", ""))
+    if exam:
+        prof["exam"] = exam
     return prof
 
 
@@ -411,6 +437,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "cardiology": {
         "maneuver": "cardiovascular", "system_en": "Cardiovascular", "system_tr": "Kardiyovasküler",
         "age": (48, 82),
+        "exam": [("cardiovascular", "Cardiovascular", "Kardiyovasküler", "Regular pulse, normal heart sounds, no murmur; JVP not raised; no peripheral oedema.", "Düzenli nabız, normal kalp sesleri, üfürüm yok; JVP yüksek değil; periferik ödem yok.", False)],
         "labs": [
             ("67151-1", "High-sensitivity troponin", "Yüksek duyarlıklı troponin", 180, "ng/L", 0, 14, "HH", "cardiac"),
             ("2160-0", "Creatinine", "Kreatinin", 1.1, "mg/dL", 0.6, 1.3, "N", "chemistry"),
@@ -419,8 +446,9 @@ _PROFILES: dict[str, dict[str, Any]] = {
                     "Dynamic ST-T changes without ST elevation.", "ST yükselmesi olmadan dinamik ST-T değişiklikleri.",
                     "ischemic ECG ST depression 12-lead", "iskemik EKG ST çökmesi 12 derivasyon"),
         "treatments": [
-            ("asa", "Aspirin 300 mg PO", "Aspirin 300 mg PO", "indicated", [("pain", -1.0, 600000)], "Loading aspirin for suspected ACS.", "Şüpheli AKS için aspirin yükleme."),
-            ("gtn", "Sublingual nitrate", "Dilaltı nitrat", "indicated", [("pain", -2.0, 300000), ("systolic", -8.0, 300000)], "Nitrate eases ischaemic chest pain.", "Nitrat iskemik göğüs ağrısını azaltır."),
+            # Review 02 finding 15: aspirin is an antiplatelet with no analgesic effect.
+            ("asa", "Aspirin 300 mg PO", "Aspirin 300 mg PO", "indicated", [], "Loading aspirin for suspected ACS (antiplatelet, not analgesic).", "Şüpheli AKS için aspirin yükleme (antiplatelet, analjezik değil)."),
+            ("gtn", "Sublingual nitrate", "Dilaltı nitrat", "indicated", [("pain", -2.0, 300000), ("systolic", -8.0, 300000)], "Nitrate eases ischaemic chest pain when SBP >= 90 and no PDE-5 inhibitor.", "SKB >= 90 ve PDE-5 inhibitörü yoksa nitrat iskemik göğüs ağrısını azaltır."),
             ("thrombolysis", "Empiric thrombolysis", "Ampirik tromboliz", "contraindicated", [], "Not indicated without STEMI confirmation.", "STEMI doğrulanmadan endike değildir."),
         ],
         "guide": ("ESC", "2023 ESC ACS Guidelines (summary)", "Obtain a 12-lead ECG within 10 minutes and serial troponin for suspected ACS.", "Şüpheli AKS'de 10 dakika içinde EKG ve seri troponin alın."),
@@ -428,6 +456,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "pulmonology": {
         "maneuver": "respiratory", "system_en": "Respiratory", "system_tr": "Solunum",
         "age": (30, 78),
+        "exam": [("respiratory", "Respiratory", "Solunum", "Increased work of breathing; reduced air entry at one base with scattered added sounds.", "Artmış solunum iş yükü; bir bazalde azalmış hava girişi ve dağınık ek sesler.", True)],
         "labs": [
             ("2703-7", "Arterial pO2", "Arteriyel pO2", 62, "mmHg", 80, 100, "L", "blood-gas"),
             ("48065-7", "D-dimer", "D-dimer", 1200, "ng/mL", 0, 500, "H", "coagulation"),
@@ -438,13 +467,16 @@ _PROFILES: dict[str, dict[str, Any]] = {
         "treatments": [
             ("o2", "Controlled oxygen to target SpO2", "Hedef SpO2'ye kontrollü oksijen", "indicated", [("spo2", 4.0, 120000)], "Titrated oxygen corrects hypoxia.", "Titre edilen oksijen hipoksiyi düzeltir."),
             ("salbutamol", "Nebulised bronchodilator", "Nebülize bronkodilatör", "indicated", [("rr", -4.0, 300000)], "Relieves bronchospasm.", "Bronkospazmı giderir."),
-            ("routine_abx", "Routine antibiotics for all comers", "Herkese rutin antibiyotik", "neutral", [], "Reserve antibiotics for a bacterial source.", "Antibiyotiği bakteriyel kaynak için saklayın."),
+            # Review 02 finding 40: empirical antibiotics for non-bacterial dyspnoea are a
+            # stewardship error (NICE NG114 https://www.nice.org.uk/guidance/ng114).
+            ("routine_abx", "Routine antibiotics for all comers", "Herkese rutin antibiyotik", "contraindicated", [], "Reserve antibiotics for a bacterial source (pneumonia, purulent COPD exacerbation).", "Antibiyotiği bakteriyel kaynak için saklayın (pnömoni, pürülan KOAH alevlenmesi)."),
         ],
         "guide": ("NICE", "NICE respiratory guidance (summary)", "Give controlled oxygen titrated to a target SpO2 range and treat the underlying cause.", "Hedef SpO2 aralığına titre edilmiş kontrollü oksijen verin ve altta yatan nedeni tedavi edin."),
     },
     "gastroenterology": {
         "maneuver": "abdominal", "system_en": "Abdominal", "system_tr": "Karın",
         "age": (18, 70),
+        "exam": [("abdominal", "Abdominal", "Karın", "Soft abdomen with localised tenderness, no peritonism; bowel sounds present.", "Yumuşak karın, lokalize hassasiyet, peritonizm yok; bağırsak sesleri var.", True)],
         "labs": [
             ("6690-2", "White cell count", "Lökosit", 15.2, "10^9/L", 4.0, 11.0, "H", "haematology"),
             ("1988-5", "C-reactive protein", "CRP", 68, "mg/L", 0, 5, "H", "chemistry"),
@@ -463,6 +495,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "neurology": {
         "maneuver": "neurological", "system_en": "Neurological", "system_tr": "Nörolojik",
         "age": (35, 80),
+        "exam": [("neurological", "Neurological", "Nörolojik", "GCS 15, pupils equal and reactive, no focal limb deficit; gait not yet assessed.", "GKS 15, pupiller eşit ve reaktif, fokal ekstremite defisiti yok; yürüyüş henüz değerlendirilmedi.", False)],
         "labs": [
             ("2345-7", "Capillary glucose", "Kapiller glukoz", 6.4, "mmol/L", 4.0, 7.8, "N", "chemistry"),
             ("2160-0", "Creatinine", "Kreatinin", 0.9, "mg/dL", 0.6, 1.3, "N", "chemistry"),
@@ -480,6 +513,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "infectious": {
         "maneuver": "general-inspection", "system_en": "General", "system_tr": "Genel",
         "age": (18, 80),
+        "exam": [("general-inspection", "General", "Genel", "Flushed and febrile, warm peripheries, capillary refill 2 s; no rash.", "Kızarık ve ateşli, sıcak ekstremiteler, kapiller dolum 2 s; döküntü yok.", True)],
         "labs": [
             ("6690-2", "White cell count", "Lökosit", 16.8, "10^9/L", 4.0, 11.0, "H", "haematology"),
             ("2524-7", "Lactate", "Laktat", 2.6, "mmol/L", 0.5, 2.0, "H", "blood-gas"),
@@ -490,7 +524,8 @@ _PROFILES: dict[str, dict[str, Any]] = {
                     "chest x-ray infection source", "akciğer grafisi enfeksiyon kaynağı"),
         "treatments": [
             ("cultures", "Blood cultures before antibiotics", "Antibiyotik öncesi kan kültürü", "indicated", [], "Culture before antibiotics if no delay.", "Geciktirmiyorsa antibiyotik öncesi kültür alın."),
-            ("abx", "Broad-spectrum IV antibiotics", "Geniş spektrumlu IV antibiyotik", "indicated", [("tempC", -0.6, 1800000)], "Early antibiotics for suspected sepsis.", "Şüpheli sepsiste erken antibiyotik."),
+            # Review 02 finding 14: no 30-minute antipyresis from antibiotics.
+            ("abx", "Broad-spectrum IV antibiotics", "Geniş spektrumlu IV antibiyotik", "indicated", [], "Early antibiotics for suspected sepsis.", "Şüpheli sepsiste erken antibiyotik."),
             ("iv_fluids", "IV fluid resuscitation", "IV sıvı resüsitasyonu", "indicated", [("hr", -10.0, 600000), ("systolic", 10.0, 600000)], "Restore perfusion.", "Perfüzyonu düzeltin."),
         ],
         "guide": ("SSC", "Surviving Sepsis Campaign (summary)", "For suspected sepsis take cultures and lactate and start antibiotics and fluids within the first hour.", "Şüpheli sepsiste kültür ve laktat alıp ilk saat içinde antibiyotik ve sıvı başlayın."),
@@ -498,6 +533,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "endocrine": {
         "maneuver": "general-inspection", "system_en": "General", "system_tr": "Genel",
         "age": (20, 75),
+        "exam": [("general-inspection", "General", "Genel", "Dry mucous membranes, reduced skin turgor; alert and orientated.", "Kuru mukozalar, azalmış turgor; uyanık ve oryante.", True)],
         "labs": [
             ("2345-7", "Plasma glucose", "Plazma glukozu", 22.0, "mmol/L", 4.0, 7.8, "HH", "chemistry"),
             ("2823-3", "Potassium", "Potasyum", 5.4, "mmol/L", 3.5, 5.0, "H", "chemistry"),
@@ -516,10 +552,11 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "renal": {
         "maneuver": "abdominal", "system_en": "Abdominal / renal", "system_tr": "Karın / renal",
         "age": (25, 80),
+        "exam": [("abdominal", "Abdominal / renal", "Karın / renal", "Mild bilateral ankle oedema; abdomen soft, bladder not palpable.", "Hafif bilateral ayak bileği ödemi; karın yumuşak, mesane ele gelmiyor.", True)],
         "labs": [
             ("2160-0", "Creatinine", "Kreatinin", 3.2, "mg/dL", 0.6, 1.3, "HH", "chemistry"),
             ("2823-3", "Potassium", "Potasyum", 6.1, "mmol/L", 3.5, 5.0, "HH", "chemistry"),
-            ("3094-0", "Urea", "Üre", 24, "mmol/L", 2.5, 7.1, "H", "chemistry"),
+            ("22664-7", "Urea", "Üre", 24, "mmol/L", 2.5, 7.1, "H", "chemistry"),  # review 02 finding 22
         ],
         "imaging": ("24558-9", "Renal tract ultrasound", "Üriner sistem ultrasonu",
                     "Assess for obstruction / hydronephrosis.", "Obstrüksiyon / hidronefroz değerlendirmesi.",
@@ -534,6 +571,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "psychiatry": {
         "maneuver": "general-inspection", "system_en": "Mental state", "system_tr": "Ruhsal durum",
         "age": (18, 55),
+        "exam": [("general-inspection", "Mental state", "Ruhsal durum", "Alert, orientated, anxious affect; speech normal in rate and content; no focal neurology.", "Uyanık, oryante, anksiyöz duygudurum; konuşma hız ve içerik olarak normal; fokal nöroloji yok.", False)],
         "labs": [
             ("2345-7", "Capillary glucose", "Kapiller glukoz", 5.2, "mmol/L", 4.0, 7.8, "N", "chemistry"),
             ("3084-1", "Urate / metabolic screen", "Ürat / metabolik tarama", 5.0, "mg/dL", 3.5, 7.2, "N", "chemistry"),
@@ -551,6 +589,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "hematology": {
         "maneuver": "general-inspection", "system_en": "General", "system_tr": "Genel",
         "age": (18, 75),
+        "exam": [("general-inspection", "General", "Genel", "Pale conjunctivae; scattered bruises on the forearms; no lymphadenopathy.", "Soluk konjonktivalar; ön kollarda dağınık morluklar; lenfadenopati yok.", True)],
         "labs": [
             ("718-7", "Haemoglobin", "Hemoglobin", 7.8, "g/dL", 12.0, 16.0, "L", "haematology"),
             ("777-3", "Platelets", "Trombosit", 60, "10^9/L", 150, 400, "L", "haematology"),
@@ -560,7 +599,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
                     "Screen for occult infection in cytopenia.", "Sitopenide gizli enfeksiyon taraması.",
                     "chest x-ray neutropenia infection", "akciğer grafisi nötropeni enfeksiyon"),
         "treatments": [
-            ("neutropenic_abx", "Immediate broad-spectrum antibiotics", "Hemen geniş spektrumlu antibiyotik", "indicated", [("tempC", -0.5, 1800000)], "Neutropenic fever is a time-critical emergency.", "Nötropenik ateş zaman kritik bir acildir."),
+            ("neutropenic_abx", "Immediate broad-spectrum antibiotics", "Hemen geniş spektrumlu antibiyotik", "indicated", [], "Neutropenic fever is a time-critical emergency.", "Nötropenik ateş zaman kritik bir acildir."),
             ("transfuse", "Transfuse per threshold", "Eşiğe göre transfüzyon", "indicated", [], "Transfuse symptomatic anaemia.", "Semptomatik anemiyi transfüze edin."),
             ("delay_abx", "Delay antibiotics for cultures", "Kültür için antibiyotiği ertele", "contraindicated", [], "Do not delay antibiotics in neutropenic fever.", "Nötropenik ateşte antibiyotiği geciktirmeyin."),
         ],
@@ -569,6 +608,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "obstetrics-gynecology": {
         "maneuver": "abdominal", "system_en": "Abdominal / pelvic", "system_tr": "Karın / pelvik",
         "age": (18, 42),
+        "exam": [("abdominal", "Abdominal / pelvic", "Karın / pelvik", "Lower abdominal tenderness, no peritonism; speculum: closed os, scant dark loss.", "Alt karın hassasiyeti, peritonizm yok; spekulum: kapalı os, az miktarda koyu akıntı.", True)],
         "labs": [
             ("2118-8", "Serum beta-hCG", "Serum beta-hCG", 1500, "IU/L", 0, 5, "H", "chemistry"),
             ("718-7", "Haemoglobin", "Hemoglobin", 10.5, "g/dL", 12.0, 16.0, "L", "haematology"),
@@ -586,8 +626,9 @@ _PROFILES: dict[str, dict[str, Any]] = {
     "musculoskeletal": {
         "maneuver": "musculoskeletal", "system_en": "Musculoskeletal", "system_tr": "Kas-iskelet",
         "age": (18, 75),
+        "exam": [("musculoskeletal", "Musculoskeletal", "Kas-iskelet", "Swelling and tenderness over the affected region; distal pulses and sensation intact.", "Etkilenen bölgede şişlik ve hassasiyet; distal nabızlar ve duyu sağlam.", True)],
         "labs": [
-            ("2532-0", "Creatine kinase", "Kreatin kinaz", 320, "U/L", 30, 200, "H", "chemistry"),
+            ("2157-6", "Creatine kinase", "Kreatin kinaz", 320, "U/L", 30, 200, "H", "chemistry"),  # review 02 finding 22
             ("1988-5", "C-reactive protein", "CRP", 22, "mg/L", 0, 5, "H", "chemistry"),
         ],
         "imaging": ("43468-8", "Plain radiograph of the region", "Bölgenin düz grafisi",
@@ -604,6 +645,7 @@ _PROFILES: dict[str, dict[str, Any]] = {
 _PROFILES["_default"] = {
     "maneuver": "general-inspection", "system_en": "General", "system_tr": "Genel",
     "age": (25, 75),
+    "exam": [("general-inspection", "General", "Genel", "Looks unwell but alert; warm peripheries, capillary refill 2 s.", "Hasta görünüyor ama uyanık; sıcak ekstremiteler, kapiller dolum 2 s.", True)],
     "labs": [
         ("6690-2", "White cell count", "Lökosit", 12.0, "10^9/L", 4.0, 11.0, "H", "haematology"),
         ("2160-0", "Creatinine", "Kreatinin", 1.0, "mg/dL", 0.6, 1.3, "N", "chemistry"),
@@ -629,8 +671,21 @@ def _band_value(rng: random.Random, band: tuple[float, float], decimals: int = 0
     return round(v, decimals) if decimals else round(v)
 
 
-def _triage_vitals(rng: random.Random, acuity: int) -> dict[str, Any]:
-    b = _ACUITY_BANDS.get(acuity, _ACUITY_BANDS[3])
+def _vitals_envelope(acuity: int, cond: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """The per-vital band to draw from: the condition's authored envelope
+    (``case_fixtures.CONDITION_VITALS``) overlaid on the ESI band. Review 02
+    finding 1 (critical): heart block must be bradycardic, hypertensive
+    emergency hypertensive, hypothermia cold, opioid overdose bradypnoeic."""
+    b = dict(_ACUITY_BANDS.get(acuity, _ACUITY_BANDS[3]))
+    env = case_fixtures.CONDITION_VITALS.get((cond or {}).get("id", ""), {})
+    for key in ("hr", "systolic", "diastolic", "rr", "spo2", "tempC"):
+        if key in env:
+            b[key] = env[key]
+    return b
+
+
+def _triage_vitals(rng: random.Random, acuity: int, cond: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    b = _vitals_envelope(acuity, cond)
     systolic = int(_band_value(rng, b["systolic"]))
     diastolic = int(_band_value(rng, b["diastolic"]))
     if diastolic >= systolic:                    # keep it physiological
@@ -645,7 +700,13 @@ def _triage_vitals(rng: random.Random, acuity: int) -> dict[str, Any]:
     }
 
 
-def _disposition(system: str, acuity: int) -> str:
+def _disposition(system: str, acuity: int, cond: Optional[dict[str, Any]] = None) -> str:
+    """Condition-carried disposition first (review 02 finding 19: appendicitis and
+    torsion go to theatre, stroke to the stroke unit, not "every ESI 3 is
+    observation"); the ESI-based default remains for the long tail."""
+    authored = (cond or {}).get("disposition")
+    if authored in DISPOSITIONS:
+        return authored
     if acuity <= 1:
         return "admit-icu"
     if acuity == 2:
@@ -655,7 +716,35 @@ def _disposition(system: str, acuity: int) -> str:
     return "discharge"
 
 
-def _hpi(cond: dict[str, Any], rng: random.Random, *, avoid_repeats: bool = False) -> list[dict[str, Any]]:
+def _background(cond: dict[str, Any], rng: random.Random) -> dict[str, tuple[str, str]]:
+    """Seeded draw of a coherent PMH / medications / allergies triple from the
+    condition's pool (review 02 finding 2)."""
+    pool = case_fixtures.background_pool(cond.get("id", ""), cond["system"])
+    return {
+        "pmh": rng.choice(pool["pmh"]),
+        "meds": rng.choice(pool["meds"]),
+        "allergies": rng.choice(pool["allergies"]),
+    }
+
+
+def _red_flags(cond: dict[str, Any]) -> list[dict[str, Any]]:
+    """Structured red flags: the catalog's clinician-observed signs/results plus
+    the patient-voiced lay symptom (review 02 finding 3). Never patient speech
+    for lab values or ECG findings."""
+    flags: list[dict[str, Any]] = [
+        {"en": rf["en"], "tr": rf["tr"], "channel": "clinician"}
+        for rf in cond.get("red_flags", [])
+    ]
+    speech = case_fixtures.PATIENT_RED_FLAG_SPEECH.get(cond.get("id", ""))
+    if speech:
+        flags.append({"en": speech[0], "tr": speech[1], "channel": "patient"})
+    return flags
+
+
+def _hpi(
+    cond: dict[str, Any], rng: random.Random, *, avoid_repeats: bool = False,
+    background: Optional[dict[str, tuple[str, str]]] = None,
+) -> list[dict[str, Any]]:
     cc_en, cc_tr = cond["typical_complaint_en"], cond["typical_complaint_tr"]
     recent_onset = _lru_recent("onset") if avoid_repeats else set()
     onset_en, onset_tr = _pick_avoiding(
@@ -664,37 +753,68 @@ def _hpi(cond: dict[str, Any], rng: random.Random, *, avoid_repeats: bool = Fals
     if avoid_repeats:
         _lru_add("onset", onset_en)
     severity = rng.randint(5, 9)
+    bg = background or _background(cond, rng)
     items: list[dict[str, Any]] = [
         {"intent": "onset", "answer_en": onset_en, "answer_tr": onset_tr},
         {"intent": "character", "answer_en": f"It feels like {cc_en.lower()}.", "answer_tr": f"{cc_tr} gibi hissettiriyor."},
         {"intent": "severity", "answer_en": f"About {severity} out of ten.", "answer_tr": f"On üzerinden yaklaşık {severity}."},
         {"intent": "timing", "answer_en": "It has been fairly constant since it began.", "answer_tr": "Başladığından beri oldukça sürekli."},
-        {"intent": "past-medical-history", "answer_en": "Otherwise I am generally well.", "answer_tr": "Bunun dışında genelde iyiyim."},
-        {"intent": "medications", "answer_en": "I do not take any regular medicines.", "answer_tr": "Düzenli ilaç kullanmıyorum."},
-        {"intent": "allergies", "answer_en": "No known drug allergies.", "answer_tr": "Bilinen ilaç alerjim yok."},
+        # Review 02 finding 2: background is condition-coherent, not "generally well".
+        {"intent": "past-medical-history", "answer_en": bg["pmh"][0], "answer_tr": bg["pmh"][1]},
+        {"intent": "medications", "answer_en": bg["meds"][0], "answer_tr": bg["meds"][1]},
+        {"intent": "allergies", "answer_en": bg["allergies"][0], "answer_tr": bg["allergies"][1]},
     ]
-    for rf in cond.get("red_flags", [])[:2]:
-        items.append({
-            "intent": "red-flags",
-            "answer_en": f"Yes — {rf['en'].lower()}.",
-            "answer_tr": f"Evet — {rf['tr'].lower()}.",
-            "red_flag": True,
-        })
+    # Review 02 finding 3: the patient reports ONLY what a patient can know, in
+    # lay language. Catalog red flags (ECG / lab / exam signs) travel as
+    # structured ``red_flags`` data, never as patient speech.
+    speech = case_fixtures.PATIENT_RED_FLAG_SPEECH.get(
+        cond.get("id", ""), case_fixtures.GENERIC_RED_FLAG_SPEECH,
+    )
+    items.append({
+        "intent": "red-flags",
+        "answer_en": speech[0],
+        "answer_tr": speech[1],
+        "red_flag": speech is not case_fixtures.GENERIC_RED_FLAG_SPEECH,
+    })
     return items
 
 
 def _exam(cond: dict[str, Any], prof: dict[str, Any], rng: random.Random) -> list[dict[str, Any]]:
-    return [
+    """Real, condition-specific findings from the fixture (review 02 finding 4);
+    the system profile's non-revealing default for the long tail. Never
+    "Findings consistent with <diagnosis>"."""
+    items: list[dict[str, Any]] = [
         {"maneuver": "general-inspection", "system_en": "General", "system_tr": "Genel",
          "finding_en": "Uncomfortable but engaging with questions.", "finding_tr": "Rahatsız ama sorulara yanıt veriyor.",
          "abnormal": True},
-        {"maneuver": prof["maneuver"], "system_en": prof["system_en"], "system_tr": prof["system_tr"],
-         "finding_en": f"Findings consistent with {cond['label_en'].lower()}.",
-         "finding_tr": f"{cond['label_tr']} ile uyumlu bulgular.", "abnormal": True},
+    ]
+    for (maneuver, sys_en, sys_tr, fen, ftr, abnormal) in prof.get("exam", ()):
+        items.append({"maneuver": maneuver, "system_en": sys_en, "system_tr": sys_tr,
+                      "finding_en": fen, "finding_tr": ftr, "abnormal": bool(abnormal)})
+    items.append(
         {"maneuver": "vitals-recheck", "system_en": "Vitals", "system_tr": "Vital bulgular",
          "finding_en": "Vitals rechecked and trending as charted.", "finding_tr": "Vitaller tekrar ölçüldü, seyir tabloya uygun.",
          "abnormal": False},
-    ]
+    )
+    return items
+
+
+# Sex-specific haemoglobin / haematocrit reference intervals (review 02 finding 21;
+# MedlinePlus https://medlineplus.gov/ency/article/003645.htm).
+_HB_REF: dict[str, tuple[float, float]] = {"male": (13.5, 17.5), "female": (12.0, 15.5)}
+_HCT_REF: dict[str, tuple[float, float]] = {"male": (41.0, 50.0), "female": (36.0, 44.0)}
+
+
+def _flag_for(value: Any, lo: float, hi: float, fixture_flag: str) -> str:
+    """Re-derive H/L/N from a (possibly sex-adjusted) interval, preserving a
+    fixture's critical double flag (HH/LL) when the direction still agrees."""
+    if not isinstance(value, (int, float)):
+        return fixture_flag
+    if value < lo:
+        return "LL" if fixture_flag == "LL" else "L"
+    if value > hi:
+        return "HH" if fixture_flag == "HH" else "H"
+    return "N"
 
 
 def _jittered(rng: random.Random, base: Any, jitter: float) -> Any:
@@ -712,14 +832,27 @@ def _jittered(rng: random.Random, base: Any, jitter: float) -> Any:
     return round(max(0.0, val), decimals)
 
 
-def _labs(prof: dict[str, Any], rng: random.Random) -> list[dict[str, Any]]:
+def _labs(prof: dict[str, Any], rng: random.Random, sex: str = "female") -> list[dict[str, Any]]:
     out = []
     for row in prof["labs"]:
         code, en, tr, val, unit, lo, hi, flag, cat = row[:9]
         jitter = row[9] if len(row) > 9 else 0
-        out.append({"code": code, "label_en": en, "label_tr": tr,
-                    "value": _jittered(rng, val, jitter),
-                    "unit": unit, "ref_low": lo, "ref_high": hi, "flag": flag, "category": cat})
+        hours = row[10] if len(row) > 10 else None
+        value = _jittered(rng, val, jitter)
+        # Review 02 finding 21: sex-specific Hb / Hct intervals and re-derived flag.
+        if code == "718-7":
+            lo, hi = _HB_REF["male" if sex == "male" else "female"]
+            flag = _flag_for(value, lo, hi, flag)
+        elif code == "4544-3":
+            lo, hi = _HCT_REF["male" if sex == "male" else "female"]
+            flag = _flag_for(value, lo, hi, flag)
+        lab: dict[str, Any] = {"code": code, "label_en": en, "label_tr": tr, "value": value,
+                               "unit": unit, "ref_low": lo, "ref_high": hi, "flag": flag, "category": cat}
+        if isinstance(val, str):                 # review 02 finding 39: qualitative
+            lab["qualitative"] = val
+        if hours is not None:                    # review 02 finding 38: timed level
+            lab["hours_post_ingestion"] = float(hours)
+        out.append(lab)
     return out
 
 
@@ -740,11 +873,31 @@ def _treatments(prof: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
-def _trajectory(triage: dict[str, Any], acuity: int) -> list[dict[str, Any]]:
-    # Sicker cases drift worse; less acute cases settle. Bounded, plausible.
+def _trajectory(triage: dict[str, Any], acuity: int, cond: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
+    """Baseline 30-minute course. With an authored envelope the shape follows the
+    condition's own ``drift`` (review 02 finding 30: obstructive, haemorrhagic
+    and distributive shock must not deteriorate identically, and temperature
+    moves where the condition says so). Compensated phase for the first third,
+    then decompensation. Long-tail conditions keep the ESI-based generic drift."""
+    env = case_fixtures.CONDITION_VITALS.get((cond or {}).get("id", ""), {})
+    drift = env.get("drift")
     worsen = acuity <= 2
     pts = []
     for i, minute in enumerate((0, 5, 15, 30)):
+        if drift is not None:
+            # Compensated then decompensated: 10% of the drift by 5 min, 45% by 15, all by 30.
+            frac = (0.0, 0.1, 0.45, 1.0)[i]
+            d = lambda k: drift.get(k, 0) * frac  # noqa: E731
+            pts.append({
+                "atMs": minute * 60000,
+                "hr": int(round(triage["hr"] + d("hr"))),
+                "systolic": int(round(triage["systolic"] + d("systolic"))),
+                "diastolic": int(round(triage["diastolic"] + d("diastolic"))),
+                "rr": int(round(triage["rr"] + d("rr"))),
+                "spo2": int(max(60, min(100, round(triage["spo2"] + d("spo2"))))),
+                "tempC": round(triage["tempC"] + d("tempC"), 1),
+            })
+            continue
         f = i
         pts.append({
             "atMs": minute * 60000,
@@ -776,11 +929,14 @@ def _demographics(
     cond: dict[str, Any], prof: dict[str, Any], rng: random.Random,
     *, locale: str = "en", avoid_repeats: bool = False,
 ) -> dict[str, Any]:
-    lo, hi = prof["age"]
-    age = rng.randint(lo, hi)
-    if cond["system"] == "obstetrics-gynecology":
+    # Review 02 finding 20: the condition's own age band and sex constraint win
+    # (bronchiolitis is an infant, hip fracture an older adult, priapism male).
+    lo, hi = cond.get("age") or prof["age"]
+    age = rng.randint(int(lo), int(hi))
+    constraint = cond.get("sex", "any")
+    if cond["system"] == "obstetrics-gynecology" or constraint == "female":
         sex = "female"
-    elif cond["id"] in ("testicular_torsion", "bph_retention"):
+    elif constraint == "male" or cond["id"] in ("testicular_torsion", "bph_retention"):
         sex = "male"
     else:
         sex = rng.choice(("male", "female"))
@@ -803,8 +959,10 @@ def build_template_spec(
     onset phrasing away from recently served ones via the anti-repeat memory;
     objective data is bound to the *specific condition* via ``_resolve_fixture``."""
     prof = _resolve_fixture(cond)
-    triage = _triage_vitals(rng, acuity)
+    triage = _triage_vitals(rng, acuity, cond)
     src, cite, gen, gtr = prof["guide"]
+    demographics = _demographics(cond, prof, rng, locale=locale, avoid_repeats=avoid_repeats)
+    background = _background(cond, rng)
     spec: dict[str, Any] = {
         "seed": seed,
         "locale": locale,
@@ -813,26 +971,28 @@ def build_template_spec(
             "dsm5tr": cond.get("dsm5tr"), "label_en": cond["label_en"],
             "label_tr": cond["label_tr"], "system": cond["system"],
         },
-        "demographics": _demographics(cond, prof, rng, locale=locale, avoid_repeats=avoid_repeats),
+        "demographics": demographics,
         "chief_complaint_en": cond["typical_complaint_en"],
         "chief_complaint_tr": cond["typical_complaint_tr"],
         "acuity_esi": acuity,
         "difficulty": difficulty,
-        "hpi": _hpi(cond, rng, avoid_repeats=avoid_repeats),
-        "pmh_en": "No significant past medical history reported.",
-        "pmh_tr": "Belirgin özgeçmiş bildirilmedi.",
-        "meds_en": "No regular medications.", "meds_tr": "Düzenli ilaç yok.",
-        "allergies_en": "No known drug allergies.", "allergies_tr": "Bilinen ilaç alerjisi yok.",
+        "hpi": _hpi(cond, rng, avoid_repeats=avoid_repeats, background=background),
+        # Review 02 finding 2: coherent PMH / meds / allergies drawn from fixtures.
+        "pmh_en": background["pmh"][0], "pmh_tr": background["pmh"][1],
+        "meds_en": background["meds"][0], "meds_tr": background["meds"][1],
+        "allergies_en": background["allergies"][0], "allergies_tr": background["allergies"][1],
         "exam": _exam(cond, prof, rng),
         "triage_vitals": triage,
-        "vitals_trajectory": _trajectory(triage, acuity),
-        "labs": _labs(prof, rng),
+        "vitals_trajectory": _trajectory(triage, acuity, cond),
+        "labs": _labs(prof, rng, demographics["sex"]),
         "imaging": _imaging(prof),
         "treatments": _treatments(prof),
-        "disposition": _disposition(cond["system"], acuity),
+        "disposition": _disposition(cond["system"], acuity, cond),
         "guideline_anchors": [{
             "statement_en": gen, "statement_tr": gtr, "source": src, "citation": cite,
         }],
+        # Review 02 finding 3: structured red flags (clinician signs + patient symptom).
+        "red_flags": _red_flags(cond),
     }
     return spec
 
@@ -939,7 +1099,7 @@ def _extract_json_object(text: str) -> Optional[dict[str, Any]]:
 
 
 # List fields where an empty model value must NOT override the template.
-_LIST_FIELDS = ("hpi", "exam", "labs", "imaging", "treatments", "vitals_trajectory", "guideline_anchors")
+_LIST_FIELDS = ("hpi", "exam", "labs", "imaging", "treatments", "vitals_trajectory", "guideline_anchors", "red_flags")
 
 
 def _merge(template: dict[str, Any], model: dict[str, Any]) -> dict[str, Any]:

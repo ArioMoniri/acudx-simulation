@@ -306,9 +306,9 @@ const chestPainNstemiCase: CaseInstance = {
     vitalsTrajectory: trajectory(acsTriage, { hr: 12, spo2: -2 }),
   },
   expectedWorkup: [
-    order("w-acs-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 10, true, "esc-acs-2023"),
-    order("w-acs-trop", "laboratory", LOINC.troponinHs, { en: "High-sensitivity troponin (0/1 h)", tr: "Yüksek duyarlıklı troponin (0/1 s)" }, 15, true, "esc-acs-2023"),
-    order("w-acs-cr", "laboratory", LOINC.creatinine, { en: "Renal function", tr: "Böbrek fonksiyonu" }, 30, false, "esc-acs-2023"),
+    order("w-acs-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 10, true, "gs_nice_ng185_nstemi_assessment"),
+    order("w-acs-trop", "laboratory", LOINC.troponinHs, { en: "High-sensitivity troponin (0/1 h)", tr: "Yüksek duyarlıklı troponin (0/1 s)" }, 15, true, "gs_nice_ng185_nstemi_assessment"),
+    order("w-acs-cr", "laboratory", LOINC.creatinine, { en: "Renal function", tr: "Böbrek fonksiyonu" }, 30, false, "gs_nice_ng185_nstemi_assessment"),
   ],
   disposition: "admit-ccu",
   provenance: "seed",
@@ -369,7 +369,7 @@ const sahCase: CaseInstance = {
   },
   expectedWorkup: [
     order("w-sah-ct", "imaging", { system: LOINC.ecg12.system, code: "ct-head-noncon", display: "CT head" },
-      { en: "Noncontrast CT head", tr: "Kontrastsız beyin BT" }, 30, true, "nice-ng228"),
+      { en: "Noncontrast CT head", tr: "Kontrastsız beyin BT" }, 30, true, "gs_nice_ng228_thunderclap"),
     order("w-sah-bp", "laboratory", LOINC.creatinine, { en: "Baseline bloods and renal function", tr: "Bazal kan tetkikleri ve böbrek fonksiyonu" }, 45, false, "tepdad-em"),
   ],
   disposition: "admit-icu",
@@ -429,9 +429,9 @@ const appendicitisCase: CaseInstance = {
     vitalsTrajectory: trajectory(appyTriage, { hr: 8, tempC: 0.4 }),
   },
   expectedWorkup: [
-    order("w-appy-bloods", "laboratory", LOINC.wbc, { en: "FBC and CRP", tr: "Tam kan sayımı ve CRP" }, 30, false, "tepdad-em"),
+    order("w-appy-bloods", "laboratory", LOINC.wbc, { en: "FBC and CRP", tr: "Tam kan sayımı ve CRP" }, 30, false, "gs_wses2020_appy_scores"),
     order("w-appy-us", "imaging", { system: LOINC.ecg12.system, code: "us-abdomen", display: "US abdomen" },
-      { en: "Abdominal ultrasound", tr: "Karın ultrasonu" }, 60, false, "tepdad-em"),
+      { en: "Abdominal ultrasound", tr: "Karın ultrasonu" }, 60, false, "gs_wses2020_appy_tailored"),
     order("w-appy-analgesia", "procedure", { system: LOINC.ecg12.system, code: "analgesia", display: "Analgesia" },
       { en: "Timely analgesia", tr: "Zamanında analjezi" }, 30, false, "tepdad-em"),
   ],
@@ -495,13 +495,20 @@ const pulmonaryEmbolismCase: CaseInstance = {
     ],
     vitalsTrajectory: trajectory(peTriage, { hr: 10, spo2: -4, rr: 4 }),
   },
+  // Review 02 finding 23 (major): active cancer, unilateral calf swelling, HR
+  // > 100 and recent immobilisation give a Wells score >= 7 ("PE likely"). In
+  // high clinical probability D-dimer is not recommended and must not delay
+  // CTPA, which is the first critical order (ESC 2019 acute PE,
+  // https://doi.org/10.1093/eurheartj/ehz405). Bilateral main-artery emboli
+  // with RV strain and troponin 22 ng/L are intermediate-high risk, which needs
+  // a monitored bed, not a general ward.
   expectedWorkup: [
-    order("w-pe-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 15, false, "esc-acs-2023"),
-    order("w-pe-ddimer", "laboratory", LOINC.dDimer, { en: "D-dimer (age-adjusted)", tr: "D-dimer (yaşa göre ayarlı)" }, 30, false, "tepdad-em"),
     order("w-pe-ctpa", "imaging", { system: LOINC.ecg12.system, code: "ctpa", display: "CTPA" },
-      { en: "CT pulmonary angiogram", tr: "BT pulmoner anjiyografi" }, 90, true, "tepdad-em"),
+      { en: "CT pulmonary angiogram (first-line in PE-likely)", tr: "BT pulmoner anjiyografi (PE olası ise birinci basamak)" }, 60, true, "gs_nice_ng158_pe_ctpa"),
+    order("w-pe-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 15, false, "gs_nice_ng185_nstemi_assessment"),
+    order("w-pe-ddimer", "laboratory", LOINC.dDimer, { en: "D-dimer (not indicated when PE likely)", tr: "D-dimer (PE olası ise endike değil)" }, 30, false, "gs_nice_ng158_pe_unlikely_ddimer", true),
   ],
-  disposition: "admit-ward",
+  disposition: "admit-ccu",
   provenance: "seed",
 };
 
@@ -518,14 +525,18 @@ const panicDisorderCase: CaseInstance = {
   locale: "en",
   chiefComplaint: { en: "Chest tightness with palpitations and fear", tr: "Çarpıntı ve korkuyla birlikte göğüste sıkışma" },
   patient: p5,
-  encounter: encounter("panic-005", p5.id, { en: "Recurrent chest tightness, 40 minutes", tr: "Tekrarlayan göğüste sıkışma, 40 dakika" }),
+  // Review 02 finding 10 (critical): a single very low hs-troponin rules out
+  // NSTEMI only when chest-pain onset was > 3 h before the draw (ESC 2023 ACS,
+  // 0 h/1 h algorithm; https://doi.org/10.1093/eurheartj/ehad191). Onset is
+  // therefore 4 hours before presentation so the single-draw rule-out is valid.
+  encounter: encounter("panic-005", p5.id, { en: "Recurrent chest tightness, 4 hours", tr: "Tekrarlayan göğüste sıkışma, 4 saat" }),
   allergies: allergyNKDA(p5.id),
   triageVitals: panicTriage,
   difficulty: 3,
   acuityESI: 3,
   correctDiagnosis: dx("dx-panic-005", DSM5TR.panicDisorder,
     { en: "Panic disorder", tr: "Panik bozukluğu" },
-    { subject: p5.id, note: { en: "Recurrent unexpected panic attacks; ACS ruled out with normal ECG and troponin.", tr: "Tekrarlayan beklenmedik panik atakları; normal EKG ve troponinle ACS dışlandı." } }),
+    { subject: p5.id, note: { en: "Recurrent unexpected panic attacks; ACS ruled out with a normal ECG and a single very low hs-troponin drawn more than 3 h after symptom onset (ESC 2023).", tr: "Tekrarlayan beklenmedik panik atakları; normal EKG ve semptom başlangıcından 3 saatten sonra alınan tek çok düşük hs-troponinle ACS dışlandı (ESC 2023)." } }),
   differentials: [
     dx("ddx-panic-acs", ICD10.acsNstemi, { en: "Acute coronary syndrome", tr: "Akut koroner sendrom" }, { category: "differential", verification: "differential", subject: p5.id }),
     dx("ddx-panic-gad", DSM5TR.gad, { en: "Generalized anxiety disorder", tr: "Yaygın anksiyete bozukluğu" }, { category: "differential", verification: "differential", subject: p5.id }),
@@ -537,7 +548,7 @@ const panicDisorderCase: CaseInstance = {
   ],
   groundTruth: {
     history: [
-      hx("h-panic-onset", "onset", { en: "It came on suddenly while I was sitting, peaking in minutes.", tr: "Otururken aniden geldi, dakikalar içinde en şiddetli hale ulaştı." }),
+      hx("h-panic-onset", "onset", { en: "It came on suddenly about four hours ago while I was sitting, peaking in minutes, and has waxed and waned since.", tr: "Yaklaşık dört saat önce otururken aniden geldi, dakikalar içinde en şiddetli hale ulaştı ve o zamandan beri azalıp artıyor." }),
       hx("h-panic-char", "character", { en: "My chest feels tight and my heart is racing.", tr: "Göğsüm sıkışıyor ve kalbim hızlı atıyor." }),
       hx("h-panic-assoc", "associated-symptoms", { en: "My hands tingle and I feel like I cannot breathe.", tr: "Ellerim karıncalanıyor ve nefes alamıyormuş gibi hissediyorum." }),
       hx("h-panic-rad", "radiation", { en: "No, it does not spread to my arm or jaw.", tr: "Hayır, koluma veya çeneme yayılmıyor." }),
@@ -561,8 +572,8 @@ const panicDisorderCase: CaseInstance = {
     vitalsTrajectory: trajectory(panicTriage, { hr: -18, rr: -4 }),
   },
   expectedWorkup: [
-    order("w-panic-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 10, true, "esc-acs-2023"),
-    order("w-panic-trop", "laboratory", LOINC.troponinHs, { en: "High-sensitivity troponin", tr: "Yüksek duyarlıklı troponin" }, 15, true, "esc-acs-2023"),
+    order("w-panic-ecg", "imaging", LOINC.ecg12, { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, 10, true, "gs_nice_ng185_nstemi_assessment"),
+    order("w-panic-trop", "laboratory", LOINC.troponinHs, { en: "High-sensitivity troponin", tr: "Yüksek duyarlıklı troponin" }, 15, true, "gs_nice_ng185_nstemi_assessment"),
     order("w-panic-ddimer", "laboratory", LOINC.dDimer, { en: "D-dimer", tr: "D-dimer" }, 30, false, "tepdad-em", true),
   ],
   disposition: "discharge",
@@ -596,7 +607,11 @@ export function getSeedCase(id: string): CaseInstance | undefined {
 
 /** Additional case-specific citation ids used by seed workups. */
 export const seedCitationIds = [
-  "esc-acs-2023",
-  "nice-ng228",
+  "gs_nice_ng185_nstemi_assessment",
+  "gs_nice_ng228_thunderclap",
+  "gs_nice_ng158_pe_ctpa",
+  "gs_nice_ng158_pe_unlikely_ddimer",
+  "gs_wses2020_appy_scores",
+  "gs_wses2020_appy_tailored",
   "tepdad-em",
 ] as const;

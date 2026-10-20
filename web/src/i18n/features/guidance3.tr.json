@@ -93,6 +93,35 @@
       "skin": "Cilt",
       "ent": "KBB",
       "focused-special": "Odaklı özel test"
+    },
+    "citation": {
+      "loading": "Kaynak yükleniyor",
+      "unavailable": "Kaynak doğrulanmadı",
+      "unavailableBody": "Bu kaynak belgesine karşı doğrulanmadığı için gösterilmiyor. Burada hiçbir şey uydurulmaz.",
+      "verified": "{{date}} tarihinde doğrulandı",
+      "unverifiedDate": "Doğrulama tarihi bilinmiyor"
+    },
+    "unavailable": {
+      "title": "Rehberlik kullanılamıyor",
+      "short": "Rehberlik yok",
+      "body": "Bu adım için doğrulanmış bir kılavuz ifadesi sunulamadı. Doğrulanmamış bir ipucu yerine hiçbir şey gösterilmiyor."
+    },
+    "tips": {
+      "title": "Kıdemli hekim önerileri",
+      "subtitle": "Kısa, uygulanabilir ve her biri doğrulanmış bir kılavuz ifadesine bağlı",
+      "pitfall": "Tuzak",
+      "timing": "Zamanlama",
+      "empty": "Bu durum için henüz doğrulanmış öneri yok.",
+      "locked": "Tedavi ve taburculuk önerileri değerlendirme aşamasına geçince açılır.",
+      "loading": "Kıdemli hekim önerileri yükleniyor",
+      "stage": {
+        "triage": "Triyaj",
+        "history": "Anamnez",
+        "exam": "Muayene",
+        "workup": "Tetkik",
+        "treatment": "Tedavi",
+        "disposition": "Taburculuk / yatış"
+      }
     }
   }
 }

@@ -59,7 +59,6 @@ import {
   type PatientTurnRequest,
 } from "@/lib/backend";
 import type {
-  GuidanceHint,
   Lang,
   TranscriptRole,
   TranscriptTurn,
@@ -195,25 +194,6 @@ function nbaPhrase(nba: NextBestAction | null, lang: Lang, t: TFunc): string {
     default:
       return "";
   }
-}
-
-/**
- * The citation whose provenance the guidance card cites, derived from the CURRENT
- * case (next-best-action citation, else the expectation matching it, else the
- * case's first expected-workup citation). Guideline-anchored, diagnosis-free.
- */
-function pickGuidanceCitationId(
-  nba: NextBestAction | null,
-  caseInstance: CaseInstance,
-): string {
-  if (nba?.citationId) return nba.citationId;
-  if (nba?.ref) {
-    const exp = caseInstance.expectedWorkup.find(
-      (w) => (w.code.coding[0]?.code ?? "") === nba.ref,
-    );
-    if (exp?.citationId) return exp.citationId;
-  }
-  return caseInstance.expectedWorkup[0]?.citationId ?? "";
 }
 
 /**
@@ -427,30 +407,17 @@ export function InterviewTab({
 
   // Reactive, grounded interview guidance. The coverage layer names the single
   // most useful next step (what's been asked / is still missing); the guideline
-  // text is grounded via /v1/ground when the live pod is reachable (mirroring the
-  // Guidance tab's useLiveGrounding) and degrades to the case's cited local
-  // reference offline. PROCESS ONLY — it never references the diagnosis.
+  // text is a VERIFIED statement served by /v1/ground when the gateway is
+  // reachable. Offline there is no hint, only an explicit unavailable state.
+  // PROCESS ONLY — it never references the diagnosis.
   const coverage = computeCoverage(state, caseInstance);
   const nba = coverage.nextBestAction;
-  const workupCitationIds = useMemo(
-    () => Array.from(new Set(caseInstance.expectedWorkup.map((w) => w.citationId))),
-    [caseInstance],
-  );
-  const workupOrderCodes = useMemo(
-    () => caseInstance.expectedWorkup.map((w) => w.code.coding[0]?.code ?? ""),
-    [caseInstance],
-  );
   const guidanceQuery = guidanceOn
     ? [caseInstance.chiefComplaint[lang], nbaPhrase(nba, lang, t)]
         .filter(Boolean)
         .join(" · ")
     : "";
-  const grounding = useLiveGrounding({
-    query: guidanceQuery,
-    locale: lang,
-    citationIds: workupCitationIds,
-    orderCodes: workupOrderCodes,
-  });
+  const grounding = useLiveGrounding({ query: guidanceQuery, locale: lang });
   const leadPassage = grounding.passages[0];
 
   // Genuine out-of-scope: the learner's most recent move was flagged off-task
@@ -465,16 +432,9 @@ export function InterviewTab({
     !!lastGuard &&
     (lastGuard.type === "offtopic" || lastGuard.type === "answer-seeking") &&
     (lastClinicalSeq == null || lastGuard.seq > lastClinicalSeq);
-  const guidanceAbstained = guidanceOffScope || grounding.passages.length === 0;
-
-  const activeHint: GuidanceHint = {
-    id: "interview-guidance",
-    stage: "history",
-    text: leadPassage
-      ? { en: leadPassage.text, tr: leadPassage.text }
-      : { en: "", tr: "" },
-    citationId: pickGuidanceCitationId(nba, caseInstance),
-  };
+  const guidanceAbstained = guidanceOffScope;
+  // The hint IS the verified statement (text + citation payload); null => unavailable.
+  const activeHint = leadPassage?.hint ?? null;
 
   function pulseTyping() {
     setTyping(true);
@@ -904,8 +864,7 @@ export function InterviewTab({
               hint={activeHint}
               lang={lang}
               abstained={guidanceAbstained}
-              live={!grounding.degraded}
-              sourceUrl={leadPassage?.url}
+              live={!grounding.unavailable}
             />
           ) : null}
 

@@ -697,7 +697,7 @@ export function FeedbackPage() {
                   {t("feedback.process.stewardship.note")}
                 </p>
                 <span>
-                  <CitationPill citationId="esc-acs-2023" lang={lang} />
+                  <CitationPill citationId="gs_nice_ng185_nstemi_assessment" lang={lang} />
                 </span>
               </div>
             </Card>

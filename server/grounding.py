@@ -106,6 +106,10 @@ class Citation(BaseModel):
     reference: str = ""
     url: str = ""
     pub_date: str = ""
+    # Provenance from the verified GuidelineStatement store (server/guidelines/store.py).
+    doi: str = ""
+    edition: str = ""
+    verified_at: str = ""
 
 
 class Passage(BaseModel):
@@ -446,6 +450,22 @@ def _statement_vectors_hash(statements: List[Dict[str, Any]], locale: str) -> Li
 
 
 # ---------------------------------------------------------------------------
+# Verified corpus (projection of the SQLite GuidelineStatement store).
+# ---------------------------------------------------------------------------
+
+def verified_statements() -> List[Dict[str, Any]]:
+    """Verified GuidelineStatements in the legacy dict shape the retrieval code consumes.
+    Returns [] (never the unverified seed) when the store cannot be opened."""
+    try:
+        from server.guidelines.store import get_store, statement_to_legacy
+
+        return [statement_to_legacy(s) for s in get_store().verified()]
+    except Exception as exc:  # pragma: no cover - defensive: a broken store must not 500 /v1/ground
+        logger.warning("guideline store unavailable: %s", exc)
+        return []
+
+
+# ---------------------------------------------------------------------------
 # The public grounding call.
 # ---------------------------------------------------------------------------
 
@@ -483,9 +503,11 @@ async def ground(
         return result.model_dump()
 
     # ---- 1. country filter BEFORE rank -------------------------------------
-    candidates = [s for s in seed.all_statements() if seed.in_country_scope(s, country)]
+    # Candidates come from the VERIFIED guideline store only (status=verified). The raw seed
+    # corpus is never retrieved over: an unverified statement must not reach a learner.
+    candidates = [s for s in verified_statements() if seed.in_country_scope(s, country)]
     if not candidates:
-        result.detail = f"no statements in scope for country={country}"
+        result.detail = f"no verified statements in scope for country={country}"
         return result.model_dump()
 
     embedder_id, embed_fn = await _resolve_embed_fn(gateway)

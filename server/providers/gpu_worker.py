@@ -411,6 +411,9 @@ class WorkerManager:
         w = self.store.active_worker()
         if w is None:
             return False
+        if w.status == "booting":
+            # Boot time is never idle time; a stuck boot is bounded by ready_timeout_s.
+            return False
         idle_s = self._clock() - w.last_used_at
         if idle_s < self.policy.idle_minutes * 60:
             return False
