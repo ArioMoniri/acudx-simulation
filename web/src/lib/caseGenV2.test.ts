@@ -1,7 +1,69 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it } from "vitest";
 
-import { parseSseBuffer, streamCaseGenV2, v2SpecToCaseInstance, type CaseGenV2Spec } from "@/lib/caseGenV2";
+import {
+  directorStep,
+  generateCaseV2,
+  parseSseBuffer,
+  streamCaseGenV2,
+  v2SpecToCaseInstance,
+  type CaseGenV2Spec,
+} from "@/lib/caseGenV2";
 import { validateCase } from "@/domain/caseGen";
+import { createProfile, resetProfile } from "@/state/profileStore";
+
+/** Capture the JSON body of the next fetch and answer with `reply`. */
+function captureFetch(reply: unknown = {}) {
+  const bodies: unknown[] = [];
+  globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return new Response(JSON.stringify(reply), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  return bodies;
+}
+
+describe("learner_id on the v2 requests (architecture 15 section 10)", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+    resetProfile();
+  });
+
+  it("omits learner_id when no profile is active", async () => {
+    const bodies = captureFetch();
+    await directorStep({ action: { kind: "question", ref: "onset" } });
+    expect(bodies[0]).not.toHaveProperty("learner_id");
+  });
+
+  it("fills learner_id from the active profile on director steps and generation", async () => {
+    const p = createProfile({ fullName: "L", role: "student", institution: "U", language: "en", avatarSeed: "aster" });
+    const bodies = captureFetch();
+    await directorStep({ action: { kind: "question", ref: "onset" } });
+    await generateCaseV2({ system: "cardiology" });
+    expect(bodies[0]).toMatchObject({ learner_id: p.localId, action: { kind: "question", ref: "onset" } });
+    expect(bodies[1]).toMatchObject({ learner_id: p.localId, system: "cardiology" });
+  });
+
+  it("keeps an explicit learner_id (or null) set by the caller", async () => {
+    createProfile({ fullName: "L", role: "student", institution: "U", language: "en", avatarSeed: "aster" });
+    const bodies = captureFetch();
+    await directorStep({ action: { kind: "question", ref: "onset" }, learner_id: "faculty-preview" });
+    await generateCaseV2({ learner_id: null });
+    expect(bodies[0]).toMatchObject({ learner_id: "faculty-preview" });
+    expect(bodies[1]).toMatchObject({ learner_id: null });
+  });
+
+  it("sends learner_id on the streaming generator too", async () => {
+    const p = createProfile({ fullName: "L", role: "student", institution: "U", language: "en", avatarSeed: "aster" });
+    const bodies: unknown[] = [];
+    globalThis.fetch = (async (_url: unknown, init?: RequestInit) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify({ error: "model_unreachable" }), { status: 503, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    await streamCaseGenV2({ system: "cardiology" }, { onEvent: () => undefined });
+    expect(bodies[0]).toMatchObject({ learner_id: p.localId });
+  });
+});
 
 const sse = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 

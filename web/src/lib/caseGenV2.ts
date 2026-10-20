@@ -23,6 +23,7 @@
 import { BACKEND_URL, type BackendResult, type RequestOptions } from "@/lib/backend";
 import { specToCaseInstance, type GeneratedCaseSpec } from "@/lib/liveCaseGen";
 import type { CaseInstance } from "@/domain/case";
+import { getProfileState, selectLearnerId } from "@/state/profileStore";
 
 export { specToCaseInstance };
 
@@ -292,6 +293,18 @@ async function request<T>(
 /* Public API                                                                 */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Fill `learner_id` from the active profile when the caller left it undefined,
+ * so the Director memory is written for the signed-in or local learner
+ * (architecture 15 section 10). An explicit value, including null, is kept:
+ * a faculty preview can opt out of writing a learner's memory.
+ */
+export function withLearnerId<T extends { learner_id?: string | null }>(req: T): T {
+  if (req.learner_id !== undefined) return req;
+  const id = selectLearnerId(getProfileState());
+  return id ? { ...req, learner_id: id } : req;
+}
+
 /** Run the full generator graph and wait for the finished case. */
 export function generateCaseV2(
   req: CaseGenV2Request,
@@ -299,7 +312,7 @@ export function generateCaseV2(
 ): Promise<BackendResult<CaseGenV2Result>> {
   return request<CaseGenV2Result>(
     "/v2/case/generate",
-    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(req) },
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(withLearnerId(req)) },
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.generate,
     opts.signal,
   );
@@ -338,7 +351,7 @@ export function directorStep(
 ): Promise<BackendResult<DirectorStepResult>> {
   return request<DirectorStepResult>(
     "/v2/director/step",
-    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(req) },
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(withLearnerId(req)) },
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.director,
     opts.signal,
   );
@@ -395,7 +408,7 @@ export async function streamCaseGenV2(
     const res = await fetch(`${BACKEND_URL}/v2/case/generate/stream`, {
       method: "POST",
       headers: { "content-type": "application/json", accept: "text/event-stream" },
-      body: JSON.stringify(req),
+      body: JSON.stringify(withLearnerId(req)),
       signal,
     });
     if (!res.ok) {

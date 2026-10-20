@@ -421,6 +421,21 @@ export function localIdentityHeaders(s: ProfileState = state): Record<string, st
   return headers;
 }
 
+/**
+ * The key under which the Clinical Director keeps this learner's memory
+ * (conditions seen, errors, weak systems; architecture 15 section 10). The
+ * verified IdP subject when signed in, otherwise the pseudonymous localId, which
+ * is the same value the local-mode principal carries in X-User-Id, so Director
+ * memory and the encounter event log key the same identity. Null when nobody is
+ * signed in: the request then carries no learner_id and no memory is written.
+ */
+export function selectLearnerId(s: ProfileState = state): string | null {
+  const p = s.profile;
+  if (!p || !s.active) return null;
+  if (p.verified && p.sub) return p.sub;
+  return p.localId || null;
+}
+
 export function selectDisplayName(s: ProfileState): string {
   return s.profile?.onboarded ? s.profile.fullName : "";
 }

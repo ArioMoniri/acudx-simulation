@@ -8,6 +8,7 @@ import {
   localIdentityHeaders,
   normalizeProfileRole,
   resetProfile,
+  selectLearnerId,
   updateProfile,
 } from "./profileStore";
 
@@ -71,5 +72,29 @@ describe("profileStore role derivation", () => {
     const v = applyVerifiedIdentity({ sub: "s", email: "e@x", name: "Verified", roles: ["faculty"], org: "org", primary_role: "faculty" });
     expect(v.localId).toBe(p.localId);
     expect(v.avatarSeed).toBe("aster");
+  });
+});
+
+describe("selectLearnerId (Director memory key, architecture 15 section 10)", () => {
+  beforeEach(() => {
+    resetProfile();
+  });
+
+  it("is null without an active profile", () => {
+    expect(selectLearnerId(getProfileState())).toBeNull();
+  });
+
+  it("is the pseudonymous localId for a local profile, matching the X-User-Id principal", () => {
+    const p = createProfile({ fullName: "Local Learner", role: "student", institution: "Demo Uni", language: "en", avatarSeed: "aster" });
+    expect(selectLearnerId(getProfileState())).toBe(p.localId);
+    expect(selectLearnerId(getProfileState())).toBe(localIdentityHeaders()["X-User-Id"]);
+  });
+
+  it("is the verified IdP subject once signed in, and stable across preference edits", () => {
+    createProfile({ fullName: "Local Learner", role: "student", institution: "Demo Uni", language: "en", avatarSeed: "aster" });
+    applyVerifiedIdentity({ sub: "kc-77", email: null, name: "V", roles: ["student"], org: "o", primary_role: "student" });
+    expect(selectLearnerId(getProfileState())).toBe("kc-77");
+    updateProfile({ language: "tr" });
+    expect(selectLearnerId(getProfileState())).toBe("kc-77");
   });
 });
