@@ -7,6 +7,16 @@
     GET  /v2/case/{thread_id}       checkpoint read (spec, status, trace)
     GET  /v2/learner/{learner_id}   learner memory profile
 
+Access (review 04 O3): ``GET /v2/learner/{learner_id}`` and ``GET /v2/case/{thread_id}``
+need a signed-in caller (``current_user``); a ``learner_id`` in a generate or Director body
+needs one too. The caller may only name their own learner id (the principal ``sub``, which is
+the local profile id in local mode, or its ``user_hash``) unless they hold ``faculty`` or
+above. A checkpoint generated for a learner is readable by that learner and by faculty; for
+anyone else it answers the same 404 as a missing thread.
+
+SSE streams are capped at ``SSE_MAX_DURATION_S`` (review 04 O11): a stuck node ends the
+stream with an ``error`` event (``stream_timeout``, 504) instead of holding the connection.
+
 Honesty rule: when the model endpoint is unreachable the generate routes answer
 ``503 model_unreachable``; when the model answers but not with a valid case,
 ``502 model_output_invalid``. A template is never returned as a generated case.
@@ -19,6 +29,7 @@ with an in-process transport and swap it in.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import uuid
@@ -26,13 +37,14 @@ from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Optional
 
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.base import BaseStore
 from pydantic import BaseModel, Field
 
+from server.auth.deps import Principal, current_user, optional_user
 from server.config import EgressBlocked, Settings, get_settings
 from server.orchestration.director import Action, CaseState, anext_state
 from server.orchestration.graph import (
@@ -43,6 +55,9 @@ from server.orchestration.memory import LearnerMemory, memory_store
 from server.orchestration.trace import summarize
 
 router = APIRouter(prefix="/v2", tags=["orchestration"])
+
+# Hard server-side cap on one SSE generation stream (review 04 O11).
+SSE_MAX_DURATION_S = 180.0
 
 # Node order the SSE stream announces up front so a UI can render a progress rail.
 PIPELINE_NODES: tuple[str, ...] = (
@@ -113,12 +128,44 @@ class OrchestrationRuntime:
         return {"configurable": {"thread_id": thread_id}}
 
 
+def _runtime_lock(state: Any) -> asyncio.Lock:
+    """One creation lock per app and event loop (a lock never crosses loops)."""
+    loop = asyncio.get_running_loop()
+    held = getattr(state, "orchestration_lock", None)
+    if held is None or held[0] is not loop:
+        held = (loop, asyncio.Lock())
+        state.orchestration_lock = held
+    return held[1]
+
+
 async def get_runtime(request: Request) -> OrchestrationRuntime:
-    rt = getattr(request.app.state, "orchestration", None)
-    if rt is None:
-        rt = await OrchestrationRuntime.create(getattr(request.app.state, "settings", None))
-        request.app.state.orchestration = rt
+    """The cached runtime; the first concurrent requests create exactly one (review 04 O7)."""
+    state = request.app.state
+    rt = getattr(state, "orchestration", None)
+    if rt is not None:
+        return rt
+    async with _runtime_lock(state):
+        rt = getattr(state, "orchestration", None)
+        if rt is None:
+            rt = await OrchestrationRuntime.create(getattr(state, "settings", None))
+            state.orchestration = rt
     return rt
+
+
+def owns_learner(user: Principal, learner_id: str) -> bool:
+    """The caller's own learner id (sub or its hash), or any id for faculty and above."""
+    return learner_id in (user.sub, user.user_hash) or user.has("faculty")
+
+
+def _learner_guard(learner_id: str | None, user: Principal | None) -> JSONResponse | None:
+    """None when the request may read or write ``learner_id``'s memory, else the error response."""
+    if not learner_id:
+        return None
+    if user is None:
+        return _error(401, "unauthenticated", "sign in to read or write learner memory")
+    if not owns_learner(user, learner_id):
+        return _error(403, "forbidden_learner", "learner_id must be your own learner id")
+    return None
 
 
 # --------------------------------------------------------------------------- #
@@ -162,7 +209,11 @@ def _unreachable(rt: OrchestrationRuntime, exc: Exception | None) -> JSONRespons
 # /v2/case/generate                                                            #
 # --------------------------------------------------------------------------- #
 @router.post("/case/generate")
-async def generate(req: GenerateV2Request, request: Request) -> JSONResponse:
+async def generate(req: GenerateV2Request, request: Request,
+                   user: Optional[Principal] = Depends(optional_user)) -> JSONResponse:
+    denied = _learner_guard(req.learner_id, user)
+    if denied is not None:
+        return denied
     rt = await get_runtime(request)
     if rt.llm is None:
         return _unreachable(rt, None)
@@ -194,8 +245,19 @@ async def _stream_events(rt: OrchestrationRuntime, req: GenerateV2Request) -> As
     state = initial_state(req.model_dump(exclude={"thread_id"}), thread_id)
     final: dict[str, Any] | None = None
     trace: list[dict[str, Any]] = []
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + SSE_MAX_DURATION_S
+    updates = rt.graph.astream(state, rt.config(thread_id), stream_mode="updates").__aiter__()
     try:
-        async for update in rt.graph.astream(state, rt.config(thread_id), stream_mode="updates"):
+        while True:
+            # The cap wraps each pull, never a yield, so the timeout only ever cancels graph work.
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise TimeoutError
+            try:
+                update = await asyncio.wait_for(updates.__anext__(), remaining)
+            except StopAsyncIteration:
+                break
             for node, payload in (update or {}).items():
                 if not isinstance(payload, dict):
                     continue
@@ -207,6 +269,11 @@ async def _stream_events(rt: OrchestrationRuntime, req: GenerateV2Request) -> As
                 if node == "finalize":
                     final = payload.get("spec")
                 yield _sse("node", data)
+    except TimeoutError:
+        yield _sse("error", {"error": "stream_timeout", "status": 504, "thread_id": thread_id,
+                             "detail": f"generation exceeded the {SSE_MAX_DURATION_S:.0f} s stream cap"})
+        await _aclose_quietly(updates)
+        return
     except ModelUnreachable as exc:
         yield _sse("error", {"error": "model_unreachable", "status": 503, "detail": str(exc)[:300], "thread_id": thread_id})
         return
@@ -216,8 +283,22 @@ async def _stream_events(rt: OrchestrationRuntime, req: GenerateV2Request) -> As
     yield _sse("done", {"thread_id": thread_id, "spec": final, "trace_summary": summarize(trace)})
 
 
+async def _aclose_quietly(it: Any) -> None:
+    close = getattr(it, "aclose", None)
+    if close is None:
+        return
+    try:
+        await close()
+    except (Exception, asyncio.CancelledError):  # noqa: BLE001 - a cancelled graph may raise on close
+        pass
+
+
 @router.post("/case/generate/stream")
-async def generate_stream(req: GenerateV2Request, request: Request) -> Response:
+async def generate_stream(req: GenerateV2Request, request: Request,
+                          user: Optional[Principal] = Depends(optional_user)) -> Response:
+    denied = _learner_guard(req.learner_id, user)
+    if denied is not None:
+        return denied
     rt = await get_runtime(request)
     if rt.llm is None:
         return _unreachable(rt, None)
@@ -237,11 +318,13 @@ async def template(req: GenerateV2Request) -> JSONResponse:
 
 
 @router.get("/case/{thread_id}")
-async def read_case(thread_id: str, request: Request) -> JSONResponse:
+async def read_case(thread_id: str, request: Request, user: Principal = Depends(current_user)) -> JSONResponse:
     rt = await get_runtime(request)
     snapshot = await rt.graph.aget_state(rt.config(thread_id))
     values = snapshot.values if snapshot is not None else {}
-    if not values:
+    owner = (values.get("request") or {}).get("learner_id") if values else None
+    if not values or (owner and not owns_learner(user, str(owner))):
+        # Someone else's checkpoint answers exactly like a missing one (no existence oracle).
         return _error(404, "thread_not_found", f"no checkpoint for thread {thread_id!r}")
     trace = values.get("trace") or []
     return JSONResponse(content={
@@ -260,7 +343,11 @@ async def read_case(thread_id: str, request: Request) -> JSONResponse:
 # /v2/director/step                                                            #
 # --------------------------------------------------------------------------- #
 @router.post("/director/step")
-async def director_step(req: DirectorStepRequest, request: Request) -> JSONResponse:
+async def director_step(req: DirectorStepRequest, request: Request,
+                        user: Optional[Principal] = Depends(optional_user)) -> JSONResponse:
+    denied = _learner_guard(req.learner_id, user)
+    if denied is not None:
+        return denied
     rt = await get_runtime(request)
     if req.case_state is not None:
         try:
@@ -289,7 +376,11 @@ async def director_step(req: DirectorStepRequest, request: Request) -> JSONRespo
     })
 
 
-@router.get("/learner/{learner_id}")
-async def learner_profile(learner_id: str, request: Request) -> dict[str, Any]:
+@router.get("/learner/{learner_id}", response_model=None)
+async def learner_profile(learner_id: str, request: Request,
+                          user: Principal = Depends(current_user)) -> dict[str, Any] | JSONResponse:
+    denied = _learner_guard(learner_id, user)
+    if denied is not None:
+        return denied
     rt = await get_runtime(request)
     return rt.memory.profile(learner_id)

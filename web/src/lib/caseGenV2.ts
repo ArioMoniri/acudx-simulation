@@ -23,6 +23,7 @@
 import { BACKEND_URL, type BackendResult, type RequestOptions } from "@/lib/backend";
 import { specToCaseInstance, type GeneratedCaseSpec } from "@/lib/liveCaseGen";
 import type { CaseInstance } from "@/domain/case";
+import { identityHeaders } from "@/lib/panelsApi";
 import { getProfileState, selectLearnerId } from "@/state/profileStore";
 
 export { specToCaseInstance };
@@ -267,7 +268,10 @@ async function request<T>(
 ): Promise<BackendResult<T>> {
   const { signal, clear } = composeSignal(timeoutMs, external);
   try {
-    const res = await fetch(`${BACKEND_URL}${path}`, { ...init, signal });
+    // The server binds learner memory and checkpoints to the caller (review 04 O3), so every
+    // call carries the same identity the panels use: the bearer, else the local headers.
+    const headers = { ...(await identityHeaders()), ...((init.headers as Record<string, string>) ?? {}) };
+    const res = await fetch(`${BACKEND_URL}${path}`, { ...init, headers, signal });
     if (!res.ok) {
       // Surface the server's error code (model_unreachable, thread_not_found, ...)
       // when it sent one, so the UI can explain instead of guessing.
@@ -407,7 +411,7 @@ export async function streamCaseGenV2(
   try {
     const res = await fetch(`${BACKEND_URL}/v2/case/generate/stream`, {
       method: "POST",
-      headers: { "content-type": "application/json", accept: "text/event-stream" },
+      headers: { ...(await identityHeaders()), "content-type": "application/json", accept: "text/event-stream" },
       body: JSON.stringify(withLearnerId(req)),
       signal,
     });
