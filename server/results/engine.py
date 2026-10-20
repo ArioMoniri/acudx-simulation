@@ -297,6 +297,7 @@ def condition_id_for(case_state: dict[str, Any]) -> Optional[str]:
 
 _TREATMENT_RULES: list[tuple[str, str]] = [
     (r"insulin.*(dextrose|glucose)|dextrose.*insulin", "insulin_dextrose"),
+    (r"dextrose|10 ?% glucose|glucose 10", "dextrose"),
     (r"insulin|friii", "insulin_infusion"),
     (r"prbc|packed red|transfus|blood product|o[- ]neg", "prbc"),
     (r"fluid|saline|crystalloid|bolus|hartmann|ringer|plasma-?lyte|rehydrat", "iv_fluids"),
@@ -423,6 +424,27 @@ class CaseContext:
         sbp = float(self.vitals.get("systolic", 120) or 120)
         dbp = float(self.vitals.get("diastolic", 70) or 70)
         self.hypotensive = sbp < 90 or (sbp + 2 * dbp) / 3 < 65
+        # Review 06b F19: when the Clinical Director is live, its state wins over
+        # the ESI-derived severity and the authored trajectory: severity, MAP and
+        # shock come from the course engine, lactate from perfusion (F20), CBG and
+        # potassium from insulin, dextrose and replacement (F18), and an opened
+        # branch (pneumonia to septic shock) switches the lab profile.
+        live = case_state.get("director")
+        self.live: Optional[dict[str, Any]] = live if isinstance(live, dict) and live.get("vitals") is not None else None
+        if self.live is not None:
+            branch = str(self.live.get("condition_id") or "")
+            if branch and branch != self.condition_id and branch in CONDITION_PROFILES:
+                merged = dict(self.profile)
+                merged["labs"] = {**(self.profile.get("labs") or {}), **(CONDITION_PROFILES[branch].get("labs") or {})}
+                self.profile = merged
+            try:
+                self.severity = max(0.0, min(1.0, float(self.live.get("severity") or 0.0)))
+            except (TypeError, ValueError):
+                pass
+            lv = self.live.get("vitals") or {}
+            self.vitals = {k: float(lv[k]) for k in ("hr", "systolic", "diastolic", "rr", "spo2", "tempC") if k in lv}
+            mp = self.live.get("map")
+            self.hypotensive = bool(self.live.get("shock")) or (mp is not None and float(mp) < 65)
         self.authored_labs = {str(lab.get("code")): lab for lab in case_state.get("labs") or [] if isinstance(lab, dict) and lab.get("code")}
         self.authored_imaging = [im for im in case_state.get("imaging") or [] if isinstance(im, dict)]
         self.weight_kg = float(demo.get("weight_kg", 70) or 70)
@@ -436,11 +458,26 @@ NORMOTENSIVE_LACTATE_SEVERITY = 0.25
 
 def _model_value(ctx: CaseContext, loinc: str, spec: Optional[tuple], t_h: float) -> tuple[float, Optional[str]]:
     base = _baseline(loinc, ctx.sex, ctx.age, ctx.seed)
+    if spec is None and ctx.live is not None and loinc in ("2345-7", "2339-0") and ctx.live.get("metabolic") in ("dka", "hypo") \
+            and ctx.live.get("cbg") is not None:
+        return float(ctx.live["cbg"]) * 18.0, "director"
     if spec is None:
         return base, None
     kind = spec[0]
     tr = ctx.treatments
     sev = ctx.severity
+    live = ctx.live
+    if live is not None:
+        if kind == "lactate" and live.get("lactate") is not None:
+            return float(live["lactate"]), "director"
+        metabolic = live.get("metabolic")
+        if kind == "dka" and spec[1] == "glucose" and live.get("cbg") is not None:
+            return float(live["cbg"]) * 18.0, "director"
+        if (kind == "potassium" or (kind == "dka" and spec[1] == "potassium")) and live.get("k") is not None \
+                and metabolic in ("dka", "hyperk"):
+            return float(live["k"]), "director"
+        if loinc in ("2345-7", "2339-0") and metabolic in ("dka", "hypo") and live.get("cbg") is not None:
+            return float(live["cbg"]) * 18.0, "director"
     if kind == "troponin":
         assay = spec[1] or load_ranges()["_by_loinc"].get(loinc, {}).get("assay", "hs_ctnt")
         return k.troponin(assay, t_h, sev, tr, ctx.sex), "troponin"
@@ -537,7 +574,9 @@ def _observation(ctx: CaseContext, loinc: str, prior: Optional[list[dict[str, An
     if authored is not None and isinstance(authored.get("value"), (int, float)):
         ground_truth = True
         authored_value = float(authored["value"])
-        if kin is not None:
+        if kin == "director":
+            value_num = model_now
+        elif kin is not None:
             model_arrival, _ = _model_value(ctx, loinc, spec, ctx.onset_h)
             value_num = authored_value if ctx.sim_time_ms == 0 else (model_now * (authored_value / model_arrival) if model_arrival > 0 else model_now)
         else:

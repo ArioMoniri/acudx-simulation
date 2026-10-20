@@ -327,20 +327,12 @@ def _curb65(spec: dict[str, Any], tv: Vitals, gcs: float) -> int:
 
 
 def build_course_input(spec: dict[str, Any], cid: str, tv: Vitals, trajectory: list[dict[str, Any]]) -> dict[str, Any]:
-    """The engine input for this case: rule library, arrival state, patient, seed."""
-    rule = COURSE.expand_rule(cid) if cid else None
-    if rule is not None:
-        library = COURSE.library_for(cid)
-        traj: list[dict[str, Any]] = []
-    else:
-        # No course rule (ESI 3 to 5 long tail): the stable fallback rule keeps
-        # the authored trajectory, so these cases behave as before.
-        rule = COURSE.fallback_rule(cid or "unclassified")
-        library = {rule["id"]: rule}
-        library.update({k: v for k, v in COURSE.library_for("anaphylaxis_iatrogenic").items()})
-        library.update({k: v for k, v in COURSE.library_for("hypoglycemia").items()})
-        cid = rule["id"]
-        traj = trajectory
+    """The engine input for this case: condition (its rule library is looked up), arrival state, patient, seed."""
+    cid = cid or "unclassified"
+    rule = COURSE.library_for(cid)[cid]
+    # No course rule (ESI 3 to 5 long tail): the stable fallback rule keeps the
+    # authored trajectory, so these cases behave as before.
+    traj: list[dict[str, Any]] = trajectory if rule.get("fallback") else []
     t0: dict[str, Any] = tv.model_dump()
     bed0 = dict(rule.get("bedside0") or {})
     for lab in spec.get("labs") or []:
@@ -370,7 +362,7 @@ def build_course_input(spec: dict[str, Any], cid: str, tv: Vitals, trajectory: l
         "allergies": parse_allergies(spec),
         "curb65": _curb65(spec, tv, float(t0.get("gcs", 15))),
     }
-    return {"condition_id": cid, "library": library, "t0": t0, "seed": seed, "patient": patient, "trajectory": traj}
+    return {"condition_id": cid, "t0": t0, "seed": seed, "patient": patient, "trajectory": traj}
 
 
 # --------------------------------------------------------------------------- #
@@ -867,7 +859,8 @@ def results_view(state: CaseState) -> dict[str, Any]:
         "map": b.get("map"), "shock": bool((b.get("map") or 99) < 65 or snap.get("pressor_on") or not b.get("pulse", True)),
         "lactate": b.get("lactate"), "cbg": b.get("cbg"), "k": b.get("k"), "vitals": snap.get("vitals"),
         "active_diagnoses": snap.get("active_diagnoses") or [],
-        "metabolic": (state.course.get("library", {}).get(state.course.get("condition_id", ""), {}) or {}).get("metabolic"),
+        "metabolic": COURSE.library_for(str(state.course.get("condition_id") or "unclassified"))
+        .get(str(state.course.get("condition_id") or "unclassified"), {}).get("metabolic"),
     }
 
 

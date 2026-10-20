@@ -156,7 +156,11 @@ class TestDka:
         s = k.dka_state(20.0, 0.9, tx)
         assert s["resolved"] == 1.0
         assert k.dka_state(8.0, 0.9, tx)["resolved"] == 0.0
-        assert s["glucose_mmol_L"] >= 10.0 and s["potassium_mmol_L"] >= 4.0
+        assert s["potassium_mmol_L"] >= 4.0
+        # 06b F18: no glucose floor under insulin; 10 % glucose holds it up.
+        assert s["glucose_mmol_L"] < 4.0
+        with_dex = k.dka_state(20.0, 0.9, tx + [Treatment("dextrose", 6.0)])
+        assert with_dex["glucose_mmol_L"] >= 6.0
         assert k.BOUNDS["ph"][0] <= s["ph"] <= k.BOUNDS["ph"][1]
 
     def test_winters_and_hh(self):

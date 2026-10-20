@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import copy
 import math
+from functools import lru_cache
 from typing import Any, Optional
 
 from server import case_fixtures as FX
@@ -158,9 +159,13 @@ def fallback_rule(cid: str) -> dict[str, Any]:
     return rule
 
 
+@lru_cache(maxsize=256)
 def library_for(cid: str) -> dict[str, dict[str, Any]]:
-    """The rule and every rule its branches (transitively) can open."""
+    """The rule and every rule its branches (transitively) can open. A condition
+    with no rule gets the stable fallback rule. Cached; callers treat it as read-only."""
     out: dict[str, dict[str, Any]] = {}
+    if cid not in FX.CONDITION_COURSE:
+        out[cid] = fallback_rule(cid)
     todo = [cid, "anaphylaxis_iatrogenic", "hypoglycemia"]
     while todo:
         nxt = todo.pop()
@@ -205,7 +210,7 @@ def _cmp(a: float, op: str, b: float) -> bool:
 class _Sim:
     def __init__(self, inp: dict[str, Any]) -> None:
         self.inp = inp
-        self.lib: dict[str, dict[str, Any]] = inp["library"]
+        self.lib: dict[str, dict[str, Any]] = inp.get("library") or library_for(str(inp["condition_id"]))
         self.seed = inp.get("seed", 0)
         pat = inp.get("patient") or {}
         self.weight = float(pat.get("weight_kg") or 70)
@@ -263,7 +268,8 @@ class _Sim:
     # ---- processes ------------------------------------------------------ #
     def _open(self, rid: str, minute: int, parent: Optional[dict[str, Any]], *, why_en: str, why_tr: str,
               s_start: Optional[float] = None, supersede: bool = False, primary: bool = False,
-              say_en: str = "", say_tr: str = "", lactate_min: Optional[float] = None) -> None:
+              say_en: str = "", say_tr: str = "", lactate_min: Optional[float] = None,
+              rate_h: Optional[float] = None) -> None:
         rule = self.lib.get(rid)
         if rule is None or any(p["id"] == rid for p in self.procs):
             return
@@ -271,7 +277,7 @@ class _Sim:
         s0 = float(rule["s0"] if s_start is None else s_start)
         proc = {"id": rid, "s": s0, "s_start": s0, "start": minute, "v_start": v_start, "superseded": False,
                 "resolved": False, "rate_mult": 1.0, "why_en": why_en, "why_tr": why_tr, "primary": primary,
-                "trend": 0.0}
+                "trend": 0.0, "rate_h": float(rule["rate_h"] if rate_h is None else rate_h)}
         if supersede and parent is not None:
             parent["superseded"] = True
         self.procs.append(proc)
@@ -333,7 +339,7 @@ class _Sim:
     def _classes(self, e: dict[str, Any]) -> list[str]:
         rule = self.lib[self.inp["condition_id"]]
         row = str(e.get("row") or "")
-        if row and row in rule["row_classes"]:
+        if row and row in rule["row_classes"] and str(e.get("code") or "") == row:
             return list(rule["row_classes"][row])
         return list(e.get("classes") or [])
 
@@ -745,7 +751,7 @@ class _Sim:
                 else:
                     ds = 0.0
             else:
-                ds = float(rule["rate_h"]) * p["rate_mult"] / 60.0
+                ds = p["rate_h"] * p["rate_mult"] / 60.0
                 p["s"] = min(1.0, p["s"] + ds)
             p["trend"] = ds
             rb = rule.get("resolve_below")
@@ -923,7 +929,7 @@ class _Sim:
                 elif b.get("to"):
                     self._open(b["to"], minute, p, why_en=b["why_en"], why_tr=b["why_tr"], s_start=b.get("s_start"),
                                supersede=bool(b.get("supersede")), say_en=b.get("say_en", ""), say_tr=b.get("say_tr", ""),
-                               lactate_min=b.get("lactate_min"))
+                               lactate_min=b.get("lactate_min"), rate_h=b.get("rate_h"))
         # Arrest from severity or sustained hypotension or hypoxia.
         if self.arrest is None:
             for p in self._live():

@@ -24,6 +24,7 @@ from typing import Iterable, Optional, Sequence
 TREATMENT_CODES: tuple[str, ...] = (
     "insulin_infusion",      # fixed-rate IV insulin (DKA); amount = units/kg/h
     "insulin_dextrose",      # hyperkalaemia bolus (10 U + glucose)
+    "dextrose",              # 10 % glucose infusion alongside FRIII (DKA)
     "iv_fluids",             # crystalloid; amount = litres
     "prbc",                  # packed red cells; amount = units
     "oxygen",                # amount = FiO2 (0.21..1.0); device in ``note``
@@ -430,7 +431,14 @@ def dka_state(
         krep = _first(treatments, "potassium_replacement")
         if krep is not None and t_h >= krep.t_h:
             potassium = max(potassium, 4.0)
-    glucose = clamp(max(glucose, 10.0 if t_ins is not None else 5.0), "glucose_mmol_L")
+    # Review 06b F18: no floor under insulin. Without 10 % glucose the fall
+    # continues into hypoglycaemia; once 10 % glucose runs (JBDS: add it when
+    # CBG is below 14 mmol/L) it offsets the insulin and holds about 6 mmol/L
+    # (design midpoint of the JBDS 6 to 10 mmol/L target).
+    dex = _first(treatments, "dextrose")
+    if dex is not None and t_ins is not None and t_h > dex.t_h:
+        glucose = max(glucose, 6.0)
+    glucose = clamp(glucose if t_ins is not None else max(glucose, 5.0), "glucose_mmol_L")
     ketones = clamp(max(ketones, 0.3), "ketones_mmol_L")
     hco3 = clamp(min(hco3, 24.0), "hco3_mmol_L")
     pco2 = winters_pco2(hco3) if hco3 < 22.0 else 40.0

@@ -2875,9 +2875,9 @@ def _tgt(tid: str, group: str, by_min: int, source: str, *, basis: str = "guidel
 
 def _br(bid: str, to: str, when: list, *, p: float = 1.0, window: tuple | None = None, supersede: bool = True,
         s_start: float | None = None, lactate_min: float | None = None, arrest: str | None = None,
-        why_en: str, why_tr: str, say_en: str = "", say_tr: str = "") -> dict[str, Any]:
+        rate_h: float | None = None, why_en: str, why_tr: str, say_en: str = "", say_tr: str = "") -> dict[str, Any]:
     return {"id": bid, "to": to, "when": when, "p": p, "window": list(window) if window else None,
-            "supersede": supersede, "s_start": s_start, "lactate_min": lactate_min, "arrest": arrest,
+            "supersede": supersede, "s_start": s_start, "lactate_min": lactate_min, "arrest": arrest, "rate_h": rate_h,
             "why_en": why_en, "why_tr": why_tr, "say_en": say_en, "say_tr": say_tr}
 
 
@@ -3114,9 +3114,9 @@ _WHY_SHOCK = ("MAP below 65 mmHg or lactate 4 mmol/L or more: sepsis has progres
 
 def _to_shock(bid: str = "septic_shock", to: str = "septic_shock", extra: list | None = None) -> list[dict[str, Any]]:
     return [
-        _br(bid, to, [_c("map", "<", 65)] + (extra or []), s_start=0.5, lactate_min=4.5,
+        _br(bid, to, [_c("map", "<", 65)] + (extra or []), s_start=0.5, lactate_min=4.5, rate_h=0.4,
             why_en=_WHY_SHOCK[0], why_tr=_WHY_SHOCK[1], say_en=_SAY_SHOCK[0], say_tr=_SAY_SHOCK[1]),
-        _br(bid + "_lactate", to, [_c("lactate", ">=", 4.0)] + (extra or []), s_start=0.5, lactate_min=4.5,
+        _br(bid + "_lactate", to, [_c("lactate", ">=", 4.0)] + (extra or []), s_start=0.5, lactate_min=4.5, rate_h=0.4,
             why_en=_WHY_SHOCK[0], why_tr=_WHY_SHOCK[1], say_en=_SAY_SHOCK[0], say_tr=_SAY_SHOCK[1]),
     ]
 
@@ -3125,9 +3125,12 @@ _SEIZURE = _br("seizure", "status_epilepticus", [], p=0.15, window=(30, 100), su
                why_en="Seeded seizure (seizures occur in about 17 % of adult bacterial meningitis; Zoons 2008)",
                why_tr="Tohumlanmış nöbet (erişkin bakteriyel menenjitte yaklaşık %17; Zoons 2008)",
                say_en="(the relative shouts) He's shaking all over!", say_tr="(yakını bağırır) Her yeri titriyor!")
-_MOTTLING = _fd("mottling", "general-inspection", [_c("mottle", ">=", 3)],
-                "Mottling extends above the knees; capillary refill 5 s at the sternum.",
-                "Alacalanma dizlerin üzerine uzanıyor; sternumda kapiller dolum 5 sn.")
+_MOTTLING = _fd("mottling", "general-inspection", [_c("mottle", ">=", 2)],
+                "Mottling over both knees (mottling score 2); cold peripheries, capillary refill 4 to 5 s.",
+                "Her iki dizde alacalanma (skor 2); soğuk ekstremiteler, kapiller dolum 4-5 sn.")
+_MOTTLING_HIGH = _fd("mottling_thighs", "general-inspection", [_c("mottle", ">=", 4)],
+                     "Mottling now extends over the thighs (score 4); capillary refill 6 s at the sternum.",
+                     "Alacalanma artık uyluklara yayıldı (skor 4); sternumda kapiller dolum 6 sn.")
 _CONFUSED = _fd("confusion", "neurological", [_c("gcs", "<=", 12)],
                 "Confused and mumbling; the family now gives the history.",
                 "Konfüze ve mırıldanıyor; öyküyü artık ailesi veriyor.")
@@ -3147,7 +3150,7 @@ CONDITION_COURSE: dict[str, dict[str, Any]] = {
             _br("ards", "ards", [_c("t_min", ">=", 360), _c("s", ">=", 0.6)], supersede=False,
                 why_en="Time-skip: bilateral infiltrates with P/F below 300 on PEEP 5 (Berlin 2012)",
                 why_tr="Zaman atlaması: PEEP 5'te P/F 300 altı bilateral infiltrat (Berlin 2012)")],
-        "findings": [_MOTTLING, _CONFUSED],
+        "findings": [_MOTTLING, _MOTTLING_HIGH, _CONFUSED],
         "harm_rules": ["starch"],
     },
     # ---- 06b section 5.1 ------------------------------------------------- #
@@ -3166,7 +3169,7 @@ CONDITION_COURSE: dict[str, dict[str, Any]] = {
         "targets": [_tgt("abx_4h", "antimicrobial", 240, NG250)],
         "branches": [
             _br("septic_shock", "septic_shock", [_c("curb65", ">=", 3), _c("unmet:antimicrobial", "==", 1)], p=0.3, window=(60, 120),
-                s_start=0.5, lactate_min=4.5,
+                s_start=0.5, lactate_min=4.5, rate_h=0.6,
                 why_en="CURB-65 3 or more and no antibiotic by 60 min: pulmonary sepsis progressed to septic shock (NICE NG250; SSC 2021)",
                 why_tr="CURB-65 3 ve üzeri, 60. dakikada antibiyotik yok: pulmoner sepsis septik şoka ilerledi (NICE NG250; SSC 2021)",
                 say_en="I can't get my breath and I'm freezing.", say_tr="Nefes alamıyorum ve donuyorum."),
