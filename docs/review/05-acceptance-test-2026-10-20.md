@@ -151,8 +151,12 @@ Additional clinical corrections found while fixing:
 - The febrile neutropenia exam no longer states a temperature that disagrees with the chart.
 - The template's PMH, medication and allergy answers no longer render twice (step C3).
 
-A rerun of `acceptance.spec.ts` on this branch (gateway with no model, AIRGAPPED, screenshots written to a scratch directory so the run 4 evidence above is unchanged) is summarised in the handoff note. The evidence PNGs were palette-quantised (64 colours) from 13.1 MB to 3.9 MB.
+Run 5 (`acceptance.spec.ts` on this branch, fresh gateway database, no model, AIRGAPPED; screenshots written to a scratch directory so the run 4 evidence above is unchanged): **56 checks, 52 pass, 4 fail** (run 4: 42 pass, 14 fail). Cases: ascending cholangitis (1 try) and malaria (1 try). S2 finds the Fever tile; C3b 0 clarification replies of 9 typed questions in both cases; C4 8 exam findings; C6 paracetamol and ceftriaxone given in both (the cholangitis patient's mild penicillin rash is now a caution, not a block, NICE NG240 1.7.3); C10 WBC 17 / CRP 192 / lactate 3.2 (cholangitis) and WBC 4.9 / CRP 16 / lactate 1.3 (malaria); C11b 0 "Source unavailable" rows; F1 shows the role-gate notice. Remaining failures: C3.1 and C3.2 count 9 labelled patient replies for 10 questions (0 deflections; the spec counts one combined reply), C13.2 `www.cdc.gov` answers 403 to the headless request client while the verifier's fetch of the same page returned 200 (a bot wall, not a dead link), F2 the spec looks for a "Faculty" nav badge where the shell now labels the vantage "Educator". These are spec expectations, recorded for the next walk.
+
+An earlier attempt of run 5, before the rash fix, failed C6.1 (ceftriaxone blocked by a penicillin rash) and the case 1 steps after it; that finding produced the severity-aware cross-check. The evidence PNGs were palette-quantised (64 colours) from 13.1 MB to 3.9 MB.
 
 ## 8. Gates
 
 After the merge and every fix: `npm --prefix web run typecheck` clean; `npm --prefix web test` 32 files, 337 tests passed; `npm --prefix web run lint` 0 errors (71 warnings, none new); `.venv/bin/python -m pytest server/tests -q` 1043 passed, 2 skipped. `scripts/watchdog.sh` on the touched files reports one hit, the pre-existing "hardcodes" comment at `web/src/lib/backend.ts:32`.
+
+Second pass: `npm --prefix web run typecheck` clean; `npm --prefix web test` 38 files, 381 tests passed; `npm --prefix web run lint` 0 errors (71 warnings, none new); `.venv/bin/python -m pytest server/tests -q` 1309 passed, 2 skipped; `scripts/watchdog.sh` on the touched source files clean.
