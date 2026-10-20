@@ -204,3 +204,12 @@ def test_local_mode_verified_bearer_keeps_its_faculty_role(tmp_path, keys):
     c = client_for(app, token=keys.mint(sub="f", roles=["faculty"]))
     assert c.get("/v1/auth/me").json()["roles"] == ["faculty"]
     assert c.get("/v1/faculty/queue").status_code == 200
+
+
+def test_empty_audience_is_a_configuration_error_not_a_disabled_check(tmp_path, keys):
+    """Review 04 O9: a row with audience "" refuses bearers (503) and says why in /v1/auth/config."""
+    app, _ = build_app(tmp_path, keys=keys, idp_extra={"audience": ""})
+    r = client_for(app, token=keys.mint(sub="x", roles=["student"], aud=None)).get("/v1/auth/me")
+    assert r.status_code == 503 and r.json()["detail"]["reason"] == "identity_misconfigured"
+    cfg = client_for(app).get("/v1/auth/config").json()
+    assert "audience is empty" in cfg["provider"]["config_error"]

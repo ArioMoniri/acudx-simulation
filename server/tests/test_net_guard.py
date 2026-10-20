@@ -127,3 +127,19 @@ async def test_registry_probe_refuses_a_metadata_target_without_a_request(tmp_pa
         out = await probe_provider(rec, api_key=None, settings=Settings(_env_file=None, airgapped=False),
                                    client=c, store=store)
     assert out["ok"] is False and out["error"] == "BlockedDestination" and not calls
+
+
+async def test_identity_probe_reports_an_empty_audience_as_a_configuration_error(tmp_path):
+    from cryptography.fernet import Fernet
+
+    from server.config import Settings
+    from server.registry.probe import probe_provider
+    from server.registry.store import ProviderIn, RegistryStore
+
+    store = RegistryStore(str(tmp_path / "r.db"), secret_key=Fernet.generate_key().decode())
+    rec = store.create_provider(ProviderIn(kind="identity", name="kc", base_url="https://idp.example.edu/realms/a",
+                                           extra={"audience": ""}))
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200, json={}))) as c:
+        out = await probe_provider(rec, api_key=None, settings=Settings(_env_file=None, airgapped=False),
+                                   client=c, store=store)
+    assert out["ok"] is False and out["error"] == "IdentityMisconfigured" and "audience" in out["detail"]

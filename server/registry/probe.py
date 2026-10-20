@@ -80,6 +80,16 @@ async def probe_provider(rec: ProviderRecord, *, api_key: str | None, settings: 
         _persist(store, rec.id, result)
         return result
 
+    if rec.kind == "identity":
+        from server.auth.config import identity_config_from_record
+
+        cfg_error = identity_config_from_record(rec).config_error
+        if cfg_error:
+            # Review 04 O9: surfaced as the row's probe error in the admin providers panel.
+            result.update(error="IdentityMisconfigured", detail=cfg_error)
+            _persist(store, rec.id, result)
+            return result
+
     headers = _auth_headers(rec.kind, api_key)
     base = rec.base_url.rstrip("/")
     paths = HEALTH_PATHS.get(rec.kind, ("/",))

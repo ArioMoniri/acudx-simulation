@@ -153,8 +153,11 @@ class OidcVerifier:
         alg = header.get("alg")
         if alg not in ALLOWED_ALGS:
             raise TokenInvalid("alg_not_allowed", f"alg {alg!r} is not accepted")
+        if not self.audience:
+            # Review 04 O9: an empty audience is a configuration error, never a disabled check.
+            raise TokenInvalid("audience_not_configured", "the identity provider has no audience configured")
         key = await self.key_for(header.get("kid"), client)
-        options: dict[str, Any] = {"require": ["exp", "iat", "iss", "sub"], "verify_aud": self.audience is not None}
+        options: dict[str, Any] = {"require": ["exp", "iat", "iss", "sub"], "verify_aud": True}
         try:
             return jwt.decode(
                 token,

@@ -179,6 +179,9 @@ class AuthService:
                                                                  "message": "AUTH_MODE is oidc but no identity provider is enabled"})
                 raise HTTPException(status_code=401, detail={"reason": "no_identity_provider",
                                                              "message": "a bearer token was sent but no identity provider is configured"})
+            if cfg.config_error:
+                raise HTTPException(status_code=503, detail={"reason": "identity_misconfigured",
+                                                             "message": cfg.config_error})
             try:
                 claims = await self.verifier_for(cfg).verify(token, self._client)
             except TokenInvalid as exc:
