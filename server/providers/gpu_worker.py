@@ -284,6 +284,7 @@ class WorkerManager:
         self.boot_timeout_s = boot_timeout_s
         self.ready_timeout_s = ready_timeout_s
         self._lock = asyncio.Lock()
+        self._inflight: asyncio.Task[WorkerRecord] | None = None
         self._reaper: asyncio.Task[None] | None = None
         self._policy = self.store.get_policy() or WorkerPolicy(
             idle_minutes=settings.gpu_idle_minutes, daily_budget_usd=settings.gpu_daily_budget_usd,
@@ -380,18 +381,24 @@ class WorkerManager:
         }
 
     async def ensure_worker(self) -> WorkerRecord:
-        """Return a healthy worker, launching one if needed. Raises :class:`WorkerRefused`."""
+        """Return a healthy worker, launching one if needed. Raises :class:`WorkerRefused`.
+
+        The lock only guards the decision; the launch or readiness wait runs as ONE shared
+        task that every concurrent caller awaits (shielded, so a caller that disconnects
+        never cancels the boot or triggers an early termination).
+        """
         async with self._lock:
             refusal = self._refusal()
             if refusal is not None:
                 raise refusal
             now = self._clock()
             w = self.store.active_worker()
-            if w is not None:
-                if w.status == "ready" and await self._healthy(w):
-                    return self.store.update_worker(w.id, last_used_at=now)
-                return await self._wait_ready(w)
-            return await self._launch()
+            if w is not None and w.status == "ready" and await self._healthy(w):
+                return self.store.update_worker(w.id, last_used_at=now)
+            if self._inflight is None or self._inflight.done():
+                self._inflight = asyncio.create_task(self._wait_ready(w) if w is not None else self._launch())
+            task = self._inflight
+        return await asyncio.shield(task)
 
     async def terminate(self, reason: str = "admin") -> WorkerRecord | None:
         w = self.store.active_worker()
@@ -407,7 +414,7 @@ class WorkerManager:
                 self.store.update_worker(w.id, status=w.status)
                 raise
         self.store.close_ledger(w.instance_id, now, reason)
-        log.info("gpu worker %s terminated (%s)", w.instance_id, reason)
+        log.info("gpu worker %s terminated (%s) after %.0fs", w.instance_id, reason, now - w.launched_at)
         return self.store.update_worker(w.id, status="terminated", terminated_at=now)
 
     # -- idle reaper --------------------------------------------------------- #
@@ -510,6 +517,9 @@ class WorkerManager:
 
     async def _wait_ready(self, w: WorkerRecord) -> WorkerRecord:
         api = self._lambda()
+        t0 = self._clock()
+        log.info("gpu worker %s: waiting for readiness (boot budget %.0fs, ready budget %.0fs, poll %.0fs)",
+                 w.instance_id, self.boot_timeout_s, self.ready_timeout_s, self.poll_interval_s)
         if not w.ip:
             for _ in range(self._attempts(self.boot_timeout_s)):
                 inst = await api.get_instance(w.instance_id)
@@ -530,6 +540,8 @@ class WorkerManager:
                 return self.store.update_worker(w.id, status="ready", ready_at=w.ready_at or now,
                                                 last_used_at=now)
             await self._sleep(self.poll_interval_s)
+        log.warning("gpu worker %s: /healthz never passed; elapsed %.0fs of %.0fs budget",
+                    w.instance_id, self._clock() - t0, self.ready_timeout_s)
         await self.terminate(reason="ready_timeout")
         raise WorkerFailed(f"worker {w.domain} did not pass /healthz in {self.ready_timeout_s:.0f}s")
 
