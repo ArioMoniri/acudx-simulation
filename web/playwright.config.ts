@@ -53,7 +53,7 @@ function resolveChromium(): string | undefined {
 }
 
 const executablePath = resolveChromium();
-const PORT = 4173;
+const PORT = Number(process.env.PORT ?? 4173);
 export const BASE_URL = `http://localhost:${PORT}`;
 
 const webCommand = process.env.E2E_PREVIEW
