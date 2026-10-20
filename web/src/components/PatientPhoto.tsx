@@ -431,7 +431,7 @@ export function PatientPhoto({
   return (
     <figure
       className={cn(
-        "relative overflow-hidden rounded-control bg-monitor-border/40",
+        "@container relative overflow-hidden rounded-control bg-monitor-border/40",
         className,
       )}
     >
@@ -566,7 +566,10 @@ export function PatientPhoto({
             </span>
           ) : null}
           {reducedSigns.length > 0 ? (
-            <span className="inline-flex items-start gap-1 rounded-pill bg-black/55 px-1.5 py-0.5 text-[10px] font-medium leading-tight text-white shadow-sm backdrop-blur-sm">
+            // Hidden on thumbnails narrower than 160 px, where it clipped over the face
+            // (redesign review 2026-10-20); the same signs stay in the sign line and
+            // flowsheet next to every thumbnail, so no information is lost.
+            <span className="hidden items-start gap-1 rounded-pill bg-black/55 px-1.5 py-0.5 text-[10px] font-medium leading-tight text-white shadow-sm backdrop-blur-sm @[160px]:inline-flex">
               <Pulse weight="bold" className="mt-px h-3 w-3 shrink-0" aria-hidden />
               <span>
                 {t("patientviewer.clinicalSigns", { defaultValue: "Clinical signs" })}

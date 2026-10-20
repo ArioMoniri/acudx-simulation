@@ -349,7 +349,7 @@ export function ActivityTabs({
         </div>
       </TabsContent>
       <TabsContent value="orders">
-        <OrdersTab caseInstance={caseInstance} lang={lang} />
+        <OrdersTab caseInstance={caseInstance} lang={lang} guidanceOn={guidanceOn} />
       </TabsContent>
       <TabsContent value="results">
         <ResultsTab lang={lang} guidanceOn={guidanceOn} />

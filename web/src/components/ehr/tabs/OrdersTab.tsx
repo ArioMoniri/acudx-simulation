@@ -64,6 +64,11 @@ import type { CaseInstance } from "@/domain/case";
 export interface OrdersTabProps {
   caseInstance: CaseInstance;
   lang: Lang;
+  /**
+   * Coaching mode. The indicated / low-value flags come from the case rubric, so they
+   * are answers: show them only when guidance is on (never in exam or no-hint runs).
+   */
+  guidanceOn?: boolean;
 }
 
 const GROUP_ICON: Record<OrderCategory, Icon> = {
@@ -100,7 +105,7 @@ function turnaround(o: Orderable, lang: Lang): string {
  * class, administers agents that drive the live vitals course. Indicated vs
  * low-value orders are flagged from the case rubric, but anything is orderable.
  */
-export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
+export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabProps) {
   const { t } = useTranslation();
   const state = useEncounterState();
   const [query, setQuery] = useState("");
@@ -111,13 +116,14 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
   // Indicated / low-value flags from the case rubric (ordering stays unlimited).
   const rubric = useMemo(() => {
     const m = new Map<string, "indicated" | "lowValue">();
+    if (!guidanceOn) return m;
     for (const w of caseInstance.expectedWorkup) {
       const code = w.code.coding[0]?.code;
       if (!code) continue;
       m.set(code, w.lowValue ? "lowValue" : "indicated");
     }
     return m;
-  }, [caseInstance]);
+  }, [caseInstance, guidanceOn]);
 
   // The catalog, plus any case-specific lab/imaging codes not already listed so
   // the indicated order is always present and flaggable.
