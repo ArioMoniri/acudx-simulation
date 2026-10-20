@@ -65,7 +65,7 @@ export function DebriefPanel({
       className="flex flex-col gap-4 rounded-card border border-border bg-surface p-4"
     >
       <div>
-        <h2 className="text-sm font-semibold text-fg">{t("rooms.debrief.title")}</h2>
+        <h2 className="text-[1.0625rem] text-fg">{t("rooms.debrief.title")}</h2>
         <p className="mt-1 text-xs text-muted">{t("rooms.debrief.subtitle")}</p>
       </div>
 

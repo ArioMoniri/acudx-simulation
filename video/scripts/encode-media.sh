@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# Re-encode the Remotion renders for the repository and export the README hero.
+# Re-encode the Remotion renders for the repository.
 #
 #   bash scripts/encode-media.sh prepare   # recording webm -> seek-friendly mp4 for Remotion
-#   bash scripts/encode-media.sh final     # out/*.raw.mp4 -> out/*.mp4 (CRF tuned) and the README hero WebP
+#   bash scripts/encode-media.sh final     # out/*.raw.mp4 -> out/*.mp4 (CRF tuned)
+#
+# The README hero is no longer cut from the film (its zoom-to-focus camera
+# cropped text and carried the cursor overlay and caption bar). It is a plain
+# capture of the running app: scripts/design/capture-readme.mjs and
+# scripts/design/readme-media.py at the repository root.
 #
 # Uses the system ffmpeg when present, else Remotion's bundled ffmpeg.
 set -euo pipefail
@@ -14,7 +19,6 @@ if [ -z "$FFMPEG" ]; then
 fi
 [ -n "$FFMPEG" ] || { echo "no ffmpeg found" >&2; exit 1; }
 
-MEDIA=../docs/media/readme
 
 case "${1:-}" in
   prepare)
@@ -32,13 +36,7 @@ case "${1:-}" in
       "$FFMPEG" -v error -y -i "out/$name.raw.mp4" -vf "hqdn3d=2:2:6:6" -c:v libx264 -preset slower -crf "$crf" \
         -x264-params "aq-mode=3:psy-rd=0.6" -pix_fmt yuv420p -movflags +faststart -an "out/$name.mp4"
     done
-    mkdir -p "$MEDIA"
-    # README hero: 7 s of the encounter (the interview) from the walkthrough, animated WebP at 960 px, 15 fps.
-    START="${HERO_START:-19}"
-    "$FFMPEG" -v error -y -ss "$START" -t 7 -i out/walkthrough.raw.mp4 \
-      -vf "fps=15,scale=960:-2:flags=lanczos" -c:v libwebp_anim -lossless 0 -quality 72 -compression_level 6 -loop 0 -an \
-      "$MEDIA/hero-encounter.webp"
-    ls -la out/*.mp4 "$MEDIA"/hero-encounter.webp
+    ls -la out/*.mp4
     ;;
   *)
     echo "usage: $0 prepare|final" >&2

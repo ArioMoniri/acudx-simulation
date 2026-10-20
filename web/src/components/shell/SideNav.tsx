@@ -9,9 +9,11 @@ import { Wordmark } from "./Wordmark";
 import { NAV_ICON } from "./navIcons";
 
 /**
- * SideNav: the primary navigation rail on lg and up (Linear, Vercel, Heidi).
- * 220 px, wordmark at the top, role-scoped items from lib/navigation, a
- * 32 px row per item with a glyph and label, the active row filled.
+ * SideNav: the ink navigation rail on lg and up (v4 "Ward ink"). 232 px,
+ * always dark in both themes: the Pulse seal lockup at the top, role-scoped
+ * items from lib/navigation as 36 px rows, the active row marked by a lighter
+ * ink fill and a 2 px cobalt bar on its leading edge. The ink scope re-points
+ * the semantic tokens so focus rings and text stay AA on the dark ground.
  */
 export function SideNav({ className }: { className?: string }) {
   const { t } = useTranslation();
@@ -21,17 +23,17 @@ export function SideNav({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-dvh w-[220px] shrink-0 flex-col border-e border-border bg-surface lg:flex",
+        "ink-scope sticky top-0 hidden h-dvh w-[232px] shrink-0 flex-col border-e border-ink-border bg-ink lg:flex",
         className,
       )}
     >
-      <div className="flex h-12 items-center border-b border-border px-4">
+      <div className="flex h-14 items-center px-5">
         <NavLink to="/" aria-label={t("app.name")} className="rounded-control">
-          <Wordmark size="sm" />
+          <Wordmark size="md" />
         </NavLink>
       </div>
-      <nav aria-label={t("nav.primary", { defaultValue: "Primary" })} className="flex-1 overflow-y-auto px-2 py-3">
-        <ul className="flex flex-col gap-px">
+      <nav aria-label={t("nav.primary", { defaultValue: "Primary" })} className="flex-1 overflow-y-auto px-3 pb-3 pt-2">
+        <ul className="flex flex-col gap-0.5">
           {items.map((item) => {
             const Glyph = NAV_ICON[item.to] ?? House;
             return (
@@ -43,11 +45,11 @@ export function SideNav({ className }: { className?: string }) {
                   onFocus={() => prefetchRoute(item.to)}
                   className={({ isActive }) =>
                     cn(
-                      "flex h-8 items-center gap-2.5 rounded-control px-2.5 text-[0.8125rem] font-medium",
+                      "relative flex h-9 items-center gap-3 rounded-control px-3 text-[0.8125rem] font-medium",
                       "transition-colors duration-[120ms] ease-out",
                       isActive
-                        ? "bg-bg-inset text-fg"
-                        : "text-muted hover:bg-bg-subtle hover:text-fg",
+                        ? "bg-ink-3 text-ink-fg before:absolute before:inset-y-2 before:start-0 before:w-0.5 before:rounded-full before:bg-ink-accent"
+                        : "text-ink-muted hover:bg-ink-2 hover:text-ink-fg",
                     )
                   }
                 >
@@ -55,7 +57,7 @@ export function SideNav({ className }: { className?: string }) {
                     <>
                       <Glyph
                         weight={isActive ? "fill" : "regular"}
-                        className={cn("h-4 w-4 shrink-0", isActive ? "text-brand" : "text-subtle")}
+                        className={cn("h-[1.05rem] w-[1.05rem] shrink-0", isActive ? "text-ink-accent" : "text-ink-muted")}
                         aria-hidden
                       />
                       <span className="truncate">{t(item.key, { defaultValue: item.defaultLabel })}</span>
@@ -67,8 +69,8 @@ export function SideNav({ className }: { className?: string }) {
           })}
         </ul>
       </nav>
-      <div className="border-t border-border px-4 py-3">
-        <p className="text-[0.6875rem] leading-4 text-subtle">{t("app.eduDisclaimer")}</p>
+      <div className="border-t border-ink-border px-5 py-4">
+        <p className="text-[0.6875rem] leading-4 text-ink-muted">{t("app.eduDisclaimer")}</p>
       </div>
     </aside>
   );

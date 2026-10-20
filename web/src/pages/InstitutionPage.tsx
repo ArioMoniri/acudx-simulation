@@ -86,7 +86,7 @@ function SectionHeading({
     <div className="mb-3 border-b border-border pb-2">
       <div className="flex items-center gap-2">
         <Icon weight="bold" className="h-4.5 w-4.5 text-brand" aria-hidden />
-        <h2 id={id} className="text-lg font-semibold tracking-tight text-fg">
+        <h2 id={id} className="text-xl text-fg">
           {title}
         </h2>
       </div>

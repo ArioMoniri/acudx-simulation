@@ -90,7 +90,7 @@ export function ParticipantsPanel({
     >
       {/* Header + shared team clock */}
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-fg">
+        <h2 className="text-[1.0625rem] text-fg">
           {t("rooms.inroom.participants")}
         </h2>
         <span className="inline-flex items-center gap-1.5">
@@ -189,7 +189,7 @@ export function ParticipantsPanel({
                 {/* Turn cue — icon + text, never colour/motion alone */}
                 {speaking ? (
                   <span
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[11px] font-medium text-white"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[11px] font-medium text-on-brand"
                     aria-live="polite"
                   >
                     {hasFloor ? (

@@ -35,7 +35,7 @@ function BannerFact({
   className?: string;
 }) {
   return (
-    <div className={cn("flex min-w-0 flex-col gap-0.5 px-3 py-1.5 first:ps-0", className)}>
+    <div className={cn("flex min-w-0 shrink-0 flex-col gap-0.5 py-2 sm:px-4 sm:first:ps-0", className)}>
       <span className="eyebrow text-[0.625rem]">{label}</span>
       <div className="flex min-h-5 min-w-0 items-center gap-1.5 text-[0.8125rem] text-fg">
         {children}
@@ -45,12 +45,14 @@ function BannerFact({
 }
 
 /**
- * PatientBanner: the persistent chart header (Epic storyboard condensed).
+ * PatientBanner: the persistent chart header (Epic storyboard condensed), the
+ * most recognisable surface of the v4 "Ward ink" language.
  *
- * A full-width record strip with square corners and no blur: an identity row
- * (portrait, name, age and sex, MRN in mono, SIM provenance, toolbar) over a
- * hairline-divided fact band (chief complaint, allergies, code status, ESI,
- * weight, encounter class). Allergies, acuity and code pair an icon or dot with
+ * An ink identity band (always dark, both themes) with a cobalt leading edge:
+ * portrait, the patient's name in the Fraunces serif, age and sex, MRN in
+ * mono, SIM provenance and the toolbar. Under it a paper fact band divided by
+ * 1 px rules (chief complaint, allergies, code status, ESI, weight, encounter
+ * class). Allergies, acuity and code pair an icon or dot with
  * their label so meaning is never carried by colour alone (WCAG 1.4.1).
  * Sticky under the 48 px top bar so it never scrolls away.
  */
@@ -76,8 +78,8 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
       aria-label={t("ehr.banner.label")}
       className="relative z-30 -mx-4 border-b border-border bg-surface md:sticky md:top-12 md:-mx-6"
     >
-      {/* Identity row */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 md:px-6">
+      {/* Identity row: the ink band */}
+      <div className="ink-scope relative flex flex-wrap items-center gap-x-3.5 gap-y-2 bg-ink px-4 py-2.5 before:absolute before:inset-y-0 before:start-0 before:w-[3px] before:bg-ink-accent md:px-6">
         <PatientPhoto
           sex={visual.sexAtBirth}
           age={visual.age}
@@ -86,11 +88,11 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
           alt={t("ehr.storyboard.avatarAlt", {
             defaultValue: "Synthetic patient portrait, not a real individual",
           })}
-          className="h-9 w-9 shrink-0 rounded-control ring-1 ring-border"
+          className="h-10 w-10 shrink-0 rounded-control ring-1 ring-ink-border"
         />
 
         <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-          <h2 className="text-base font-semibold leading-tight tracking-tight text-fg">
+          <h2 className="text-[1.375rem] leading-tight text-ink-fg">
             {patient.name}
           </h2>
           <span className="tnum text-[0.8125rem] text-muted">
@@ -111,10 +113,10 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
       </div>
 
       {/* Fact band */}
-      <div className="flex flex-wrap items-stretch divide-x divide-border border-t border-border bg-surface-2 px-4 md:px-6">
+      <div className="grid grid-cols-2 gap-x-4 bg-surface px-4 sm:flex sm:flex-wrap sm:items-stretch sm:gap-x-0 sm:divide-x sm:divide-border md:flex-nowrap md:px-6">
         <BannerFact
           label={t("ehr.banner.chiefComplaint")}
-          className="basis-full sm:basis-auto sm:max-w-sm"
+          className="col-span-2 border-b border-border sm:max-w-md sm:border-b-0 md:shrink"
         >
           <span className="line-clamp-2 font-medium">{pick(caseInstance.chiefComplaint, lang)}</span>
         </BannerFact>
@@ -152,7 +154,7 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
         </BannerFact>
 
         {patient.weightKg != null ? (
-          <BannerFact label={t("ehr.storyboard.weight", { defaultValue: "Weight" })} className="hidden sm:flex">
+          <BannerFact label={t("ehr.storyboard.weight", { defaultValue: "Weight" })} className="hidden lg:flex">
             <span className="font-mono">
               {patient.weightKg}
               <span className="ms-0.5 text-xs text-muted">kg</span>
@@ -160,7 +162,7 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
           </BannerFact>
         ) : null}
 
-        <BannerFact label={t("encounter.title")} className="hidden md:flex">
+        <BannerFact label={t("encounter.title")} className="hidden xl:flex">
           <Badge tone="neutral" variant="outline">
             {t(`ehr.encounterClass.${encounter.class}`)}
           </Badge>

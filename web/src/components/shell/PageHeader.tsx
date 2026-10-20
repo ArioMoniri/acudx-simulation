@@ -48,7 +48,7 @@ export function PageHeader({
     <header
       className={cn(
         "flex flex-col gap-3",
-        !marketing && "border-b border-border pb-4",
+        !marketing && "border-b border-border pb-5 pt-1",
         className,
       )}
     >
@@ -84,8 +84,8 @@ export function PageHeader({
             className={cn(
               "text-fg",
               marketing
-                ? "display text-3xl sm:text-4xl lg:text-[2.75rem]"
-                : "text-lg font-semibold tracking-tight sm:text-xl",
+                ? "display text-4xl sm:text-5xl lg:text-[3.5rem]"
+                : "display text-[1.625rem] sm:text-[2rem]",
             )}
           >
             {title}
@@ -94,7 +94,7 @@ export function PageHeader({
             <p
               className={cn(
                 "text-muted",
-                marketing ? "max-w-xl text-base sm:text-lg" : "max-w-2xl text-[0.8125rem]",
+                marketing ? "max-w-xl text-base sm:text-lg" : "mt-1 max-w-2xl text-sm",
               )}
             >
               {description}

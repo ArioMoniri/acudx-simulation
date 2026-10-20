@@ -53,7 +53,7 @@ export function ChatMessage({ role, text, affect }: ChatMessageProps) {
           className={cn(
             "mt-0.5 rounded-card px-3.5 py-2.5 text-sm leading-relaxed",
             isDoctor
-              ? "rounded-br-md bg-brand text-white"
+              ? "rounded-br-md bg-brand text-on-brand"
               : "rounded-bl-md border border-border bg-surface text-fg",
           )}
         >
