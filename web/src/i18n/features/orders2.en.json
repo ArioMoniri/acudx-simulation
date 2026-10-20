@@ -47,7 +47,8 @@
       "orderedAt": "ordered {{min}} min",
       "resultedAt": "resulted {{min}} min",
       "progressAria": "{{name}} result progress",
-      "hint": "Results open in the Results tab as each test finalises."
+      "hint": "Results open in the Results tab as each test finalises.",
+      "timeLegend": "ETA is the clinical turnaround in simulated time; the simulation compresses time, so the \"ready in\" countdown is the real wait on your screen."
     },
     "treatments": {
       "heading": "Treatments",
@@ -103,6 +104,12 @@
       "finalReport": "Final report",
       "normalHeading": "Additional results (normal)",
       "normalNote": "Ordered tests with no case-specific finding are reported here, within normal limits."
+    },
+    "allergy": {
+      "alternatives": "Allergy-safe alternatives in the formulary for this diagnosis:",
+      "none": "No allergy-safe alternative in this group; seek specialist advice.",
+      "caution": "Caution: documented {{allergy}}. Cross-reactivity is under 1%; give with monitoring.",
+      "cautionShort": "caution"
     }
   }
 }

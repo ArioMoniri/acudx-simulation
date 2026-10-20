@@ -1,6 +1,11 @@
 {
-  "nav": { "faculty": "Faculty", "dean": "Dean" },
-  "role": { "faculty": "Faculty" },
+  "nav": {
+    "faculty": "Faculty",
+    "dean": "Dean"
+  },
+  "role": {
+    "faculty": "Faculty"
+  },
   "profile": {
     "roles": {
       "nurse": "Nurse",
@@ -40,6 +45,14 @@
     "profile": {
       "managedByIdp": "Your name, role and institution are managed by your identity provider and cannot be edited here.",
       "roleVerifiedHint": "Verified from your institution token. Ask an administrator to change it."
+    },
+    "roleGate": {
+      "title": "This page needs the {{role}} role",
+      "current": "You are signed in as {{role}}.",
+      "noProfile": "No profile is signed in.",
+      "signIn": "Sign in with your institution",
+      "adminToken": "Change role in Account, then enter the admin token in the admin console",
+      "home": "Back to Home"
     }
   }
 }

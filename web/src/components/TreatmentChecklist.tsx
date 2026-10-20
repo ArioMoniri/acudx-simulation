@@ -71,7 +71,7 @@ export function TreatmentChecklist({ behaviors, lang }: TreatmentChecklistProps)
               </div>
               <p className="mt-1 text-xs text-muted">{b.anchor[lang]}</p>
               <div className="mt-2">
-                <CitationPill citationId={b.citationId} lang={lang} />
+                {b.citationId ? <CitationPill citationId={b.citationId} lang={lang} /> : null}
               </div>
             </div>
           </li>

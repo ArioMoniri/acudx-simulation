@@ -17,6 +17,7 @@
 import type { CaseInstance } from "@/domain/case";
 import { adverseEffectForContraindicated, classify, genericEffect } from "@/domain/treatments";
 import { fluidsGate, gateFor, isAnaphylaxis, isOpioidToxidrome } from "@/domain/treatmentRules";
+import { FORMULARY_ROW_STEMS, matchTreatmentResponse } from "@/domain/treatmentMatch";
 
 export interface CurrentVitals {
   hr: number;
@@ -121,7 +122,7 @@ function effectsFor(
   treatments: AdministeredTreatment[],
   at: number,
 ) {
-  const bespoke = c.treatmentResponses?.find((r) => r.treatmentCode === code);
+  const bespoke = matchTreatmentResponse(c, code);
   if (bespoke) {
     if (bespoke.appropriateness === "contraindicated" && bespoke.effects.length === 0) {
       return adverseEffectForContraindicated(code);
@@ -200,6 +201,10 @@ export function rescueCodesFor(c: CaseInstance): Set<string> {
   const authored = c.treatmentResponses ?? [];
   if (authored.length > 0) {
     const s = new Set<string>(authored.filter((r) => r.appropriateness === "indicated").map((r) => r.treatmentCode));
+    // D-20: formulary drugs that stand for an indicated row are rescues too.
+    for (const code of Object.keys(FORMULARY_ROW_STEMS).filter((k) => k !== "161" && k !== "7052")) {
+      if (matchTreatmentResponse(c, code)?.appropriateness === "indicated") s.add(code);
+    }
     const contraindicated = new Set(authored.filter((r) => r.appropriateness === "contraindicated").map((r) => r.treatmentCode));
     for (const code of SUPPORTIVE_RESCUE) {
       if (contraindicated.has(code)) continue;

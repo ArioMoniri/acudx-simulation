@@ -375,6 +375,36 @@ const INTENT_STEMS: Array<[QuestionIntent, string[]]> = [
 ];
 
 /**
+ * Fever history topics (acceptance 2026-10-20 D-12). Each topic belongs to one
+ * intent; the case's HistoryItem.topic carries the matching answer.
+ */
+const TOPIC_STEMS: Array<[string, QuestionIntent, string[]]> = [
+  ["rigors", "associated-symptoms", ["rigor", "shiver", "shak", "chill", "titre", "üşü"]],
+  ["urinary", "associated-symptoms", ["urin", "pee", "dysur", "burn", "wee", "idrar", "işe", "yanma"]],
+  ["cough", "associated-symptoms", ["cough", "phlegm", "sputum", "öksür", "balgam"]],
+  ["neck", "associated-symptoms", ["neck", "stiff", "photophob", "light", "ense", "boyun", "ışık"]],
+  ["travel", "social-history", ["travel", "abroad", "trip", "holiday", "overseas", "seyahat", "yurtdış", "tatil"]],
+  ["contacts", "social-history", ["contact", "anyone", "sick", "unwell", "ill", "partner", "temas", "hasta", "çevren"]],
+  ["vaccination", "past-medical-history", ["vaccin", "jab", "immunis", "immuniz", "aşı"]],
+  ["immunosuppression", "risk-factors", ["immunosup", "immunocomp", "steroid", "chemo", "transplant", "hiv", "bağışıklı", "kemoterap"]],
+];
+
+/** The fever history topic a free-text question names, or null. Pure. */
+export function inferQuestionTopic(text: string): { topic: string; intent: QuestionIntent } | null {
+  const tokens = tokenize(text);
+  let best: { topic: string; intent: QuestionIntent } | null = null;
+  let bestHits = 0;
+  for (const [topic, intent, stems] of TOPIC_STEMS) {
+    const hits = tokens.filter((tok) => startsWithAny(tok, stems)).length;
+    if (hits > bestHits) {
+      bestHits = hits;
+      best = { topic, intent };
+    }
+  }
+  return best;
+}
+
+/**
  * Map an in-scope free-text question to the best-matching QuestionIntent, or
  * null when nothing scores. Intents the case actually covers win ties. Pure.
  */
@@ -392,6 +422,9 @@ export function inferQuestionIntent(text: string, caseInstance: CaseInstance): Q
   const tokens = tokenize(text);
   if (tokens.length === 0) return null;
   const expected = new Set(expectedIntents(caseInstance));
+  // A named fever topic the case answers decides the intent (D-12).
+  const named = inferQuestionTopic(text);
+  if (named && caseInstance.groundTruth.history.some((h) => h.topic === named.topic)) return named.intent;
 
   let best: QuestionIntent | null = null;
   let bestScore = 0;

@@ -226,6 +226,25 @@ SRC: Dict[str, Dict[str, str]] = {
                   url="https://www.nice.org.uk/guidance/ng111/chapter/Recommendations", published="2018-10-31"),
     "ng141": dict(body=NICE, title="Cellulitis and erysipelas: antimicrobial prescribing (NG141)", edition="NG141, September 2019",
                   url="https://www.nice.org.uk/guidance/ng141/chapter/Recommendations", published="2019-09-27"),
+    # ---- Febrile families (acceptance 2026-10-20, D-11 / D-24) ----------------
+    "ng110": dict(body=NICE, title="Prostatitis (acute): antimicrobial prescribing (NG110)", edition="NG110, October 2018",
+                  url="https://www.nice.org.uk/guidance/ng110/chapter/Recommendations", published="2018-10-31"),
+    "ng191t": dict(body=NICE, title="COVID-19 rapid guideline: managing COVID-19 (NG191), therapeutics", edition="NG191, March 2021 (updated)",
+                   url="https://www.nice.org.uk/guidance/ng191/chapter/4-Therapeutics-for-COVID-19", published="2021-03-23"),
+    "ng191c": dict(body=NICE, title="COVID-19 rapid guideline: managing COVID-19 (NG191), co-infections", edition="NG191, March 2021 (updated)",
+                   url="https://www.nice.org.uk/guidance/ng191/chapter/6-Identifying-and-managing-co-infections", published="2021-03-23"),
+    "cg183": dict(body=NICE, title="Drug allergy: diagnosis and management (CG183)", edition="CG183, September 2014",
+                  url="https://www.nice.org.uk/guidance/cg183/chapter/Recommendations", published="2014-09-03"),
+    "ng197": dict(body=NICE, title="Shared decision making (NG197)", edition="NG197, June 2021",
+                  url="https://www.nice.org.uk/guidance/ng197/chapter/Recommendations", published="2021-06-17"),
+    "cdc_pid": dict(body="CDC", title="Sexually Transmitted Infections Treatment Guidelines, 2021: Pelvic Inflammatory Disease",
+                    edition="MMWR Recomm Rep 2021;70(4)", url="https://www.cdc.gov/std/treatment-guidelines/pid.htm",
+                    published="2021-07-23"),
+    "cdc_flu": dict(body="CDC", title="Influenza Antiviral Medications: Summary for Clinicians", edition="Current season",
+                    url="https://www.cdc.gov/flu/hcp/antivirals/summary-clinicians.html", published="2024-09-01"),
+    "cdc_malaria": dict(body="CDC", title="Clinical Guidance: Malaria Diagnosis and Treatment in the U.S. (Algorithm, Appendix B)",
+                        edition="Updated August 2026", url="https://www.cdc.gov/malaria/hcp/clinical-guidance/appendix-b-algorithm.html",
+                        published="2026-07-09"),
     "ng118": dict(body=NICE, title="Renal and ureteric stones: assessment and management (NG118)", edition="NG118, January 2019",
                   url="https://www.nice.org.uk/guidance/ng118/chapter/Recommendations", published="2019-01-08"),
 }
@@ -751,6 +770,79 @@ def open_statements() -> List[GuidelineStatement]:  # noqa: C901 - a flat author
         "Offer urgent (within 24 hours of presentation) low-dose non-contrast CT to adults with suspected renal colic, and offer ultrasound instead of CT if a woman is pregnant; offer a non-steroidal anti-inflammatory drug (NSAID) by any route as first-line treatment, offer intravenous paracetamol if NSAIDs are contraindicated or are not giving sufficient pain relief, and do not offer antispasmodics.",
         "Şüpheli renal kolikli erişkinlere acil (başvurudan sonraki 24 saat içinde) düşük doz kontrastsız BT önerin; kadın gebeyse BT yerine ultrason önerin; birinci basamak tedavi olarak herhangi bir yoldan non-steroid antiinflamatuar ilaç (NSAİİ) önerin, NSAİİ kontrendike veya yetersizse intravenöz parasetamol önerin ve antispazmodik vermeyin.",
         ["N23", "N20.0", "N20.1"], specialties=["renal"]))
+
+    # ---- Febrile families: acceptance test 2026-10-20 (D-11, D-17, D-24) ----
+    # Each statement was written after reading the fetched source text; the
+    # wording follows the source closely so the verifier can locate it.
+    SEP_SOURCE = SEP + ["K83.09", "M00.9", "N73.9", "N10", "M72.6", "N41.0", "L03.90"]
+    S.append(_s("gs_ssc21_source_control", "ssc21",
+        "Adults with sepsis or septic shock should be rapidly evaluated for specific anatomical diagnoses or sources of infection that require emergent source control; for adults with a source of infection that requires source control, we suggest early source control, ideally within 6 hours of diagnosis of sepsis or septic shock.",
+        "Sepsis veya septik şoklu erişkinler acil kaynak kontrolü gerektiren özgül anatomik tanılar veya enfeksiyon kaynakları açısından hızla değerlendirilmelidir; kaynak kontrolü gerektiren bir enfeksiyon kaynağı olan erişkinlerde, ideal olarak sepsis veya septik şok tanısından sonraki 6 saat içinde erken kaynak kontrolü öneriyoruz.",
+        SEP_SOURCE, specialties=["sepsis", "surgery"]))
+    S.append(_s("gs_nice_ng110_abx_msu", "ng110",
+        "Offer an antibiotic to people with acute prostatitis, taking account of the severity of symptoms, the risk of developing complications, previous urine culture and susceptibility results and previous antibiotic use; obtain a midstream urine sample before antibiotics are taken and send for culture and susceptibility testing.",
+        "Akut prostatitli kişilere semptomların şiddetini, komplikasyon gelişme riskini, önceki idrar kültürü ve duyarlılık sonuçlarını ve önceki antibiyotik kullanımını göz önünde bulundurarak antibiyotik önerin; antibiyotik alınmadan önce orta akım idrar örneği alıp kültür ve duyarlılık testine gönderin.",
+        ["N41.0"], specialties=["renal", "infectious"]))
+    S.append(_s("gs_nice_ng110_refer", "ng110",
+        "Refer people with acute prostatitis to hospital if they have any symptoms or signs suggesting a more serious illness or condition (for example sepsis, acute urinary retention or prostatic abscess), or their symptoms are not improving 48 hours after starting the antibiotic.",
+        "Akut prostatitli kişileri daha ciddi bir hastalığı düşündüren belirti veya bulguları varsa (örneğin sepsis, akut idrar retansiyonu veya prostat apsesi) ya da antibiyotik başladıktan 48 saat sonra semptomları düzelmiyorsa hastaneye yönlendirin.",
+        ["N41.0"], specialties=["renal", "infectious"]))
+    S.append(_s("gs_cdc_pid_minimum_criteria", "cdc_pid",
+        "Presumptive treatment for PID should be initiated for sexually active young women and other women at risk for STIs if they are experiencing pelvic or lower abdominal pain, if no cause for the illness other than PID can be identified, and if one or more of the following three minimum clinical criteria are present on pelvic examination: cervical motion tenderness, uterine tenderness, or adnexal tenderness.",
+        "Pelvik veya alt karın ağrısı olan, PİH dışında hastalığın başka bir nedeni bulunamayan ve pelvik muayenede şu üç minimum klinik ölçütten bir veya daha fazlası bulunan cinsel olarak aktif genç kadınlarda ve CYBE riski taşıyan diğer kadınlarda PİH için varsayımsal tedavi başlatılmalıdır: servikal hareket hassasiyeti, uterus hassasiyeti veya adneksiyal hassasiyet.",
+        ["N73.9", "N70.93"], specialties=["obgyn", "infectious"], countries=["US"]))
+    S.append(_s("gs_cdc_pid_parenteral", "cdc_pid",
+        "Recommended parenteral regimen for PID: ceftriaxone 1 g IV every 24 hours plus doxycycline 100 mg orally or IV every 12 hours plus metronidazole 500 mg orally or IV every 12 hours; because of the pain associated with IV infusion, doxycycline should be administered orally when possible.",
+        "PİH için önerilen parenteral rejim: 24 saatte bir 1 g IV seftriakson artı 12 saatte bir ağızdan veya IV 100 mg doksisiklin artı 12 saatte bir ağızdan veya IV 500 mg metronidazol; IV infüzyonun ağrısı nedeniyle doksisiklin mümkün olduğunda ağızdan verilmelidir.",
+        ["N73.9", "N70.93"], specialties=["obgyn", "infectious"], countries=["US"]))
+    S.append(_s("gs_cdc_pid_alternative", "cdc_pid",
+        "Alternative parenteral regimens for PID: ampicillin-sulbactam 3 g IV every 6 hours plus doxycycline 100 mg orally or IV every 12 hours, or clindamycin 900 mg IV every 8 hours plus gentamicin loading dose IV or IM (2 mg/kg body weight) followed by a maintenance dose; single daily dosing (3 to 5 mg/kg body weight) can be substituted.",
+        "PİH için alternatif parenteral rejimler: 6 saatte bir 3 g IV ampisilin-sulbaktam artı 12 saatte bir ağızdan veya IV 100 mg doksisiklin ya da 8 saatte bir 900 mg IV klindamisin artı IV veya IM gentamisin yükleme dozu (2 mg/kg vücut ağırlığı) ve ardından idame dozu; günde tek doz (3-5 mg/kg vücut ağırlığı) uygulanabilir.",
+        ["N73.9", "N70.93"], specialties=["obgyn", "infectious"], countries=["US"]))
+    S.append(_s("gs_cdc_flu_oseltamivir", "cdc_flu",
+        "Antiviral treatment is recommended as soon as possible for any patient with suspected or confirmed influenza who is hospitalized, has severe, complicated, or progressive illness, or is at higher risk for influenza complications; for hospitalized patients, initiation of antiviral treatment with oral or enterically administered oseltamivir is recommended as soon as possible.",
+        "Şüpheli veya kesin influenzası olup hastaneye yatırılan, ağır, komplike veya ilerleyici hastalığı olan ya da influenza komplikasyonları açısından yüksek riskli her hastada antiviral tedavi mümkün olan en kısa sürede önerilir; hastanede yatan hastalarda ağızdan veya enteral yoldan oseltamivir ile antiviral tedavinin mümkün olan en kısa sürede başlatılması önerilir.",
+        ["J10.1", "J11.1", "J09.X2"], specialties=["infectious", "respiratory"], countries=["US"]))
+    S.append(_s("gs_nice_ng191_dexamethasone", "ng191t",
+        "Offer dexamethasone, or either hydrocortisone or prednisolone when dexamethasone cannot be used or is unavailable, to people with COVID-19 who need supplemental oxygen to meet their prescribed oxygen saturation levels; the adult dosage is dexamethasone 6 mg orally or intravenously once a day for 10 days.",
+        "Reçete edilen oksijen satürasyon düzeyine ulaşmak için ek oksijen gereken COVID-19'lu kişilere deksametazon, deksametazon kullanılamıyorsa veya yoksa hidrokortizon ya da prednizolon önerin; erişkin dozu 10 gün boyunca günde bir kez ağızdan veya intravenöz 6 mg deksametazondur.",
+        ["U07.1"], specialties=["infectious", "respiratory"]))
+    S.append(_s("gs_nice_ng191_no_antibiotics", "ng191c",
+        "Do not offer an antibiotic for preventing or treating pneumonia if SARS-CoV-2, another virus, or a fungal infection, is likely to be the cause; antibiotics do not work on viruses, and inappropriate use may lead to Clostridioides difficile infection and antimicrobial resistance.",
+        "SARS-CoV-2, başka bir virüs veya mantar enfeksiyonu olası neden ise pnömoniyi önlemek veya tedavi etmek için antibiyotik önermeyin; antibiyotikler virüslere etki etmez ve uygunsuz kullanım Clostridioides difficile enfeksiyonuna ve antimikrobiyal dirence yol açabilir.",
+        ["U07.1", "J10.1", "J11.1"], specialties=["infectious", "respiratory"]))
+    S.append(_s("gs_cdc_malaria_smears", "cdc_malaria",
+        "Preliminary review of blood smears concerning for intracellular parasites or a positive RDT or NAAT is sufficient to initiate treatment; if RDT or NAAT is performed, microscopic evaluation of blood smears should also be performed concurrently, and if tests are negative but malaria is still suspected, repeat blood smears every 12 to 24 hours (total of 3 times).",
+        "Hücre içi parazit açısından şüpheli kan yaymalarının ön incelemesi veya pozitif HTT ya da NAAT tedaviye başlamak için yeterlidir; HTT veya NAAT yapılırsa kan yaymalarının mikroskobik incelemesi de eş zamanlı yapılmalıdır ve testler negatif olduğu halde sıtma hâlâ düşünülüyorsa kan yaymaları 12-24 saatte bir (toplam 3 kez) tekrarlanmalıdır.",
+        ["B54", "B50.9"], specialties=["infectious"], countries=["US"]))
+    S.append(_s("gs_cdc_malaria_severe_artesunate", "cdc_malaria",
+        "If the patient has severe malaria, regardless of species, begin intravenous artesunate; administer a full follow-on oral treatment course after the intravenous artesunate course is completed, if parasitemia is below 1% and the patient is able to tolerate oral medication.",
+        "Hastada ağır sıtma varsa türden bağımsız olarak intravenöz artesunat başlayın; parazitemi %1'in altındaysa ve hasta ağızdan ilacı tolere edebiliyorsa intravenöz artesunat kürü tamamlandıktan sonra tam bir oral idame tedavisi verin.",
+        ["B54", "B50.9", "B50.0"], specialties=["infectious"], countries=["US"]))
+    S.append(_s("gs_nice_cg183_check_allergy", "cg183",
+        "Check a person's drug allergy status and confirm it with them (or their family members or carers as appropriate) before prescribing, dispensing or administering any drug.",
+        "Herhangi bir ilacı reçete etmeden, vermeden veya uygulamadan önce kişinin ilaç alerjisi durumunu kontrol edin ve kendisiyle (veya uygunsa aile üyeleri ya da bakım verenleriyle) doğrulayın.",
+        ["Z88.0", "Z88.9"], specialties=["pharmacology"]))
+    S.append(_s("gs_nice_ng197_what_matters", "ng197",
+        "When discussing decisions about tests, treatments and interventions, do so in a way that encourages people to think about what matters to them, and to express their needs and preferences.",
+        "Testler, tedaviler ve girişimlerle ilgili kararları, kişileri kendileri için neyin önemli olduğunu düşünmeye ve ihtiyaçlarını ve tercihlerini ifade etmeye teşvik edecek şekilde tartışın.",
+        ["Z71.89"], specialties=["communication"]))
+    S.append(_s("gs_nice_ng240_antibiotic_allergy", "ng240",
+        "In people with an antibiotic allergy: ask about the reaction they get; give ceftriaxone if their reaction was not severe allergy; if their reaction was severe allergy, get advice from an infection specialist and consider chloramphenicol.",
+        "Antibiyotik alerjisi olan kişilerde: oluşan reaksiyonu sorun; reaksiyon ağır alerji değilse seftriakson verin; reaksiyon ağır alerjiyse bir enfeksiyon uzmanından görüş alın ve kloramfenikolü düşünün.",
+        MEN, specialties=["neurology", "infectious"]))
+    S.append(_s("gs_nice_ng141_penicillin_allergy", "ng141",
+        "Alternative first-choice antibiotics for cellulitis for penicillin allergy or if flucloxacillin is unsuitable (give orally unless person unable to take oral or severely unwell): clarithromycin 500 mg twice a day orally or 500 mg twice a day intravenously, erythromycin in pregnancy, or doxycycline 200 mg on the first day then 100 mg once a day orally.",
+        "Penisilin alerjisinde veya flukloksasilin uygun değilse selülit için alternatif ilk tercih antibiyotikler (ağızdan alamıyorsa veya çok hasta değilse ağızdan verin): günde iki kez ağızdan 500 mg veya günde iki kez intravenöz 500 mg klaritromisin, gebelikte eritromisin ya da ilk gün 200 mg ardından günde bir kez ağızdan 100 mg doksisiklin.",
+        ["L03.90", "L03.115"], specialties=["infectious"]))
+    S.append(_s("gs_nice_ng250_penicillin_allergy", "ng250",
+        "High-severity disease: alternative antibiotic for penicillin allergy (consult a local microbiologist if fluoroquinolone not appropriate) is levofloxacin 500 mg twice a day orally or intravenously for 5 days; low-severity disease: alternative oral antibiotics for penicillin allergy are doxycycline 200 mg on first day, then 100 mg once a day, or clarithromycin 500 mg twice a day for 5 days.",
+        "Yüksek ağırlıkta hastalık: penisilin alerjisinde alternatif antibiyotik (florokinolon uygun değilse yerel mikrobiyoloğa danışın) 5 gün boyunca günde iki kez ağızdan veya intravenöz 500 mg levofloksasindir; düşük ağırlıkta hastalık: penisilin alerjisinde alternatif oral antibiyotikler ilk gün 200 mg ardından günde bir kez 100 mg doksisiklin veya 5 gün boyunca günde iki kez 500 mg klaritromisindir.",
+        ["J18.9"], specialties=["respiratory", "infectious"]))
+    S.append(_s("gs_nice_ng111_iv_choice", "ng111",
+        "First-choice intravenous antibiotics for acute pyelonephritis in adults (if unable to take oral antibiotics or severely unwell; antibiotics may be combined if sepsis a concern): cefuroxime 750 mg to 1.5 g three or four times a day, ceftriaxone 1 g to 2 g once a day, or gentamicin initially 5 mg/kg to 7 mg/kg once a day, subsequent doses adjusted according to serum gentamicin concentration.",
+        "Erişkinlerde akut piyelonefrit için ilk tercih intravenöz antibiyotikler (ağızdan antibiyotik alamıyorsa veya çok hastaysa; sepsis endişesi varsa antibiyotikler birleştirilebilir): günde üç veya dört kez 750 mg-1,5 g sefuroksim, günde bir kez 1-2 g seftriakson veya başlangıçta günde bir kez 5-7 mg/kg gentamisin, sonraki dozlar serum gentamisin düzeyine göre ayarlanır.",
+        ["N10"], specialties=["infectious", "renal"]))
 
     return S
 

@@ -16,6 +16,11 @@ from server.tests.openai_double import Scenario, build_double
 import httpx
 
 SEED_IDS = {s["id"] for s in all_statements()}
+# Acceptance 2026-10-20 D-11: anchors come from the verified store (which holds
+# the seed ids that passed verification plus the open statements).
+from server.case_generator import _verified_statements  # noqa: E402
+
+VERIFIED_IDS = set(_verified_statements())
 
 
 def _compiled(deps: G.CaseGenDeps | None = None):
@@ -136,7 +141,7 @@ async def test_grounding_attaches_only_existing_ids(runtime: OrchestrationRuntim
     anchors = out["spec"]["guideline_anchors"]
     assert anchors, "a STEMI case has seed statements to anchor to"
     for a in anchors:
-        assert a["statement_id"] in SEED_IDS
+        assert a["statement_id"] in VERIFIED_IDS
         assert a["citation"].startswith("http")
         assert a["statement_en"]
     assert all(a["statement_id"] != "gs_does_not_exist" for a in anchors)
@@ -203,7 +208,10 @@ def test_template_is_labelled_template():
     assert spec["meta"]["source"] == "template"
     assert spec["meta"]["degraded"] is True
     for a in spec["guideline_anchors"]:
-        assert a["statement_id"] in SEED_IDS
+        # A condition with no verified statement keeps its fixture summary with
+        # no id; an unverified id is never attached (D-11).
+        if a.get("statement_id"):
+            assert a["statement_id"] in VERIFIED_IDS
 
 
 def test_price_table_and_cost():

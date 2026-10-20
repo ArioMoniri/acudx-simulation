@@ -65,6 +65,8 @@ TURNAROUND: dict[str, dict[str, Any]] = {
 MICRO_CODES: dict[str, str] = {
     "blood-culture": "600-7", "urine-culture": "630-4", "sputum-culture": "sputum", "gram-stain": "gram",
     "resp-viral-panel": "rvp", "csf-studies": "csf", "hepatitis-panel": "hep", "hiv": "hiv", "monospot": "mono",
+    # Acceptance 2026-10-20 D-25: malaria films and rapid diagnostic test.
+    "malaria-film": "malaria", "malaria-rdt": "malaria_rdt",
 }
 
 
@@ -178,6 +180,16 @@ CONDITION_PROFILES: dict[str, dict[str, Any]] = {
     "pneumonia_cap": {"onset_h": 72.0, "labs": _SEPSIS_LABS, "ecg": "sinus_tachycardia", "imaging": _PNEUMONIA_IMG, "micro": {"600-7": ("Streptococcus pneumoniae", 0.25), "sputum": ("Streptococcus pneumoniae", 0.6)}},
     "aspiration_pneumonitis": {"onset_h": 12.0, "labs": _SEPSIS_LABS, "imaging": _PNEUMONIA_IMG, "ecg": "sinus_tachycardia"},
     "covid19": {"onset_h": 120.0, "labs": {"1988-5": ("crp",), "33959-8": ("pct", False), "731-0": ("mult", 0.5), "48065-7": ("mult", 2.0), "2703-7": ("oxy", "pao2"), "2708-6": ("oxy", "spo2")}, "imaging": {"xr:chest": ("consolidation", "bilateral", ["bilateral peripheral ground-glass opacities"], "Bilateral peripheral opacities consistent with viral pneumonitis.")}, "micro": {"rvp": ("SARS-CoV-2 RNA detected", 0.95)}, "ecg": "sinus_tachycardia"},
+    # Acceptance 2026-10-20 (section 5, D-25): malaria had no profile, so it got
+    # the default leucocytosis; P. falciparum gives a normal or low white count
+    # and thrombocytopenia (WHO Guidelines for malaria,
+    # https://www.who.int/publications/i/item/guidelines-for-malaria).
+    "malaria": {"onset_h": 120.0, "labs": {"777-3": ("mult", 0.25), "1975-2": ("static", 2.4), "1988-5": ("crp",)},
+                "micro": {"malaria": ("Plasmodium falciparum ring forms seen, parasitaemia 2%", 1.0),
+                          "malaria_rdt": ("P. falciparum HRP2 antigen detected", 0.95)}, "severity_cap": 0.4},
+    # Acute HIV: lymphopenia, mild thrombocytopenia, modest CRP (BHIVA/BASHH 2020).
+    "hiv_seroconversion": {"onset_h": 240.0, "labs": {"731-0": ("mult", 0.45), "777-3": ("mult", 0.5), "1742-6": ("mult", 2.0), "1988-5": ("crp",)},
+                           "micro": {"hiv": ("HIV-1/2 antigen/antibody reactive (p24 antigen positive)", 0.95)}, "severity_cap": 0.15},
     "influenza": {"onset_h": 48.0, "labs": {"1988-5": ("crp",), "33959-8": ("pct", False)}, "micro": {"rvp": ("Influenza A RNA detected", 0.9)}, "severity_cap": 0.3},
     "asthma_exacerbation": {"onset_h": 6.0, "labs": {"2703-7": ("oxy", "pao2"), "2708-6": ("oxy", "spo2"), "2019-8": ("static", 34.0)}, "imaging": {"xr:chest": ("hyperinflation", "bilateral", ["hyperinflated lungs", "no consolidation", "no pneumothorax"], "Hyperinflation without focal abnormality.")}, "ecg": "sinus_tachycardia"},
     "copd_exacerbation": {"onset_h": 48.0, "labs": {"2703-7": ("oxy", "pao2"), "2708-6": ("oxy", "spo2"), "2019-8": ("static", 58.0), "1963-8": ("static", 31.0), "1988-5": ("crp",)}, "imaging": {"xr:chest": ("hyperinflation", "bilateral", ["hyperinflation", "flattened diaphragms", "no consolidation"], "Changes of COPD without acute consolidation.")}, "ecg": "sinus_tachycardia"},
@@ -403,6 +415,14 @@ class CaseContext:
         self.t_h = self.onset_h + self.sim_time_ms / MS_PER_H
         self.treatments = map_treatments(case_state, self.onset_h)
         self.vitals = vitals_at(case_state, sim_time_ms)
+        # Acceptance 2026-10-20: lactate 5.5 to 8.2 mmol/L appeared in patients
+        # with a normal blood pressure. Septic shock is hypotension needing
+        # vasopressors for a MAP of 65 mmHg with lactate above 2 after fluids
+        # (Sepsis-3, Singer et al. JAMA 2016;315:801, doi 10.1001/jama.2016.0287);
+        # without hypotension the hyperlactataemia of sepsis is usually 2 to 4.
+        sbp = float(self.vitals.get("systolic", 120) or 120)
+        dbp = float(self.vitals.get("diastolic", 70) or 70)
+        self.hypotensive = sbp < 90 or (sbp + 2 * dbp) / 3 < 65
         self.authored_labs = {str(lab.get("code")): lab for lab in case_state.get("labs") or [] if isinstance(lab, dict) and lab.get("code")}
         self.authored_imaging = [im for im in case_state.get("imaging") or [] if isinstance(im, dict)]
         self.weight_kg = float(demo.get("weight_kg", 70) or 70)
@@ -411,6 +431,9 @@ class CaseContext:
 # --------------------------------------------------------------------------- #
 # Analyte evaluation                                                           #
 # --------------------------------------------------------------------------- #
+NORMOTENSIVE_LACTATE_SEVERITY = 0.25
+
+
 def _model_value(ctx: CaseContext, loinc: str, spec: Optional[tuple], t_h: float) -> tuple[float, Optional[str]]:
     base = _baseline(loinc, ctx.sex, ctx.age, ctx.seed)
     if spec is None:
@@ -422,7 +445,8 @@ def _model_value(ctx: CaseContext, loinc: str, spec: Optional[tuple], t_h: float
         assay = spec[1] or load_ranges()["_by_loinc"].get(loinc, {}).get("assay", "hs_ctnt")
         return k.troponin(assay, t_h, sev, tr, ctx.sex), "troponin"
     if kind == "lactate":
-        return k.lactate(t_h, sev, tr), "lactate"
+        # A normotensive patient's plateau stays at or below 1 + 9 * 0.25 = 3.25.
+        return k.lactate(t_h, sev if ctx.hypotensive else min(sev, NORMOTENSIVE_LACTATE_SEVERITY), tr), "lactate"
     if kind == "crp":
         return k.crp(t_h, sev, tr), "crp"
     if kind == "pct":
@@ -556,6 +580,50 @@ def _apply_ua_pattern(ctx: CaseContext, observations: list[dict[str, Any]]) -> N
         obs["interpretation"] = f"{obs['name']}: {override} (consistent with the clinical picture)."
 
 
+def _reconcile_differential(ctx: CaseContext, observations: list[dict[str, Any]]) -> None:
+    """Make the absolute neutrophil and lymphocyte counts fit inside the total.
+
+    Acceptance 2026-10-20 D-23: a malaria CBC reported WBC 16.8 with neutrophils
+    3.9 and lymphocytes 2.2 (6.1 of 16.8). The white count is the sum of the
+    differential, so neutrophils + lymphocytes are scaled to the total minus the
+    other cells (monocytes, eosinophils and basophils, about 8 percent of the
+    count, 0.2 to 1.0 x 10^9/L; MedlinePlus Blood differential test,
+    https://medlineplus.gov/ency/article/003657.htm). Authored (case) values are
+    never rescaled; the free analyte absorbs the difference."""
+    by = {o["loinc"]: o for o in observations if not o.get("qualitative")}
+    wbc, anc, alc = by.get("6690-2"), by.get("751-8"), by.get("731-0")
+    if not (wbc and anc and alc):
+        return
+    total = float(wbc["value"])
+    other = min(1.0, max(0.2, 0.08 * total)) if total >= 2.5 else 0.08 * total
+    room = max(0.0, total - other)
+    n, ly = float(anc["value"]), float(alc["value"])
+    if anc["ground_truth"] and alc["ground_truth"]:
+        return
+    if anc["ground_truth"]:
+        ly = max(0.0, room - n)
+    elif alc["ground_truth"]:
+        n = max(0.0, room - ly)
+    elif n + ly > room or ly >= room:
+        scale = room / (n + ly) if n + ly > 0 else 0.0
+        n, ly = n * scale, ly * scale
+    else:
+        # A raised total is a neutrophilia unless the case authored otherwise.
+        n = room - ly
+    hb, hct = by.get("718-7"), by.get("4544-3")
+    if hb and hct and hb["ground_truth"] and not hct["ground_truth"]:
+        # Haematocrit is about three times the haemoglobin in g/dL (MedlinePlus 003646).
+        hct["value"] = _round("4544-3", 3.0 * float(hb["value"]))
+        hct["flag"], hct["critical"] = flag_value("4544-3", hct["value"], ctx.sex, ctx.age)
+        hct["interpretation"] = _interpret("4544-3", hct["value"], hct["flag"], None, ctx, None)
+    for obs, val in ((anc, n), (alc, ly)):
+        if obs["ground_truth"]:
+            continue
+        obs["value"] = _round(obs["loinc"], val)
+        obs["flag"], obs["critical"] = flag_value(obs["loinc"], obs["value"], ctx.sex, ctx.age)
+        obs["interpretation"] = _interpret(obs["loinc"], obs["value"], obs["flag"], obs.get("kinetics"), ctx, None)
+
+
 def _tat_category(loincs: list[str], order_code: str) -> str:
     if order_code in ("poc-glucose", "istat"):
         return "poc"
@@ -655,7 +723,13 @@ def _resolve_micro(ctx: CaseContext, order_code: str) -> dict[str, Any]:
     if abx_before and organism:
         p *= 0.5  # cultures drawn after antibiotics lose sensitivity (Lamy 2016)
     positive = organism is not None and _unit(ctx.seed, "micro", order_code) < p
-    if key in ("rvp", "csf", "hep", "hiv", "mono", "gram"):
+    if key in ("malaria", "malaria_rdt"):
+        # CDC malaria algorithm: films and RDT within hours; repeat films every
+        # 12-24 h (three sets) before excluding malaria.
+        result = organism if positive else ("No malaria parasites seen on thick and thin films; repeat in 12-24 h if still suspected"
+                                            if key == "malaria" else "Plasmodium antigen not detected")
+        tat = "haematology"
+    elif key in ("rvp", "csf", "hep", "hiv", "mono", "gram"):
         result = organism if positive else ("Not detected" if key in ("rvp", "hiv", "hep", "mono") else "No organisms seen" if key == "gram" else "Clear CSF: WBC 2/uL, protein 0.35 g/L, glucose 3.6 mmol/L")
         tat = "urine" if key in ("gram", "csf") else "inflammatory"
     else:
@@ -705,6 +779,8 @@ def resolve_order(
     elif order_code in ranges["panels"] or order_code in ranges["_by_loinc"]:
         loincs = ranges["panels"].get(order_code) or [order_code]
         observations = [_observation(ctx, l, prior) for l in loincs]
+        if order_code == "6690-2":
+            _reconcile_differential(ctx, observations)
         if order_code == "ua":
             _apply_ua_pattern(ctx, observations)
         body = {"kind": "lab", "status": "ok", "observations": observations,

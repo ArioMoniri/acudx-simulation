@@ -90,6 +90,11 @@ export interface HistoryItem {
   answer: Bilingual;
   /** True when this datum is a red-flag positive the student must elicit. */
   redFlag?: boolean;
+  /**
+   * A finer topic inside the intent ("rigors", "urinary", "travel"). A free-text
+   * question that names a topic reveals only that answer (acceptance D-12).
+   */
+  topic?: string;
 }
 
 /** An exam finding, grouped by system and revealed by a maneuver. */
@@ -192,6 +197,8 @@ export interface TreatmentResponse {
   appropriateness: "indicated" | "contraindicated" | "neutral";
   effects: VitalEffect[];
   narrative: Bilingual;
+  /** The row's label (lets a formulary drug match an abstract row; D-20). */
+  label?: Bilingual;
 }
 
 export type Disposition =

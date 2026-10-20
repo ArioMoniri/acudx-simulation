@@ -67,13 +67,30 @@ function opt(
   return { code, label, klass, route: ROUTE_LABEL[routeCode], routeCode, ...(defaultDose ? { defaultDose } : {}) };
 }
 
+const ABX: Bilingual = { en: "Antibiotic", tr: "Antibiyotik" };
+
 export const TREATMENT_CATALOG: TreatmentOption[] = [
   opt("7806", { en: "Oxygen", tr: "Oksijen" }, { en: "Oxygen therapy", tr: "Oksijen tedavisi" }, "INH", { amount: 4, unit: "L/min" }),
   opt("313002", { en: "IV fluid bolus (NS / RL)", tr: "İ.V. sıvı bolusu (SF / RL)" }, { en: "Crystalloid", tr: "Kristaloid" }, "IV", { amount: 500, unit: "mL" }),
   opt("1191", { en: "Aspirin", tr: "Aspirin" }, { en: "Antiplatelet", tr: "Antiagregan" }, "PO", { amount: 300, unit: "mg" }),
   opt("4917", { en: "Nitroglycerin (GTN)", tr: "Nitrogliserin (GTN)" }, { en: "Nitrate vasodilator", tr: "Nitrat vazodilatör" }, "SL", { amount: 0.4, unit: "mg" }),
   opt("7052", { en: "Morphine", tr: "Morfin" }, { en: "Opioid analgesic", tr: "Opioid analjezik" }, "IV", { amount: 2.5, unit: "mg" }),
-  opt("2193", { en: "Ceftriaxone", tr: "Seftriakson" }, { en: "Antibiotic (cephalosporin)", tr: "Antibiyotik (sefalosporin)" }, "IV", { amount: 2000, unit: "mg" }),
+  opt("2193", { en: "Ceftriaxone", tr: "Seftriakson" }, ABX, "IV", { amount: 2000, unit: "mg" }),
+  // Acceptance 2026-10-20 D-17: non-beta-lactam and allergy-safe antimicrobials
+  // (doses and sources in formulary.ts).
+  opt("pip-tazo", { en: "Piperacillin-tazobactam (penicillin)", tr: "Piperasilin-tazobaktam (penisilin)" }, ABX, "IV", { amount: 4500, unit: "mg" }),
+  opt("29561", { en: "Meropenem (carbapenem)", tr: "Meropenem (karbapenem)" }, ABX, "IV", { amount: 1000, unit: "mg" }),
+  opt("11124", { en: "Vancomycin (glycopeptide)", tr: "Vankomisin (glikopeptit)" }, ABX, "IV", { amount: 1500, unit: "mg" }),
+  opt("4413", { en: "Gentamicin (aminoglycoside)", tr: "Gentamisin (aminoglikozit)" }, ABX, "IV", { amount: 5, unit: "mg/kg" }),
+  opt("82122", { en: "Levofloxacin (fluoroquinolone)", tr: "Levofloksasin (florokinolon)" }, ABX, "IV", { amount: 500, unit: "mg" }),
+  opt("21212", { en: "Clarithromycin (macrolide)", tr: "Klaritromisin (makrolid)" }, ABX, "PO", { amount: 500, unit: "mg" }),
+  opt("3640", { en: "Doxycycline (tetracycline)", tr: "Doksisiklin (tetrasiklin)" }, ABX, "PO", { amount: 200, unit: "mg" }),
+  opt("2582", { en: "Clindamycin (lincosamide)", tr: "Klindamisin (linkozamid)" }, ABX, "IV", { amount: 600, unit: "mg" }),
+  opt("6922", { en: "Metronidazole (nitroimidazole)", tr: "Metronidazol (nitroimidazol)" }, ABX, "IV", { amount: 500, unit: "mg" }),
+  opt("2348", { en: "Chloramphenicol", tr: "Kloramfenikol" }, ABX, "IV", { amount: 25, unit: "mg/kg" }),
+  opt("artesunate", { en: "Artesunate IV (antimalarial)", tr: "Artesunat İ.V. (antimalaryal)" }, { en: "Antimalarial / antiviral", tr: "Antimalaryal / antiviral" }, "IV", { amount: 2.4, unit: "mg/kg" }),
+  opt("260101", { en: "Oseltamivir (neuraminidase inhibitor)", tr: "Oseltamivir (nöraminidaz inhibitörü)" }, { en: "Antimalarial / antiviral", tr: "Antimalaryal / antiviral" }, "PO", { amount: 75, unit: "mg" }),
+  opt("3264", { en: "Dexamethasone", tr: "Deksametazon" }, { en: "Corticosteroid", tr: "Kortikosteroid" }, "IV", { amount: 6, unit: "mg" }),
   opt("435", { en: "Salbutamol nebuliser", tr: "Salbutamol nebül" }, { en: "Bronchodilator (SABA)", tr: "Bronkodilatör (SABA)" }, "NEB", { amount: 5, unit: "mg" }),
   opt("448", { en: "Adenosine", tr: "Adenozin" }, { en: "Antiarrhythmic", tr: "Antiaritmik" }, "IV", { amount: 6, unit: "mg" }),
   opt("5856", { en: "Insulin infusion (fixed rate)", tr: "İnsülin infüzyonu (sabit hız)" }, { en: "Insulin", tr: "İnsülin" }, "IV", { amount: 0.1, unit: "units/kg/h" }),

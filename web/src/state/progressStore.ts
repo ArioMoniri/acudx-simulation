@@ -25,6 +25,7 @@
  * Education only. No real patient data path.
  */
 
+import { ALLERGY_CITATION, feedbackFor, ICE_CITATION } from "@/domain/conditionCitations";
 import { useSyncExternalStore } from "react";
 
 import type {
@@ -115,6 +116,8 @@ export interface EncounterRecord {
   diagnosisCorrect: boolean;
   /** A safety-critical timing miss OR allergies never checked. */
   safetyMiss: boolean;
+  /** ICD-10 code of the case diagnosis (condition-specific feedback, D-11). */
+  conditionCode?: string;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -306,6 +309,10 @@ export function buildEncounterRecord(
     expectedIntentCount: expectedIntents(caseInstance).length,
     diagnosisCorrect: metrics.diagnosisCorrect,
     safetyMiss,
+    conditionCode:
+      caseInstance.correctDiagnosis.code.coding.find((c) => /icd-?10/i.test(c.system ?? ""))?.code ??
+      caseInstance.correctDiagnosis.code.coding[0]?.code ??
+      "",
   };
 }
 
@@ -1406,7 +1413,8 @@ export function deriveFeedbackGaps(rec: EncounterRecord): FeedbackGap[] {
         tr: `Bu vakada endike olmayan ${steward.lowValue} istem.`,
       },
       remediation: GAP_LOWVALUE_REMEDIATION,
-      citationId: "gs_nice_ng185_nstemi_assessment",
+      // D-11: the presentation's own work-up statement, not NICE NG185 (ACS).
+      citationId: feedbackFor(rec.conditionCode).workupCitation,
       safetyCritical: false,
       recurrence: 0,
     });
@@ -1420,16 +1428,18 @@ export function deriveFeedbackGaps(rec: EncounterRecord): FeedbackGap[] {
  */
 export function deriveTreatmentBehaviors(rec: EncounterRecord): TreatmentBehavior[] {
   const flags = rec.metrics.communicationFlags;
+  // Acceptance 2026-10-20 D-11: condition-specific label and verified citation.
+  const fb = feedbackFor(rec.conditionCode);
   return [
     {
       id: "tb-redflag",
       kind: "safety",
-      label: { en: "Screened cardiac red flags", tr: "Kardiyak kırmızı bayrakları taradı" },
+      label: fb.redFlags,
       anchor: flags.screenedRedFlags
         ? { en: "Elicited red-flag features during the history.", tr: "Anamnezde alarm bulgularını sorguladı." }
         : { en: "Red-flag features were not screened during the history.", tr: "Anamnezde alarm bulguları taranmadı." },
       met: flags.screenedRedFlags,
-      citationId: "gs_nice_ng185_reperfusion_eligibility",
+      citationId: fb.redFlagCitation,
       critical: false,
     },
     {
@@ -1440,7 +1450,7 @@ export function deriveTreatmentBehaviors(rec: EncounterRecord): TreatmentBehavio
         ? { en: "Confirmed allergy status before treatment.", tr: "Tedaviden önce alerji durumu doğrulandı." }
         : { en: "Allergy status was not confirmed before treatment.", tr: "Tedaviden önce alerji durumu doğrulanmadı." },
       met: flags.checkedAllergies,
-      citationId: "gs_nice_ng185_nstemi_assessment",
+      citationId: ALLERGY_CITATION,
       critical: true,
     },
     {
@@ -1451,7 +1461,7 @@ export function deriveTreatmentBehaviors(rec: EncounterRecord): TreatmentBehavio
         ? { en: "Invited the patient's own concerns.", tr: "Hastanın kendi endişelerini davet etti." }
         : { en: "The patient's ideas and concerns were not explored.", tr: "Hastanın düşünce ve endişeleri araştırılmadı." },
       met: flags.exploredIce,
-      citationId: "tepdad-em",
+      citationId: ICE_CITATION,
       critical: false,
     },
   ];

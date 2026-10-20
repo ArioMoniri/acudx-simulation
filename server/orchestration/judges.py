@@ -253,8 +253,11 @@ def check_pedagogy(draft: dict[str, Any], cond: dict[str, Any]) -> dict[str, Any
     except (TypeError, ValueError):
         issues.append("acuity_esi missing")
     hpi = draft.get("hpi") or []
-    if not (4 <= len(hpi) <= 10):
-        issues.append(f"hpi has {len(hpi)} items (expected 4-10)")
+    # Topic items (rigors, urinary, travel, ...; acceptance 2026-10-20 D-12) are
+    # finer answers inside an intent and do not count toward the core 4-10.
+    core = [h for h in hpi if not str(h.get("topic") or "")]
+    if not (4 <= len(core) <= 10) or len(hpi) > 20:
+        issues.append(f"hpi has {len(core)} core items and {len(hpi)} in all (expected 4-10 core, at most 20)")
     if cond.get("red_flags") and not any(bool(h.get("red_flag")) for h in hpi):
         issues.append("condition has red flags but no hpi item is marked red_flag")
     intents = [h.get("intent") for h in hpi]

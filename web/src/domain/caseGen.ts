@@ -130,6 +130,7 @@ function makeRng(seed: number): Rng {
  * CHIEF_COMPLAINT_FAMILIES list below rather than hand-maintaining keys.
  */
 export type ChiefComplaintFamily =
+  | "fever"
   | "chest-pain"
   | "headache"
   | "abdominal-pain"
@@ -162,6 +163,10 @@ export interface ChiefComplaintFamilyMeta {
  * a new family only has to be declared here.
  */
 export const CHIEF_COMPLAINT_FAMILIES: ChiefComplaintFamilyMeta[] = [
+  // Acceptance 2026-10-20 D-01: a febrile case could only be asked for through
+  // "Infectious", which also serves tetanus and lower UTI. "fever" is the
+  // server's complaint-index key (server/condition_catalog.py COMPLAINT_INDEX).
+  { id: "fever", icon: "Thermometer", label: { en: "Fever", tr: "Ateş" }, hint: { en: "Sepsis, pneumonia, meningitis, malaria and the febrile mimics.", tr: "Sepsis, pnömoni, menenjit, sıtma ve ateşli taklitçiler." } },
   { id: "chest-pain", icon: "Heartbeat", label: { en: "Chest pain", tr: "Göğüs ağrısı" }, hint: { en: "ACS, dissection, PE and the can't-miss mimics.", tr: "AKS, diseksiyon, PE ve atlanmaması gereken taklitçiler." } },
   { id: "headache", icon: "Brain", label: { en: "Headache", tr: "Baş ağrısı" }, hint: { en: "Thunderclap, meningitis and stroke vs benign causes.", tr: "Gök gürültüsü, menenjit ve inme; iyi huylu nedenlerden ayrım." } },
   { id: "abdominal-pain", icon: "Flask", label: { en: "Abdominal pain", tr: "Karın ağrısı" }, hint: { en: "Surgical abdomen, colic and metabolic mimics.", tr: "Cerrahi akut karın, kolik ve metabolik taklitçiler." } },
@@ -1145,7 +1150,7 @@ const SPECIALTY_TAGS: Record<string, ChiefComplaintFamily[]> = {
   pneumothorax: ["respiratory"],
   sah: ["neurology", "vascular"],
   migraine: ["neurology"],
-  meningitis: ["neurology", "infectious"],
+  meningitis: ["neurology", "infectious", "fever"],
   "ischemic-stroke": ["neurology", "vascular"],
   "temporal-arteritis": ["neurology", "rheumatology", "vascular"],
   appendicitis: ["gi-surgical"],
@@ -1156,9 +1161,9 @@ const SPECIALTY_TAGS: Record<string, ChiefComplaintFamily[]> = {
   "ectopic-pregnancy": ["obgyn"],
   dka: ["endocrine"],
   aaa: ["vascular"],
-  pyelonephritis: ["renal-urology", "infectious"],
+  pyelonephritis: ["renal-urology", "infectious", "fever"],
   pe: ["respiratory", "vascular"],
-  pneumonia: ["respiratory", "infectious"],
+  pneumonia: ["respiratory", "infectious", "fever"],
   "acute-heart-failure": ["cardiology"],
   "copd-exacerbation": ["respiratory"],
   asthma: ["respiratory"],

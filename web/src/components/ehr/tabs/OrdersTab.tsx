@@ -41,8 +41,8 @@ import {
 } from "@/components/ui";
 import { orderTiming, serialInfo } from "@/domain/orderCatalog";
 import { TREATMENT_CATALOG, type TreatmentOption } from "@/domain/treatments";
-import { formularyFor, ROUTE_LABEL, type Route } from "@/domain/formulary";
-import type { MedicationAdministrationRecord } from "@/domain/medicationSafety";
+import { allergySafeAlternatives, formularyFor, ROUTE_LABEL, type Route } from "@/domain/formulary";
+import { allergyTextList, type MedicationAdministrationRecord } from "@/domain/medicationSafety";
 import {
   ORDERABLES_BY_GROUP,
   ORDER_GROUPS,
@@ -175,6 +175,16 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
   useSecondTick(pending.length > 0);
 
   const treatmentGroups = useMemo(() => groupTreatments(TREATMENT_CATALOG), []);
+  // Acceptance 2026-10-20 D-17: allergy-safe alternatives need the allergy list
+  // and the diagnosis (the guideline differs between meningitis and pneumonia).
+  const allergyTexts = useMemo(() => allergyTextList(caseInstance.allergies), [caseInstance]);
+  const dxCode = useMemo(
+    () =>
+      caseInstance.correctDiagnosis.code.coding.find((c) => /icd-?10/i.test(c.system ?? ""))?.code ??
+      caseInstance.correctDiagnosis.code.coding[0]?.code ??
+      "",
+    [caseInstance],
+  );
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_minmax(0,340px)]">
@@ -284,6 +294,8 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
                       lang={lang}
                       given={givenCounts.get(tx.code) ?? 0}
                       weightKg={caseInstance.patient.weightKg}
+                      allergyTexts={allergyTexts}
+                      dxCode={dxCode}
                     />
                   ))}
                 </ul>
@@ -339,6 +351,8 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
         )}
 
         <p className="text-[0.6875rem] text-muted">{t("orders2.tracker.hint")}</p>
+        {/* Acceptance 2026-10-20 D-27: explain the sim-time compression. */}
+        <p className="text-[0.6875rem] text-muted">{t("orders2.tracker.timeLegend")}</p>
       </motion.aside>
     </div>
   );
@@ -462,11 +476,15 @@ function TreatmentRow({
   lang,
   given,
   weightKg,
+  allergyTexts = [],
+  dxCode = "",
 }: {
   option: TreatmentOption;
   lang: Lang;
   given: number;
   weightKg?: number;
+  allergyTexts?: string[];
+  dxCode?: string;
 }) {
   const { t } = useTranslation();
   const name = pick(option.label, lang);
@@ -611,6 +629,14 @@ function TreatmentRow({
             : ""}
         </p>
       ) : null}
+      {last?.allergy.caution ? (
+        <p role="note" className="text-xs text-[color:var(--state-caution)]">
+          {t("orders2.allergy.caution", { allergy: last.allergy.matched ?? "" })}
+        </p>
+      ) : null}
+      {last && last.outcome === "blocked" && last.allergy.conflict ? (
+        <AllergyAlternatives code={option.code} allergyTexts={allergyTexts} dxCode={dxCode} lang={lang} />
+      ) : null}
     </li>
   );
 }
@@ -694,6 +720,50 @@ function TrackerRow({
 /* -------------------------------------------------------------------------- */
 
 /** Group the treatment catalog by pharmacologic class, preserving order. */
+/**
+ * Acceptance 2026-10-20 D-17: when the allergy cross-check blocks a drug, name
+ * the formulary alternatives the diagnosis's guideline prefers (NICE NG240
+ * chloramphenicol in meningitis, NG250 levofloxacin in pneumonia, a carbapenem
+ * with caution or vancomycin + gentamicin in sepsis), so the learner can treat.
+ */
+function AllergyAlternatives({
+  code,
+  allergyTexts,
+  dxCode,
+  lang,
+}: {
+  code: string;
+  allergyTexts: string[];
+  dxCode: string;
+  lang: Lang;
+}) {
+  const { t } = useTranslation();
+  const { alternatives, source } = allergySafeAlternatives(code, allergyTexts, dxCode);
+  if (alternatives.length === 0) {
+    return <p className="text-xs text-muted">{t("orders2.allergy.none")}</p>;
+  }
+  return (
+    <div role="note" className="rounded-control border border-border bg-bg-subtle px-3 py-2 text-xs text-muted">
+      <p className="font-medium text-fg">{t("orders2.allergy.alternatives")}</p>
+      <ul className="mt-1 flex flex-wrap gap-1.5">
+        {alternatives.slice(0, 4).map((a) => (
+          <li key={a.entry.code}>
+            <Badge tone={a.caution ? "caution" : "neutral"} variant="outline">
+              {pick(a.entry.drug, lang)}
+              {a.caution ? ` (${t("orders2.allergy.cautionShort")})` : ""}
+            </Badge>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1">
+        <a href={source.url} target="_blank" rel="noreferrer" className="underline">
+          {source.title}
+        </a>
+      </p>
+    </div>
+  );
+}
+
 function groupTreatments(
   catalog: TreatmentOption[],
 ): Array<{ klass: Bilingual; items: TreatmentOption[] }> {

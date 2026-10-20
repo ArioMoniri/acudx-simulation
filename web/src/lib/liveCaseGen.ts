@@ -48,6 +48,7 @@ import {
   type GenerateCaseOptions,
 } from "@/domain/caseGen";
 import { hashSeed, pickProfileForCase } from "@/domain/patientProfiles";
+import { catalogCodeFor } from "@/domain/orderables";
 import type {
   CaseInstance,
   Disposition,
@@ -91,6 +92,8 @@ export interface SpecHpi {
   answer_en: string;
   answer_tr: string;
   red_flag?: boolean;
+  /** Finer topic inside the intent ("rigors", "travel"; acceptance D-12). */
+  topic?: string;
 }
 
 export interface SpecExam {
@@ -169,6 +172,10 @@ export interface SpecGuidelineAnchor {
   statement_tr?: string;
   source?: string;
   citation?: string;
+  /** Verified GuidelineStatement id (acceptance D-11). */
+  statement_id?: string;
+  /** Order codes the statement supports (cultures, films, imaging). */
+  codes?: string[];
 }
 
 export interface SpecMeta {
@@ -446,6 +453,9 @@ function complaintHint(codings: Coding[]): string {
     return "chest-pain";
   }
   if (code.startsWith("I60") || code.startsWith("G4")) return "headache";
+  // Acceptance 2026-10-20 D-25: a malaria case was offered "Gastroenteritis,
+  // GERD" as differentials; febrile infections get a febrile pool.
+  if (/^(A[0-9]|B[0-9]|G0[0-4]|N10|N39|N41|N7[0-3]|L03|M00|K83|D70|U07|J09|J1[0-1]|R50)/.test(code)) return "fever";
   if (code.startsWith("K3") || code.startsWith("K5") || code.startsWith("I88")) {
     return "abdominal-pain";
   }
@@ -487,6 +497,16 @@ const DIFF_POOL: Record<string, DiffEntry[]> = {
     { code: ICD10.acsNstemi, label: { en: "Acute coronary syndrome (rule out)", tr: "Akut koroner sendrom (dışla)" } },
   ],
 };
+
+const icd = (code: string, display: string): Coding => ({ system: CODE_SYSTEMS.icd10, code, display });
+DIFF_POOL.fever = [
+  { code: icd("A41.9", "Sepsis, unspecified organism"), label: { en: "Sepsis (source to be found)", tr: "Sepsis (kaynak aranacak)" } },
+  { code: icd("N10", "Acute pyelonephritis"), label: { en: "Acute pyelonephritis", tr: "Akut piyelonefrit" } },
+  { code: icd("J18.9", "Pneumonia, unspecified organism"), label: { en: "Pneumonia", tr: "Pnömoni" } },
+  { code: icd("B54", "Unspecified malaria"), label: { en: "Malaria (after travel)", tr: "Sıtma (seyahat sonrası)" } },
+  { code: icd("J11.1", "Influenza with other respiratory manifestations"), label: { en: "Viral illness (influenza)", tr: "Viral hastalık (influenza)" } },
+  { code: icd("G00.9", "Bacterial meningitis, unspecified"), label: { en: "Bacterial meningitis", tr: "Bakteriyel menenjit" } },
+];
 
 const GENERIC_DIFF: DiffEntry[] = [
   { code: ICD10.gerd, label: { en: "GERD", tr: "Gastroözofageal reflü" } },
@@ -609,19 +629,23 @@ function buildHistory(pid: string, spec: GeneratedCaseSpec): HistoryItem[] {
       intent: asIntent(h.intent),
       answer: bi(h.answer_en, h.answer_tr),
       ...(h.red_flag ? { redFlag: true } : {}),
+      ...(h.topic ? { topic: h.topic } : {}),
     });
   });
 
+  // The template already voices PMH, medications and allergies as hpi items;
+  // adding them again rendered a second, unlabelled line (acceptance C3).
+  const said = new Set(items.map((h) => h.answer.en.trim()));
   const pmh = bi(textOf(spec.pmh_en), textOf(spec.pmh_tr));
-  if (pmh.en) {
+  if (pmh.en && !said.has(pmh.en.trim())) {
     items.push({ id: `h-${pid}-pmh`, intent: "past-medical-history", answer: pmh });
   }
   const meds = bi(textOf(spec.meds_en), textOf(spec.meds_tr));
-  if (meds.en) {
+  if (meds.en && !said.has(meds.en.trim())) {
     items.push({ id: `h-${pid}-meds`, intent: "medications", answer: meds });
   }
   const alg = bi(textOf(spec.allergies_en), textOf(spec.allergies_tr));
-  if (alg.en) {
+  if (alg.en && !said.has(alg.en.trim())) {
     items.push({ id: `h-${pid}-alg`, intent: "allergies", answer: alg });
   }
 
@@ -669,7 +693,8 @@ function buildExam(pid: string, spec: GeneratedCaseSpec): ExamFinding[] {
 
 function buildLabs(pid: string, spec: GeneratedCaseSpec): LabResult[] {
   return (spec.labs ?? []).map((l, i) => {
-    const code = (l.code ?? `lab-${i}`).trim() || `lab-${i}`;
+    // D-19: the catalogue code of the same test, so ordering it scores.
+    const code = catalogCodeFor((l.code ?? `lab-${i}`).trim() || `lab-${i}`, l.label_en);
     const label = bi(l.label_en, l.label_tr);
     const interpretation = asInterpretation(l.flag);
     const range = refRange(l.ref_low ?? undefined, l.ref_high ?? undefined);
@@ -703,7 +728,7 @@ function buildLabs(pid: string, spec: GeneratedCaseSpec): LabResult[] {
 
 function buildImaging(pid: string, spec: GeneratedCaseSpec): ImagingResult[] {
   return (spec.imaging ?? []).map((im, i) => {
-    const code = (im.code ?? `img-${i}`).trim() || `img-${i}`;
+    const code = catalogCodeFor((im.code ?? `img-${i}`).trim() || `img-${i}`, im.modality_en);
     const modality = bi(im.modality_en, im.modality_tr);
     const isCardiac = /ecg|ekg|cardio|kardiy/i.test(`${code} ${modality.en}`);
     const report: DiagnosticReport = {
@@ -748,10 +773,18 @@ function buildWorkup(
   acuity: number,
 ): OrderExpectation[] {
   const anchors = spec.guideline_anchors ?? [];
-  const citationAt = (i: number): string => {
+  // Acceptance 2026-10-20 D-11: cite the verified statement id, preferring the
+  // anchor that names this order code; a free-text citation never resolves, so
+  // it rendered "Source unavailable".
+  const verified = anchors.filter((a) => (a.statement_id ?? "").startsWith("gs_"));
+  const citationFor = (code: string, i: number): string => {
+    const byCode = verified.find((a) => (a.codes ?? []).includes(code));
+    if (byCode?.statement_id) return byCode.statement_id;
+    if (verified.length > 0) return verified[i % verified.length].statement_id as string;
     const a = anchors.length > 0 ? anchors[i % anchors.length] : undefined;
-    return (a?.citation || a?.source || "tepdad-em").toString();
+    return (a?.statement_id || a?.citation || a?.source || "tepdad-em").toString();
   };
+  const citationAt = (i: number, code = ""): string => citationFor(code, i);
 
   const workup: OrderExpectation[] = [];
   labs.forEach((l, i) => {
@@ -763,7 +796,7 @@ function buildWorkup(
       label: bi(spl?.label_en || l.orderCode, spl?.label_tr),
       idealWindowMs: 30 * MIN,
       critical: isCriticalLab(spl),
-      citationId: citationAt(i),
+      citationId: citationAt(i, l.orderCode),
     });
   });
   imaging.forEach((im, i) => {
@@ -775,7 +808,7 @@ function buildWorkup(
       idealWindowMs: (i === 0 ? 30 : 90) * MIN,
       // The lead imaging study is the decisive, time-critical test.
       critical: i === 0,
-      citationId: citationAt(labs.length + i),
+      citationId: citationAt(labs.length + i, im.orderCode),
     });
   });
 
@@ -823,6 +856,7 @@ function buildTreatmentResponses(
       .map(mapEffect)
       .filter((e): e is VitalEffect => e !== null),
     narrative: bi(t.narrative_en, t.narrative_tr),
+    ...(t.label_en ? { label: bi(t.label_en, t.label_tr) } : {}),
   }));
 }
 

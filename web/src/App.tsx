@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 
 import { AppFrame, PageContainer } from "@/components/shell";
 import { RouteFallback } from "@/components/shell/RouteFallback";
+import { RoleGateNotice } from "@/components/shell/RoleGateNotice";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui";
 import { bootstrapAuth, useAuthSession } from "@/lib/auth";
@@ -216,7 +217,8 @@ function RoleGate({
   const auth = useAuthSession();
   const oidcOnly = auth.configLoaded && auth.mode === "oidc";
   if (!profile || !roles.includes(profile.role) || (oidcOnly && !profile.verified)) {
-    return <Navigate to="/" replace />;
+    // Acceptance 2026-10-20 D-21: say which role is needed instead of a silent redirect.
+    return <RoleGateNotice required={roles[0]} current={profile?.role} />;
   }
   return <>{children}</>;
 }

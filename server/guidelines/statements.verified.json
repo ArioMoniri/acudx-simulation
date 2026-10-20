@@ -1,9 +1,9 @@
 {
  "schema": "acudx.GuidelineStatement/1",
- "exported_at": "2026-10-19T23:11:32+00:00",
+ "exported_at": "2026-10-20T10:05:40+00:00",
  "counts": {
   "draft": 0,
-  "verified": 113,
+  "verified": 130,
   "failed": 42,
   "retired": 0
  },
@@ -269,6 +269,240 @@
    ],
    "topic": "pneumothorax_management",
    "status": "failed"
+  },
+  {
+   "id": "gs_cdc_flu_oseltamivir",
+   "statement_en": "Antiviral treatment is recommended as soon as possible for any patient with suspected or confirmed influenza who is hospitalized, has severe, complicated, or progressive illness, or is at higher risk for influenza complications; for hospitalized patients, initiation of antiviral treatment with oral or enterically administered oseltamivir is recommended as soon as possible.",
+   "statement_tr": "Şüpheli veya kesin influenzası olup hastaneye yatırılan, ağır, komplike veya ilerleyici hastalığı olan ya da influenza komplikasyonları açısından yüksek riskli her hastada antiviral tedavi mümkün olan en kısa sürede önerilir; hastanede yatan hastalarda ağızdan veya enteral yoldan oseltamivir ile antiviral tedavinin mümkün olan en kısa sürede başlatılması önerilir.",
+   "source_body": "CDC",
+   "source_title": "Influenza Antiviral Medications: Summary for Clinicians",
+   "source_url": "https://www.cdc.gov/flu/hcp/antivirals/summary-clinicians.html",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "Current season",
+   "published_date": "2024-09-01",
+   "retrieved_at": "2026-10-20T10:05:30+00:00",
+   "verified_at": "2026-10-20T10:05:30+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Priority Groups for Antiviral Treatment of Influenza Antiviral treatment is recommended as soon as possible for any patient with suspected or confirmed influenza who: - is hospitalized; - has severe, complicated, or progressive illness; or - is at higher risk for influenza complications. [...] Clinicians can consider early empiric antiviral treatment of non-higher-risk outpatients with suspected influenza based upon clinical judgment if treatment can be initiated within two days of illness onset. Antiviral Drug Options - For hospitalized patients with suspected or confirmed influenza, initiation of antiviral treatment with oral or enterically administered oseltamivir is recommended as soon as possible. - For outpatients with complications or progressive disease >2 days after symptom onset and suspected or confirmed influenza (e.g., pneumonia, or exacerbation of underlying chronic…",
+   "verification_url": "https://www.cdc.gov/flu/hcp/antivirals/summary-clinicians.html",
+   "verification_note": "score 1.00; 20/20 terms; composite quote; html 45572 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "US"
+    ],
+    "specialties": [
+     "infectious",
+     "respiratory"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "J10.1",
+    "J11.1",
+    "J09.X2"
+   ],
+   "topic": "gs_cdc_flu_oseltamivir",
+   "status": "verified"
+  },
+  {
+   "id": "gs_cdc_malaria_severe_artesunate",
+   "statement_en": "If the patient has severe malaria, regardless of species, begin intravenous artesunate; administer a full follow-on oral treatment course after the intravenous artesunate course is completed, if parasitemia is below 1% and the patient is able to tolerate oral medication.",
+   "statement_tr": "Hastada ağır sıtma varsa türden bağımsız olarak intravenöz artesunat başlayın; parazitemi %1'in altındaysa ve hasta ağızdan ilacı tolere edebiliyorsa intravenöz artesunat kürü tamamlandıktan sonra tam bir oral idame tedavisi verin.",
+   "source_body": "CDC",
+   "source_title": "Clinical Guidance: Malaria Diagnosis and Treatment in the U.S. (Algorithm, Appendix B)",
+   "source_url": "https://www.cdc.gov/malaria/hcp/clinical-guidance/appendix-b-algorithm.html",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "Updated August 2026",
+   "published_date": "2026-07-09",
+   "retrieved_at": "2026-10-20T10:05:31+00:00",
+   "verified_at": "2026-10-20T10:05:31+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "If the patient has severe malaria (see footnote 2), regardless of species, begin intravenous artesunate. Admit to intensive care unit and check smears at least daily to monitor parasitemia. Administer a full follow-on oral treatment course after intravenous artesunate course is completed, if parasitemia is <1% and the patient is able to tolerate oral medication (see footnote 5).",
+   "verification_url": "https://www.cdc.gov/malaria/hcp/clinical-guidance/appendix-b-algorithm.html",
+   "verification_note": "score 0.95; 18/19 terms; html 7391 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "US"
+    ],
+    "specialties": [
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "B54",
+    "B50.9",
+    "B50.0"
+   ],
+   "topic": "gs_cdc_malaria_severe_artesunate",
+   "status": "verified"
+  },
+  {
+   "id": "gs_cdc_malaria_smears",
+   "statement_en": "Preliminary review of blood smears concerning for intracellular parasites or a positive RDT or NAAT is sufficient to initiate treatment; if RDT or NAAT is performed, microscopic evaluation of blood smears should also be performed concurrently, and if tests are negative but malaria is still suspected, repeat blood smears every 12 to 24 hours (total of 3 times).",
+   "statement_tr": "Hücre içi parazit açısından şüpheli kan yaymalarının ön incelemesi veya pozitif HTT ya da NAAT tedaviye başlamak için yeterlidir; HTT veya NAAT yapılırsa kan yaymalarının mikroskobik incelemesi de eş zamanlı yapılmalıdır ve testler negatif olduğu halde sıtma hâlâ düşünülüyorsa kan yaymaları 12-24 saatte bir (toplam 3 kez) tekrarlanmalıdır.",
+   "source_body": "CDC",
+   "source_title": "Clinical Guidance: Malaria Diagnosis and Treatment in the U.S. (Algorithm, Appendix B)",
+   "source_url": "https://www.cdc.gov/malaria/hcp/clinical-guidance/appendix-b-algorithm.html",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "Updated August 2026",
+   "published_date": "2026-07-09",
+   "retrieved_at": "2026-10-20T10:05:31+00:00",
+   "verified_at": "2026-10-20T10:05:31+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Malaria diagnostic testing include microscopy with or without rapid diagnostic testing (RDT) or nucleic acid amplification test (NAAT). See footnote 1. If tests are negative but malaria is still suspected, repeat blood smears every 12-24 hours (total of 3 times). See footnote 3. If testing is positive, evaluate clinical status, parasitemia, and disease severity. [...] Preliminary review of blood smears concerning for intracellular parasites or positive RDT or NAAT is sufficient to initiate treatment. If your facility cannot provide results immediately, strongly consider transferring the patient for prompt evaluation of malaria. If RDT or NAAT performed, microscopic evaluation of blood smears should also be performed concurrently.",
+   "verification_url": "https://www.cdc.gov/malaria/hcp/clinical-guidance/appendix-b-algorithm.html",
+   "verification_note": "score 1.00; 26/26 terms; composite quote; html 7391 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "US"
+    ],
+    "specialties": [
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "B54",
+    "B50.9"
+   ],
+   "topic": "gs_cdc_malaria_smears",
+   "status": "verified"
+  },
+  {
+   "id": "gs_cdc_pid_alternative",
+   "statement_en": "Alternative parenteral regimens for PID: ampicillin-sulbactam 3 g IV every 6 hours plus doxycycline 100 mg orally or IV every 12 hours, or clindamycin 900 mg IV every 8 hours plus gentamicin loading dose IV or IM (2 mg/kg body weight) followed by a maintenance dose; single daily dosing (3 to 5 mg/kg body weight) can be substituted.",
+   "statement_tr": "PİH için alternatif parenteral rejimler: 6 saatte bir 3 g IV ampisilin-sulbaktam artı 12 saatte bir ağızdan veya IV 100 mg doksisiklin ya da 8 saatte bir 900 mg IV klindamisin artı IV veya IM gentamisin yükleme dozu (2 mg/kg vücut ağırlığı) ve ardından idame dozu; günde tek doz (3-5 mg/kg vücut ağırlığı) uygulanabilir.",
+   "source_body": "CDC",
+   "source_title": "Sexually Transmitted Infections Treatment Guidelines, 2021: Pelvic Inflammatory Disease",
+   "source_url": "https://www.cdc.gov/std/treatment-guidelines/pid.htm",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "MMWR Recomm Rep 2021;70(4)",
+   "published_date": "2021-07-23",
+   "retrieved_at": "2026-10-20T10:05:30+00:00",
+   "verified_at": "2026-10-20T10:05:30+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Ampicillin-sulbactam plus doxycycline is effective against C. trachomatis, N. gonorrhoeae, and anaerobes for women with tubo-ovarian abscess. Another trial demonstrated short-term clinical cure rates with azithromycin monotherapy or combined with metronidazole (1178). When using the clindamycin and gentamicin alternative parenteral regimen, women with clinical improvement after 24-48 hours can be transitioned to clindamycin (450 mg orally 4 times/day) or doxycycline (100 mg orally 2 times/day) to complete the 14-day therapy. [...] Ampicillin-sulbactam 3 g IV every 6 hours PLUS Doxycycline 100 mg orally or IV every 12 hours OR Clindamycin 900 mg IV every 8 hours PLUS Gentamicin loading dose IV or IM (2 mg/kg body weight), followed by a maintenance dose (1.5 mg/kg body weight) every 8 hours; single daily dosing (3-5 mg/kg body weight) can be substituted Intramuscular or Oral Treatment IM…",
+   "verification_url": "https://www.cdc.gov/std/treatment-guidelines/pid.htm",
+   "verification_note": "score 1.00; 29/29 terms; composite quote; html 20672 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "US"
+    ],
+    "specialties": [
+     "obgyn",
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "N73.9",
+    "N70.93"
+   ],
+   "topic": "gs_cdc_pid_alternative",
+   "status": "verified"
+  },
+  {
+   "id": "gs_cdc_pid_minimum_criteria",
+   "statement_en": "Presumptive treatment for PID should be initiated for sexually active young women and other women at risk for STIs if they are experiencing pelvic or lower abdominal pain, if no cause for the illness other than PID can be identified, and if one or more of the following three minimum clinical criteria are present on pelvic examination: cervical motion tenderness, uterine tenderness, or adnexal tenderness.",
+   "statement_tr": "Pelvik veya alt karın ağrısı olan, PİH dışında hastalığın başka bir nedeni bulunamayan ve pelvik muayenede şu üç minimum klinik ölçütten bir veya daha fazlası bulunan cinsel olarak aktif genç kadınlarda ve CYBE riski taşıyan diğer kadınlarda PİH için varsayımsal tedavi başlatılmalıdır: servikal hareket hassasiyeti, uterus hassasiyeti veya adneksiyal hassasiyet.",
+   "source_body": "CDC",
+   "source_title": "Sexually Transmitted Infections Treatment Guidelines, 2021: Pelvic Inflammatory Disease",
+   "source_url": "https://www.cdc.gov/std/treatment-guidelines/pid.htm",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "MMWR Recomm Rep 2021;70(4)",
+   "published_date": "2021-07-23",
+   "retrieved_at": "2026-10-20T10:05:30+00:00",
+   "verified_at": "2026-10-20T10:05:30+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Presumptive treatment for PID should be initiated for sexually active young women and other women at risk for STIs if they are experiencing pelvic or lower abdominal pain, if no cause for the illness other than PID can be identified, and if one or more of the following three minimum clinical criteria are present on pelvic examination: cervical motion tenderness, uterine tenderness, or adnexal tenderness.",
+   "verification_url": "https://www.cdc.gov/std/treatment-guidelines/pid.htm",
+   "verification_note": "score 1.00; 26/26 terms; html 20672 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "US"
+    ],
+    "specialties": [
+     "obgyn",
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "N73.9",
+    "N70.93"
+   ],
+   "topic": "gs_cdc_pid_minimum_criteria",
+   "status": "verified"
+  },
+  {
+   "id": "gs_cdc_pid_parenteral",
+   "statement_en": "Recommended parenteral regimen for PID: ceftriaxone 1 g IV every 24 hours plus doxycycline 100 mg orally or IV every 12 hours plus metronidazole 500 mg orally or IV every 12 hours; because of the pain associated with IV infusion, doxycycline should be administered orally when possible.",
+   "statement_tr": "PİH için önerilen parenteral rejim: 24 saatte bir 1 g IV seftriakson artı 12 saatte bir ağızdan veya IV 100 mg doksisiklin artı 12 saatte bir ağızdan veya IV 500 mg metronidazol; IV infüzyonun ağrısı nedeniyle doksisiklin mümkün olduğunda ağızdan verilmelidir.",
+   "source_body": "CDC",
+   "source_title": "Sexually Transmitted Infections Treatment Guidelines, 2021: Pelvic Inflammatory Disease",
+   "source_url": "https://www.cdc.gov/std/treatment-guidelines/pid.htm",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "MMWR Recomm Rep 2021;70(4)",
+   "published_date": "2021-07-23",
+   "retrieved_at": "2026-10-20T10:05:30+00:00",
+   "verified_at": "2026-10-20T10:05:31+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "For women with tubo-ovarian abscesses, >24 hours of inpatient observation is recommended. Ceftriaxone 1 g IV every 24 hours PLUS Doxycycline 100 mg orally or IV every 12 hours PLUS Metronidazole 500 mg orally or IV every 12 hours OR Cefotetan 2 g IV every 12 hours PLUS Doxycycline 100 mg orally or IV every 12 hours OR Cefoxitin 2 g IV every 6 hours PLUS Doxycycline 100 mg orally or IV every 12 hours Because of the pain associated with IV infusion, doxycycline should be administered orally when possible. [...] Women who do not respond to IM or oral therapy within 72 hours should be reevaluated to confirm the diagnosis and be administered therapy IV. Ceftriaxone 500 mg IM in a single dose* PLUS Doxycycline 100 mg orally 2 times/day for 14 days WITH Metronidazole 500 mg orally 2 times/day for 14 days OR Cefoxitin 2 g IM in a single dose and Probenecid 1 g orally administered concurrently…",
+   "verification_url": "https://www.cdc.gov/std/treatment-guidelines/pid.htm",
+   "verification_note": "score 1.00; 20/20 terms; composite quote; html 20672 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "US"
+    ],
+    "specialties": [
+     "obgyn",
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "N73.9",
+    "N70.93"
+   ],
+   "topic": "gs_cdc_pid_parenteral",
+   "status": "verified"
   },
   {
    "id": "gs_cellulitis_eron",
@@ -1989,6 +2223,44 @@
    "status": "verified"
   },
   {
+   "id": "gs_nice_cg183_check_allergy",
+   "statement_en": "Check a person's drug allergy status and confirm it with them (or their family members or carers as appropriate) before prescribing, dispensing or administering any drug.",
+   "statement_tr": "Herhangi bir ilacı reçete etmeden, vermeden veya uygulamadan önce kişinin ilaç alerjisi durumunu kontrol edin ve kendisiyle (veya uygunsa aile üyeleri ya da bakım verenleriyle) doğrulayın.",
+   "source_body": "NICE",
+   "source_title": "Drug allergy: diagnosis and management (CG183)",
+   "source_url": "https://www.nice.org.uk/guidance/cg183/chapter/Recommendations",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "CG183, September 2014",
+   "published_date": "2014-09-03",
+   "retrieved_at": "2026-10-20T10:05:32+00:00",
+   "verified_at": "2026-10-20T10:05:32+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Check a person's drug allergy status and confirm it with them (or their family members or carers as appropriate) before prescribing, dispensing or administering any drug (see also recommendation 1.3.4).",
+   "verification_url": "https://www.nice.org.uk/guidance/cg183/chapter/Recommendations",
+   "verification_note": "score 1.00; 12/12 terms; html 10594 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "pharmacology"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "Z88.0",
+    "Z88.9"
+   ],
+   "topic": "gs_nice_cg183_check_allergy",
+   "status": "verified"
+  },
+  {
    "id": "gs_nice_headache_redflags",
    "statement_en": "Treat a thunderclap headache (severe, reaching maximum intensity within 5 minutes) as a red flag for serious secondary causes such as subarachnoid haemorrhage and arrange immediate same-day assessment and neuroimaging.",
    "statement_tr": "Gök gürültüsü baş ağrısını (şiddetli, 5 dakika içinde en yüksek şiddete ulaşan) subaraknoid kanama gibi ciddi ikincil nedenler için bir kırmızı bayrak olarak değerlendirin ve acilen aynı gün değerlendirme ile nörogörüntüleme ayarlayın.",
@@ -2255,6 +2527,120 @@
     "F20.9"
    ],
    "topic": "gs_nice_ng10_rt_monitoring",
+   "status": "verified"
+  },
+  {
+   "id": "gs_nice_ng110_abx_msu",
+   "statement_en": "Offer an antibiotic to people with acute prostatitis, taking account of the severity of symptoms, the risk of developing complications, previous urine culture and susceptibility results and previous antibiotic use; obtain a midstream urine sample before antibiotics are taken and send for culture and susceptibility testing.",
+   "statement_tr": "Akut prostatitli kişilere semptomların şiddetini, komplikasyon gelişme riskini, önceki idrar kültürü ve duyarlılık sonuçlarını ve önceki antibiyotik kullanımını göz önünde bulundurarak antibiyotik önerin; antibiyotik alınmadan önce orta akım idrar örneği alıp kültür ve duyarlılık testine gönderin.",
+   "source_body": "NICE",
+   "source_title": "Prostatitis (acute): antimicrobial prescribing (NG110)",
+   "source_url": "https://www.nice.org.uk/guidance/ng110/chapter/Recommendations",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "NG110, October 2018",
+   "published_date": "2018-10-31",
+   "retrieved_at": "2026-10-20T10:05:33+00:00",
+   "verified_at": "2026-10-20T10:05:33+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Treatment 1.1.2 Offer an antibiotic (see the recommendations on choice of antibiotic) to people with acute prostatitis. Take account of: the severity of symptoms the risk of developing complications or having treatment failure, particularly after medical procedures such as prostate biopsy previous urine culture and susceptibility results previous antibiotic use, which may have led to resistant bacteria. 1.1.3 Obtain a midstream urine sample before antibiotics are taken and send for culture and susceptibility testing.",
+   "verification_url": "https://www.nice.org.uk/guidance/ng110/chapter/Recommendations",
+   "verification_note": "score 1.00; 19/19 terms; html 7058 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "renal",
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "N41.0"
+   ],
+   "topic": "gs_nice_ng110_abx_msu",
+   "status": "verified"
+  },
+  {
+   "id": "gs_nice_ng110_refer",
+   "statement_en": "Refer people with acute prostatitis to hospital if they have any symptoms or signs suggesting a more serious illness or condition (for example sepsis, acute urinary retention or prostatic abscess), or their symptoms are not improving 48 hours after starting the antibiotic.",
+   "statement_tr": "Akut prostatitli kişileri daha ciddi bir hastalığı düşündüren belirti veya bulguları varsa (örneğin sepsis, akut idrar retansiyonu veya prostat apsesi) ya da antibiyotik başladıktan 48 saat sonra semptomları düzelmiyorsa hastaneye yönlendirin.",
+   "source_body": "NICE",
+   "source_title": "Prostatitis (acute): antimicrobial prescribing (NG110)",
+   "source_url": "https://www.nice.org.uk/guidance/ng110/chapter/Recommendations",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "NG110, October 2018",
+   "published_date": "2018-10-31",
+   "retrieved_at": "2026-10-20T10:05:33+00:00",
+   "verified_at": "2026-10-20T10:05:33+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Referral 1.1.7 Refer people with acute prostatitis to hospital if: they have any symptoms or signs suggesting a more serious illness or condition (for example sepsis, acute urinary retention or prostatic abscess), or their symptoms are not improving 48 hours after starting the antibiotic.",
+   "verification_url": "https://www.nice.org.uk/guidance/ng110/chapter/Recommendations",
+   "verification_note": "score 1.00; 20/20 terms; html 7058 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "renal",
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "N41.0"
+   ],
+   "topic": "gs_nice_ng110_refer",
+   "status": "verified"
+  },
+  {
+   "id": "gs_nice_ng111_iv_choice",
+   "statement_en": "First-choice intravenous antibiotics for acute pyelonephritis in adults (if unable to take oral antibiotics or severely unwell; antibiotics may be combined if sepsis a concern): cefuroxime 750 mg to 1.5 g three or four times a day, ceftriaxone 1 g to 2 g once a day, or gentamicin initially 5 mg/kg to 7 mg/kg once a day, subsequent doses adjusted according to serum gentamicin concentration.",
+   "statement_tr": "Erişkinlerde akut piyelonefrit için ilk tercih intravenöz antibiyotikler (ağızdan antibiyotik alamıyorsa veya çok hastaysa; sepsis endişesi varsa antibiyotikler birleştirilebilir): günde üç veya dört kez 750 mg-1,5 g sefuroksim, günde bir kez 1-2 g seftriakson veya başlangıçta günde bir kez 5-7 mg/kg gentamisin, sonraki dozlar serum gentamisin düzeyine göre ayarlanır.",
+   "source_body": "NICE",
+   "source_title": "Pyelonephritis (acute): antimicrobial prescribing (NG111)",
+   "source_url": "https://www.nice.org.uk/guidance/ng111/chapter/Recommendations",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "NG111, October 2018",
+   "published_date": "2018-10-31",
+   "retrieved_at": "2026-10-20T10:05:34+00:00",
+   "verified_at": "2026-10-20T10:05:34+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "750 mg to 1.5 g three or four times a day Ceftriaxone: 1 g to 2 g once a day Gentamicin: Initially 5 mg/kg to 7 mg/kg once a day, subsequent doses adjusted according to serum gentamicin concentration Therapeutic drug monitoring and assessment of renal function is required (BNF information on gentamicin) Amikacin: [...] 500 mg twice or three times a day (up to 1 g to 1.5 g three or four times a day for severe infections) for 7 to 10 days | | First-choice intravenous antibiotic (if vomiting, unable to take oral antibiotics, or severely unwell) | Cefuroxime: 750 mg to 1.5 g three or four times a day | | Second-choice antibiotics or when combining antibiotics if susceptibility or sepsis a concern | Consult local microbiologist | See the BNF for appropriate use and dosing in specific populations, for example, hepatic impairment and renal impairment, and administering intravenous…",
+   "verification_url": "https://www.nice.org.uk/guidance/ng111/chapter/Recommendations",
+   "verification_note": "score 0.95; 30/32 terms; composite quote; html 11602 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "infectious",
+     "renal"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "N10"
+   ],
+   "topic": "gs_nice_ng111_iv_choice",
    "status": "verified"
   },
   {
@@ -2830,6 +3216,44 @@
    "status": "verified"
   },
   {
+   "id": "gs_nice_ng141_penicillin_allergy",
+   "statement_en": "Alternative first-choice antibiotics for cellulitis for penicillin allergy or if flucloxacillin is unsuitable (give orally unless person unable to take oral or severely unwell): clarithromycin 500 mg twice a day orally or 500 mg twice a day intravenously, erythromycin in pregnancy, or doxycycline 200 mg on the first day then 100 mg once a day orally.",
+   "statement_tr": "Penisilin alerjisinde veya flukloksasilin uygun değilse selülit için alternatif ilk tercih antibiyotikler (ağızdan alamıyorsa veya çok hasta değilse ağızdan verin): günde iki kez ağızdan 500 mg veya günde iki kez intravenöz 500 mg klaritromisin, gebelikte eritromisin ya da ilk gün 200 mg ardından günde bir kez ağızdan 100 mg doksisiklin.",
+   "source_body": "NICE",
+   "source_title": "Cellulitis and erysipelas: antimicrobial prescribing (NG141)",
+   "source_url": "https://www.nice.org.uk/guidance/ng141/chapter/Recommendations",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "NG141, September 2019",
+   "published_date": "2019-09-27",
+   "retrieved_at": "2026-10-20T10:05:35+00:00",
+   "verified_at": "2026-10-20T10:05:35+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Alternative first-choice antibiotics for penicillin allergy or if flucloxacillin is unsuitable (give orally unless person unable to take oral or severely unwell) Clarithromycin (5 to 7 days): 500 mg twice a day orally or 500 mg twice a day intravenously Erythromycin (in pregnancy; [...] 5 to 7 days): 500 mg four times a day orally Doxycycline (5 to 7 days in total): 200 mg on the first day then 100 mg once a day orally First-choice antibiotic if infection is near the eyes or nose (consider seeking specialist advice; give orally unless person unable to take oral or severely unwell) Co-amoxiclav (7 days): 500/125 mg three times a day orally or 1.2 g three times a day intravenously Alternative first-choice antibiotics if infection is near the eyes or nose for penicillin allergy or if co-amoxiclav is unsuitable (consider seeking specialist advice; give orally unless person unable to take…",
+   "verification_url": "https://www.nice.org.uk/guidance/ng141/chapter/Recommendations",
+   "verification_note": "score 0.96; 24/25 terms; composite quote; html 22206 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "L03.90",
+    "L03.115"
+   ],
+   "topic": "gs_nice_ng141_penicillin_allergy",
+   "status": "verified"
+  },
+  {
    "id": "gs_nice_ng148_detect",
    "statement_en": "Investigate for acute kidney injury, by measuring serum creatinine and comparing with baseline, in adults with acute illness if any of the following are likely or present: chronic kidney disease, heart failure, liver disease, diabetes, history of acute kidney injury, oliguria, hypovolaemia, use of drugs that can cause or exacerbate kidney injury (such as NSAIDs, aminoglycosides, ACE inhibitors, ARBs and diuretics) within the past week, iodine-based contrast media within the past week, urological obstruction, sepsis, deteriorating early warning scores or age 65 years or over.",
    "statement_tr": "Akut hastalığı olan erişkinlerde şunlardan herhangi biri varsa veya olasıysa serum kreatinini ölçüp bazal değerle karşılaştırarak akut böbrek hasarını araştırın: kronik böbrek hastalığı, kalp yetersizliği, karaciğer hastalığı, diyabet, akut böbrek hasarı öyküsü, oligüri, hipovolemi, son bir hafta içinde böbrek hasarına yol açabilen veya kötüleştirebilen ilaç kullanımı (NSAİİ, aminoglikozid, ACE inhibitörü, ARB ve diüretik gibi), son bir hafta içinde iyotlu kontrast madde, ürolojik obstrüksiyon, sepsis, kötüleşen erken uyarı skorları veya 65 yaş ve üzeri.",
@@ -3275,6 +3699,121 @@
     "I21.3"
    ],
    "topic": "gs_nice_ng185_reperfusion_eligibility",
+   "status": "verified"
+  },
+  {
+   "id": "gs_nice_ng191_dexamethasone",
+   "statement_en": "Offer dexamethasone, or either hydrocortisone or prednisolone when dexamethasone cannot be used or is unavailable, to people with COVID-19 who need supplemental oxygen to meet their prescribed oxygen saturation levels; the adult dosage is dexamethasone 6 mg orally or intravenously once a day for 10 days.",
+   "statement_tr": "Reçete edilen oksijen satürasyon düzeyine ulaşmak için ek oksijen gereken COVID-19'lu kişilere deksametazon, deksametazon kullanılamıyorsa veya yoksa hidrokortizon ya da prednizolon önerin; erişkin dozu 10 gün boyunca günde bir kez ağızdan veya intravenöz 6 mg deksametazondur.",
+   "source_body": "NICE",
+   "source_title": "COVID-19 rapid guideline: managing COVID-19 (NG191), therapeutics",
+   "source_url": "https://www.nice.org.uk/guidance/ng191/chapter/4-Therapeutics-for-COVID-19",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "NG191, March 2021 (updated)",
+   "published_date": "2021-03-23",
+   "retrieved_at": "2026-10-20T10:05:37+00:00",
+   "verified_at": "2026-10-20T10:05:37+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "4.2 Corticosteroids 4.2.1 Offer dexamethasone, or either hydrocortisone or prednisolone when dexamethasone cannot be used or is unavailable, to people with COVID-19 who: need supplemental oxygen to meet their prescribed oxygen saturation levels or have a level of hypoxia that needs supplemental oxygen but who are unable to have or tolerate it. Continue corticosteroids for up to 10 days unless there is a clear indication to stop early, which includes discharge from hospital or a hospital-supervised virtual COVID ward. [8 April 2021]See box 1 on dosage information. [...] Dosage for children with a greater than 44-week corrected gestational age Dexamethasone: 150 micrograms/kg (as a base) orally, nasogastrically or intravenously once a day for 10 days (max 6 mg). Prednisolone: 1 mg/kg orally, nasogastrically or intravenously once a day for 10 days (maximum 40 mg; doses can be rounded as…",
+   "verification_url": "https://www.nice.org.uk/guidance/ng191/chapter/4-Therapeutics-for-COVID-19",
+   "verification_note": "score 1.00; 20/20 terms; composite quote; html 8737 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "infectious",
+     "respiratory"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "U07.1"
+   ],
+   "topic": "gs_nice_ng191_dexamethasone",
+   "status": "verified"
+  },
+  {
+   "id": "gs_nice_ng191_no_antibiotics",
+   "statement_en": "Do not offer an antibiotic for preventing or treating pneumonia if SARS-CoV-2, another virus, or a fungal infection, is likely to be the cause; antibiotics do not work on viruses, and inappropriate use may lead to Clostridioides difficile infection and antimicrobial resistance.",
+   "statement_tr": "SARS-CoV-2, başka bir virüs veya mantar enfeksiyonu olası neden ise pnömoniyi önlemek veya tedavi etmek için antibiyotik önermeyin; antibiyotikler virüslere etki etmez ve uygunsuz kullanım Clostridioides difficile enfeksiyonuna ve antimikrobiyal dirence yol açabilir.",
+   "source_body": "NICE",
+   "source_title": "COVID-19 rapid guideline: managing COVID-19 (NG191), co-infections",
+   "source_url": "https://www.nice.org.uk/guidance/ng191/chapter/6-Identifying-and-managing-co-infections",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "NG191, March 2021 (updated)",
+   "published_date": "2021-03-23",
+   "retrieved_at": "2026-10-20T10:05:36+00:00",
+   "verified_at": "2026-10-20T10:05:36+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "6.1.1 Do not offer an antibiotic for preventing or treating pneumonia if SARS-CoV-2, another virus, or a fungal infection, is likely to be the cause.Antibiotics do not work on viruses, and inappropriate antibiotic use may reduce availability. Also, inappropriate use may lead to Clostridioides difficile infection and antimicrobial resistance, particularly with broad-spectrum antibiotics.",
+   "verification_url": "https://www.nice.org.uk/guidance/ng191/chapter/6-Identifying-and-managing-co-infections",
+   "verification_note": "score 1.00; 17/17 terms; html 10046 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "infectious",
+     "respiratory"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "U07.1",
+    "J10.1",
+    "J11.1"
+   ],
+   "topic": "gs_nice_ng191_no_antibiotics",
+   "status": "verified"
+  },
+  {
+   "id": "gs_nice_ng197_what_matters",
+   "statement_en": "When discussing decisions about tests, treatments and interventions, do so in a way that encourages people to think about what matters to them, and to express their needs and preferences.",
+   "statement_tr": "Testler, tedaviler ve girişimlerle ilgili kararları, kişileri kendileri için neyin önemli olduğunu düşünmeye ve ihtiyaçlarını ve tercihlerini ifade etmeye teşvik edecek şekilde tartışın.",
+   "source_body": "NICE",
+   "source_title": "Shared decision making (NG197)",
+   "source_url": "https://www.nice.org.uk/guidance/ng197/chapter/Recommendations",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "NG197, June 2021",
+   "published_date": "2021-06-17",
+   "retrieved_at": "2026-10-20T10:05:38+00:00",
+   "verified_at": "2026-10-20T10:05:38+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "1.2.9 When discussing decisions about tests, treatments and interventions, do so in a way that encourages people to think about what matters to them, and to express their needs and preferences.",
+   "verification_url": "https://www.nice.org.uk/guidance/ng197/chapter/Recommendations",
+   "verification_note": "score 1.00; 10/10 terms; html 20600 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "communication"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "Z71.89"
+   ],
+   "topic": "gs_nice_ng197_what_matters",
    "status": "verified"
   },
   {
@@ -3775,6 +4314,46 @@
    "status": "verified"
   },
   {
+   "id": "gs_nice_ng240_antibiotic_allergy",
+   "statement_en": "In people with an antibiotic allergy: ask about the reaction they get; give ceftriaxone if their reaction was not severe allergy; if their reaction was severe allergy, get advice from an infection specialist and consider chloramphenicol.",
+   "statement_tr": "Antibiyotik alerjisi olan kişilerde: oluşan reaksiyonu sorun; reaksiyon ağır alerji değilse seftriakson verin; reaksiyon ağır alerjiyse bir enfeksiyon uzmanından görüş alın ve kloramfenikolü düşünün.",
+   "source_body": "NICE",
+   "source_title": "Meningitis (bacterial) and meningococcal disease: recognition, diagnosis and management (NG240)",
+   "source_url": "https://www.nice.org.uk/guidance/ng240/chapter/Recommendations",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "NG240, March 2024",
+   "published_date": "2024-03-19",
+   "retrieved_at": "2026-10-20T10:05:39+00:00",
+   "verified_at": "2026-10-20T10:05:39+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "1.7.3 In people with an antibiotic allergy: ask about the reaction they get give ceftriaxone if their reaction was not severe allergy if their reaction was severe allergy, get advice from an infection specialist and consider chloramphenicol.",
+   "verification_url": "https://www.nice.org.uk/guidance/ng240/chapter/Recommendations",
+   "verification_note": "score 1.00; 12/12 terms; html 67238 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "neurology",
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "G00.9",
+    "A39.4",
+    "A39.0"
+   ],
+   "topic": "gs_nice_ng240_antibiotic_allergy",
+   "status": "verified"
+  },
+  {
    "id": "gs_nice_ng240_dexamethasone",
    "statement_en": "For people over 3 months with strongly suspected or confirmed bacterial meningitis, give intravenous dexamethasone; when the causative organism is found, continue dexamethasone if it is pneumococcus or Haemophilus influenzae type b and stop dexamethasone for all other organisms.",
    "statement_tr": "3 aylıktan büyük, kuvvetle şüphelenilen veya doğrulanmış bakteriyel menenjitli kişilere intravenöz deksametazon verin; etken bulunduğunda pnömokok veya Haemophilus influenzae tip b ise deksametazona devam edin, diğer tüm etkenlerde deksametazonu kesin.",
@@ -3963,6 +4542,44 @@
     "J18.9"
    ],
    "topic": "gs_nice_ng250_curb65",
+   "status": "verified"
+  },
+  {
+   "id": "gs_nice_ng250_penicillin_allergy",
+   "statement_en": "High-severity disease: alternative antibiotic for penicillin allergy (consult a local microbiologist if fluoroquinolone not appropriate) is levofloxacin 500 mg twice a day orally or intravenously for 5 days; low-severity disease: alternative oral antibiotics for penicillin allergy are doxycycline 200 mg on first day, then 100 mg once a day, or clarithromycin 500 mg twice a day for 5 days.",
+   "statement_tr": "Yüksek ağırlıkta hastalık: penisilin alerjisinde alternatif antibiyotik (florokinolon uygun değilse yerel mikrobiyoloğa danışın) 5 gün boyunca günde iki kez ağızdan veya intravenöz 500 mg levofloksasindir; düşük ağırlıkta hastalık: penisilin alerjisinde alternatif oral antibiyotikler ilk gün 200 mg ardından günde bir kez 100 mg doksisiklin veya 5 gün boyunca günde iki kez 500 mg klaritromisindir.",
+   "source_body": "NICE",
+   "source_title": "Pneumonia: diagnosis and management (NG250)",
+   "source_url": "https://www.nice.org.uk/guidance/ng250/chapter/Recommendations",
+   "fetch_url": "",
+   "doi": "",
+   "edition_or_version": "NG250, 2025",
+   "published_date": "2025-01-01",
+   "retrieved_at": "2026-10-20T10:05:40+00:00",
+   "verified_at": "2026-10-20T10:05:40+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "500 mg three times a day (higher doses can be used; see the BNF) for 5 days | | Low-severity disease: alternative oral antibiotics for penicillin allergy or if amoxicillin unsuitable (for example, if atypical pathogens suspected) | Doxycycline: 200 mg on first day, then 100 mg once a day for 4 days (5-day course in total) Clarithromycin: 500 mg twice a day for 5 days Erythromycin (in pregnancy): [...] 500/125 mg three times a day orally or 1.2 g three times a day intravenously for 5 days With Clarithromycin: 500 mg twice a day orally or intravenously for 5 days Or Erythromycin (in pregnancy): 500 mg four times a day orally for 5 days | | High-severity disease: alternative antibiotic for penicillin allergy (consult a local microbiologist if fluoroquinolone not appropriate) | Levofloxacin:",
+   "verification_url": "https://www.nice.org.uk/guidance/ng250/chapter/Recommendations",
+   "verification_note": "score 1.00; 26/26 terms; composite quote; html 41531 chars",
+   "license_tag": "open",
+   "scope": {
+    "countries": [
+     "UK"
+    ],
+    "specialties": [
+     "respiratory",
+     "infectious"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "J18.9"
+   ],
+   "topic": "gs_nice_ng250_penicillin_allergy",
    "status": "verified"
   },
   {
@@ -4872,6 +5489,53 @@
     "R65.20"
    ],
    "topic": "gs_ssc21_screening",
+   "status": "verified"
+  },
+  {
+   "id": "gs_ssc21_source_control",
+   "statement_en": "Adults with sepsis or septic shock should be rapidly evaluated for specific anatomical diagnoses or sources of infection that require emergent source control; for adults with a source of infection that requires source control, we suggest early source control, ideally within 6 hours of diagnosis of sepsis or septic shock.",
+   "statement_tr": "Sepsis veya septik şoklu erişkinler acil kaynak kontrolü gerektiren özgül anatomik tanılar veya enfeksiyon kaynakları açısından hızla değerlendirilmelidir; kaynak kontrolü gerektiren bir enfeksiyon kaynağı olan erişkinlerde, ideal olarak sepsis veya septik şok tanısından sonraki 6 saat içinde erken kaynak kontrolü öneriyoruz.",
+   "source_body": "SSC (SCCM/ESICM)",
+   "source_title": "Surviving Sepsis Campaign: International Guidelines for Management of Sepsis and Septic Shock 2021",
+   "source_url": "https://www.sccm.org/survivingsepsiscampaign/guidelines-and-resources/surviving-sepsis-campaign-adult-guidelines",
+   "fetch_url": "",
+   "doi": "10.1097/CCM.0000000000005337",
+   "edition_or_version": "2021",
+   "published_date": "2021-10-04",
+   "retrieved_at": "2026-10-20T10:05:38+00:00",
+   "verified_at": "2026-10-20T10:05:38+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Certainty of evidence: Very low Adults with sepsis or septic shock should be rapidly evaluated for specific anatomical diagnoses or sources of infection that require emergent source control. For adults with sepsis or septic shock and a specific anatomical diagnosis or source of infection that requires source control, we \"suggest\" early source control over late source control, ideally within 6 hr of diagnosis of sepsis or septic shock requiring source control.",
+   "verification_url": "https://www.sccm.org/survivingsepsiscampaign/guidelines-and-resources/surviving-sepsis-campaign-adult-guidelines",
+   "verification_note": "score 1.00; 20/20 terms; html 35188 chars",
+   "license_tag": "copyrighted-summarized",
+   "scope": {
+    "countries": [
+     "GLOBAL"
+    ],
+    "specialties": [
+     "sepsis",
+     "surgery"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "A41.9",
+    "R65.21",
+    "R65.20",
+    "K83.09",
+    "M00.9",
+    "N73.9",
+    "N10",
+    "M72.6",
+    "N41.0",
+    "L03.90"
+   ],
+   "topic": "gs_ssc21_source_control",
    "status": "verified"
   },
   {

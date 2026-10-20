@@ -48,6 +48,8 @@ import {
   type MedicationOrder,
 } from "@/domain/medicationSafety";
 import { gateFor } from "@/domain/treatmentRules";
+import { matchTreatmentResponse } from "@/domain/treatmentMatch";
+import { inferQuestionTopic } from "@/domain/scopeGuard";
 import { directorStep, type DirectorAction, type DirectorAffect, type DirectorCaseState, type DirectorStepResult } from "@/lib/caseGenV2";
 import { resolveOrder as engineResolveOrder, type OrderResult } from "@/lib/resultsApi";
 import {
@@ -400,6 +402,25 @@ export function startEncounter(caseInstance: CaseInstance, opts: StartEncounterO
 }
 
 /**
+ * Acceptance 2026-10-20 D-12: an intent such as "associated symptoms" now holds
+ * several fever topics (rigors, urinary, cough, neck). A question that names a
+ * topic reveals that answer; a question that names none reveals the general
+ * answers (or everything when the intent has only topic items).
+ */
+function selectByTopic(c: CaseInstance, ids: string[], utterance?: string): string[] {
+  const byId = new Map(c.groundTruth.history.map((h) => [h.id, h] as const));
+  const items = ids.map((id) => byId.get(id)).filter((h): h is NonNullable<typeof h> => Boolean(h));
+  if (!items.some((h) => h.topic)) return ids;
+  const named = utterance ? inferQuestionTopic(utterance) : null;
+  if (named) {
+    const hit = items.filter((h) => h.topic === named.topic).map((h) => h.id);
+    if (hit.length > 0) return hit;
+  }
+  const general = items.filter((h) => !h.topic).map((h) => h.id);
+  return general.length > 0 ? general : ids;
+}
+
+/**
  * Ask a history question by intent. Reveals matching history + logs the event.
  * `utterance` carries the learner's own words when the intent was inferred from
  * free text (offline guard path), so the transcript can show what they typed.
@@ -409,7 +430,7 @@ export function askQuestion(intent: QuestionIntent, opts?: { utterance?: string 
   if (!c) return;
   const resolved = resolveReveal(c, { kind: "question", ref: intent });
   const hit = resolved?.datumKind === "history";
-  const datumIds = hit ? resolved!.datumIds : [];
+  const datumIds = hit ? selectByTopic(c, resolved!.datumIds, opts?.utterance) : [];
   const alreadyKnown = datumIds.every((id) => state.discovered.has(id));
   const utterance = opts?.utterance?.trim();
   const ev = appendEvent("question", intent, {
@@ -734,7 +755,8 @@ export function administerMedication(
 
   // Appropriateness: the case's bespoke response wins; otherwise the gate on the
   // live vitals (review 02 finding 8); otherwise neutral.
-  const resp = c.treatmentResponses?.find((r) => r.treatmentCode === order.drug);
+  // Acceptance 2026-10-20 D-20: a formulary code maps to the case's own row.
+  const resp = matchTreatmentResponse(c, order.drug);
   const vitals = currentVitals(c, at, state.treatments);
   const gate = resp ? null : gateFor(order.drug, c, vitals, state.treatments, at);
   const appropriateness = resp?.appropriateness ?? gate?.appropriateness ?? "neutral";

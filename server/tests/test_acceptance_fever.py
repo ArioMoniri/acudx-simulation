@@ -127,7 +127,8 @@ def test_formulary_paracetamol_lowers_a_fever() -> None:
     t0 = state.vitals.tempC
     state, _, notes = D.next_state(state, D.Action(kind="treatment", ref="161", elapsed_ms=60_000))
     assert any("0 effect" not in n["why"] for n in notes if "161" in n["note"]), notes
-    state, visible, _ = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=600_000))
+    # D-18: the case row authors a realistic 45-minute onset for paracetamol.
+    state, visible, _ = D.next_state(state, D.Action(kind="elapsed", elapsed_ms=2_700_000))
     assert visible["vitals"]["tempC"] < t0 - 0.3
 
 
@@ -148,3 +149,194 @@ def test_sse_stream_cap_covers_an_author_call_plus_a_repair_round() -> None:
     from server.orchestration import routes as orch_routes
 
     assert orch_routes.SSE_MAX_DURATION_S >= 2 * Settings().casegen_timeout_s
+
+
+# --------------------------------------------------------------------------- #
+# Second acceptance pass (docs/review/05, resolution column)                   #
+# --------------------------------------------------------------------------- #
+import random as _random  # noqa: E402
+
+from server import case_generator as CG  # noqa: E402
+from server.results.engine import resolve_order  # noqa: E402
+
+FEBRILE_FAMILY = ("sepsis_uncomplicated", "septic_shock", "pneumonia_cap", "pyelonephritis", "bacterial_meningitis",
+                  "cellulitis", "ascending_cholangitis", "septic_arthritis", "malaria", "influenza", "covid19", "pid",
+                  "acute_prostatitis", "febrile_neutropenia")
+VIRAL = {"influenza", "covid19"}
+
+
+def _tspec(cid: str, seed: int = 1) -> dict:
+    cond = BY_ID[cid]
+    return CG.build_template_spec(cond, seed=seed, locale="en", acuity=cond["typical_acuity"],
+                                  difficulty=cond["difficulty"], rng=_random.Random(seed))
+
+
+@pytest.mark.parametrize("cid", FEBRILE_FAMILY)
+def test_d18_every_febrile_condition_has_a_full_treatment_table(cid: str) -> None:
+    rows = {t["code"]: t for t in _tspec(cid)["treatments"]}
+    labels = " | ".join(t["label_en"].lower() for t in rows.values())
+    indicated = [t for t in rows.values() if t["appropriateness"] == "indicated"]
+    assert any(t["appropriateness"] == "contraindicated" for t in rows.values()), cid
+    assert "paracetamol" in labels, cid
+    assert "antipyretic" in rows and rows["antipyretic"]["effects"][0]["onsetMs"] >= 30 * 60_000
+    for t in rows.values():
+        for e in t["effects"]:
+            assert e["onsetMs"] >= 5 * 60_000, (cid, t["code"], e)
+    if cid in VIRAL:
+        # NICE NG191: no antibiotics when a virus is the likely cause.
+        abx = [t for t in rows.values() if "antibiotic" in t["label_en"].lower()]
+        assert abx and all(t["appropriateness"] == "contraindicated" for t in abx), cid
+    else:
+        assert any(("antibiotic" in t["label_en"].lower() or "artesunate" in t["label_en"].lower()
+                    or t["code"] in {"severity_abx", "abx_cellulitis", "abx_joint", "abx_pid", "abx_prostatitis"})
+                   for t in indicated), cid
+    if cid not in VIRAL | {"malaria", "cellulitis", "pid"}:
+        assert "culture" in labels, cid
+
+
+def test_d18_septic_shock_fluids_are_30_ml_per_kg_and_prostatitis_is_not_hyperkalaemia() -> None:
+    shock = {t["code"]: t for t in _tspec("septic_shock")["treatments"]}
+    assert "30 ml/kg" in shock["iv_fluids"]["label_en"].lower()
+    assert "vasopressor" in shock and shock["starch"]["appropriateness"] == "contraindicated"
+    pros = {lab["code"] for lab in _tspec("acute_prostatitis")["labs"]}
+    assert "2823-3" not in pros and "5799-2" in pros
+
+
+def _sepsis_state(seed: int = 2) -> D.CaseState:
+    spec = template_spec({"complaint": "Sepsis", "seed": seed})
+    assert spec["meta"]["condition_id"] == "sepsis_uncomplicated"
+    return D.CaseState.from_spec(spec)
+
+
+def test_d18_paracetamol_does_not_avert_the_sepsis_deadline_but_an_antibiotic_does() -> None:
+    state = _sepsis_state()
+    comp = state.pending_complications[0]
+    assert "antipyretic" not in comp.required_any_of and "cultures" not in comp.required_any_of
+    state, _, notes = D.next_state(state, D.Action(kind="treatment", ref="161", elapsed_ms=60_000))
+    assert not any("averted" in n["note"] for n in notes)
+    state, _, notes = D.next_state(state, D.Action(kind="treatment", ref="11124", elapsed_ms=60_000))
+    assert any("averted" in n["note"] for n in notes), notes
+
+
+@pytest.mark.parametrize("code", ["11124", "82122", "4413", "29561", "pip-tazo", "2193"])
+def test_d17_every_formulary_antibiotic_matches_the_antibiotic_row_not_the_cultures_row(code: str) -> None:
+    row = D.match_treatment_row(_sepsis_state(), code)
+    assert row is not None and row.code == "abx", (code, row)
+
+
+def test_d17_allergy_draw_is_prevalence_weighted_with_nkda_the_majority() -> None:
+    draws = [_tspec("sepsis_uncomplicated", seed)["allergies_en"] for seed in range(1, 201)]
+    nkda = sum(1 for a in draws if a == fx.NKDA[0])
+    anaphylaxis = sum(1 for a in draws if "anaphylaxis" in a.lower())
+    assert nkda > 100, nkda
+    assert anaphylaxis < 20, anaphylaxis
+    assert len(set(draws)) >= 4
+
+
+@pytest.mark.parametrize("cid", FEBRILE_FAMILY)
+def test_d12_febrile_templates_answer_every_fever_topic_and_examine_every_system(cid: str) -> None:
+    spec = _tspec(cid)
+    topics = {h.get("topic") for h in spec["hpi"]}
+    assert set(fx.FEVER_TOPICS) <= topics, cid
+    maneuvers = {e["maneuver"] for e in spec["exam"]}
+    assert {"respiratory", "abdominal", "neurological", "skin", "musculoskeletal", "cardiovascular"} <= maneuvers, cid
+    # The schema keeps the topic (pydantic ignores unknown fields otherwise).
+    assert all(h.topic for h in CG.GeneratedCaseSpec.model_validate(spec).hpi if h.intent == "social-history"
+               and h.answer_en in {x["answer_en"] for x in fx.fever_hpi(cid)})
+
+
+def test_d12_condition_positives_reach_the_patient() -> None:
+    men = {h["topic"]: h["answer_en"] for h in _tspec("bacterial_meningitis")["hpi"] if h.get("topic")}
+    assert "stiff" in men["neck"].lower()
+    mal = {h["topic"]: h["answer_en"] for h in _tspec("malaria")["hpi"] if h.get("topic")}
+    assert "nigeria" in mal["travel"].lower()
+    men_exam = " ".join(e["finding_en"] for e in _tspec("bacterial_meningitis")["exam"] if e["maneuver"] == "neurological")
+    assert "kernig" in men_exam.lower()
+
+
+def test_d11_condition_statements_are_verified_and_reach_the_anchors() -> None:
+    verified = CG._verified_statements()
+    for cid, rows in fx.CONDITION_STATEMENTS.items():
+        for sid, _codes in rows:
+            assert sid in verified, (cid, sid)
+    for cid in FEBRILE_FAMILY:
+        anchors = template_spec({"complaint": BY_ID[cid]["label_en"], "seed": 1})["guideline_anchors"]
+        assert anchors
+        for a in anchors:
+            if a.get("statement_id"):
+                assert a["statement_id"] in verified
+
+
+def test_d11_unverified_seed_ids_are_never_attached() -> None:
+    from server.orchestration.anchors import resolve_anchors
+
+    anchors, dropped = resolve_anchors(["gs_nice_pyelonephritis"], BY_ID["pyelonephritis"])
+    assert "gs_nice_pyelonephritis" in dropped
+    assert anchors[0]["statement_id"] == "gs_nice_ng111_msu"
+    assert anchors[0]["codes"] and anchors[0]["citation"].startswith("http")
+
+
+def test_lactate_stays_below_shock_range_in_a_normotensive_patient() -> None:
+    spec = _tspec("febrile_neutropenia")
+    spec["labs"] = [lab for lab in spec["labs"] if lab["code"] != "2524-7"]  # model value, no anchor
+    spec["triage_vitals"].update(systolic=118, diastolic=72)
+    spec["vitals_trajectory"] = [{"atMs": 0, **spec["triage_vitals"]}]
+    lac = resolve_order(spec, "2524-7", 3_600_000, seed=1)["observations"][0]["value"]
+    assert lac <= 3.5, lac
+    spec["triage_vitals"].update(systolic=78, diastolic=40)
+    spec["vitals_trajectory"] = [{"atMs": 0, **spec["triage_vitals"]}]
+    assert resolve_order(spec, "2524-7", 3_600_000, seed=1)["observations"][0]["value"] > 4.0
+
+
+@pytest.mark.parametrize("cid", ["malaria", "sepsis_uncomplicated", "febrile_neutropenia", "hiv_seroconversion"])
+def test_d23_cbc_differential_fits_inside_the_white_count(cid: str) -> None:
+    obs = {o["loinc"]: o["value"] for o in resolve_order(_tspec(cid), "6690-2", 0, seed=1)["observations"]}
+    assert obs["751-8"] + obs["731-0"] <= obs["6690-2"] + 0.05, obs
+
+
+def test_malaria_and_hiv_counts_are_plausible() -> None:
+    mal = {lab["code"]: lab["value"] for lab in _tspec("malaria")["labs"]}
+    assert 4.0 <= mal["6690-2"] <= 11.0 and mal["777-3"] < 150
+    hiv = {lab["code"]: lab["value"] for lab in _tspec("hiv_seroconversion")["labs"]}
+    assert hiv["6690-2"] < 11.0 and hiv["1988-5"] < 50
+
+
+def test_d20_client_matcher_mirrors_the_director_stem_table() -> None:
+    """web/src/domain/treatmentMatch.ts must carry the same codes and stems."""
+    import re
+    from pathlib import Path
+
+    ts = (Path(__file__).resolve().parents[2] / "web/src/domain/treatmentMatch.ts").read_text(encoding="utf-8")
+    abx = set(re.findall(r'"([\w-]+)"', ts[ts.index("ANTIBIOTIC_CODES"):ts.index("]);")]))
+    assert abx == set(D.ANTIBIOTIC_CODES)
+    for code, stems in D.FORMULARY_ROW_STEMS.items():
+        assert f'"{code}"' in ts or f"{code}:" in ts, code
+        for st in stems:
+            assert f'"{st}"' in ts, (code, st)
+    for st in D.DIAGNOSTIC_ROW_STEMS:
+        assert f'"{st}"' in ts, st
+
+
+@pytest.mark.parametrize("rel", ["web/src/domain/conditionCitations.ts", "web/src/domain/formulary.ts",
+                                 "web/src/state/progressStore.ts"])
+def test_d11_every_client_citation_id_is_verified(rel: str) -> None:
+    """Feedback rows and allergy alternatives cite only verified statements."""
+    import re
+    from pathlib import Path
+
+    ts = (Path(__file__).resolve().parents[2] / rel).read_text(encoding="utf-8")
+    ids = set(re.findall(r'"(gs_[a-z0-9_]+)"', ts))
+    assert ids or rel.endswith("progressStore.ts")
+    verified = CG._verified_statements()
+    assert sorted(i for i in ids if i not in verified) == []
+
+
+def test_d01_the_web_fever_tile_serves_febrile_cases() -> None:
+    """web/src/domain/caseGen.ts sends "fever"; the complaint index resolves it."""
+    from pathlib import Path
+
+    ts = (Path(__file__).resolve().parents[2] / "web/src/domain/caseGen.ts").read_text(encoding="utf-8")
+    assert '{ id: "fever"' in ts
+    for seed in range(1, 25):
+        spec = template_spec({"complaint": "fever", "seed": seed})
+        assert spec["triage_vitals"]["tempC"] >= 37.8, (spec["meta"]["condition_id"], spec["triage_vitals"])
