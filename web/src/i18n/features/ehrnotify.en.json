@@ -1,0 +1,9 @@
+{
+  "ehr": {
+    "tabs": {
+      "newResults_one": "{{count}} new result is waiting on the Results tab.",
+      "newResults_other": "{{count}} new results are waiting on the Results tab.",
+      "unseenBadge": "{{count}} new"
+    }
+  }
+}

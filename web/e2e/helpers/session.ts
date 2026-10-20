@@ -82,9 +82,10 @@ export async function openTab(page: Page, name: string | RegExp): Promise<void> 
 
 /**
  * Assert `target` becomes visible on the given EHR tab, re-opening that tab
- * between attempts. Needed because a landing result advances the store stage
- * and the tab strip follows it to Results, pulling the learner off the tab they
- * were working in (recorded as a product finding in the tester handoff).
+ * between attempts. Written when a landing result moved the tab strip to Results
+ * on its own (tester handoff finding); ActivityTabs no longer steals the tab
+ * (it badges Results and announces instead), so this is now belt-and-braces: it
+ * keeps a long wait honest if the learner's tab ever changes under the test.
  */
 export async function expectOnTab(
   page: Page,
