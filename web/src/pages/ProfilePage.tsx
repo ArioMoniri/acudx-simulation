@@ -83,7 +83,8 @@ export function ProfileAvatar({
         width: size,
         height: size,
         borderRadius: "9999px",
-        background: `hsl(${hue} 58% 45%)`,
+        // 29% lightness keeps white initials at 4.5:1 or better on every hue.
+        background: `hsl(${hue} 58% 29%)`,
         color: "#fff",
         fontWeight: 600,
         fontSize: Math.max(11, Math.round(size * 0.38)),

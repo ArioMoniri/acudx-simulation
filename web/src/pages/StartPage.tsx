@@ -135,7 +135,6 @@ function ChoiceCard({
   disabled,
   badge,
   onSelect,
-  ariaLabel,
   layout,
 }: {
   icon: Icon;
@@ -145,7 +144,6 @@ function ChoiceCard({
   disabled?: boolean;
   badge?: string;
   onSelect: () => void;
-  ariaLabel: string;
   layout: ChoiceLayout;
 }) {
   const shell = cn(
@@ -166,7 +164,6 @@ function ChoiceCard({
       type="button"
       role="radio"
       aria-checked={selected}
-      aria-label={ariaLabel}
       disabled={disabled}
       onClick={onSelect}
       className={cn(
@@ -380,7 +377,6 @@ export function StartPage() {
               body={m.description[lang]}
               selected={mode === m.id}
               onSelect={() => setMode(m.id)}
-              ariaLabel={m.label[lang]}
             />
           ))}
         </div>
@@ -415,7 +411,6 @@ export function StartPage() {
               disabled={!r.available}
               badge={r.badge?.[lang]}
               onSelect={() => r.available && setRole(r.id)}
-              ariaLabel={r.label[lang]}
             />
           ))}
         </div>
@@ -450,7 +445,6 @@ export function StartPage() {
                 body={c.hint[lang]}
                 selected={chiefComplaint === c.id}
                 onSelect={() => setChiefComplaint(c.id)}
-                ariaLabel={c.label[lang]}
               />
             );
           })}

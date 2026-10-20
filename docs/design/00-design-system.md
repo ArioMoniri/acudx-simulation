@@ -72,7 +72,7 @@ All color pairings below meet WCAG 2.2 AA contrast (≥ 4.5:1 body text; ≥ 3:1
   --border:    #e2e8f0;   /* hairline dividers       */
 
   /* ---- Clinical semantic states (NEVER color alone — §3.4) ---- */
-  --state-normal:   #10b981;  /* normal / in range     */
+  --state-normal:   #065f46;  /* normal / in range (6.6:1 on white, AA on its tint) */
   --state-caution:  #f59e0b;  /* elevated / caution    */
   --state-warning:  #f97316;  /* warning / abnormal    */
   --state-critical: #ef4444;  /* critical              */
@@ -110,7 +110,7 @@ All color pairings below meet WCAG 2.2 AA contrast (≥ 4.5:1 body text; ≥ 3:1
   --monitor-bg:     #0b1220;
   --monitor-border: #1e293b;
   --monitor-fg:     #e2e8f0;
-  --monitor-dim:    #64748b;
+  --monitor-dim:    #8a94a6;   /* 6.1:1 on monitor-bg (AA for 10-11px labels) */
   --monitor-online: #10b981;   /* live/online dot */
 }
 ```
@@ -151,7 +151,7 @@ All color pairings below meet WCAG 2.2 AA contrast (≥ 4.5:1 body text; ≥ 3:1
   --monitor-bg:     #0b1220;
   --monitor-border: #1e293b;
   --monitor-fg:     #e2e8f0;
-  --monitor-dim:    #64748b;
+  --monitor-dim:    #8a94a6;   /* 6.1:1 on monitor-bg (AA for 10-11px labels) */
   --monitor-online: #10b981;
 }
 ```

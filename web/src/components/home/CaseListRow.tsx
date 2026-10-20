@@ -85,6 +85,7 @@ export function CaseListRow({ data, lang, to = "/encounter" }: CaseListRowProps)
           </span>
           <span
             className="inline-flex items-center gap-1"
+            role="group"
             aria-label={`${t("caseCard.languages")}: ${data.languages
               .map((l) => l.toUpperCase())
               .join(", ")}`}

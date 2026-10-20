@@ -38,12 +38,12 @@
   --surface-2: #fbfcfe; /* raised rows / striped tables */
   --fg: #0f172a;
   --fg-muted: #5b6472; /* secondary text (AA on white) */
-  --fg-subtle: #8a93a3; /* tertiary text, labels, placeholders */
+  --fg-subtle: #5f6b7c; /* tertiary text, labels, placeholders (5.4:1 on white, AA at 11px eyebrows) */
   --border: #e6e9ef; /* default hairline */
   --border-strong: #cfd5de; /* emphasized dividers, inputs */
 
   /* ---- Clinical semantic states (NEVER color alone) ---- */
-  --state-normal: #059669; /* normal / in range */
+  --state-normal: #065f46; /* normal / in range (6.6:1 on white, 5.8:1 on its 14% tint, so it can label text) */
   --state-caution: #d97706; /* elevated / caution */
   --state-warning: #ea580c; /* warning */
   --state-critical: #dc2626; /* critical */
@@ -93,7 +93,7 @@
   --monitor-bg: #0a0f1c;
   --monitor-border: #1c2536;
   --monitor-fg: #e6edf7;
-  --monitor-dim: #5b6678;
+  --monitor-dim: #8a94a6; /* 6.1:1 on monitor-bg */
   --monitor-online: #10b981;
 }
 
@@ -112,7 +112,7 @@
   --surface-2: #16202f;
   --fg: #e6edf7;
   --fg-muted: #9aa6b8;
-  --fg-subtle: #6b7688;
+  --fg-subtle: #8b96a8; /* 5.5:1 on dark surfaces */
   --border: #1f2a3d;
   --border-strong: #2c394f;
 
@@ -145,7 +145,7 @@
   --monitor-bg: #0a0f1c;
   --monitor-border: #1c2536;
   --monitor-fg: #e6edf7;
-  --monitor-dim: #5b6678;
+  --monitor-dim: #8a94a6; /* 6.1:1 on monitor-bg */
   --monitor-online: #10b981;
 }
 

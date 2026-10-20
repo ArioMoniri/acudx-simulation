@@ -66,7 +66,11 @@ export function FloorPanel({
         <h2 className="text-sm font-semibold text-fg">{t("rooms.inroom.floor")}</h2>
       </div>
 
-      <ol className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <ol
+        tabIndex={0}
+        aria-label={t("rooms.inroom.floor")}
+        className="flex flex-1 flex-col gap-3 overflow-y-auto p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
         {events.map((ev) => {
           const seat = room.seats.find((s) => s.role === ev.role);
           const holder = seat ? effectiveHolder(seat, room.aiBackfill) : null;
