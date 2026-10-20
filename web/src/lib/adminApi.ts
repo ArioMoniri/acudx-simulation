@@ -383,7 +383,29 @@ export function createAdminApi(opts: AdminApiOptions = {}) {
     getGpuPolicy: () => request<WorkerPolicy>("/admin/gpu/policy"),
     putGpuPolicy: (policy: WorkerPolicy) =>
       request<WorkerPolicy>("/admin/gpu/policy", { method: "PUT", body: policy }),
+    /* identity: user_roles directory (server/auth/routes.py) */
+    listUsers: (org?: string) => request<UserDirectory>("/admin/users", { query: { org } }),
+    putUserRoles: (sub: string, roles: string[], org?: string) =>
+      request<UserRecord>(`/admin/users/${encodeURIComponent(sub)}/roles`, { method: "PUT", body: { roles, org } }),
+    deleteUser: (sub: string) => request<void>(`/admin/users/${encodeURIComponent(sub)}`, { method: "DELETE" }),
   };
+}
+
+export interface UserRecord {
+  sub: string;
+  org: string | null;
+  roles: string[];
+  email: string | null;
+  name: string | null;
+  granted_by: string | null;
+  created_at: number;
+  updated_at: number;
+  last_seen_at: number | null;
+}
+
+export interface UserDirectory {
+  users: UserRecord[];
+  roles: string[];
 }
 
 export type AdminApi = ReturnType<typeof createAdminApi>;

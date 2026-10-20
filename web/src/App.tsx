@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion, useReducedMotion } from "motion/react";
@@ -7,7 +7,10 @@ import { AppFrame, PageContainer } from "@/components/shell";
 import { RouteFallback } from "@/components/shell/RouteFallback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui";
+import { bootstrapAuth, useAuthSession } from "@/lib/auth";
+import { installEventSync } from "@/lib/eventSync";
 import {
+  applyVerifiedIdentity,
   useIsOnboarded,
   useIsSignedIn,
   useProfile,
@@ -35,8 +38,10 @@ const load = {
   feedback: () => import("@/pages/FeedbackPage"),
   progress: () => import("@/pages/ProgressPage"),
   room: () => import("@/pages/RoomPage"),
-  institution: () => import("@/pages/InstitutionPage"),
+  dean: () => import("@/pages/DeanPage"),
+  faculty: () => import("@/pages/FacultyPage"),
   signin: () => import("@/pages/SignInPage"),
+  authCallback: () => import("@/pages/AuthCallbackPage"),
   profile: () => import("@/pages/ProfilePage"),
   exam: () => import("@/pages/ExamPage"),
   atlas: () => import("@/pages/AtlasPage"),
@@ -52,8 +57,10 @@ const EncounterPage = lazy(() => load.encounter().then((m) => ({ default: m.Enco
 const FeedbackPage = lazy(() => load.feedback().then((m) => ({ default: m.FeedbackPage })));
 const ProgressPage = lazy(() => load.progress().then((m) => ({ default: m.ProgressPage })));
 const RoomPage = lazy(() => load.room().then((m) => ({ default: m.RoomPage })));
-const InstitutionPage = lazy(() => load.institution().then((m) => ({ default: m.InstitutionPage })));
+const DeanPage = lazy(() => load.dean().then((m) => ({ default: m.DeanPage })));
+const FacultyPage = lazy(() => load.faculty().then((m) => ({ default: m.FacultyPage })));
 const SignInPage = lazy(() => load.signin().then((m) => ({ default: m.SignInPage })));
+const AuthCallbackPage = lazy(() => load.authCallback().then((m) => ({ default: m.AuthCallbackPage })));
 const ProfilePage = lazy(() => load.profile().then((m) => ({ default: m.ProfilePage })));
 const ExamPage = lazy(() => load.exam().then((m) => ({ default: m.ExamPage })));
 const AtlasPage = lazy(() => load.atlas().then((m) => ({ default: m.AtlasPage })));
@@ -77,7 +84,9 @@ const ROUTE_LOADERS: Record<string, () => Promise<unknown>> = {
   "/feedback": load.feedback,
   "/progress": load.progress,
   "/authoring": load.authoring,
-  "/institution": load.institution,
+  "/institution": load.dean,
+  "/dean": load.dean,
+  "/faculty": load.faculty,
   "/account": load.profile,
   "/admin": load.admin,
 };
@@ -125,30 +134,61 @@ function NotFoundPage() {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Identity bootstrap                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * On first mount: ask the gateway which identity mode it runs (GET
+ * /v1/auth/config), silently restore an OIDC session from the tab-scoped
+ * refresh token, and mirror the verified principal into the profile store.
+ * Also wires the server event sync so finished encounters reach the dean and
+ * faculty panels.
+ */
+function useIdentityBootstrap(): void {
+  useEffect(() => {
+    const off = installEventSync();
+    let cancelled = false;
+    void bootstrapAuth().then((principal) => {
+      if (!cancelled && principal) applyVerifiedIdentity(principal);
+    });
+    return () => {
+      cancelled = true;
+      off();
+    };
+  }, []);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Onboarding gate                                                             */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Gates the app on a REAL local profile. A first-time visitor is sent to the
- * sign-in screen and can only reach `/profile` to create their profile; once
- * signed in the whole app opens and the sign-in screen steps aside. This is
- * the onboarding gate — no seeded/demo user ever slips past it.
+ * Gates the app on a signed-in profile. A first-time visitor is sent to the
+ * sign-in screen; in LOCAL mode they may create a local profile at `/profile`,
+ * in OIDC mode the only way in is the institution sign-in (`/auth/callback`
+ * completes it). Once the server reports OIDC mode, a stale unverified local
+ * profile no longer passes: it is sent back to sign in.
  */
 function AuthGate({ children }: { children: ReactNode }) {
   const signedIn = useIsSignedIn();
   const onboarded = useIsOnboarded();
+  const profile = useProfile();
+  const auth = useAuthSession();
   const { pathname } = useLocation();
 
-  if (signedIn) {
-    // Already signed in — don't linger on the sign-in screen.
+  const oidcOnly = auth.configLoaded && auth.mode === "oidc";
+  const verifiedOk = !oidcOnly || profile?.verified === true;
+
+  if (pathname === "/auth/callback") return <>{children}</>;
+
+  if (signedIn && verifiedOk) {
     if (pathname === "/signin") return <Navigate to="/" replace />;
     return <>{children}</>;
   }
 
   // Not signed in: the sign-in screen is always reachable, and the onboarding
-  // form only for a genuine first-time user (no saved account yet). A signed-out
-  // account resumes via "Continue as …" on the sign-in screen.
-  const onboardingAllowed = !onboarded && pathname === "/profile";
+  // form only for a genuine first-time LOCAL user (no saved account yet).
+  const onboardingAllowed = !oidcOnly && !onboarded && pathname === "/profile";
   if (pathname === "/signin" || onboardingAllowed) return <>{children}</>;
 
   return <Navigate to="/signin" replace />;
@@ -159,11 +199,11 @@ function AuthGate({ children }: { children: ReactNode }) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Real ROLE permission guard (not "View as"). Reads the genuine `profile.role`
- * from profileStore and admits only the listed roles; anyone else is bounced to
- * Home. Composed INSIDE {@link AuthGate}, so a signed-in profile is guaranteed
- * here. `profile.role` is the permission source today — a future Supabase wave
- * swaps it for a server-verified claim without changing this boundary.
+ * Real ROLE permission guard (not "View as"). Reads `profile.role`, which in
+ * OIDC mode is derived from the server-verified principal and in local mode is
+ * the self-declared, unverified role (the server still enforces every panel
+ * API with the same precedence). Once the gateway reports OIDC mode, an
+ * unverified profile is never admitted to a privileged route.
  */
 function RoleGate({
   roles,
@@ -173,17 +213,24 @@ function RoleGate({
   children: ReactNode;
 }) {
   const profile = useProfile();
-  if (!profile || !roles.includes(profile.role)) {
+  const auth = useAuthSession();
+  const oidcOnly = auth.configLoaded && auth.mode === "oidc";
+  if (!profile || !roles.includes(profile.role) || (oidcOnly && !profile.verified)) {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
 }
+
+const DEAN_ROLES: readonly ProfileRole[] = ["dean", "admin", "super_admin"];
+const FACULTY_ROLES: readonly ProfileRole[] = ["faculty", "dean", "admin", "super_admin"];
+const ADMIN_ROLES: readonly ProfileRole[] = ["admin", "super_admin"];
 
 /* -------------------------------------------------------------------------- */
 /* App                                                                         */
 /* -------------------------------------------------------------------------- */
 
 export default function App() {
+  useIdentityBootstrap();
   return (
     <AppFrame>
       <ErrorBoundary>
@@ -191,6 +238,7 @@ export default function App() {
           <AuthGate>
             <Routes>
               <Route path="/signin" element={<SignInPage />} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/account" element={<ProfilePage />} />
               <Route path="/" element={<HomePage />} />
@@ -198,7 +246,7 @@ export default function App() {
               <Route
                 path="/authoring"
                 element={
-                  <RoleGate roles={["educator", "dean"]}>
+                  <RoleGate roles={FACULTY_ROLES}>
                     <AuthoringPage />
                   </RoleGate>
                 }
@@ -213,17 +261,26 @@ export default function App() {
               <Route path="/exam" element={<ExamPage />} />
               <Route path="/atlas" element={<AtlasPage />} />
               <Route
-                path="/institution"
+                path="/dean"
                 element={
-                  <RoleGate roles={["dean"]}>
-                    <InstitutionPage />
+                  <RoleGate roles={DEAN_ROLES}>
+                    <DeanPage />
+                  </RoleGate>
+                }
+              />
+              <Route path="/institution" element={<Navigate to="/dean" replace />} />
+              <Route
+                path="/faculty"
+                element={
+                  <RoleGate roles={FACULTY_ROLES}>
+                    <FacultyPage />
                   </RoleGate>
                 }
               />
               <Route
                 path="/admin"
                 element={
-                  <RoleGate roles={["admin"]}>
+                  <RoleGate roles={ADMIN_ROLES}>
                     <AdminPage />
                   </RoleGate>
                 }

@@ -1,0 +1,44 @@
+{
+  "nav": { "faculty": "Öğretim üyesi", "dean": "Dekan" },
+  "role": { "faculty": "Öğretim üyesi" },
+  "profile": {
+    "roles": {
+      "nurse": "Hemşire",
+      "paramedic": "Paramedik",
+      "faculty": "Öğretim üyesi (klinisyen eğitici)",
+      "super_admin": "Platform üst yöneticisi"
+    }
+  },
+  "identity": {
+    "badge": {
+      "verified": "Kurumunuz tarafından doğrulandı",
+      "local": "Yerel, doğrulanmamış",
+      "localHint": "Bu kimlik yalnızca bu tarayıcıda saklanan yerel bir profildir. Sunucu yerel modda çalışır ve kimliği doğrulamaz."
+    },
+    "signIn": {
+      "ssoHeading": "Kurumunuzla giriş yapın",
+      "ssoLede": "{{provider}} üzerinden tek oturum açma. Adınız, rolünüz ve kurumunuz üniversitenizin kimlik sağlayıcısından gelir ve AcuDx sunucusu tarafından doğrulanır.",
+      "ssoCta": "Kurumunuzla giriş yapın",
+      "ssoHint": "PKCE ile OpenID Connect. AcuDx içinde parola girilmez; erişim belirteci yalnızca bellekte kalır.",
+      "ssoUnavailable": "Kimlik sağlayıcı bir yetkilendirme uç noktası yayımlamadı. Yöneticinizden yönetim konsolunda kimlik sağlayıcıyı test etmesini isteyin.",
+      "ssoNotConfigured": "Bu kurulum kurum girişi gerektiriyor ancak henüz bir kimlik sağlayıcı tanımlı değil. Yöneticinizden Yönetim, Sağlayıcılar altında identity türünde bir sağlayıcı eklemesini isteyin.",
+      "callbackError": "Son giriş denemesi başarısız oldu: {{reason}}",
+      "gatewayDown": "AcuDx ağ geçidine ulaşılamadı; şu an yalnızca yerel profil kullanılabilir.",
+      "localNote": "Yerel profiller internetsiz demolar içindir. Yerel profille açılan dekan, öğretim üyesi ve yönetici ekranları doğrulanmamıştır ve sunucu her yanıtı X-Auth-Mode: local ile işaretler."
+    },
+    "callback": {
+      "eyebrow": "Kurum girişi",
+      "title": "Giriş tamamlanıyor",
+      "lede": "Yetkilendirme kodu değiştiriliyor ve doğrulanmış profiliniz yükleniyor.",
+      "working": "AcuDx sunucusuyla doğrulanıyor",
+      "failedTitle": "Giriş tamamlanamadı",
+      "failedLede": "Hiçbir şey kaydedilmedi. Giriş ekranından yeniden deneyebilirsiniz.",
+      "reason": "Neden:",
+      "backToSignIn": "Giriş ekranına dön"
+    },
+    "profile": {
+      "managedByIdp": "Adınız, rolünüz ve kurumunuz kimlik sağlayıcınız tarafından yönetilir ve burada düzenlenemez.",
+      "roleVerifiedHint": "Kurum belirtecinizden doğrulandı. Değiştirmek için bir yöneticiye başvurun."
+    }
+  }
+}

@@ -5,24 +5,29 @@ import { motion } from "motion/react";
 import {
   Check,
   CheckCircle,
+  ShieldCheck,
+  ShieldWarning,
   SignOut,
   UserCircle,
 } from "@phosphor-icons/react";
 
 import { PageContainer, PageHeader } from "@/components/shell";
 import {
+  Badge,
   Button,
   Card,
   Field,
   TextInput,
   Select,
 } from "@/components/ui";
+import { signOutOidc, useAuthSession } from "@/lib/auth";
 import { useEntry } from "@/lib/useLang";
 import { LANGUAGE_META, normalizeLanguage } from "@/i18n";
 import {
   AVATAR_SEEDS,
   PROFILE_LANGUAGES,
   PROFILE_ROLES,
+  SELF_SERVICE_ROLES,
   createProfile,
   signOut,
   updateProfile,
@@ -120,9 +125,21 @@ interface ProfileFormProps {
   onSubmit: (draft: ProfileDraft) => void;
   saved: boolean;
   onCancel: () => void;
+  /** Identity fields (name, role, institution) came from a verified token and cannot be edited here. */
+  locked?: boolean;
+  /** Roles the person may pick on an unverified local profile. */
+  roleOptions?: readonly ProfileRole[];
 }
 
-function ProfileForm({ mode, initial, onSubmit, saved, onCancel }: ProfileFormProps) {
+function ProfileForm({
+  mode,
+  initial,
+  onSubmit,
+  saved,
+  onCancel,
+  locked = false,
+  roleOptions = PROFILE_ROLES,
+}: ProfileFormProps) {
   const { t } = useTranslation();
   const [fullName, setFullName] = useState(initial.fullName);
   const [role, setRole] = useState<ProfileRole | "">(initial.role);
@@ -131,6 +148,11 @@ function ProfileForm({ mode, initial, onSubmit, saved, onCancel }: ProfileFormPr
   const [language, setLanguage] = useState<ProfileLanguage>(initial.language);
   const [avatarSeed, setAvatarSeed] = useState(initial.avatarSeed);
   const [errors, setErrors] = useState<FormErrors>({});
+
+  // Keep the saved role selectable even when the current mode would not offer
+  // it for a new profile (e.g. a dean created under AUTH_MODE=local).
+  const visibleRoles: readonly ProfileRole[] =
+    role && !roleOptions.includes(role) ? [...roleOptions, role] : roleOptions;
 
   function validate(): FormErrors {
     const next: FormErrors = {};
@@ -214,6 +236,13 @@ function ProfileForm({ mode, initial, onSubmit, saved, onCancel }: ProfileFormPr
         </div>
       </fieldset>
 
+      {locked ? (
+        <p className="inline-flex items-center gap-1.5 text-xs text-muted">
+          <ShieldCheck weight="fill" className="h-3.5 w-3.5 shrink-0 text-[color:var(--state-normal)]" aria-hidden />
+          {t("identity.profile.managedByIdp")}
+        </p>
+      ) : null}
+
       <Field label={t("profile.form.fullName")} error={errors.fullName}>
         {(aria) => (
           <TextInput
@@ -222,6 +251,7 @@ function ProfileForm({ mode, initial, onSubmit, saved, onCancel }: ProfileFormPr
             autoComplete="name"
             placeholder={t("profile.form.fullNamePlaceholder")}
             onChange={(e) => setFullName(e.target.value)}
+            disabled={locked}
           />
         )}
       </Field>
@@ -229,7 +259,7 @@ function ProfileForm({ mode, initial, onSubmit, saved, onCancel }: ProfileFormPr
       <div className="grid gap-6 sm:grid-cols-2">
         <Field
           label={t("profile.form.role")}
-          hint={t("profile.form.roleHint")}
+          hint={locked ? t("identity.profile.roleVerifiedHint") : t("profile.form.roleHint")}
           error={errors.role}
         >
           {(aria) => (
@@ -237,11 +267,12 @@ function ProfileForm({ mode, initial, onSubmit, saved, onCancel }: ProfileFormPr
               {...aria}
               value={role}
               onChange={(e) => setRole(e.target.value as ProfileRole | "")}
+              disabled={locked}
             >
               <option value="" disabled>
                 {"—"}
               </option>
-              {PROFILE_ROLES.map((r) => (
+              {visibleRoles.map((r) => (
                 <option key={r} value={r}>
                   {t(`profile.roles.${r}`)}
                 </option>
@@ -288,6 +319,7 @@ function ProfileForm({ mode, initial, onSubmit, saved, onCancel }: ProfileFormPr
             autoComplete="organization"
             placeholder={t("profile.form.institutionPlaceholder")}
             onChange={(e) => setInstitution(e.target.value)}
+            disabled={locked}
           />
         )}
       </Field>
@@ -342,9 +374,22 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const profile = useProfile();
   const entry = useEntry();
+  const auth = useAuthSession();
   const [saved, setSaved] = useState(false);
 
   const isEdit = profile?.onboarded === true;
+  // A verified (IdP) profile owns its identity fields; a local profile may pick
+  // any role only while the gateway runs AUTH_MODE=local. Otherwise privileged
+  // roles (faculty, dean, admin) come from a verified token or not at all.
+  const locked = profile?.verified === true;
+  const localMode = !auth.configLoaded || auth.mode === "local";
+  const roleOptions = localMode ? PROFILE_ROLES : SELF_SERVICE_ROLES;
+
+  function handleSignOutAll() {
+    signOut();
+    if (locked) signOutOidc({ postLogoutRedirectUri: `${window.location.origin}/signin` });
+    else navigate("/signin", { replace: true });
+  }
 
   const initial = useMemo(
     () => ({
@@ -376,11 +421,6 @@ export function ProfilePage() {
     setSaved(true);
   }
 
-  function handleSignOut() {
-    signOut();
-    navigate("/signin", { replace: true });
-  }
-
   const memberSince =
     profile?.createdAt != null
       ? new Date(profile.createdAt).toLocaleDateString(
@@ -404,11 +444,28 @@ export function ProfilePage() {
             isEdit ? (
               <Button
                 variant="secondary"
-                onClick={handleSignOut}
+                onClick={handleSignOutAll}
                 leadingIcon={<SignOut weight="bold" className="h-4 w-4" />}
               >
                 {t("profile.account.signOut")}
               </Button>
+            ) : undefined
+          }
+          meta={
+            isEdit ? (
+              locked ? (
+                <Badge tone="normal" icon={<ShieldCheck weight="fill" className="h-3.5 w-3.5" aria-hidden />}>
+                  {t("identity.badge.verified")}
+                </Badge>
+              ) : (
+                <Badge
+                  tone="caution"
+                  icon={<ShieldWarning weight="fill" className="h-3.5 w-3.5" aria-hidden />}
+                  title={t("identity.badge.localHint")}
+                >
+                  {t("identity.badge.local")}
+                </Badge>
+              )
             ) : undefined
           }
         />
@@ -426,9 +483,10 @@ export function ProfilePage() {
                   {profile.fullName}
                 </p>
                 <p className="truncate text-xs text-muted">
-                  {t(`profile.roles.${profile.role}`)}
+                  {profile.roles.map((r) => t(`profile.roles.${r}`)).join(", ")}
                   {" · "}
                   {profile.institution}
+                  {profile.email ? ` · ${profile.email}` : ""}
                 </p>
               </div>
               {memberSince ? (
@@ -452,6 +510,8 @@ export function ProfilePage() {
             saved={saved}
             onSubmit={isEdit ? handleUpdate : handleCreate}
             onCancel={() => navigate("/")}
+            locked={locked}
+            roleOptions={roleOptions}
           />
         </Card>
       </motion.div>
