@@ -207,7 +207,7 @@ export function ChartReviewTab({ caseInstance, lang }: ChartReviewTabProps) {
                       "rounded-full px-2.5 py-1 text-xs font-medium",
                       "transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                       active
-                        ? "bg-brand text-white"
+                        ? "bg-brand text-on-brand"
                         : "border border-border bg-surface text-muted hover:bg-bg-subtle hover:text-fg",
                     )}
                   >

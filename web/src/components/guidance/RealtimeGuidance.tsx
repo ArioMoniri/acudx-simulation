@@ -180,7 +180,7 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
             <BookOpen weight="fill" className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold tracking-tight text-fg">
+            <h3 className="serif text-lg leading-tight text-fg">
               {t("guidance3.panel.title")}
             </h3>
             <p className="text-xs text-muted">{t("guidance3.panel.subtitle")}</p>

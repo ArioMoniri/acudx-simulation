@@ -391,7 +391,7 @@ export function FeedbackPage() {
             {/* The signature calibration scatter. */}
             <div className="flex flex-col gap-3 lg:border-l lg:border-border lg:ps-10">
               <div>
-                <h2 className="text-base font-semibold tracking-tight text-fg">
+                <h2 className="text-lg text-fg">
                   {t("calibration.title")}
                 </h2>
                 <p className="mt-1 text-sm text-muted">
@@ -424,7 +424,7 @@ export function FeedbackPage() {
         <div className="flex flex-col gap-1">
           <SectionLabel>{t("feedback3.section.bands")}</SectionLabel>
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-lg font-semibold tracking-tight text-fg">
+            <h2 className="text-xl text-fg">
               {t("feedback.dualAxis.title")}
             </h2>
             <p className="hidden text-sm text-muted sm:block">
@@ -480,7 +480,7 @@ export function FeedbackPage() {
           >
             {t("feedback3.section.process")}
           </SectionLabel>
-          <h2 className="text-lg font-semibold tracking-tight text-fg">
+          <h2 className="text-xl text-fg">
             {t("feedback.process.heading")}
           </h2>
           <p className="max-w-2xl text-sm text-muted">
@@ -721,7 +721,7 @@ export function FeedbackPage() {
       <motion.section {...gaps} aria-label={t("feedback.gapsHeading")}>
         <div className="flex flex-col gap-1">
           <SectionLabel>{t("feedback3.section.gaps")}</SectionLabel>
-          <h2 className="text-lg font-semibold tracking-tight text-fg">
+          <h2 className="text-xl text-fg">
             {t("feedback.gapsHeading")}
           </h2>
         </div>
@@ -748,7 +748,7 @@ export function FeedbackPage() {
       <motion.section {...remediation} aria-label={t("feedback.remediationHeading")}>
         <Card variant="inset" padding="lg">
           <SectionLabel>{t("feedback3.section.steps")}</SectionLabel>
-          <h2 className="mt-1.5 text-lg font-semibold tracking-tight text-fg">
+          <h2 className="mt-1.5 text-xl text-fg">
             {t("feedback.remediationHeading")}
           </h2>
           <div className="mt-4 flex flex-wrap gap-3">

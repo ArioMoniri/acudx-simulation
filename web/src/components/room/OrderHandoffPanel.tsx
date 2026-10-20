@@ -108,7 +108,7 @@ export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHand
             <Prescription weight="bold" className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-fg">{t("roomscollab.orders.title")}</h2>
+            <h2 className="text-[1.0625rem] text-fg">{t("roomscollab.orders.title")}</h2>
             <p className="mt-0.5 text-xs text-muted">{t("roomscollab.orders.subtitle")}</p>
           </div>
         </div>
@@ -187,7 +187,7 @@ export function OrderHandoffPanel({ roomId, state, lang, actingRole }: OrderHand
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-sm font-semibold text-fg">{t("roomscollab.task.queueTitle")}</h2>
+            <h2 className="text-[1.0625rem] text-fg">{t("roomscollab.task.queueTitle")}</h2>
             <p className="mt-0.5 text-xs text-muted">{t("roomscollab.task.queueSubtitle")}</p>
           </div>
         </div>

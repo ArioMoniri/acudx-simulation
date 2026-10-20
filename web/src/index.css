@@ -1,81 +1,97 @@
 @import "tailwindcss";
 
-/* Self-hosted fonts (NO CDN): Inter (UI), Manrope (display only), Geist Mono (codes, values) */
+/* Self-hosted fonts (NO CDN): Fraunces (display serif: page and section
+   titles), Inter (UI), Manrope (the wordmark only), Geist Mono (codes, values) */
+@import "@fontsource-variable/fraunces/opsz.css";
 @import "@fontsource-variable/manrope";
 @import "@fontsource-variable/inter";
 @import "@fontsource/geist-mono";
 
 /* ============================================================
-   AcuDx design tokens, v3 (October 2026 redesign).
-   Target: AMBOSS density and editorial type, Epic chart clarity.
-   Rules: one accent, true neutral surfaces, 4 to 6 px radii,
-   hairlines instead of shadows, no gradients, no glow, no blur,
-   functional motion only (120 to 200 ms).
-   Light = default. Dark via .dark class.
-   Vitals-monitor tokens are ALWAYS dark in both themes.
-   All pairings verified WCAG 2.2 AA (see docs/design/00).
+   AcuDx design tokens, v4 "Ward ink" (October 2026 visual renewal).
+   docs/design/04-visual-renewal.md has the rationale and references.
+   - A warm off-white paper canvas, never pure grey.
+   - An ink-dark navigation rail and chart header (always dark).
+   - One confident accent: Pulse cobalt, the brand mark's blue, deepened.
+   - Fraunces for page and section titles, Inter for UI, Geist Mono for data.
+   - 1 px rules instead of cards; 2 to 4 px radii; no gradients, no glow.
+   - Clinical colour only for meaning, never decoration.
+   Light = default. Dark via .dark class. All pairings WCAG 2.2 AA.
    ============================================================ */
 
 :root {
   color-scheme: light;
 
-  /* ---- Accent (the one accent; 5.4:1 on white, white-on-fill 5.4:1) ---- */
-  --brand-50: #eef7f6;
-  --brand-100: #d2ebe8;
-  --brand-600: #0f766e;
-  --brand-700: #0b5d57;
+  /* ---- Accent: Pulse cobalt (6.8:1 on paper, white on fill 7.1:1) ---- */
+  --brand-50: #edf1fc;
+  --brand-100: #d9e1f8;
+  --brand-600: #2450c8;
+  --brand-700: #1c3d9e;
+  /* The mark itself (Wordmark, seal): the accent on paper */
+  --brand-mark: #2450c8;
+  /* Text and glyphs on an accent fill */
+  --on-brand: #ffffff;
 
-  /* ---- Neutral ramp (true neutral, the spine of the UI) ---- */
-  --bg: #ffffff;
-  --bg-subtle: #f4f5f6; /* app ground */
-  --bg-inset: #eceef0; /* wells, track backgrounds, code */
-  --surface: #ffffff;
-  --surface-2: #f8f9fa; /* table head, striped rows */
-  --fg: #15181d;
-  --fg-muted: #596270; /* secondary text, 6.3:1 on white */
-  --fg-subtle: #626975; /* tertiary text, labels: 5.5:1 on white, 5.1:1 on the ground, 4.8:1 on inset */
-  --border: #e2e4e8; /* default hairline */
-  --border-strong: #cbd0d6; /* inputs, emphasised rules */
+  /* ---- Warm paper ramp ---- */
+  --bg: #fbfaf7; /* reading paper */
+  --bg-subtle: #f5f3ee; /* app canvas */
+  --bg-inset: #ece8e0; /* wells, tracks, code */
+  --surface: #fffefb; /* raised sheet */
+  --surface-2: #f8f6f1; /* table head, striped rows */
+  --fg: #1a1916; /* warm ink, 17:1 */
+  --fg-muted: #57534b; /* 7.6:1 on surface, 6.3:1 on inset */
+  --fg-subtle: #5f5a51; /* 6.8:1 on surface, 5.6:1 on inset */
+  --border: #e2ddd3; /* the 1 px rule */
+  --border-strong: #c9c1b3; /* inputs, emphasised rules */
+
+  /* ---- Ink: the rail and the chart header (always dark, both themes) ---- */
+  --ink: #15171c;
+  --ink-2: #1f2229; /* hover */
+  --ink-3: #272b34; /* active row */
+  --ink-border: #2a2e37;
+  --ink-fg: #ece9e2; /* 14.8:1 on ink */
+  --ink-muted: #a6a198; /* 7.0:1 on ink, 5.5:1 on ink-3 */
+  --ink-accent: #9db0ff; /* 8.6:1 on ink */
 
   /* ---- Clinical semantic states (NEVER colour alone) ---- */
-  --state-normal: #04694a; /* 6.7:1 on white, 4.9:1 on its tint over inset */
-  --state-caution: #9a4508; /* 6.9:1 on white, 4.7:1 on its tint over inset */
-  --state-warning: #a83508; /* 6.6:1 on white, 4.7:1 on its tint over inset */
-  --state-critical: #b01b1b; /* 7.0:1 on white, 4.9:1 on its tint over inset */
+  --state-normal: #04694a; /* 6.7:1 on surface, 4.6:1 on its tint over inset */
+  --state-caution: #8f3f06; /* 7.0:1, 5.0:1 on its tint over inset */
+  --state-warning: #a23206; /* 6.9:1, 4.8:1 on its tint over inset */
+  --state-critical: #b01b1b; /* 6.9:1, 4.7:1 on its tint over inset */
 
   /* ESI / triage acuity ramp (1 = resuscitation ... 5 = non-urgent) */
   --esi-1: #b01b1b;
-  --esi-2: #a83508;
-  --esi-3: #9a4508;
+  --esi-2: #a23206;
+  --esi-3: #8f3f06;
   --esi-4: #04694a;
-  --esi-5: #0e7490;
+  --esi-5: #0a5f78;
 
   /* ---- Chart series (categorical, no decorative use) ---- */
-  --chart-1: #0f766e;
-  --chart-2: #2563eb;
-  --chart-3: #7c3aed;
-  --chart-4: #9a4508;
+  --chart-1: #2450c8;
+  --chart-2: #1b6079;
+  --chart-3: #6a3fc0;
+  --chart-4: #8f3f06;
 
-  /* ---- Feedback dual-axis (orthogonal, always paired with icon) ---- */
-  --axis-clinical: #2563eb;
-  --axis-communication: #7c3aed;
+  /* ---- Feedback dual-axis (orthogonal, always paired with a glyph) ---- */
+  --axis-clinical: #1b6079;
+  --axis-communication: #6a3fc0;
 
   /* ---- Calibration (directional, never good/bad) ---- */
-  --calib-line: #15181d;
-  --calib-over: #9a4508;
-  --calib-under: #2563eb;
+  --calib-line: #1a1916;
+  --calib-over: #8f3f06;
+  --calib-under: #1b6079;
   --calib-well: #04694a;
 
-  /* ---- Radius (4 to 6 px; pills only for status dots) ---- */
-  --r-card: 6px;
+  /* ---- Radius: crisp. 2 px sheets, 4 px controls, pills for dots ---- */
+  --r-card: 2px;
   --r-control: 4px;
-  --r-chip: 4px;
+  --r-chip: 3px;
   --r-pill: 999px;
 
-  /* ---- Shadows: none at rest, a hairline lift for popovers only ---- */
-  --shadow-sm: 0 0 #0000; /* resting surfaces carry a hairline border instead */
-  --shadow-md: 0 1px 2px rgba(21, 24, 29, 0.06);
-  --shadow-pop: 0 8px 24px -8px rgba(21, 24, 29, 0.18), 0 0 0 1px var(--border);
+  /* ---- Shadows: none at rest, one soft lift for overlays ---- */
+  --shadow-sm: 0 0 #0000;
+  --shadow-md: 0 1px 0 rgba(26, 25, 22, 0.04);
+  --shadow-pop: 0 12px 32px -12px rgba(26, 25, 22, 0.28), 0 0 0 1px var(--border);
 
   /* ---- Motion: functional only ---- */
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
@@ -83,8 +99,9 @@
   --dur-base: 160ms;
   --dur-slow: 200ms;
 
-  /* ---- Fonts (self-hosted): Inter UI, Manrope display only, Geist Mono data ---- */
-  --font-display: "Manrope Variable", "Manrope", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  /* ---- Fonts (self-hosted) ---- */
+  --font-display: "Fraunces Variable", "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --font-brand: "Manrope Variable", "Manrope", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
 
@@ -99,21 +116,31 @@
 .dark {
   color-scheme: dark;
 
-  --brand-50: #0f2d2a;
-  --brand-100: #134e4a;
-  --brand-600: #2dd4bf; /* 9.6:1 on the dark surface */
-  --brand-700: #5eead4;
+  --brand-50: #1a2140;
+  --brand-100: #232d57;
+  --brand-600: #9db0ff; /* 8.4:1 on the dark sheet; dark ink on fill 9.2:1 */
+  --brand-700: #bccaff;
+  --brand-mark: #9db0ff;
+  --on-brand: #0f0f0d;
 
-  --bg: #0b0f16;
-  --bg-subtle: #0f141b;
-  --bg-inset: #171d26;
-  --surface: #12171f;
-  --surface-2: #171d26;
-  --fg: #e8ecf1;
-  --fg-muted: #9ba5b4;
-  --fg-subtle: #8a94a3; /* 5.6:1 on surface */
-  --border: #232a35;
-  --border-strong: #323b48;
+  --bg: #0f0f0d;
+  --bg-subtle: #131311;
+  --bg-inset: #22211d;
+  --surface: #1a1a17;
+  --surface-2: #201f1c;
+  --fg: #ece9e2;
+  --fg-muted: #ada79c;
+  --fg-subtle: #9c968b; /* 5.9:1 on surface, 5.5:1 on inset */
+  --border: #2c2b27;
+  --border-strong: #3d3b36;
+
+  --ink: #0a0a09;
+  --ink-2: #171715;
+  --ink-3: #22221f;
+  --ink-border: #24231f;
+  --ink-fg: #ece9e2;
+  --ink-muted: #a6a198;
+  --ink-accent: #9db0ff;
 
   --state-normal: #34d399;
   --state-caution: #fbbf24;
@@ -124,30 +151,93 @@
   --esi-2: #fb923c;
   --esi-3: #fbbf24;
   --esi-4: #34d399;
-  --esi-5: #22d3ee;
+  --esi-5: #5fb8d4;
 
-  --chart-1: #2dd4bf;
-  --chart-2: #60a5fa;
-  --chart-3: #a78bfa;
+  --chart-1: #9db0ff;
+  --chart-2: #5fb8d4;
+  --chart-3: #b39dfa;
   --chart-4: #fbbf24;
 
-  --axis-clinical: #60a5fa;
-  --axis-communication: #a78bfa;
+  --axis-clinical: #5fb8d4;
+  --axis-communication: #b39dfa;
 
-  --calib-line: #e8ecf1;
+  --calib-line: #ece9e2;
   --calib-over: #fbbf24;
-  --calib-under: #60a5fa;
+  --calib-under: #5fb8d4;
   --calib-well: #34d399;
 
   --shadow-sm: 0 0 #0000;
-  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-pop: 0 12px 32px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border);
+  --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--border);
 
   --monitor-bg: #0b0f16;
   --monitor-border: #1f2630;
   --monitor-fg: #e8ecf1;
   --monitor-dim: #8a94a6;
   --monitor-online: #10b981;
+}
+
+/* ============================================================
+   Ink scope: re-points the semantic tokens at the ink ramp so every
+   primitive inside (buttons, chips, focus ring, text) renders correctly
+   on the dark rail and the chart header without a second component set.
+   `ink-scope-until-lg` applies it below 1024 px only (the phone top bar).
+   ============================================================ */
+.ink-scope,
+.ink-scope-until-lg {
+  --ink-scope-on: 1;
+}
+.ink-scope {
+  color-scheme: dark;
+  --bg: var(--ink);
+  --bg-subtle: var(--ink-2);
+  --bg-inset: var(--ink-3);
+  --surface: var(--ink);
+  --surface-2: var(--ink-2);
+  --fg: var(--ink-fg);
+  --fg-muted: var(--ink-muted);
+  --fg-subtle: var(--ink-muted);
+  --border: var(--ink-border);
+  --border-strong: #3c414c;
+  --brand-50: #1d2440;
+  --brand-100: #27305a;
+  --brand-600: var(--ink-accent);
+  --brand-700: #c3cfff;
+  --brand-mark: var(--ink-accent);
+  --on-brand: var(--ink);
+  --state-normal: #34d399;
+  --state-caution: #fbbf24;
+  --state-warning: #fb923c;
+  --state-critical: #f87171;
+  --esi-1: #f87171;
+  --esi-2: #fb923c;
+  --esi-3: #fbbf24;
+  --esi-4: #34d399;
+  --esi-5: #5fb8d4;
+  --shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px var(--ink-border);
+  color: var(--fg);
+}
+@media (max-width: 1023.98px) {
+  .ink-scope-until-lg {
+    color-scheme: dark;
+    --bg: var(--ink);
+    --bg-subtle: var(--ink-2);
+    --bg-inset: var(--ink-3);
+    --surface: var(--ink);
+    --surface-2: var(--ink-2);
+    --fg: var(--ink-fg);
+    --fg-muted: var(--ink-muted);
+    --fg-subtle: var(--ink-muted);
+    --border: var(--ink-border);
+    --border-strong: #3c414c;
+    --brand-50: #1d2440;
+    --brand-100: #27305a;
+    --brand-600: var(--ink-accent);
+    --brand-700: #c3cfff;
+    --brand-mark: var(--ink-accent);
+    --on-brand: var(--ink);
+    color: var(--fg);
+  }
 }
 
 /* ============================================================
@@ -169,6 +259,16 @@
   --color-brand-hover: var(--brand-700);
   --color-brand-tint: var(--brand-50);
   --color-brand-tint-2: var(--brand-100);
+  --color-brand-mark: var(--brand-mark);
+  --color-on-brand: var(--on-brand);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-border: var(--ink-border);
+  --color-ink-fg: var(--ink-fg);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-accent: var(--ink-accent);
 
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -210,6 +310,7 @@
   --shadow-pop: var(--shadow-pop);
 
   --font-display: var(--font-display);
+  --font-brand: var(--font-brand);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 
@@ -254,13 +355,21 @@
     letter-spacing: 0;
   }
 
-  /* Headings are Inter, semibold, tight. Manrope is reserved for .display. */
+  /* Page and section titles (h1, h2) are set in the Fraunces display serif;
+     sub-headings (h3, h4) stay in Inter, semibold, tight. */
   h1, h2, h3, h4 {
     font-family: var(--font-sans);
     font-weight: 600;
     text-wrap: balance;
     letter-spacing: -0.012em;
     line-height: 1.25;
+  }
+  h1, h2 {
+    font-family: var(--font-display);
+    font-weight: 560;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
   }
 
   /* Focus-visible ring: 2 px accent, never clipped, square geometry */
@@ -279,13 +388,30 @@
    Typographic helpers
    ============================================================ */
 
-/* Display: the only Manrope surface (landing headline, wordmark). */
+/* Display: the Fraunces serif at headline sizes (landing, page titles). */
 @utility display {
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.08;
+  font-weight: 540;
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+  line-height: 1.06;
   text-wrap: balance;
+}
+
+/* Serif: the display face at reading sizes (section titles, patient name). */
+@utility serif {
+  font-family: var(--font-display);
+  font-weight: 560;
+  font-optical-sizing: auto;
+  letter-spacing: -0.008em;
+}
+
+/* Wordmark: the only Manrope surface (the AcuDx lockup in the shell). */
+@utility wordmark {
+  font-family: var(--font-brand);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
 }
 
 /* Eyebrow / section label: 11 px, uppercase, tracked, subtle. */
@@ -302,6 +428,13 @@
 @utility tnum {
   font-variant-numeric: tabular-nums slashed-zero;
   font-feature-settings: "tnum" 1;
+}
+
+/* Ruled section: a 1 px rule above, no box. The renewal's replacement for
+   a card when the content is a reading block or a list. */
+@utility ruled {
+  border-top: 1px solid var(--border);
+  padding-top: 0.875rem;
 }
 
 /* Hairline rule token, for hand-rolled dividers. */

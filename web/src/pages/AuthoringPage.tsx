@@ -201,7 +201,7 @@ function PipelineStepper({
                     className={cn(
                       "grid h-8 w-8 shrink-0 place-items-center rounded-control",
                       isActive
-                        ? "bg-brand text-white"
+                        ? "bg-brand text-on-brand"
                         : isDone
                           ? "bg-[color-mix(in_srgb,var(--state-normal)_14%,transparent)] text-[color:var(--state-normal)]"
                           : "bg-bg-subtle text-muted",
@@ -295,7 +295,7 @@ function StageHeading({ stage }: { stage: PipelineStageMeta }) {
       </SectionLabel>
       <div className="flex items-center gap-2">
         <StageIcon weight="bold" className="h-5 w-5 text-brand" aria-hidden />
-        <h2 className="text-lg font-semibold tracking-tight text-fg">
+        <h2 className="text-xl text-fg">
           {t(`authoring.pipeline.stage.${stage.key}.title`)}
         </h2>
       </div>

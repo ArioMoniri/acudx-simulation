@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- The README walkthrough poster (1280 x 720), rendered by readme-media.py.
+     A real capture of the renewed encounter beside the lockup; no cursor,
+     no caption bar. Fonts load from web/node_modules (self-hosted). -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../web/node_modules/@fontsource-variable/fraunces/opsz.css" />
+    <link rel="stylesheet" href="../../web/node_modules/@fontsource-variable/inter/index.css" />
+    <link rel="stylesheet" href="../../web/node_modules/@fontsource/geist-mono/index.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1280px;
+        height: 720px;
+        overflow: hidden;
+        background: #15171c;
+        color: #ece9e2;
+        font-family: "Inter Variable", system-ui, sans-serif;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: 420px 1fr;
+        height: 100%;
+      }
+      .copy {
+        padding: 64px 0 56px 64px;
+        display: flex;
+        flex-direction: column;
+      }
+      .copy img {
+        width: 200px;
+      }
+      h1 {
+        margin: 40px 0 0;
+        font-family: "Fraunces Variable", Georgia, serif;
+        font-weight: 520;
+        font-size: 52px;
+        line-height: 1.04;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 18px 0 0;
+        max-width: 320px;
+        font-size: 18px;
+        line-height: 1.45;
+        color: #a6a198;
+      }
+      .play {
+        margin-top: auto;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .play span {
+        display: grid;
+        place-items: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 999px;
+        background: #9db0ff;
+      }
+      .url {
+        margin-top: 22px;
+        font-family: "Geist Mono", monospace;
+        font-size: 14px;
+        color: #a6a198;
+      }
+      .shot {
+        position: relative;
+        padding: 64px 0 0 0;
+      }
+      .shot img {
+        width: 1000px;
+        border-radius: 6px 0 0 0;
+        border: 1px solid #2a2e37;
+        border-right: 0;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="copy">
+        <img src="../../docs/media/readme/lockup-dark.svg" alt="AcuDx" />
+        <h1>Simulated patients. Real decisions.</h1>
+        <p>A clinical reasoning simulator inside a real EHR, for health-professions education.</p>
+        <div class="play">
+          <span
+            ><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+              <path d="M5 3.5v11l9-5.5z" fill="#15171c" /></svg
+          ></span>
+          Watch the walkthrough
+        </div>
+        <div class="url">github.com/ArioMoniri/acudx-simulation</div>
+      </div>
+      <div class="shot">
+        <img src="../../docs/media/readme/raw/hero-encounter.png" alt="" />
+      </div>
+    </div>
+  </body>
+</html>

@@ -582,7 +582,7 @@ export function FacultyPage() {
             ) : queue ? (
               <div className="flex flex-col gap-8">
                 <section aria-labelledby="fac-cases" className="flex flex-col gap-3">
-                  <h2 id="fac-cases" className="inline-flex items-center gap-2 text-base font-semibold text-fg">
+                  <h2 id="fac-cases" className="inline-flex items-center gap-2 text-lg text-fg">
                     <PenNib weight="bold" className="h-4 w-4 text-brand" aria-hidden />
                     {t("panels.faculty.cases.heading", { count: queue.cases.length })}
                   </h2>
@@ -595,7 +595,7 @@ export function FacultyPage() {
                   )}
                 </section>
                 <section aria-labelledby="fac-flagged" className="flex flex-col gap-3">
-                  <h2 id="fac-flagged" className="inline-flex items-center gap-2 text-base font-semibold text-fg">
+                  <h2 id="fac-flagged" className="inline-flex items-center gap-2 text-lg text-fg">
                     <ClipboardText weight="bold" className="h-4 w-4 text-brand" aria-hidden />
                     {t("panels.faculty.flagged.heading", { count: queue.encounters.length })}
                   </h2>
@@ -617,7 +617,7 @@ export function FacultyPage() {
                 </section>
                 {queue.recent_reviews.length > 0 ? (
                   <section aria-labelledby="fac-recent" className="flex flex-col gap-2">
-                    <h2 id="fac-recent" className="text-sm font-semibold text-fg">
+                    <h2 id="fac-recent" className="text-[1.0625rem] text-fg">
                       {t("panels.faculty.recent.heading")}
                     </h2>
                     <ul className="flex flex-col gap-1.5 text-xs text-muted">
@@ -646,7 +646,7 @@ export function FacultyPage() {
           <TabsContent value="roster">
             <div className="flex flex-col gap-6">
               <section aria-labelledby="fac-roster">
-                <h2 id="fac-roster" className="mb-3 inline-flex items-center gap-2 text-base font-semibold text-fg">
+                <h2 id="fac-roster" className="mb-3 inline-flex items-center gap-2 text-lg text-fg">
                   <Users weight="bold" className="h-4 w-4 text-brand" aria-hidden />
                   {t("panels.faculty.roster.heading", { count: roster.length })}
                 </h2>

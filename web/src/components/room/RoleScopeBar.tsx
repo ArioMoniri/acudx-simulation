@@ -87,7 +87,7 @@ export function RoleScopeBar({
           )}
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-fg">
+          <h2 className="text-[1.0625rem] text-fg">
             {observer
               ? t("rooms.inroom.observer")
               : t("rooms.inroom.yourScope", { role: t(`rooms.role.${role}`) })}

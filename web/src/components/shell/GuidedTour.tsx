@@ -232,7 +232,7 @@ export function GuidedTour({ className }: { className?: string }) {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold tracking-tight text-fg">
+                <h2 className="text-lg text-fg">
                   {t("tour.title")}
                 </h2>
                 <p className="mt-1 text-sm text-muted">
@@ -318,7 +318,7 @@ export function GuidedTour({ className }: { className?: string }) {
                         className={cn(
                           "grid h-6 w-6 shrink-0 place-items-center rounded-full font-mono text-[11px] font-semibold",
                           isCurrent
-                            ? "bg-brand text-white"
+                            ? "bg-brand text-on-brand"
                             : isVisited
                               ? "text-[color:var(--state-normal)]"
                               : "bg-bg-subtle text-muted",
@@ -370,7 +370,7 @@ export function GuidedTour({ className }: { className?: string }) {
                 type="button"
                 onClick={() => go(tourStops[nextIndex].to)}
                 disabled={atEnd}
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-control bg-brand px-3 text-sm font-medium text-white shadow-soft transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-control bg-brand px-3 text-sm font-medium text-on-brand shadow-soft transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
               >
                 {currentIndex < 0 ? t("tour.start") : t("tour.next")}
                 <ArrowRight weight="bold" className="h-4 w-4" aria-hidden />

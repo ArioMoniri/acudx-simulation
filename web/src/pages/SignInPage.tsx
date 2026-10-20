@@ -73,7 +73,7 @@ export function SignInPage() {
           <Card padding="lg" className="flex flex-col gap-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold tracking-tight text-fg">
+                <h2 className="text-[1.0625rem] text-fg">
                   {t("identity.signIn.ssoHeading")}
                 </h2>
                 <p className="mt-1 text-xs text-muted">
@@ -106,7 +106,7 @@ export function SignInPage() {
         {localAllowed ? (
           <Card padding="lg" className="flex flex-col gap-4">
             <div className="flex items-start justify-between gap-3">
-              <h2 className="text-sm font-semibold tracking-tight text-fg">
+              <h2 className="text-[1.0625rem] text-fg">
                 {t("profile.signIn.localHeading")}
               </h2>
               <Badge
@@ -178,7 +178,7 @@ export function SignInPage() {
 
         {!ssoAvailable && !localAllowed ? (
           <Card padding="lg" variant="inset" className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold text-fg">{t("identity.signIn.ssoHeading")}</h2>
+            <h2 className="text-[1.0625rem] text-fg">{t("identity.signIn.ssoHeading")}</h2>
             <p className="text-xs text-muted">{t("identity.signIn.ssoNotConfigured")}</p>
           </Card>
         ) : null}

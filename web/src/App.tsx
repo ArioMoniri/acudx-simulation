@@ -122,7 +122,7 @@ function NotFoundPage() {
         animate={reduce ? undefined : { opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
       >
-        <h1 className="text-3xl font-semibold tracking-tight text-fg">404</h1>
+        <h1 className="text-[2.25rem] text-fg">404</h1>
         <p className="mt-2 max-w-2xl text-muted">{t("common.empty")}</p>
         <div className="mt-8">
           <Button asChild>

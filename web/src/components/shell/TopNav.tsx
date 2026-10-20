@@ -26,7 +26,7 @@ export function TopNav() {
   const crumbs = breadcrumbsFor(location.pathname, role);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface">
+    <header className="ink-scope-until-lg sticky top-0 z-40 border-b border-border bg-bg">
       <nav aria-label={t("app.name")} className="flex h-12 items-center gap-2 px-4 sm:px-6">
         <NavLink to="/" className="shrink-0 rounded-control lg:hidden" aria-label={t("app.name")}>
           <Wordmark size="sm" />
