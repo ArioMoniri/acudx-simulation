@@ -89,3 +89,14 @@ An ink identity band with a 3 px cobalt leading edge: portrait, the patient's na
 - Every new pairing was computed before use (warm text on the paper ramp, ink text and accent on the ink ramp, each clinical state on its own tint over the warm inset). The caution and warning hues were darkened because the warm inset is darker than the v3 grey inset.
 - The ink scope keeps the focus ring visible on ink (it becomes the light cobalt).
 - `npm run test:e2e` includes the axe spec; counts are in the HANDOFF.
+
+## 8. HANDOFF
+
+```
+HANDOFF Designer -> Orchestrator
+Goal: make the visual renewal unmistakable and fix the README banner, with no component API, i18n key or test id change.
+Done: web/src/index.css (v4 tokens, ink scope, serif, wordmark, ruled utilities); shell (SideNav, TopNav, BottomTabBar, PageHeader, Wordmark, BrandLottie); ui (Button, Stat, Tabs, KeyValue); ehr (PatientBanner, Storyboard); guidance (AttendingTips, RealtimeGuidance); h1/h2 classes across pages; text-on-brand across 18 files; scripts/design/*; docs/design/04 and 00; README header and docs/media/readme/*; web/public/media/screens/*.
+Verified by: typecheck clean; vitest 381/381; eslint 0 errors (72 warnings, same as before); watchdog clean; PORT=4205 npm run test:e2e 235 passed, 1 failed (mobile 66/0, tablet 51/1, laptop 52/0, desktop 66/0); axe spec 60/60 with no serious or critical findings; readme-preview no overlap at 1012 and 390 px, light and dark.
+Open: the tablet stress test (stress.spec.ts:27, "Encounter timeline" after the burst) fails identically on the pre-renewal commit, so it is not caused by this pass. The in-app hero and docs captures of the curated default case still show "curated case"; the README media use an offline-generated case.
+Next: merge this branch, then re-run scripts/design/capture-readme.mjs once the case entry point work lands.
+```
