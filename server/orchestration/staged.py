@@ -285,7 +285,7 @@ def s1_messages(cond: dict[str, Any], *, locale: str, acuity: int, difficulty: i
         "action or delay (for example no antibiotic by 60 min) and its effect\n"
         "- kernel.anchor_ids: 0-3 ids ONLY from this list (never invent one):\n" + cands + "\n"
     )
-    return [{"role": "system", "content": "ROLE: kernel\n" + _CHARTER}, {"role": "user", "content": user}]
+    return [{"role": "system", "content": "ROLE: author\n" + _CHARTER}, {"role": "user", "content": "STAGE: s1\n" + user}]
 
 
 def case_prefix(state: dict[str, Any]) -> str:
@@ -297,7 +297,7 @@ def case_prefix(state: dict[str, Any]) -> str:
         "acuity_esi": state["acuity"], "difficulty": state["difficulty"], "locale": state["locale"],
         "kernel": state.get("kernel") or {}, "opening": state.get("opening") or {},
     }
-    return ("ROLE: layer\n" + _CHARTER + " " + _locale_rule(state["locale"]) + " Stay consistent with the "
+    return ("ROLE: author.layer\n" + _CHARTER + " " + _locale_rule(state["locale"]) + " Stay consistent with the "
             "CASE below; never contradict a key positive or key negative.\n\nCASE (hidden from the learner)\n"
             + json.dumps(block, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
 
@@ -688,7 +688,7 @@ def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
         "events": events,
     }
     spec["meta"] = {
-        "source": "model", "generator": "v2-staged", "thread_id": state["thread_id"],
+        "source": "model", "generator": "v2", "pipeline": "staged", "thread_id": state["thread_id"],
         "condition_id": cond["id"], "locale": state["locale"],
         "model": state.get("model"), "models": sorted(set(state.get("models") or [])),
         "layers": {n: (layers.get(n) or {}).get("status") for n in order},
@@ -742,6 +742,7 @@ class StagedRuntime:
         self._tasks: dict[str, asyncio.Task[Any]] = {}
         self._layer_tasks: dict[tuple[str, str], asyncio.Task[Any]] = {}
         self._notify: dict[str, asyncio.Event] = {}
+        self._spawned: set[asyncio.Task[Any]] = set()
         self._sem = asyncio.Semaphore(LAYER_CONCURRENCY)
         self._medians: dict[str, deque[float]] = {k: deque(maxlen=50) for k in DEFAULT_ETA_MS}
 
@@ -782,6 +783,18 @@ class StagedRuntime:
             except asyncio.TimeoutError:
                 continue
 
+    def spawn(self, coro: Any) -> asyncio.Task[Any]:
+        """Run same-thread background work (a branch event layer); failures land on the thread log."""
+        async def quiet() -> None:
+            try:
+                await coro
+            except Exception:  # noqa: BLE001 - reported through the thread's error event
+                pass
+        task = asyncio.create_task(quiet())
+        self._spawned.add(task)
+        task.add_done_callback(self._spawned.discard)
+        return task
+
     def running(self, thread_id: str) -> bool:
         t = self._tasks.get(thread_id)
         if t is not None and not t.done():
@@ -814,7 +827,8 @@ class StagedRuntime:
         acuity = int(cond["typical_acuity"])
         difficulty = req["difficulty"] if req.get("difficulty") is not None else int(cond["difficulty"])
         state: dict[str, Any] = {
-            "thread_id": thread_id, "owner": req.get("learner_id"), "source": "model", "request": req,
+            "thread_id": thread_id, "owner": req.get("learner_id"), "requester": request.get("requester"),
+            "source": "model", "request": req,
             "seed": req["seed"], "locale": req["locale"], "condition": cond, "acuity": acuity,
             "difficulty": difficulty, "steered_system": steer, "kernel": None, "opening": None, "layers": {},
             "layer_order": [], "spec": None, "director": None, "status": "opening", "models": [], "trace": [],
@@ -1126,7 +1140,7 @@ class StagedRuntime:
                 continue
             vote, event = res
             self.store.update(thread_id, lambda s, e=event: s.update(trace=(list(s.get("trace") or []) + [e])[-80:]))
-            issues += [f"[{vote['judge']}] {i}" for i in vote.get("issues") or []]
+            issues += [f"[{vote['judge']}] {i}" for i in vote.get("issues") or [] if not _single_shot_rule(i)]
         council = {"decision": "accept" if not issues else "patched", "issues": issues, "async": True}
         self.store.update(thread_id, lambda s: s.update(council=council))
         if not issues:
@@ -1148,6 +1162,8 @@ class StagedRuntime:
                 self.emit(thread_id, "judge", {"layer": layer, "decision": "patched", "issues": layer_issues,
                                                "patch": [{"op": "replace", "path": f"/layers/{layer}", "value": after}],
                                                "spec": st.get("spec")})
+            else:
+                self.emit(thread_id, "judge", {"layer": layer, "decision": "noted", "issues": layer_issues})
 
     @staticmethod
     def _issues_by_layer(state: dict[str, Any], issues: list[str]) -> dict[str, list[str]]:
@@ -1170,6 +1186,13 @@ class StagedRuntime:
             if target:
                 out.setdefault(target, []).append(issue)
         return out
+
+
+def _single_shot_rule(issue: str) -> bool:
+    """Deterministic rules written for one whole-case author call that do not apply to a layered
+    case: the history is answered per question cluster, so the 4-10 core HPI bound of a
+    single draft is not a defect here."""
+    return "core items" in issue and "hpi has" in issue
 
 
 # --------------------------------------------------------------------------- #

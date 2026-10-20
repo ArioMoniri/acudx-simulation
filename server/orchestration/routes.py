@@ -84,6 +84,9 @@ class OrchestrationRuntime:
     cases: CaseStore
     staged: StagedRuntime
     db_path: Optional[str] = None
+    # The single-call council graph (author, three judges, repair). Not a learner path: kept for
+    # the case-quality regression suite and faculty review of whole-case drafts.
+    graph: Any = None
     _closed: bool = field(default=False, repr=False)
 
     @classmethod
@@ -97,6 +100,8 @@ class OrchestrationRuntime:
         telemetry: Any = None,
         worker_manager: Any = None,
         continuation: bool = True,
+        max_repairs: int = 2,
+        time_budget_s: float | None = None,
         **_legacy: Any,
     ) -> "OrchestrationRuntime":
         settings = settings or get_settings()
@@ -118,8 +123,20 @@ class OrchestrationRuntime:
         memory = LearnerMemory(store)
         cases = CaseStore(path)
         staged = StagedRuntime(llm, cases, memory, continuation=continuation)
+        from langgraph.checkpoint.memory import InMemorySaver
+
+        from server.orchestration.graph import CaseGenDeps, build_casegen_graph
+
+        budget = time_budget_s if time_budget_s is not None else float(
+            getattr(settings, "casegen_time_budget_s", 120.0) or 120.0)
+        graph = build_casegen_graph(CaseGenDeps(llm=llm, memory=memory, max_repairs=max_repairs,
+                                                time_budget_s=budget)).compile(checkpointer=InMemorySaver(),
+                                                                               store=store)
         return cls(settings=settings, llm=llm, store=store, memory=memory, cases=cases, staged=staged,
-                   db_path=path)
+                   db_path=path, graph=graph)
+
+    def config(self, thread_id: str) -> dict[str, Any]:
+        return {"configurable": {"thread_id": thread_id}}
 
     async def aclose(self) -> None:
         if self._closed:
@@ -183,10 +200,12 @@ def _thread_for(rt: OrchestrationRuntime, thread_id: str, user: Principal | None
     if st is None or st.get("source") != "model":
         return None
     owner = st.get("owner") or st.get("requester")
+    if user is None:
+        return None
     if owner:
-        if user is None or not (owns_learner(user, str(owner))):
-            return None
-    return st
+        return st if owns_learner(user, str(owner)) else None
+    # Requested with no identity at all: only faculty may open it (never another learner).
+    return st if user.has("faculty") else None
 
 
 # --------------------------------------------------------------------------- #
@@ -255,6 +274,14 @@ def _gen_request(req: GenerateV2Request, user: Principal | None) -> dict[str, An
     return body
 
 
+def _fresh_thread_id(rt: OrchestrationRuntime, wanted: str | None) -> str:
+    """A thread names exactly one request. A reused id never replays (or overwrites) the stored
+    case: the new request gets a new thread."""
+    if wanted and rt.cases.get(wanted) is None:
+        return wanted
+    return str(uuid.uuid4())
+
+
 async def _preflight(rt: OrchestrationRuntime) -> JSONResponse | None:
     if rt.llm is None:
         return _unreachable(rt, None)
@@ -306,9 +333,7 @@ async def generate_stream(req: GenerateV2Request, request: Request,
     blocked = await _preflight(rt)
     if blocked is not None:
         return blocked
-    if req.thread_id and rt.cases.get(req.thread_id) is not None:
-        return _error(409, "thread_exists", "a thread id names one request; reconnect with GET .../events")
-    thread_id = rt.staged.start(_gen_request(req, user), req.thread_id or str(uuid.uuid4()))
+    thread_id = rt.staged.start(_gen_request(req, user), _fresh_thread_id(rt, req.thread_id))
     ambient = current_context()
     ctx = {"route": ambient.route or request.url.path, "tenant": ambient.tenant,
            "user_hash": ambient.user_hash, "encounter_id": ambient.encounter_id}
@@ -337,9 +362,7 @@ async def generate(req: GenerateV2Request, request: Request,
     rt = await get_runtime(request)
     if rt.llm is None:
         return _unreachable(rt, None)
-    if req.thread_id and rt.cases.get(req.thread_id) is not None:
-        return _error(409, "thread_exists", "a thread id names one request")
-    thread_id = rt.staged.start(_gen_request(req, user), req.thread_id or str(uuid.uuid4()))
+    thread_id = rt.staged.start(_gen_request(req, user), _fresh_thread_id(rt, req.thread_id))
     await rt.staged.wait(thread_id)
     st = rt.cases.get(thread_id) or {}
     if st.get("status") == "failed":
@@ -356,6 +379,23 @@ async def generate(req: GenerateV2Request, request: Request,
 
 def _layer_status(st: dict[str, Any]) -> dict[str, str]:
     return {n: str((st.get("layers") or {}).get(n, {}).get("status")) for n in st.get("layer_order") or []}
+
+
+@router.post("/case/template")
+async def template_diagnostic(req: GenerateV2Request, user: Optional[Principal] = Depends(optional_user)
+                              ) -> JSONResponse:
+    """Faculty and admin diagnostic only: the deterministic template, labelled as such.
+
+    Owner decision: a template is never served to a learner as a case, so there is no learner
+    fallback setting at all; students, residents and anonymous callers are refused."""
+    if user is None:
+        return _error(401, "unauthenticated", "the template diagnostic is for faculty")
+    if not user.has("faculty"):
+        return _error(403, "forbidden_role", "templates are never served to learners as cases")
+    from server.orchestration.graph import template_spec
+
+    spec = template_spec(req.model_dump(exclude={"thread_id", "blueprint", "purpose"}))
+    return JSONResponse(content={"spec": spec, "trace_summary": None, "diagnostic": True})
 
 
 @router.get("/cases/mine")
@@ -511,11 +551,18 @@ def _record_errors(rt: OrchestrationRuntime, learner_id: str | None, before: Cas
 
 async def _director_diagnostic(rt: OrchestrationRuntime, req: DirectorStepRequest, action: Action,
                                llm: StructuredLLM | None, user: Principal | None) -> JSONResponse:
-    """Faculty-only: step a supplied spec or state (debugging the Director). Never a learner path:
-    a learner encounter is always bound to the thread its case was generated in."""
-    if user is None or not user.has("faculty"):
-        return _error(422, "thread_required",
-                      "send the thread_id of a case generated on request; client-held cases are not accepted")
+    """Stateless step of a supplied spec or state; nothing is written to CaseStore.
+
+    The web client always steps by ``thread_id``. This path exists for faculty diagnostics and
+    deterministic Director checks. Provenance guard: a spec must be model-generated
+    (``meta.source == "model"``); seed, template, offline or published specs are refused
+    unless the caller is faculty."""
+    faculty = user is not None and user.has("faculty")
+    if req.spec is not None and req.case_state is None and not faculty:
+        source = str((req.spec.get("meta") or {}).get("source") or "")
+        if source != "model":
+            return _error(422, "not_model_generated",
+                          f"only model-generated cases can be stepped (meta.source={source!r})")
     if req.case_state is not None:
         try:
             state = CaseState.model_validate(req.case_state)

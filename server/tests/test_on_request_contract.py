@@ -7,10 +7,10 @@ never regress silently (docs/review/06c-tester-on-request-cases.md):
      model graph and returns a freshly drawn case; a checkpoint is readable only
      by the learner it was generated for (or faculty), never by another learner;
      /v2 has no case listing / catalog route.
-  2. /v2/case/template is refused for learner roles unless an explicit
-     admin/faculty setting allows a labelled offline fallback. Faculty and above
-     may always preview it; whatever is served is labelled
-     meta.source == "template" and meta.degraded is True.
+  2. /v2/case/template is refused for learner roles, always (owner decision:
+     no learner fallback setting exists). Faculty and above may preview it as a
+     diagnostic; whatever is served is labelled meta.source == "template" and
+     meta.degraded is True.
   3. Director steps change state deterministically for given actions:
      deterioration after a missed deadline, improvement after an indicated
      treatment, and byte-identical output for an identical action sequence.
@@ -21,10 +21,9 @@ Tests that fail on today's code are marked ``xfail(strict=True)`` with a
 reference to the doc, so they turn into a hard failure (XPASS) the moment the
 implementer fixes the behaviour and must remove the marker.
 
-Settings contract for (2), proposed by this file: the labelled learner fallback
-is enabled by ``learner_template_fallback = True`` on the app settings (the
-object at ``app.state.settings``), or by the environment variable
-``ACUDX_LEARNER_TEMPLATE_FALLBACK=1``. Default off.
+Settings contract for (2): the owner removed the learner fallback entirely, so
+``learner_template_fallback`` and ``ACUDX_LEARNER_TEMPLATE_FALLBACK`` (proposed in
+06c) have no effect; a test pins that.
 
 In-process only (openai_double); no network. Education only.
 """
@@ -129,7 +128,6 @@ async def test_reusing_a_thread_id_does_not_replay_the_stored_case(client: httpx
     assert _identity(second.json()["spec"]) != _identity(first.json()["spec"])
 
 
-@pytest.mark.xfail(strict=True, reason=f"{DOC} F-S1: an unowned checkpoint is served to any signed-in learner")
 async def test_a_checkpoint_is_never_served_to_a_different_learner(client: httpx.AsyncClient):
     """A case generated without learner_id is not a shared stored case another learner can open."""
     r = await client.post("/v2/case/generate", json={"thread_id": "th-unowned"}, headers=STUDENT)
@@ -148,7 +146,12 @@ async def test_an_owned_checkpoint_is_hidden_from_other_learners(client: httpx.A
 
 def test_v2_has_no_case_listing_route():
     """No /v2 GET may serve a catalog of cases. A new GET route must be reviewed and added here."""
-    allowed = {"/v2/case/{thread_id}", "/v2/learner/{learner_id}"}
+    # Reviewed 2026-10-20 (staged generation, review 06a 4.6):
+    #   /v2/case/{thread_id}/events  SSE reconnect for the caller's OWN thread (owner check, 404 otherwise)
+    #   /v2/cases/mine               the caller's own encounter history: summaries, never a case
+    #                                (test_my_cases_lists_only_own_summaries_never_a_case)
+    allowed = {"/v2/case/{thread_id}", "/v2/learner/{learner_id}", "/v2/case/{thread_id}/events",
+               "/v2/cases/mine"}
     # The OpenAPI schema, not app.routes: included routers are not flattened into app.routes.
     paths = app_module.app.openapi()["paths"]
     gets = {p for p, ops in paths.items() if p.startswith("/v2") and "get" in ops}
@@ -159,7 +162,6 @@ def test_v2_has_no_case_listing_route():
 # --------------------------------------------------------------------------- #
 # 2. /v2/case/template is not a learner path                                  #
 # --------------------------------------------------------------------------- #
-@pytest.mark.xfail(strict=True, reason=f"{DOC} F-S2: /v2/case/template serves learners with no setting")
 @pytest.mark.parametrize("headers", LEARNER_HEADERS)
 async def test_template_is_refused_for_learner_roles_by_default(client: httpx.AsyncClient, headers: dict):
     r = await client.post("/v2/case/template", json={"system": "neurology"}, headers=headers)
@@ -175,15 +177,26 @@ async def test_template_is_available_to_faculty_and_labelled(client: httpx.Async
 
 
 @pytest.mark.parametrize("headers", [pytest.param(STUDENT, id="student"), pytest.param(RESIDENT, id="resident")])
-async def test_template_fallback_for_learners_only_when_enabled_and_labelled(
+async def test_template_is_never_a_learner_fallback_even_when_a_setting_asks(
         client: httpx.AsyncClient, headers: dict, monkeypatch):
+    """Owner decision (2026-10-20): no learner template fallback exists. The template is a
+    faculty and admin diagnostic only, so the setting proposed in 06c has no effect."""
     app_module.app.state.settings.learner_template_fallback = True
     monkeypatch.setenv("ACUDX_LEARNER_TEMPLATE_FALLBACK", "1")
     r = await client.post("/v2/case/template", json={"system": "neurology"}, headers=headers)
+    assert r.status_code in (401, 403), f"learner got a template case: {r.status_code}"
+    assert "spec" not in r.json()
+
+
+async def test_my_cases_lists_only_own_summaries_never_a_case(client: httpx.AsyncClient):
+    r = await client.post("/v2/case/generate", json={"learner_id": "L-student"}, headers=STUDENT)
     assert r.status_code == 200, r.text
-    meta = r.json()["spec"]["meta"]
-    assert meta["source"] == "template" and meta["degraded"] is True
-    assert "template" in (meta.get("note") or "")
+    mine = (await client.get("/v2/cases/mine", headers=STUDENT)).json()["cases"]
+    assert [c["thread_id"] for c in mine] == [r.json()["thread_id"]]
+    assert all(c["source"] == "model" for c in mine)
+    assert not any(k in c for c in mine for k in ("spec", "hpi", "exam", "treatments", "condition"))
+    assert (await client.get("/v2/cases/mine", headers=OTHER_STUDENT)).json()["cases"] == []
+    assert (await client.get("/v2/cases/mine")).status_code == 401
 
 
 # --------------------------------------------------------------------------- #

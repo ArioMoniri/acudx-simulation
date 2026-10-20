@@ -1,4 +1,5 @@
-"""/v2 routes: honesty (503), template labelling, SSE event order, checkpoint read, director step."""
+"""/v2 routes: honesty (503), faculty-only template, staged SSE order and reconnect, server-held case
+state, director step bound to the thread."""
 
 from __future__ import annotations
 
@@ -78,10 +79,15 @@ async def test_generate_returns_model_spec_and_trace(client: httpx.AsyncClient):
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["thread_id"] == "th-1"
-    assert body["spec"]["meta"]["source"] == "model"
-    assert body["trace_summary"]["model_calls"] == 4
+    meta = body["spec"]["meta"]
+    assert meta["source"] == "model" and meta["pipeline"] == "staged" and meta["thread_id"] == "th-1"
+    nodes = [e["node"] for e in body["trace"]]
+    assert nodes[0] == "s1"
+    # S1 plus one short call per core layer (3 history clusters, 3 exam systems, treatments, results)
+    assert sum(1 for n in nodes if n.startswith("layer:")) == 8
+    assert body["trace_summary"]["model_calls"] >= 9
     assert body["trace_summary"]["price_table_version"]
-    assert [e["node"] for e in body["trace"]][:2] == ["sample_condition", "author"]
+    assert set(body["layers"].values()) == {"ready"}
 
 
 async def test_generate_503_when_model_unreachable(unreachable_client: httpx.AsyncClient):
@@ -89,7 +95,7 @@ async def test_generate_503_when_model_unreachable(unreachable_client: httpx.Asy
     assert r.status_code == 503
     body = r.json()
     assert body["error"] == "model_unreachable"
-    assert "template" in body["detail"]  # points at the honest alternative
+    assert "template" not in body["detail"] and body["retryable"] is True  # Retry, nothing else
     assert "spec" not in body
     r2 = await unreachable_client.post("/v2/case/generate/stream", json={})
     assert r2.status_code == 503 and r2.json()["error"] == "model_unreachable"
@@ -109,46 +115,101 @@ async def test_generate_503_when_airgapped_blocks_endpoint():
         await rt.aclose()
 
 
-async def test_template_route_is_labelled_template(client: httpx.AsyncClient):
-    r = await client.post("/v2/case/template", json={"system": "neurology", "seed": 5})
+FACULTY = {"X-User-Id": "fac", "X-User-Role": "faculty", "X-Admin-Token": ADMIN}
+
+
+async def test_template_route_is_a_faculty_diagnostic_and_labelled(client: httpx.AsyncClient):
+    assert (await client.post("/v2/case/template", json={"system": "neurology"})).status_code == 401
+    assert (await client.post("/v2/case/template", json={"system": "neurology"}, headers=ME)).status_code == 403
+    r = await client.post("/v2/case/template", json={"system": "neurology", "seed": 5}, headers=FACULTY)
     assert r.status_code == 200
     spec = r.json()["spec"]
     assert spec["meta"]["source"] == "template" and spec["meta"]["degraded"] is True
     assert spec["condition"]["system"] == "neurology"
 
 
+def _parse_ids(text: str) -> list[int]:
+    return [int(line[4:]) for line in text.splitlines() if line.startswith("id: ")]
+
+
 async def test_stream_event_order(client: httpx.AsyncClient):
-    async with client.stream("POST", "/v2/case/generate/stream", json={"system": "pulmonology", "seed": 7, "thread_id": "th-sse"}) as r:
+    async with client.stream("POST", "/v2/case/generate/stream",
+                             json={"system": "pulmonology", "seed": 7, "thread_id": "th-sse"}, headers=ME) as r:
         assert r.status_code == 200
         assert r.headers["content-type"].startswith("text/event-stream")
         text = "".join([chunk async for chunk in r.aiter_text()])
     events = _parse_sse(text)
     names = [n for n, _ in events]
     assert names[0] == "start" and names[-1] == "done"
-    nodes = [d["node"] for n, d in events if n == "node"]
-    assert nodes[:2] == ["sample_condition", "author"]
-    assert sorted(nodes[2:5]) == ["clinical_consistency", "pedagogy", "safety_dosing"]
-    assert nodes[5:] == ["aggregate", "ground", "finalize"]
     start = events[0][1]
-    assert start["thread_id"] == "th-sse" and "repair" in start["pipeline"]
-    agg = next(d for n, d in events if n == "node" and d["node"] == "aggregate")
-    assert agg["council"]["decision"] == "accept"
+    assert start["thread_id"] == "th-sse" and "s1" in start["stages"] and start["eta_ms"]["s1"] > 0
+    first_ready = names.index("opening.ready")
+    assert "opening.delta" in names[:first_ready], "the opening streams field by field"
+    assert names.index("kernel") < first_ready
+    assert all(names.index(n) > first_ready for n in ("layer.pending", "layer.ready"))
+    deltas = {d["path"]: d["value"] for n, d in events if n == "opening.delta"}
+    assert "chief_complaint" in deltas and "triage_vitals.hr" in deltas
+    opening = events[first_ready][1]
+    assert opening["spec"]["meta"]["source"] == "model" and opening["timings"]["t_opening_ms"] > 0
+    assert opening["spec"]["chief_complaint_en"] == deltas["chief_complaint"]
+    ready = {d["layer"] for n, d in events if n == "layer.ready"}
+    assert {"history.presenting", "history.associated", "history.background", "exam.general", "treatments",
+            "results"} <= ready
+    assert any(n == "judge" and d.get("layer") == "treatments" and d.get("blocking") for n, d in events)
     done = events[-1][1]
-    assert done["spec"]["meta"]["source"] == "model"
-    assert done["trace_summary"]["model_calls"] == 4
+    assert done["spec"]["meta"]["source"] == "model" and done["spec"]["treatments"]
+    ids = _parse_ids(text)
+    assert ids == sorted(ids) and len(ids) == len(events)
+
+
+async def test_stream_reconnect_replays_after_the_last_id(client: httpx.AsyncClient):
+    r = await client.post("/v2/case/generate/stream", json={"seed": 9, "thread_id": "th-rc"}, headers=ME)
+    ids = _parse_ids(r.text)
+    mid = ids[len(ids) // 2]
+    again = await client.get(f"/v2/case/th-rc/events?after={mid}", headers=ME)
+    assert again.status_code == 200
+    assert _parse_ids(again.text) == [i for i in ids if i > mid]
+    other = await client.get("/v2/case/th-rc/events", headers={"X-User-Id": "L-other"})
+    assert other.status_code == 404
 
 
 async def test_checkpoint_read_after_generate(client: httpx.AsyncClient):
-    r = await client.post("/v2/case/generate", json={"seed": 3, "thread_id": "th-read"})
+    r = await client.post("/v2/case/generate", json={"seed": 3, "thread_id": "th-read", "learner_id": "L-route"},
+                          headers=ME)
     assert r.status_code == 200
     r2 = await client.get("/v2/case/th-read", headers=ME)
     assert r2.status_code == 200
     body = r2.json()
-    assert body["status"] == "done"
+    assert body["status"] == "complete" and body["source"] == "model"
     assert body["spec"]["seed"] == r.json()["spec"]["seed"]
-    assert body["trace_summary"]["nodes"][-1] == "finalize"
+    assert body["trace_summary"]["nodes"][0] == "s1"
+    assert body["last_event_id"] > 0
     r3 = await client.get("/v2/case/does-not-exist", headers=ME)
     assert r3.status_code == 404 and r3.json()["error"] == "thread_not_found"
+
+
+async def test_director_steps_by_thread_with_server_state(client: httpx.AsyncClient):
+    gen = await client.post("/v2/case/generate", json={"system": "cardiology", "complaint": "STEMI", "seed": 1,
+                                                       "thread_id": "th-dir", "learner_id": "L-route"}, headers=ME)
+    assert gen.status_code == 200, gen.text
+    r = await client.post("/v2/director/step", json={
+        "thread_id": "th-dir", "action": {"kind": "question", "ref": "onset"}, "use_model": False,
+        "case_state": {"t_ms": 999_999_999}}, headers=ME)   # a client-held state is ignored
+    assert r.status_code == 200, r.text
+    assert r.json()["case_state"]["t_ms"] == 30_000
+    r2 = await client.post("/v2/director/step", json={
+        "thread_id": "th-dir", "action": {"kind": "question", "ref": "onset"}, "use_model": False}, headers=ME)
+    assert r2.json()["case_state"]["t_ms"] == 60_000      # the server kept the state
+    foreign = await client.post("/v2/director/step", json={
+        "thread_id": "th-dir", "action": {"kind": "question", "ref": "onset"}}, headers={"X-User-Id": "L-other"})
+    assert foreign.status_code == 404
+
+
+async def test_director_refuses_a_non_model_spec_without_a_thread(client: httpx.AsyncClient):
+    spec = (await client.post("/v2/case/template", json={"seed": 4}, headers=FACULTY)).json()["spec"]
+    r = await client.post("/v2/director/step", json={"spec": spec, "action": {"kind": "question", "ref": "onset"},
+                                                     "use_model": False}, headers=ME)
+    assert r.status_code == 422 and r.json()["error"] == "not_model_generated"
 
 
 async def test_director_step_from_spec_then_from_state(client: httpx.AsyncClient, scenario: Scenario):
@@ -254,21 +315,17 @@ async def test_sse_stream_is_capped_server_side(monkeypatch):
 
     from server.orchestration import routes as orch
 
-    class StuckGraph:
-        def astream(self, *_a, **_kw):
-            async def gen():
-                yield {"sample_condition": {"status": "sampled", "trace": []}}
-                await asyncio.sleep(3600)          # a node that never returns
-                yield {}
+    class StuckStaged:
+        async def tail(self, thread_id, after, cap_s, **_kw):
+            yield 1, "start", {"thread_id": thread_id}
+            await asyncio.sleep(cap_s)          # a continuation that never finishes
 
-            return gen()
-
-    rt = SimpleNamespace(graph=StuckGraph(), config=lambda tid: {"configurable": {"thread_id": tid}})
+    rt = SimpleNamespace(staged=StuckStaged())
     monkeypatch.setattr(orch, "SSE_MAX_DURATION_S", 0.2)
-    req = orch.GenerateV2Request(thread_id="th-stuck")
     events = []
     async with asyncio.timeout(5):
-        async for chunk in orch._stream_events(rt, req):
+        async for chunk in orch._tail_sse(rt, "th-stuck", 0):
             events.extend(_parse_sse(chunk))
-    assert [e[0] for e in events] == ["start", "node", "error"]
+    assert [e[0] for e in events] == ["start", "error"]
     assert events[-1][1]["error"] == "stream_timeout" and events[-1][1]["status"] == 504
+    assert events[-1][1]["after"] == 1      # where the client reconnects

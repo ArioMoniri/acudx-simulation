@@ -11,8 +11,7 @@ GET  /status           {disk, ram} + per-endpoint reachability + model names
 POST /v1/guard         Scope & Injection Guard (docs/architecture/13 §3)
 POST /v1/patient/turn  guard -> route-by-class -> persona + gateway -> FactGate
 POST /v1/grade         decomposed, evidence-forced rubric grading -> banded score
-POST /v1/case/generate sample ICD-11/10/DSM-5-TR condition -> model-synthesized,
-                       schema-validated case spec (deterministic templated fallback)
+POST /v1/case/generate 410 Gone (retired; cases come from /v2/case/generate/stream)
 POST /v1/ground        delegates to server.grounding.ground() (sibling-owned)
 
 ``server.grounding`` is imported **lazily** (per request) so this app still
@@ -41,7 +40,6 @@ from server.auth.deps import AuthService
 from server.auth.routes import admin_router as auth_admin_router
 from server.auth.routes import router as auth_router
 from server.auth.store import UserRoleStore
-from server.case_generator import generate_case_spec
 from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
 from server.guidelines.routes import router as guidelines_router
@@ -359,14 +357,13 @@ async def status() -> dict[str, Any]:
         "disk": _disk(s.status_disk_path),
         "ram": _ram(),
         "endpoints": endpoints,
-        # Case generation reuses the LLM endpoint above; it always answers (a
-        # deterministic template covers a model outage), so its reachability is
-        # that of "llm". Surface its constrainable systems for discoverability.
+        # Cases are generated on request by the staged v2 pipeline through the
+        # casegen endpoint; a model outage is reported, never covered by a template.
         "case_generator": {
-            "route": "/v1/case/generate",
+            "route": "/v2/case/generate/stream",
             "available": True,
             "depends_on": "llm",
-            "fallback": "deterministic-template",
+            "fallback": None,
             "systems": list_systems(),
         },
     }
@@ -459,32 +456,17 @@ async def grade(req: GradeRequest) -> GradeResponse:
 
 
 # --------------------------------------------------------------------------- #
-# /v1/case/generate  — unlimited dynamic case synthesis.
-# Samples an ICD-11/ICD-10/DSM-5-TR condition (random by default, constrainable
-# by system/difficulty/complaint), then makes ONE bounded gateway `chat` call
-# (task="case", capped max_tokens, temperature~0.6) to synthesize a full,
-# structured, schema-validated GeneratedCaseSpec. The call runs through the same
-# ModelGateway that enforces the AIRGAPPED no-egress guard; on ANY failure
-# (model unreachable, unparseable, schema-invalid) a deterministic templated
-# spec is returned, so this endpoint always answers 200 with a usable case.
-# Typical latency: ~3-12 s on the pod's local Qwen2.5-7B; sub-ms for fallback.
+# /v1/case/generate  — retired (owner decision, review 06a). It overlaid model output
+# on a template and answered the bare template on any model failure. Every learner
+# case is now generated on request by the staged v2 pipeline
+# (POST /v2/case/generate/stream), so this route answers 410 Gone.
 # --------------------------------------------------------------------------- #
 @app.post("/v1/case/generate")
 async def case_generate(req: CaseGenerateRequest) -> JSONResponse:
-    try:
-        gw = _gateway(app)
-    except Exception:  # noqa: BLE001 — no gateway wired -> deterministic template
-        gw = None
-    constraints = {
-        "system": req.system,
-        "difficulty": req.difficulty,
-        "complaint": req.complaint,
-        "locale": req.locale,
-        "seed": req.seed,
-        "session_id": req.session_id,
-    }
-    spec = await generate_case_spec(constraints, gw, seed=req.seed)
-    return JSONResponse(content=spec)
+    return JSONResponse(status_code=410, content={
+        "error": "gone",
+        "detail": "POST /v1/case/generate is retired; request a case at POST /v2/case/generate/stream",
+    })
 
 
 # --------------------------------------------------------------------------- #

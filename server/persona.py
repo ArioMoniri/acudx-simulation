@@ -20,8 +20,10 @@ and ``13`` (§4.5) for the patient roleplay layer:
 fields we read (all optional):
 
     narrative / feelings / symptoms  -> qualitative persona knowledge (cached)
-    sanctioned_facts / known_facts   -> staff-reported values the patient may
-                                        state verbatim THIS turn (volatile)
+    sanctioned_facts / known_facts   -> facts the learner's actual questions (and
+                                        staff) sanctioned THIS turn (volatile)
+    vitals_adjectives / affect /     -> the Clinical Director's live state, voiced
+    complications / live_events         as feelings (volatile, see live_state_lines)
     persona / demographics           -> identity for the system prompt
 
 Education only. No real patient-data path.
@@ -172,6 +174,78 @@ _DIRECTIVES: dict[Directive, str] = {
 }
 
 
+# Live state -> how the patient feels (review 06a 4.5: the persona consumes the Director).
+# Plain feelings only: the patient never states a number or a clinical label.
+_FELT: dict[str, str] = {
+    "tachycardic": "your heart is racing",
+    "bradycardic": "you feel weak and slowed down",
+    "hypotensive": "you feel faint and light-headed when you lift your head",
+    "hypertensive": "you have a pounding head",
+    "tachypnoeic": "you are breathing fast",
+    "bradypnoeic": "you can barely be bothered to breathe",
+    "hypoxic": "you are struggling for breath",
+    "severely hypoxic": "you can only get a few words out between breaths",
+    "febrile": "you feel hot and shivery",
+    "hypothermic": "you feel very cold",
+    "drowsy": "you are drowsy and slow to answer",
+    "unresponsive": "you can only mumble",
+    "short of breath": "you are short of breath",
+    "in severe pain": "the pain is severe",
+    "very anxious": "you are frightened",
+}
+
+
+def _scale(v: Any) -> float:
+    """Director dyspnea and anxiety arrive on 0-1 (some clients send 0-10); return 0-10."""
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return 0.0
+    return f * 10.0 if f <= 1.0 else f
+
+
+def live_state_lines(case_state: dict[str, Any]) -> list[str]:
+    """How the patient is RIGHT NOW, from the Clinical Director's live state.
+
+    Reads ``vitals_adjectives`` (computed from the Director's vitals), ``affect``
+    (pain, dyspnea, anxiety, consciousness, mood) and fired ``complications`` and
+    turns them into felt experience, so the patient sounds worse while desaturating
+    and better after treatment. No numbers, no diagnosis."""
+    lines: list[str] = []
+    seen: set[str] = set()
+    for adj in _as_list(case_state.get("vitals_adjectives")):
+        felt = _FELT.get(adj.strip().lower())
+        if felt and felt not in seen:
+            seen.add(felt)
+            lines.append(felt)
+    affect = case_state.get("affect")
+    if isinstance(affect, dict):
+        mood = affect.get("mood_en") or affect.get("mood")
+        if isinstance(mood, str) and mood.strip():
+            lines.append(f"your mood: {mood.strip()}")
+        try:
+            pain = float(affect.get("pain") or 0)   # Director pain is 0-10
+        except (TypeError, ValueError):
+            pain = 0.0
+        if pain >= 7 and "the pain is severe" not in seen:
+            lines.append("the pain is severe")
+        elif 0 < pain <= 2:
+            lines.append("the pain has eased a lot")
+        if _scale(affect.get("dyspnea")) >= 6 and "you are short of breath" not in seen:
+            lines.append("you are short of breath: speak in short phrases")
+        consciousness = str(affect.get("consciousness") or "").lower()
+        if consciousness == "drowsy" and "you are drowsy and slow to answer" not in seen:
+            lines.append("you are drowsy and slow to answer")
+        elif consciousness == "unresponsive":
+            lines.append("you can only mumble a word or two")
+    complications = _as_list(case_state.get("complications"))
+    if complications:
+        lines.append("you feel clearly worse than when you arrived")
+    for event in _as_list(case_state.get("live_events")):
+        lines.append(f"you notice: {event}")
+    return lines
+
+
 def build_patient_turn(
     case_state: dict[str, Any],
     persona: dict[str, Any] | None,
@@ -222,8 +296,15 @@ def build_patient_turn(
         if content:
             messages.append({"role": role, "content": content})
 
-    # Volatile suffix: the sanctioned facts (if any) + the learner's line.
+    # Volatile suffix: how the patient is right now (live Director state), the sanctioned
+    # facts (if any) and the learner's line. Kept out of the system block so the prefix
+    # stays byte-stable for prefix caching while the state changes every turn.
     user_parts: list[str] = []
+    now = live_state_lines(case_state)
+    if now:
+        user_parts.append("[HOW YOU ARE RIGHT NOW - let it show in how you speak, never as numbers]:")
+        user_parts.extend(f"  - {line}" for line in now)
+        user_parts.append("")
     if facts:
         user_parts.append("[KNOWN CASE FACTS provided this turn — you MAY relay these]:")
         user_parts.extend(f"  - {f}" for f in facts)

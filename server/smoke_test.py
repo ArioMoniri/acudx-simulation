@@ -463,8 +463,6 @@ def main() -> int:
         check_status(base, args.timeout),
         check_guard(base, args.timeout),
         check_patient_turn(base, args.timeout),
-        check_case_generate(base, args.timeout),
-        check_case_anti_repeat(base, args.timeout),
         check_ground(base, args.timeout),
     ]
 

@@ -197,8 +197,8 @@ async def test_memory_store_persists_in_sqlite(tmp_path, double_transport):
     rt2 = await OrchestrationRuntime.create(make_settings(), transport=double_transport, db_path=str(db))
     try:
         assert rt2.memory.conditions_seen("L2") == [out["spec"]["meta"]["condition_id"]]
-        snap2 = await rt2.graph.aget_state(rt2.config(out["thread_id"]))
-        assert snap2.values["status"] == "done"
+        # Learner case state lives in CaseStore (server/orchestration/store.py), tested in
+        # test_orchestration_staged.py; the council graph keeps no learner-facing checkpoint.
     finally:
         await rt2.aclose()
 
