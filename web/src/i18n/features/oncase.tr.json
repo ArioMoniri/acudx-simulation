@@ -1,0 +1,59 @@
+{
+  "oncase": {
+    "phase": {
+      "requesting": "Vaka isteniyor",
+      "writing": "Açılış yazılıyor",
+      "playable": "Açılış hazır"
+    },
+    "elapsed": "{{seconds}} sn",
+    "elapsedEta": "{{seconds}} sn / yaklaşık {{eta}} sn",
+    "preview": {
+      "label": "Şu ana kadarki açılış",
+      "complaint": "Yakınma",
+      "age": "Yaş",
+      "sex": "Cinsiyet",
+      "triage": "Triyaj notu",
+      "vitals": "Triyaj vitalleri"
+    },
+    "layers": {
+      "label": "Bu hasta için yazılıyor",
+      "pending": "{{layer}} bu hasta için yazılıyor",
+      "failed": "{{layer}} yazılamadı",
+      "retry": "Yeniden dene",
+      "name": {
+        "history": "Öykü",
+        "exam": "Muayene",
+        "treatments": "Tedavi tablosu",
+        "results": "Sonuçlar",
+        "debrief": "Değerlendirme",
+        "event": "Yatak başı olay"
+      }
+    },
+    "unavailable": {
+      "title": "Vaka üreticisine ulaşılamıyor",
+      "body": "Vakalar istek üzerine model tarafından üretilir. Erişilebilir olana kadar vaka başlatılamaz.",
+      "retry": "Yeniden kontrol et"
+    },
+    "request": {
+      "title": "Vaka iste",
+      "hint": "Her vaka, istediğinizde model tarafından sizin için üretilir ve yaptıklarınıza göre değişir.",
+      "submit": "Yeni bir vaka üret",
+      "complaint": "Başvuru yakınması",
+      "any": "Herhangi bir yakınma",
+      "difficulty": "Zorluk"
+    },
+    "history": {
+      "title": "Karşılaşmalarınız",
+      "empty": "Henüz karşılaşma yok. İstediğiniz her vaka burada görünür.",
+      "unavailable": "Karşılaşma geçmişiniz şu anda kullanılamıyor.",
+      "row": "{{complaint}}, {{age}} {{sex}}",
+      "esi": "ESI {{esi}}",
+      "committed": "tanı kaydedildi",
+      "open": "devam ediyor"
+    },
+    "recommended": {
+      "hint": "Bunlardan birini açtığınızda yeni bir vaka yazılır.",
+      "row": "{{family}}, zorluk {{difficulty}}"
+    }
+  }
+}

@@ -7,13 +7,11 @@ import { Card, Button, Badge } from "@/components/ui";
 import { PatientBanner, ActivityTabs, signsFromVitals } from "@/components/ehr";
 import { useReveal } from "@/lib/motion";
 import { useLang } from "@/lib/useLang";
-import type { CaseInstance } from "@/domain/case";
-import { generateCase } from "@/domain/caseGen";
-import { fetchGeneratedCase } from "@/lib/liveCaseGen";
 import { useLiveBackend } from "@/lib/liveBackend";
+import { endCaseSession, requestCase } from "@/lib/caseSession";
 import {
   resetEncounter,
-  startEncounter,
+  setLiveEnabled,
   useEncounterState,
 } from "@/state/encounterStore";
 import {
@@ -31,9 +29,10 @@ export interface ExamRunnerProps {
 }
 
 /**
- * ExamRunner — drives the proctored, timed sequence of cases. For each case it
- * generates a case (live backend when reachable, on-device otherwise), starts the
- * shared encounter store, and renders the SAME EHR workspace as free practice but
+ * ExamRunner — drives the proctored, timed sequence of cases. Each station requests
+ * its case from the model at the start of that station (POST
+ * /v2/case/generate/stream, review 06a P13), starts the shared encounter store from
+ * the opening as soon as it is playable, and renders the SAME EHR workspace as free practice but
  * with guidance FORCED OFF and a visible countdown. "Submit & next" grades the
  * case with `scoreCase`, resets the store, and advances; the countdown
  * auto-submits at zero. The tally is kept out of the store so a case reset never
@@ -50,6 +49,12 @@ export function ExamRunner({ config, onFinish }: ExamRunnerProps) {
   const [index, setIndex] = useState(0);
   const [generating, setGenerating] = useState(true);
   const [deadline, setDeadline] = useState<number | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  // The Director runs in an exam exactly as in practice: Live follows reachability.
+  useEffect(() => {
+    setLiveEnabled(backendAvailable);
+  }, [backendAvailable]);
 
   // Refs so the stable submit handler always reads the freshest values and the
   // countdown/click cannot double-submit the same case.
@@ -64,46 +69,38 @@ export function ExamRunner({ config, onFinish }: ExamRunnerProps) {
 
   const caseInstance = state.caseInstance;
 
-  const makeCase = useCallback(
-    async (i: number): Promise<CaseInstance> => {
-      const constraint = constraintForCase(config, i);
-      if (backendAvailable) {
-        const controller = new AbortController();
-        abortRef.current = controller;
-        try {
-          return await fetchGeneratedCase(
-            { locale: lang, complaint: constraint ?? null },
-            { signal: controller.signal },
-          );
-        } catch {
-          // Backend unavailable / slow / cancelled → fall back to on-device.
-        }
-      }
-      return constraint
-        ? generateCase({ seedMode: "constrained", chiefComplaint: constraint, locale: lang })
-        : generateCase({ seedMode: "random", locale: lang });
-    },
-    [config, backendAvailable, lang],
-  );
-
   const startCase = useCallback(
     async (i: number) => {
       setGenerating(true);
+      setFailure(null);
       setDeadline(null);
       // Per #108: clear the store (and its pending timers) between cases.
+      abortRef.current?.abort();
+      endCaseSession();
       resetEncounter();
-      const next = await makeCase(i);
-      if (!activeRef.current) return;
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const constraint = constraintForCase(config, i);
+      const res = await requestCase(
+        { locale: lang, purpose: "exam", ...(constraint ? { complaint: constraint } : {}) },
+        { signal: controller.signal },
+      );
+      if (!activeRef.current || controller.signal.aborted) return;
+      if (!res.ok) {
+        // No other case is substituted: the station waits for Retry.
+        setFailure(res.error);
+        setGenerating(false);
+        return;
+      }
       const now = Date.now();
       caseStartedAtRef.current = now;
       indexRef.current = i;
       submittedIndexRef.current = -1;
-      startEncounter(next);
       setIndex(i);
       setDeadline(now + config.perCaseSeconds * 1000);
       setGenerating(false);
     },
-    [makeCase, config.perCaseSeconds],
+    [config, lang],
   );
 
   // Kick off the first case on mount; clean up the store on unmount.
@@ -113,6 +110,7 @@ export function ExamRunner({ config, onFinish }: ExamRunnerProps) {
     return () => {
       activeRef.current = false;
       abortRef.current?.abort();
+      endCaseSession();
       resetEncounter();
     };
     // Intentionally mount-only: the config is captured at arrival.
@@ -162,6 +160,18 @@ export function ExamRunner({ config, onFinish }: ExamRunnerProps) {
 
   const isLast = index + 1 >= config.length;
   const noop = useCallback(() => {}, []);
+
+  if (failure && !generating) {
+    return (
+      <Card padding="lg" className="flex flex-col items-center gap-3 text-center" role="alert">
+        <p className="text-sm font-medium text-fg">
+          {t(`live2.gen.error.${failure}`, { defaultValue: t("live2.gen.error.unknown", { code: failure }) })}
+        </p>
+        <p className="text-xs text-muted">{t("live2.gen.onRequestHint")}</p>
+        <Button onClick={() => void startCase(index)}>{t("live2.gen.retry")}</Button>
+      </Card>
+    );
+  }
 
   // Preparing state — first case still generating, or the between-case gap.
   if (generating || !caseInstance || deadline == null) {

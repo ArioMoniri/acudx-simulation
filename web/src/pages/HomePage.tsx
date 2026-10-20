@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
@@ -24,11 +24,9 @@ import { CalibrationPlot } from "@/components";
 import { CaseListRow } from "@/components/home/CaseListRow";
 import { ActivityRow } from "@/components/home/ActivityRow";
 import {
-  difficultyToTier,
   type Band,
   type DashboardStat,
   type FeedbackDomainKey,
-  type Lang,
   type RecommendedCase,
 } from "@/data/schema";
 import {
@@ -39,19 +37,8 @@ import {
   useRecentActivity,
 } from "@/state/progressStore";
 import type { MasteryDomain } from "@/data/progress";
-import {
-  generateCase,
-  CHIEF_COMPLAINT_FAMILIES,
-  type ChiefComplaintFamily,
-} from "@/domain/caseGen";
-import type { CaseInstance } from "@/domain/case";
-import {
-  SPECIALTY_LABELS,
-  specialtyOf,
-  guidelineTagOf,
-  languagesOf,
-  estMinutesOf,
-} from "@/data/caseLibrary";
+import { CHIEF_COMPLAINT_FAMILIES, type ChiefComplaintFamily } from "@/domain/caseGen";
+import { COMPLAINT_LABELS } from "@/data/caseLibrary";
 import { useLang } from "@/lib/useLang";
 import { useReveal, useStagger } from "@/lib/motion";
 
@@ -106,10 +93,14 @@ const DOMAIN_FAMILIES: Record<FeedbackDomainKey, ChiefComplaintFamily[]> = {
   professionalism: ["abdominal-pain", "dyspnea"],
 };
 
-/** One rail entry: the display row + the live case to hand off (null = fallback). */
+/**
+ * One rail entry: a REQUEST (complaint family + difficulty), never a case. The case
+ * is generated on request by the model when the learner opens the row (owner
+ * decision, review 06a P12).
+ */
 interface RecommendedRow {
   row: RecommendedCase;
-  instance: CaseInstance | null;
+  request: { chiefComplaint: ChiefComplaintFamily; difficulty: 1 | 2 | 3 | 4 | 5 };
 }
 
 /**
@@ -181,97 +172,46 @@ function jitterDifficulty(base: 1 | 2 | 3 | 4 | 5): 1 | 2 | 3 | 4 | 5 {
   return Math.min(5, Math.max(1, base + delta)) as 1 | 2 | 3 | 4 | 5;
 }
 
-/** Map a generated CaseInstance onto the row shape the rail renders. */
-function toRow(c: CaseInstance): RecommendedCase {
-  const female = c.patient.gender === "female";
-  return {
-    id: c.id,
-    // Title is the presenting complaint; the sub-line carries the specialty so
-    // the two lines never read as the same text.
-    title: c.chiefComplaint,
-    chiefComplaint: SPECIALTY_LABELS[specialtyOf(c)],
-    setting: { en: "Emergency", tr: "Acil" },
-    ageSex: {
-      en: `${c.patient.ageYears}${female ? "F" : "M"}`,
-      tr: `${c.patient.ageYears}${female ? "K" : "E"}`,
-    },
-    difficulty: difficultyToTier(c.difficulty),
-    guidelineTag: guidelineTagOf(c),
-    estMinutes: estMinutesOf(c),
-    languages: languagesOf(c),
-  };
-}
+const TIER: Record<1 | 2 | 3 | 4 | 5, RecommendedCase["difficulty"]> = {
+  1: "foundation",
+  2: "foundation",
+  3: "core",
+  4: "advanced",
+  5: "advanced",
+};
 
 /**
- * Deterministic fallback rail, used ONLY when the client case generator throws
- * while building the "Recommended for you" set. Rows carry `instance: null`, so
- * they open the default encounter rather than a live instance (degraded path;
- * the generator is pure and this branch is not expected to run in production).
+ * Build the rail of requests: draw weighted families from real mastery and pair each
+ * with a focus difficulty. No case is built here; nothing is generated before the
+ * learner opens a row.
  */
-const FALLBACK_RAIL: RecommendedCase[] = [
-  {
-    id: "em-acs-001",
-    title: { en: "Central chest pain, radiating", tr: "Yayılan orta hat göğüs ağrısı" },
-    chiefComplaint: { en: "Chest pain", tr: "Göğüs ağrısı" },
-    setting: { en: "Emergency", tr: "Acil" },
-    ageSex: { en: "58M", tr: "58E" },
-    difficulty: "core",
-    guidelineTag: "ESC ACS 2023",
-    estMinutes: 12,
-    languages: ["en", "tr"],
-  },
-  {
-    id: "em-sepsis-002",
-    title: { en: "Fever and confusion in an older adult", tr: "Yaşlı bir hastada ateş ve konfüzyon" },
-    chiefComplaint: { en: "Sepsis screen", tr: "Sepsis taraması" },
-    setting: { en: "Emergency", tr: "Acil" },
-    ageSex: { en: "74F", tr: "74K" },
-    difficulty: "advanced",
-    guidelineTag: "NICE NG51",
-    estMinutes: 15,
-    languages: ["en", "tr"],
-  },
-  {
-    id: "em-asthma-003",
-    title: { en: "Acute breathlessness in a young adult", tr: "Genç bir erişkinde akut nefes darlığı" },
-    chiefComplaint: { en: "Breathlessness", tr: "Nefes darlığı" },
-    setting: { en: "Emergency", tr: "Acil" },
-    ageSex: { en: "23F", tr: "23K" },
-    difficulty: "foundation",
-    guidelineTag: "BTS/SIGN",
-    estMinutes: 10,
-    languages: ["en", "tr"],
-  },
-];
-
-/**
- * Build the fresh rail: draw weighted families, generate a constrained case for
- * each, and map it to a row. On any generator failure fall back to
- * `FALLBACK_RAIL` (which navigates to the default encounter, no live instance).
- */
-function buildRecommended(mastery: MasteryDomain[], locale: Lang): RecommendedRow[] {
-  try {
-    const weights = familyWeights(mastery);
-    const base = focusDifficulty(mastery);
-    return drawFamilies(weights, RECOMMENDED_COUNT).map((chiefComplaint) => {
-      const instance = generateCase({
-        seedMode: "constrained",
-        chiefComplaint,
-        difficulty: jitterDifficulty(base),
-        locale,
-      });
-      return { row: toRow(instance), instance };
-    });
-  } catch {
-    return FALLBACK_RAIL.map((row) => ({ row, instance: null }));
-  }
+function buildRecommended(mastery: MasteryDomain[]): RecommendedRow[] {
+  const weights = familyWeights(mastery);
+  const base = focusDifficulty(mastery);
+  return drawFamilies(weights, RECOMMENDED_COUNT).map((chiefComplaint, i) => {
+    const difficulty = jitterDifficulty(base);
+    const label = COMPLAINT_LABELS[chiefComplaint];
+    return {
+      request: { chiefComplaint, difficulty },
+      row: {
+        id: `req-${i + 1}`,
+        title: label,
+        chiefComplaint: { en: "New case on request", tr: "İstek üzerine yeni vaka" },
+        setting: { en: "Emergency", tr: "Acil" },
+        ageSex: { en: `difficulty ${difficulty}`, tr: `zorluk ${difficulty}` },
+        difficulty: TIER[difficulty],
+        guidelineTag: "",
+        estMinutes: 12,
+        languages: ["en", "tr"],
+      },
+    };
+  });
 }
 
 /** HomePage — the learner's clinical instrument panel. */
 export function HomePage() {
   const { t } = useTranslation();
   const lang = useLang();
-  const navigate = useNavigate();
   const displayName = useDisplayName();
   // Real, earned session data (empty for a new user → honest empty states).
   const calibrationPoints = useCalibrationPoints();
@@ -283,19 +223,13 @@ export function HomePage() {
   const mastery = useMasteryDomains();
   const [refreshNonce, setRefreshNonce] = useState(0);
   const recommended = useMemo(
-    () => buildRecommended(mastery, lang),
-    // `refreshNonce` is a deliberate regenerate trigger; `mastery` is a stable
+    () => buildRecommended(mastery),
+    // `refreshNonce` is a deliberate redraw trigger; `mastery` is a stable
     // reference until real records change (progressStore caches it).
-    [mastery, lang, refreshNonce],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mastery, refreshNonce],
   );
   const showDifferent = useCallback(() => setRefreshNonce((n) => n + 1), []);
-  const openCase = useCallback(
-    (instance: CaseInstance) => {
-      // Hand THIS generated case to the workspace exactly like the Case Library.
-      navigate("/encounter", { state: { caseInstance: instance } });
-    },
-    [navigate],
-  );
   const header = useReveal();
   const strip = useReveal(0.06);
   const body = useReveal(0.12);
@@ -406,33 +340,13 @@ export function HomePage() {
             </div>
           </div>
           <motion.ul {...cases.container} className="-mt-2 divide-y divide-border rounded-card border border-border bg-surface">
-            {recommended.map(({ row, instance }) => (
-              <motion.li
-                key={row.id}
-                {...cases.item}
-                onClickCapture={
-                  instance
-                    ? (e) => {
-                        // Plain left-click hands the generated instance to the
-                        // encounter via router state (a bare <Link> cannot carry
-                        // it). Modifier / middle clicks fall through to the Link.
-                        if (
-                          e.defaultPrevented ||
-                          e.button !== 0 ||
-                          e.metaKey ||
-                          e.ctrlKey ||
-                          e.shiftKey ||
-                          e.altKey
-                        ) {
-                          return;
-                        }
-                        e.preventDefault();
-                        openCase(instance);
-                      }
-                    : undefined
-                }
-              >
-                <CaseListRow data={row} lang={lang} />
+            {recommended.map(({ row, request }) => (
+              <motion.li key={row.id} {...cases.item}>
+                <CaseListRow
+                  data={row}
+                  lang={lang}
+                  state={{ start: { mode: "solo", role: "doctor", guidance: true, ...request } }}
+                />
               </motion.li>
             ))}
           </motion.ul>

@@ -1,18 +1,14 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkle, CaretDown, Sliders, Stack, BookOpen } from "@phosphor-icons/react";
+import { Sparkle, CaretDown, Sliders } from "@phosphor-icons/react";
 
 import { Button, SectionLabel, Select } from "@/components/ui";
-import { seedCases } from "@/data/seedCases";
-import { usePublishedCases } from "@/data/authoring";
-import { startEncounter } from "@/state/encounterStore";
 import type { ChiefComplaintFamily } from "@/domain/caseGen";
-import type { CaseInstance } from "@/domain/case";
 import type { Lang } from "@/data/schema";
-import { pick } from "./labels";
 
 export interface NewCaseMenuProps {
-  lang: Lang;
+  /** Kept for callers; the menu labels come from i18n. */
+  lang?: Lang;
   /** Generate a fresh random case. */
   onRandom: () => void;
   /** Generate a constrained case (chief complaint + difficulty). */
@@ -20,8 +16,6 @@ export interface NewCaseMenuProps {
     chiefComplaint: ChiefComplaintFamily,
     difficulty: 1 | 2 | 3 | 4 | 5,
   ) => void;
-  /** Load one of the curated seed cases by id. */
-  onLoadSeed: (id: string) => void;
 }
 
 const CHIEF_COMPLAINTS: ChiefComplaintFamily[] = [
@@ -37,16 +31,15 @@ function camel(s: string): string {
 
 /**
  * NewCaseMenu — the case-generation control in the workspace toolbar (docs §3).
- * Offers a fully random case (default), a constrained case (chief complaint +
- * difficulty 1-5), and the curated seed cases. Built as a lightweight,
+ * Offers a fresh case (default) and a constrained request (chief complaint +
+ * difficulty 1-5). Both are generated on request by the model; there is no
+ * curated, seed or published list to start from (owner decision). Built as a lightweight,
  * keyboard-accessible popover (Escape to close, click-outside to dismiss) so no
  * extra dependency is needed.
  */
 export function NewCaseMenu({
-  lang,
   onRandom,
   onConstrained,
-  onLoadSeed,
 }: NewCaseMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -56,22 +49,6 @@ export function NewCaseMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
-
-  // Educator-authored, co-signed, PUBLISHED cases, surfaced as startable options
-  // alongside the generator and the curated seeds. Only non-flagged cases offered
-  // in the active locale are shown, so a mismatched-language case never appears.
-  // Clicking one loads its exact authored caseInstance into the shared encounter
-  // store — the same store the seed path drives — so it starts just like a seed.
-  const published = usePublishedCases();
-  const liveCases = useMemo(
-    () =>
-      published.filter(
-        (p) =>
-          p.status !== "flagged" &&
-          p.locales.some((l) => l.locale === lang && l.offered),
-      ),
-    [published, lang],
-  );
 
   // Close and return focus to the trigger (used for Escape + item selection so
   // keyboard users are never dropped at the top of the document).
@@ -203,65 +180,6 @@ export function NewCaseMenu({
             </Button>
           </div>
 
-          {/* Tertiary: start from an educator-published case (if any) */}
-          {liveCases.length > 0 ? (
-            <div className="mt-2 border-t border-border pt-2">
-              <SectionLabel
-                className="px-2.5"
-                icon={<BookOpen weight="bold" className="h-3.5 w-3.5" aria-hidden />}
-              >
-                {t("livegen.orPublished", {
-                  defaultValue: "Or start from a published case",
-                })}
-              </SectionLabel>
-              <ul className="mt-1 max-h-40 overflow-y-auto">
-                {liveCases.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        // Load the exact authored patient into the encounter
-                        // store — identical to how a seed case starts.
-                        startEncounter(p.caseInstance);
-                        close();
-                      }}
-                      className="w-full truncate rounded-control px-2.5 py-1.5 text-start text-sm text-fg hover:bg-bg-subtle focus-visible:outline-none"
-                    >
-                      {pick(p.chiefComplaint, lang)}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {/* Quaternary: start from a curated case */}
-          <div className="mt-2 border-t border-border pt-2">
-            <SectionLabel
-              className="px-2.5"
-              icon={<Stack weight="bold" className="h-3.5 w-3.5" aria-hidden />}
-            >
-              {t("livegen.orCurated")}
-            </SectionLabel>
-            <ul className="mt-1 max-h-40 overflow-y-auto">
-              {seedCases.map((c: CaseInstance) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      onLoadSeed(c.id);
-                      close();
-                    }}
-                    className="w-full truncate rounded-control px-2.5 py-1.5 text-start text-sm text-fg hover:bg-bg-subtle focus-visible:outline-none"
-                  >
-                    {pick(c.chiefComplaint, lang)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
       ) : null}
     </div>

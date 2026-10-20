@@ -2,17 +2,23 @@
  * AcuDx: typed client for the v2 case generator and the Clinical Director
  * (server/orchestration/routes.py).
  *
- *   POST /v2/case/generate          -> CaseGenV2Result (spec + trace summary)
- *   POST /v2/case/generate/stream   -> SSE, one `node` event per graph node
- *   POST /v2/case/template          -> deterministic template, meta.source="template"
- *   POST /v2/director/step          -> DirectorStepResult
- *   GET  /v2/case/{thread_id}       -> CaseThreadResult (checkpoint read)
+ *   POST /v2/case/generate/stream   -> SSE (review 06a 4.6): start, kernel, opening.delta*,
+ *                                      opening.ready, layer.pending / layer.ready, judge, done
+ *   GET  /v2/case/{thread_id}/events?after=<id>  -> SSE reconnect for the same thread
+ *   POST /v2/case/{thread_id}/layer/{layer}      -> one layer, generated on first access
+ *   POST /v2/case/generate          -> CaseGenV2Result (the staged run, core layers in)
+ *   POST /v2/director/step          -> DirectorStepResult (bound to thread_id)
+ *   GET  /v2/case/{thread_id}       -> CaseThreadResult (server-authoritative case state)
+ *   GET  /v2/cases/mine             -> the learner's own generated encounters
+ *
+ * Owner decision: every learner case is generated on request by the model and
+ * changes in flight. There is no template, seed or library client here; a
+ * model outage is reported (503) and the UI offers Retry, nothing else.
  *
  * Follows src/lib/backend.ts: every call is bounded by an AbortController
  * timeout and resolves to `{ ok, data } | { ok: false, error, status }`, never
  * throwing into the UI. The server answers 503 `model_unreachable` when the
- * model cannot be reached and never returns a template as a generated case;
- * the caller decides whether to show the template route's output as degraded.
+ * model cannot be reached and never returns a template as a generated case.
  *
  * The spec is adapted to a CaseInstance with the existing `specToCaseInstance`
  * from src/lib/liveCaseGen.ts (re-exported here, not duplicated).
@@ -41,6 +47,10 @@ export interface CaseGenV2Request {
   learner_id?: string | null;
   session_id?: string | null;
   thread_id?: string | null;
+  /** Faculty generation constraints (never a fixed case). */
+  blueprint?: { condition_id?: string | null; difficulty?: number | null; objectives?: string[] } | null;
+  /** Where the request came from (telemetry only). */
+  purpose?: "encounter" | "room" | "exam" | "authoring";
 }
 
 /** One OTel-style record per graph node (server/orchestration/trace.py). */
@@ -100,6 +110,13 @@ export interface GroundedAnchor {
 export interface CaseGenV2Meta {
   source: "model" | "template";
   generator: "v2";
+  /** "staged": opening first, layers on access or by same-thread continuation. */
+  pipeline?: "staged";
+  /** Generated language (one locale per call). */
+  locale?: "en" | "tr";
+  /** Layer name -> pending | ready | failed. */
+  layers?: Record<string, string | null>;
+  timings?: { t_first_text_ms?: number; t_opening_ms?: number };
   model: string | string[] | null;
   models?: string[];
   condition_id: string;
@@ -135,14 +152,12 @@ export interface CaseGenV2Result {
   council: CouncilVerdict | null;
 }
 
-export interface CaseTemplateResult {
-  spec: CaseGenV2Spec;
-  trace_summary: null;
-}
-
 export interface CaseThreadResult {
   thread_id: string;
   status: string | null;
+  source?: "model";
+  layers?: Record<string, string>;
+  last_event_id?: number;
   spec: CaseGenV2Spec | null;
   council: CouncilVerdict | null;
   condition: Record<string, unknown> | null;
@@ -211,7 +226,9 @@ export interface DirectorNote {
 export type DirectorCaseState = Record<string, unknown> & { t_ms: number };
 
 export interface DirectorStepRequest {
-  /** Either the state from the previous step ... */
+  /** The generation thread: the server holds the case and the Director state (learners). */
+  thread_id?: string | null;
+  /** Faculty diagnostics only: the state from the previous step ... */
   case_state?: DirectorCaseState;
   /** ... or the spec to start a fresh encounter from. */
   spec?: CaseGenV2Spec | GeneratedCaseSpec;
@@ -222,20 +239,52 @@ export interface DirectorStepRequest {
 }
 
 export interface DirectorStepResult {
+  thread_id?: string;
   case_state: DirectorCaseState;
   patient_visible_changes: PatientVisibleChanges;
   director_notes: DirectorNote[];
+  /** Layers the server is still writing for this step (lazy layer, branch event). */
+  layers_pending?: string[];
+}
+
+export interface CaseLayerResult {
+  thread_id: string;
+  layer: string;
+  status: "ready";
+  data: Record<string, unknown>;
+  spec: CaseGenV2Spec;
+}
+
+export interface MyCaseRow {
+  thread_id: string;
+  source: "model";
+  status: string | null;
+  created_at: number;
+  locale: string | null;
+  complaint: string;
+  age: number | null;
+  sex: string | null;
+  acuity_esi: number | null;
+  difficulty: number | null;
+  committed: boolean;
 }
 
 /* -------------------------------------------------------------------------- */
 /* SSE events                                                                 */
 /* -------------------------------------------------------------------------- */
 
-export type CaseGenV2Event =
-  | { event: "start"; thread_id: string; pipeline: string[] }
+export type CaseGenV2Event = (
+  | { event: "start"; thread_id: string; stages?: string[]; eta_ms?: Record<string, number>; pipeline?: string[] }
+  | { event: "kernel"; status: string }
+  | { event: "opening.delta"; path: string; value: unknown }
+  | { event: "opening.ready"; thread_id: string; opening: Record<string, unknown>; spec: CaseGenV2Spec; timings?: Record<string, number> }
+  | { event: "layer.pending"; layer: string; reason: string }
+  | { event: "layer.ready"; layer: string; data: Record<string, unknown>; spec: CaseGenV2Spec }
+  | { event: "judge"; layer: string; decision: "accept" | "patched" | "noted" | "rejected"; issues?: string[]; spec?: CaseGenV2Spec; blocking?: boolean }
   | { event: "node"; node: string; status: string | null; trace: TraceEvent[]; council?: CouncilVerdict }
-  | { event: "done"; thread_id: string; spec: CaseGenV2Spec | null; trace_summary: TraceSummary }
-  | { event: "error"; error: string; status: number; detail: string; thread_id?: string };
+  | { event: "done"; thread_id: string; spec: CaseGenV2Spec | null; trace_summary?: TraceSummary; timings?: Record<string, number> }
+  | { event: "error"; error: string; status: number; detail?: string; thread_id?: string; stage?: string; retryable?: boolean; fatal?: boolean }
+) & { id?: number };
 
 /* -------------------------------------------------------------------------- */
 /* Core request helper (timeout + never-throw), as in backend.ts               */
@@ -246,7 +295,7 @@ const DEFAULT_TIMEOUTS = {
   // at the server SSE cap (SSE_MAX_DURATION_S, 600 s): at 240 s a live
   // generation with one repair was cut off (acceptance 2026-10-20).
   generate: 600_000,
-  template: 8_000,
+  layer: 75_000,
   director: 20_000,
   read: 8_000,
 } as const;
@@ -335,20 +384,31 @@ export function generateCaseV2(
   );
 }
 
-/** The deterministic template, honestly labelled (meta.source === "template"). */
-export function templateCaseV2(
-  req: CaseGenV2Request,
+/** One layer of a case, generated on first access (or awaited while the continuation writes it). */
+export function readCaseLayer(
+  threadId: string,
+  layer: string,
   opts: RequestOptions = {},
-): Promise<BackendResult<CaseTemplateResult>> {
-  return request<CaseTemplateResult>(
-    "/v2/case/template",
-    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(req) },
-    opts.timeoutMs ?? DEFAULT_TIMEOUTS.template,
+): Promise<BackendResult<CaseLayerResult>> {
+  return request<CaseLayerResult>(
+    `/v2/case/${encodeURIComponent(threadId)}/layer/${encodeURIComponent(layer)}`,
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ reason: "access" }) },
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.layer,
     opts.signal,
   );
 }
 
-/** Read a checkpointed run by its thread id. */
+/** The learner's own history of generated encounters (summaries, never a case). */
+export function listMyCases(opts: RequestOptions = {}): Promise<BackendResult<{ cases: MyCaseRow[] }>> {
+  return request<{ cases: MyCaseRow[] }>(
+    "/v2/cases/mine",
+    { method: "GET", headers: { accept: "application/json" } },
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.read,
+    opts.signal,
+  );
+}
+
+/** Read the server-held case state of a thread. */
 export function readCaseThread(
   threadId: string,
   opts: RequestOptions = {},
@@ -389,15 +449,20 @@ export function parseSseBuffer(buffer: string): { events: CaseGenV2Event[]; rest
   const events: CaseGenV2Event[] = [];
   for (const block of blocks) {
     let name = "";
+    let id: number | undefined;
     const dataLines: string[] = [];
     for (const line of block.split("\n")) {
       if (line.startsWith("event:")) name = line.slice(6).trim();
       else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+      else if (line.startsWith("id:")) {
+        const n = Number(line.slice(3).trim());
+        if (Number.isFinite(n)) id = n;
+      }
     }
     if (!name || dataLines.length === 0) continue;
     try {
       const payload = JSON.parse(dataLines.join("\n")) as Record<string, unknown>;
-      events.push({ ...payload, event: name } as CaseGenV2Event);
+      events.push({ ...payload, event: name, ...(id !== undefined ? { id } : {}) } as CaseGenV2Event);
     } catch {
       // A malformed data line is dropped; the stream keeps going.
     }
@@ -406,70 +471,157 @@ export function parseSseBuffer(buffer: string): { events: CaseGenV2Event[]; rest
 }
 
 export interface StreamOptions extends RequestOptions {
-  /** Called for every event in order (start, node..., done | error). */
+  /** Called for every event in order, including the ones after the opening. */
   onEvent: (event: CaseGenV2Event) => void;
+  /** Reconnect attempts after a dropped stream (GET .../events?after=<last id>). */
+  reconnects?: number;
+}
+
+/** The first playable case of a request: the opening (staged) or a finished case. */
+export interface CaseStreamOpening {
+  thread_id: string;
+  spec: CaseGenV2Spec | null;
+  trace_summary?: TraceSummary;
+  /** Resolves when the thread is complete (done), failed, aborted or the reconnects ran out. */
+  finished: Promise<"done" | "error" | "aborted" | "dropped">;
+}
+
+type Failure = { ok: false; error: string; status?: number };
+
+async function errorOf(res: Response): Promise<Failure> {
+  let code = `http_${res.status}`;
+  try {
+    const body = (await res.json()) as Partial<CaseGenV2Error>;
+    if (typeof body.error === "string" && body.error) code = body.error;
+  } catch {
+    // keep http_<status>
+  }
+  return { ok: false, error: code, status: res.status };
 }
 
 /**
- * Stream the generator run as SSE (POST, so EventSource cannot be used). The
- * returned result is the final `done` payload, or an error when the server
- * answered with a non-2xx status, the stream sent an `error` event, or the
- * connection failed. Never throws.
+ * Stream one on-request case (POST, so EventSource cannot be used). Resolves as
+ * soon as the case is playable: on `opening.ready`, or on `done` for a server
+ * that sends the whole case at once. The stream keeps being read after that
+ * (layers, judge patches, done) and every event reaches `onEvent`; a dropped
+ * connection reconnects to `GET /v2/case/{thread_id}/events?after=<last id>`.
+ * Resolves to an error when the server answered non-2xx, the stream sent a
+ * fatal `error` before the opening, or the connection failed. Never throws.
  */
 export async function streamCaseGenV2(
   req: CaseGenV2Request,
   opts: StreamOptions,
-): Promise<BackendResult<{ thread_id: string; spec: CaseGenV2Spec | null; trace_summary: TraceSummary }>> {
+): Promise<BackendResult<CaseStreamOpening>> {
   const { signal, clear } = composeSignal(opts.timeoutMs ?? DEFAULT_TIMEOUTS.generate, opts.signal);
-  try {
-    const res = await fetch(`${BACKEND_URL}/v2/case/generate/stream`, {
-      method: "POST",
-      headers: { ...(await identityHeaders()), "content-type": "application/json", accept: "text/event-stream" },
-      body: JSON.stringify(withLearnerId(req)),
-      signal,
-    });
-    if (!res.ok) {
-      let code = `http_${res.status}`;
-      try {
-        const body = (await res.json()) as Partial<CaseGenV2Error>;
-        if (typeof body.error === "string" && body.error) code = body.error;
-      } catch {
-        // keep http_<status>
-      }
-      return { ok: false, error: code, status: res.status };
+  let resolveOpening: (r: BackendResult<CaseStreamOpening>) => void = () => undefined;
+  const opening = new Promise<BackendResult<CaseStreamOpening>>((r) => {
+    resolveOpening = r;
+  });
+  let settled = false;
+  let resolveFinished: (v: "done" | "error" | "aborted" | "dropped") => void = () => undefined;
+  const finished = new Promise<"done" | "error" | "aborted" | "dropped">((r) => {
+    resolveFinished = r;
+  });
+  let threadId = "";
+  let lastId = 0;
+  let ended: "done" | "error" | null = null;
+
+  const settle = (r: BackendResult<CaseStreamOpening>) => {
+    if (settled) return;
+    settled = true;
+    resolveOpening(r);
+  };
+
+  const handle = (ev: CaseGenV2Event) => {
+    if (typeof ev.id === "number") lastId = Math.max(lastId, ev.id);
+    if (ev.event === "start" && ev.thread_id) threadId = ev.thread_id;
+    opts.onEvent(ev);
+    if (ev.event === "opening.ready") {
+      threadId = ev.thread_id || threadId;
+      settle({ ok: true, data: { thread_id: threadId, spec: ev.spec, finished } });
+    } else if (ev.event === "done") {
+      ended = "done";
+      threadId = ev.thread_id || threadId;
+      settle({
+        ok: true,
+        data: { thread_id: threadId, spec: ev.spec, ...(ev.trace_summary ? { trace_summary: ev.trace_summary } : {}), finished },
+      });
+    } else if (ev.event === "error" && (!settled || ev.fatal)) {
+      ended = "error";
+      settle({ ok: false, error: ev.error, status: ev.status });
     }
-    if (!res.body) return { ok: false, error: "no_body" };
+  };
+
+  const pump = async (res: Response): Promise<void> => {
+    if (!res.body) return;
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
-    let done: { thread_id: string; spec: CaseGenV2Spec | null; trace_summary: TraceSummary } | null = null;
-    let failure: BackendResult<never> | null = null;
     for (;;) {
       const chunk = await reader.read();
       if (chunk.done) break;
       buffer += decoder.decode(chunk.value, { stream: true });
       const parsed = parseSseBuffer(buffer);
       buffer = parsed.rest;
-      for (const ev of parsed.events) {
-        opts.onEvent(ev);
-        if (ev.event === "done") done = { thread_id: ev.thread_id, spec: ev.spec, trace_summary: ev.trace_summary };
-        if (ev.event === "error") failure = { ok: false, error: ev.error, status: ev.status };
+      for (const ev of parsed.events) handle(ev);
+      if (ended) break;
+    }
+    if (!ended) for (const ev of parseSseBuffer(`${buffer}\n\n`).events) handle(ev);
+  };
+
+  void (async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/v2/case/generate/stream`, {
+        method: "POST",
+        headers: { ...(await identityHeaders()), "content-type": "application/json", accept: "text/event-stream" },
+        body: JSON.stringify(withLearnerId(req)),
+        signal,
+      });
+      if (!res.ok) {
+        settle(await errorOf(res));
+        resolveFinished("error");
+        return;
       }
+      if (!res.body) {
+        settle({ ok: false, error: "no_body" });
+        resolveFinished("error");
+        return;
+      }
+      await pump(res);
+      // Same-thread reconnects (the continuation keeps writing layers server-side).
+      let tries = opts.reconnects ?? 3;
+      while (!ended && threadId && tries > 0 && !signal.aborted) {
+        tries -= 1;
+        const again = await fetch(
+          `${BACKEND_URL}/v2/case/${encodeURIComponent(threadId)}/events?after=${lastId}`,
+          { headers: { ...(await identityHeaders()), accept: "text/event-stream" }, signal },
+        );
+        if (!again.ok) break;
+        await pump(again);
+      }
+      if (!settled) settle({ ok: false, error: "stream_incomplete" });
+      resolveFinished(ended ?? (signal.aborted ? "aborted" : "dropped"));
+    } catch (err) {
+      settle({ ok: false, error: reasonFor(err) });
+      resolveFinished(signal.aborted ? "aborted" : "dropped");
+    } finally {
+      clear();
     }
-    const tail = parseSseBuffer(`${buffer}\n\n`);
-    for (const ev of tail.events) {
-      opts.onEvent(ev);
-      if (ev.event === "done") done = { thread_id: ev.thread_id, spec: ev.spec, trace_summary: ev.trace_summary };
-      if (ev.event === "error") failure = { ok: false, error: ev.error, status: ev.status };
-    }
-    if (failure) return failure;
-    if (!done) return { ok: false, error: "stream_incomplete" };
-    return { ok: true, data: done };
-  } catch (err) {
-    return { ok: false, error: reasonFor(err) };
-  } finally {
-    clear();
+  })();
+  return opening;
+}
+
+/** Provenance guard (owner decision): a learner case must be model-generated on request. */
+export class NotModelGeneratedError extends Error {
+  constructor(source: string) {
+    super(`learner cases must be generated on request by the model (got source "${source}")`);
+    this.name = "NotModelGeneratedError";
   }
+}
+
+export function assertModelSpec(spec: Pick<CaseGenV2Spec, "meta"> | null | undefined): void {
+  const source = spec?.meta?.source ?? "none";
+  if (source !== "model") throw new NotModelGeneratedError(source);
 }
 
 /* -------------------------------------------------------------------------- */

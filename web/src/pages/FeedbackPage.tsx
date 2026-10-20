@@ -37,7 +37,6 @@ import {
 } from "@/components";
 import { type Band, type FeedbackAxis } from "@/data/schema";
 import { complaintFamilyOf } from "@/data/caseLibrary";
-import { generateCase } from "@/domain/caseGen";
 import { safetyCriticalMisses } from "@/domain/processMetrics";
 import { useEncounterState } from "@/state/encounterStore";
 import {
@@ -245,24 +244,16 @@ export function FeedbackPage() {
 
   // "Try a harder variant": a fresh case of the SAME presentation as the
   // just-finished encounter, one difficulty step higher (capped at 5). The
-  // finished case (`enc.caseInstance`) supplies the chief-complaint family,
-  // current difficulty and locale; hand the built case to /encounter the same
-  // way the Case Library does (`state: { caseInstance }`).
+  // finished case supplies the chief-complaint family and difficulty; the new
+  // case is REQUESTED from the model on /encounter (never built on the device).
   const handleHarderVariant = () => {
     const finished = enc.caseInstance;
     const family = finished ? complaintFamilyOf(finished) : null;
     const current = finished?.difficulty ?? 3;
-    const locale = finished?.locale ?? lang;
     const harder = Math.min(5, current + 1) as 1 | 2 | 3 | 4 | 5;
-    const caseInstance = family
-      ? generateCase({
-          seedMode: "constrained",
-          chiefComplaint: family,
-          difficulty: harder,
-          locale,
-        })
-      : generateCase({ seedMode: "random", difficulty: harder, locale });
-    navigate("/encounter", { state: { caseInstance } });
+    navigate("/encounter", {
+      state: { start: { mode: "solo", role: "doctor", guidance: true, chiefComplaint: family, difficulty: harder } },
+    });
   };
 
   return (

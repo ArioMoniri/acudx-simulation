@@ -1,71 +1,52 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle, CircleNotch, Warning, ArrowClockwise, Stack, X } from "@phosphor-icons/react";
+import { CheckCircle, CircleNotch, Warning, ArrowClockwise, X } from "@phosphor-icons/react";
 
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
+import type { CaseGenV2Event } from "@/lib/caseGenV2";
 
 /* -------------------------------------------------------------------------- */
-/* Pipeline stages                                                             */
+/* Progress of one on-request case (review 06a 4.6)                            */
 /* -------------------------------------------------------------------------- */
 
-/** Human stages of the v2 generator graph (docs/architecture/15, section 4). */
-export type GenStage = "sampling" | "authoring" | "judging" | "repairing" | "grounding" | "finalizing";
-
-export const GEN_STAGES: readonly GenStage[] = [
-  "sampling",
-  "authoring",
-  "judging",
-  "repairing",
-  "grounding",
-  "finalizing",
-];
-
-/** Map a graph node name (SSE `node` event) to its human stage. */
-export function stageForNode(node: string): GenStage | null {
-  switch (node) {
-    case "sample_condition":
-      return "sampling";
-    case "author":
-      return "authoring";
-    case "clinical_consistency":
-    case "safety_dosing":
-    case "pedagogy":
-    case "aggregate":
-      return "judging";
-    case "repair":
-      return "repairing";
-    case "ground":
-      return "grounding";
-    case "finalize":
-      return "finalizing";
-    default:
-      return null;
-  }
-}
+/** What the learner sees while the opening of their case is being written. */
+export type GenPhase = "requesting" | "writing" | "playable";
 
 export interface GenProgress {
-  /** Stages that have reported at least one node event, in order of arrival. */
-  done: GenStage[];
-  /** The stage currently running (the latest node seen). */
-  active: GenStage | null;
-  /** Repairs seen so far (the council sent the draft back). */
-  repairs: number;
+  phase: GenPhase;
   threadId: string | null;
+  /** Wall-clock ms when the request was sent (for the elapsed timer). */
+  startedAt: number | null;
+  /** Server ETA for the opening, from the rolling stage medians. */
+  etaMs: number | null;
+  /** Opening fields streamed so far (opening.delta), by dotted path. */
+  preview: Record<string, unknown>;
 }
 
-export const EMPTY_PROGRESS: GenProgress = { done: [], active: null, repairs: 0, threadId: null };
+export const EMPTY_PROGRESS: GenProgress = {
+  phase: "requesting",
+  threadId: null,
+  startedAt: null,
+  etaMs: null,
+  preview: {},
+};
 
-/** Fold one node event into the progress record. Pure. */
-export function advanceProgress(prev: GenProgress, node: string): GenProgress {
-  const stage = stageForNode(node);
-  if (!stage) return prev;
-  const done = prev.active && prev.active !== stage && !prev.done.includes(prev.active) ? [...prev.done, prev.active] : prev.done;
-  return {
-    ...prev,
-    done,
-    active: stage,
-    repairs: node === "repair" ? prev.repairs + 1 : prev.repairs,
-  };
+/** Fold one stream event into the progress record. Pure. */
+export function foldProgress(prev: GenProgress, ev: CaseGenV2Event): GenProgress {
+  switch (ev.event) {
+    case "start":
+      return { ...prev, threadId: ev.thread_id, etaMs: ev.eta_ms?.s1 ?? prev.etaMs };
+    case "opening.delta":
+      return { ...prev, phase: "writing", preview: { ...prev.preview, [ev.path]: ev.value } };
+    case "node":
+      return prev.phase === "requesting" ? { ...prev, phase: "writing" } : prev;
+    case "opening.ready":
+    case "done":
+      return { ...prev, phase: "playable" };
+    default:
+      return prev;
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -81,33 +62,45 @@ export interface GenFailure {
 
 export interface CaseGenProgressProps {
   progress: GenProgress;
-  /** Set when the run ended without a case; shows the two labelled choices. */
+  /** Set when the request ended without a case: the error and Retry, nothing else. */
   failure?: GenFailure | null;
   busy: boolean;
   onRetry: () => void;
-  onUseTemplate: () => void;
   onCancel?: () => void;
   className?: string;
 }
 
+function useElapsed(startedAt: number | null, running: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!running) return;
+    const id = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(id);
+  }, [running]);
+  return startedAt == null ? 0 : Math.max(0, now - startedAt);
+}
+
+const PREVIEW_ORDER: { path: string; key: string }[] = [
+  { path: "chief_complaint", key: "oncase.preview.complaint" },
+  { path: "demographics.age", key: "oncase.preview.age" },
+  { path: "demographics.sex", key: "oncase.preview.sex" },
+  { path: "triage_note", key: "oncase.preview.triage" },
+];
+
 /**
- * CaseGenProgress: the live view of a v2 generator run (sampling, authoring,
- * council judging, repairing, grounding, finalizing). When the gateway answers
- * 503 (model unreachable) or the stream fails, the real error is shown and the
- * learner chooses explicitly between the deterministic template (labelled as
- * not model generated) and a retry. Nothing is picked silently.
+ * CaseGenProgress: the opening of a case being written for this learner, field by
+ * field (complaint, age, triage note, vitals), with an elapsed timer and the server's
+ * ETA. On failure the real error is shown and Retry is offered: a case is only ever
+ * generated on request by the model, so no other case is offered in its place.
  */
-export function CaseGenProgress({
-  progress,
-  failure = null,
-  busy,
-  onRetry,
-  onUseTemplate,
-  onCancel,
-  className,
-}: CaseGenProgressProps) {
+export function CaseGenProgress({ progress, failure = null, busy, onRetry, onCancel, className }: CaseGenProgressProps) {
   const { t } = useTranslation();
-  const visibleStages = GEN_STAGES.filter((s) => s !== "repairing" || progress.repairs > 0 || progress.active === "repairing");
+  const elapsed = useElapsed(progress.startedAt, busy && !failure);
+  const seconds = Math.round(elapsed / 1000);
+  const eta = progress.etaMs != null ? Math.round(progress.etaMs / 1000) : null;
+  const vitals = ["hr", "systolic", "diastolic", "rr", "spo2", "tempC"]
+    .map((k) => [k, progress.preview[`triage_vitals.${k}`]] as const)
+    .filter(([, v]) => typeof v === "number");
 
   return (
     <section
@@ -122,9 +115,7 @@ export function CaseGenProgress({
           <h2 className="text-sm font-semibold text-fg">
             {failure ? t("live2.gen.failedTitle") : t("live2.gen.title")}
           </h2>
-          <p className="mt-0.5 text-xs text-muted">
-            {failure ? t("live2.gen.failedHint") : t("live2.gen.hint")}
-          </p>
+          <p className="mt-0.5 text-xs text-muted">{failure ? t("live2.gen.failedHint") : t("live2.gen.hint")}</p>
         </div>
         {busy && onCancel ? (
           <Button size="sm" variant="ghost" onClick={onCancel} leadingIcon={<X weight="bold" className="h-3.5 w-3.5" aria-hidden />}>
@@ -133,40 +124,37 @@ export function CaseGenProgress({
         ) : null}
       </div>
 
-      <ol className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-6" aria-label={t("live2.gen.stagesLabel")}>
-        {visibleStages.map((stage) => {
-          const isDone = progress.done.includes(stage) || (!busy && !failure && progress.active != null);
-          const isActive = busy && progress.active === stage;
-          return (
-            <li
-              key={stage}
-              className={cn(
-                "flex items-center gap-2 rounded-control border px-2.5 py-2 text-xs",
-                isActive
-                  ? "border-brand bg-brand-tint text-fg"
-                  : isDone
-                    ? "border-border bg-bg-subtle text-fg"
-                    : "border-dashed border-border text-muted",
-              )}
-              aria-current={isActive ? "step" : undefined}
-            >
-              {isActive ? (
-                <CircleNotch weight="bold" className="h-3.5 w-3.5 shrink-0 motion-safe:animate-spin" aria-hidden />
-              ) : isDone ? (
-                <CheckCircle weight="fill" className="h-3.5 w-3.5 shrink-0 text-[color:var(--state-normal)]" aria-hidden />
-              ) : (
-                <span aria-hidden className="inline-block h-3.5 w-3.5 shrink-0 rounded-full border border-border" />
-              )}
-              <span className="truncate">
-                {t(`live2.gen.stage.${stage}`)}
-                {stage === "repairing" && progress.repairs > 0 ? ` ×${progress.repairs}` : ""}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-
-      {failure ? (
+      {!failure ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <p className="flex items-center gap-2 text-xs text-muted" data-testid="casegen-timer">
+            {progress.phase === "playable" ? (
+              <CheckCircle weight="fill" className="h-3.5 w-3.5 text-[color:var(--state-normal)]" aria-hidden />
+            ) : (
+              <CircleNotch weight="bold" className="h-3.5 w-3.5 motion-safe:animate-spin" aria-hidden />
+            )}
+            <span>{t(`oncase.phase.${progress.phase}`)}</span>
+            <span className="font-mono">
+              {eta != null ? t("oncase.elapsedEta", { seconds, eta }) : t("oncase.elapsed", { seconds })}
+            </span>
+          </p>
+          {Object.keys(progress.preview).length > 0 ? (
+            <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-[auto_1fr]" aria-label={t("oncase.preview.label")}>
+              {PREVIEW_ORDER.filter((p) => progress.preview[p.path] != null).map((p) => (
+                <div key={p.path} className="contents">
+                  <dt className="text-muted">{t(p.key)}</dt>
+                  <dd className="text-fg">{String(progress.preview[p.path])}</dd>
+                </div>
+              ))}
+              {vitals.length > 0 ? (
+                <div className="contents">
+                  <dt className="text-muted">{t("oncase.preview.vitals")}</dt>
+                  <dd className="font-mono text-fg">{vitals.map(([k, v]) => `${k} ${String(v)}`).join("  ")}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
+        </div>
+      ) : (
         <div
           className="mt-3 rounded-control border p-3"
           style={{
@@ -187,26 +175,13 @@ export function CaseGenProgress({
             </span>
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Button
-              size="sm"
-              onClick={onRetry}
-              leadingIcon={<ArrowClockwise weight="bold" className="h-3.5 w-3.5" aria-hidden />}
-            >
+            <Button size="sm" onClick={onRetry} leadingIcon={<ArrowClockwise weight="bold" className="h-3.5 w-3.5" aria-hidden />}>
               {t("live2.gen.retry")}
             </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={onUseTemplate}
-              className="h-auto min-h-8 whitespace-normal py-1.5 text-start"
-              leadingIcon={<Stack weight="bold" className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-            >
-              {t("live2.gen.useTemplate")}
-            </Button>
           </div>
-          <p className="mt-2 text-[11px] text-muted">{t("live2.gen.templateHint")}</p>
+          <p className="mt-2 text-[11px] text-muted">{t("live2.gen.onRequestHint")}</p>
         </div>
-      ) : null}
+      )}
     </section>
   );
 }

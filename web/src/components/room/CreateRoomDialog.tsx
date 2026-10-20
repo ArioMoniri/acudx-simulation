@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Plus, Users, Robot } from "@phosphor-icons/react";
 
@@ -6,32 +6,29 @@ import { Button, Switch, Field, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { ROLE_ICON } from "./roleMeta";
 import { CLINICAL_ROLE_ORDER, type ClinicalRole, type RoomLocale } from "@/data/rooms";
-import { seedCases } from "@/data/seedCases";
-import { usePublishedCases } from "@/data/authoring";
-import { complaintFamilyOf } from "@/data/caseLibrary";
+import { COMPLAINT_LABELS } from "@/data/caseLibrary";
 import type { Lang } from "@/data/schema";
-import type { ChiefComplaintFamily } from "@/domain/caseGen";
-import { familyForSeedCase } from "./roomStore";
-import { pick } from "@/components/ehr/labels";
+import { CHIEF_COMPLAINT_FAMILIES, type ChiefComplaintFamily } from "@/domain/caseGen";
 
 export interface CreateRoomDialogProps {
   open: boolean;
   onClose: () => void;
   lang: Lang;
-  /** Called with the chosen case template, which roles are human seats (rest AI),
-   *  the AI-backfill toggle, the shared encounter language, and the presentation
-   *  `family` used to generate this room's fresh, unique case. */
+  /** Called with the presentation the room's case is requested for (or none for any),
+   *  which roles are human seats (rest AI), the AI-backfill toggle and the shared
+   *  encounter language. The case is generated on request by the model; resolves to
+   *  an error code when that failed (the dialog shows it and stays open). */
   onCreate: (config: {
-    caseId: string;
+    family: ChiefComplaintFamily | null;
     humanRoles: ClinicalRole[];
     aiBackfill: boolean;
     locale: RoomLocale;
-    family?: ChiefComplaintFamily;
-  }) => void;
+  }) => Promise<string | null> | void;
 }
 
 /**
- * CreateRoomDialog — Create Room flow (Screen 6.1). Pick a case, choose which
+ * CreateRoomDialog — Create Room flow (Screen 6.1). Pick a presentation (the room's
+ * case is generated on request by the model, never picked from a list), choose which
  * of Doctor / Nurse / Paramedic are HUMAN seats vs AI-backfilled, and toggle
  * AI backfill for the rest. Focus is trapped to the panel, Escape closes, and
  * every control is labelled. Fully keyboard operable.
@@ -46,31 +43,20 @@ export function CreateRoomDialog({
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
 
-  const [caseId, setCaseId] = useState(seedCases[0]?.id ?? "");
+  const [family, setFamily] = useState<ChiefComplaintFamily | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // The learner always holds Doctor by default; the rest start AI-backfilled.
   const [humanRoles, setHumanRoles] = useState<ClinicalRole[]>(["doctor"]);
   const [aiBackfill, setAiBackfill] = useState(true);
   const [locale, setLocale] = useState<RoomLocale>(lang);
 
-  // Educator-authored, co-signed, PUBLISHED cases can also seed a room. Only
-  // non-flagged cases offered in the active locale are eligible, so a room is
-  // never built from a mismatched-language case. The subscription keeps this
-  // live, so a freshly published case is pickable without a reload.
-  const published = usePublishedCases();
-  const liveCases = useMemo(
-    () =>
-      published.filter(
-        (p) =>
-          p.status !== "flagged" &&
-          p.locales.some((l) => l.locale === lang && l.offered),
-      ),
-    [published, lang],
-  );
-
   // Reset the form each time the dialog opens.
   useEffect(() => {
     if (open) {
-      setCaseId(seedCases[0]?.id ?? "");
+      setFamily(null);
+      setBusy(false);
+      setError(null);
       setHumanRoles(["doctor"]);
       setAiBackfill(true);
       setLocale(lang);
@@ -99,22 +85,14 @@ export function CreateRoomDialog({
     );
   }
 
-  function submit() {
-    // The picked case is a TEMPLATE: the room mints a fresh, unique patient in
-    // that presentation family, so no two rooms share the same case. A published
-    // case is not in the seed-family map, so derive its family from its authored
-    // caseInstance; a seed case resolves via the seed-family map as before.
-    const pub = liveCases.find((p) => p.id === caseId);
-    const family = pub
-      ? (complaintFamilyOf(pub.caseInstance) ?? undefined)
-      : familyForSeedCase(caseId);
-    onCreate({ caseId, humanRoles, aiBackfill, locale, family });
+  async function submit() {
+    setBusy(true);
+    setError(null);
+    const failed = await onCreate({ family, humanRoles, aiBackfill, locale });
+    setBusy(false);
+    if (failed) setError(failed);
   }
 
-  const selectedPublished = liveCases.find((p) => p.id === caseId);
-  const selectedCase = seedCases.find((c) => c.id === caseId);
-  const selectedDifficulty =
-    selectedCase?.difficulty ?? selectedPublished?.difficulty;
   const locales: RoomLocale[] = ["tr", "en"];
 
   return (
@@ -155,46 +133,21 @@ export function CreateRoomDialog({
           </button>
         </div>
 
-        {/* Case picker */}
+        {/* Presentation the room's case is requested for */}
         <div className="mt-5">
-          <Field
-            label={t("rooms.create.caseLabel")}
-            hint={
-              selectedDifficulty
-                ? t("rooms.create.difficulty", { level: selectedDifficulty })
-                : undefined
-            }
-          >
+          <Field label={t("rooms.create.caseLabel")}>
             {(aria) => (
               <Select
                 {...aria}
-                value={caseId}
-                onChange={(e) => setCaseId(e.target.value)}
+                value={family ?? "any"}
+                onChange={(e) => setFamily(e.target.value === "any" ? null : (e.target.value as ChiefComplaintFamily))}
               >
-                {liveCases.length > 0 ? (
-                  <optgroup
-                    label={t("rooms.create.publishedGroup", {
-                      defaultValue: "Published cases",
-                    })}
-                  >
-                    {liveCases.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {pick(p.chiefComplaint, lang)}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-                <optgroup
-                  label={t("rooms.create.curatedGroup", {
-                    defaultValue: "Curated cases",
-                  })}
-                >
-                  {seedCases.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {pick(c.chiefComplaint, lang)}
-                    </option>
-                  ))}
-                </optgroup>
+                <option value="any">{t("oncase.request.any")}</option>
+                {CHIEF_COMPLAINT_FAMILIES.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {COMPLAINT_LABELS[f.id][lang]}
+                  </option>
+                ))}
               </Select>
             )}
           </Field>
@@ -204,6 +157,11 @@ export function CreateRoomDialog({
                 "A fresh, unique patient is generated for each room and shared with everyone who joins.",
             })}
           </p>
+          {error ? (
+            <p role="alert" className="mt-1.5 text-xs text-[color:var(--state-caution)]">
+              {t(`live2.gen.error.${error}`, { defaultValue: t("live2.gen.error.unknown", { code: error }) })}
+            </p>
+          ) : null}
         </div>
 
         {/* Role assignment */}
@@ -315,8 +273,9 @@ export function CreateRoomDialog({
             {t("actions.cancel")}
           </Button>
           <Button
-            onClick={submit}
-            disabled={!caseId}
+            onClick={() => void submit()}
+            disabled={busy}
+            aria-busy={busy}
             leadingIcon={<Plus weight="bold" className="h-4 w-4" />}
           >
             {t("rooms.create.confirm")}

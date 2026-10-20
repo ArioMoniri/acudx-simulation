@@ -15,32 +15,23 @@
     },
     "degraded": "kısıtlı",
     "gen": {
-      "title": "Model ağ geçidinde vaka üretiliyor",
-      "hint": "Durum örnekleniyor, yazılıyor, üç hakemli konsey inceliyor, kaynaklara bağlanıyor ve sonlandırılıyor. Bu sırada dosyayı okuyabilirsiniz.",
+      "title": "Vakanız model ağ geçidinde yazılıyor",
+      "hint": "Önce açılış (hasta, yakınma, triyaj) yazılır ve hazır olunca kart açılır; öykü, muayene, istemler ve sonuçlar siz çalışırken bu hasta için yazılır.",
       "failedTitle": "Model bir vaka döndürmedi",
-      "failedHint": "Hiçbir şey sessizce yerine konmadı. Nasıl devam edileceğini seçin.",
-      "stagesLabel": "Üretici aşamaları",
-      "stage": {
-        "sampling": "Örnekleme",
-        "authoring": "Yazım",
-        "judging": "Konsey değerlendirmesi",
-        "repairing": "Onarım",
-        "grounding": "Kaynaklandırma",
-        "finalizing": "Sonlandırma"
-      },
+      "failedHint": "Hiçbir vaka açılmadı.",
       "error": {
         "model_unreachable": "Vaka üretici modele ulaşılamadı (ağ geçidi 503 yanıtı verdi).",
         "model_output_invalid": "Model iki kez geçersiz vaka döndürdü (ağ geçidi 502 yanıtı verdi).",
         "timeout": "Üretim zaman aşımına uğradı.",
         "network": "Ağ geçidine ulaşılamadı.",
-        "stream_incomplete": "Üretim akışı vaka tamamlanmadan sona erdi.",
+        "stream_incomplete": "Akış, vaka açılışı hazır olmadan sona erdi.",
         "no_spec": "Üretici bir vaka olmadan bitti.",
         "cancelled": "Üretim iptal edildi.",
-        "unknown": "Üretim başarısız oldu ({{code}})."
+        "unknown": "Üretim başarısız oldu ({{code}}).",
+        "NotModelGeneratedError": "Sunucu model tarafından üretilmemiş bir vaka gönderdi; reddedildi."
       },
       "retry": "Model üretimini yeniden dene",
-      "useTemplate": "Şablon vakayı kullan (deterministik, model üretimi değil)",
-      "templateHint": "Şablon sabit, gözden geçirilmiş bir vakadır. Hasta başlığında şablon olarak etiketlenir ve kısıtlı olarak işaretlenir."
+      "onRequestHint": "Her vaka, istediğinizde model tarafından sizin için yazılır. Yerine başka bir şey sunulmaz: model erişilebilir olduğunda yeniden deneyin."
     },
     "director": {
       "hint": "Klinik Yönetmen: sunucu, vitalleri, bulguları ve komplikasyonları eylemlerinize göre uyarlar.",

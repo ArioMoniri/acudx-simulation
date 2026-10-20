@@ -16,7 +16,6 @@
 
 import type { Bilingual } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
-import { getSeedCase } from "@/data/seedCases";
 import { NURSE_PROTOCOL_ORDERS, PARAMEDIC_INTERVENTIONS } from "@/domain/scopeOfPractice";
 
 /* -------------------------------------------------------------------------- */
@@ -150,8 +149,14 @@ export interface Room {
   id: string;
   /** Room title authored by the host (realistic sim-session naming). */
   title: Bilingual;
-  /** The seed case this room runs. */
+  /**
+   * Presentation key of the room (a chief-complaint family hint). Never a case: the
+   * room's case is generated on request by the model through the same pipeline as
+   * a solo encounter, at room creation or on first entry (review 06a P14, P15).
+   */
   caseId: string;
+  /** Generation thread of the room's case, once requested. */
+  threadId?: string;
   /** Chief complaint shown on the lobby card (mirrors the case). */
   chiefComplaint: Bilingual;
   status: RoomStatus;
@@ -349,9 +354,9 @@ export function getRoom(id: string): Room | undefined {
   return rooms.find((r) => r.id === id);
 }
 
-/** Resolve the CaseInstance a room runs (from the seed library). */
-export function roomCase(room: Room): CaseInstance | undefined {
-  return getSeedCase(room.caseId);
+/** The room's case: only ever the one generated on request for it (null before). */
+export function roomCase(_room: Room, runtimeCase?: CaseInstance | null): CaseInstance | null {
+  return runtimeCase ?? null;
 }
 
 /** After AI backfill, resolve the effective holder of a seat for rendering. */

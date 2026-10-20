@@ -41,6 +41,7 @@ import {
 } from "@/domain/scopeGuard";
 import type { QuestionIntent, ExamManeuver, CaseInstance } from "@/domain/case";
 import { useLiveBackend } from "@/lib/liveBackend";
+import { personaFacts } from "@/lib/personaFacts";
 import {
   sttSupported,
   startRecording,
@@ -276,8 +277,10 @@ export function InterviewTab({
     // voice / live exchanges are logged as `question` events too (meta.dialogue)
     // but render from the persisted store transcript below — exclude them here so
     // they are not shown twice.
+    // A question the live persona already answered (meta.voiced) renders from the
+    // dialogue log too, so it is not shown twice either.
     const questionEvents = [...state.events]
-      .filter((e) => e.type === "question" && e.meta?.dialogue !== true)
+      .filter((e) => e.type === "question" && e.meta?.dialogue !== true && e.meta?.voiced !== true)
       .sort((a, b) => a.seq - b.seq);
 
     for (const ev of questionEvents) {
@@ -305,7 +308,13 @@ export function InterviewTab({
         .map((id) => historyById.get(id))
         .filter((h): h is NonNullable<typeof h> => Boolean(h));
 
-      if (answers.length > 0) {
+      if (ev.meta?.awaiting === true) {
+        // The history for this question is still being written for this patient:
+        // the patient is "thinking" until the layer lands (then the event resolves).
+        const patId = `p-${ev.seq}-wait`;
+        turnsAcc.push({ id: patId, role: "patient", stage: "history", en: "...", tr: "...", seq: ev.seq });
+        affect[patId] = affectLabel;
+      } else if (answers.length > 0) {
         for (const a of answers) {
           const patId = `p-${ev.seq}-${a.id}`;
           turnsAcc.push({
@@ -571,13 +580,15 @@ export function InterviewTab({
     return { scope_terms: Array.from(terms) };
   }
 
-  function buildPatientTurnRequest(learnerMsg: string): PatientTurnRequest {
+  function buildPatientTurnRequest(learnerMsg: string, intent: QuestionIntent | null): PatientTurnRequest {
     const persona = {
       name: caseInstance.patient.name,
       age: caseInstance.patient.ageYears,
       affect_baseline: affectLabel,
     };
-    const answers = caseInstance.groundTruth.history.map((h) => h.answer[lang]);
+    // Only facts the learner's actual questions sanctioned (revealed so far, plus the
+    // question asked now), never the whole history (review 06a 2.2).
+    const facts = personaFacts(caseInstance, state.discovered, lang, intent);
     const history = [...turns, ...dialogueTurns].slice(-8).map((tt) => ({
       role: tt.role === "doctor" ? "user" : "assistant",
       content: tt[lang],
@@ -590,8 +601,8 @@ export function InterviewTab({
       learner_msg: learnerMsg,
       case_state: {
         persona,
-        narrative: [caseInstance.chiefComplaint[lang], ...answers],
-        sanctioned_facts: [...answers, ...directorCtx.sanctioned_facts],
+        narrative: facts.narrative,
+        sanctioned_facts: [...facts.sanctioned, ...directorCtx.sanctioned_facts],
         vitals: directorCtx.vitals,
         vitals_adjectives: directorCtx.vitals_adjectives,
         affect: directorCtx.affect,
@@ -635,7 +646,8 @@ export function InterviewTab({
     if (typingTimer.current) window.clearTimeout(typingTimer.current);
     setTyping(true);
     try {
-      const tres = await backendPatientTurn(buildPatientTurnRequest(text));
+      const intent = inferQuestionIntent(text, caseInstance);
+      const tres = await backendPatientTurn(buildPatientTurnRequest(text, intent));
       // A 200 carrying the gateway's scripted deflection (model unreachable)
       // is a failure too: the reveal graph answers instead.
       if (!tres.ok || isDegradedPatientTurn(tres.data)) {
@@ -646,6 +658,9 @@ export function InterviewTab({
       // Neutral affect caption — the reply's live provenance stays internal
       // (recorded as `source` for metrics) and is never shown to the learner.
       appendExchange(text, { en: reply, tr: reply }, affectLabel, "live");
+      // The question the persona just answered is revealed and steps the Director
+      // (voiced: the narrator's line is not added on top of the persona's reply).
+      if (intent) askQuestion(intent, { utterance: text, voiced: true });
     } catch {
       // Belt and suspenders: the client never throws, but never trust the wire.
       liveFallback(text);

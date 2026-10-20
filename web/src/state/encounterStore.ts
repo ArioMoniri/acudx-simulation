@@ -51,6 +51,7 @@ import { gateFor } from "@/domain/treatmentRules";
 import { matchTreatmentResponse } from "@/domain/treatmentMatch";
 import { inferQuestionTopic } from "@/domain/scopeGuard";
 import { directorStep, type DirectorAction, type DirectorAffect, type DirectorCaseState, type DirectorStepResult } from "@/lib/caseGenV2";
+import { layerForIntent, layerForManeuver, layerPending, type LayerStatus } from "@/lib/caseLayers";
 import { resolveOrder as engineResolveOrder, type OrderResult } from "@/lib/resultsApi";
 import {
   applyDirectorChanges,
@@ -253,6 +254,11 @@ export interface EncounterState {
   /** How the running case was produced (banner SimBadge provenance). */
   generation: CaseGenerationMeta | null;
   director: DirectorSlice;
+  /**
+   * Layer status of an on-request case (server/orchestration/staged.py): which parts
+   * the server has written for this thread so far. Empty for a case that arrived whole.
+   */
+  caseLayers: Record<string, LayerStatus>;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -293,6 +299,7 @@ function initialState(): EncounterState {
     liveEnabled,
     generation: null,
     director: initialDirector(),
+    caseLayers: {},
   };
 }
 
@@ -368,6 +375,89 @@ export interface StartEncounterOptions {
   generation?: CaseGenerationMeta;
 }
 
+/**
+ * Provenance guard (owner decision): a learner encounter starts only from a case
+ * generated on request by the model, bound to its generation thread. Learner pages
+ * call this; {@link startEncounter} stays for unit-test fixtures of the store.
+ */
+export function startGeneratedEncounter(
+  caseInstance: CaseInstance,
+  generation: CaseGenerationMeta,
+  layers: Record<string, LayerStatus> = {},
+): void {
+  if (generation.source !== "model" || !generation.threadId) {
+    throw new Error(
+      `learner cases must be generated on request by the model (source "${generation.source}", thread ${generation.threadId ?? "none"})`,
+    );
+  }
+  startEncounter(caseInstance, { generation });
+  setState({ ...state, caseLayers: { ...layers } });
+}
+
+/** Ask the case session for a layer the learner just reached (set by caseSession.ts). */
+let layerRequester: ((layer: string) => void) | null = null;
+
+/** Register who fetches a missing layer for the running thread (null to clear). */
+export function setLayerRequester(fn: ((layer: string) => void) | null): void {
+  layerRequester = fn;
+}
+
+function requestLayer(layer: string | null): void {
+  if (layer && layerRequester && layerPending(state.caseLayers, layer)) layerRequester(layer);
+}
+
+/** Retry one layer of the running thread (the strip's Retry; the failed layer only). */
+export function retryCaseLayer(layer: string): void {
+  if (layerRequester) layerRequester(layer);
+}
+
+/** The layer statuses of the running thread. */
+export function getCaseLayers(s: EncounterState): Record<string, LayerStatus> {
+  return s.caseLayers;
+}
+
+/** Mark layer statuses of the running thread (layer.pending / layer.ready / error events). */
+export function setCaseLayers(threadId: string, layers: Record<string, LayerStatus>): void {
+  if (!state.caseInstance || state.generation?.threadId !== threadId) return;
+  setState({ ...state, caseLayers: { ...state.caseLayers, ...layers } });
+}
+
+/**
+ * Fold newly written layers of the SAME thread into the running encounter without
+ * restarting it: the case content grows (stable datum ids), the log, clock, orders
+ * and Director state are kept, and questions or exams that were waiting for the
+ * layer are answered now.
+ */
+export function mergeGeneratedCase(
+  threadId: string,
+  next: CaseInstance,
+  layers: Record<string, LayerStatus> = {},
+): void {
+  const c = state.caseInstance;
+  if (!c || state.generation?.threadId !== threadId) return;
+  let discovered = state.discovered;
+  const events = state.events.map((ev) => {
+    if (ev.meta?.awaiting !== true) return ev;
+    if (ev.type !== "question" && ev.type !== "exam") return ev;
+    const resolved = resolveReveal(next, { kind: ev.type, ref: ev.ref } as Parameters<typeof resolveReveal>[1]);
+    const want = ev.type === "question" ? "history" : "exam";
+    if (resolved?.datumKind !== want || resolved.datumIds.length === 0) return ev;
+    const ids =
+      ev.type === "question"
+        ? selectByTopic(next, resolved.datumIds, typeof ev.meta?.utterance === "string" ? ev.meta.utterance : undefined)
+        : resolved.datumIds;
+    discovered = revealDatumIds(ids, discovered);
+    return { ...ev, meta: { ...ev.meta, awaiting: false, hit: true, revealed: ids } };
+  });
+  setState({
+    ...state,
+    caseInstance: { ...next, id: c.id },
+    discovered,
+    events,
+    caseLayers: { ...state.caseLayers, ...layers },
+  });
+}
+
 /** Start (or restart) an encounter with a case. Captures the sim-clock start. */
 export function startEncounter(caseInstance: CaseInstance, opts: StartEncounterOptions = {}): void {
   for (const t of pendingTimers) clearTimeout(t);
@@ -425,7 +515,7 @@ function selectByTopic(c: CaseInstance, ids: string[], utterance?: string): stri
  * `utterance` carries the learner's own words when the intent was inferred from
  * free text (offline guard path), so the transcript can show what they typed.
  */
-export function askQuestion(intent: QuestionIntent, opts?: { utterance?: string }): void {
+export function askQuestion(intent: QuestionIntent, opts?: { utterance?: string; voiced?: boolean }): void {
   const c = state.caseInstance;
   if (!c) return;
   const resolved = resolveReveal(c, { kind: "question", ref: intent });
@@ -433,18 +523,25 @@ export function askQuestion(intent: QuestionIntent, opts?: { utterance?: string 
   const datumIds = hit ? selectByTopic(c, resolved!.datumIds, opts?.utterance) : [];
   const alreadyKnown = datumIds.every((id) => state.discovered.has(id));
   const utterance = opts?.utterance?.trim();
+  const layer = layerForIntent(intent);
+  // The history layer for this intent is still being written for this patient:
+  // the question waits for it instead of answering "nothing to say".
+  const awaiting = !hit && layerPending(state.caseLayers, layer) && Object.keys(state.caseLayers).length > 0;
   const ev = appendEvent("question", intent, {
     hit,
     redundant: hit && alreadyKnown,
     revealed: datumIds,
     ...(utterance ? { utterance: utterance.slice(0, 280) } : {}),
+    ...(opts?.voiced ? { voiced: true } : {}),
+    ...(awaiting ? { awaiting: true } : {}),
   });
   setState({
     ...state,
     discovered: hit ? revealDatumIds(datumIds, state.discovered) : state.discovered,
     events: [...state.events, ev],
   });
-  queueDirector({ kind: "question", ref: intent });
+  if (awaiting) requestLayer(layer);
+  queueDirector({ kind: "question", ref: intent }, { seq: ev.seq, voiced: Boolean(opts?.voiced) });
 }
 
 /**
@@ -507,18 +604,22 @@ export function requestExam(maneuver: ExamManeuver): void {
   const hit = resolved?.datumKind === "exam";
   const datumIds = hit ? resolved!.datumIds : [];
   const alreadyKnown = datumIds.every((id) => state.discovered.has(id));
+  const layer = layerForManeuver(maneuver);
+  const awaiting = !hit && layerPending(state.caseLayers, layer) && Object.keys(state.caseLayers).length > 0;
   const ev = appendEvent("exam", maneuver, {
     hit,
     redundant: hit && alreadyKnown,
     revealed: datumIds,
+    ...(awaiting ? { awaiting: true } : {}),
   });
+  if (awaiting) requestLayer(layer);
   setState({
     ...state,
     discovered: hit ? revealDatumIds(datumIds, state.discovered) : state.discovered,
     stage: state.stage === "interview" ? "exam" : state.stage,
     events: [...state.events, ev],
   });
-  queueDirector({ kind: "exam", ref: maneuver });
+  queueDirector({ kind: "exam", ref: maneuver }, { seq: ev.seq });
 }
 
 /**
@@ -887,7 +988,14 @@ export function resetEncounter(): void {
  * updated when the answer lands. An "elapsed" tick is coalesced so a slow
  * gateway never accumulates a backlog of cadence steps. Inert off Live mode.
  */
-function queueDirector(action: DirectorAction): void {
+interface DirectorStepContext {
+  /** Event seq of the learner action, so the patient's line lands right after it. */
+  seq?: number;
+  /** The persona already voiced the reply to this action: do not add the narrator's line. */
+  voiced?: boolean;
+}
+
+function queueDirector(action: DirectorAction, ctx: DirectorStepContext = {}): void {
   if (!liveEnabled || !state.caseInstance) return;
   if (action.kind === "elapsed") {
     if (directorTickQueued) return;
@@ -896,7 +1004,7 @@ function queueDirector(action: DirectorAction): void {
   const caseId = state.caseInstance.id;
   directorPending += 1;
   directorChain = directorChain
-    .then(() => runDirectorStep(action, caseId))
+    .then(() => runDirectorStep(action, caseId, ctx))
     .catch(() => {
       /* runDirectorStep never throws; this keeps the chain alive regardless */
     })
@@ -906,15 +1014,22 @@ function queueDirector(action: DirectorAction): void {
     });
 }
 
-async function runDirectorStep(action: DirectorAction, caseId: string): Promise<void> {
+async function runDirectorStep(action: DirectorAction, caseId: string, ctx: DirectorStepContext = {}): Promise<void> {
   const c = state.caseInstance;
   if (!c || c.id !== caseId || !liveEnabled) return;
   if (state.director.status !== "busy") {
     setState({ ...state, director: { ...state.director, status: "busy" } });
   }
   const prevState = state.director.caseState;
+  const threadId = state.generation?.threadId ?? null;
+  // An on-request case is stepped by its thread: the server holds the case and the
+  // Director state (CaseStore). A fixture-only encounter (unit tests) sends the spec.
   const res = await directorStep({
-    ...(prevState ? { case_state: prevState } : { spec: caseInstanceToSpec(c) }),
+    ...(threadId
+      ? { thread_id: threadId }
+      : prevState
+        ? { case_state: prevState }
+        : { spec: caseInstanceToSpec(c) }),
     action: { ...action, locale: c.locale },
     use_model: true,
   });
@@ -930,11 +1045,14 @@ async function runDirectorStep(action: DirectorAction, caseId: string): Promise<
     setState({ ...state, director: { ...state.director, status: "error", error: res.error } });
     return;
   }
-  applyDirectorStep(res.data);
+  applyDirectorStep(res.data, action, ctx);
+  for (const layer of res.data.layers_pending ?? []) {
+    if (layerRequester) layerRequester(layer);
+  }
 }
 
 /** Fold a Director answer into the store: overlay, facts, notes, complications. */
-function applyDirectorStep(data: DirectorStepResult): void {
+function applyDirectorStep(data: DirectorStepResult, action?: DirectorAction, ctx: DirectorStepContext = {}): void {
   const c = state.caseInstance;
   if (!c) return;
   const at = nowOffset();
@@ -956,9 +1074,29 @@ function applyDirectorStep(data: DirectorStepResult): void {
     if (before.has(comp)) continue;
     events.push(appendEvent("stage", "director-complication", { director: true, complication: comp }));
   }
+  // The patient's bedside line for this action (Director narrator), unless the live
+  // persona already answered it: deterioration and relief are heard, not only read.
+  const pv = data.patient_visible_changes;
+  const line = { en: (pv?.utterance_en ?? "").trim(), tr: (pv?.utterance_tr ?? "").trim() };
+  let dialogue = state.dialogue;
+  if (action && (action.kind === "question" || action.kind === "exam" || action.kind === "treatment") && !ctx.voiced && (line.en || line.tr)) {
+    const seq = ctx.seq ?? (events[events.length - 1]?.seq ?? 0);
+    dialogue = [
+      ...dialogue,
+      {
+        id: `dir-${seq}-${state.director.steps}`,
+        role: "patient",
+        en: line.en || line.tr,
+        tr: line.tr || line.en,
+        seq,
+        ...(pv.affect ? { affect: pv.affect.mood_en } : {}),
+      },
+    ];
+  }
   setState({
     ...state,
     events,
+    dialogue,
     director: {
       ...state.director,
       caseState: data.case_state,
@@ -1007,6 +1145,11 @@ function subscribe(listener: () => void): () => void {
 }
 
 function getSnapshot(): EncounterState {
+  return state;
+}
+
+/** The current encounter state, non-reactively (event handlers, effects). */
+export function getEncounterSnapshot(): EncounterState {
   return state;
 }
 

@@ -70,12 +70,20 @@ import {
   setPhase,
   closedLoopStats,
   openLoopEvent,
+  attachRoomCase,
+  familyForSeedCase,
   type RoomRuntime,
 } from "@/components/room/roomStore";
 import { useEntry, useLang } from "@/lib/useLang";
 import { roomCase, effectiveHolder, type ClinicalRole, type Room } from "@/data/rooms";
-import { getSeedCase } from "@/data/seedCases";
-import { resetEncounter, startEncounter, useEncounterState } from "@/state/encounterStore";
+import {
+  getEncounterSnapshot,
+  resetEncounter,
+  startGeneratedEncounter,
+  useEncounterState,
+} from "@/state/encounterStore";
+import { endCaseSession, requestCase } from "@/lib/caseSession";
+import type { ChiefComplaintFamily } from "@/domain/caseGen";
 
 /* -------------------------------------------------------------------------- */
 /* Lobby (/rooms)                                                              */
@@ -91,16 +99,33 @@ function Lobby() {
   const roomsList = useRoomList();
   const [createOpen, setCreateOpen] = useState(false);
 
+  // The room's case is generated on request at room creation through the same
+  // pipeline as a solo encounter (review 06a P15); the room binds to its thread.
   const handleCreate = useCallback(
-    (config: {
-      caseId: string;
+    async (config: {
+      family: ChiefComplaintFamily | null;
       humanRoles: ClinicalRole[];
       aiBackfill: boolean;
       locale: "tr" | "en";
-    }) => {
+    }): Promise<string | null> => {
+      const res = await requestCase({
+        locale: config.locale,
+        purpose: "room",
+        ...(config.family ? { complaint: config.family } : {}),
+      });
+      const live = getEncounterSnapshot().caseInstance;
+      if (!res.ok || !live) return res.ok ? "no_spec" : res.error;
       setCreateOpen(false);
-      const id = createRoom(config);
+      const id = createRoom({
+        caseId: `room-${config.family ?? "any"}`,
+        humanRoles: config.humanRoles,
+        aiBackfill: config.aiBackfill,
+        locale: config.locale,
+        caseInstance: live,
+        threadId: res.data.threadId,
+      });
       navigate(`/rooms/${id}`);
+      return null;
     },
     [navigate],
   );
@@ -231,10 +256,11 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
   const body = useEntry(0.06);
 
   const room = runtime.room;
-  const caseInstance = useMemo(
-    () => roomCase(room) ?? getSeedCase("em-acs-001"),
-    [room.caseId],
-  );
+  // Only ever the case generated on request for this room (the create-dialog bug of
+  // review 06a P15, a published pick playing em-acs-001, cannot happen: there is no
+  // pick and no fallback patient).
+  const caseInstance = roomCase(room, runtime.caseInstance);
+  const [caseError, setCaseError] = useState<string | null>(null);
 
   // Scope: the seat this device holds, or the lead's seat when only observing.
   const mine = runtime.mine;
@@ -249,11 +275,38 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
   // (vitals + task loop) lives in the SEPARATE room-case store, below, so the
   // two never fight over the single-encounter singleton.
   const state = useEncounterState();
+  const threadId = runtime.threadId ?? room.threadId ?? null;
   useEffect(() => {
-    if (caseInstance) startEncounter(caseInstance);
-    return () => resetEncounter();
+    const live = getEncounterSnapshot();
+    if (caseInstance && threadId) {
+      // The host's store already runs this thread (requested in the create flow).
+      if (live.generation?.threadId !== threadId) {
+        startGeneratedEncounter(caseInstance, {
+          source: "model", threadId, council: null, degraded: false, model: null, note: null,
+        });
+      }
+      return;
+    }
+    if (caseInstance) return;
+    // A lobby room opened without a case: request one now, for this room only.
+    const controller = new AbortController();
+    const family = familyForSeedCase(room.caseId);
+    void requestCase(
+      { locale: room.locale, purpose: "room", ...(family ? { complaint: family } : {}) },
+      { signal: controller.signal },
+    ).then((res) => {
+      if (controller.signal.aborted) return;
+      const started = getEncounterSnapshot().caseInstance;
+      if (res.ok && started) attachRoomCase(id, started, res.data.threadId);
+      else setCaseError(res.ok ? "no_spec" : res.error);
+    });
+    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room.id]);
+  }, [room.id, caseInstance == null, threadId]);
+  useEffect(() => () => {
+    endCaseSession();
+    resetEncounter();
+  }, []);
 
   // Shared room-case state: bind the room to ONE case and drive the multi-role
   // order → task → execute loop on top of the clinical-course engine.
@@ -374,7 +427,14 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
   if (!caseInstance || !state.caseInstance || !roomCaseState) {
     return (
       <PageContainer width="wide">
-        <p className="text-sm text-muted">{t("common.loading")}</p>
+        {caseError ? (
+          <p role="alert" className="text-sm text-fg">
+            {t(`live2.gen.error.${caseError}`, { defaultValue: t("live2.gen.error.unknown", { code: caseError }) })}{" "}
+            <span className="text-muted">{t("live2.gen.onRequestHint")}</span>
+          </p>
+        ) : (
+          <p className="text-sm text-muted">{t("live2.gen.title")}</p>
+        )}
       </PageContainer>
     );
   }

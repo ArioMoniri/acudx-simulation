@@ -69,11 +69,9 @@ import { cn } from "@/lib/cn";
 import { useLang, useEntry } from "@/lib/useLang";
 import { useProfile } from "@/state/profileStore";
 import { useProgressRecords } from "@/state/progressStore";
-import {
-  generateCase,
-  CHIEF_COMPLAINT_FAMILIES,
-  type ChiefComplaintFamily,
-} from "@/domain/caseGen";
+import { CHIEF_COMPLAINT_FAMILIES, type ChiefComplaintFamily } from "@/domain/caseGen";
+import { complaintFamilyOf } from "@/data/caseLibrary";
+import { generateCaseV2, v2SpecToCaseInstance } from "@/lib/caseGenV2";
 import {
   pipelineStages,
   makeInitialAuthoringState,
@@ -351,18 +349,32 @@ function BlueprintPanel({
   const lang = useLang();
   const [family, setFamily] = useState<ChiefComplaintFamily | "">("");
   const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
+  const [genBusy, setGenBusy] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
 
+  // Faculty content is a BLUEPRINT (presentation, difficulty, objectives) that goes
+  // through the same model pipeline as every learner case; the draft is the model's
+  // case for faculty review, never a fixed case served to learners (review 06a P16).
   const generate = useCallback(() => {
     const fam = family === "" ? null : family;
-    const caseInstance = fam
-      ? generateCase({
-          seedMode: "constrained",
-          chiefComplaint: fam,
-          difficulty,
-          locale: lang,
-        })
-      : generateCase({ seedMode: "random", difficulty, locale: lang });
-    dispatch({ type: "generate", caseInstance, family: fam });
+    setGenBusy(true);
+    setGenError(null);
+    void generateCaseV2({
+      locale: lang,
+      difficulty,
+      purpose: "authoring",
+      learner_id: null,
+      ...(fam ? { complaint: fam } : {}),
+      blueprint: { difficulty, objectives: [] },
+    }).then((res) => {
+      setGenBusy(false);
+      if (!res.ok) {
+        setGenError(res.error);
+        return;
+      }
+      const caseInstance = v2SpecToCaseInstance(res.data.spec).case;
+      dispatch({ type: "generate", caseInstance, family: fam });
+    });
   }, [family, difficulty, lang, dispatch]);
 
   const draft = state.draft;
@@ -429,12 +441,19 @@ function BlueprintPanel({
           <Button
             size="md"
             onClick={generate}
+            disabled={genBusy}
+            aria-busy={genBusy}
             leadingIcon={<MagicWand weight="bold" className="h-4 w-4" />}
           >
             {draft
               ? t("authoringP9.blueprint.regenerate", { defaultValue: "Generate another draft" })
               : t("authoringP9.blueprint.generate", { defaultValue: "Generate draft" })}
           </Button>
+          {genError ? (
+            <p role="alert" className="text-xs text-[color:var(--state-caution)]">
+              {t(`live2.gen.error.${genError}`, { defaultValue: t("live2.gen.error.unknown", { code: genError }) })}
+            </p>
+          ) : null}
           <p className="inline-flex items-center gap-1.5 text-[11px] text-muted">
             <Robot weight="bold" className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {t("authoring2.draft.tierNote")}
@@ -1607,9 +1626,21 @@ function MonitorPanel({ state }: { state: AuthoringUIState }) {
     [records],
   );
 
+  // A published case is a faculty blueprint: "open" requests a NEW case with its
+  // presentation and difficulty through the model pipeline, never the stored case.
   const openCase = useCallback(
     (pub: PublishedCase) => {
-      navigate("/encounter", { state: { caseInstance: pub.caseInstance } });
+      navigate("/encounter", {
+        state: {
+          start: {
+            mode: "solo",
+            role: "doctor",
+            guidance: true,
+            chiefComplaint: complaintFamilyOf(pub.caseInstance),
+            difficulty: pub.caseInstance.difficulty,
+          },
+        },
+      });
     },
     [navigate],
   );
@@ -1735,7 +1766,7 @@ function StagePanel({
  * as a live, steppable pipeline over a REAL generated draft.
  *
  * The Blueprint stage takes a prompt (presentation family / specialty +
- * difficulty) and generates a fresh synthetic case with `generateCase`; every
+ * difficulty) and requests a fresh synthetic case from the model (v2 pipeline); every
  * downstream stage reflects that draft. Each AI-drafted fact must be grounded
  * and LOCKED before it can reach a learner, and publish stays disabled until
  * every fact is locked AND the AUTHENTICATED clinician (from profileStore, no

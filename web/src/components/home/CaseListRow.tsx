@@ -20,6 +20,8 @@ export interface CaseListRowProps {
   lang: Lang;
   /** Where the row navigates (defaults to the live encounter). */
   to?: string;
+  /** Router state for the target (the encounter request). */
+  state?: unknown;
 }
 
 /**
@@ -28,13 +30,14 @@ export interface CaseListRowProps {
  * the difficulty as a status dot, the estimate right-aligned, and the start
  * affordance at the end. Rows are hairline-divided by the parent list.
  */
-export function CaseListRow({ data, lang, to = "/encounter" }: CaseListRowProps) {
+export function CaseListRow({ data, lang, to = "/encounter", state }: CaseListRowProps) {
   const { t } = useTranslation();
   const caseRef = data.id.toUpperCase();
 
   return (
     <Link
       to={to}
+      state={state}
       className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-2.5 transition-colors duration-[120ms] hover:bg-surface-2 md:grid-cols-[6.5rem_minmax(0,1fr)_6.5rem_4rem_auto]"
     >
       <span className="hidden font-mono text-xs text-subtle md:block" aria-label={t("home2.caseCode")}>
@@ -43,7 +46,7 @@ export function CaseListRow({ data, lang, to = "/encounter" }: CaseListRowProps)
       <span className="min-w-0">
         <span className="block text-[0.8125rem] font-semibold leading-snug text-fg">{data.title[lang]}</span>
         <span className="block truncate text-xs text-muted">
-          {data.chiefComplaint[lang]} · {data.ageSex[lang]} · {data.setting[lang]} · {data.guidelineTag}
+          {[data.chiefComplaint[lang], data.ageSex[lang], data.setting[lang], data.guidelineTag].filter(Boolean).join(" · ")}
         </span>
       </span>
       <span className="hidden md:block">

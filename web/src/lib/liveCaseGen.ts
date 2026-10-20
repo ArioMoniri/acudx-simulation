@@ -1,28 +1,20 @@
 /**
- * AcuDx — liveCaseGen: bridge the pod backend's unlimited case generation into
- * the client CaseInstance model.
- *
- * The pod-side Model Gateway exposes POST /v1/case/generate, which samples an
- * ICD-11 / ICD-10 / DSM-5-TR presentation and returns a rich `GeneratedCaseSpec`
- * (generate -> RAG-ground -> verify -> instantiate, docs/00-overview/04 §3.2).
- * On CPU that call can take seconds→minutes, so the UI drives it asynchronously
- * with a progress state and ALWAYS has a graceful fallback: the INSTANT client
- * `generateCase` (src/domain/caseGen.ts) is the default path and the offline
- * safety net.
+ * AcuDx — liveCaseGen: the wire spec of a case generated on request by the model
+ * (server/orchestration/staged.py, `GeneratedCaseSpec` shape) and its adapter to the
+ * client CaseInstance model.
  *
  * `specToCaseInstance` maps the wire spec to a fully-valid `CaseInstance` reusing
- * the fhir.ts / caseGen.ts helpers (concept, curated codings, validateCase) and
- * gap-fills so the result ALWAYS passes `validateCase`. `fetchGeneratedCase`
- * POSTs to the gateway (via the existing backend lib's BACKEND_URL), adapts the
- * spec, and falls back to the instant generator on unavailable / slow / error.
- * Every path is abortable and never throws into the UI unless the caller itself
- * cancelled.
+ * the fhir.ts / caseGen.ts helpers (concept, curated codings, validateCase). Items of a
+ * staged case carry a stable `uid` (for example `history.presenting.1`), so a datum keeps
+ * its id when later layers of the same thread are merged into a running encounter.
+ *
+ * The retired v1 case client (template overlay, on-device fallback) is gone:
+ * every learner case comes from `POST /v2/case/generate/stream` (src/lib/caseSession.ts).
  *
  * Education only. Synthetic patients. No real patient data path.
  */
 
 import type { Bilingual, Lang } from "@/data/schema";
-import { BACKEND_URL, type BackendResult } from "@/lib/backend";
 import {
   concept,
   CODE_SYSTEMS,
@@ -40,13 +32,7 @@ import {
   type ObservationInterpretation,
   type Patient,
 } from "@/domain/fhir";
-import {
-  generateCase,
-  noteServedCase,
-  validateCase,
-  type ChiefComplaintFamily,
-  type GenerateCaseOptions,
-} from "@/domain/caseGen";
+import { validateCase } from "@/domain/caseGen";
 import { hashSeed, pickProfileForCase } from "@/domain/patientProfiles";
 import { catalogCodeFor } from "@/domain/orderables";
 import type {
@@ -66,7 +52,7 @@ import type {
 import type { VitalEffect, VitalKey } from "@/domain/treatments";
 
 /* -------------------------------------------------------------------------- */
-/* Wire shape — GeneratedCaseSpec (mirrors server /v1/case/generate)           */
+/* Wire shape — GeneratedCaseSpec (server staged v2 spec)                   */
 /* -------------------------------------------------------------------------- */
 
 export interface SpecCondition {
@@ -88,6 +74,8 @@ export interface SpecDemographics {
 }
 
 export interface SpecHpi {
+  /** Stable id of an item of a staged case (kept across layer merges). */
+  uid?: string;
   intent: string;
   answer_en: string;
   answer_tr: string;
@@ -97,6 +85,7 @@ export interface SpecHpi {
 }
 
 export interface SpecExam {
+  uid?: string;
   maneuver: string;
   system_en: string;
   system_tr: string;
@@ -119,6 +108,7 @@ export interface SpecTrajectoryPoint extends SpecVitals {
 }
 
 export interface SpecLab {
+  uid?: string;
   code: string;
   label_en: string;
   label_tr: string;
@@ -142,6 +132,7 @@ export interface SpecRedFlag {
 }
 
 export interface SpecImaging {
+  uid?: string;
   code: string;
   modality_en: string;
   modality_tr: string;
@@ -185,7 +176,7 @@ export interface SpecMeta {
   degraded?: boolean;
 }
 
-/** POST /v1/case/generate response. Fields are optional-tolerant on the client. */
+/** Generator spec meta. Fields are optional-tolerant on the client. */
 export interface GeneratedCaseSpec {
   seed?: number | string;
   locale?: string;
@@ -625,7 +616,7 @@ function buildHistory(pid: string, spec: GeneratedCaseSpec): HistoryItem[] {
   const items: HistoryItem[] = [];
   (spec.hpi ?? []).forEach((h, i) => {
     items.push({
-      id: `h-${pid}-${i}`,
+      id: `h-${pid}-${h.uid ?? i}`,
       intent: asIntent(h.intent),
       answer: bi(h.answer_en, h.answer_tr),
       ...(h.red_flag ? { redFlag: true } : {}),
@@ -670,7 +661,7 @@ function buildExam(pid: string, spec: GeneratedCaseSpec): ExamFinding[] {
     const abnormal = Boolean(e.abnormal);
     const observation: Observation = {
       resourceType: "Observation",
-      id: `obs-exam-${pid}-${i}`,
+      id: `obs-exam-${pid}-${e.uid ?? i}`,
       status: "final",
       category: "exam",
       code: concept(
@@ -687,7 +678,7 @@ function buildExam(pid: string, spec: GeneratedCaseSpec): ExamFinding[] {
       interpretation: abnormal ? "A" : "N",
       bodySystem: system,
     };
-    return { id: `e-${pid}-${i}`, maneuver, system, finding, abnormal, observation };
+    return { id: `e-${pid}-${e.uid ?? i}`, maneuver, system, finding, abnormal, observation };
   });
 }
 
@@ -700,7 +691,7 @@ function buildLabs(pid: string, spec: GeneratedCaseSpec): LabResult[] {
     const range = refRange(l.ref_low ?? undefined, l.ref_high ?? undefined);
     const observation: Observation = {
       resourceType: "Observation",
-      id: `obs-${pid}-${i}`,
+      id: `obs-${pid}-${l.uid ?? i}`,
       status: "final",
       category: asObsCategory(l.category),
       code: concept(
@@ -722,7 +713,7 @@ function buildLabs(pid: string, spec: GeneratedCaseSpec): LabResult[] {
         ? { referenceRange: `${range ?? ""}${range ? " · " : ""}${l.hours_post_ingestion} h post-ingestion` }
         : {}),
     };
-    return { id: `l-${pid}-${i}`, orderCode: code, observation };
+    return { id: `l-${pid}-${l.uid ?? i}`, orderCode: code, observation };
   });
 }
 
@@ -733,7 +724,7 @@ function buildImaging(pid: string, spec: GeneratedCaseSpec): ImagingResult[] {
     const isCardiac = /ecg|ekg|cardio|kardiy/i.test(`${code} ${modality.en}`);
     const report: DiagnosticReport = {
       resourceType: "DiagnosticReport",
-      id: `rep-${pid}-${i}`,
+      id: `rep-${pid}-${im.uid ?? i}`,
       status: "final",
       category: isCardiac ? "cardiology" : "imaging",
       code: concept(
@@ -750,7 +741,7 @@ function buildImaging(pid: string, spec: GeneratedCaseSpec): ImagingResult[] {
         ? bi(im.image_query_en, im.image_query_tr)
         : undefined;
     return {
-      id: `i-${pid}-${i}`,
+      id: `i-${pid}-${im.uid ?? i}`,
       orderCode: code,
       modality,
       report,
@@ -1032,152 +1023,4 @@ function gapFill(c: CaseInstance): CaseInstance {
     );
   }
   return fixed;
-}
-
-/* -------------------------------------------------------------------------- */
-/* fetchGeneratedCase — backend POST with instant-client fallback              */
-/* -------------------------------------------------------------------------- */
-
-export interface GeneratedCaseConstraints {
-  locale: Lang;
-  difficulty?: 1 | 2 | 3 | 4 | 5;
-  /** Chief-complaint family (shared with the instant generator). */
-  complaint?: ChiefComplaintFamily | null;
-  /** Optional specialty facet (backend sampling hint). */
-  specialty?: string | null;
-  /** Optional coded-system preference for the backend sampler. */
-  system?: "icd10" | "icd11" | "dsm5tr" | null;
-  /** Explicit numeric seed for reproducibility. */
-  seed?: number;
-}
-
-export interface FetchGeneratedOptions {
-  /** Cancel the request (e.g. component unmount / user cancel). */
-  signal?: AbortSignal;
-  /** Override the (generous) default timeout. */
-  timeoutMs?: number;
-}
-
-export type GeneratedSource = "ai" | "template" | "local";
-
-export interface FetchGeneratedResult {
-  case: CaseInstance;
-  /** How the case was produced: backend AI, backend template, or local fallback. */
-  source: GeneratedSource;
-  degraded: boolean;
-  meta?: SpecMeta;
-}
-
-// The pod model is CPU-bound (seconds→minutes); keep it bounded but generous.
-const GENERATE_TIMEOUT_MS = 120_000;
-
-/** Reason string for a failed / aborted fetch, without leaking internals. */
-function reasonFor(err: unknown): string {
-  if (err instanceof DOMException && err.name === "AbortError") return "timeout";
-  if (err instanceof TypeError) return "network";
-  if (err instanceof Error && err.message) return err.message.slice(0, 120);
-  return "unknown";
-}
-
-async function requestGenerate(
-  constraints: GeneratedCaseConstraints,
-  timeoutMs: number,
-  external?: AbortSignal,
-): Promise<BackendResult<GeneratedCaseSpec>> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  if (external) {
-    if (external.aborted) controller.abort();
-    else external.addEventListener("abort", () => controller.abort(), { once: true });
-  }
-
-  const body: Record<string, unknown> = { locale: constraints.locale };
-  if (constraints.difficulty) body.difficulty = constraints.difficulty;
-  if (constraints.complaint) {
-    body.complaint = constraints.complaint;
-    body.chief_complaint = constraints.complaint;
-  }
-  if (constraints.specialty) body.specialty = constraints.specialty;
-  if (constraints.system) body.system = constraints.system;
-  if (typeof constraints.seed === "number") body.seed = constraints.seed;
-
-  try {
-    const res = await fetch(`${BACKEND_URL}/v1/case/generate`, {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    if (!res.ok) return { ok: false, error: `http_${res.status}`, status: res.status };
-    const data = (await res.json()) as GeneratedCaseSpec;
-    return { ok: true, data };
-  } catch (err) {
-    return { ok: false, error: reasonFor(err) };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function fallbackOptions(c: GeneratedCaseConstraints): GenerateCaseOptions {
-  const base = {
-    locale: c.locale,
-    ...(c.difficulty ? { difficulty: c.difficulty } : {}),
-    ...(typeof c.seed === "number" ? { seed: c.seed } : {}),
-  };
-  return c.complaint
-    ? { seedMode: "constrained", chiefComplaint: c.complaint, ...base }
-    : { seedMode: "random", ...base };
-}
-
-/**
- * Generate a case from the pod backend, with the instant client as the fallback.
- * Returns the case AND its provenance (ai / template / local) so the UI can
- * surface the source. Resolves from the instant generator on any backend
- * unavailability, slowness, error, or malformed spec. Re-raises only when the
- * CALLER aborted (so a user-cancel does not silently produce a case).
- */
-export async function generateCaseFromBackend(
-  constraints: GeneratedCaseConstraints,
-  opts: FetchGeneratedOptions = {},
-): Promise<FetchGeneratedResult> {
-  const res = await requestGenerate(
-    constraints,
-    opts.timeoutMs ?? GENERATE_TIMEOUT_MS,
-    opts.signal,
-  );
-
-  if (res.ok) {
-    try {
-      const instance = specToCaseInstance(res.data);
-      const meta = res.data.meta;
-      const source: GeneratedSource = meta?.source === "template" ? "template" : "ai";
-      // Feed the shared anti-repeat memory so a following LOCAL fallback draw
-      // does not repeat the diagnosis / patient the backend just served.
-      noteServedCase(
-        instance.correctDiagnosis.code.coding[0]?.code,
-        instance.patient.name,
-      );
-      return { case: instance, source, degraded: Boolean(meta?.degraded), meta };
-    } catch {
-      // Malformed spec — fall through to the local generator below.
-    }
-  } else if (opts.signal?.aborted) {
-    // The caller cancelled — propagate rather than fabricating a case.
-    throw new DOMException("Aborted", "AbortError");
-  }
-
-  const local = generateCase(fallbackOptions(constraints));
-  return { case: local, source: "local", degraded: false };
-}
-
-/**
- * fetchGeneratedCase — POST /v1/case/generate, adapt to a CaseInstance, and fall
- * back to the INSTANT client generator on unavailable / slow / error. Abortable.
- */
-export async function fetchGeneratedCase(
-  constraints: GeneratedCaseConstraints,
-  opts: FetchGeneratedOptions = {},
-): Promise<CaseInstance> {
-  const result = await generateCaseFromBackend(constraints, opts);
-  return result.case;
 }

@@ -31,8 +31,8 @@ import {
   type FloorEvent,
   type FloorEventKind,
 } from "@/data/rooms";
-import type { Bilingual, Lang } from "@/data/schema";
-import { generateCase, type ChiefComplaintFamily } from "@/domain/caseGen";
+import type { Bilingual } from "@/data/schema";
+import type { ChiefComplaintFamily } from "@/domain/caseGen";
 import type { CaseInstance } from "@/domain/case";
 import { registerRoomCase } from "./roomCaseStore";
 import {
@@ -69,6 +69,8 @@ export interface RoomRuntime {
    * from `caseId`).
    */
   caseInstance?: CaseInstance;
+  /** Generation thread of that case (server/orchestration CaseStore). */
+  threadId?: string;
 }
 
 interface StoreState {
@@ -418,6 +420,7 @@ function applyRemoteSnapshot(channel: string, raw: unknown): void {
       mine: deriveMine(wire.room),
       loopsClosedByMe: prev?.loopsClosedByMe ?? 0,
       caseInstance: wire.caseInstance ?? prev?.caseInstance,
+      threadId: wire.room.threadId ?? prev?.threadId,
     };
     const order = state.order.includes(id) ? state.order : [id, ...state.order];
     state = { order, runtimes: { ...state.runtimes, [id]: merged } };
@@ -460,29 +463,21 @@ export function familyForSeedCase(caseId: string): ChiefComplaintFamily | undefi
 /* Actions — lobby                                                             */
 /* -------------------------------------------------------------------------- */
 
-/** Create a room from the dialog config and return its new id. */
+/**
+ * Create a room around the case generated on request for it (the host requested it
+ * through the v2 pipeline before calling this) and return the new room id.
+ */
 export function createRoom(config: {
   caseId: string;
   humanRoles: ClinicalRole[];
   aiBackfill: boolean;
   locale?: RoomLocale;
-  /** Chief-complaint family to constrain generation to (from the dialog). */
-  family?: ChiefComplaintFamily;
-  /** A pre-generated case (else one is minted here). */
-  caseInstance?: CaseInstance;
+  /** The case generated on request for this room, and its generation thread. */
+  caseInstance: CaseInstance;
+  threadId: string;
 }): string {
-  const locale = (config.locale ?? "tr") as Lang;
-  // Each room runs a fresh, UNIQUE generated case (not a fixed seed), matched to
-  // the presentation family the host chose. Carried in the snapshot so every
-  // member shares the same patient.
-  const family = config.family ?? familyForSeedCase(config.caseId);
-  const caseInstance: CaseInstance =
-    config.caseInstance ??
-    generateCase(
-      family
-        ? { seedMode: "constrained", chiefComplaint: family, locale }
-        : { seedMode: "random", locale },
-    );
+  // Carried in the snapshot so every member shares the same patient.
+  const caseInstance: CaseInstance = config.caseInstance;
   const chiefComplaint: Bilingual = caseInstance.chiefComplaint;
 
   // Deterministic id from the shared join code so a device that joins by code
@@ -501,6 +496,7 @@ export function createRoom(config: {
     // Keep the seed template id so the solo history interview stays coherent;
     // the collaborative store uses the generated case via the registry.
     caseId: config.caseId,
+    threadId: config.threadId,
     chiefComplaint,
     status: "open",
     locale: config.locale ?? "tr",
@@ -521,6 +517,7 @@ export function createRoom(config: {
     mine,
     loopsClosedByMe: 0,
     caseInstance,
+    threadId: config.threadId,
   };
   state = {
     order: [id, ...state.order],
@@ -532,6 +529,23 @@ export function createRoom(config: {
   connect(id, joinCode);
   broadcast(id);
   return id;
+}
+
+/**
+ * Attach the case generated on request for a room entered without one (a lobby room
+ * opened for the first time). Shared with every member through the snapshot.
+ */
+export function attachRoomCase(id: string, caseInstance: CaseInstance, threadId: string): void {
+  const rt = state.runtimes[id];
+  if (!rt || rt.caseInstance) return;
+  const room = { ...rt.room, threadId, chiefComplaint: caseInstance.chiefComplaint, acuityESI: caseInstance.acuityESI };
+  state = {
+    ...state,
+    runtimes: { ...state.runtimes, [id]: { ...rt, room, caseInstance, threadId } },
+  };
+  registerRoomCase(id, caseInstance);
+  emit();
+  broadcast(id);
 }
 
 /** The first seat a teammate can take (an open seat, else an AI-held one). */

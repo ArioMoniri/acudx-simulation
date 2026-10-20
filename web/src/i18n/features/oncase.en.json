@@ -1,0 +1,59 @@
+{
+  "oncase": {
+    "phase": {
+      "requesting": "Requesting a case",
+      "writing": "Writing the opening",
+      "playable": "Opening ready"
+    },
+    "elapsed": "{{seconds}} s",
+    "elapsedEta": "{{seconds}} s of about {{eta}} s",
+    "preview": {
+      "label": "Opening so far",
+      "complaint": "Complaint",
+      "age": "Age",
+      "sex": "Sex",
+      "triage": "Triage note",
+      "vitals": "Triage vitals"
+    },
+    "layers": {
+      "label": "Being written for this patient",
+      "pending": "{{layer}} is being written for this patient",
+      "failed": "{{layer}} could not be written",
+      "retry": "Retry",
+      "name": {
+        "history": "History",
+        "exam": "Examination",
+        "treatments": "Treatment table",
+        "results": "Results",
+        "debrief": "Debrief",
+        "event": "Bedside event"
+      }
+    },
+    "unavailable": {
+      "title": "The case generator is not reachable",
+      "body": "Cases are generated on request by the model. No case can be started until it is reachable.",
+      "retry": "Check again"
+    },
+    "request": {
+      "title": "Request a case",
+      "hint": "Every case is generated for you by the model when you ask, and it changes with what you do.",
+      "submit": "Generate a fresh case",
+      "complaint": "Chief complaint",
+      "any": "Any complaint",
+      "difficulty": "Difficulty"
+    },
+    "history": {
+      "title": "Your encounters",
+      "empty": "No encounters yet. Every case you request appears here.",
+      "unavailable": "Your encounter history is not available right now.",
+      "row": "{{complaint}}, {{age}} {{sex}}",
+      "esi": "ESI {{esi}}",
+      "committed": "diagnosis committed",
+      "open": "in progress"
+    },
+    "recommended": {
+      "hint": "A fresh case is written when you open one of these.",
+      "row": "{{family}}, difficulty {{difficulty}}"
+    }
+  }
+}
