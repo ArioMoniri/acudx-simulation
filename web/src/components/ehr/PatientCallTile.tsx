@@ -231,10 +231,12 @@ export function PatientCallTile({
         setTavusUrl(ses.data.conversation_url);
         avatarRef.current = {
           session: ses.data,
-          metrics: { prepareMs: null, answerMs: null, firstFrameMs: null, speechStartMs: null, lipLagMs: null, ttsMs: null, provider: "tavus" },
+          metrics: { prepareMs: null, answerMs: null, firstFrameMs: null, speechStartMs: null, lipLagMs: null, ttsMs: null, firstAudioMs: null, provider: "tavus" },
           samples: [],
+          lastSpeak: null,
           speak: async () => false,
-          stats: async () => ({ audioPackets: 0, audioEnergy: 0, videoFrames: 0, videoFps: null, rttMs: null }),
+          stats: async () => ({ audioPackets: 0, audioEnergy: 0, videoFrames: 0, videoFps: null, rttMs: null,
+            audioJitterMs: null, videoJitterMs: null }),
           end: () => void voiceApi.avatarEnd(ses.data.session_id),
         };
         setMode("tavus");

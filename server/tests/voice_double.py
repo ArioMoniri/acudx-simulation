@@ -73,6 +73,27 @@ def build_worker_double(sc: WorkerScenario) -> FastAPI:
 
         return StreamingResponse(gen(), media_type="audio/wav")
 
+    @app.post("/tts/v1/audio/speech/stream")
+    async def speech_stream(request: Request, authorization: str | None = Header(default=None)):
+        """Chatterbox ``/speech/stream``: a WAV header with an unknown size, then PCM per text chunk."""
+        _auth(authorization)
+        body = await request.json()
+        sc.tts_calls.append({**body, "_route": "stream"})
+        if sc.tts_status != 200:
+            raise HTTPException(status_code=sc.tts_status, detail="tts failed")
+        audio = wav_bytes()
+        header = bytearray(audio[:44])
+        header[4:8] = (0xFFFFFFFF).to_bytes(4, "little")
+        header[40:44] = (0xFFFFFFFF).to_bytes(4, "little")
+        pcm = audio[44:]
+
+        async def gen():
+            yield bytes(header[:30])          # a header split across chunks
+            yield bytes(header[30:]) + pcm[:1001]
+            yield pcm[1001:]
+
+        return StreamingResponse(gen(), media_type="audio/wav")
+
     @app.post("/stt/v1/audio/transcriptions")
     async def transcriptions(file: UploadFile = File(...), model: str = Form(...),
                              language: str | None = Form(default=None),

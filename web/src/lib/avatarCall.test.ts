@@ -28,14 +28,23 @@ describe("resample", () => {
   it("puts irregular samples on a fixed grid", () => {
     const out = resample(
       [
-        { t: 0, rms: 0.1, motion: 1 },
-        { t: 35, rms: 0.2, motion: 2 },
-        { t: 90, rms: 0.3, motion: 3 },
+        { t: 0, rms: 0.1, motion: 1, open: 10 },
+        { t: 35, rms: 0.2, motion: 2, open: 20 },
+        { t: 90, rms: 0.3, motion: 3, open: 30 },
       ],
       40,
     );
     expect(out.rms).toEqual([0.1, 0.2, 0.2]);
     expect(out.motion).toEqual([1, 2, 2]);
+    expect(out.open).toEqual([10, 20, 20]);
+  });
+
+  it("openness recovers the lag of the mouth behind the voice", () => {
+    // Uneven syllables (as in speech); the mouth opens 2 steps (80 ms) after the voice.
+    const env = Array.from({ length: 120 }, (_, i) => Math.max(0, Math.sin((i / (6 + (i % 17) / 4)) * Math.PI)));
+    const open = env.map((_, i) => (i >= 2 ? env[i - 2] : 0));
+    expect(crossCorrelationLag(env, open, 40)).toBe(80);
+    expect(crossCorrelationLag(open, env, 40)).toBe(-80);
   });
 });
 
@@ -65,6 +74,14 @@ describe("sessionBody and mouthRegion", () => {
     const r = mouthRegion();
     expect(r.y).toBeGreaterThan(0.5);
     expect(r.x + r.w).toBeLessThanOrEqual(1);
+  });
+
+  it("places the mouth box from the runner's face box when the session has it", () => {
+    const r = mouthRegion({ face_box: [100, 100, 300, 400], width: 400, height: 500 });
+    expect(r.x).toBeCloseTo(160 / 400);
+    expect(r.y).toBeCloseTo(286 / 500);
+    expect(r.w).toBeCloseTo(80 / 400);
+    expect(r.h).toBeCloseTo(90 / 500);
   });
 });
 

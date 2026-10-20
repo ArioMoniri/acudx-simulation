@@ -38,6 +38,9 @@ class TtsRequest:
     model: str | None = None       # provider model id; adapters fall back to their default
     output_format: str = "mp3"     # "mp3" | "wav"
     speed: float = 1.0
+    # Ask for incremental audio (the live call forwards each chunk as it arrives): adapters use the
+    # provider's streaming route when it has a separate one (Chatterbox ``/v1/audio/speech/stream``).
+    stream: bool = False
 
 
 @dataclass
@@ -48,6 +51,7 @@ class TtsStream:
     chunks: AsyncIterator[bytes]
     model: str
     duration_ms: int | None = None   # known up front only for WAV (header) or vendor metadata
+    sample_rate: int | None = None   # raw PCM streams (ElevenLabs ``pcm_24000``) carry no header
 
 
 @dataclass(frozen=True)

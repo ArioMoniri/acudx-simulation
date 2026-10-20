@@ -706,3 +706,50 @@ async def test_stop_cancels_the_inflight_readiness_wait_so_a_new_launch_is_not_b
         assert "terminated" in str(exc.value) or "terminating" in str(exc.value)
     finally:
         await m.aclose()
+
+
+# --- live call follow-ups (docs/architecture/18 6.3, 2026-10-20) ------------ #
+
+def test_chatterbox_keeps_pkg_resources_for_the_perth_watermarker():
+    """Workers 2 and 3: Chatterbox /health 200 with "'NoneType' object is not callable". resemble-perth
+    1.0.1 imports pkg_resources (gone in setuptools 82) and sets PerthImplicitWatermarker = None."""
+    dockerfile = _written("/chatterbox.Dockerfile")
+    assert '"setuptools==80.9.0"' in dockerfile and 'echo "setuptools==80.9.0" >> /app/torch-constraints.txt' in dockerfile
+    pin_at = dockerfile.index('"setuptools==80.9.0"')
+    assert pin_at < dockerfile.index("chatterbox-multilingual.git@")
+    assert "sys.exit(0 if perth.PerthImplicitWatermarker else 1)" in dockerfile
+
+
+def test_public_443_is_an_sni_router_for_turn_over_tls_and_caddy():
+    edge = _written("/edge.conf")
+    assert "ssl_preread on;" in edge and "listen 443;" in edge
+    assert "~\\bacme-tls/1\\b 1;" in edge and "~^1: 127.0.0.1:8443;" in edge
+    assert "~^0:turn\\. 127.0.0.1:5349;" in edge and "default 127.0.0.1:8443;" in edge
+    services = _compose()["services"]
+    assert services["edge"]["image"] == "nginx:1.30.6-alpine" and services["edge"]["network_mode"] == "host"
+    assert services["caddy"]["ports"] == ["127.0.0.1:8443:8443"]
+    caddy = _written("/Caddyfile")
+    assert "https_port 8443" in caddy and caddy.count("alt_tlsalpn_port 8443") == 2
+    assert "turn.{$WORKER_DOMAIN} {" in caddy
+    turn = services["turn"]
+    assert "${TURN_TLS_ARGS:---no-tls}" in turn["command"] and "/opt/acudx/turn-tls:/tls:ro" in turn["volumes"]
+    # coturn 4.18 exits 255 on the unknown flag --no-dtls (DTLS is off unless --dtls is given).
+    assert "--no-dtls" not in turn["command"]
+    avatar_sh = _written("/avatar.sh")
+    assert 'TURN_TLS_ARGS="--tls-listening-port=5349 --cert=/tls/turn.crt --pkey=/tls/turn.key"' in avatar_sh
+    assert avatar_sh.index("TURN_TLS_ARGS=") < avatar_sh.index("$compose up -d turn avatar")
+    runcmd = "\n".join(_cloud_init()["runcmd"])
+    assert "docker compose up -d edge caddy" in runcmd
+
+
+def test_avatar_runner_streams_audio_bounds_latency_and_reports_calls():
+    runner = _written("/acudx_avatar_server.py")
+    for route in ('add_get("/stream", stream_audio)', 'add_get("/turn_check", turn_check)',
+                  'add_post("/humanaudio", humanaudio)'):
+        assert route in runner
+    assert "mt.MuseReal.render = _render" in runner and "sess.asr.feat_queue = queue.Queue(maxsize=1)" in runner
+    assert "soxr.ResampleStream" in runner and "BORDER_REPLICATE" in runner and "BORDER_REFLECT_101" in runner
+    assert "cv2.BORDER_REPLICATE)\n" not in runner.split("def extend_portrait")[0]
+    env = _compose()["services"]["avatar"]["environment"]
+    assert "AVATAR_BATCH_SIZE=4" in env and "AVATAR_AHEAD_FRAMES=10" in env and "TURN_SECRET=${TURN_SECRET}" in env
+    compile(runner, "acudx_avatar_server.py", "exec")

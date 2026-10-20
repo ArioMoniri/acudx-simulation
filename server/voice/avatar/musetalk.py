@@ -7,13 +7,18 @@ container behind Caddy at ``/avatar/*`` (bearer required) plus a coturn TURN ser
 * ``PUT  /avatar/avatars/{id}``  the case portrait (``web/public/patients/<photo>.jpg``) becomes
                                 the reference face: MuseTalk latents, face box, blend mask;
 * ``POST /avatar/offer``         the browser's SDP offer (proxied, never the bearer) -> answer;
-* ``POST /avatar/humanaudio``    the patient's TTS audio (Chatterbox or ElevenLabs, synthesized
-                                by :class:`~server.voice.service.VoiceService`) is lip-synced and
-                                streamed on the same WebRTC connection, audio and video together;
+* ``GET  /avatar/stream``        WebSocket: the patient's TTS audio (Chatterbox or ElevenLabs,
+                                synthesized by :class:`~server.voice.service.VoiceService`) as raw
+                                16-bit PCM chunks while it is generated; the runner lip-syncs from
+                                the first 20 ms and streams voice and face on the same WebRTC
+                                connection (:class:`RunnerAudioLink`);
+* ``POST /avatar/humanaudio``    the whole-file fallback (MP3, or a runner without ``/stream``);
 * ``POST /avatar/close``         end the runner session;
 * ``GET  /avatar/health``        model, sessions, VRAM, measured inference fps.
 
 Media never passes through the gateway: the browser reaches the worker's TURN server
+(UDP and TCP on 3478, and TLS on 443 at ``turn.<domain>`` for networks that only allow HTTPS;
+the worker's nginx SNI router hands that name to coturn and everything else to Caddy)
 with short-lived TURN REST credentials (``username = "<expiry>:<session>"``,
 ``credential = base64(HMAC-SHA1(secret, username))``, the coturn ``use-auth-secret``
 scheme), where the secret is derived from the worker token the same way the boot
@@ -28,19 +33,28 @@ say "disabled on this 40 GB card" instead of a bare 502.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import hmac
+import json
+import logging
 import re
 import time
-from dataclasses import dataclass
+import urllib.request
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, AsyncIterator, Callable
+from urllib.parse import urlparse
 
 import httpx
 
+log = logging.getLogger("acudx.voice.avatar")
+
 TURN_SECRET_LABEL = b"acudx-turn-v1"
 TURN_PORT = 3478
+TURN_TLS_PORT = 443
+TURN_TLS_HOST_PREFIX = "turn."
 TURN_TTL_S = 2 * 60 * 60
 HEALTH_PATH = "/avatar/health"
 STATUS_PATH = "/avatar-status/status.json"
@@ -101,16 +115,19 @@ def turn_credentials(secret: str, session_id: str, *, ttl_s: int = TURN_TTL_S,
 
 def ice_servers(worker: WorkerAvatar, session_id: str, *, override_urls: list[str] | None = None,
                 now: float | None = None) -> list[dict[str, Any]]:
-    """RTCIceServer list for the browser: the worker's TURN over UDP and TCP.
+    """RTCIceServer list for the browser: the worker's TURN over UDP, TCP and TLS on 443.
 
-    ``override_urls`` (``AVATAR_TURN_URLS``) replaces the URLs, for deployments that front
-    the TURN port elsewhere (a TLS terminator on 443, or a local tunnel in a test harness);
-    the credentials stay the worker's.
+    The browser gathers relay candidates from every URL at once and ICE keeps a pair that
+    works, so a learner behind an HTTPS-only proxy or a UDP-blocking firewall falls back to
+    ``turns:turn.<domain>:443`` without any client logic. ``override_urls``
+    (``AVATAR_TURN_URLS``) replaces the URLs, for deployments that front the TURN port
+    elsewhere (or a local tunnel in a test harness); the credentials stay the worker's.
     """
     username, credential = turn_credentials(turn_secret(worker.token), session_id, now=now)
     urls = list(override_urls) if override_urls else [
         f"turn:{worker.domain}:{TURN_PORT}?transport=udp",
         f"turn:{worker.domain}:{TURN_PORT}?transport=tcp",
+        f"turns:{TURN_TLS_HOST_PREFIX}{worker.domain}:{TURN_TLS_PORT}?transport=tcp",
     ]
     return [{"urls": urls, "username": username, "credential": credential}]
 
@@ -169,7 +186,16 @@ async def ensure_avatar(client: httpx.AsyncClient, worker: WorkerAvatar, avatar_
     """Prepare the reference face once per worker (the runner keeps it on disk)."""
     r = await client.get(worker.origin + "/avatar/avatars", headers=worker.headers(), timeout=10.0)
     if r.status_code == 200 and avatar_id in (await _json(r)).get("avatars", []):
-        return {"avatar_id": avatar_id, "prepared": False}
+        out: dict[str, Any] = {"avatar_id": avatar_id, "prepared": False}
+        # Frame size and face box for the browser's lip-sync meter (older runners answer 404/405).
+        try:
+            g = await client.get(worker.origin + f"/avatar/avatars/{avatar_id}", headers=worker.headers(), timeout=10.0)
+            if g.status_code == 200:
+                info = await _json(g)
+                out.update({k: info[k] for k in ("face_box", "width", "height", "idle_frames") if info.get(k) is not None})
+        except httpx.HTTPError:
+            pass
+        return out
     r = await client.put(worker.origin + f"/avatar/avatars/{avatar_id}", content=image,
                          headers={**worker.headers(), "Content-Type": "image/jpeg"}, timeout=120.0)
     body = await _json(r)
@@ -180,9 +206,11 @@ async def ensure_avatar(client: httpx.AsyncClient, worker: WorkerAvatar, avatar_
 
 
 async def offer(client: httpx.AsyncClient, worker: WorkerAvatar, *, sdp: str, sdp_type: str,
-                avatar_id: str) -> dict[str, Any]:
-    r = await client.post(worker.origin + "/avatar/offer", headers=worker.headers(),
-                          json={"sdp": sdp, "type": sdp_type, "avatar": avatar_id}, timeout=60.0)
+                avatar_id: str, tuning: dict[str, int] | None = None) -> dict[str, Any]:
+    payload: dict[str, Any] = {"sdp": sdp, "type": sdp_type, "avatar": avatar_id}
+    if tuning:
+        payload["tuning"] = tuning
+    r = await client.post(worker.origin + "/avatar/offer", headers=worker.headers(), json=payload, timeout=60.0)
     body = await _json(r)
     if r.status_code != 200 or not body.get("sdp") or not body.get("sessionid"):
         raise AvatarWorkerError(r.status_code, str(body.get("error") or body.get("msg") or body))
@@ -210,3 +238,174 @@ async def close(client: httpx.AsyncClient, worker: WorkerAvatar, worker_session:
                           json={"sessionid": worker_session}, timeout=10.0)
     except httpx.HTTPError:
         pass
+
+
+async def turn_check(client: httpx.AsyncClient, worker: WorkerAvatar) -> dict[str, Any]:
+    """The runner's own TURN Allocate against the worker's public endpoints (TLS 443 included)."""
+    r = await client.get(worker.origin + "/avatar/turn_check", headers=worker.headers(), timeout=40.0)
+    body = await _json(r)
+    body.setdefault("http_status", r.status_code)
+    return body
+
+
+def call_capacity(h: dict[str, Any], *, gateway_limit: int, gateway_pending: int) -> dict[str, Any]:
+    """Calls this worker can take: the lower of the gateway's per-worker limit and the runner's own
+    ``max_sessions``; active = the runner's connected calls plus the gateway's calls still being set
+    up (portrait preparation, ICE), which the runner counts only once their offer arrives."""
+    runner_max = h.get("max_sessions")
+    limit = int(gateway_limit)
+    if isinstance(runner_max, int) and runner_max > 0:
+        limit = min(limit, runner_max)
+    active = int(h.get("sessions") or 0) + int(gateway_pending)
+    return {"max_calls": limit, "active_calls": active, "calls_available": max(0, limit - active)}
+
+
+# --------------------------------------------------------------------------- #
+# Streaming audio in                                                            #
+# --------------------------------------------------------------------------- #
+class PcmStream:
+    """Incremental WAV / raw PCM parser: ``feed(bytes)`` returns the sample bytes seen so far.
+
+    Streaming servers write a RIFF header with a data size of 0 or 0xFFFFFFFF (Chatterbox
+    ``/speech/stream``), so the header is parsed up to the ``data`` chunk and every later byte
+    is sample data. Raw ``audio/pcm`` (ElevenLabs ``pcm_24000``) has no header and a known rate.
+    Only 16-bit mono is forwarded (``supported``); anything else takes the whole-file upload.
+    """
+
+    def __init__(self, content_type: str, *, sample_rate: int | None = None):
+        self.raw = content_type == "audio/pcm"
+        self.sample_rate: int | None = (sample_rate or 24000) if self.raw else None
+        self.channels = 1
+        self.bits = 16
+        self.ready = self.raw
+        self._head = b""
+
+    @property
+    def supported(self) -> bool:
+        return self.bits == 16 and self.channels == 1
+
+    def feed(self, chunk: bytes) -> bytes:
+        if self.ready:
+            return chunk
+        self._head += chunk
+        h = self._head
+        if len(h) < 12:
+            return b""
+        if h[:4] != b"RIFF" or h[8:12] != b"WAVE":
+            raise ValueError("not a WAV stream")
+        pos = 12
+        while pos + 8 <= len(h):
+            cid = h[pos:pos + 4]
+            size = int.from_bytes(h[pos + 4:pos + 8], "little")
+            if cid == b"fmt ":
+                if pos + 24 > len(h):
+                    return b""
+                self.channels = int.from_bytes(h[pos + 10:pos + 12], "little")
+                self.sample_rate = int.from_bytes(h[pos + 12:pos + 16], "little")
+                self.bits = int.from_bytes(h[pos + 22:pos + 24], "little")
+            elif cid == b"data":
+                self.ready = True
+                self._head = b""
+                return h[pos + 8:]
+            pos += 8 + size + (size & 1)
+        return b""
+
+
+def _ws_url(worker: WorkerAvatar, path: str) -> str:
+    u = urlparse(worker.origin)
+    return f"{'wss' if u.scheme == 'https' else 'ws'}://{u.netloc}{path}"
+
+
+def _is_ws_error(exc: BaseException) -> bool:
+    return type(exc).__module__.startswith("websockets")
+
+
+async def ws_connect(url: str, headers: dict[str, str], timeout_s: float) -> Any:
+    """Open a client WebSocket (``websockets``, a uvicorn[standard] dependency) through
+    ``HTTPS_PROXY`` for a remote worker, directly for a NO_PROXY host (a local runner)."""
+    import websockets  # noqa: PLC0415 - only needed for live calls
+
+    kw: dict[str, Any] = {"proxy": None} if urllib.request.proxy_bypass(urlparse(url).hostname or "") else {}
+    return await asyncio.wait_for(websockets.connect(url, additional_headers=headers, max_size=1 << 20,
+                                                     ping_interval=20, open_timeout=timeout_s, **kw),
+                                  timeout=timeout_s + 2)
+
+
+@dataclass
+class RunnerAudioLink:
+    """One WebSocket per call to the runner's ``/avatar/stream``, opened once and reused for every
+    patient line (the handshake costs a few round trips; a spoken line should not pay them)."""
+
+    worker: WorkerAvatar
+    worker_session: str
+    connect_timeout_s: float = 10.0
+    connect_ms: float | None = None
+    _ws: Any = None
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    async def _connect(self) -> Any:
+        t0 = time.monotonic()
+        ws = await ws_connect(_ws_url(self.worker, "/avatar/stream"), self.worker.headers(), self.connect_timeout_s)
+        self.connect_ms = round((time.monotonic() - t0) * 1000.0, 1)
+        return ws
+
+    def _open(self) -> bool:
+        return self._ws is not None and getattr(self._ws, "close_code", None) is None
+
+    async def ensure(self) -> None:
+        """Open the socket ahead of the first line (called right after the offer)."""
+        async with self._lock:
+            if not self._open():
+                self._ws = await self._connect()
+
+    async def utterance(self, pcm: AsyncIterator[bytes], sample_rate: int, *, interrupt: bool = False,
+                        on_first_chunk: Callable[[], None] | None = None) -> dict[str, Any]:
+        """Send one line: begin, each PCM chunk as it arrives, end; return the runner's stats."""
+        async with self._lock:
+            try:
+                if not self._open():
+                    self._ws = await self._connect()
+                ws = self._ws
+                await ws.send(json.dumps({"type": "begin", "sessionid": self.worker_session,
+                                          "sample_rate": int(sample_rate), "interrupt": interrupt}))
+                sent = 0
+                async for chunk in pcm:
+                    if not chunk:
+                        continue
+                    if sent == 0 and on_first_chunk is not None:
+                        on_first_chunk()
+                    await ws.send(chunk)
+                    sent += len(chunk)
+                await ws.send(json.dumps({"type": "end"}))
+                deadline = time.monotonic() + 30.0
+                while True:
+                    raw = await asyncio.wait_for(ws.recv(), timeout=max(0.1, deadline - time.monotonic()))
+                    if isinstance(raw, bytes):
+                        continue
+                    msg = json.loads(raw)
+                    if msg.get("type") == "done":
+                        return {**msg, "bytes_sent": sent}
+                    if msg.get("type") == "error":
+                        raise AvatarWorkerError(409, str(msg.get("error")))
+            except AvatarWorkerError:
+                raise
+            except (OSError, asyncio.TimeoutError, ValueError) as exc:
+                await self._drop()
+                raise AvatarWorkerError(502, f"audio stream: {type(exc).__name__}") from exc
+            except Exception as exc:
+                if _is_ws_error(exc):
+                    await self._drop()
+                    raise AvatarWorkerError(502, f"audio stream: {type(exc).__name__}") from exc
+                raise
+
+    async def _drop(self) -> None:
+        ws, self._ws = self._ws, None
+        if ws is not None:
+            try:
+                await ws.close()
+            except Exception:  # noqa: BLE001 - best effort
+                pass
+
+    async def close(self) -> None:
+        async with self._lock:
+            await self._drop()

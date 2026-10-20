@@ -89,6 +89,26 @@ async def gpu_boot_log(request: Request, tail: int = 200, worker_id: int | None 
     return {**stored, "live_error": live.get("error")} if stored else live
 
 
+@router.get("/gpu/turn-check", dependencies=[Depends(require_admin)])
+async def gpu_turn_check(request: Request) -> dict[str, Any]:
+    """TURN Allocate from inside the ready worker against its public TURN URLs (UDP and TCP on
+    3478, TLS on 443 with the certificate and host name verified): proof that a browser behind an
+    HTTPS-only proxy has a relay path. 409 when no worker is ready."""
+    from server.voice.avatar import musetalk as mt  # noqa: PLC0415 - voice is optional for the GPU admin
+
+    worker = mt.worker_from_endpoint(_manager(request).llm_endpoint())
+    if worker is None:
+        raise HTTPException(status_code=409, detail={"reason": "no_ready_worker"})
+    svc = getattr(request.app.state, "voice", None)
+    client = svc.client if svc is not None else None
+    if client is None:
+        raise HTTPException(status_code=503, detail={"reason": "voice service is not wired"})
+    try:
+        return await mt.turn_check(client, worker)
+    except Exception as exc:  # noqa: BLE001 - surfaced to the operator
+        raise HTTPException(status_code=502, detail={"reason": "runner_unreachable", "error": type(exc).__name__}) from exc
+
+
 @router.get("/gpu/ledger", dependencies=[Depends(require_admin)])
 async def gpu_ledger(request: Request, limit: int = 100) -> dict[str, Any]:
     m = _manager(request)

@@ -11,8 +11,10 @@
 #                TTS audio in, the case portrait as the reference face); see avatar.sh
 #   /avatar-status/status.json  the runner's bring-up state (building | waiting | starting | ready |
 #                disabled with a reason such as insufficient_vram), readable while the runner is down
-# Plus coturn on 3478 UDP and TCP (host network): the WebRTC media path for browsers, with
-# TURN REST credentials derived from WORKER_TOKEN (server/voice/avatar/musetalk.py).
+# Plus coturn on 3478 UDP and TCP and TLS on 443 at turn.<domain> (host network): the WebRTC media
+# path for browsers, with TURN REST credentials derived from WORKER_TOKEN
+# (server/voice/avatar/musetalk.py). Public 443 is an nginx SNI router (edge.conf): turn.<domain>
+# goes to coturn's TLS listener, everything else to Caddy on 127.0.0.1:8443.
 #   /healthz     vLLM /health only (the TTS and STT side-cars never gate readiness)
 #   /diag/<s>/   final boot-diagnostics snapshot (see diag.sh)
 # Every route requires: Authorization: Bearer ${WORKER_TOKEN}. The check sits first inside
@@ -29,6 +31,8 @@
 #   ghcr.io/speaches-ai/speaches:0.8.3-cuda       (GHCR tags list; 0.9.0 is still rc)
 #   ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4      (GHCR tags list)
 #   caddy:2.9.1                                   (Docker Hub; Caddyfile validated with 2.9.1)
+#   nginx:1.30.6-alpine                           (Docker Hub stable; stream + ssl_preread built in,
+#                                                  edge.conf validated with nginx -t on 2026-10-20)
 #   ghcr.io/astral-sh/uv:0.8.22                   (GHCR manifest, Chatterbox build stage)
 #   ghcr.io/coturn/coturn:4.18.0-debian           (GHCR; same tag as Docker Hub coturn/coturn, 2026-09-08)
 #   python:3.12-slim-bookworm                     (Docker Hub, avatar runner base)
@@ -43,7 +47,8 @@
 #     commit a5f466128e4baa8e4cceb3bba9b7ca9de6f7ec6b with the AcuDx override
 #     Dockerfile below (based on docker/Dockerfile.uv.gpu at that commit), and
 #     chatterbox-multilingual pinned to c33cc0286ad166f14dd143c02c2a1c3309ab4727
-#     (head of its exp branch on 2026-10-20; torch==2.6.0, torchaudio==2.6.0).
+#     (head of its exp branch on 2026-10-20; torch==2.6.0, torchaudio==2.6.0), and setuptools
+#     pinned to 80.9.0 because resemble-perth 1.0.1 still imports pkg_resources (setuptools 82 dropped it).
 #
 # VRAM budget on one A100 40 GB (docs/research/14 section 2.2, planning numbers):
 #   vLLM          --gpu-memory-utilization 0.60 -> 24 GB: Qwen3-14B-AWQ weights about 10 GB + KV cache
@@ -72,15 +77,32 @@ write_files:
   - path: /opt/acudx/Caddyfile
     content: |
       # Port 80 belongs to the boot-diagnostics server (python, see diag.sh) until vLLM is
-      # healthy, so Caddy serves 443 only and obtains its certificate with TLS-ALPN-01.
+      # healthy, so Caddy obtains its certificates with TLS-ALPN-01. Public 443 is the nginx SNI
+      # router (edge.conf): turn.<domain> goes to coturn's TLS listener, everything else (and every
+      # acme-tls/1 challenge) to this Caddy on 127.0.0.1:8443, hence https_port and alt_tlsalpn_port.
       {
         auto_https disable_redirects
+        https_port 8443
         acme_ca https://acme-v02.api.letsencrypt.org/directory
+        servers {
+          protocols h1 h2
+        }
+      }
+      # Certificate only: coturn serves turns:turn.<domain>:443 with it (avatar.sh copies it out).
+      turn.{$WORKER_DOMAIN} {
+        tls {
+          issuer acme {
+            disable_http_challenge
+            alt_tlsalpn_port 8443
+          }
+        }
+        respond 404
       }
       {$WORKER_DOMAIN} {
         tls {
           issuer acme {
             disable_http_challenge
+            alt_tlsalpn_port 8443
           }
         }
         route {
@@ -115,6 +137,34 @@ write_files:
           }
         }
       }
+  # Public 443: an nginx stream (layer 4) SNI router, nothing terminated here. TURN over TLS must
+  # share 443 with the API so browsers behind HTTPS-only proxies and firewalls reach it; the
+  # ClientHello's server name decides: turn.<domain> -> coturn's TLS listener (5349, loopback
+  # only), anything else -> Caddy (8443). ACME tls-alpn-01 challenges (ALPN acme-tls/1) always go
+  # to Caddy, also for turn.<domain>, so Caddy can obtain that certificate for coturn.
+  - path: /opt/acudx/edge.conf
+    content: |
+      worker_processes auto;
+      error_log /dev/stderr warn;
+      events { worker_connections 4096; }
+      stream {
+        map $ssl_preread_alpn_protocols $acudx_acme {
+          ~\bacme-tls/1\b 1;
+          default 0;
+        }
+        map "$acudx_acme:$ssl_preread_server_name" $acudx_upstream {
+          ~^1: 127.0.0.1:8443;
+          ~^0:turn\. 127.0.0.1:5349;
+          default 127.0.0.1:8443;
+        }
+        server {
+          listen 443;
+          ssl_preread on;
+          proxy_pass $acudx_upstream;
+          proxy_connect_timeout 5s;
+          proxy_timeout 2h;
+        }
+      }
   # Chatterbox build override (task 24, "No CUDA GPUs are available"). Same layers as
   # docker/Dockerfile.uv.gpu at a5f4661 with three changes: uv is pinned (upstream copies
   # ghcr.io/astral-sh/uv:latest), chatterbox-multilingual is pinned to a commit (upstream
@@ -146,11 +196,19 @@ write_files:
           "torchaudio==${TORCHAUDIO_VERSION}" --index-url "${TORCH_INDEX_URL}"
       RUN printf 'torch==%s\ntorchaudio==%s\ntorchvision==%s\n' "${TORCH_VERSION}" "${TORCHAUDIO_VERSION}" \
           "${TORCHVISION_VERSION}" > /app/torch-constraints.txt
-      RUN uv pip install setuptools fastapi "uvicorn[standard]" python-dotenv python-multipart requests \
-          psutil pydub sse-starlette
+      # setuptools stays below 82: resemble-perth 1.0.1 (the watermarker ChatterboxMultilingualTTS
+      # builds in __init__) imports pkg_resources, which setuptools 82.0.0 (2026-02-08) removed.
+      # perth swallows that ImportError and sets PerthImplicitWatermarker = None, so model init
+      # failed with "'NoneType' object is not callable" (workers 2 and 3, 2026-10-20). The pin also
+      # goes into the constraint file so the chatterbox install cannot upgrade it again.
+      RUN uv pip install "setuptools==80.9.0" fastapi "uvicorn[standard]" python-dotenv python-multipart \
+          requests psutil pydub sse-starlette \
+          && echo "setuptools==80.9.0" >> /app/torch-constraints.txt
       RUN uv pip install --constraint /app/torch-constraints.txt \
           "git+https://github.com/travisvn/chatterbox-multilingual.git@${CHATTERBOX_MULTILINGUAL_REF}"
       RUN python -c "import sys, torch; print('torch', torch.__version__, 'cuda', torch.version.cuda); sys.exit(0 if torch.version.cuda else 1)"
+      # The failure above surfaced only at model load; fail the build instead.
+      RUN python -c "import sys, perth; print('perth watermarker', perth.PerthImplicitWatermarker); sys.exit(0 if perth.PerthImplicitWatermarker else 1)"
       COPY app/ ./app/
       COPY main.py ./
       COPY voice-sample.mp3 ./voice-sample.mp3
@@ -259,9 +317,16 @@ write_files:
             - WHISPER__COMPUTE_TYPE=float16
             - HF_HOME=/hf
           volumes: [ "/opt/acudx/hf:/hf" ]
+        # Public 443 (SNI router, edge.conf); host network so it reaches coturn's loopback TLS port.
+        edge:
+          image: nginx:1.30.6-alpine
+          network_mode: host
+          restart: unless-stopped
+          volumes:
+            - /opt/acudx/edge.conf:/etc/nginx/nginx.conf:ro
         caddy:
           image: caddy:2.9.1
-          ports: [ "443:443" ]
+          ports: [ "127.0.0.1:8443:8443" ]
           env_file: /opt/acudx/.env
           volumes:
             - /opt/acudx/Caddyfile:/etc/caddy/Caddyfile:ro
@@ -287,9 +352,17 @@ write_files:
           environment:
             - HF_HOME=/hf
             - AVATAR_PORT=8010
-            - AVATAR_BATCH_SIZE=8
+            # Latency defaults (docs/architecture/18 6.3); the gateway can override them per call.
+            - AVATAR_BATCH_SIZE=4
+            - AVATAR_AHEAD_FRAMES=10
+            - AVATAR_LOOKAHEAD_FRAMES=6
+            - AVATAR_IDLE_FRAMES=75
             - AVATAR_MAX_SESSIONS=${AVATAR_MAX_SESSIONS}
             - AVATAR_TURN_TCP_HOST=host.docker.internal
+            - TURN_SECRET=${TURN_SECRET}
+            - WORKER_DOMAIN=${WORKER_DOMAIN}
+            # /turn_check dials the host's own address (the public IP is NATed and does not hairpin)
+            - AVATAR_TURN_HOST_ADDR=${TURN_RELAY_IP}
             - LIVETALKING_REF=${LIVETALKING_REF}
             - NVIDIA_VISIBLE_DEVICES=all
             - NVIDIA_DRIVER_CAPABILITIES=compute,utility
@@ -297,13 +370,19 @@ write_files:
             - /opt/acudx/hf:/hf
             - /opt/acudx/avatars:/app/data/avatars
         # TURN for the avatar call (RFC 8656, coturn). Host networking so the relay ports reach
-        # the runner's container addresses; only 3478 is open publicly (lambda_cloud.py rules).
+        # the runner's container addresses; 3478 is open publicly (lambda_cloud.py rules) and the
+        # TLS listener (5349) is reached only through the edge router on 443 (turn.<domain>), with
+        # the Let's Encrypt certificate Caddy obtained for that name (copied by avatar.sh).
+        # DTLS is off by default in coturn 4.18; it has no --no-dtls flag (an unknown flag exits 255,
+        # which is how the first TLS build lost TURN entirely, 2026-10-20).
         turn:
           image: ghcr.io/coturn/coturn:4.18.0-debian
           network_mode: host
+          volumes: [ "/opt/acudx/turn-tls:/tls:ro" ]
           command: >
             -n --log-file=stdout --listening-port=3478 --fingerprint --use-auth-secret
-            --static-auth-secret=${TURN_SECRET} --realm=acudx --no-tls --relay-ip=${TURN_RELAY_IP}
+            --static-auth-secret=${TURN_SECRET} --realm=acudx --relay-ip=${TURN_RELAY_IP}
+            ${TURN_TLS_ARGS:---no-tls}
             --min-port=49160 --max-port=49260 --no-multicast-peers
             --allowed-peer-ip=172.16.0.0-172.31.255.255 --allowed-peer-ip=${TURN_RELAY_IP}
   # Voice library seeding: Chatterbox picks the synthesis language from the voice's
@@ -338,7 +417,7 @@ write_files:
       snapshot() {
         { date -u
           echo "--- docker ps"; docker ps --format '{{.Names}} {{.Status}}' 2>&1
-          for svc in vllm caddy avatar turn; do
+          for svc in vllm caddy edge avatar turn chatterbox kokoro; do
             echo "--- $svc logs (last 40 lines, redacted)"
             $compose logs --no-color --tail 40 "$svc" 2>&1 | redact
           done
@@ -346,6 +425,7 @@ write_files:
           echo "--- vllm root-cause lines (errors and memory, redacted)"
           $compose logs --no-color vllm 2>&1 | grep -E 'Error|error|Exception|CUDA|memory|Memory|OOM|insufficient|ValueError|Traceback|raise ' | tail -60 | redact
           echo "--- chatterbox torch check"; redact < /var/log/acudx-chatterbox-gpu.log 2>/dev/null
+          echo "--- chatterbox voice seeding"; tail -8 /var/log/acudx-seed-voices.log 2>/dev/null
           echo "--- avatar status"; cat /opt/acudx/public/avatar-status/status.json 2>/dev/null
           echo "--- avatar bring-up (last 20 lines)"; tail -20 /var/log/acudx-avatar.log 2>/dev/null | redact
           echo "--- avatar image build (last 15 lines)"; tail -15 /var/log/acudx-avatar-build.log 2>/dev/null | redact
@@ -365,9 +445,15 @@ write_files:
           now=$(date +%s)
           [ -n "$healthy_since" ] || healthy_since=$now
           if [ $((now - healthy_since)) -ge "$healthy_for_s" ]; then
-            echo "--- diagnostics server on :80 stopped $(date -u) after vLLM /health answered 200 for ${healthy_for_s} s; this final snapshot is served by Caddy on 443 behind the bearer" >> "$d/docker-status.txt"
             kill "$srv" 2>/dev/null
-            exit 0
+            # The side-cars (avatar runner, coturn, Kokoro) come up after vLLM, so the snapshot keeps
+            # refreshing every 60 s, readable only through Caddy on 443 behind the bearer (live
+            # finding 2026-10-20: a coturn start failure was invisible in the frozen snapshot).
+            while true; do
+              snapshot
+              echo "--- diagnostics server on :80 stopped after vLLM /health answered 200 for ${healthy_for_s} s; snapshot refreshed $(date -u) and served by Caddy on 443 behind the bearer" >> "$d/docker-status.txt"
+              sleep 60
+            done
           fi
         else
           healthy_since=""
@@ -378,14 +464,30 @@ write_files:
     permissions: "0755"
     content: |
       #!/usr/bin/env bash
+      # The API is only on the compose network (no host port), so seed from inside the container,
+      # and only once the model is loaded: /health answers 200 while initializing (and on an init
+      # error). Before this, every upload went to 127.0.0.1:4123 on the host and failed, the library
+      # stayed empty, and an unknown voice fell back to the default sample with language "en", so
+      # Turkish text was synthesised as English (live finding 2026-10-20).
       set -u
-      api=http://127.0.0.1:4123
-      for i in $(seq 1 90); do curl -sf "$api/health" >/dev/null && break; sleep 10; done
-      sample=/opt/acudx/chatterbox-tts-api/voice-sample.mp3
+      compose="docker compose -f /opt/acudx/docker-compose.yml"
+      for i in $(seq 1 180); do
+        $compose exec -T chatterbox curl -sf http://localhost:4123/health 2>/dev/null | grep -q '"initialization_state":"ready"' && break
+        sleep 10
+      done
       for spec in acudx_tr_female:tr acudx_tr_male:tr acudx_en_female:en acudx_en_male:en; do
         name=${spec%%:*}; lang=${spec##*:}
-        curl -sf -X POST "$api/voices" -F "voice_name=$name" -F "language=$lang" -F "voice_file=@$sample" >/dev/null \
+        $compose exec -T chatterbox curl -sf -X POST http://localhost:4123/voices -F "voice_name=$name" \
+          -F "language=$lang" -F "voice_file=@/app/voice-sample.mp3" >/dev/null \
+          && echo "acudx: voice $name ($lang) seeded" \
           || echo "acudx: voice $name already present or upload failed" >&2
+      done
+      # Warm-up: the first synthesis on a fresh container took 13.6 s (CUDA kernels, conditionals),
+      # the next ones 1.4 to 2.7 s; pay it here, not on a learner's first patient line.
+      for v in acudx_tr_female acudx_en_female; do
+        $compose exec -T chatterbox curl -sf -o /dev/null -X POST http://localhost:4123/v1/audio/speech \
+          -H "Content-Type: application/json" -d "{\"input\": \"Merhaba doktor, hazırım.\", \"voice\": \"$v\"}" \
+          && echo "acudx: chatterbox warm-up with $v done"
       done
   - path: /opt/acudx/avatar/Dockerfile.acudx
     content: |
@@ -551,46 +653,77 @@ write_files:
       client of the control routes; the browser only ever sees the SDP answer and media.
 
       Routes (all JSON unless noted):
-        GET  /health                 model, sessions, prepared avatars, VRAM, measured infer fps
+        GET  /health                 model, sessions (with per-call fps and underruns), prepared avatars,
+                                     VRAM, measured infer fps, the call limit
         GET  /avatars                prepared avatar ids
+        GET  /avatars/{avatar_id}    frame size, face box and idle frames of a prepared avatar
         PUT  /avatars/{avatar_id}    body = portrait image bytes (jpeg/png); prepares the MuseTalk
-                                     latents, face box and blend mask for that face (one frame)
-        POST /offer                  {sdp, type, avatar} -> {sdp, type, sessionid} (LiveTalking RTCManager)
-        POST /humanaudio             multipart sessionid + file (wav or mp3): lip-sync and stream it
+                                     latents, face boxes and blend masks for that face: a short idle
+                                     loop (subtle head motion) generated from the one portrait
+        POST /offer                  {sdp, type, avatar, tuning?} -> {sdp, type, sessionid}; tuning =
+                                     {batch_size, ahead_frames, lookahead_frames, av_shift_ms}, bounded
+        GET  /stream                 WebSocket audio in: {"type":"begin","sessionid","sample_rate"} text,
+                                     then binary s16le mono PCM chunks as the TTS produces them, then
+                                     {"type":"end"} -> {"type":"done", frames, ...}. Lip sync starts on
+                                     the first 20 ms of audio; no file upload, no full-utterance wait
+        POST /humanaudio             multipart sessionid + file (wav or mp3): the whole-file fallback
         POST /interrupt_talk         {sessionid}
         POST /is_speaking            {sessionid}
         POST /close                  {sessionid}: stop the render threads and close the peer connection
         GET  /turn                   WebSocket <-> TCP byte bridge to the worker's TURN server, for
                                      clients whose network only allows HTTPS (see docs/architecture/18 6.3)
+        GET  /turn_check             TURN Allocate against this worker's public TURN endpoints, from
+                                     inside the worker: turns:turn.<domain>:443 (TLS, certificate and
+                                     host name verified), turn:<domain>:3478 over TCP and UDP
 
       The avatar preparation below is a port of LiveTalking avatars/musetalk/genavatar.py
       (Apache-2.0) that reuses the already-loaded VAE instead of loading a second UNet,
-      and writes the single portrait frame as 00000000.png (load_avatar sorts frames by
-      integer file name).
+      and writes the frames as 00000000.png ... (load_avatar sorts frames by integer file name).
       """
 
       from __future__ import annotations
 
       import asyncio
+      import base64
+      import collections
       import copy
+      import hashlib
+      import hmac
       import json
       import logging
+      import math
       import os
       import pickle
+      import queue
       import re
+      import ssl
       import sys
       import threading
       import time
 
       AVATAR_PORT = int(os.environ.get("AVATAR_PORT", "8010"))
       MAX_SESSIONS = int(os.environ.get("AVATAR_MAX_SESSIONS", "2"))
-      BATCH_SIZE = int(os.environ.get("AVATAR_BATCH_SIZE", "8"))
+      BATCH_SIZE = int(os.environ.get("AVATAR_BATCH_SIZE", "4"))
+      # Frames the render loop keeps ahead of the WebRTC sender (queued + in flight). Upstream throttles
+      # on the video queue alone (5 frames) while two feature batches and 16 rendered frames pile up
+      # behind it, about 1.5 s; counting every stage keeps the lead to this many frames.
+      AHEAD_FRAMES = int(os.environ.get("AVATAR_AHEAD_FRAMES", "10"))
+      # Right audio context the whisper features need, in 20 ms audio frames (upstream -r 10).
+      LOOKAHEAD_FRAMES = int(os.environ.get("AVATAR_LOOKAHEAD_FRAMES", "6"))
+      # Positive: the video leaves this many ms after its audio (fixes lips leading the voice).
+      AV_SHIFT_MS = int(os.environ.get("AVATAR_AV_SHIFT_MS", "0"))
+      IDLE_FRAMES = int(os.environ.get("AVATAR_IDLE_FRAMES", "75"))
       TURN_TCP_HOST = os.environ.get("AVATAR_TURN_TCP_HOST", "host.docker.internal")
       TURN_TCP_PORT = int(os.environ.get("AVATAR_TURN_TCP_PORT", "3478"))
+      TURN_SECRET = os.environ.get("TURN_SECRET", "")
+      # The host's own address for the TURN self-check (the public IP is NATed and does not hairpin).
+      TURN_HOST_ADDR = os.environ.get("AVATAR_TURN_HOST_ADDR", "")
+      WORKER_DOMAIN = os.environ.get("WORKER_DOMAIN", "")
       LIVETALKING_REF = os.environ.get("LIVETALKING_REF", "")
       MAX_IMAGE_BYTES = 8 * 1024 * 1024
       AVATAR_ID_RE = re.compile(r"^[a-z0-9_-]{1,64}$")
       MAX_FRAME_H = 720
+      PREP_VERSION = 2  # 2: reflected + blurred extension, idle loop; older avatar dirs are re-prepared
 
       # LiveTalking parses its own argv; set it before importing anything from the checkout.
       sys.argv = [sys.argv[0], "--config", "", "--model", "musetalk", "--avatar_id", "acudx_none",
@@ -599,6 +732,7 @@ write_files:
 
       import cv2  # noqa: E402
       import numpy as np  # noqa: E402
+      import soxr  # noqa: E402  (librosa dependency, streaming resampler)
       import torch  # noqa: E402
       from aiohttp import WSMsgType, web  # noqa: E402
 
@@ -639,11 +773,14 @@ write_files:
       # sound, and how many speaking frames could not be blended (each one would otherwise drop
       # its video frame AND its two audio frames in LiveTalking's process_frames).
       MEDIA = {"audio_frames": 0, "audio_frames_with_sound": 0, "audio_peak": 0, "video_frames": 0,
-               "blend_errors": 0}
+               "blend_errors": 0, "stream_utterances": 0}
       import server.webrtc as _lt_webrtc  # noqa: E402
 
       _orig_push_audio = _lt_webrtc.HumanPlayer.push_audio
       _orig_push_video = _lt_webrtc.HumanPlayer.push_video
+
+
+      TRACE: dict = {}
 
 
       def _push_audio(self, frame, eventpoint=None):
@@ -652,6 +789,14 @@ write_files:
           if peak > 64:
               MEDIA["audio_frames_with_sound"] += 1
               MEDIA["audio_peak"] = max(MEDIA["audio_peak"], peak)
+              t_in = TRACE.get("speech_in_at")
+              if t_in is not None and TRACE.get("speech_out_at") is None:
+                  TRACE["speech_out_at"] = time.monotonic()
+                  a = getattr(self, "_HumanPlayer__audio", None)
+                  v = getattr(self, "_HumanPlayer__video", None)
+                  TRACE["last"] = {"in_to_sender_ms": round((TRACE["speech_out_at"] - t_in) * 1000.0, 1),
+                                   "audio_queue_frames": a._queue.qsize() if a is not None else None,
+                                   "video_queue_frames": v._queue.qsize() if v is not None else None}
           return _orig_push_audio(self, frame, eventpoint)
 
 
@@ -662,6 +807,25 @@ write_files:
 
       _lt_webrtc.HumanPlayer.push_audio = _push_audio
       _lt_webrtc.HumanPlayer.push_video = _push_video
+
+      # Per-track delivery: frames handed to the encoder per second, and underruns (the sender
+      # asked for a video frame and none was ready: the call stutters). Read per session in /health.
+      _orig_recv = _lt_webrtc.PlayerStreamTrack.recv
+
+
+      async def _recv(self):
+          if self.kind == "video":
+              st = self.__dict__.setdefault("_acudx", {"frames": 0, "underruns": 0, "window": collections.deque(maxlen=50)})
+              if st["frames"] and self._queue.empty():
+                  st["underruns"] += 1
+          frame = await _orig_recv(self)
+          if self.kind == "video":
+              st["frames"] += 1
+              st["window"].append(time.monotonic())
+          return frame
+
+
+      _lt_webrtc.PlayerStreamTrack.recv = _recv
 
       t0 = time.monotonic()
       MODEL = mt.load_model()
@@ -683,6 +847,123 @@ write_files:
 
 
       mt.MuseReal.paste_back_frame = _paste_back_frame
+
+      _orig_infer = mt.MuseReal.inference_batch
+
+
+      def _inference_batch(self, index, audiofeat_batch):
+          """One UNet + VAE batch on this call's own CUDA stream (two calls overlap on the GPU instead of
+          serialising on the default stream), timed per call for /health."""
+          st = self.__dict__.get("_acudx_stream")
+          if st is None and torch.cuda.is_available():
+              st = self._acudx_stream = torch.cuda.Stream()
+          self._acudx_inflight = 1
+          t = time.perf_counter()
+          try:
+              if st is not None:
+                  with torch.cuda.stream(st):
+                      out = _orig_infer(self, index, audiofeat_batch)
+                  st.synchronize()
+              else:
+                  out = _orig_infer(self, index, audiofeat_batch)
+          finally:
+              self._acudx_inflight = 0
+          stats = self.__dict__.setdefault("_acudx_infer", {"frames": 0, "seconds": 0.0})
+          stats["frames"] += len(out)
+          stats["seconds"] += time.perf_counter() - t
+          return out
+
+
+      mt.MuseReal.inference_batch = _inference_batch
+
+
+      def _render(self, quit_event):
+          """LiveTalking BaseAvatar.render with a latency-bounded throttle.
+
+          Upstream sleeps only when the WebRTC video queue holds 5 frames, so the feature queue (2
+          batches) and the rendered-frame queue (2 batches) stay full and new speech waits behind
+          about 1.5 s of silence. Here the loop counts every stage (sender queue, rendered frames,
+          queued feature batches, the batch in the UNet) and extracts the next batch only while that
+          total is below ``ahead_frames``.
+          """
+          from threading import Event, Thread  # noqa: PLC0415
+
+          self.quit_event = quit_event
+          self.init_customindex()
+          self.tts.render(quit_event)
+          infer_quit, process_quit = Event(), Event()
+          infer_thread = Thread(target=self.inference, args=(infer_quit,), daemon=True)
+          process_thread = Thread(target=self.process_frames, args=(process_quit,), daemon=True)
+          infer_thread.start()
+          process_thread.start()
+          b = self.batch_size
+          target = int(getattr(self, "_acudx_ahead", AHEAD_FRAMES))
+          while not quit_event.is_set():
+              out_q = _sender_depth(self)
+              ahead = (out_q + self.res_frame_queue.qsize()
+                       + (self.asr.feat_queue.qsize() + int(getattr(self, "_acudx_inflight", 0))) * b)
+              if ahead >= target:
+                  time.sleep(0.004)
+                  continue
+              self.asr.run_step()
+          infer_quit.set()
+          infer_thread.join()
+          process_quit.set()
+          process_thread.join()
+          log.info("render thread for %s stopped", getattr(self, "sessionid", "?"))
+
+
+      mt.MuseReal.render = _render
+
+
+      def _tracks(sess) -> tuple:
+          player = getattr(getattr(sess, "output", None), "_player", None)
+          if player is None:
+              return None, None
+          return getattr(player, "_HumanPlayer__audio", None), getattr(player, "_HumanPlayer__video", None)
+
+
+      def _sender_depth(sess) -> int:
+          """Frames waiting in the WebRTC sender, in video frames: the deeper of the video queue and the
+          audio queue (two 20 ms frames per video frame). Upstream looks at the video queue only, so an
+          audio backlog (audio is never dropped) adds its full length to the voice latency unseen."""
+          audio, video = _tracks(sess)
+          vq = video._queue.qsize() if video is not None else 0
+          aq = audio._queue.qsize() if audio is not None else 0
+          return max(vq, (aq + 1) // 2)
+
+
+      def _install_av_shift(sess, shift_ms: int) -> None:
+          """Re-pair audio and video by index: the WebRTC tracks emit frame k at start + k * 40 ms, so a
+          delay line only shifts lips against voice if it emits one frame per frame pushed (prefilled
+          with the first frame). Positive ``shift_ms`` shows video frame k - n with audio frame k."""
+          n = int(round(abs(shift_ms) / 40.0))
+          if n == 0:
+              return
+          out = sess.output
+          if shift_ms > 0:
+              orig_v = out.push_video_frame
+              line: collections.deque = collections.deque()
+
+              def push_video_frame(frame) -> None:
+                  if not line:
+                      line.extend(frame for _ in range(n))
+                  line.append(frame)
+                  orig_v(line.popleft())
+
+              out.push_video_frame = push_video_frame
+          else:
+              orig_a = out.push_audio_frame
+              aline: collections.deque = collections.deque((np.zeros(320, dtype=np.int16), None) for _ in range(2 * n))
+
+              def push_audio_frame(frame, eventpoint=None) -> None:
+                  aline.append((frame, eventpoint))
+                  f, ev = aline.popleft()
+                  orig_a(f, ev)
+
+              out.push_audio_frame = push_audio_frame
+
+
       AVATARS: dict[str, tuple] = {}
       PREP_LOCK = threading.Lock()
       AVATAR_ROOT = "./data/avatars"
@@ -693,7 +974,14 @@ write_files:
 
 
       def _is_prepared(avatar_id: str) -> bool:
-          return os.path.isfile(os.path.join(_avatar_dir(avatar_id), "latents.pt"))
+          root = _avatar_dir(avatar_id)
+          if not os.path.isfile(os.path.join(root, "latents.pt")):
+              return False
+          try:
+              with open(os.path.join(root, "avator_info.json")) as f:
+                  return int(json.load(f).get("acudx_prep", 1)) >= PREP_VERSION
+          except (OSError, ValueError):
+              return False
 
 
       def _load(avatar_id: str) -> tuple:
@@ -706,10 +994,90 @@ write_files:
           pass
 
 
+      def extend_portrait(img: np.ndarray, top: int, bottom: int, left: int, right: int) -> np.ndarray:
+          """Grow the portrait on the sides that need it without streaks. Right at the seam the border
+          is the mirrored image (texture continues, no hard edge); within ``feather`` px it fades into
+          the edge colours smeared outwards and blurred across (replicate, then a wide Gaussian), so the
+          old edge-replicate streaks are averaged away and no mirrored features (a second chin, an ear)
+          appear. The original pixels are kept exactly."""
+          if max(top, bottom, left, right) <= 0:
+              return img
+          h, w = img.shape[:2]
+          mirrored = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_REFLECT_101)
+          smeared = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_REPLICATE)
+          pad = max(top, bottom, left, right)
+          sigma = max(8.0, pad / 2.0)
+          blurred = cv2.GaussianBlur(smeared, (0, 0), sigmaX=sigma, sigmaY=sigma, borderType=cv2.BORDER_REPLICATE)
+          H, W = mirrored.shape[:2]
+          ys = np.arange(H, dtype=np.float32)[:, None]
+          xs = np.arange(W, dtype=np.float32)[None, :]
+          dx = np.maximum(np.maximum(left - xs, xs - (left + w - 1)), 0.0)
+          dy = np.maximum(np.maximum(top - ys, ys - (top + h - 1)), 0.0)
+          d = np.sqrt(dx * dx + dy * dy)
+          feather = float(max(6, min(16, pad // 3)))
+          keep = np.clip(1.0 - d / feather, 0.0, 1.0)
+          keep = (keep * keep * (3.0 - 2.0 * keep))[..., None]  # smoothstep: no visible seam in the fade
+          out = keep * mirrored.astype(np.float32) + (1.0 - keep) * blurred.astype(np.float32)
+          out[top:top + h, left:left + w] = img
+          return np.clip(out, 0, 255).astype(np.uint8)
+
+
+      def _ease(u: float, k: int) -> float:
+          """(1 - cos(k pi u)) / 2: zero velocity at u = 0 and u = 1, so LiveTalking's ping-pong
+          playback of the loop (mirror_index) turns around without a jolt."""
+          return (1.0 - math.cos(k * math.pi * u)) / 2.0
+
+
+      def idle_transforms(n: int, box: list[int]) -> list[np.ndarray]:
+          """Affine transforms for a subtle idle head motion around a pivot under the chin: a slow
+          sway (+-0.7 degrees), a small nod (1.2 px) and a slight drift (0.8 px); identity for n == 1."""
+          x1, y1, x2, y2 = box
+          bh = y2 - y1
+          pivot = ((x1 + x2) / 2.0, y2 + 0.25 * bh)
+          out = []
+          for t in range(n):
+              u = t / (n - 1) if n > 1 else 0.0
+              angle = 0.7 * (2.0 * _ease(u, 1) - 1.0) if n > 1 else 0.0
+              nod = 1.2 * _ease(u, 2) if n > 1 else 0.0
+              drift = 0.8 * (2.0 * _ease(u, 3) - 1.0) if n > 1 else 0.0
+              m = cv2.getRotationMatrix2D(pivot, angle, 1.0 + 0.003 * _ease(u, 2))
+              m[0, 2] += drift
+              m[1, 2] += nod
+              out.append(m)
+          return out
+
+
+      def head_mask(shape: tuple, box: list[int]) -> np.ndarray:
+          """Soft ellipse over the head (face box, hair above, chin), 1 inside, feathered: only the head
+          moves in the idle loop, shoulders and background stay still."""
+          x1, y1, x2, y2 = box
+          bw, bh = x2 - x1, y2 - y1
+          top, bottom = y1 - 0.75 * bh, y2 + 0.12 * bh
+          center = (int(round((x1 + x2) / 2.0)), int(round((top + bottom) / 2.0)))
+          axes = (int(round(0.85 * bw)), int(round((bottom - top) / 2.0)))
+          m = np.zeros(shape[:2], dtype=np.float32)
+          cv2.ellipse(m, center, axes, 0, 0, 360, 1.0, -1)
+          sigma = max(3.0, 0.12 * bh)
+          return cv2.GaussianBlur(m, (0, 0), sigmaX=sigma, sigmaY=sigma)[..., None]
+
+
+      def _box_after(m: np.ndarray, box: list[int], shape: tuple) -> list[int]:
+          x1, y1, x2, y2 = box
+          pts = np.array([[x1, y1, 1], [x2, y1, 1], [x1, y2, 1], [x2, y2, 1]], dtype=np.float32) @ m.T
+          cx, cy = pts[:, 0].mean(), pts[:, 1].mean()
+          w, h = x2 - x1, y2 - y1
+          nx1, ny1 = int(round(cx - w / 2.0)), int(round(cy - h / 2.0))
+          nx1 = max(0, min(nx1, shape[1] - w))
+          ny1 = max(0, min(ny1, shape[0] - h))
+          return [nx1, ny1, nx1 + w, ny1 + h]
+
+
       @torch.no_grad()
-      def prepare_avatar(avatar_id: str, image_bytes: bytes) -> dict:
-          """Portrait -> MuseTalk avatar (latents, face box, blend mask) for one frame."""
+      def prepare_avatar(avatar_id: str, image_bytes: bytes, idle_frames: int | None = None) -> dict:
+          """Portrait -> MuseTalk avatar: an idle loop of ``idle_frames`` frames (latents, face boxes,
+          blend masks per frame). 1 frame = the still portrait."""
           started = time.monotonic()
+          n = max(1, min(int(idle_frames if idle_frames is not None else IDLE_FRAMES), 150))
           img = cv2.imdecode(np.frombuffer(image_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
           if img is None:
               raise ValueError("image could not be decoded")
@@ -720,12 +1088,15 @@ write_files:
               h, w = img.shape[:2]
           # H.264 and VP8 encoders want even dimensions.
           img = img[: h - h % 2, : w - w % 2]
+          padded = 0
           with PREP_LOCK:
               root = _avatar_dir(avatar_id)
               full_dir = os.path.join(root, "full_imgs")
               mask_dir = os.path.join(root, "mask")
-              os.makedirs(full_dir, exist_ok=True)
-              os.makedirs(mask_dir, exist_ok=True)
+              for d in (full_dir, mask_dir):
+                  os.makedirs(d, exist_ok=True)
+                  for f in os.listdir(d):
+                      os.remove(os.path.join(d, f))
               frame_path = os.path.join(full_dir, "00000000.png")
               for _attempt in range(3):
                   cv2.imwrite(frame_path, img)
@@ -739,58 +1110,109 @@ write_files:
                   # The blend step pastes into the face box expanded 1.5x (blending.get_crop_box). A
                   # close-up portrait puts that box outside the frame, every speaking frame then fails
                   # in paste_back_frame and is dropped together with its audio, so the call is silent.
-                  # Pad the portrait (edge replicate) until the expanded box fits, then detect again.
+                  # Extend the portrait (mirrored, blurred; see extend_portrait) until the expanded box
+                  # fits with room for the idle motion, then detect again.
                   (cx1, cy1, cx2, cy2), _s = get_crop_box(coords, 1.5)
                   fh, fw = frame.shape[:2]
-                  pad = max(0, -cx1, -cy1, cx2 - fw, cy2 - fh)
-                  if pad == 0:
+                  margin = 12
+                  need = [max(0, -cy1), max(0, cy2 - fh), max(0, -cx1), max(0, cx2 - fw)]  # top, bottom, left, right
+                  if max(need) == 0:
                       break
-                  pad += 4
-                  img = cv2.copyMakeBorder(img, pad, pad, pad, pad, cv2.BORDER_REPLICATE)
-                  if img.shape[0] > MAX_FRAME_H:
-                      scale = MAX_FRAME_H / img.shape[0]
-                      img = cv2.resize(img, (int(img.shape[1] * scale), MAX_FRAME_H), interpolation=cv2.INTER_AREA)
+                  sides = [n + margin if n else 0 for n in need]
+                  # Keep the result within MAX_FRAME_H by shrinking the portrait first (the face box and
+                  # so the needed border shrink with it), instead of padding and then shrinking again.
+                  grown_h = img.shape[0] + sides[0] + sides[1]
+                  if grown_h > MAX_FRAME_H:
+                      s = MAX_FRAME_H / float(grown_h)
+                      img = cv2.resize(img, (int(img.shape[1] * s), int(img.shape[0] * s)), interpolation=cv2.INTER_AREA)
+                      sides = [int(math.ceil(n * s)) if n else 0 for n in sides]
+                  padded = max(padded, max(sides))
+                  img = extend_portrait(img, *sides)
                   img = img[: img.shape[0] - img.shape[0] % 2, : img.shape[1] - img.shape[1] % 2]
               else:
                   raise NoFace("the face fills the portrait; no room for the blend box")
-              crop = cv2.resize(frame[y1:y2, x1:x2], (256, 256), interpolation=cv2.INTER_LANCZOS4)
-              latents = VAE.get_latents_for_unet(crop)
-              mask, crop_box = get_image_prepare_material(frame, coords, fp=FACE_PARSER, mode="jaw")
-              cv2.imwrite(os.path.join(mask_dir, "00000000.png"), mask)
+              base = frame
+              mask = head_mask(base.shape, coords) if n > 1 else None
+              coords_list, mask_coords, latents = [], [], []
+              for i, m in enumerate(idle_transforms(n, coords)):
+                  if mask is not None and i > 0:
+                      warped = cv2.warpAffine(base, m, (base.shape[1], base.shape[0]), flags=cv2.INTER_LINEAR,
+                                              borderMode=cv2.BORDER_REFLECT_101)
+                      fr = np.clip(mask * warped.astype(np.float32) + (1.0 - mask) * base.astype(np.float32),
+                                   0, 255).astype(np.uint8)
+                      box = _box_after(m, coords, base.shape)
+                  else:
+                      fr, box = base, list(coords)
+                  bx1, by1, bx2, by2 = box
+                  crop = cv2.resize(fr[by1:by2, bx1:bx2], (256, 256), interpolation=cv2.INTER_LANCZOS4)
+                  latents.append(VAE.get_latents_for_unet(crop))
+                  fmask, crop_box = get_image_prepare_material(fr, box, fp=FACE_PARSER, mode="jaw")
+                  name = f"{i:08d}.png"
+                  cv2.imwrite(os.path.join(full_dir, name), fr)
+                  cv2.imwrite(os.path.join(mask_dir, name), fmask)
+                  coords_list.append(box)
+                  mask_coords.append(crop_box)
               with open(os.path.join(root, "mask_coords.pkl"), "wb") as f:
-                  pickle.dump([crop_box], f)
+                  pickle.dump(mask_coords, f)
               with open(os.path.join(root, "coords.pkl"), "wb") as f:
-                  pickle.dump([coords], f)
-              torch.save([latents], os.path.join(root, "latents.pt"))
+                  pickle.dump(coords_list, f)
+              torch.save(latents, os.path.join(root, "latents.pt"))
               with open(os.path.join(root, "avator_info.json"), "w") as f:
-                  json.dump({"avatar_id": avatar_id, "video_path": "portrait", "bbox_shift": 0}, f)
+                  json.dump({"avatar_id": avatar_id, "video_path": "portrait", "bbox_shift": 0,
+                             "acudx_prep": PREP_VERSION, "idle_frames": n, "extended_px": padded,
+                             "face_box": [int(v) for v in coords], "width": int(base.shape[1]),
+                             "height": int(base.shape[0])}, f)
               AVATARS.pop(avatar_id, None)
               _load(avatar_id)
           ms = round((time.monotonic() - started) * 1000.0, 1)
           STATE["prepare_ms"][avatar_id] = ms
-          return {"avatar_id": avatar_id, "width": int(img.shape[1]), "height": int(img.shape[0]),
-                  "face_box": [int(v) for v in coords],
-                  "prepare_ms": ms}
+          return {"avatar_id": avatar_id, "width": int(base.shape[1]), "height": int(base.shape[0]),
+                  "face_box": [int(v) for v in coords], "idle_frames": n, "extended_px": padded,
+                  "extension": "mirrored+blurred" if padded else "none", "prepare_ms": ms}
+
+
+      def _bounded(params: dict, key: str, default: int, lo: int, hi: int) -> int:
+          try:
+              v = int(params.get(key, default))
+          except (TypeError, ValueError):
+              v = default
+          return max(lo, min(hi, v))
 
 
       def build_avatar_session(sessionid: str, params: dict):
+          tuning = params.get("tuning") if isinstance(params.get("tuning"), dict) else {}
           o = copy.deepcopy(opt)
           o.sessionid = sessionid
+          o.batch_size = _bounded(tuning, "batch_size", BATCH_SIZE, 2, 16)
+          o.r = _bounded(tuning, "lookahead_frames", LOOKAHEAD_FRAMES, 4, 10)
           avatar_id = params["avatar"]
           o.avatar_id = avatar_id
-          return registry.create("avatar", "musetalk", opt=o, model=MODEL, avatar=_load(avatar_id))
+          sess = registry.create("avatar", "musetalk", opt=o, model=MODEL, avatar=_load(avatar_id))
+          # Shallow queues: one feature batch and one rendered batch in flight (upstream: two each).
+          sess.asr.feat_queue = queue.Queue(maxsize=1)
+          sess.res_frame_queue = queue.Queue(o.batch_size)
+          sess._acudx_ahead = _bounded(tuning, "ahead_frames", AHEAD_FRAMES, o.batch_size + 2, 40)
+          sess._acudx_shift_ms = _bounded(tuning, "av_shift_ms", AV_SHIFT_MS, -1000, 1000)
+          sess._acudx_tuning = {"batch_size": o.batch_size, "lookahead_frames": o.r, "ahead_frames": sess._acudx_ahead,
+                                "av_shift_ms": sess._acudx_shift_ms}
+          _install_av_shift(sess, sess._acudx_shift_ms)
+          return sess
 
 
       class TrackedRTCManager(RTCManager):
-          """RTCManager that remembers the peer connection per session so /close can end it."""
+          """RTCManager that remembers the peer connection and video track per session."""
 
           def __init__(self, o):
               super().__init__(o)
               self.by_session: dict = {}
+              self.video_tracks: dict = {}
 
           async def _create_pc_and_answer(self, avatar_session, sessionid, offer):
               pc = await super()._create_pc_and_answer(avatar_session, sessionid, offer)
               self.by_session[sessionid] = pc
+              for sender in pc.getSenders():
+                  if sender.track is not None and sender.track.kind == "video":
+                      self.video_tracks[sessionid] = sender.track
               return pc
 
 
@@ -809,21 +1231,56 @@ write_files:
           return out
 
 
+      def _session_stats(sid: str, sess) -> dict:
+          out: dict = {"id": sid[:8], "tuning": getattr(sess, "_acudx_tuning", None),
+                       "speaking": bool(getattr(sess, "speaking", False))}
+          inf = getattr(sess, "_acudx_infer", None)
+          if inf and inf["seconds"] > 0:
+              out["infer_fps"] = round(inf["frames"] / inf["seconds"], 1)
+              out["inferred_frames"] = inf["frames"]
+          audio, video = _tracks(sess)
+          out["sender_queue"] = {"audio_frames": audio._queue.qsize() if audio is not None else None,
+                                 "video_frames": video._queue.qsize() if video is not None else None}
+          track = RTC.video_tracks.get(sid)
+          st = getattr(track, "_acudx", None) if track is not None else None
+          if st:
+              w = st["window"]
+              out["sent_frames"] = st["frames"]
+              out["underruns"] = st["underruns"]
+              if len(w) >= 2 and w[-1] > w[0]:
+                  out["out_fps"] = round((len(w) - 1) / (w[-1] - w[0]), 1)
+          return out
+
+
       async def health(_request: web.Request) -> web.Response:
-          active = [k for k, v in session_manager.sessions.items() if v is not None]
+          active = {k: v for k, v in session_manager.sessions.items() if v is not None}
           prepared = sorted(d for d in os.listdir(AVATAR_ROOT) if _is_prepared(d)) if os.path.isdir(AVATAR_ROOT) else []
           return web.json_response({
               "ok": True, "model": "musetalk-1.5", "runner": "livetalking", "livetalking_ref": LIVETALKING_REF,
               "transport": "webrtc", "fps": opt.fps, "batch_size": BATCH_SIZE, "sessions": len(active),
               "max_sessions": MAX_SESSIONS, "avatars": prepared, "infer_fps": STATE["infer_fps"],
+              "defaults": {"batch_size": BATCH_SIZE, "ahead_frames": AHEAD_FRAMES, "lookahead_frames": LOOKAHEAD_FRAMES,
+                           "av_shift_ms": AV_SHIFT_MS, "idle_frames": IDLE_FRAMES},
+              "calls": [_session_stats(k, v) for k, v in active.items()],
               "model_load_ms": STATE["model_load_ms"], "gpu": _gpu(), "uptime_s": round(time.time() - STATE["started_at"]),
-              "media": dict(MEDIA),
+              "media": dict(MEDIA), "audio_in": ["stream", "humanaudio"], "last_speech_trace": TRACE.get("last"),
           })
 
 
       async def list_avatars(_request: web.Request) -> web.Response:
           prepared = sorted(d for d in os.listdir(AVATAR_ROOT) if _is_prepared(d)) if os.path.isdir(AVATAR_ROOT) else []
           return web.json_response({"avatars": prepared})
+
+
+      async def get_avatar(request: web.Request) -> web.Response:
+          """A prepared avatar's geometry (frame size, face box, idle frames), for the browser's lip-sync meter."""
+          avatar_id = request.match_info["avatar_id"]
+          if not AVATAR_ID_RE.match(avatar_id) or not _is_prepared(avatar_id):
+              return web.json_response({"error": "not_prepared"}, status=404)
+          with open(os.path.join(_avatar_dir(avatar_id), "avator_info.json")) as f:
+              info = json.load(f)
+          return web.json_response({k: info.get(k) for k in ("avatar_id", "face_box", "width", "height", "idle_frames",
+                                                             "extended_px")})
 
 
       async def put_avatar(request: web.Request) -> web.Response:
@@ -833,13 +1290,22 @@ write_files:
           body = await request.read()
           if not body or len(body) > MAX_IMAGE_BYTES:
               return web.json_response({"error": "image missing or larger than 8 MB"}, status=400)
+          frames = request.query.get("idle_frames")
           try:
-              info = await asyncio.get_running_loop().run_in_executor(None, prepare_avatar, avatar_id, body)
+              n = int(frames) if frames else None
+          except ValueError:
+              return web.json_response({"error": "bad idle_frames"}, status=400)
+          try:
+              info = await asyncio.get_running_loop().run_in_executor(None, prepare_avatar, avatar_id, body, n)
           except NoFace as exc:
               return web.json_response({"error": "no_face", "detail": str(exc)}, status=422)
           except ValueError as exc:
               return web.json_response({"error": "bad_image", "detail": str(exc)}, status=400)
           return web.json_response(info)
+
+
+      def _active() -> int:
+          return sum(1 for v in session_manager.sessions.values() if v is not None)
 
 
       async def offer(request: web.Request) -> web.Response:
@@ -851,8 +1317,7 @@ write_files:
               await asyncio.get_running_loop().run_in_executor(None, _load, avatar_id)
           except Exception as exc:  # noqa: BLE001 - a broken avatar dir is a client-visible error
               return web.json_response({"error": "avatar_load_failed", "detail": type(exc).__name__}, status=500)
-          active = sum(1 for v in session_manager.sessions.values() if v is not None)
-          if active >= MAX_SESSIONS:
+          if _active() >= MAX_SESSIONS:
               return web.json_response({"error": "max_sessions", "max_sessions": MAX_SESSIONS}, status=503)
           try:
               return await RTC.handle_offer(request)
@@ -864,11 +1329,118 @@ write_files:
           params = await request.json()
           sid = str(params.get("sessionid") or "")
           session_manager.remove_session(sid)
+          RTC.video_tracks.pop(sid, None)
           pc = RTC.by_session.pop(sid, None)
           if pc is not None:
               await pc.close()
               RTC.pcs.discard(pc)
           return web.json_response({"ok": True, "closed": pc is not None})
+
+
+      class _Utterance:
+          """Streamed TTS audio -> 16 kHz float32 20 ms frames pushed straight into the session's audio
+          queue (LiveTalking ``put_audio_frame``), resampled with a streaming soxr resampler so chunk
+          boundaries leave no clicks."""
+
+          CHUNK = 320
+
+          def __init__(self, sess, sample_rate: int):
+              self.sess = sess
+              self.rate = sample_rate
+              self.rs = soxr.ResampleStream(sample_rate, 16000, 1, dtype="float32", quality="HQ") if sample_rate != 16000 else None
+              self.buf = np.zeros(0, dtype=np.float32)
+              self.odd = b""
+              self.frames = 0
+              self.started = time.monotonic()
+              self.first_frame_ms: float | None = None
+              self.bytes_in = 0
+
+          def _push(self, samples: np.ndarray, last: bool) -> None:
+              if samples.size:
+                  self.buf = np.concatenate([self.buf, samples])
+              while self.buf.size >= self.CHUNK:
+                  frame, self.buf = self.buf[: self.CHUNK], self.buf[self.CHUNK:]
+                  final = last and self.buf.size == 0
+                  ev = {"status": "start"} if self.frames == 0 else ({"status": "end"} if final else {})
+                  self.sess.put_audio_frame(frame.copy(), ev)
+                  if self.frames == 0:
+                      self.first_frame_ms = round((time.monotonic() - self.started) * 1000.0, 1)
+                      TRACE["speech_in_at"], TRACE["speech_out_at"] = time.monotonic(), None
+                  self.frames += 1
+
+          def feed(self, data: bytes) -> None:
+              self.bytes_in += len(data)
+              data = self.odd + data
+              if len(data) % 2:
+                  self.odd, data = data[-1:], data[:-1]
+              else:
+                  self.odd = b""
+              if not data:
+                  return
+              x = np.frombuffer(data, dtype="<i2").astype(np.float32) / 32768.0
+              if self.rs is not None:
+                  x = self.rs.resample_chunk(x)
+              self._push(x.astype(np.float32, copy=False), last=False)
+
+          def finish(self) -> dict:
+              tail = self.rs.resample_chunk(np.zeros(0, dtype=np.float32), last=True) if self.rs is not None else np.zeros(0, np.float32)
+              if self.buf.size + tail.size:
+                  pad = (-(self.buf.size + tail.size)) % self.CHUNK
+                  tail = np.concatenate([tail.astype(np.float32), np.zeros(pad, dtype=np.float32)])
+              self._push(tail, last=True)
+              return {"frames": self.frames, "audio_ms": self.frames * 20, "bytes_in": self.bytes_in,
+                      "first_frame_ms": self.first_frame_ms, "elapsed_ms": round((time.monotonic() - self.started) * 1000.0, 1)}
+
+
+      async def stream_audio(request: web.Request) -> web.WebSocketResponse:
+          """Audio in as it is synthesised (see the module docstring for the message shapes)."""
+          ws = web.WebSocketResponse(max_msg_size=1 << 20, heartbeat=20)
+          await ws.prepare(request)
+          cur: _Utterance | None = None
+          sess = None
+          async for msg in ws:
+              if msg.type == WSMsgType.BINARY:
+                  if cur is not None:
+                      cur.feed(msg.data)
+                  continue
+              if msg.type != WSMsgType.TEXT:
+                  break
+              try:
+                  m = json.loads(msg.data)
+              except ValueError:
+                  await ws.send_json({"type": "error", "error": "bad_json"})
+                  continue
+              kind = m.get("type")
+              if kind == "begin":
+                  sess = session_manager.get_session(str(m.get("sessionid") or ""))
+                  if sess is None:
+                      await ws.send_json({"type": "error", "error": "unknown_session"})
+                      cur = None
+                      continue
+                  if m.get("interrupt"):
+                      sess.flush_talk()
+                  rate = int(m.get("sample_rate") or 16000)
+                  if rate not in (8000, 16000, 22050, 24000, 44100, 48000):
+                      await ws.send_json({"type": "error", "error": "bad_sample_rate"})
+                      continue
+                  cur = _Utterance(sess, rate)
+                  MEDIA["stream_utterances"] += 1
+                  await ws.send_json({"type": "begun"})
+              elif kind == "end":
+                  if cur is not None:
+                      stats = cur.finish()
+                      cur = None
+                      await ws.send_json({"type": "done", **stats})
+              elif kind == "interrupt":
+                  if sess is not None:
+                      sess.flush_talk()
+                  cur = None
+                  await ws.send_json({"type": "interrupted"})
+              elif kind == "ping":
+                  await ws.send_json({"type": "pong"})
+          if cur is not None:
+              cur.finish()
+          return ws
 
 
       async def turn_bridge(request: web.Request) -> web.WebSocketResponse:
@@ -903,6 +1475,72 @@ write_files:
           return ws
 
 
+      def _turn_credentials(label: str) -> tuple[str, str]:
+          username = f"{int(time.time()) + 600}:{label}"
+          digest = hmac.new(TURN_SECRET.encode(), username.encode(), hashlib.sha1).digest()
+          return username, base64.b64encode(digest).decode()
+
+
+      async def _allocate(host: str, port: int, transport: str, use_tls: bool) -> dict:
+          from aioice import turn as aturn  # noqa: PLC0415 - aiortc's ICE library
+
+          user, cred = _turn_credentials("turn-check")
+          started = time.monotonic()
+          ctx = ssl.create_default_context() if use_tls else None
+          dial = TURN_HOST_ADDR or host
+          try:
+              if use_tls:
+                  # Same TLS as a browser (SNI and certificate checked for the public name), dialled at
+                  # the host address: create_connection(host=dial, server_hostname=name).
+                  loop = asyncio.get_running_loop()
+                  orig = loop.create_connection
+
+                  async def _cc(factory, host=None, port=None, **kw):
+                      kw.setdefault("server_hostname", turn_name)
+                      return await orig(factory, host=dial, port=port, **kw)
+
+                  turn_name = host
+                  loop.create_connection = _cc  # type: ignore[method-assign]
+                  try:
+                      tt, _proto = await asyncio.wait_for(aturn.create_turn_endpoint(
+                          asyncio.DatagramProtocol, server_addr=(host, port), username=user, password=cred,
+                          ssl=ctx, transport=transport), timeout=10)
+                  finally:
+                      loop.create_connection = orig  # type: ignore[method-assign]
+              else:
+                  tt, _proto = await asyncio.wait_for(aturn.create_turn_endpoint(
+                      asyncio.DatagramProtocol, server_addr=(dial, port), username=user, password=cred,
+                      ssl=None, transport=transport), timeout=10)
+          except Exception as exc:  # noqa: BLE001 - reported per URL
+              return {"ok": False, "error": f"{type(exc).__name__}: {exc}"[:200]}
+          relayed = tt.get_extra_info("sockname")
+          out = {"ok": True, "relayed": f"{relayed[0]}:{relayed[1]}" if relayed else None,
+                 "ms": round((time.monotonic() - started) * 1000.0, 1)}
+          inner = getattr(getattr(tt, "_TurnTransport__inner_protocol", None), "transport", None)
+          sslobj = inner.get_extra_info("ssl_object") if inner is not None else None
+          if sslobj is not None:
+              cert = sslobj.getpeercert() or {}
+              out["tls"] = {"version": sslobj.version(), "cipher": (sslobj.cipher() or [None])[0],
+                            "subject": dict(x[0] for x in cert.get("subject", ())).get("commonName"),
+                            "issuer": dict(x[0] for x in cert.get("issuer", ())).get("organizationName")}
+          tt.close()
+          return out
+
+
+      async def turn_check(_request: web.Request) -> web.Response:
+          if not TURN_SECRET or not WORKER_DOMAIN:
+              return web.json_response({"ok": False, "error": "TURN_SECRET or WORKER_DOMAIN not set"}, status=503)
+          checks = {
+              f"turns:turn.{WORKER_DOMAIN}:443?transport=tcp": ("turn." + WORKER_DOMAIN, 443, "tcp", True),
+              f"turn:{WORKER_DOMAIN}:3478?transport=tcp": (WORKER_DOMAIN, 3478, "tcp", False),
+              f"turn:{WORKER_DOMAIN}:3478?transport=udp": (WORKER_DOMAIN, 3478, "udp", False),
+          }
+          results = [await _allocate(*v) for v in checks.values()]  # sequential: the TLS dial patches the loop
+          out = dict(zip(checks.keys(), results))
+          return web.json_response({"ok": all(r["ok"] for r in results), "dialled": TURN_HOST_ADDR or "public names",
+                                    "results": out})
+
+
       async def on_shutdown(_app: web.Application) -> None:
           await RTC.shutdown()
 
@@ -916,14 +1554,17 @@ write_files:
           app.router.add_get("/health", health)
           app.router.add_get("/avatars", list_avatars)
           app.router.add_put("/avatars/{avatar_id}", put_avatar)
+          app.router.add_get("/avatars/{avatar_id}", get_avatar)
           app.router.add_post("/offer", offer)
+          app.router.add_get("/stream", stream_audio)
           app.router.add_post("/humanaudio", humanaudio)
           app.router.add_post("/interrupt_talk", interrupt_talk)
           app.router.add_post("/is_speaking", is_speaking)
           app.router.add_post("/close", close)
           app.router.add_get("/turn", turn_bridge)
-          log.info("acudx avatar runner on :%d (batch %d, max sessions %d, model load %.0f ms)", AVATAR_PORT, BATCH_SIZE,
-                   MAX_SESSIONS, STATE["model_load_ms"])
+          app.router.add_get("/turn_check", turn_check)
+          log.info("acudx avatar runner on :%d (batch %d, ahead %d frames, max sessions %d, model load %.0f ms)",
+                   AVATAR_PORT, BATCH_SIZE, AHEAD_FRAMES, MAX_SESSIONS, STATE["model_load_ms"])
           web.run_app(app, host="0.0.0.0", port=AVATAR_PORT, access_log=None)
 
 
@@ -987,6 +1628,21 @@ write_files:
         exit 0
       fi
       status starting "" "$total" "$free"
+      # TURN over TLS on 443 (turn.<domain>, routed by edge.conf): coturn runs as nobody and cannot
+      # read Caddy's 0600 key in place, so the certificate pair is copied for it. Caddy requested
+      # it at boot; give it up to 5 minutes, else TURN starts without TLS (UDP/TCP 3478 only).
+      certdir="/opt/acudx/caddy/caddy/certificates/acme-v02.api.letsencrypt.org-directory/turn.$WORKER_DOMAIN"
+      for _ in $(seq 1 60); do [ -s "$certdir/turn.$WORKER_DOMAIN.crt" ] && break; sleep 5; done
+      if [ -s "$certdir/turn.$WORKER_DOMAIN.crt" ] && [ -s "$certdir/turn.$WORKER_DOMAIN.key" ]; then
+        install -d -m 0750 -o 65534 -g 65534 /opt/acudx/turn-tls
+        install -m 0644 -o 65534 -g 65534 "$certdir/turn.$WORKER_DOMAIN.crt" /opt/acudx/turn-tls/turn.crt
+        install -m 0600 -o 65534 -g 65534 "$certdir/turn.$WORKER_DOMAIN.key" /opt/acudx/turn-tls/turn.key
+        export TURN_TLS_ARGS="--tls-listening-port=5349 --cert=/tls/turn.crt --pkey=/tls/turn.key"
+        echo "acudx avatar: TURN over TLS on 443 (turn.$WORKER_DOMAIN)"
+      else
+        mkdir -p /opt/acudx/turn-tls
+        echo "acudx avatar: no certificate for turn.$WORKER_DOMAIN yet; TURN without TLS"
+      fi
       $compose up -d turn avatar
       for _ in $(seq 1 120); do
         if $compose exec -T avatar curl -sf -o /dev/null http://localhost:8010/health >/dev/null 2>&1; then
@@ -1056,7 +1712,7 @@ runcmd:
   # process already holds that memory (worker 10, 2026-10-20: once Chatterbox reached the
   # GPU, vLLM died with "Engine core initialization failed"). So vLLM starts alone and the
   # GPU side-cars start only after its health check passes (compose --wait, 40 min cap).
-  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d caddy
+  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d edge caddy
   - |
     cd /opt/acudx && set -a && . ./.env && set +a
     timeout 2400 docker compose up -d --wait vllm || echo "acudx - vllm did not become healthy within 40 min" >&2

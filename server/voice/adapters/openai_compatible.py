@@ -51,6 +51,24 @@ class OpenAiCompatibleTts:
     def model_for(ep: ProviderEndpoint) -> str:
         return str(ep.extra.get("tts_model") or ep.model or DEFAULT_TTS_MODEL)
 
+    @staticmethod
+    def stream_route(ep: ProviderEndpoint) -> tuple[str, dict[str, Any]]:
+        """Path and body fields for incremental audio.
+
+        The GPU worker's Chatterbox API answers ``/speech`` only once the whole utterance is
+        synthesised; ``/speech/stream`` sends the WAV header at once and then each text chunk's
+        PCM as soon as it is generated (chatterbox-tts-api ``app/api/endpoints/speech.py``,
+        ``streaming_chunk_size`` >= 50 characters, ``streaming_strategy`` sentence). Kokoro and
+        OpenAI stream ``/speech`` already. ``extra.tts_stream_path`` / ``extra.tts_stream_body``
+        override per row.
+        """
+        path = ep.extra.get("tts_stream_path")
+        body = ep.extra.get("tts_stream_body")
+        if ep.source == "gpu_worker":
+            path = path or "/speech/stream"
+            body = body if isinstance(body, dict) else {"streaming_chunk_size": 60, "streaming_strategy": "sentence"}
+        return (str(path) if path else "/speech"), (dict(body) if isinstance(body, dict) else {})
+
     async def synthesize(self, client: httpx.AsyncClient, ep: ProviderEndpoint, req: TtsRequest) -> TtsStream:
         model = req.model or self.model_for(ep)
         fmt = req.output_format if req.output_format in _CONTENT_TYPES else "mp3"
@@ -60,10 +78,14 @@ class OpenAiCompatibleTts:
         extra_body = ep.extra.get("tts_body")
         if isinstance(extra_body, dict):
             body.update(extra_body)   # e.g. Chatterbox {"exaggeration": 0.6, "cfg_weight": 0.4}
+        path = "/speech"
+        if req.stream:
+            path, stream_body = self.stream_route(ep)
+            body.update(stream_body)
         headers = {"Content-Type": "application/json"}
         if ep.api_key:
             headers["Authorization"] = f"Bearer {ep.api_key}"
-        request = client.build_request("POST", f"{_audio_base(ep)}/speech", json=body, headers=headers)
+        request = client.build_request("POST", f"{_audio_base(ep)}{path}", json=body, headers=headers)
         resp = await client.send(request, stream=True)
         if resp.status_code >= 400:
             await resp.aread()

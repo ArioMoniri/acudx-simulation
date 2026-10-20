@@ -233,3 +233,36 @@ async def test_capabilities_probe_the_worker_tts_route_not_just_healthz(tmp_path
     assert caps["tts"]["enabled"] is True and caps["tts"]["provider"] == "gpu-worker"
     assert caps["gpu_worker"]["tts"]["ok"] is True
     assert worker.ensure_calls == 0
+
+
+async def test_streamed_worker_tts_uses_the_chatterbox_stream_route(tmp_path):
+    """The live call forwards audio while it is generated: the worker's Chatterbox answers /speech only
+    after the whole line, /speech/stream right after the first sentence."""
+    sc = WorkerScenario()
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=FakeWorkerManager(ready=True), scenario=sc)
+    out = await svc.tts("Göğsümde baskı var. Sabahtan beri.", lang="tr", sex="male", age=45, output_format="wav",
+                        stream=True)
+    audio = await _collect(out.stream)
+    assert audio[:4] == b"RIFF" and len(audio) == 44 + 24000
+    call = sc.tts_calls[-1]
+    assert call["_route"] == "stream" and call["voice"] == "acudx_tr_male"
+    assert call["streaming_chunk_size"] == 60 and call["streaming_strategy"] == "sentence"
+    plain = await svc.tts("Merhaba", lang="tr", sex="male", age=45, output_format="wav")
+    await _collect(plain.stream)
+    assert "_route" not in sc.tts_calls[-1]
+
+
+async def test_a_row_declaring_its_languages_is_skipped_for_others(tmp_path):
+    """A Kokoro row (English voices) declares ["en"]: a Turkish line goes on to the worker's Chatterbox."""
+    sc = WorkerScenario()
+    router = respx.MockRouter(assert_all_called=False)
+    kokoro = router.post("https://kokoro.example/v1/audio/speech").mock(
+        return_value=httpx.Response(200, content=b"RIFF", headers={"content-type": "audio/wav"}))
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=FakeWorkerManager(ready=True), scenario=sc,
+                                   respx_router=router)
+    store.create_provider(ProviderIn(kind="tts", name="worker-kokoro", base_url="https://kokoro.example", priority=0,
+                                     extra={"languages": ["en"], "voice_family": "kokoro"}))
+    tr = await svc.tts("Nefes alamıyorum.", lang="tr", sex="female", age=70, output_format="wav")
+    assert tr.endpoint.source == "gpu_worker" and not kokoro.called
+    en = await svc.tts("I cannot breathe.", lang="en", sex="female", age=70, output_format="wav")
+    assert en.endpoint.name == "worker-kokoro" and kokoro.called

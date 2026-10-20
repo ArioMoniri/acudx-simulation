@@ -150,6 +150,7 @@ async def lifespan(app: FastAPI):
     app.state.worker_manager = worker_manager
     app.state.voice = voice
     app.state.avatar_sessions = SessionStore()
+    voice.avatar_calls = app.state.avatar_sessions.pending_on  # per-worker call limit in capabilities
     app.state.auth = auth
     app.state.learning = learning
     app.state.jobs = {"provider_probe": probe_job, "telemetry_retention": retention_job}
