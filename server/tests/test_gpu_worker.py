@@ -311,3 +311,24 @@ async def test_reaper_task_starts_and_stops(tmp_path):
     await m.stop_reaper()
     assert not m.reaper_running
     await m.aclose()
+
+
+async def test_reaper_never_counts_boot_time_as_idle(tmp_path):
+    """Live finding 2026-10-19: a cold boot (image + weights pull) ran past the idle
+    window and the reaper terminated the worker before it ever became ready."""
+    from server.providers.gpu_worker import WorkerStore
+    store = WorkerStore(str(tmp_path / "w.db"))
+    w = store.insert_worker(instance_id="i-boot", instance_type="gpu_1x_a100_sxm4", region="us-east-1",
+                            token="t", status="booting", price_cents_per_hour=199,
+                            launched_at=0.0, last_used_at=0.0)
+    store.open_ledger(w)
+
+    class M:
+        policy = type("P", (), {"idle_minutes": 1})()
+        def __init__(self): self.store = store; self.terminated = False
+        def _clock(self): return 10_000.0
+        async def terminate(self, reason=""): self.terminated = True
+    from server.providers.gpu_worker import WorkerManager
+    m = M()
+    assert await WorkerManager.reap_once(m) is False
+    assert m.terminated is False
