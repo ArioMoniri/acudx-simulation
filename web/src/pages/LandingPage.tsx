@@ -1,15 +1,15 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
-import { ArrowRight, Translate, Footprints } from "@phosphor-icons/react";
+import { ArrowRight, Translate } from "@phosphor-icons/react";
 
 import { PageContainer, PageHeader, Wordmark } from "@/components/shell";
 import { SimBadge } from "@/components/ehr";
-import { Button, Card, SectionLabel } from "@/components/ui";
+import { Button, SectionLabel } from "@/components/ui";
 import { useLang } from "@/lib/useLang";
 import { useReveal } from "@/lib/motion";
+import { useTheme } from "@/lib/theme";
 import {
-  VitalsMonitorTile,
   CoreLoop,
   SupportingRail,
   CredibilityStrip,
@@ -17,47 +17,32 @@ import {
   LaunchTeaser,
 } from "@/components/landing";
 
-/* -------------------------------------------------------------------------- */
-/* Page                                                                        */
-/* -------------------------------------------------------------------------- */
+/** Real captures of the encounter workspace (web/public/media/screens). */
+const HERO_SHOT = {
+  light: "/media/screens/encounter-1280-light.png",
+  dark: "/media/screens/encounter-1280-dark.png",
+};
 
 /**
- * LandingPage — the ONE marketing surface (docs/design/01 Screen 1.1), rebuilt
- * as a clinical-instrument editorial page rather than a template feature grid.
- *
- * An asymmetric hero pairs a tight value proposition (PageHeader, marketing
- * tone) with a REAL artifact — a compact vitals monitor on the always-dark
- * `--monitor-*` palette — so the product shows itself instead of being blurbed.
- * A monochrome credibility strip cites the guideline bodies; the core learner
- * loop is a single dominant stepper; the surrounding platform is a compact
- * hairline-divided rail (not equal cards); a calm band closes with one CTA.
- *
- * The brand moment: the hero lockup carries the mark drawing itself in
- * (HeroMark, code-split and mounted after idle so it never competes with LCP;
- * static under reduced motion). A ten-second silent teaser sits after the
- * credibility strip as a lazy inline video with a poster.
- *
- * One saturated primary button (the hero's primary call to action); every other
- * CTA is secondary or a quiet link. Restrained, reduced-motion-safe entrances. Light
- * default and dark. Nothing here is real patient data; every case is synthetic
- * and for education only.
+ * LandingPage: the one marketing surface, as an editorial page rather than a
+ * template. A left-aligned hero (display headline, one lede, one primary
+ * action) next to a real capture of the encounter workspace; a plain sources
+ * line; the loop as a numbered list; the platform as a hairline list; one
+ * closing line. No tinted tiles, no gradients, no closing band.
  */
 export function LandingPage() {
   const { t } = useTranslation();
   const lang = useLang();
+  const { theme } = useTheme();
 
   const hero = useReveal();
-  const heroArtifact = useReveal(0.08);
-  const cred = useReveal(0.04);
-  const film = useReveal(0.04);
-  const loopHead = useReveal();
-  const platformHead = useReveal();
-  const closing = useReveal(0.04);
+  const media = useReveal(0.04);
+  const rest = useReveal(0.06);
 
   return (
-    <PageContainer width="wide" className="flex flex-col gap-16 sm:gap-20">
-      {/* Hero — asymmetric editorial split */}
-      <section className="grid items-center gap-10 pt-2 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:pt-6">
+    <PageContainer width="wide" className="flex flex-col gap-12 sm:gap-16">
+      {/* Hero: text left, the product on the right */}
+      <section className="grid items-center gap-8 pt-2 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-12 lg:pt-6">
         <motion.div {...hero}>
           <div className="flex flex-wrap items-center gap-3">
             <Wordmark size="lg" mark={<HeroMark />} />
@@ -66,18 +51,14 @@ export function LandingPage() {
 
           <PageHeader
             tone="marketing"
-            className="mt-7"
+            className="mt-6"
             eyebrow={t("landing2.hero.eyebrow")}
             title={t("landing.hero.title")}
             description={t("landing.hero.subtitle")}
           />
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Button
-              asChild
-              size="lg"
-              trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
-            >
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <Button asChild size="lg" trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}>
               <Link to="/start">{t("landing.hero.primaryCta")}</Link>
             </Button>
             <Button asChild size="lg" variant="secondary">
@@ -85,95 +66,81 @@ export function LandingPage() {
             </Button>
           </div>
 
-          <p className="mt-5 inline-flex items-center gap-2 text-sm text-muted">
+          <p className="mt-4 inline-flex items-center gap-2 text-[0.8125rem] text-muted">
             <Translate weight="bold" className="h-4 w-4" aria-hidden />
             {t("landing.hero.bilingualNote")}
           </p>
         </motion.div>
 
-        {/* Right column: a genuine instrument readout, not a staged screenshot */}
-        <motion.div {...heroArtifact} className="lg:ps-2">
-          <VitalsMonitorTile className="mx-auto w-full max-w-sm lg:max-w-none" />
-        </motion.div>
-      </section>
-
-      {/* Credibility strip — monochrome, sourced */}
-      <motion.div {...cred}>
-        <CredibilityStrip />
-      </motion.div>
-
-      {/* Ten-second teaser: lazy, silent, with a poster and native controls */}
-      <motion.div {...film}>
-        <LaunchTeaser />
-      </motion.div>
-
-      {/* Core loop — the dominant stepper */}
-      <section aria-labelledby="landing-loop">
-        <motion.div {...loopHead} className="max-w-2xl">
-          <SectionLabel>{t("landing2.loop.eyebrow")}</SectionLabel>
-          <h2
-            id="landing-loop"
-            className="mt-2 text-2xl font-semibold tracking-tight text-fg sm:text-3xl"
-          >
-            {t("landing2.loop.heading")}
-          </h2>
-          <p className="mt-2 text-base text-muted">{t("landing2.loop.sub")}</p>
-        </motion.div>
-        <div className="mt-6">
-          <CoreLoop />
-        </div>
-      </section>
-
-      {/* Platform — asymmetric 2-col: lead heading + compact hairline rail */}
-      <section
-        aria-labelledby="landing-platform"
-        className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:gap-14"
-      >
-        <motion.div {...platformHead} className="lg:pt-1">
-          <SectionLabel>{t("landing2.platform.eyebrow")}</SectionLabel>
-          <h2
-            id="landing-platform"
-            className="mt-2 text-2xl font-semibold tracking-tight text-fg sm:text-3xl"
-          >
-            {t("landing2.platform.heading")}
-          </h2>
-          <p className="mt-3 max-w-md text-base text-muted">
-            {t("landing2.platform.sub")}
-          </p>
-        </motion.div>
-        <SupportingRail />
-      </section>
-
-      {/* Closing band — one calm CTA */}
-      <motion.section {...closing}>
-        <Card variant="inset" padding="lg" className="flex flex-col gap-5">
-          <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-brand-tint text-brand">
-              <Footprints weight="bold" className="h-5 w-5" aria-hidden />
-            </span>
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight text-fg">
-                {t("landing.closing.heading")}
-              </h2>
-              <p className="mt-1.5 max-w-2xl text-sm text-muted">
-                {t("landing.closing.body")}
-              </p>
-            </div>
+        <motion.figure {...media} className="m-0 min-w-0">
+          <div className="overflow-hidden rounded-card border border-border bg-surface">
+            <img
+              src={theme === "dark" ? HERO_SHOT.dark : HERO_SHOT.light}
+              width={1280}
+              height={800}
+              alt={t("landing3.hero.shotAlt", {
+                defaultValue: "The encounter workspace: patient banner, storyboard rail and the chart tabs",
+              })}
+              className="block h-auto w-full"
+              loading="eager"
+              decoding="async"
+            />
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              asChild
-              variant="secondary"
-              trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
-            >
+          <figcaption className="mt-2 font-mono text-[0.6875rem] text-subtle">
+            {t("landing3.hero.shotCaption", {
+              defaultValue: "Encounter workspace, 1280 px, synthetic patient",
+            })}
+          </figcaption>
+        </motion.figure>
+      </section>
+
+      <motion.div {...rest} className="flex flex-col gap-12 sm:gap-16">
+        {/* Sources line */}
+        <CredibilityStrip />
+
+        {/* The loop: numbered list */}
+        <section aria-labelledby="landing-loop" className="grid gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-12">
+          <div>
+            <SectionLabel>{t("landing2.loop.eyebrow")}</SectionLabel>
+            <h2 id="landing-loop" className="mt-2 text-xl font-semibold tracking-tight text-fg sm:text-2xl">
+              {t("landing2.loop.heading")}
+            </h2>
+            <p className="mt-2 max-w-md text-[0.9375rem] text-muted">{t("landing2.loop.sub")}</p>
+          </div>
+          <CoreLoop />
+        </section>
+
+        {/* Teaser film */}
+        <LaunchTeaser />
+
+        {/* Platform: hairline list */}
+        <section aria-labelledby="landing-platform" className="grid gap-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-12">
+          <div>
+            <SectionLabel>{t("landing2.platform.eyebrow")}</SectionLabel>
+            <h2 id="landing-platform" className="mt-2 text-xl font-semibold tracking-tight text-fg sm:text-2xl">
+              {t("landing2.platform.heading")}
+            </h2>
+            <p className="mt-2 max-w-md text-[0.9375rem] text-muted">{t("landing2.platform.sub")}</p>
+          </div>
+          <SupportingRail />
+        </section>
+
+        {/* Closing line */}
+        <section className="flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-fg">{t("landing.closing.heading")}</h2>
+            <p className="mt-1 max-w-2xl text-[0.8125rem] text-muted">{t("landing.closing.body")}</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
+            <Button asChild variant="secondary" trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}>
               <Link to="/start">{t("landing.closing.primaryCta")}</Link>
             </Button>
-            <span className="ms-auto hidden text-xs text-muted sm:inline">
+            <span className="hidden text-xs text-subtle sm:inline">
               {t("landing.closing.note", { lang: lang.toUpperCase() })}
             </span>
           </div>
-        </Card>
-      </motion.section>
+        </section>
+      </motion.div>
     </PageContainer>
   );
 }
