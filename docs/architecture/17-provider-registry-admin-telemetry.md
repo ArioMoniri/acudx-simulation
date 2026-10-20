@@ -82,6 +82,8 @@ The gateway without a resolver (unit tests, scripts) keeps the env-only behaviou
 
 `POST /admin/providers/{id}/probe` performs a real HTTP GET with a 5 s timeout against kind-specific paths: `/models` for OpenAI-compatible kinds, `/v1/projects` (Deepgram style) for STT, `/v1/user` then `/v1/models` for TTS, `/health` for avatar, `/.well-known/openid-configuration` for identity, `/api/public/health` for a Langfuse sink. Auth headers follow the kind (`Authorization: Bearer`, `Token`, or `xi-api-key`). The air-gap guard runs before any socket opens and reports `EgressBlocked`. Model ids from a `/models` reply are returned so the UI can show what the endpoint serves. The outcome is written on the row and feeds resolution rule 3.
 
+`server/registry/jobs.py` runs the same probe on a schedule: `ProbeScheduler` probes every enabled row every `PROBE_INTERVAL_MINUTES` (default 10, `0` disables) from the app lifespan, so `last_probe_*` and `/admin/health` stay current without an operator pressing Probe. Disabled rows are skipped; the status of the job (runs, last run, last result, last error) is reported under `jobs.provider_probe` in `/admin/health`.
+
 ## 7. Telemetry
 
 * `TelemetryRecorder.record()` is called by `ModelGateway.chat`, `embed` and `rerank` on success and on failure. Token counts come from the provider's `usage` block (`prompt_tokens`, `completion_tokens`, `prompt_tokens_details.cached_tokens`).
@@ -101,7 +103,7 @@ All routes share the constant-time `X-Admin-Token` guard from `server/admin_rout
 | GET, PUT, DELETE | /admin/providers/{id} | ProviderPatch on PUT | public view, 204 on delete |
 | POST | /admin/providers/{id}/probe | | probe result |
 | GET, PUT | /admin/settings | `{settings: {...}}` on PUT | `{settings}` |
-| GET | /admin/health | | `{status, airgapped, secrets_configured, db, providers, gpu, disk}` |
+| GET | /admin/health | | `{status, airgapped, secrets_configured, db, providers, gpu, disk, jobs}` |
 | GET | /admin/telemetry/summary | `?window=` | summary |
 | GET | /admin/telemetry/gpu | `?limit=` | ledger roll-up |
 | GET, POST, PUT | /admin/gpu/{status,start,stop,ledger,policy} | | unchanged from document 16 |
@@ -134,6 +136,7 @@ Charts are the evilcharts shadcn registry items `recharts-area-chart`, `recharts
 * `server/tests/test_registry_store.py`: schema, encryption round trip, public view never leaks, refusal without secret key, update semantics, wrong key, settings, env seed.
 * `server/tests/test_registry_resolve.py`: priority order, air-gap refusal and allow-list, probe-aware skipping, env key fallback, GPU worker fallback and touch, frozen endpoint hides key.
 * `server/tests/test_registry_routes.py`: guard, CRUD, 409 without secret key, probes via respx (success, failure, non-2xx, air-gap), settings, health, telemetry endpoints, main app mounts.
+* `server/tests/test_registry_jobs.py`: scheduled probes touch enabled rows only and persist, the loop runs and stops, interval 0 disables, a failing iteration is recorded and survived.
 * `server/tests/test_telemetry.py`: price table, cost with cached discount, row writes, percentile math, summary math and buckets, OTel span attributes, gateway hooks for chat/embed/rerank, failure rows.
 * `web/src/lib/adminApi.test.ts`, `web/src/lib/adminCharts.test.ts`: client headers and error mapping, series and share shaping, ledger folding, formatting, provider tones.
 
@@ -141,4 +144,4 @@ Charts are the evilcharts shadcn registry items `recharts-area-chart`, `recharts
 
 * Retention purge for `model_calls` is a setting without a job yet; add a daily task once the orchestrator schedules server jobs.
 * Per-tenant budgets: the summary already groups by tenant-capable columns; the console shows global totals only.
-* Probe scheduling: probes are manual today; a periodic probe (every 5 min for enabled rows) would keep rule 3 current without operator action.
+* Jobs run in-process per gateway instance; with several replicas each one probes and purges on its own schedule (harmless, but a leader election or a single jobs replica would avoid duplicate probes).

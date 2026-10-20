@@ -191,6 +191,7 @@ async def health(request: Request) -> dict[str, Any]:
         "providers": {"total": len(providers), "enabled": enabled, "probe_failed": failed, "by_kind": by_kind},
         "gpu": gpu,
         "disk": disk,
+        "jobs": {name: job.status() for name, job in (getattr(request.app.state, "jobs", None) or {}).items()},
         "ts": time.time(),
     }
 

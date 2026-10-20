@@ -161,7 +161,20 @@ export interface HealthReport {
   };
   gpu: GpuStatus;
   disk: { path: string; total_bytes?: number; free_bytes?: number; used_bytes?: number; used_pct?: number | null; error?: string };
+  /** Background jobs (provider_probe, telemetry_retention); absent on older gateways. */
+  jobs?: Record<string, JobStatus>;
   ts: number;
+}
+
+export interface JobStatus {
+  name: string;
+  enabled: boolean;
+  interval_s: number;
+  running: boolean;
+  runs: number;
+  last_run_at: number | null;
+  last_result: Record<string, unknown> | null;
+  last_error: string | null;
 }
 
 export interface WorkerPolicy {
