@@ -27,26 +27,26 @@ import type { MotionProps, Variants } from "motion/react";
  * "settle" curve: quick to leave, gently arriving. Used for every entrance and
  * hover so motion feels like one hand drew it.
  */
-export const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+export const EASE: [number, number, number, number] = [0.2, 0, 0, 1];
 
 /** Durations in seconds. Deliberately brief — restraint over spectacle. */
 export const DURATION = {
   /** Hover / press feedback. */
-  fast: 0.18,
+  fast: 0.12,
   /** The default entrance. */
-  base: 0.42,
+  base: 0.16,
   /** Reserved for larger, rarer reveals. */
-  slow: 0.6,
+  slow: 0.2,
 } as const;
 
 /** Vertical travel for a fade-up, in pixels (transform only). */
-const REVEAL_Y = 12;
+const REVEAL_Y = 4;
 /** How far a card rises on hover, in pixels (transform only). */
-const HOVER_LIFT_Y = 4;
+const HOVER_LIFT_Y = 0;
 /** Gap between staggered siblings, in seconds. */
-const STAGGER_GAP = 0.06;
+const STAGGER_GAP = 0.03;
 /** Lead-in before the first staggered child, in seconds. */
-const STAGGER_LEAD = 0.02;
+const STAGGER_LEAD = 0;
 
 /** The default entrance transition. */
 const enterTransition = { duration: DURATION.base, ease: EASE } as const;

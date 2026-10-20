@@ -91,10 +91,10 @@ function MeterRow({
         <StatusDot tone={tone} size="sm" />
         <span className="text-xs font-medium text-fg">{label}</span>
       </div>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-pill bg-bg-inset">
+      <div className="h-1.5 flex-1 overflow-hidden rounded-chip bg-bg-inset">
         <div
           className={cn(
-            "h-full rounded-pill transition-[width] duration-500 ease-out motion-reduce:transition-none",
+            "h-full rounded-chip transition-[width] duration-500 ease-out motion-reduce:transition-none",
             complete ? "bg-[color:var(--state-normal)]" : "bg-brand",
           )}
           style={{ width: `${pct}%` }}
@@ -175,7 +175,7 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
         <div className="flex min-w-0 items-start gap-2.5">
           <span
             aria-hidden
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-chip bg-brand-tint text-brand"
+            className="grid h-6 w-6 shrink-0 place-items-center text-brand"
           >
             <BookOpen weight="fill" className="h-4 w-4" />
           </span>
@@ -193,7 +193,7 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
       <Card variant="surface" padding="md">
         <div className="flex flex-wrap items-center gap-2">
           <span className="eyebrow text-brand">{t("guidance3.focus")}</span>
-          <span className="rounded-pill bg-brand-tint px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+          <span className="rounded-chip bg-brand-tint px-1 text-[0.625rem] font-semibold uppercase leading-4 tracking-wide text-brand">
             {t("guidance3.panel.education")}
           </span>
         </div>
@@ -292,7 +292,7 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
         <SectionLabel
           icon={<ListChecks weight="bold" className="h-3.5 w-3.5" />}
           trailing={
-            <span className="rounded-pill bg-bg-subtle px-2 py-0.5 font-mono text-xs tabular-nums text-fg">
+            <span className="rounded-chip bg-bg-subtle px-2 py-0.5 font-mono text-xs tabular-nums text-fg">
               {coveragePct}%
             </span>
           }
@@ -319,7 +319,7 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
           <SectionLabel
             icon={<FlagBanner weight="bold" className="h-3.5 w-3.5" />}
             trailing={
-              <span className="rounded-pill bg-bg-subtle px-2 py-0.5 font-mono text-xs tabular-nums text-muted">
+              <span className="rounded-chip bg-bg-subtle px-2 py-0.5 font-mono text-xs tabular-nums text-muted">
                 {coverage.redFlags.screened}/{coverage.redFlags.total}
               </span>
             }
@@ -441,7 +441,7 @@ function ReferencePill({ degraded, loading }: { degraded: boolean; loading: bool
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-pill border px-2 py-0.5 text-[11px] font-medium",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-chip border px-2 py-0.5 text-[11px] font-medium",
         live
           ? "border-transparent bg-[color-mix(in_srgb,var(--state-normal)_14%,transparent)] text-[color:var(--state-normal)]"
           : "border-border bg-bg-subtle text-muted",

@@ -12,9 +12,10 @@ export interface ProgressStagesProps {
 }
 
 /**
- * ProgressStages — a horizontal clinical stepper. The current stage is marked
- * with aria-current and a filled brand node; completed stages carry a check.
- * State is conveyed by icon + text + position, never color alone.
+ * ProgressStages: a compact clinical stepper. Square numbered chips joined by
+ * hairlines; the current stage is filled with the accent and carries
+ * aria-current, completed stages carry a check. State is conveyed by icon,
+ * text and position, never colour alone.
  */
 export function ProgressStages({
   stages,
@@ -27,7 +28,7 @@ export function ProgressStages({
       <ol
         tabIndex={0}
         aria-label={ariaLabel}
-        className="flex items-center gap-1 overflow-x-auto pb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        className="flex items-center overflow-x-auto"
       >
         {stages.map((stage, i) => {
           const status =
@@ -37,22 +38,20 @@ export function ProgressStages({
               <span
                 aria-current={status === "current" ? "step" : undefined}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-                  "transition-colors duration-200 ease-out",
-                  status === "current" &&
-                    "bg-brand text-white shadow-soft",
-                  status === "done" && "bg-brand-tint text-brand",
-                  status === "todo" && "bg-bg-subtle text-muted",
+                  "inline-flex h-7 items-center gap-1.5 rounded-chip px-2 text-xs font-medium",
+                  "transition-colors duration-[120ms] ease-out",
+                  status === "current" && "bg-fg text-bg",
+                  status === "done" && "text-fg",
+                  status === "todo" && "text-muted",
                 )}
               >
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "grid h-4 w-4 place-items-center rounded-full text-[10px] font-semibold",
-                    status === "current" && "bg-white/25 text-white",
-                    status === "done" && "bg-brand/15 text-brand",
-                    status === "todo" &&
-                      "border border-border text-muted",
+                    "grid h-4 w-4 place-items-center rounded-chip font-mono text-[0.625rem] font-semibold",
+                    status === "current" && "bg-bg/20 text-bg",
+                    status === "done" && "bg-brand text-white",
+                    status === "todo" && "border border-border-strong text-muted",
                   )}
                 >
                   {status === "done" ? (
@@ -67,8 +66,8 @@ export function ProgressStages({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "mx-0.5 h-px w-4 shrink-0",
-                    i < currentIndex ? "bg-brand/40" : "bg-border",
+                    "mx-1 h-px w-5 shrink-0",
+                    i < currentIndex ? "bg-brand" : "bg-border-strong",
                   )}
                 />
               ) : null}

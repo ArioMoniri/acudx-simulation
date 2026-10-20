@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 /**
  * CredibilityStrip — a restrained, monochrome citation band under the hero.
  * Names the guideline bodies AcuDx grounds its hints and feedback in as plain
- * text (no fake logos), so the claim reads as sourced rather than decorative.
+ * text (no invented logos), so the claim reads as sourced rather than decorative.
  */
 export function CredibilityStrip({ className }: { className?: string }) {
   const { t } = useTranslation();

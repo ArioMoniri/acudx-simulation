@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowsDownUp,
   Sparkle,
   Lightning,
   CircleNotch,
@@ -47,6 +50,7 @@ import type { StatusTone } from "@/components/ui";
 import { CaseInstanceCard } from "@/components";
 import { SimBadge } from "@/components/ehr";
 import { useLang } from "@/lib/useLang";
+import { nextSort, sortCases, type CaseSort, type CaseSortKey } from "@/lib/caseSort";
 import { useReveal } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 import { pick, esiToState } from "@/components/ehr/labels";
@@ -140,8 +144,8 @@ function FilterChip({
       aria-checked={selected}
       onClick={onSelect}
       className={cn(
-        "inline-flex min-h-8 items-center gap-1.5 rounded-pill border px-2.5 text-[0.8125rem] font-medium",
-        "transition-colors duration-150 ease-out",
+        "inline-flex h-7 items-center gap-1.5 rounded-chip border px-2 text-xs font-medium",
+        "transition-colors duration-[120ms] ease-out",
         selected
           ? "border-brand bg-brand-tint text-brand"
           : "border-border bg-surface text-muted hover:border-border-strong hover:text-fg",
@@ -219,38 +223,24 @@ function GeneratePanel({
   const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
-        <SectionLabel icon={<Sparkle weight="fill" className="h-3.5 w-3.5" />}>
+    <Card padding="md" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <SectionLabel icon={<Sparkle weight="bold" className="h-3.5 w-3.5" />}>
           {t("select2.cases.generator.eyebrow")}
         </SectionLabel>
         <h2
           id="cases-generate-heading"
-          className="text-lg font-semibold tracking-tight text-fg"
+          className="text-base font-semibold tracking-tight text-fg"
         >
           {t("cases.generate.heading")}
         </h2>
-        <p className="max-w-2xl text-sm text-muted">{t("cases.generate.hint")}</p>
+        <p className="max-w-2xl text-[0.8125rem] text-muted">{t("cases.generate.hint")}</p>
       </div>
 
-      {/* Headline action: generate a fresh, non-repeating synthetic case. */}
-      <div className="flex flex-col gap-2.5 rounded-card border border-brand/30 bg-brand-tint/40 p-4">
-        <Button
-          size="lg"
-          fullWidth
-          disabled={busy}
-          onClick={() => onEndless(complaint, difficulty)}
-          leadingIcon={<Sparkle weight="fill" className="h-5 w-5" />}
-        >
-          {t("livegen.endless")}
-        </Button>
-        <p className="text-xs text-muted">{t("livegen.endlessHint")}</p>
-      </div>
-
-      {/* Optional constraint controls that shape the generated case */}
+      {/* One toolbar row: constraints, then the headline action. */}
       <div className="flex flex-col gap-2">
         <span className="eyebrow">{t("livegen.refine")}</span>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
           <Field label={t("cases.generate.complaintLegend")}>
             {(aria) => (
               <Select
@@ -293,40 +283,47 @@ function GeneratePanel({
               </Select>
             )}
           </Field>
+          <Button
+            size="md"
+            disabled={busy}
+            onClick={() => onEndless(complaint, difficulty)}
+            leadingIcon={<Sparkle weight="bold" className="h-4 w-4" />}
+            className="h-9"
+          >
+            {t("livegen.endless")}
+          </Button>
         </div>
+        <p className="text-xs text-muted">{t("livegen.endlessHint")}</p>
       </div>
 
       {/* Secondary: force a specific engine (preserves the quick / AI split) */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-3">
         <span className="eyebrow">{t("livegen.pickEngine")}</span>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Button
-              size="sm"
-              variant="secondary"
-              fullWidth
-              disabled={busy}
-              onClick={() => onQuickGenerate(complaint, difficulty)}
-              leadingIcon={<Lightning weight="fill" className="h-4 w-4" />}
-            >
-              {t("livegen.quick")}
-            </Button>
-            <p className="text-xs text-muted">{t("livegen.quickHint")}</p>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Button
-              size="sm"
-              variant="secondary"
-              fullWidth
-              disabled={busy}
-              onClick={() => onAiGenerate(complaint, difficulty)}
-              leadingIcon={<Sparkle weight="fill" className="h-4 w-4" />}
-            >
-              {t("livegen.ai")}
-            </Button>
-            <p className="text-xs text-muted">{t("livegen.aiHint")}</p>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => onQuickGenerate(complaint, difficulty)}
+            leadingIcon={<Lightning weight="bold" className="h-3.5 w-3.5" />}
+            title={t("livegen.quickHint")}
+          >
+            {t("livegen.quick")}
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => onAiGenerate(complaint, difficulty)}
+            leadingIcon={<Sparkle weight="bold" className="h-3.5 w-3.5" />}
+            title={t("livegen.aiHint")}
+          >
+            {t("livegen.ai")}
+          </Button>
         </div>
+        <p className="basis-full text-xs text-muted">
+          {t("livegen.quickHint")} {t("livegen.aiHint")}
+        </p>
       </div>
 
       {/* Progress + outcome surface (never blocks; AI runs async) */}
@@ -385,11 +382,66 @@ function GeneratePanel({
         </div>
       ) : null}
 
-      <p className="flex items-start gap-2 border-t border-border pt-4 text-xs text-muted">
-        <Sparkle weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-subtle" aria-hidden />
+      <p className="text-xs text-muted">
         {t("livegen.note")} {t("cases.generate.unlimited")}
       </p>
     </Card>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Sortable column header                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * SortTh: a column header that is a real button. Carries aria-sort on the
+ * cell and a glyph for the direction (Origin, Supabase). Activation cycles
+ * ascending, descending, cleared (lib/caseSort nextSort).
+ */
+function SortTh({
+  column,
+  sort,
+  onSort,
+  numeric,
+  className,
+  children,
+}: {
+  column: CaseSortKey;
+  sort: CaseSort | null;
+  onSort: (key: CaseSortKey) => void;
+  numeric?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation();
+  const active = sort?.key === column;
+  const dir = active ? sort.dir : null;
+  return (
+    <Th
+      numeric={numeric}
+      className={className}
+      aria-sort={dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        aria-label={t("cases3.sortBy", { column: String(children), defaultValue: "Sort by {{column}}" })}
+        className={cn(
+          "inline-flex items-center gap-1 rounded-chip eyebrow hover:text-fg",
+          numeric && "flex-row-reverse",
+          active && "text-fg",
+        )}
+      >
+        {children}
+        {dir === "asc" ? (
+          <ArrowUp weight="bold" className="h-3 w-3" aria-hidden />
+        ) : dir === "desc" ? (
+          <ArrowDown weight="bold" className="h-3 w-3" aria-hidden />
+        ) : (
+          <ArrowsDownUp weight="bold" className="h-3 w-3 text-border-strong" aria-hidden />
+        )}
+      </button>
+    </Th>
   );
 }
 
@@ -576,6 +628,10 @@ export function CasesPage() {
   const [genNote, setGenNote] = useState<GenNote | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Column sort (asc, desc, then cleared; see lib/caseSort).
+  const [sort, setSort] = useState<CaseSort | null>(null);
+  const toggleSort = useCallback((key: CaseSortKey) => setSort((s) => nextSort(s, key)), []);
+
   // Facet filters.
   const [specialty, setSpecialty] = useState<Specialty | null>(null);
   const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
@@ -606,13 +662,14 @@ export function CasesPage() {
   );
 
   const visible = useMemo(() => {
-    return allCases.filter((c) => {
+    const filtered = allCases.filter((c) => {
       if (specialty && specialtyOf(c) !== specialty) return false;
       if (difficulty && c.difficulty !== difficulty) return false;
       if (complaint && complaintFamilyOf(c) !== complaint) return false;
       return true;
     });
-  }, [allCases, specialty, difficulty, complaint]);
+    return sortCases(filtered, sort, lang);
+  }, [allCases, specialty, difficulty, complaint, sort, lang]);
 
   const anyFilter =
     specialty !== null || difficulty !== null || complaint !== null;
@@ -715,7 +772,7 @@ export function CasesPage() {
   );
 
   return (
-    <PageContainer className="flex flex-col gap-8">
+    <PageContainer width="wide" className="flex flex-col gap-6">
       {/* Header */}
       <motion.div {...header}>
         <PageHeader
@@ -740,7 +797,7 @@ export function CasesPage() {
       </motion.section>
 
       {/* Secondary affordance: the curated + generated catalogue below */}
-      <motion.div {...filterEntry} className="-mb-4">
+      <motion.div {...filterEntry} className="-mb-3 border-t border-border pt-5">
         <SectionLabel icon={<Stack weight="bold" className="h-3.5 w-3.5" />}>
           {t("livegen.orCurated")}
         </SectionLabel>
@@ -750,7 +807,7 @@ export function CasesPage() {
       <motion.section
         {...filterEntry}
         aria-label={t("cases.filters.label")}
-        className="flex flex-col gap-3 rounded-card border border-border bg-bg-subtle px-4 py-3.5"
+        className="flex flex-col gap-2.5 border-b border-border pb-4"
       >
         <div className="flex items-center justify-between gap-3">
           <SectionLabel
@@ -867,18 +924,24 @@ export function CasesPage() {
               <Table>
                 <THead>
                   <Tr>
-                    <Th>{t("select2.cases.table.case")}</Th>
-                    <Th className="hidden xl:table-cell">
+                    <SortTh column="case" sort={sort} onSort={toggleSort}>
+                      {t("select2.cases.table.case")}
+                    </SortTh>
+                    <SortTh column="specialty" sort={sort} onSort={toggleSort} className="hidden xl:table-cell">
                       {t("cases.filters.specialty")}
-                    </Th>
-                    <Th>{t("select2.cases.table.code")}</Th>
-                    <Th>{t("caseCard.difficulty")}</Th>
-                    <Th className="hidden lg:table-cell">
+                    </SortTh>
+                    <SortTh column="code" sort={sort} onSort={toggleSort}>
+                      {t("select2.cases.table.code")}
+                    </SortTh>
+                    <SortTh column="difficulty" sort={sort} onSort={toggleSort}>
+                      {t("caseCard.difficulty")}
+                    </SortTh>
+                    <SortTh column="acuity" sort={sort} onSort={toggleSort} className="hidden lg:table-cell">
                       {t("select2.cases.table.acuity")}
-                    </Th>
-                    <Th numeric className="hidden lg:table-cell">
+                    </SortTh>
+                    <SortTh column="minutes" sort={sort} onSort={toggleSort} numeric className="hidden lg:table-cell">
                       {t("select2.cases.table.time")}
-                    </Th>
+                    </SortTh>
                     <Th className="text-end">
                       {t("select2.cases.table.action")}
                     </Th>

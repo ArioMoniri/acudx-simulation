@@ -51,23 +51,18 @@ function PrimaryHeader({
   badge?: ReactNode;
 }) {
   return (
-    <header className="mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-      <div className="flex items-start gap-3.5">
-        <span
-          className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-brand-tint text-brand"
-          aria-hidden
-        >
-          <Icon weight="bold" className="h-5.5 w-5.5" />
-        </span>
-        <div className="flex flex-col gap-1">
-          <span className="eyebrow text-brand">{eyebrow}</span>
+    <header className="mb-3 flex flex-wrap items-start justify-between gap-x-4 gap-y-3 border-b border-border pb-3">
+      <div className="flex items-start gap-2.5">
+        <Icon weight="bold" className="mt-1 h-4 w-4 shrink-0 text-subtle" aria-hidden />
+        <div className="flex flex-col gap-0.5">
+          <span className="eyebrow">{eyebrow}</span>
           <h2
             id={id}
-            className="text-2xl font-semibold tracking-tight text-fg"
+            className="text-lg font-semibold tracking-tight text-fg"
           >
             {title}
           </h2>
-          <p className="max-w-2xl text-sm text-muted">{subtitle}</p>
+          <p className="max-w-2xl text-xs text-muted">{subtitle}</p>
         </div>
       </div>
       {badge ? <div className="shrink-0">{badge}</div> : null}
@@ -88,14 +83,14 @@ function SectionHeading({
   subtitle: string;
 }) {
   return (
-    <div className="mb-4">
+    <div className="mb-3 border-b border-border pb-2">
       <div className="flex items-center gap-2">
         <Icon weight="bold" className="h-4.5 w-4.5 text-brand" aria-hidden />
         <h2 id={id} className="text-lg font-semibold tracking-tight text-fg">
           {title}
         </h2>
       </div>
-      <p className="mt-1 max-w-2xl text-sm text-muted">{subtitle}</p>
+      <p className="mt-0.5 max-w-2xl text-xs text-muted">{subtitle}</p>
     </div>
   );
 }
@@ -128,7 +123,7 @@ export function InstitutionPage() {
   const detectedSignals = deriveRemediationSignals(records).length;
 
   return (
-    <PageContainer width="wide" className="flex flex-col gap-12">
+    <PageContainer width="wide" className="flex flex-col gap-8">
       {/* Header */}
       <motion.div {...header}>
         <PageHeader

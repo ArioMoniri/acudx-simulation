@@ -65,8 +65,8 @@ export function RoleSwitcher({ className, variant = "segmented" }: RoleSwitcherP
           onChange={(e) => setRole(e.target.value as ViewAsRole)}
           title={t("role.viewAs")}
           className={cn(
-            "h-9 appearance-none rounded-control border border-border bg-bg-subtle ps-8 pe-7",
-            "text-xs font-semibold text-fg transition-colors duration-200 ease-out",
+            "h-8 appearance-none rounded-control border border-border bg-bg-subtle ps-8 pe-7",
+            "text-xs font-semibold text-fg transition-colors duration-[120ms] ease-out",
             "hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
           )}
         >
@@ -110,10 +110,10 @@ export function RoleSwitcher({ className, variant = "segmented" }: RoleSwitcherP
               aria-label={t("role.viewAsRole", { role: t(`role.${r}`) })}
               title={t("role.viewAsRole", { role: t(`role.${r}`) })}
               className={cn(
-                "inline-flex min-h-8 items-center gap-1.5 rounded-chip px-2.5 text-xs font-semibold",
-                "transition-colors duration-200 ease-out focus-visible:outline-none",
+                "inline-flex min-h-7 items-center gap-1.5 rounded-chip px-2 text-xs font-semibold",
+                "transition-colors duration-[120ms] ease-out focus-visible:outline-none",
                 active
-                  ? "bg-surface text-fg shadow-soft"
+                  ? "bg-surface text-fg shadow-soft-md"
                   : "text-muted hover:text-fg",
               )}
             >

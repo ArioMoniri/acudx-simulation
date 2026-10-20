@@ -21,9 +21,9 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 const paddings = {
   none: "",
-  sm: "p-4",
-  md: "p-5",
-  lg: "p-6 sm:p-7",
+  sm: "p-3",
+  md: "p-4",
+  lg: "p-5",
 } as const;
 
 const variants: Record<Variant, string> = {
@@ -31,9 +31,9 @@ const variants: Record<Variant, string> = {
   flat: "bg-transparent",
   inset: "border border-border bg-inset",
   interactive:
-    "border border-border bg-surface transition-[border-color,box-shadow,transform] " +
-    "duration-200 ease-out hover:border-border-strong hover:shadow-soft-md " +
-    "focus-within:border-brand active:translate-y-px",
+    "border border-border bg-surface transition-[border-color,background-color] " +
+    "duration-[120ms] ease-out hover:border-border-strong hover:bg-surface-2 " +
+    "focus-within:border-brand",
 };
 
 /** Card — hairline-bordered surface. Depth is drawn, not floated. */
@@ -61,7 +61,7 @@ export function CardHeader({
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("mb-3 flex flex-col gap-1", className)} {...props} />
+    <div className={cn("mb-3 flex flex-col gap-0.5", className)} {...props} />
   );
 }
 
@@ -72,7 +72,7 @@ export function CardTitle({
   return (
     <h3
       className={cn(
-        "text-base font-semibold tracking-tight text-fg",
+        "text-sm font-semibold tracking-tight text-fg",
         className,
       )}
       {...props}
@@ -84,5 +84,5 @@ export function CardDescription({
   className,
   ...props
 }: HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-sm text-muted", className)} {...props} />;
+  return <p className={cn("text-xs text-muted", className)} {...props} />;
 }

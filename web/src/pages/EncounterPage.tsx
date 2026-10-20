@@ -516,7 +516,7 @@ export function EncounterPage() {
         <span
           role="status"
           data-testid="director-chip"
-          className="hidden items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 py-1 text-xs text-muted md:inline-flex"
+          className="hidden h-8 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 text-xs text-muted md:inline-flex"
           title={
             director.status === "error"
               ? t("live2.director.errorHint", { reason: director.error ?? "" })
@@ -554,7 +554,7 @@ export function EncounterPage() {
         type="button"
         onClick={() => setRailOpen(true)}
         aria-label={t("ehr.storyboard.open")}
-        className="inline-flex h-9 items-center gap-1.5 rounded-control border border-border bg-surface px-3 text-sm font-medium text-fg lg:hidden"
+        className="inline-flex h-8 items-center gap-1.5 rounded-control border border-border bg-surface px-2.5 text-[0.8125rem] font-medium text-fg lg:hidden"
       >
         <List weight="bold" className="h-4 w-4" aria-hidden />
         {t("ehr.storyboard.chart")}
@@ -563,8 +563,8 @@ export function EncounterPage() {
   );
 
   return (
-    <PageContainer width="wide" className="flex flex-col gap-4">
-      <motion.div {...top}>
+    <PageContainer width="wide" className="flex flex-col gap-3 pt-0 md:pt-0">
+      <motion.div {...top} className="relative z-30 md:sticky md:top-12">
         <PatientBanner caseInstance={caseInstance} lang={lang} toolbar={toolbar} />
       </motion.div>
 
@@ -585,7 +585,7 @@ export function EncounterPage() {
           case-meta line, framed as one dense chrome bar under the banner. */}
       <motion.div
         {...top}
-        className="flex flex-col gap-3 rounded-card border border-border bg-surface px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-2 border-b border-border py-2 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="min-w-0 sm:flex-1">
           <ProgressStages
@@ -595,7 +595,7 @@ export function EncounterPage() {
             ariaLabel={t("encounter.stageLabel")}
           />
         </div>
-        <p className="shrink-0 text-xs text-muted">
+        <p className="shrink-0 font-mono text-[0.6875rem] text-muted">
           {t("ehr.workspace.caseMeta", {
             difficulty: caseInstance.difficulty,
             provenance: t(`ehr.provenance.${caseInstance.provenance}`),
@@ -604,7 +604,7 @@ export function EncounterPage() {
       </motion.div>
 
       {/* Workspace: rail + main */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,280px)_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,260px)_1fr] lg:gap-5">
         {/* Rail (desktop) */}
         <motion.div {...body} className="hidden lg:block">
           <Storyboard caseInstance={caseInstance} lang={lang} affectLabel={affectLabel} />

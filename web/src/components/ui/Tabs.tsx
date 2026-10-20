@@ -2,7 +2,7 @@ import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { createContext, forwardRef, useContext } from "react";
 import { cn } from "@/lib/cn";
 
-type TabsVariant = "segmented" | "underline";
+type TabsVariant = "segmented" | "underline" | "vertical";
 
 const VariantCtx = createContext<TabsVariant>("segmented");
 
@@ -20,8 +20,10 @@ export const TabsList = forwardRef<
         ref={ref}
         className={cn(
           variant === "segmented"
-            ? "inline-flex items-center gap-1 rounded-control border border-border bg-bg-subtle p-1"
-            : "flex items-center gap-5 border-b border-border",
+            ? "inline-flex items-center gap-0.5 rounded-control border border-border bg-bg-inset p-0.5"
+            : variant === "vertical"
+              ? "flex flex-col gap-px"
+              : "flex items-center gap-4 border-b border-border",
           className,
         )}
         {...props}
@@ -39,19 +41,26 @@ export const TabsTrigger = forwardRef<
     <TabsPrimitive.Trigger
       ref={ref}
       className={cn(
-        "text-sm font-medium transition-colors duration-150 ease-out focus-visible:outline-none",
+        "text-[0.8125rem] font-medium transition-colors duration-[120ms] ease-out",
         variant === "segmented"
           ? [
-              "inline-flex min-h-8 items-center justify-center rounded-chip px-3 py-1.5",
+              "inline-flex min-h-7 items-center justify-center rounded-chip px-2.5 py-1",
               "text-muted hover:text-fg",
-              "data-[state=active]:bg-surface data-[state=active]:text-fg data-[state=active]:shadow-soft",
+              "data-[state=active]:bg-surface data-[state=active]:text-fg data-[state=active]:shadow-soft-md",
             ]
-          : [
-              // Underline tabs — the EHR / section-nav treatment (Heidi/Attio).
-              "-mb-px inline-flex items-center gap-1.5 border-b-2 border-transparent pb-2.5 pt-1",
-              "text-muted hover:text-fg hover:border-border-strong",
-              "data-[state=active]:border-brand data-[state=active]:text-fg",
-            ],
+          : variant === "vertical"
+            ? [
+                // Console section nav (Vercel settings, Whop admin): a left list.
+                "flex min-h-8 w-full items-center gap-2 rounded-control px-2.5 py-1.5 text-start",
+                "text-muted hover:bg-bg-inset hover:text-fg",
+                "data-[state=active]:bg-bg-inset data-[state=active]:text-fg data-[state=active]:font-semibold",
+              ]
+            : [
+                // Underline tabs: the EHR activity-tab treatment.
+                "-mb-px inline-flex items-center gap-1.5 border-b-2 border-transparent pb-2 pt-1",
+                "text-muted hover:text-fg hover:border-border-strong",
+                "data-[state=active]:border-brand data-[state=active]:text-fg",
+              ],
         className,
       )}
       {...props}
@@ -66,7 +75,7 @@ export const TabsContent = forwardRef<
   return (
     <TabsPrimitive.Content
       ref={ref}
-      className={cn("mt-4 focus-visible:outline-none", className)}
+      className={cn("mt-4", className)}
       {...props}
     />
   );

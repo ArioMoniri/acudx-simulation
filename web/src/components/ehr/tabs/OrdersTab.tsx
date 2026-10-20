@@ -18,7 +18,7 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 
-import { useReveal, useStagger } from "@/lib/motion";
+import { useReveal } from "@/lib/motion";
 import {
   Badge,
   Button,
@@ -31,6 +31,13 @@ import {
   TabsTrigger,
   TextInput,
   Select,
+  Table,
+  TableWrap,
+  THead,
+  TBody,
+  Tr,
+  Th,
+  Td,
 } from "@/components/ui";
 import { orderTiming, serialInfo } from "@/domain/orderCatalog";
 import { TREATMENT_CATALOG, type TreatmentOption } from "@/domain/treatments";
@@ -213,7 +220,7 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
             </div>
 
             {!anyMatch ? (
-              <div className="rounded-card border border-dashed border-border bg-bg-subtle px-4 py-8 text-center">
+              <div className="rounded-card border border-border bg-surface px-4 py-8 text-center">
                 <p className="text-sm text-muted">{t("orders2.search.noMatches")}</p>
               </div>
             ) : null}
@@ -280,18 +287,18 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
         </Tabs>
       </div>
 
-      {/* Live order tracker */}
+      {/* Live order worklist */}
       <motion.aside
         {...summaryReveal}
-        className="flex h-max min-w-0 flex-col gap-3 rounded-card border border-border bg-surface p-4"
+        className="flex h-max min-w-0 flex-col gap-2 lg:sticky lg:top-[10.5rem] lg:max-h-[calc(100dvh-11.5rem)] lg:overflow-y-auto"
       >
-        <div>
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+        <div className="flex items-baseline justify-between gap-2 border-b border-border pb-1.5">
+          <h3 className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-fg">
             <ClipboardText weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("orders2.tracker.heading")}
           </h3>
           {state.orders.length > 0 ? (
-            <p className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
+            <p className="font-mono text-[0.6875rem] tabular-nums text-muted">
               {t("orders2.tracker.summary", {
                 placed: state.orders.length,
                 pending: pending.length,
@@ -302,31 +309,30 @@ export function OrdersTab({ caseInstance, lang }: OrdersTabProps) {
         </div>
 
         {state.orders.length === 0 ? (
-          <p className="text-xs italic text-muted">{t("orders2.tracker.empty")}</p>
+          <p className="py-2 text-xs text-muted">{t("orders2.tracker.empty")}</p>
         ) : (
-          <div className="flex flex-col gap-3">
-            {pending.length > 0 ? (
-              <TrackerGroup
-                heading={t("orders2.tracker.inProgress")}
-                orders={pending}
-                lang={lang}
-                nowMs={nowMs}
-              />
-            ) : null}
-            {resulted.length > 0 ? (
-              <TrackerGroup
-                heading={t("orders2.tracker.resultedGroup")}
-                orders={resulted}
-                lang={lang}
-                nowMs={nowMs}
-              />
-            ) : null}
-          </div>
+          <TableWrap>
+            <Table className="min-w-[300px]">
+              <caption className="sr-only">{t("orders2.tracker.heading")}</caption>
+              <THead>
+                <Tr>
+                  <Th>{t("orders2.tracker.orderCol", { defaultValue: "Order" })}</Th>
+                  <Th>{t("orders2.tracker.statusCol", { defaultValue: "Status" })}</Th>
+                </Tr>
+              </THead>
+              <TBody>
+                {pending.map((o, i) => (
+                  <TrackerRow key={`p-${o.code}-${i}`} order={o} lang={lang} nowMs={nowMs} />
+                ))}
+                {resulted.map((o, i) => (
+                  <TrackerRow key={`r-${o.code}-${i}`} order={o} lang={lang} nowMs={nowMs} />
+                ))}
+              </TBody>
+            </Table>
+          </TableWrap>
         )}
 
-        <p className="mt-1 border-t border-border pt-3 text-[11px] text-muted">
-          {t("orders2.tracker.hint")}
-        </p>
+        <p className="text-[0.6875rem] text-muted">{t("orders2.tracker.hint")}</p>
       </motion.aside>
     </div>
   );
@@ -365,9 +371,9 @@ function OrderRow({
   const canRepeat = placed && serial.repeatable;
 
   return (
-    <li className="flex items-center justify-between gap-3 py-2">
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="min-w-0 text-sm text-fg">{name}</span>
+    <li className="flex items-center justify-between gap-3 py-1.5">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="min-w-0 text-[0.8125rem] text-fg">{name}</span>
         <span className="flex flex-wrap items-center gap-1.5">
           <Badge tone="neutral" icon={<Timer weight="bold" className="h-3 w-3" aria-hidden />}>
             {eta}
@@ -487,10 +493,10 @@ function TreatmentRow({
   const formId = `med-${option.code}`;
 
   return (
-    <li className="flex flex-col gap-2 py-2">
+    <li className="flex flex-col gap-2 py-1.5">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="min-w-0 text-sm text-fg">{name}</span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="min-w-0 text-[0.8125rem] text-fg">{name}</span>
           <span className="flex flex-wrap items-center gap-1.5">
             {option.defaultDose ? (
               <Badge tone="neutral" variant="outline">
@@ -603,34 +609,11 @@ function TreatmentRow({
   );
 }
 
-/** A titled group of tracked orders (all pending, or all resulted). */
-function TrackerGroup({
-  heading,
-  orders,
-  lang,
-  nowMs,
-}: {
-  heading: string;
-  orders: PlacedOrder[];
-  lang: Lang;
-  nowMs: number;
-}) {
-  const { container, item } = useStagger();
-  return (
-    <section>
-      <h4 className="mb-1.5 eyebrow">{heading}</h4>
-      <motion.ul {...container} className="flex flex-col gap-2">
-        {orders.map((o, i) => (
-          <motion.li key={`${o.code}-${i}`} {...item}>
-            <TrackerRow order={o} lang={lang} nowMs={nowMs} />
-          </motion.li>
-        ))}
-      </motion.ul>
-    </section>
-  );
-}
-
-/** One tracked order: label, status, live turnaround bar + clinical ETA. */
+/**
+ * One worklist row: the order, its status chip (pending with a live
+ * progress bar, or resulted), and the turnaround column (clinical ETA, the
+ * live countdown while pending, the resulted time once done).
+ */
 function TrackerRow({
   order,
   lang,
@@ -651,57 +634,52 @@ function TrackerRow({
   const etaSec = Math.max(0, Math.ceil((order.resultsReadyAt - nowMs) / 1000));
 
   return (
-    <div className="rounded-control border border-border bg-bg-subtle px-2.5 py-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-sm text-fg">{name}</span>
+    <Tr>
+      <Td className="max-w-[200px]">
+        <span className="block truncate font-medium text-fg">{name}</span>
+        <span className="block font-mono text-[0.6875rem] text-subtle">
+          {t("orders2.tracker.orderedAt", { min: minutesOf(order.placedAt) })}
+          {" · "}
+          {t("orders2.tracker.eta", { eta: clinicalEta })}
+        </span>
+      </Td>
+      <Td className="w-[7.5rem]">
         {done ? (
-          <StatusDot tone="normal" label={t("orders2.tracker.resultedTag")} size="sm" />
-        ) : (
-          <Badge
-            tone="caution"
-            icon={<Timer weight="fill" className="h-3.5 w-3.5 motion-safe:animate-pulse" aria-hidden />}
-            className="shrink-0"
-          >
-            {t("orders2.tracker.pending")}
-          </Badge>
-        )}
-      </div>
-
-      {/* Clinical turnaround (realistic ETA), always shown. */}
-      <p className="mt-0.5 font-mono text-[11px] tabular-nums text-subtle">
-        {t("orders2.tracker.eta", { eta: clinicalEta })}
-      </p>
-
-      {done ? (
-        <p className="mt-0.5 font-mono text-[11px] tabular-nums text-muted">
-          {t("orders2.tracker.resultedAt", { min: minutesOf(nowMs) })}
-        </p>
-      ) : (
-        <>
-          <div
-            className="mt-2 h-1 overflow-hidden rounded-full bg-border"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={pct}
-            aria-label={t("orders2.tracker.progressAria", { name })}
-          >
-            <div
-              className="h-full rounded-full bg-brand motion-safe:transition-[width] motion-safe:duration-1000 motion-safe:ease-linear"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="mt-1 flex items-center justify-between gap-2 font-mono text-[11px] tabular-nums text-muted">
-            <span>{t("orders2.tracker.orderedAt", { min: minutesOf(order.placedAt) })}</span>
-            <span aria-live="off">
-              {etaSec > 0
-                ? t("orders2.tracker.readyIn", { sec: etaSec })
-                : t("orders2.tracker.readyNow")}
+          <div className="flex flex-col gap-0.5">
+            <StatusDot tone="normal" label={t("orders2.tracker.resultedTag")} size="sm" />
+            <span className="font-mono text-[0.6875rem] text-subtle">
+              {t("orders2.tracker.resultedAt", { min: minutesOf(nowMs) })}
             </span>
           </div>
-        </>
-      )}
-    </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <Badge
+              tone="caution"
+              icon={<Timer weight="fill" className="h-3 w-3" aria-hidden />}
+              className="w-max"
+            >
+              {t("orders2.tracker.pending")}
+            </Badge>
+            <div
+              className="h-1 w-20 overflow-hidden rounded-chip bg-bg-inset"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={pct}
+              aria-label={t("orders2.tracker.progressAria", { name })}
+            >
+              <div
+                className="h-full bg-brand motion-safe:transition-[width] motion-safe:duration-1000 motion-safe:ease-linear"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <span className="font-mono text-[0.6875rem] text-subtle" aria-live="off">
+              {etaSec > 0 ? t("orders2.tracker.readyIn", { sec: etaSec }) : t("orders2.tracker.readyNow")}
+            </span>
+          </div>
+        )}
+      </Td>
+    </Tr>
   );
 }
 

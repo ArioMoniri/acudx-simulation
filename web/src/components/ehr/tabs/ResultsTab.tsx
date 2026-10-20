@@ -507,8 +507,8 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
         </Card>
       ) : (
         <motion.div {...summaryReveal}>
-          <Card padding="md">
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <Card padding="sm">
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <SummaryStat
                   label={t("ehr2.results.summaryHeading")}
@@ -559,10 +559,10 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
       {criticalItems.length > 0 ? (
         <motion.div {...criticalReveal}>
           <div
-            className="rounded-card border p-4"
+            className="border-s-2 bg-surface px-4 py-3"
             style={{
-              borderColor: "color-mix(in srgb, var(--state-critical) 40%, transparent)",
-              backgroundColor: "color-mix(in srgb, var(--state-critical) 8%, transparent)",
+              borderColor: "var(--state-critical)",
+              backgroundColor: "color-mix(in srgb, var(--state-critical) 6%, transparent)",
             }}
           >
             <h3 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
@@ -592,8 +592,8 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
 
       {/* Pending orders — in progress · ETA */}
       {pending.length > 0 ? (
-        <Card padding="md">
-          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-fg">
+        <section className="flex flex-col gap-3">
+          <h3 className="flex items-center gap-1.5 border-b border-border pb-1.5 text-[0.8125rem] font-semibold text-fg">
             <Timer weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("ehr.results.pendingHeading")}
           </h3>
@@ -621,13 +621,13 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
               );
             })}
           </ul>
-        </Card>
+        </section>
       ) : null}
 
       {/* Laboratory results — serial trends first, then single-draw panels */}
       {shownPanels.length > 0 || shownTrends.length > 0 ? (
-        <Card padding="md">
-          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-fg">
+        <section className="flex flex-col gap-3">
+          <h3 className="flex items-center gap-1.5 border-b border-border pb-1.5 text-[0.8125rem] font-semibold text-fg">
             <Flask weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("ehr.results.labsHeading")}
           </h3>
@@ -639,29 +639,29 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
               <PanelTable key={g.key} group={g} lang={lang} />
             ))}
           </div>
-        </Card>
+        </section>
       ) : null}
 
       {/* Microbiology, serology & other narrative reports */}
       {shownMicro.length > 0 ? (
-        <Card padding="md">
-          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-fg">
+        <section className="flex flex-col gap-3">
+          <h3 className="flex items-center gap-1.5 border-b border-border pb-1.5 text-[0.8125rem] font-semibold text-fg">
             <Virus weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("labs2.results.microHeading")}
           </h3>
           <MicroList entries={shownMicro} lang={lang} />
-        </Card>
+        </section>
       ) : null}
 
       {/* Imaging — every study shows a REAL representative image */}
       {shownImaging.length > 0 ? (
-        <Card padding="md">
-          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-fg">
+        <section className="flex flex-col gap-3">
+          <h3 className="flex items-center gap-1.5 border-b border-border pb-1.5 text-[0.8125rem] font-semibold text-fg">
             <Scan weight="bold" className="h-4 w-4 text-muted" aria-hidden />
             {t("ehr.results.imagingHeading")}
           </h3>
           <ImagingList entries={shownImaging} lang={lang} guidanceOn={guidanceOn} />
-        </Card>
+        </section>
       ) : null}
 
       {nothingAbnormalShown ? (
@@ -1066,11 +1066,11 @@ function LabResultRow({ row, lang }: { row: ResultRow; lang: Lang }) {
 
   return (
     <Tr>
-      <th scope="row" className="px-3 py-2.5 text-start align-middle font-medium text-fg">
+      <th scope="row" className="px-3 py-1.5 text-start align-middle font-medium text-fg">
         <span className="flex items-center gap-2">
           <span
             aria-hidden
-            className="inline-block h-3.5 w-0.5 rounded-full"
+            className="inline-block h-3.5 w-0.5"
             style={{ backgroundColor: abnormal ? present.colorVar : "transparent" }}
           />
           {conceptText(obs.code, lang)}
@@ -1204,11 +1204,11 @@ function TrendRow({ analyte, lang }: { analyte: AnalyteTrend; lang: Lang }) {
 
   return (
     <Tr>
-      <th scope="row" className="px-3 py-2.5 text-start align-middle font-medium text-fg">
+      <th scope="row" className="px-3 py-1.5 text-start align-middle font-medium text-fg">
         <span className="flex items-center gap-2">
           <span
             aria-hidden
-            className="inline-block h-3.5 w-0.5 rounded-full"
+            className="inline-block h-3.5 w-0.5"
             style={{ backgroundColor: abnormal ? present.colorVar : "transparent" }}
           />
           {conceptText(latest.code, lang)}

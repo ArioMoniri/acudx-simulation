@@ -67,10 +67,10 @@ export function ChartFrame({
 
 /** Theme-aware series palette (CSS vars switch with the .dark class). */
 export const SERIES_COLORS = {
-  brand: "var(--brand-600)",
-  blue: "var(--grad-blue)",
-  pink: "var(--grad-pink)",
-  teal: "var(--grad-teal)",
+  brand: "var(--chart-1)",
+  blue: "var(--chart-2)",
+  pink: "var(--chart-3)",
+  teal: "var(--chart-4)",
   caution: "var(--state-caution)",
   critical: "var(--state-critical)",
   normal: "var(--state-normal)",

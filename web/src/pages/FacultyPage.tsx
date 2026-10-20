@@ -551,14 +551,27 @@ export function FacultyPage() {
           </Card>
         ) : null}
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-          <TabsList aria-label={t("panels.faculty.title")}>
-            {TABS.map((k) => (
-              <TabsTrigger key={k} value={k}>
-                {t(`panels.faculty.tabs.${k}`)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-8">
+          {/* Console section nav: a left list on lg+, an underline strip below. */}
+          <div className="lg:sticky lg:top-16 lg:self-start">
+            <TabsList aria-label={t("panels.faculty.title")} variant="vertical" className="hidden lg:flex">
+              {TABS.map((k) => (
+                <TabsTrigger key={k} value={k}>
+                  {t(`panels.faculty.tabs.${k}`)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <div className="-mx-4 overflow-x-auto px-4 lg:hidden">
+              <TabsList aria-label={t("panels.faculty.title")} variant="underline" className="w-max min-w-full">
+                {TABS.map((k) => (
+                  <TabsTrigger key={k} value={k}>
+                    {t(`panels.faculty.tabs.${k}`)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+          </div>
+          <div className="min-w-0 [&>[role=tabpanel]]:mt-0">
 
           <TabsContent value="queue">
             {loading && !queue ? (
@@ -648,6 +661,7 @@ export function FacultyPage() {
               <AssignmentsTable rows={assignments} roster={roster} />
             </div>
           </TabsContent>
+          </div>
         </Tabs>
       </motion.div>
     </PageContainer>

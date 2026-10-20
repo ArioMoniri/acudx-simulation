@@ -1,0 +1,35 @@
+{
+  "nav": {
+    "primary": "Primary",
+    "more": "More",
+    "search": "Search",
+    "breadcrumbs": "Breadcrumbs",
+    "sections": "Sections"
+  },
+  "landing": {
+    "breadcrumb": "Welcome"
+  },
+  "landing3": {
+    "hero": {
+      "shotAlt": "The encounter workspace: patient banner, storyboard rail and the chart tabs",
+      "shotCaption": "Encounter workspace, 1280 px, synthetic patient"
+    }
+  },
+  "orders2": {
+    "tracker": {
+      "orderCol": "Order",
+      "statusCol": "Status"
+    }
+  },
+  "cases3": {
+    "sortBy": "Sort by {{column}}",
+    "sortedAsc": "sorted ascending",
+    "sortedDesc": "sorted descending",
+    "generatorTitle": "New synthetic case",
+    "library": "Case library",
+    "rows": "{{count}} cases"
+  },
+  "shell3": {
+    "openSection": "Open section"
+  }
+}

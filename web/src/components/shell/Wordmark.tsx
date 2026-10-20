@@ -37,7 +37,7 @@ export function Wordmark({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-[0.12em] font-extrabold leading-none tracking-[-0.05em] [font-family:var(--font-display)]",
+        "display inline-flex items-center gap-[0.12em] font-extrabold leading-none tracking-[-0.05em]",
         sz,
         className,
       )}

@@ -74,8 +74,8 @@ export function SimBadge({ variant = "chip", generation = null, className }: Sim
         role="note"
         aria-label={label}
         className={cn(
-          "flex items-center gap-2 rounded-control border border-dashed border-border",
-          "bg-bg-subtle px-3 py-1.5 text-xs text-muted",
+          "flex items-center gap-2 rounded-control border border-border",
+          "bg-surface px-3 py-1 text-[0.6875rem] text-muted",
           className,
         )}
       >
@@ -101,8 +101,8 @@ export function SimBadge({ variant = "chip", generation = null, className }: Sim
       role="note"
       aria-label={label}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-dashed border-border",
-        "bg-bg-subtle px-2.5 py-0.5 text-[11px] font-medium text-muted",
+        "inline-flex items-center gap-1.5 rounded-chip border border-border",
+        "bg-surface px-1.5 py-px text-[0.6875rem] font-medium leading-4 text-muted",
         className,
       )}
     >

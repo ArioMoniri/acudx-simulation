@@ -51,7 +51,7 @@ export function KpiRow() {
       aria-label={t("institution.kpi.ownSectionLabel", {
         defaultValue: "Your headline metrics",
       })}
-      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+      className="grid gap-px overflow-hidden rounded-card border border-border bg-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
     >
       {kpis.map((kpi) => {
         const Icon = kpiIcon[kpi.id];
@@ -69,8 +69,8 @@ export function KpiRow() {
             }
           : undefined;
         return (
-          <li key={kpi.id} className="h-full">
-            <Card variant="surface" padding="md" className="h-full">
+          <li key={kpi.id} className="h-full bg-surface">
+            <Card variant="flat" padding="md" className="h-full">
               <Stat
                 label={t(kpi.labelKey, { defaultValue: kpi.labelDefault })}
                 value={kpi.value}

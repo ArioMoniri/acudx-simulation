@@ -303,7 +303,7 @@ export function HomePage() {
   const recent = useStagger();
 
   return (
-    <PageContainer className="flex flex-col gap-8">
+    <PageContainer width="wide" className="flex flex-col gap-6">
       {/* Zone 1 — greeting, the single primary action, and the term readout. */}
       <motion.div {...header}>
         <PageHeader
@@ -320,7 +320,7 @@ export function HomePage() {
           actions={
             <Button
               asChild
-              size="lg"
+              size="md"
               trailingIcon={<ArrowRight weight="bold" className="h-4 w-4" />}
             >
               <Link to="/encounter">{t("home.primaryCta")}</Link>
@@ -335,10 +335,8 @@ export function HomePage() {
       </motion.div>
 
       <motion.section {...strip} aria-label={t("home.statsHeading")}>
+        <SectionLabel className="mb-2">{t("home.statsHeading")}</SectionLabel>
         <Card padding="none" className="overflow-hidden">
-          <div className="border-b border-border px-5 py-3">
-            <SectionLabel>{t("home.statsHeading")}</SectionLabel>
-          </div>
           <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             {dashboardStats.map((s) => {
               const Icon = statIcon[s.key];
@@ -354,9 +352,9 @@ export function HomePage() {
                   }
                 : undefined;
               return (
-                <div key={s.key} className="px-5 py-5">
+                <div key={s.key} className="px-4 py-3">
                   <Stat
-                    size="lg"
+                    size="md"
                     label={t(`stats.${s.key}`)}
                     value={s.value}
                     icon={<Icon weight="bold" className="h-3.5 w-3.5" />}
@@ -373,16 +371,16 @@ export function HomePage() {
       {/* Zone 2 — asymmetric body: recommended work (wide) + snapshot feed. */}
       <motion.div
         {...body}
-        className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]"
+        className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]"
       >
         {/* LEFT — recommended cases as an information-hierarchy list. */}
         <section className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 border-b border-border pb-2">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight text-fg">
+              <h2 className="text-[0.9375rem] font-semibold tracking-tight text-fg">
                 {t("home.recommendedHeading")}
               </h2>
-              <p className="mt-1 text-sm text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 {t("home.recommendedSub")}
               </p>
             </div>
@@ -390,7 +388,7 @@ export function HomePage() {
               <button
                 type="button"
                 onClick={showDifferent}
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-fg focus-visible:outline-none"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-fg"
               >
                 <ArrowsClockwise
                   weight="bold"
@@ -401,13 +399,13 @@ export function HomePage() {
               </button>
               <Link
                 to="/cases"
-                className="text-sm font-medium text-brand hover:underline focus-visible:outline-none"
+                className="text-xs font-medium text-brand hover:underline"
               >
                 {t("home.viewAllCases")}
               </Link>
             </div>
           </div>
-          <motion.ul {...cases.container} className="flex flex-col gap-3">
+          <motion.ul {...cases.container} className="-mt-2 divide-y divide-border rounded-card border border-border bg-surface">
             {recommended.map(({ row, instance }) => (
               <motion.li
                 key={row.id}
@@ -443,11 +441,11 @@ export function HomePage() {
         {/* RIGHT — calibration snapshot + recent-feedback activity feed. */}
         <aside className="flex flex-col gap-6">
           <section>
-            <Card padding="lg">
-              <h2 className="text-sm font-semibold tracking-tight text-fg">
+            <Card padding="md">
+              <h2 className="text-[0.8125rem] font-semibold tracking-tight text-fg">
                 {t("home.snapshotHeading")}
               </h2>
-              <p className="mt-1 text-sm text-muted">
+              <p className="mt-0.5 text-xs text-muted">
                 {calibrationPoints.length > 0
                   ? t("home.snapshotSub")
                   : t("home.snapshotEmpty")}
@@ -462,7 +460,7 @@ export function HomePage() {
               </div>
               <Link
                 to="/feedback"
-                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline focus-visible:outline-none"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
               >
                 {t("calibration.title")}
                 <ArrowUpRight weight="bold" className="h-3.5 w-3.5" aria-hidden />
@@ -472,13 +470,13 @@ export function HomePage() {
 
           <section>
             <Card padding="none" className="overflow-hidden">
-              <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-                <h2 className="text-sm font-semibold tracking-tight text-fg">
+              <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2.5">
+                <h2 className="text-[0.8125rem] font-semibold tracking-tight text-fg">
                   {t("home.recentHeading")}
                 </h2>
                 <Link
                   to="/feedback"
-                  className="text-xs font-medium text-brand hover:underline focus-visible:outline-none"
+                  className="text-xs font-medium text-brand hover:underline"
                 >
                   {t("recentFeedback.open")}
                 </Link>
@@ -495,8 +493,8 @@ export function HomePage() {
                   ))}
                 </motion.ul>
               ) : (
-                <div className="px-4 py-8 text-center">
-                  <p className="text-sm font-medium text-fg">
+                <div className="px-4 py-6 text-center">
+                  <p className="text-[0.8125rem] font-medium text-fg">
                     {t("home.empty.feedbackTitle")}
                   </p>
                   <p className="mt-1 text-sm text-muted">

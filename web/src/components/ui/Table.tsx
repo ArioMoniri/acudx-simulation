@@ -33,7 +33,7 @@ export function Table({
 }: HTMLAttributes<HTMLTableElement>) {
   return (
     <table
-      className={cn("w-full border-collapse text-sm", className)}
+      className={cn("w-full border-collapse text-[0.8125rem]", className)}
       {...props}
     />
   );
@@ -46,7 +46,7 @@ export function THead({
   return (
     <thead
       className={cn(
-        "sticky top-0 z-10 bg-surface-2 [&_th]:border-b [&_th]:border-border",
+        "sticky top-0 z-10 bg-surface-2 [&_th]:border-b [&_th]:border-border-strong",
         className,
       )}
       {...props}
@@ -78,7 +78,7 @@ export function Tr({
     <tr
       className={cn(
         interactive &&
-          "cursor-pointer transition-colors duration-150 hover:bg-bg-subtle",
+          "cursor-pointer transition-colors duration-[120ms] hover:bg-surface-2",
         className,
       )}
       {...props}
@@ -95,7 +95,7 @@ export function Th({
     <th
       scope="col"
       className={cn(
-        "whitespace-nowrap px-3 py-2.5 text-start align-middle",
+        "whitespace-nowrap px-3 py-1.5 text-start align-middle",
         "eyebrow",
         numeric && "text-end tabular-nums",
         className,
@@ -113,7 +113,7 @@ export function Td({
   return (
     <td
       className={cn(
-        "px-3 py-2.5 align-middle text-fg",
+        "px-3 py-2 align-middle text-fg",
         numeric && "text-end font-mono tabular-nums",
         className,
       )}

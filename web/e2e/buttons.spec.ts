@@ -29,6 +29,9 @@ test.describe("buttons", () => {
       const report = watchConsole(page);
       await page.goto(route);
       await settle(page);
+      // The path the route lands on: an alias such as /institution redirects
+      // (to /dean), and staying there is not a navigation away.
+      const landed = new URL(page.url()).pathname;
 
       const seen = new Set<string>();
       let clicked = 0;
@@ -69,7 +72,7 @@ test.describe("buttons", () => {
         expect(report.pageErrors, `uncaught exception after clicking ${id}`).toEqual([]);
 
         const url = new URL(page.url());
-        if (url.pathname !== route) {
+        if (url.pathname !== landed) {
           await page.goto(route);
           await settle(page);
         } else if ((await page.locator('[role="dialog"]').count()) > 0) {
