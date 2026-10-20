@@ -27,6 +27,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -62,6 +63,9 @@ from server.voice.routes import admin_router as voice_admin_router
 from server.voice.routes import router as voice_router
 from server.voice.service import VoiceService
 
+if not logging.getLogger().handlers:
+    logging.basicConfig(level=os.environ.get("ACUDX_LOG_LEVEL", "INFO"),
+                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("acudx.app")
 
 # Guard-class -> persona directive (docs/architecture/13 §3.1 routing).

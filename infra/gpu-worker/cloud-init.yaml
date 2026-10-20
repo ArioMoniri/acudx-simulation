@@ -38,19 +38,18 @@ write_files:
       CHATTERBOX_REF=a5f466128e4baa8e4cceb3bba9b7ca9de6f7ec6b
   - path: /opt/acudx/Caddyfile
     content: |
-      # Boot diagnostics over plain HTTP: /diag/<worker token>/cloud-init-output.log and
-      # docker-status.txt. The token in the path is the only credential, so the files are
-      # readable only by the gateway that launched the worker. ACME http-01 still works.
-      http://:80 {
-        handle /diag/* {
-          root * /opt/acudx/public
-          file_server
-        }
-        handle {
-          redir https://{$WORKER_DOMAIN}{uri} permanent
-        }
+      # Port 80 belongs to the boot-diagnostics server (python, see diag.sh), so Caddy
+      # serves 443 only and obtains its certificate with the TLS-ALPN-01 challenge.
+      {
+        auto_https disable_redirects
+        acme_ca https://acme-v02.api.letsencrypt.org/directory
       }
       {$WORKER_DOMAIN} {
+        tls {
+          issuer acme {
+            disable_http_challenge
+          }
+        }
         @unauth not header Authorization "Bearer {$WORKER_TOKEN}"
         respond @unauth 401
         handle_path /tts/* { reverse_proxy chatterbox:4123 }
@@ -147,12 +146,11 @@ write_files:
           volumes: [ "/opt/acudx/hf:/hf" ]
         caddy:
           image: caddy:2.9
-          ports: [ "80:80", "443:443" ]
+          ports: [ "443:443" ]
           env_file: /opt/acudx/.env
           volumes:
             - /opt/acudx/Caddyfile:/etc/caddy/Caddyfile:ro
             - /opt/acudx/caddy:/data
-            - /opt/acudx/public:/opt/acudx/public:ro
   # Voice library seeding: Chatterbox picks the synthesis language from the voice's
   # metadata, so one voice per language is uploaded once the API is up. The reference
   # clip is the repository's bundled sample; institutions replace it with consented
@@ -172,8 +170,9 @@ write_files:
       echo "acudx worker" > /opt/acudx/public/index.html
       echo "acudx worker diagnostics" > /opt/acudx/public/diag/index.html
       ln -sf /var/log/cloud-init-output.log "$d/cloud-init-output.log"
-      # Served on :80 by python until Caddy binds the port (compose step); if compose
-      # fails the runcmd below restarts this server so the failure is still readable.
+      # Port 80 is reserved for this server for the life of the worker (Caddy uses 443
+      # only and the TLS-ALPN challenge), so the boot log stays readable even when the
+      # containers fail.
       nohup python3 -m http.server 80 --bind 0.0.0.0 --directory /opt/acudx/public >/var/log/acudx-diag.log 2>&1 &
       while true; do
         { date; echo "--- docker ps"; docker ps --format '{{.Names}} {{.Status}}' 2>&1;
@@ -225,7 +224,6 @@ runcmd:
   # name registered (boot log 2026-10-20: "unknown or invalid runtime name: nvidia");
   # register it and restart docker so both --gpus and device reservations work.
   - (command -v nvidia-ctk >/dev/null && nvidia-ctk runtime configure --runtime=docker && systemctl restart docker) || true
-  - pkill -f "http.server 80" || true
-  - cd /opt/acudx && set -a && . ./.env && set +a && (docker compose up -d caddy vllm speaches kokoro || nohup python3 -m http.server 80 --bind 0.0.0.0 --directory /opt/acudx/public >/var/log/acudx-diag.log 2>&1 &)
+  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d caddy vllm speaches kokoro
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d --build chatterbox
   - nohup /opt/acudx/seed-voices.sh >/var/log/acudx-seed-voices.log 2>&1 &

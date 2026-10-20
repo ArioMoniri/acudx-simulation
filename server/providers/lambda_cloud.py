@@ -98,7 +98,7 @@ class FirewallRule(_Model):
 # Inbound rules the sslip.io worker needs: Caddy's ACME challenge + TLS.
 WORKER_FIREWALL_RULES: list[FirewallRule] = [
     FirewallRule(protocol="tcp", port_range=[80, 80], source_network="0.0.0.0/0",
-                 description="acudx gpu-worker: ACME http-01 for Caddy"),
+                 description="acudx gpu-worker: boot diagnostics (token-scoped path, plain HTTP)"),
     FirewallRule(protocol="tcp", port_range=[443, 443], source_network="0.0.0.0/0",
                  description="acudx gpu-worker: HTTPS (LLM/TTS/STT behind bearer token)"),
 ]
