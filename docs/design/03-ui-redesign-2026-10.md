@@ -61,12 +61,12 @@ Not adopted on purpose: the dark marketing heroes (Vizcom, Norma, Craft) because
 
 ### 3.3 Encounter (`web/src/components/ehr/`)
 
-- `PatientBanner`: a full-width record strip, square corners, no blur. Identity row (portrait, name, age and sex, MRN in mono, SIM badge, toolbar) over a fact band with chief complaint, allergies, code status, ESI, weight, encounter class.
+- `PatientBanner`: a full-width record strip, square corners, no blur. Identity row (portrait, name, age and sex, MRN in mono, SIM badge, toolbar) over a fact band with chief complaint, allergies, code status, ESI, weight, encounter class. Sticky under the top bar from md up; on a phone it scrolls away, because a 250 px sticky header would leave too little of an 844 px screen for the chart.
 - `ProgressStages`: a compact numbered stepper with square chips and hairline connectors.
 - `ActivityTabs`: a flat Epic-like activity strip with a 2 px underline on the active tab, mono counts, no card chrome.
-- `OrdersTab`: the live tracker is a worklist table (order, status chip, ordered at, ETA, progress), the catalogue rows are 36 px.
+- `OrdersTab`: the live tracker is a worklist table (order with ordered-at and ETA, status chip with a live progress bar and countdown) in a sticky, self-scrolling side rail; the catalogue rows are 36 px.
 - `ResultsTab`: flowsheet sections with a hairline rule under each heading, the existing trend sparklines and glyph-plus-word flags.
-- `InterviewTab`: the patient call tile is sticky at the top of its column so it stays pinned while the transcript scrolls.
+- `InterviewTab`: on lg+ the right column is a sticky, self-scrolling rail under the banner, so the patient call tile stays pinned at its top while the transcript scrolls and the ask and exam chips scroll inside the rail (a sticky tile alone would cover the chips on an 800 px screen).
 - Guidance tab: `RealtimeGuidance` and `AttendingTips` sit in a `reference` reading layout (headings, bullets, citation chips, callouts) with a 68 character measure.
 
 ### 3.4 Landing, Home, Cases
@@ -83,7 +83,13 @@ Not adopted on purpose: the dark marketing heroes (Vizcom, Norma, Craft) because
 
 - Transitions are 120 to 200 ms, transform and opacity only, with no scale on press and no hover lift. Reduced motion is honoured at the CSS level and in every hook.
 
-## 4. Verification
+## 4. Accessibility corrections found by axe during verification
+
+- `--fg-subtle` #6b7280 measured 4.42:1 on the new app ground #f4f5f6. It is now #626975 (5.5:1 on white, 5.1:1 on the ground, 4.8:1 on inset).
+- A caution chip (12 percent tint) over an inset ground measured 3.93:1. The light clinical colours were re-tuned so every chip stays AA on any ground: normal #04694a, caution #9a4508, warning #a83508, critical #b01b1b.
+- The search button had an aria-label that did not contain its visible shortcut text. The visible label is now the accessible name and the shortcut glyph is hidden from assistive tech, with `aria-keyshortcuts` set.
+
+## 5. Verification
 
 - Before and after captures at 390, 768, 1280 and 1920 live in `docs/design/redesign-shots/before/` and `docs/design/redesign-shots/after/` (landing, home, cases, encounter and its Interview, Orders, Results and Guidance tabs, dean, faculty, admin, progress).
 - `npm run typecheck`, `npm test`, `npm run lint`, and `PORT=4191 npm run test:e2e` on all four viewports. Counts are in the HANDOFF.
