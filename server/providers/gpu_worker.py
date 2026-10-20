@@ -94,7 +94,7 @@ class WorkerPolicy(BaseModel):
     idle_minutes: int = Field(default=20, ge=1, le=24 * 60)
     daily_budget_usd: float = Field(default=25.0, ge=0)
     allowlist: list[str] = Field(default_factory=lambda: list(DEFAULT_ALLOWLIST), min_length=1)
-    llm_model: str = Field(default="Qwen/Qwen3-32B-AWQ", min_length=1)
+    llm_model: str = Field(default="Qwen/Qwen3-14B-AWQ", min_length=1)
     region_preference: list[str] = Field(default_factory=list)
     # Optional Lambda filesystem (same region) mounted on the worker; the cloud-init keeps the
     # HF cache there so later boots skip the model download.

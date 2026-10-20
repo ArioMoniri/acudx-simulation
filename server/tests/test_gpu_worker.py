@@ -117,7 +117,7 @@ def test_policy_defaults_and_persist(tmp_path):
     store.set_policy(WorkerPolicy(idle_minutes=5, daily_budget_usd=3.5))
     again = WorkerStore(str(tmp_path / "acudx.db")).get_policy()
     assert again.idle_minutes == 5 and again.daily_budget_usd == 3.5
-    assert again.llm_model == "Qwen/Qwen3-32B-AWQ"
+    assert again.llm_model == "Qwen/Qwen3-14B-AWQ"
     assert again.allowlist[0] == "gpu_1x_a100_sxm4"
 
 

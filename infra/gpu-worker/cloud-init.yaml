@@ -33,7 +33,9 @@
 #     (head of its exp branch on 2026-10-20; torch==2.6.0, torchaudio==2.6.0).
 #
 # VRAM budget on one A100 40 GB (docs/research/14 section 2.2, planning numbers):
-#   vLLM          --gpu-memory-utilization 0.60 -> 24 GB (weights + KV cache)
+#   vLLM          --gpu-memory-utilization 0.60 -> 24 GB: Qwen3-14B-AWQ weights about 10 GB + KV cache
+#                 (Qwen3-32B-AWQ needs about 18 GB of weights and left too little KV cache at 0.60 on a
+#                 40 GB card: worker 7 died with "Engine core initialization failed"; use 32B on 80 GB cards)
 #   Chatterbox    about 4 GB (Multilingual 500M, fp16)
 #   speaches      about 3 GB (large-v3-turbo fp16; the turbo decoder is 4 layers)
 #   Kokoro        under 1 GB
