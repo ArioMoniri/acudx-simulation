@@ -155,3 +155,18 @@ def client() -> Iterator[TestClient]:
 
     with TestClient(app) as c:
         yield c
+
+
+# ---- SSRF guard (review 04 O5): tests never touch real DNS ----
+PUBLIC_TEST_IP = "93.184.215.14"
+
+
+@pytest.fixture(autouse=True)
+def _public_resolver(monkeypatch):
+    """Every host resolves to one public address unless a test installs its own resolver."""
+    from server import net_guard
+
+    async def _resolve(_host: str) -> list[str]:
+        return [PUBLIC_TEST_IP]
+
+    monkeypatch.setattr(net_guard, "RESOLVER", _resolve)

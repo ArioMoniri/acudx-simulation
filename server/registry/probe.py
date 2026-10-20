@@ -21,6 +21,7 @@ from typing import Any
 
 import httpx
 
+from server import net_guard
 from server.config import EgressBlocked, Settings
 from server.registry.store import ProviderRecord, RegistryStore
 
@@ -67,6 +68,15 @@ async def probe_provider(rec: ProviderRecord, *, api_key: str | None, settings: 
         settings.guard_egress(rec.base_url)
     except EgressBlocked as exc:
         result.update(error="EgressBlocked", detail=str(exc))
+        _persist(store, rec.id, result)
+        return result
+
+    try:
+        # SSRF guard (review 04 O5): never metadata or link-local; a name resolving privately
+        # must be on LOCAL_ALLOWLIST (literal private IPs stay allowed for on-prem providers).
+        await net_guard.check_probe_url(rec.base_url, allow_private=settings.local_allowlist)
+    except net_guard.BlockedDestination as exc:
+        result.update(error="BlockedDestination", detail=str(exc))
         _persist(store, rec.id, result)
         return result
 

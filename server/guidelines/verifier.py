@@ -6,6 +6,9 @@ For each draft statement the verifier
    because a homepage can never evidence a specific recommendation;
 2. fetches ``fetch_url or source_url`` with httpx (timeouts, a per-host rate limit, a
    robots.txt check, a conservative User-Agent) and refuses JavaScript walls / logins;
+   every hop must resolve to public addresses, redirects stay on the source's registrable
+   domain (or ``GUIDELINE_REDIRECT_ALLOWLIST``) and the body is streamed under a 25 MB cap
+   (``server/net_guard.py``, review 04 O5);
 3. extracts text: PDF via pypdf, JATS/XML via tag stripping, HTML via trafilatura with an
    lxml full-text fallback (the longer of the two wins, because trafilatura mis-picks the
    main block on some NICE chapters);
@@ -36,10 +39,11 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 from urllib import robotparser
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
+from server import net_guard
 from server.guidelines.store import EXPORT_PATH, GuidelineStatement, GuidelineStore, get_store, utcnow_iso
 
 logger = logging.getLogger("acudx.guidelines.verifier")
@@ -57,6 +61,7 @@ COMPOSITE_MIN_SCORE = float(os.environ.get("ACUDX_VERIFY_COMPOSITE_MIN_SCORE", "
 MIN_MATCHED_TERMS = int(os.environ.get("ACUDX_VERIFY_MIN_TERMS", "5"))
 PER_HOST_INTERVAL_S = float(os.environ.get("ACUDX_VERIFY_HOST_INTERVAL_S", "1.0"))
 MAX_BYTES = 25 * 1024 * 1024
+MAX_REDIRECTS = 3
 MAX_PDF_PAGES = 400
 QUOTE_MAX_CHARS = 900
 WINDOW_MAX_CHARS = 1000
@@ -428,43 +433,90 @@ def extract_text(content: bytes, content_type: str, url: str) -> Tuple[str, str]
 
 
 async def fetch_document(url: str, client: httpx.AsyncClient, *, robots: Optional[RobotsCache] = None,
-                         limiter: Optional[RateLimiter] = None) -> Fetched:
+                         limiter: Optional[RateLimiter] = None,
+                         redirect_allowlist: Optional[Sequence[str]] = None) -> Fetched:
+    """GET one document with the SSRF and size guards of review 04 O5.
+
+    * every hop's host must resolve to public addresses only (``server.net_guard``;
+      ``LOCAL_ALLOWLIST`` exempts an on-prem mirror explicitly);
+    * redirects are followed by hand, at most ``MAX_REDIRECTS``, and only to the original
+      URL's registrable domain or to a host on ``GUIDELINE_REDIRECT_ALLOWLIST``
+      (``redirect_allowlist`` overrides it);
+    * the body is streamed and abandoned as soon as it passes ``MAX_BYTES`` (25 MB), so a
+      huge or endless response never sits in gateway memory.
+    """
     robots = robots or RobotsCache()
     limiter = limiter or RateLimiter()
+    allow = list(redirect_allowlist) if redirect_allowlist is not None else net_guard.env_list("GUIDELINE_REDIRECT_ALLOWLIST")
+    private_allow = net_guard.env_list("LOCAL_ALLOWLIST")
+
+    def failed(error: str, final: str = url, status: int = 0, ctype: str = "") -> Fetched:
+        return Fetched(url=url, final_url=final, status=status, content_type=ctype, text="", kind="", error=error[:300])
+
+    try:
+        await net_guard.check_public_url(url, allow_private=private_allow)
+    except net_guard.BlockedDestination as exc:
+        return failed(f"blocked destination: {exc}")
     if not await robots.allowed(client, url):
-        return Fetched(url=url, final_url=url, status=0, content_type="", text="", kind="",
-                       error="disallowed by robots.txt")
+        return failed("disallowed by robots.txt")
     await limiter.wait(url)
+    headers = {"User-Agent": USER_AGENT,
+               "Accept": "text/html,application/xhtml+xml,application/pdf,application/xml;q=0.9,*/*;q=0.5"}
+    current = url
+    content = b""
+    status = 0
+    ctype = ""
+    for _hop in range(MAX_REDIRECTS + 1):
+        try:
+            async with client.stream("GET", current, headers=headers, follow_redirects=False,
+                                     timeout=DEFAULT_TIMEOUT_S) as r:
+                status = r.status_code
+                ctype = r.headers.get("content-type", "")
+                location = r.headers.get("location")
+                if r.is_redirect and location:
+                    nxt = urljoin(current, location)
+                    if not net_guard.same_site_or_allowed(url, nxt, allow):
+                        return failed(f"redirect to another domain refused: {nxt}", current, status)
+                    try:
+                        await net_guard.check_public_url(nxt, allow_private=private_allow)
+                    except net_guard.BlockedDestination as exc:
+                        return failed(f"blocked destination: {exc}", current, status)
+                    current = nxt
+                    continue
+                declared = r.headers.get("content-length")
+                if declared and declared.isdigit() and int(declared) > MAX_BYTES:
+                    return failed(f"document larger than {MAX_BYTES} bytes", current, status)
+                buf = bytearray()
+                async for chunk in r.aiter_bytes():
+                    buf += chunk
+                    if len(buf) > MAX_BYTES:
+                        return failed(f"document larger than {MAX_BYTES} bytes", current, status)
+                content = bytes(buf)
+                break
+        except httpx.HTTPError as exc:
+            return failed(f"fetch error: {type(exc).__name__}: {exc}", current)
+    else:
+        return failed(f"more than {MAX_REDIRECTS} redirects", current, status)
+    final_url = current
+    if status >= 400:
+        return Fetched(url=url, final_url=final_url, status=status, content_type=ctype, text="", kind="",
+                       error=f"HTTP {status}")
     try:
-        r = await client.get(url, headers={"User-Agent": USER_AGENT,
-                                           "Accept": "text/html,application/xhtml+xml,application/pdf,application/xml;q=0.9,*/*;q=0.5"},
-                             follow_redirects=True, timeout=DEFAULT_TIMEOUT_S)
-    except httpx.HTTPError as exc:
-        return Fetched(url=url, final_url=url, status=0, content_type="", text="", kind="",
-                       error=f"fetch error: {type(exc).__name__}: {exc}"[:300])
-    if len(r.content) > MAX_BYTES:
-        return Fetched(url=url, final_url=str(r.url), status=r.status_code, content_type="", text="", kind="",
-                       error=f"document larger than {MAX_BYTES} bytes")
-    ctype = r.headers.get("content-type", "")
-    if r.status_code >= 400:
-        return Fetched(url=url, final_url=str(r.url), status=r.status_code, content_type=ctype, text="", kind="",
-                       error=f"HTTP {r.status_code}")
-    try:
-        text, kind = extract_text(r.content, ctype, str(r.url))
+        text, kind = extract_text(content, ctype, final_url)
     except Exception as exc:
-        return Fetched(url=url, final_url=str(r.url), status=r.status_code, content_type=ctype, text="", kind="",
+        return Fetched(url=url, final_url=final_url, status=status, content_type=ctype, text="", kind="",
                        error=f"extraction failed: {type(exc).__name__}: {exc}"[:300])
     low = text[:600].lower()
     if any(m in low for m in JS_WALL_MARKERS):
-        return Fetched(url=url, final_url=str(r.url), status=r.status_code, content_type=ctype, text="", kind=kind,
+        return Fetched(url=url, final_url=final_url, status=status, content_type=ctype, text="", kind=kind,
                        error="source behind a JavaScript/anti-bot wall; document not retrievable headlessly")
-    if any(m in low for m in LOGIN_MARKERS) or "/login" in str(r.url).lower():
-        return Fetched(url=url, final_url=str(r.url), status=r.status_code, content_type=ctype, text="", kind=kind,
+    if any(m in low for m in LOGIN_MARKERS) or "/login" in final_url.lower():
+        return Fetched(url=url, final_url=final_url, status=status, content_type=ctype, text="", kind=kind,
                        error="source requires a login; document not publicly retrievable")
     if len(text) < 200:
-        return Fetched(url=url, final_url=str(r.url), status=r.status_code, content_type=ctype, text=text, kind=kind,
+        return Fetched(url=url, final_url=final_url, status=status, content_type=ctype, text=text, kind=kind,
                        error=f"only {len(text)} characters of text extracted")
-    return Fetched(url=url, final_url=str(r.url), status=r.status_code, content_type=ctype, text=text, kind=kind)
+    return Fetched(url=url, final_url=final_url, status=status, content_type=ctype, text=text, kind=kind)
 
 
 # ---------------------------------------------------------------------------
