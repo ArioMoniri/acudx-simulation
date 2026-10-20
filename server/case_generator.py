@@ -62,6 +62,8 @@ import random
 import re
 import threading
 import time
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -216,6 +218,9 @@ class HpiItem(_Base):
     answer_en: str
     answer_tr: str
     red_flag: bool = False
+    # Acceptance 2026-10-20 D-12: a finer topic inside the intent ("rigors",
+    # "urinary", "travel") so the client reveals the answer to the question asked.
+    topic: str = ""
 
     @field_validator("intent", mode="before")
     @classmethod
@@ -352,6 +357,10 @@ class GuidelineAnchor(_Base):
     statement_tr: str
     source: str = ""
     citation: str = ""
+    # Acceptance 2026-10-20 D-11: the verified GuidelineStatement id behind the
+    # anchor, and the order codes it supports, so work-up rows cite a real source.
+    statement_id: str = ""
+    codes: list[str] = []
 
 
 class GeneratedCaseSpec(_Base):
@@ -426,7 +435,9 @@ def _resolve_fixture(cond: dict[str, Any]) -> dict[str, Any]:
                 prof[key] = fixture[key]
     # Review 02 finding 4: condition-specific exam findings win over the
     # system-level non-revealing default.
-    exam = case_fixtures.CONDITION_EXAM.get(cond.get("id", ""))
+    # Acceptance 2026-10-20 D-12: febrile conditions also answer neck stiffness,
+    # chest auscultation, renal angle, skin and joints.
+    exam = case_fixtures.fever_exam(cond.get("id", ""))
     if exam:
         prof["exam"] = exam
     return prof
@@ -732,8 +743,45 @@ def _background(cond: dict[str, Any], rng: random.Random) -> dict[str, tuple[str
     return {
         "pmh": rng.choice(pool["pmh"]),
         "meds": rng.choice(pool["meds"]),
-        "allergies": rng.choice(pool["allergies"]),
+        # Acceptance 2026-10-20 D-17: prevalence-weighted, NKDA the majority.
+        "allergies": case_fixtures.draw_allergy(rng, pool["allergies"]),
     }
+
+
+@lru_cache(maxsize=1)
+def _verified_statements() -> dict[str, dict[str, Any]]:
+    """The verified GuidelineStatement export, keyed by id (read once)."""
+    import json
+
+    from server.guidelines.store import EXPORT_PATH
+
+    try:
+        rows = json.loads(Path(EXPORT_PATH).read_text(encoding="utf-8")).get("statements", [])
+    except (OSError, ValueError):
+        return {}
+    return {r["id"]: r for r in rows if r.get("status") == "verified"}
+
+
+def _anchors(cond: dict[str, Any], src: str, cite: str, gen: str, gtr: str) -> list[dict[str, Any]]:
+    """Guideline anchors for a template case. The fixture's own summary comes
+    first; acceptance 2026-10-20 D-11 adds one anchor per verified statement in
+    ``case_fixtures.CONDITION_STATEMENTS`` (with its id and the order codes it
+    supports), so the client can cite a verified source instead of "Source
+    unavailable". Unverified ids are dropped, never cited."""
+    verified = _verified_statements()
+    linked = [(sid, codes) for sid, codes in case_fixtures.CONDITION_STATEMENTS.get(cond.get("id", ""), [])
+              if sid in verified]
+    first: dict[str, Any] = {"statement_en": gen, "statement_tr": gtr, "source": src, "citation": cite}
+    if linked:
+        first["statement_id"] = linked[0][0]
+        first["codes"] = list(linked[0][1])
+    out = [first]
+    for sid, codes in linked[1:]:
+        row = verified[sid]
+        out.append({"statement_en": row.get("statement_en", ""), "statement_tr": row.get("statement_tr", ""),
+                    "source": row.get("source_body", ""), "citation": row.get("source_title", ""),
+                    "statement_id": sid, "codes": list(codes)})
+    return out
 
 
 def _red_flags(cond: dict[str, Any]) -> list[dict[str, Any]]:
@@ -785,6 +833,9 @@ def _hpi(
         "answer_tr": speech[1],
         "red_flag": speech is not case_fixtures.GENERIC_RED_FLAG_SPEECH,
     })
+    # Acceptance 2026-10-20 D-12: rigors, urinary symptoms, cough, neck stiffness,
+    # travel, sick contacts, vaccination and immunosuppression for febrile cases.
+    items.extend(case_fixtures.fever_hpi(cond.get("id", "")))
     return items
 
 
@@ -1002,9 +1053,7 @@ def build_template_spec(
         "imaging": _imaging(prof),
         "treatments": _treatments(prof),
         "disposition": _disposition(cond["system"], acuity, cond),
-        "guideline_anchors": [{
-            "statement_en": gen, "statement_tr": gtr, "source": src, "citation": cite,
-        }],
+        "guideline_anchors": _anchors(cond, src, cite, gen, gtr),
         # Review 02 finding 3: structured red flags (clinician signs + patient symptom).
         "red_flags": _red_flags(cond),
     }

@@ -461,36 +461,8 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
     # judge. Delaying antimicrobials is the teachable harm: SSC recommends them
     # within 1 hour of recognising probable sepsis or shock
     # https://www.sccm.org/SurvivingSepsisCampaign/Guidelines
-    "sepsis_uncomplicated": {
-        "treatments": [
-            ("cultures", "Blood cultures before antibiotics", "Antibiyotik öncesi kan kültürü", "indicated", [], "Culture before antibiotics if no delay.", "Geciktirmiyorsa antibiyotik öncesi kültür alın."),
-            ("abx", "Broad-spectrum IV antibiotics", "Geniş spektrumlu IV antibiyotik", "indicated", [], "Early antibiotics for suspected sepsis; they do not move the vitals within the hour.", "Şüpheli sepsiste erken antibiyotik; vitalleri ilk saatte değiştirmez."),
-            ("iv_fluids", "IV fluid resuscitation", "IV sıvı resüsitasyonu", "indicated", [("hr", -10.0, 600000), ("systolic", 10.0, 600000)], "Restore perfusion.", "Perfüzyonu düzeltin."),
-            ("delay_abx", "Delay antibiotics until all results are back", "Tüm sonuçlar çıkana kadar antibiyotiği ertele", "contraindicated", [], "Do not delay antimicrobials in probable sepsis (target within 1 hour).", "Olası sepsiste antimikrobiyali geciktirmeyin (hedef 1 saat içinde)."),
-        ],
-    },
-    "pneumonia_cap": {
-        "labs": [
-            ("1988-5", "C-reactive protein", "CRP", 180, "mg/L", 0, 5, "H", "chemistry", 15),
-            # Review 02 finding 22: 3094-0 is urea NITROGEN in mg/dL; urea in mmol/L is
-            # LOINC 22664-7 https://loinc.org/22664-7
-            ("22664-7", "Urea", "Üre", 9.2, "mmol/L", 2.5, 7.1, "H", "chemistry", 0.5),
-        ],
-        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
-                    "Lobar consolidation with an air bronchogram.",
-                    "Hava bronkogramıyla lober konsolidasyon.",
-                    "pneumonia chest x-ray consolidation", "pnömoni akciğer grafisi konsolidasyon"),
-        "treatments": [
-            # Review 02 finding 14 (major): antibiotics do not defervesce a patient in
-            # 30 minutes; median time to clinical stability in CAP is ~3 days (Halm
-            # et al., JAMA 1998 https://jamanetwork.com/journals/jama/fullarticle/187516).
-            # Antibiotic benefit is modelled as halting further deterioration, not a
-            # vital-sign change inside the session.
-            ("severity_abx", "Antibiotics guided by severity (CURB-65)", "Ağırlığa göre antibiyotik (CURB-65)", "indicated", [], "Choose antibiotics by severity score; expect defervescence over days, not minutes.", "Antibiyotiği ağırlık skoruna göre seçin; ateş dakikalar değil günler içinde düşer."),
-            ("oxygen_fluids", "Oxygen + fluids as needed", "Gerektiğinde oksijen + sıvı", "indicated", [("spo2", 3.0, 300000)], "Support oxygenation and hydration.", "Oksijenizasyon ve hidrasyonu destekleyin."),
-            ("delay_abx", "Delay antibiotics pending cultures", "Kültür için antibiyotiği ertele", "contraindicated", [], "Do not delay antibiotics in pneumonia.", "Pnömonide antibiyotiği geciktirmeyin."),
-        ],
-    },
+    # sepsis_uncomplicated: superseded by FEBRILE_FIXTURES below (acceptance 2026-10-20, D-18).
+    # pneumonia_cap: superseded by FEBRILE_FIXTURES below (acceptance 2026-10-20, D-18).
     "tension_pneumothorax": {
         "labs": [
             ("2703-7", "Arterial pO2", "Arteriyel pO2", 58, "mmHg", 80, 100, "L", "blood-gas", 4),
@@ -574,21 +546,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("antiplatelet", "Antiplatelet therapy", "Antiplatelet tedavi", "contraindicated", [], "Antiplatelets worsen a bleed.", "Antiplateletler kanamayı kötüleştirir."),
         ],
     },
-    "bacterial_meningitis": {
-        "labs": [
-            ("30405-5", "CSF white cells (neutrophilic)", "BOS lökosit (nötrofilik)", 2200, "10^6/L", 0, 5, "HH", "csf", 200),
-            ("2342-4", "CSF glucose (low)", "BOS glukozu (düşük)", 1.6, "mmol/L", 2.8, 4.2, "L", "csf", 0.2),
-        ],
-        "imaging": ("30799-1", "CT head (if indicated before LP)", "LP öncesi endike ise beyin BT",
-                    "Exclude a mass lesion before lumbar puncture where indicated.",
-                    "Endike ise lomber ponksiyon öncesi kitle lezyonu dışlanır.",
-                    "meningitis CT before lumbar puncture", "menenjit LP öncesi BT"),
-        "treatments": [
-            ("immediate_ceftriaxone", "Immediate IV ceftriaxone + dexamethasone", "Hemen IV seftriakson + deksametazon", "indicated", [], "Do not wait for LP/CT to give antibiotics.", "Antibiyotik için LP/BT beklemeyin."),
-            ("blood_cultures", "Blood cultures", "Kan kültürü", "indicated", [], "Cultures without delaying antibiotics.", "Antibiyotiği geciktirmeden kültür."),
-            ("delay_abx_imaging", "Delay antibiotics for imaging", "Görüntüleme için antibiyotiği ertele", "contraindicated", [], "Never delay antibiotics for imaging.", "Antibiyotiği görüntüleme için asla geciktirmeyin."),
-        ],
-    },
+    # bacterial_meningitis: superseded by FEBRILE_FIXTURES below (acceptance 2026-10-20, D-18).
     "status_epilepticus": {
         "labs": [
             ("2345-7", "Capillary glucose", "Kapiller glukoz", 5.4, "mmol/L", 4.0, 7.8, "N", "chemistry", 0.4),
@@ -670,21 +628,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("fatty_diet", "Advise a normal fatty diet", "Normal yağlı diyet öner", "contraindicated", [], "Keep NBM during the acute phase.", "Akut dönemde ağızdan almayın."),
         ],
     },
-    "ascending_cholangitis": {
-        "labs": [
-            ("1975-2", "Total bilirubin", "Total bilirubin", 5.8, "mg/dL", 0.2, 1.2, "H", "chemistry", 0.5),
-            ("6768-6", "Alkaline phosphatase", "ALP", 420, "U/L", 40, 130, "H", "chemistry", 30),
-        ],
-        "imaging": ("24558-9", "US / MRCP of the biliary tree", "Safra yolu US / MRCP",
-                    "Dilated bile ducts with an obstructing stone.",
-                    "Tıkayıcı taşla genişlemiş safra yolları.",
-                    "cholangitis MRCP dilated ducts", "kolanjit MRCP genişlemiş kanal"),
-        "treatments": [
-            ("abx_fluids", "IV antibiotics + fluids", "IV antibiyotik + sıvı", "indicated", [("systolic", 8.0, 600000)], "Broad-spectrum antibiotics and resuscitation (fluids, not antibiotics, move the vitals this hour).", "Geniş spektrumlu antibiyotik ve resüsitasyon."),
-            ("biliary_drainage", "Urgent biliary drainage (ERCP)", "Acil biliyer drenaj (ERCP)", "indicated", [], "Decompress the obstructed duct urgently.", "Tıkalı kanalı acilen dekomprese edin."),
-            ("delay_drainage", "Delay drainage in septic patient", "Septik hastada drenajı ertele", "contraindicated", [], "Do not delay drainage in cholangitis sepsis.", "Kolanjit sepsisinde drenajı geciktirmeyin."),
-        ],
-    },
+    # ascending_cholangitis: superseded by FEBRILE_FIXTURES below (acceptance 2026-10-20, D-18).
     "bowel_obstruction": {
         "labs": [
             ("2524-7", "Lactate", "Laktat", 2.4, "mmol/L", 0.5, 2.0, "H", "blood-gas", 0.3),
@@ -821,21 +765,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("watchful_waiting", "Watchful waiting", "İzlemle bekleme", "contraindicated", [], "Delay is fatal; operate early.", "Gecikme öldürücüdür; erken opere edin."),
         ],
     },
-    "pyelonephritis": {
-        "labs": [
-            ("5799-2", "Urinalysis (leucocytes/nitrites)", "İdrar (lökosit/nitrit)", "positive", "", None, None, "H", "urinalysis"),
-            ("1988-5", "C-reactive protein", "CRP", 110, "mg/L", 0, 5, "H", "chemistry", 10),
-        ],
-        "imaging": ("24558-9", "Renal ultrasound", "Renal ultrason",
-                    "Exclude obstruction / pyonephrosis.",
-                    "Obstrüksiyon / piyonefroz dışlanır.",
-                    "pyelonephritis ultrasound obstruction", "piyelonefrit ultrason obstrüksiyon"),
-        "treatments": [
-            ("iv_abx_fluids", "IV antibiotics + fluids", "IV antibiyotik + sıvı", "indicated", [("hr", -6.0, 600000)], "Empirical antibiotics and rehydration.", "Ampirik antibiyotik ve rehidrasyon."),
-            ("drain_obstruction", "Drain if obstructed + infected", "Tıkalı + enfekte ise drenaj", "indicated", [], "Decompress an obstructed infected system.", "Tıkalı enfekte sistemi dekomprese edin."),
-            ("delay_obstructed", "Delay in obstructed pyonephrosis", "Tıkalı piyonefrozda gecikme", "contraindicated", [], "Obstructed infection needs urgent drainage.", "Tıkalı enfeksiyon acil drenaj gerektirir."),
-        ],
-    },
+    # pyelonephritis: superseded by FEBRILE_FIXTURES below (acceptance 2026-10-20, D-18).
     "meningococcemia": {
         "labs": [
             ("2524-7", "Lactate", "Laktat", 4.2, "mmol/L", 0.5, 2.0, "HH", "blood-gas", 0.4),
@@ -1018,21 +948,7 @@ CONDITION_FIXTURES: dict[str, dict[str, Any]] = {
             ("elevate_above_heart", "Elevate limb above the heart", "Uzvu kalbin üzerine kaldır", "contraindicated", [], "Over-elevation reduces perfusion.", "Aşırı yükseltme perfüzyonu azaltır."),
         ],
     },
-    "febrile_neutropenia": {
-        "labs": [
-            ("751-8", "Absolute neutrophil count", "Mutlak nötrofil sayısı", 0.3, "10^9/L", 2.0, 7.5, "LL", "haematology", 0.05),
-            ("1988-5", "C-reactive protein", "CRP", 140, "mg/L", 0, 5, "H", "chemistry", 12),
-        ],
-        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
-                    "Screen for an occult source of infection.",
-                    "Gizli enfeksiyon kaynağı taranır.",
-                    "febrile neutropenia chest x-ray source", "febril nötropeni akciğer grafisi kaynak"),
-        "treatments": [
-            ("immediate_abx", "Broad-spectrum antibiotics within 1 hour", "1 saat içinde geniş spektrumlu antibiyotik", "indicated", [], "Antibiotics within the hour, before cultures return.", "Kültür sonucundan önce, ilk saatte antibiyotik."),
-            ("cultures", "Blood cultures", "Kan kültürü", "indicated", [], "Culture without delaying antibiotics.", "Antibiyotiği geciktirmeden kültür."),
-            ("delay_abx", "Delay antibiotics for investigations", "Tetkik için antibiyotiği ertele", "contraindicated", [], "Never delay antibiotics in neutropenic fever.", "Nötropenik ateşte antibiyotiği geciktirmeyin."),
-        ],
-    },
+    # febrile_neutropenia: superseded by FEBRILE_FIXTURES below (acceptance 2026-10-20, D-18).
     "dvt": {
         "labs": [
             ("48065-7", "D-dimer", "D-dimer", 1400, "ng/mL", 0, 500, "H", "coagulation", 120),
@@ -1712,3 +1628,647 @@ CONDITION_EXAM: dict[str, list[tuple]] = {
     "testicular_torsion": [_ex("focused-special", ("Genitourinary", "Genitoüriner"), "High-riding, horizontally lying tender left testis; absent cremasteric reflex; no relief on elevation.", "Yüksek yerleşimli, yatay duran hassas sol testis; kremaster refleksi yok; elevasyonla rahatlama yok."), _ex("abdominal", _ABD, "Soft abdomen, no hernia.", "Yumuşak karın, fıtık yok.", False)],
     "panic_disorder": [_ex("cardiovascular", _CV, "Regular tachycardia, no murmur, chest wall non-tender.", "Düzenli taşikardi, üfürüm yok, göğüs duvarı hassas değil.", False), _ex("general-inspection", _GEN, "Hyperventilating, tremulous, carpopedal spasm.", "Hiperventile, titrek, karpopedal spazm.")],
 }
+
+
+
+# =========================================================================== #
+# Febrile families: acceptance test 2026-10-20 (docs/review/05), D-18 / D-12  #
+#                                                                              #
+# D-18 (critical): the sepsis template treated "A-to-E assessment" and          #
+# "analgesia" as the indicated actions, septic shock inherited the emergency    #
+# default, influenza and COVID-19 rewarded antibiotics, and acute prostatitis   #
+# inherited the renal hyperkalaemia profile (K 6.1). Each febrile condition    #
+# below gets its own labs, imaging and treatment table: cultures before        #
+# antibiotics, crystalloid (30 mL/kg where there is hypotension or lactate 4   #
+# or more), the guideline antibiotic with its allergy alternative named, an    #
+# antipyretic, source control, and one contraindicated distractor. Effect      #
+# onsets follow normalize.TREATMENT_CLASSES (fluids 5-30 min, paracetamol      #
+# 30 min-2 h, antibiotics move no vital inside a session).                     #
+#                                                                              #
+# Sources (adult):                                                             #
+#  SSC 2021 (Evans et al., Crit Care Med 2021;49:e1063,                        #
+#    doi 10.1097/CCM.0000000000005337): blood cultures before antimicrobials,   #
+#    antimicrobials within 1 h, at least 30 mL/kg crystalloid in 3 h for       #
+#    hypoperfusion, source control within 6 h, no starches.                    #
+#  NICE NG253 sepsis (https://www.nice.org.uk/guidance/ng253), NICE NG250 CAP, #
+#    NG111 pyelonephritis, NG110 prostatitis, NG141 cellulitis, NG240          #
+#    meningitis, NG191 COVID-19, CG151 neutropenic sepsis.                     #
+#  IDSA: Stevens et al. 2014 SSTI (doi 10.1093/cid/ciu296); ATS/IDSA 2019 CAP  #
+#    (Metlay et al., doi 10.1164/rccm.201908-1581ST).                          #
+#  Tokyo Guidelines 2018 cholangitis antimicrobials (Gomi et al.,              #
+#    doi 10.1002/jhbp.518) and drainage (Miura et al., doi 10.1002/jhbp.509).  #
+#  BSR/BOA hot swollen joint (Coakley et al., Rheumatology 2006;45:1039,       #
+#    doi 10.1093/rheumatology/kel163): aspirate before antibiotics,            #
+#    flucloxacillin, clindamycin if penicillin allergic, no intra-articular    #
+#    steroid.                                                                  #
+#  WHO Guidelines for malaria                                                  #
+#    (https://www.who.int/publications/i/item/guidelines-for-malaria) and the  #
+#    CDC malaria algorithm: IV artesunate 2.4 mg/kg at 0, 12, 24 h for severe  #
+#    malaria, repeat films every 12-24 h.                                      #
+#  CDC influenza antivirals summary: oseltamivir 75 mg twice daily as soon as  #
+#    possible in hospitalised patients.                                        #
+#  CDC STI 2021 PID: ceftriaxone + doxycycline + metronidazole; clindamycin +  #
+#    gentamicin as the alternative.                                            #
+#  EAU Urological Infections 2024                                              #
+#    (https://uroweb.org/guidelines/urological-infections): prostatic massage  #
+#    is contraindicated in acute bacterial prostatitis.                        #
+#  BHIVA/BASHH/BIA UK HIV testing 2020 (https://www.bhiva.org/HIV-testing-guidelines). #
+# =========================================================================== #
+_CULT = ("cultures", "Blood cultures (2 sets) before antibiotics", "Antibiyotik öncesi kan kültürü (2 set)", "indicated", [],
+         "Culture first when it does not delay the antibiotic (SSC 2021).", "Antibiyotiği geciktirmiyorsa önce kültür alın (SSC 2021).")
+_PCM = ("antipyretic", "Paracetamol 1 g for fever and discomfort", "Ateş ve rahatsızlık için parasetamol 1 g", "indicated",
+        [("tempC", -0.8, 2700000)], "Antipyresis for comfort; it treats no infection and does not replace antibiotics.",
+        "Rahatlık için ateş düşürme; enfeksiyonu tedavi etmez ve antibiyotiğin yerini tutmaz.")
+
+
+def _fluids(label_en: str, label_tr: str, sbp: float, hr: float) -> tuple:
+    return ("iv_fluids", label_en, label_tr, "indicated", [("systolic", sbp, 900000), ("hr", -hr, 900000)],
+            "Crystalloid restores perfusion; reassess after each bolus.", "Kristaloid perfüzyonu düzeltir; her bolustan sonra yeniden değerlendirin.")
+
+
+FEBRILE_FIXTURES: dict[str, dict[str, Any]] = {
+    "sepsis_uncomplicated": {
+        "labs": [
+            ("6690-2", "White cell count", "Lökosit", 15.2, "10^9/L", 4.0, 11.0, "H", "haematology", 1.5),
+            ("1988-5", "C-reactive protein", "CRP", 160, "mg/L", 0, 5, "H", "chemistry", 20),
+            ("2524-7", "Lactate", "Laktat", 2.8, "mmol/L", 0.5, 2.0, "H", "blood-gas", 0.3),
+            ("2160-0", "Creatinine", "Kreatinin", 1.4, "mg/dL", 0.6, 1.3, "H", "chemistry", 0.1),
+        ],
+        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
+                    "No focal consolidation, effusion or free air; the chest is not the source.",
+                    "Fokal konsolidasyon, efüzyon veya serbest hava yok; kaynak akciğer değil.",
+                    "chest x-ray normal lungs", "akciğer grafisi normal"),
+        "treatments": [
+            _CULT,
+            ("abx", "Broad-spectrum IV antibiotics within 1 hour (local sepsis policy, e.g. piperacillin-tazobactam; meropenem or vancomycin + gentamicin if penicillin anaphylaxis)",
+             "1 saat içinde geniş spektrumlu IV antibiyotik (yerel sepsis protokolü, örn. piperasilin-tazobaktam; penisilin anafilaksisinde meropenem veya vankomisin + gentamisin)",
+             "indicated", [], "Antimicrobials within the hour; they do not move the vitals within the session.", "İlk saatte antimikrobiyal; vitalleri seans içinde değiştirmez."),
+            _fluids("IV crystalloid 500 mL bolus, reassess (30 mL/kg if hypotensive or lactate 4 or more)",
+                    "500 mL IV kristaloid bolus, yeniden değerlendir (hipotansif veya laktat 4 ve üzeriyse 30 mL/kg)", 6.0, 6.0),
+            _PCM,
+            ("source_search", "Look for a source needing control (urine, chest, abdomen, skin, lines)", "Kontrol gerektiren kaynağı ara (idrar, akciğer, karın, cilt, kateterler)", "indicated", [],
+             "Identify a drainable source early (SSC 2021: source control within 6 h).", "Drene edilebilir kaynağı erken saptayın (SSC 2021: 6 saat içinde kaynak kontrolü)."),
+            ("delay_abx", "Delay antibiotics until all results are back", "Tüm sonuçlar çıkana kadar antibiyotiği ertele", "contraindicated", [],
+             "Do not delay antimicrobials in probable sepsis (target within 1 hour).", "Olası sepsiste antimikrobiyali geciktirmeyin (hedef 1 saat içinde)."),
+        ],
+        "guide": ("SSC", "Surviving Sepsis Campaign 2021", "Take blood cultures, then give antimicrobials within 1 hour of recognising probable sepsis, and give at least 30 mL/kg crystalloid for hypotension or a lactate of 4 mmol/L or more.",
+                  "Kan kültürünü alın, olası sepsis tanındıktan sonra 1 saat içinde antimikrobiyal verin ve hipotansiyon veya 4 mmol/L ve üzeri laktatta en az 30 mL/kg kristaloid verin."),
+    },
+    "septic_shock": {
+        "labs": [
+            ("6690-2", "White cell count", "Lökosit", 18.6, "10^9/L", 4.0, 11.0, "H", "haematology", 1.5),
+            ("2524-7", "Lactate", "Laktat", 5.4, "mmol/L", 0.5, 2.0, "HH", "blood-gas", 0.5),
+            ("2160-0", "Creatinine", "Kreatinin", 2.1, "mg/dL", 0.6, 1.3, "H", "chemistry", 0.2),
+            ("777-3", "Platelets", "Trombosit", 104, "10^9/L", 150, 400, "L", "haematology", 10),
+        ],
+        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
+                    "Clear lung fields; no consolidation.",
+                    "Akciğer alanları temiz; konsolidasyon yok.",
+                    "chest x-ray normal lungs", "akciğer grafisi normal"),
+        "treatments": [
+            _CULT,
+            ("abx", "Broad-spectrum IV antibiotics immediately (within 1 hour; meropenem or vancomycin + gentamicin if penicillin anaphylaxis)",
+             "Hemen geniş spektrumlu IV antibiyotik (1 saat içinde; penisilin anafilaksisinde meropenem veya vankomisin + gentamisin)",
+             "indicated", [], "Every hour of delay in shock raises mortality; no vital change within the session.", "Şokta her saatlik gecikme mortaliteyi artırır; seans içinde vital değişmez."),
+            _fluids("IV crystalloid 30 mL/kg within 3 hours, given as boluses with reassessment", "3 saat içinde bolus halinde 30 mL/kg IV kristaloid, aralarda yeniden değerlendirme", 14.0, 10.0),
+            ("vasopressor", "Noradrenaline to a MAP of 65 mmHg if hypotension persists after fluids", "Sıvıya rağmen hipotansiyon sürerse OAB 65 mmHg hedefiyle noradrenalin", "indicated",
+             [("systolic", 18.0, 600000), ("diastolic", 10.0, 600000)], "First-line vasopressor; peripheral start is acceptable while access is secured.", "Birinci basamak vazopresör; damar yolu sağlanırken periferden başlanabilir."),
+            ("source_control", "Source control within 6 hours (urinary obstruction, collection, infected line)", "6 saat içinde kaynak kontrolü (üriner obstrüksiyon, koleksiyon, enfekte kateter)", "indicated", [],
+             "Drain or remove the source early (SSC 2021).", "Kaynağı erken drene edin veya çıkarın (SSC 2021)."),
+            _PCM,
+            ("starch", "Hydroxyethyl starch for volume resuscitation", "Volüm resüsitasyonu için hidroksietil nişasta", "contraindicated", [],
+             "SSC 2021 recommends against starches (kidney injury, mortality).", "SSC 2021 nişastaları önermez (böbrek hasarı, mortalite)."),
+        ],
+        "guide": ("SSC", "Surviving Sepsis Campaign 2021", "In septic shock give antimicrobials immediately, at least 30 mL/kg crystalloid in 3 hours and noradrenaline to a MAP of 65 mmHg.",
+                  "Septik şokta hemen antimikrobiyal, 3 saatte en az 30 mL/kg kristaloid ve OAB 65 mmHg hedefiyle noradrenalin verin."),
+    },
+    "pneumonia_cap": {
+        "labs": [
+            ("6690-2", "White cell count", "Lökosit", 15.8, "10^9/L", 4.0, 11.0, "H", "haematology", 1.5),
+            ("1988-5", "C-reactive protein", "CRP", 180, "mg/L", 0, 5, "H", "chemistry", 15),
+            ("22664-7", "Urea", "Üre", 9.2, "mmol/L", 2.5, 7.1, "H", "chemistry", 0.5),
+        ],
+        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
+                    "Right lower lobe consolidation with an air bronchogram; no effusion.",
+                    "Sağ alt lobda hava bronkogramlı konsolidasyon; efüzyon yok.",
+                    "pneumonia chest x-ray consolidation", "pnömoni akciğer grafisi konsolidasyon"),
+        "treatments": [
+            _CULT,
+            ("severity_abx", "Antibiotics within 4 hours guided by CURB-65 (high severity: co-amoxiclav + clarithromycin; levofloxacin if penicillin allergy)",
+             "CURB-65'e göre 4 saat içinde antibiyotik (yüksek ağırlık: ko-amoksiklav + klaritromisin; penisilin alerjisinde levofloksasin)",
+             "indicated", [], "Choose by severity (NICE NG250); defervescence takes days, not minutes.", "Ağırlığa göre seçin (NICE NG250); ateş dakikalar değil günler içinde düşer."),
+            ("oxygen", "Controlled oxygen to SpO2 94-98% (88-92% if at risk of hypercapnia)", "SpO2 %94-98 hedefli kontrollü oksijen (hiperkapni riskinde %88-92)", "indicated",
+             [("spo2", 3.0, 300000)], "Titrated oxygen for hypoxaemia (BTS 2017).", "Hipoksemide titre edilen oksijen (BTS 2017)."),
+            _fluids("IV crystalloid bolus if hypotensive or dry", "Hipotansif veya dehidrateyse IV kristaloid bolus", 6.0, 5.0),
+            _PCM,
+            ("delay_abx", "Delay antibiotics pending sputum culture", "Balgam kültürü için antibiyotiği ertele", "contraindicated", [],
+             "Do not delay antibiotics in pneumonia (NICE NG250: within 4 hours).", "Pnömonide antibiyotiği geciktirmeyin (NICE NG250: 4 saat içinde)."),
+        ],
+        "guide": ("NICE", "NICE NG250 Pneumonia (2025)", "Assess severity with CURB-65 and give antibiotics within 4 hours of diagnosis, within 1 hour if sepsis is suspected.",
+                  "Ağırlığı CURB-65 ile değerlendirin; antibiyotiği tanıdan sonra 4 saat içinde, sepsis şüphesinde 1 saat içinde verin."),
+    },
+    "pyelonephritis": {
+        "labs": [
+            ("5799-2", "Urinalysis (leucocytes/nitrites)", "İdrar (lökosit/nitrit)", "positive", "", None, None, "H", "urinalysis"),
+            ("6690-2", "White cell count", "Lökosit", 15.0, "10^9/L", 4.0, 11.0, "H", "haematology", 1.2),
+            ("1988-5", "C-reactive protein", "CRP", 110, "mg/L", 0, 5, "H", "chemistry", 10),
+            ("2160-0", "Creatinine", "Kreatinin", 1.2, "mg/dL", 0.6, 1.3, "N", "chemistry", 0.1),
+        ],
+        "imaging": ("24558-9", "Renal ultrasound", "Renal ultrason",
+                    "No hydronephrosis or collection; kidneys normal in size.",
+                    "Hidronefroz veya koleksiyon yok; böbrek boyutları normal.",
+                    "pyelonephritis ultrasound obstruction", "piyelonefrit ultrason obstrüksiyon"),
+        "treatments": [
+            ("cultures", "Midstream urine and blood cultures before antibiotics", "Antibiyotik öncesi orta akım idrar ve kan kültürü", "indicated", [],
+             "Culture before the first dose (NICE NG111).", "İlk dozdan önce kültür (NICE NG111)."),
+            ("iv_abx_fluids", "IV antibiotics + fluids (ceftriaxone or cefuroxime; gentamicin if beta-lactam allergy)",
+             "IV antibiyotik + sıvı (seftriakson veya sefuroksim; beta-laktam alerjisinde gentamisin)", "indicated", [("hr", -6.0, 900000)],
+             "Empirical antibiotics (NICE NG111) and rehydration.", "Ampirik antibiyotik (NICE NG111) ve rehidrasyon."),
+            _PCM,
+            ("drain_obstruction", "Urgent decompression if obstructed and infected", "Tıkalı ve enfekteyse acil dekompresyon", "indicated", [],
+             "An obstructed infected kidney needs drainage (source control).", "Tıkalı enfekte böbrek drenaj gerektirir (kaynak kontrolü)."),
+            ("delay_obstructed", "Delay drainage of an obstructed infected kidney", "Tıkalı enfekte böbreğin drenajını ertele", "contraindicated", [],
+             "Obstructed infection needs urgent drainage.", "Tıkalı enfeksiyon acil drenaj gerektirir."),
+        ],
+        "guide": ("NICE", "NICE NG111 Pyelonephritis (acute)", "Send a midstream urine for culture before antibiotics and choose the agent on severity; review when culture results are available.",
+                  "Antibiyotikten önce orta akım idrarı kültüre gönderin ve ajanı ağırlığa göre seçin; kültür sonucu çıkınca gözden geçirin."),
+    },
+    "bacterial_meningitis": {
+        "labs": [
+            ("6690-2", "White cell count", "Lökosit", 19.4, "10^9/L", 4.0, 11.0, "H", "haematology", 1.5),
+            ("1988-5", "C-reactive protein", "CRP", 210, "mg/L", 0, 5, "H", "chemistry", 20),
+            ("30405-5", "CSF white cells (neutrophilic)", "BOS lökosit (nötrofilik)", 2200, "10^6/L", 0, 5, "HH", "csf", 200),
+            ("2342-4", "CSF glucose (low)", "BOS glukozu (düşük)", 1.6, "mmol/L", 2.8, 4.2, "L", "csf", 0.2),
+        ],
+        "imaging": ("30799-1", "CT head (if indicated before LP)", "LP öncesi endike ise beyin BT",
+                    "No mass lesion, no effacement of the basal cisterns.", "Kitle lezyonu yok, bazal sisternlerde silinme yok.",
+                    "meningitis CT before lumbar puncture", "menenjit LP öncesi BT"),
+        "treatments": [
+            ("blood_cultures", "Blood cultures (and LP only if safe without delaying antibiotics)", "Kan kültürü (LP yalnızca antibiyotiği geciktirmeyecekse ve güvenliyse)", "indicated", [],
+             "Cultures without delaying antibiotics (NICE NG240).", "Antibiyotiği geciktirmeden kültür (NICE NG240)."),
+            ("immediate_ceftriaxone", "Immediate IV antibiotics: ceftriaxone 2 g + dexamethasone (chloramphenicol if severe beta-lactam allergy)",
+             "Hemen IV antibiyotik: seftriakson 2 g + deksametazon (ağır beta-laktam alerjisinde kloramfenikol)", "indicated", [],
+             "Antibiotics within 1 hour of arrival; do not wait for CT or LP.", "Varıştan sonraki 1 saat içinde antibiyotik; BT veya LP beklemeyin."),
+            _PCM,
+            ("delay_abx_imaging", "Delay antibiotics for imaging", "Görüntüleme için antibiyotiği ertele", "contraindicated", [],
+             "Never delay antibiotics for imaging.", "Antibiyotiği görüntüleme için asla geciktirmeyin."),
+        ],
+        "guide": ("NICE", "NICE NG240 Meningitis (bacterial) and meningococcal disease", "Start antibiotics within 1 hour of arrival with suspected bacterial meningitis, with dexamethasone; do blood tests and LP first only if safe and without delay.",
+                  "Şüpheli bakteriyel menenjitte varıştan sonraki 1 saat içinde deksametazonla antibiyotik başlayın; kan ve LP'yi yalnızca güvenli ve gecikmesizse önce yapın."),
+    },
+    "cellulitis": {
+        "labs": [
+            ("6690-2", "White cell count", "Lökosit", 12.8, "10^9/L", 4.0, 11.0, "H", "haematology", 1.0),
+            ("1988-5", "C-reactive protein", "CRP", 85, "mg/L", 0, 5, "H", "chemistry", 10),
+            ("2160-0", "Creatinine", "Kreatinin", 0.9, "mg/dL", 0.6, 1.3, "N", "chemistry", 0.1),
+        ],
+        "imaging": ("us-dvt", "Lower-limb venous Doppler (if DVT is a concern)", "Alt ekstremite venöz Doppler (DVT şüphesinde)",
+                    "Veins compressible, no DVT; subcutaneous oedema only.", "Venler basıyla kapanıyor, DVT yok; yalnızca cilt altı ödem.",
+                    "leg ultrasound subcutaneous oedema", "bacak ultrasonu cilt altı ödem"),
+        "treatments": [
+            ("mark_margin", "Mark the edge of the erythema before the first dose", "İlk dozdan önce eritem sınırını işaretle", "indicated", [],
+             "Lets the next clinician see spread or response (NICE NG141).", "Sonraki hekimin yayılımı veya yanıtı görmesini sağlar (NICE NG141)."),
+            ("abx_cellulitis", "Flucloxacillin (clarithromycin or doxycycline if penicillin allergy); IV if severe or systemically unwell",
+             "Flukloksasilin (penisilin alerjisinde klaritromisin veya doksisiklin); ağır veya sistemik hastaysa IV", "indicated", [],
+             "NICE NG141 first choice; redness settles over days.", "NICE NG141 ilk tercih; kızarıklık günler içinde geriler."),
+            _PCM,
+            ("swab_delay", "Withhold antibiotics until a skin swab result is back", "Cilt sürüntüsü sonucu gelene kadar antibiyotiği beklet", "contraindicated", [],
+             "Intact-skin cellulitis is a clinical diagnosis; swabs do not guide the first dose.", "Sağlam cilt enfeksiyonu klinik tanıdır; sürüntü ilk dozu yönlendirmez."),
+        ],
+        "guide": ("NICE", "NICE NG141 Cellulitis and erysipelas", "Mark the extent of infection, then offer flucloxacillin; clarithromycin or doxycycline if penicillin allergic.",
+                  "Enfeksiyonun sınırını işaretleyin, ardından flukloksasilin önerin; penisilin alerjisinde klaritromisin veya doksisiklin."),
+    },
+    "ascending_cholangitis": {
+        "labs": [
+            ("1975-2", "Total bilirubin", "Total bilirubin", 5.8, "mg/dL", 0.2, 1.2, "H", "chemistry", 0.5),
+            ("6768-6", "Alkaline phosphatase", "ALP", 420, "U/L", 40, 130, "H", "chemistry", 30),
+            ("6690-2", "White cell count", "Lökosit", 17.0, "10^9/L", 4.0, 11.0, "H", "haematology", 1.5),
+            ("1988-5", "C-reactive protein", "CRP", 190, "mg/L", 0, 5, "H", "chemistry", 15),
+        ],
+        "imaging": ("24558-9", "US / MRCP of the biliary tree", "Safra yolu US / MRCP",
+                    "Common bile duct dilated to 11 mm with an obstructing stone; gallstones.",
+                    "Tıkayıcı taşla 11 mm genişlemiş koledok; safra taşları.",
+                    "cholangitis MRCP dilated ducts", "kolanjit MRCP genişlemiş kanal"),
+        "treatments": [
+            _CULT,
+            ("abx_fluids", "IV antibiotics + fluids (piperacillin-tazobactam; levofloxacin + metronidazole if penicillin anaphylaxis)",
+             "IV antibiyotik + sıvı (piperasilin-tazobaktam; penisilin anafilaksisinde levofloksasin + metronidazol)", "indicated", [("systolic", 8.0, 900000)],
+             "Tokyo 2018 antimicrobials and resuscitation; fluids, not antibiotics, move the vitals this hour.", "Tokyo 2018 antimikrobiyalleri ve resüsitasyon; bu saatte vitalleri antibiyotik değil sıvı değiştirir."),
+            ("biliary_drainage", "Urgent biliary drainage (ERCP)", "Acil biliyer drenaj (ERCP)", "indicated", [],
+             "Decompress the obstructed duct (source control).", "Tıkalı kanalı dekomprese edin (kaynak kontrolü)."),
+            _PCM,
+            ("delay_drainage", "Delay drainage in septic patient", "Septik hastada drenajı ertele", "contraindicated", [],
+             "Do not delay drainage in biliary sepsis.", "Biliyer sepsiste drenajı geciktirmeyin."),
+        ],
+        "guide": ("Tokyo Guidelines", "Tokyo Guidelines 2018 (TG18) acute cholangitis", "Give antimicrobials and fluids, and arrange biliary drainage urgently for moderate or severe disease.",
+                  "Antimikrobiyal ve sıvı verin; orta veya ağır hastalıkta acil biliyer drenaj planlayın."),
+    },
+    "septic_arthritis": {
+        "labs": [
+            ("6690-2", "White cell count", "Lökosit", 13.6, "10^9/L", 4.0, 11.0, "H", "haematology", 1.0),
+            ("1988-5", "C-reactive protein", "CRP", 140, "mg/L", 0, 5, "H", "chemistry", 15),
+            ("3084-1", "Uric acid", "Ürik asit", 5.2, "mg/dL", 3.4, 7.0, "N", "chemistry", 0.4),
+        ],
+        "imaging": ("43468-8", "Plain radiograph of the knee", "Diz düz grafisi",
+                    "Large effusion; no fracture, no chondrocalcinosis, joint space preserved.",
+                    "Büyük efüzyon; kırık yok, kondrokalsinoz yok, eklem aralığı korunmuş.",
+                    "knee x-ray effusion", "diz grafisi efüzyon"),
+        "treatments": [
+            ("joint_aspiration", "Aspirate the joint for Gram stain, culture and crystals before antibiotics", "Antibiyotik öncesi Gram boyama, kültür ve kristal için eklem aspirasyonu", "indicated", [],
+             "Aspiration before antibiotics, unless it would delay them in sepsis (BSR 2006).", "Sepsiste geciktirmeyecekse antibiyotik öncesi aspirasyon (BSR 2006)."),
+            _CULT,
+            ("abx_joint", "IV flucloxacillin (clindamycin if penicillin allergy; vancomycin if MRSA risk)", "IV flukloksasilin (penisilin alerjisinde klindamisin; MRSA riskinde vankomisin)", "indicated", [],
+             "Empirical anti-staphylococcal cover after aspiration.", "Aspirasyon sonrası ampirik anti-stafilokok tedavi."),
+            ("washout", "Urgent orthopaedic washout", "Acil ortopedik yıkama", "indicated", [],
+             "Source control: joint washout limits cartilage destruction.", "Kaynak kontrolü: eklem yıkaması kıkırdak hasarını sınırlar."),
+            _PCM,
+            ("ia_steroid", "Intra-articular corticosteroid injection", "Eklem içi kortikosteroid enjeksiyonu", "contraindicated", [],
+             "Never inject steroid into a possibly infected joint.", "Enfekte olabilecek ekleme asla steroid enjekte etmeyin."),
+        ],
+        "guide": ("BSR", "BSR/BOA hot swollen joint guideline (2006)", "Aspirate a hot swollen joint before antibiotics, send for Gram stain, culture and crystals, then start empirical anti-staphylococcal antibiotics.",
+                  "Sıcak şiş eklemi antibiyotik öncesi aspire edin, Gram boyama, kültür ve kristale gönderin, ardından ampirik anti-stafilokok antibiyotik başlayın."),
+    },
+    "malaria": {
+        "labs": [
+            ("32700-7", "Malaria thick and thin blood films", "Sıtma kalın ve ince yayma", "Plasmodium falciparum seen, parasitaemia 2%", "", None, None, "H", "haematology"),
+            ("6690-2", "White cell count", "Lökosit", 5.6, "10^9/L", 4.0, 11.0, "N", "haematology", 0.8),
+            ("777-3", "Platelets", "Trombosit", 64, "10^9/L", 150, 400, "L", "haematology", 8),
+            ("718-7", "Haemoglobin", "Hemoglobin", 11.2, "g/dL", 12.0, 16.0, "L", "haematology", 0.4),
+            ("1975-2", "Total bilirubin", "Total bilirubin", 2.4, "mg/dL", 0.2, 1.2, "H", "chemistry", 0.3),
+        ],
+        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
+                    "Clear lung fields; no pulmonary oedema.", "Akciğer alanları temiz; pulmoner ödem yok.",
+                    "chest x-ray normal lungs", "akciğer grafisi normal"),
+        "treatments": [
+            ("films", "Thick and thin films with a rapid diagnostic test now; repeat every 12-24 h if negative", "Hemen kalın ve ince yayma ile hızlı tanı testi; negatifse 12-24 saatte bir tekrar", "indicated", [],
+             "Three negative film sets are needed to exclude the diagnosis (CDC).", "Tanıyı dışlamak için üç negatif yayma seti gerekir (CDC)."),
+            ("artesunate", "IV artesunate 2.4 mg/kg at 0, 12 and 24 h for any severe feature (oral artemether-lumefantrine if uncomplicated)",
+             "Herhangi bir ağır bulguda 0, 12 ve 24. saatte IV artesunat 2,4 mg/kg (komplike değilse oral artemeter-lumefantrin)", "indicated", [],
+             "WHO first line for severe disease; parasite clearance takes hours to days.", "Ağır hastalıkta DSÖ birinci basamağı; parazit temizlenmesi saatler-günler sürer."),
+            _PCM,
+            ("discharge_one_film", "Discharge after a single negative film", "Tek negatif yaymadan sonra taburcu et", "contraindicated", [],
+             "One negative film does not exclude the diagnosis.", "Tek negatif yayma tanıyı dışlamaz."),
+        ],
+        "guide": ("WHO", "WHO Guidelines for malaria", "Confirm with thick and thin films or an RDT; treat severe disease with IV artesunate, then complete an oral artemisinin-based course.",
+                  "Kalın ve ince yayma veya hızlı testle doğrulayın; ağır hastalığı IV artesunatla tedavi edin, ardından oral artemisinin temelli kürü tamamlayın."),
+    },
+    "influenza": {
+        "labs": [
+            ("6690-2", "White cell count", "Lökosit", 6.2, "10^9/L", 4.0, 11.0, "N", "haematology", 0.8),
+            ("731-0", "Lymphocytes", "Lenfosit", 0.8, "10^9/L", 1.0, 4.0, "L", "haematology", 0.1),
+            ("1988-5", "C-reactive protein", "CRP", 32, "mg/L", 0, 5, "H", "chemistry", 6),
+        ],
+        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
+                    "No consolidation; mild peribronchial thickening.", "Konsolidasyon yok; hafif peribronşiyal kalınlaşma.",
+                    "chest x-ray normal lungs", "akciğer grafisi normal"),
+        "treatments": [
+            ("oseltamivir", "Oseltamivir 75 mg twice daily as soon as possible (admitted or high risk)", "Mümkün olan en kısa sürede günde iki kez oseltamivir 75 mg (yatan veya yüksek riskli)", "indicated", [],
+             "CDC: start in hospitalised or high-risk patients as soon as possible.", "CDC: yatan veya yüksek riskli hastada mümkün olan en kısa sürede başlayın."),
+            ("oxygen", "Controlled oxygen to SpO2 94-98% if hypoxic", "Hipoksikse SpO2 %94-98 hedefli kontrollü oksijen", "indicated",
+             [("spo2", 3.0, 300000)], "Titrated oxygen (BTS 2017).", "Titre edilen oksijen (BTS 2017)."),
+            _PCM,
+            ("abx_viral", "Broad-spectrum antibiotics for an uncomplicated viral illness", "Komplike olmayan viral hastalıkta geniş spektrumlu antibiyotik", "contraindicated", [],
+             "Antibiotics do not treat a virus; give them only for suspected bacterial co-infection (NICE NG191).", "Antibiyotik virüsü tedavi etmez; yalnızca bakteriyel ko-enfeksiyon şüphesinde verin (NICE NG191)."),
+        ],
+        "guide": ("CDC", "CDC Influenza antiviral medications: summary for clinicians", "Start oseltamivir as soon as possible in patients who are hospitalised, severely ill or at higher risk of complications.",
+                  "Yatan, ağır hasta veya komplikasyon riski yüksek hastalarda oseltamiviri mümkün olan en kısa sürede başlayın."),
+    },
+    "covid19": {
+        "labs": [
+            ("6690-2", "White cell count", "Lökosit", 6.0, "10^9/L", 4.0, 11.0, "N", "haematology", 0.8),
+            ("731-0", "Lymphocytes", "Lenfosit", 0.6, "10^9/L", 1.0, 4.0, "L", "haematology", 0.1),
+            ("1988-5", "C-reactive protein", "CRP", 95, "mg/L", 0, 5, "H", "chemistry", 10),
+            ("48065-7", "D-dimer", "D-dimer", 900, "ng/mL", 0, 500, "H", "coagulation", 80),
+        ],
+        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
+                    "Bilateral peripheral ground-glass opacities, lower zones.", "Alt zonlarda bilateral periferik buzlu cam opasiteleri.",
+                    "viral pneumonia chest x-ray bilateral opacities", "viral pnömoni akciğer grafisi bilateral opasite"),
+        "treatments": [
+            ("oxygen", "Controlled oxygen to SpO2 92-96%", "SpO2 %92-96 hedefli kontrollü oksijen", "indicated",
+             [("spo2", 3.0, 300000)], "Titrated oxygen for hypoxaemia.", "Hipoksemide titre edilen oksijen."),
+            ("dexamethasone", "Dexamethasone 6 mg once daily if supplemental oxygen is needed", "Ek oksijen gerekiyorsa günde bir kez deksametazon 6 mg", "indicated", [],
+             "NICE NG191: steroids for patients needing oxygen.", "NICE NG191: oksijen gereken hastalara steroid."),
+            _PCM,
+            ("abx_viral", "Empirical antibiotics for viral pneumonia", "Viral pnömoni için ampirik antibiyotik", "contraindicated", [],
+             "NICE NG191: do not offer antibiotics when a virus is the likely cause.", "NICE NG191: olası neden virüs ise antibiyotik önermeyin."),
+        ],
+        "guide": ("NICE", "NICE NG191 COVID-19 rapid guideline", "Offer dexamethasone to people who need supplemental oxygen; do not offer antibiotics when a virus is the likely cause of pneumonia.",
+                  "Ek oksijen gereken hastalara deksametazon önerin; pnömoninin olası nedeni virüs ise antibiyotik önermeyin."),
+    },
+    "pid": {
+        "labs": [
+            ("2110-5", "Urine beta-hCG", "İdrar beta-hCG", "negative", "", None, None, "N", "urinalysis"),
+            ("6690-2", "White cell count", "Lökosit", 13.0, "10^9/L", 4.0, 11.0, "H", "haematology", 1.0),
+            ("1988-5", "C-reactive protein", "CRP", 75, "mg/L", 0, 5, "H", "chemistry", 10),
+        ],
+        "imaging": ("us-pelvis", "Transvaginal ultrasound", "Transvajinal ultrason",
+                    "Mildly thickened tubes with free fluid; no tubo-ovarian abscess; no intrauterine or adnexal pregnancy.",
+                    "Hafif kalınlaşmış tüpler ve serbest sıvı; tubo-ovaryan apse yok; intrauterin veya adneksiyal gebelik yok.",
+                    "pelvic ultrasound tubal thickening", "pelvik ultrason tüp kalınlaşması"),
+        "treatments": [
+            ("pregnancy_test", "Pregnancy test before treatment", "Tedavi öncesi gebelik testi", "indicated", [],
+             "Exclude an ectopic pregnancy first.", "Önce ektopik gebeliği dışlayın."),
+            ("abx_pid", "IV ceftriaxone + doxycycline + metronidazole (clindamycin + gentamicin if allergy)", "IV seftriakson + doksisiklin + metronidazol (alerjide klindamisin + gentamisin)", "indicated", [],
+             "CDC 2021 parenteral regimen; swabs do not delay treatment.", "CDC 2021 parenteral rejimi; sürüntüler tedaviyi geciktirmez."),
+            _PCM,
+            ("await_swabs", "Withhold antibiotics until swab results", "Sürüntü sonuçlarına kadar antibiyotiği beklet", "contraindicated", [],
+             "Treat presumptively on clinical criteria (CDC 2021).", "Klinik ölçütlere göre varsayımsal tedavi edin (CDC 2021)."),
+        ],
+        "guide": ("CDC", "CDC STI Treatment Guidelines 2021", "Treat presumptively when pelvic pain comes with cervical motion, uterine or adnexal tenderness; parenteral ceftriaxone with doxycycline and metronidazole.",
+                  "Pelvik ağrıya servikal hareket, uterus veya adneksiyal hassasiyet eşlik ediyorsa varsayımsal tedavi edin; parenteral seftriakson, doksisiklin ve metronidazol."),
+    },
+    "acute_prostatitis": {
+        "labs": [
+            ("5799-2", "Urinalysis (leucocytes/nitrites)", "İdrar (lökosit/nitrit)", "positive", "", None, None, "H", "urinalysis"),
+            ("6690-2", "White cell count", "Lökosit", 15.4, "10^9/L", 4.0, 11.0, "H", "haematology", 1.2),
+            ("1988-5", "C-reactive protein", "CRP", 120, "mg/L", 0, 5, "H", "chemistry", 12),
+            ("2160-0", "Creatinine", "Kreatinin", 1.0, "mg/dL", 0.6, 1.3, "N", "chemistry", 0.1),
+        ],
+        "imaging": ("us-renal", "Bladder ultrasound (post-void residual)", "Mesane ultrasonu (işeme sonrası rezidü)",
+                    "Post-void residual 90 mL; no hydronephrosis.", "İşeme sonrası rezidü 90 mL; hidronefroz yok.",
+                    "bladder ultrasound residual", "mesane ultrasonu rezidü"),
+        "treatments": [
+            ("cultures", "Midstream urine (and blood cultures if febrile) before antibiotics", "Antibiyotik öncesi orta akım idrar (ateşliyse kan kültürü)", "indicated", [],
+             "NICE NG110: culture before antibiotics.", "NICE NG110: antibiyotik öncesi kültür."),
+            ("abx_prostatitis", "Antibiotic per NICE NG110 (oral ciprofloxacin or levofloxacin; IV ceftriaxone or gentamicin if septic)", "NICE NG110'a göre antibiyotik (oral siprofloksasin veya levofloksasin; septikse IV seftriakson veya gentamisin)", "indicated", [],
+             "A 14-day course; improvement over 48 h.", "14 günlük kür; 48 saat içinde düzelme."),
+            _fluids("IV crystalloid bolus if hypotensive", "Hipotansifse IV kristaloid bolus", 6.0, 5.0),
+            _PCM,
+            ("prostatic_massage", "Prostatic massage to obtain a specimen", "Örnek almak için prostat masajı", "contraindicated", [],
+             "Contraindicated in acute bacterial infection of the prostate (EAU).", "Prostatın akut bakteriyel enfeksiyonunda kontrendikedir (EAU)."),
+        ],
+        "guide": ("NICE", "NICE NG110 (acute, antimicrobial prescribing)", "Send a midstream urine before antibiotics, offer an antibiotic, and refer to hospital if there are signs of sepsis, retention or abscess.",
+                  "Antibiyotikten önce orta akım idrar gönderin, antibiyotik önerin; sepsis, retansiyon veya apse bulgusunda hastaneye yönlendirin."),
+    },
+    "febrile_neutropenia": {
+        "labs": [
+            ("751-8", "Absolute neutrophil count", "Mutlak nötrofil sayısı", 0.3, "10^9/L", 2.0, 7.5, "LL", "haematology", 0.05),
+            ("6690-2", "White cell count", "Lökosit", 0.9, "10^9/L", 4.0, 11.0, "LL", "haematology", 0.1),
+            ("1988-5", "C-reactive protein", "CRP", 140, "mg/L", 0, 5, "H", "chemistry", 12),
+            ("2524-7", "Lactate", "Laktat", 2.3, "mmol/L", 0.5, 2.0, "H", "blood-gas", 0.2),
+        ],
+        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
+                    "No consolidation; PICC tip at the cavo-atrial junction.", "Konsolidasyon yok; PICC ucu kavo-atriyal bileşkede.",
+                    "chest x-ray infection source", "akciğer grafisi enfeksiyon kaynağı"),
+        "treatments": [
+            ("cultures", "Blood cultures (peripheral and from the line)", "Kan kültürü (periferik ve kateterden)", "indicated", [],
+             "Culture without delaying antibiotics.", "Antibiyotiği geciktirmeden kültür."),
+            ("immediate_abx", "Empirical antibiotics within 1 hour: piperacillin-tazobactam (meropenem with caution, or vancomycin + gentamicin, if penicillin anaphylaxis)",
+             "1 saat içinde ampirik antibiyotik: piperasilin-tazobaktam (penisilin anafilaksisinde dikkatle meropenem veya vankomisin + gentamisin)", "indicated", [],
+             "NICE CG151: empiric antibiotics immediately, before the count returns.", "NICE CG151: sayım sonucu beklenmeden hemen ampirik antibiyotik."),
+            _fluids("IV crystalloid 500 mL bolus, reassess", "500 mL IV kristaloid bolus, yeniden değerlendir", 6.0, 6.0),
+            _PCM,
+            ("delay_abx", "Delay antibiotics for investigations", "Tetkik için antibiyotiği ertele", "contraindicated", [],
+             "Never delay antibiotics in neutropenic fever.", "Nötropenik ateşte antibiyotiği geciktirmeyin."),
+        ],
+        "guide": ("NICE", "NICE CG151 Neutropenic sepsis", "Treat suspected neutropenic sepsis as an emergency: piperacillin-tazobactam immediately, with FBC, renal and liver function, CRP, lactate and blood cultures.",
+                  "Şüpheli nötropenik sepsisi acil olarak ele alın: hemen piperasilin-tazobaktam; tam kan sayımı, böbrek ve karaciğer fonksiyonu, CRP, laktat ve kan kültürü."),
+    },
+    "hiv_seroconversion": {
+        "labs": [
+            ("56888-1", "HIV-1/2 antigen/antibody (4th generation)", "HIV-1/2 antijen/antikor (4. jenerasyon)", "reactive", "", None, None, "H", "serology"),
+            ("6690-2", "White cell count", "Lökosit", 3.6, "10^9/L", 4.0, 11.0, "L", "haematology", 0.3),
+            ("777-3", "Platelets", "Trombosit", 128, "10^9/L", 150, 400, "L", "haematology", 10),
+            ("1742-6", "Alanine aminotransferase", "ALT", 68, "U/L", 7, 56, "H", "chemistry", 6),
+            ("1988-5", "C-reactive protein", "CRP", 18, "mg/L", 0, 5, "H", "chemistry", 4),
+        ],
+        "imaging": ("36643-5", "Chest X-ray", "Akciğer grafisi",
+                    "Clear lung fields.", "Akciğer alanları temiz.",
+                    "chest x-ray normal lungs", "akciğer grafisi normal"),
+        "treatments": [
+            ("hiv_test", "Antigen/antibody test after an informed discussion", "Bilgilendirilmiş görüşme sonrası antijen/antikor testi", "indicated", [],
+             "A 4th-generation test detects seroconversion from about 4 weeks (BHIVA/BASHH 2020).", "4. jenerasyon test serokonversiyonu yaklaşık 4. haftadan itibaren saptar (BHIVA/BASHH 2020)."),
+            ("hiv_referral", "Same-day referral to specialist services to start antiretroviral therapy", "Antiretroviral tedavi başlamak için aynı gün uzman servisine yönlendirme", "indicated", [],
+             "Early treatment and partner notification.", "Erken tedavi ve partner bildirimi."),
+            _PCM,
+            ("abx_viral", "Broad-spectrum antibiotics for the febrile illness", "Ateşli tablo için geniş spektrumlu antibiyotik", "contraindicated", [],
+             "A viral syndrome; antibiotics do not help.", "Viral sendrom; antibiyotik yarar sağlamaz."),
+        ],
+        "guide": ("BHIVA", "BHIVA/BASHH/BIA UK guidelines for HIV testing 2020", "Offer a test to anyone with symptoms that could be primary infection, such as fever, rash and sore throat after a recent exposure.",
+                  "Yakın zamanda maruziyet sonrası ateş, döküntü ve boğaz ağrısı gibi primer enfeksiyon olabilecek belirtileri olan herkese test önerin."),
+    },
+}
+CONDITION_FIXTURES.update(FEBRILE_FIXTURES)
+
+
+# --------------------------------------------------------------------------- #
+# D-12: febrile history topics and exam findings.                              #
+#                                                                              #
+# The template authored no answer for rigors, urinary symptoms, cough, neck    #
+# stiffness, travel, sick contacts, vaccination or immunosuppression, so the   #
+# patient said "Could you be a little more specific", which tells the learner  #
+# the phrasing was wrong. Every febrile condition below answers all eight      #
+# topics (a pertinent negative where the condition gives no positive). Each    #
+# item carries a ``topic`` so the client reveals the answer to the question    #
+# that was asked, not every associated symptom at once.                        #
+# --------------------------------------------------------------------------- #
+FEVER_TOPICS: dict[str, str] = {
+    # topic -> question intent it belongs to
+    "rigors": "associated-symptoms",
+    "urinary": "associated-symptoms",
+    "cough": "associated-symptoms",
+    "neck": "associated-symptoms",
+    "travel": "social-history",
+    "contacts": "social-history",
+    "vaccination": "past-medical-history",
+    "immunosuppression": "risk-factors",
+}
+
+FEVER_NEGATIVES: dict[str, tuple[str, str]] = {
+    "rigors": ("I've felt hot and cold, but no uncontrollable shaking.", "Sıcak soğuk oldum ama kontrol edemediğim bir titreme olmadı."),
+    "urinary": ("No burning or pain when I pass urine, and I'm not going more often.", "İdrar yaparken yanma ya da ağrı yok, sık idrara da çıkmıyorum."),
+    "cough": ("No cough and no phlegm.", "Öksürük de balgam da yok."),
+    "neck": ("My neck moves fine and the light doesn't bother my eyes.", "Boynum rahat hareket ediyor, ışık da gözümü rahatsız etmiyor."),
+    "travel": ("I haven't travelled anywhere recently.", "Son zamanlarda hiçbir yere seyahat etmedim."),
+    "contacts": ("Nobody around me has been ill, as far as I know.", "Bildiğim kadarıyla çevremde hasta olan kimse yok."),
+    "vaccination": ("I think my vaccinations are up to date; I had all the routine ones.", "Aşılarımın tam olduğunu düşünüyorum; rutin aşıların hepsini oldum."),
+    "immunosuppression": ("I don't take steroids or anything that lowers my immunity, and I've never had chemotherapy.", "Steroid ya da bağışıklığımı düşüren bir ilaç kullanmıyorum, hiç kemoterapi almadım."),
+}
+
+_RIGORS_YES = ("Yes, proper shaking chills; my teeth were chattering.", "Evet, gerçek titreme nöbetleri; dişlerim birbirine vuruyordu.")
+
+FEVER_POSITIVES: dict[str, dict[str, tuple[str, str]]] = {
+    "sepsis_uncomplicated": {"rigors": _RIGORS_YES},
+    "septic_shock": {"rigors": _RIGORS_YES,
+                     "urinary": ("(Relative) He has been going to the toilet a lot and said it burned for three days.", "(Yakını) Üç gündür sık tuvalete gidiyordu ve yandığını söyledi.")},
+    "pneumonia_cap": {"rigors": _RIGORS_YES,
+                      "cough": ("Yes, for three days, bringing up rusty green phlegm, and it hurts on the right when I breathe in.", "Evet, üç gündür pas renkli yeşil balgam çıkarıyorum ve nefes alınca sağ tarafım ağrıyor."),
+                      "contacts": ("My grandson had a bad cold last week.", "Torunum geçen hafta kötü bir soğuk algınlığı geçirdi."),
+                      "vaccination": ("I never had the pneumonia jab and I missed this year's flu jab.", "Zatürre aşısı hiç olmadım, bu yılın grip aşısını da kaçırdım.")},
+    "pyelonephritis": {"rigors": _RIGORS_YES,
+                       "urinary": ("Yes, it burns, I'm going every hour, and now the pain is in my right side and back.", "Evet, yanıyor, saatte bir tuvalete gidiyorum ve şimdi ağrı sağ yanımda ve sırtımda.")},
+    "bacterial_meningitis": {"neck": ("Yes, my neck is so stiff I can't put my chin down, and the light hurts my eyes.", "Evet, boynum o kadar sert ki çenemi göğsüme değdiremiyorum, ışık da gözlerimi acıtıyor."),
+                             "contacts": ("I share a flat with other students; one had a fever last week.", "Diğer öğrencilerle aynı evde kalıyorum; biri geçen hafta ateşlendi."),
+                             "vaccination": ("I'm not sure I ever had the meningitis vaccine.", "Menenjit aşısı olup olmadığımdan emin değilim.")},
+    "cellulitis": {"rigors": ("I had one shivery spell last night.", "Dün gece bir kez titreme oldu.")},
+    "ascending_cholangitis": {"rigors": ("Yes, violent shaking chills twice today.", "Evet, bugün iki kez şiddetli titreme nöbeti geçirdim.")},
+    "septic_arthritis": {"rigors": ("I've had a couple of shivery spells.", "Birkaç kez titreme oldu."),
+                         "immunosuppression": ("No immune problems, but I had a steroid injection into that knee three weeks ago.", "Bağışıklık sorunum yok ama üç hafta önce o dizime steroid iğnesi yapıldı.")},
+    "malaria": {"rigors": ("Yes, shaking chills that come in waves, then I sweat buckets.", "Evet, dalgalar halinde gelen titreme, ardından sırılsıklam terliyorum."),
+                "travel": ("I came back from Nigeria ten days ago after visiting family; I didn't take any preventive tablets.", "On gün önce aile ziyaretinden, Nijerya'dan döndüm; koruyucu ilaç kullanmadım."),
+                "vaccination": ("I had a yellow fever jab before the trip, but no preventive tablets.", "Yolculuktan önce sarıhumma aşısı oldum ama koruyucu ilaç almadım.")},
+    "influenza": {"rigors": ("Yes, shivery and aching all over.", "Evet, titriyorum ve her yerim ağrıyor."),
+                  "cough": ("A dry cough and a sore throat.", "Kuru öksürük ve boğaz ağrısı var."),
+                  "contacts": ("Half my office has been off sick with the same thing this week.", "Bu hafta ofisin yarısı aynı şeyle hasta izinliydi."),
+                  "vaccination": ("I didn't get the seasonal jab this year.", "Bu yıl mevsimsel aşıyı olmadım.")},
+    "covid19": {"cough": ("A dry cough, and I can't smell anything.", "Kuru öksürük var ve hiçbir koku alamıyorum."),
+                "contacts": ("My partner tested positive for the virus last week.", "Eşimin geçen hafta virüs testi pozitif çıktı."),
+                "vaccination": ("I had two doses of the vaccine, but no booster for a few years.", "İki doz aşı oldum ama birkaç yıldır hatırlatma dozu olmadım.")},
+    "pid": {"urinary": ("A little stinging, but mostly the pain is low in my pelvis and there is a new discharge.", "Biraz yanma var ama ağrı çoğunlukla kasığımda ve yeni bir akıntı var."),
+            "contacts": ("I have had a new partner since last month.", "Geçen aydan beri yeni bir partnerim var.")},
+    "acute_prostatitis": {"rigors": _RIGORS_YES,
+                          "urinary": ("It burns, I have to strain, the stream is slow, and it aches between my legs.", "Yanıyor, ıkınmam gerekiyor, akım yavaş ve bacak aramda ağrı var.")},
+    "febrile_neutropenia": {"rigors": ("Yes, I started shaking after the nurse flushed my line.", "Evet, hemşire kateterimi yıkadıktan sonra titremeye başladım."),
+                            "immunosuppression": ("I had chemotherapy for breast cancer eight days ago.", "Sekiz gün önce meme kanseri için kemoterapi aldım.")},
+    "hiv_seroconversion": {"rigors": ("Night sweats and shivers for a week.", "Bir haftadır gece terlemesi ve titreme var."),
+                           "contacts": ("I had unprotected sex with a new partner about three weeks ago.", "Yaklaşık üç hafta önce yeni bir partnerle korunmasız ilişkim oldu."),
+                           "immunosuppression": ("Not that I know of; I've never had a test.", "Bildiğim kadarıyla yok; hiç test yaptırmadım.")},
+}
+
+FEVER_HPI_CONDITIONS: frozenset[str] = frozenset(FEVER_POSITIVES) | frozenset(FEBRILE_TEMP)
+
+
+def fever_hpi(cond_id: str) -> list[dict[str, Any]]:
+    """The eight febrile history topics for a febrile condition."""
+    if cond_id not in FEVER_HPI_CONDITIONS:
+        return []
+    pos = FEVER_POSITIVES.get(cond_id, {})
+    out = []
+    for topic, intent in FEVER_TOPICS.items():
+        en, tr = pos.get(topic) or FEVER_NEGATIVES[topic]
+        out.append({"intent": intent, "topic": topic, "answer_en": en, "answer_tr": tr})
+    return out
+
+
+# Febrile exam findings for every maneuver a fever work-up examines (neck
+# stiffness, Kernig / Brudzinski, chest auscultation, renal angle, skin and
+# joints). Condition-specific findings win; these fill the maneuvers a
+# condition does not author.
+FEVER_EXAM_NORMALS: dict[str, tuple] = {
+    "cardiovascular": _ex("cardiovascular", _CV, "Regular tachycardia; normal heart sounds, no murmur; capillary refill 2 s.", "Düzenli taşikardi; kalp sesleri normal, üfürüm yok; kapiller dolum 2 s.", False),
+    "respiratory": _ex("respiratory", _RESP, "Chest clear on auscultation with good air entry on both sides.", "Oskültasyonda akciğerler temiz, her iki tarafta hava girişi iyi.", False),
+    "abdominal": _ex("abdominal", _ABD, "Abdomen soft and non-tender; no renal angle (CVA) tenderness; no organomegaly.", "Karın yumuşak, hassasiyet yok; kostovertebral açı hassasiyeti yok; organomegali yok.", False),
+    "neurological": _ex("neurological", _NEURO, "Alert and orientated; no neck stiffness, Kernig and Brudzinski negative; no focal deficit.", "Uyanık ve oryante; ense sertliği yok, Kernig ve Brudzinski negatif; fokal defisit yok.", False),
+    "skin": _ex("skin", _SKIN, "No rash or petechiae; skin intact; cannula sites clean.", "Döküntü veya peteşi yok; cilt sağlam; kanül yerleri temiz.", False),
+    "musculoskeletal": _ex("musculoskeletal", _MSK, "No hot or swollen joints; full painless range of movement.", "Sıcak veya şiş eklem yok; ağrısız tam hareket açıklığı.", False),
+}
+
+FEVER_EXAM_SPECIFIC: dict[str, list[tuple]] = {
+    "sepsis_uncomplicated": [_ex("general-inspection", _GEN, "Flushed, sweaty and shivering; warm peripheries; alert.", "Kızarık, terli ve titriyor; ekstremiteler sıcak; uyanık.")],
+    "cellulitis": [_ex("skin", _SKIN, "Spreading erythema, warmth and tenderness over the left shin with an indistinct margin; a crack between the toes; no crepitus or bullae.", "Sol kaval kemiği üzerinde sınırı belirsiz, yayılan kızarıklık, sıcaklık ve hassasiyet; parmak arasında çatlak; krepitasyon veya bül yok."),
+                   _ex("musculoskeletal", _MSK, "Tender left inguinal nodes; ankle and knee move freely.", "Solda hassas inguinal lenf nodları; ayak bileği ve diz serbest hareketli.")],
+    "ascending_cholangitis": [_ex("skin", _SKIN, "Jaundiced skin with scratch marks; no rash.", "Kaşıntı izleriyle sarı cilt; döküntü yok.")],
+    "septic_arthritis": [_ex("musculoskeletal", _MSK, "Right knee hot, red and swollen with a large effusion, held flexed; any passive movement is exquisitely painful.", "Sağ diz sıcak, kırmızı ve büyük efüzyonla şiş, fleksiyonda tutuluyor; her pasif hareket çok ağrılı."),
+                         _ex("general-inspection", _GEN, "Febrile, unwilling to bear weight on the right leg.", "Ateşli, sağ bacağına yük vermek istemiyor.")],
+    "malaria": [_ex("abdominal", _ABD, "Spleen tip palpable; liver edge 2 cm below the costal margin; mildly tender.", "Dalak ucu ele geliyor; karaciğer kenarı kosta kenarının 2 cm altında; hafif hassas."),
+                _ex("general-inspection", _GEN, "Pale, mild scleral icterus, sweating after a rigor; alert, GCS 15.", "Soluk, hafif skleral ikter, titreme sonrası terli; uyanık, GKS 15.")],
+    "influenza": [_ex("respiratory", _RESP, "Scattered wheeze, no focal crackles.", "Dağınık hırıltı, fokal ral yok."),
+                  _ex("ent", ("ENT", "KBB"), "Injected pharynx, no exudate; clear nasal discharge.", "Hiperemik farenks, eksüda yok; berrak burun akıntısı."),
+                  _ex("general-inspection", _GEN, "Flushed, aching, looks unwell but alert.", "Kızarık, ağrılı, hasta görünümlü ama uyanık.")],
+    "covid19": [_ex("respiratory", _RESP, "Fine crackles at both bases; RR raised; no wheeze.", "Her iki bazalde ince raller; solunum sayısı artmış; hırıltı yok."),
+                _ex("general-inspection", _GEN, "Breathless on talking, comfortable at rest.", "Konuşurken nefes darlığı, istirahatte rahat.")],
+    "pid": [_ex("abdominal", _ABD, "Bilateral lower abdominal tenderness, no peritonism.", "Bilateral alt karın hassasiyeti, peritonizm yok."),
+            _ex("focused-special", ("Pelvic", "Pelvik"), "Speculum: mucopurulent cervical discharge; bimanual: cervical motion and bilateral adnexal tenderness.", "Spekulum: mukopürülan servikal akıntı; bimanuel: servikal hareket hassasiyeti ve bilateral adneksiyal hassasiyet.")],
+    "acute_prostatitis": [_ex("abdominal", _ABD, "Suprapubic tenderness; bladder not palpable; no renal angle tenderness.", "Suprapubik hassasiyet; mesane ele gelmiyor; kostovertebral açı hassasiyeti yok."),
+                          _ex("focused-special", ("Genitourinary", "Genitoüriner"), "Gentle rectal examination: exquisitely tender, warm, boggy prostate (no massage).", "Nazik rektal muayene: çok hassas, sıcak, yumuşak prostat (masaj yapılmadı).")],
+    "febrile_neutropenia": [_ex("general-inspection", _GEN, "Flushed and shivering, PICC line site clean; no mucositis; no obvious source.", "Kızarık ve titriyor, PICC giriş yeri temiz; mukozit yok; belirgin kaynak yok."),
+                            _ex("respiratory", _RESP, "Chest clear.", "Akciğerler temiz.", False)],
+    "hiv_seroconversion": [_ex("skin", _SKIN, "Faint maculopapular rash over the trunk.", "Gövdede silik makülopapüler döküntü."),
+                           _ex("ent", ("ENT", "KBB"), "Pharyngitis without exudate; shallow oral ulcers; tender cervical lymph nodes.", "Eksüdasız farenjit; yüzeysel ağız ülserleri; hassas servikal lenf nodları.")],
+}
+
+
+def fever_exam(cond_id: str) -> list[tuple]:
+    """Condition-specific findings first, then the febrile normals for any
+    maneuver the condition does not author."""
+    if cond_id not in FEVER_HPI_CONDITIONS:
+        return list(CONDITION_EXAM.get(cond_id, []))
+    specific = list(FEVER_EXAM_SPECIFIC.get(cond_id, []))
+    base = [e for e in CONDITION_EXAM.get(cond_id, []) if not any(e[0] == s[0] for s in specific)]
+    found = specific + base
+    have = {e[0] for e in found}
+    return found + [row for m, row in FEVER_EXAM_NORMALS.items() if m not in have]
+
+
+
+# --------------------------------------------------------------------------- #
+# D-11: verified statements behind each febrile case's work-up and management. #
+#                                                                              #
+# Every id below is ``verified`` in server/guidelines/statements.verified.json #
+# (server/tests/test_acceptance_fever.py checks it). The order codes say which #
+# expected orders a statement supports, so the client cites the cultures      #
+# statement for blood cultures, not the antibiotic-timing one.                 #
+# --------------------------------------------------------------------------- #
+_SSC_CULT = ("gs_ssc21_lactate_cultures", ("2524-7", "600-7", "blood-culture", "lactate"))
+_SSC_ABX = ("gs_ssc21_antimicrobials_1h", ())
+_SSC_FLUIDS = ("gs_ssc21_fluids_30mlkg", ())
+_SSC_SOURCE = ("gs_ssc21_source_control", ())
+
+CONDITION_STATEMENTS: dict[str, list[tuple[str, tuple[str, ...]]]] = {
+    "sepsis_uncomplicated": [_SSC_CULT, _SSC_ABX, _SSC_FLUIDS, ("gs_nice_ng253_high_risk_criteria", ()), _SSC_SOURCE],
+    "septic_shock": [_SSC_CULT, _SSC_ABX, _SSC_FLUIDS, ("gs_ssc21_norepinephrine_map65", ()), _SSC_SOURCE],
+    "pneumonia_cap": [("gs_nice_ng250_curb65", ("22664-7",)), ("gs_nice_ng250_cap_4h", ("36643-5", "cxr")),
+                      ("gs_nice_ng250_cap_micro", ("600-7", "blood-culture", "sputum-culture")),
+                      ("gs_nice_ng250_penicillin_allergy", ())],
+    "pyelonephritis": [("gs_nice_ng111_msu", ("5799-2", "ua", "urine-culture")), ("gs_nice_ng111_iv_choice", ()), _SSC_SOURCE],
+    "bacterial_meningitis": [("gs_nice_ng240_abx_1h", ("6690-2", "1988-5", "600-7", "blood-culture")),
+                             ("gs_nice_ng240_lp_imaging", ("30799-1", "ct-head-noncon", "30405-5", "2342-4", "csf-studies")),
+                             ("gs_nice_ng240_dexamethasone", ()), ("gs_nice_ng240_antibiotic_allergy", ())],
+    "cellulitis": [("gs_nice_ng141_marker", ()), ("gs_nice_ng141_penicillin_allergy", ())],
+    "ascending_cholangitis": [("gs_wses2020_acc_lfts", ("1975-2", "6768-6")), ("gs_wses2020_acc_ultrasound", ("24558-9", "us-ruq")),
+                              _SSC_SOURCE, _SSC_ABX, _SSC_CULT],
+    "septic_arthritis": [_SSC_SOURCE, _SSC_CULT, _SSC_ABX],
+    "malaria": [("gs_cdc_malaria_smears", ("32700-7", "malaria-film", "malaria-rdt", "777-3", "718-7")),
+                ("gs_cdc_malaria_severe_artesunate", ())],
+    "influenza": [("gs_cdc_flu_oseltamivir", ()), ("gs_nice_ng191_no_antibiotics", ())],
+    "covid19": [("gs_nice_ng191_dexamethasone", ()), ("gs_nice_ng191_no_antibiotics", ())],
+    "pid": [("gs_cdc_pid_minimum_criteria", ("2110-5", "urine-hcg", "us-pelvis")), ("gs_cdc_pid_parenteral", ()),
+            ("gs_cdc_pid_alternative", ())],
+    "acute_prostatitis": [("gs_nice_ng110_abx_msu", ("5799-2", "ua", "urine-culture")), ("gs_nice_ng110_refer", ("us-renal",))],
+    "febrile_neutropenia": [("gs_nice_cg151_neutropenic", ("751-8", "6690-2", "1988-5", "2524-7", "600-7", "blood-culture"))],
+}
+
+
+# --------------------------------------------------------------------------- #
+# D-17: prevalence-weighted allergy draw.                                      #
+#                                                                              #
+# Both acceptance patients drew "Penicillin, anaphylaxis as a child", so every #
+# febrile case blocked the only antibiotic. Documented drug allergy is common #
+# but not universal: in 1.77 million EHR records 35.5% of patients had at      #
+# least one, most often penicillins (12.8%), sulfonamide antibiotics (7.4%),   #
+# opiates (6.8%) and NSAIDs (3.5%) (Zhou L et al., Allergy 2016;71:1305,       #
+# doi 10.1111/all.12881). Most penicillin labels are low-risk rashes; true     #
+# IgE-mediated allergy is under 1% of the population and anaphylaxis is rarer  #
+# still (Shenoy ES et al., JAMA 2019;321:188, doi 10.1001/jama.2018.19283).    #
+# The weights below follow those proportions (per 100 patients); a condition  #
+# pool's own teaching allergies (aspirin in ACS, contrast before a CT) keep a  #
+# small extra weight so the allergy check can still fail where it teaches.    #
+# --------------------------------------------------------------------------- #
+ALLERGY_PENICILLIN_RASH: tuple[str, str] = ("Penicillin: a rash with amoxicillin years ago, no breathing problems.", "Penisilin: yıllar önce amoksisiline döküntü, solunum sorunu olmadı.")
+
+ALLERGY_PREVALENCE: list[tuple[float, tuple[str, str]]] = [
+    (64.5, NKDA),
+    (11.8, ALLERGY_PENICILLIN_RASH),
+    (1.0, ALLERGY_PENICILLIN),
+    (7.4, ALLERGY_SULFA),
+    (3.4, ALLERGY_CODEINE),
+    (3.4, ALLERGY_MORPHINE),
+    (3.5, ALLERGY_ASPIRIN),
+]
+CONDITION_ALLERGY_BONUS = 3.0
+
+
+def draw_allergy(rng: Any, pool: list[tuple[str, str]]) -> tuple[str, str]:
+    """Seeded, prevalence-weighted allergy draw; NKDA is the majority."""
+    weights: dict[tuple[str, str], float] = {a: w for w, a in ALLERGY_PREVALENCE}
+    for a in pool:
+        if a != NKDA:
+            weights[a] = weights.get(a, 0.0) + CONDITION_ALLERGY_BONUS
+    items = sorted(weights.items(), key=lambda kv: kv[0][0])
+    total = sum(w for _, w in items)
+    x = rng.random() * total
+    for a, w in items:
+        x -= w
+        if x <= 0:
+            return a
+    return items[-1][0]

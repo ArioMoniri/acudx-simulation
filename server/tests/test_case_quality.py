@@ -89,7 +89,8 @@ def test_live_treatments_map_to_catalogue_codes():
     codes = {t["label_en"]: t["code"] for t in chol["treatments"]}
     assert codes["Urgent ERCP for biliary drainage"] == "biliary_drainage"
     assert codes["IV antibiotics (piperacillin-tazobactam)"] == "abx_fluids"
-    assert codes["Acetaminophen for pain (paracetamol 1 g)"] == "161"
+    # D-18: cholangitis now authors its own antipyretic row; the label maps to it.
+    assert codes["Acetaminophen for pain (paracetamol 1 g)"] == "antipyretic"
     # Antibiotics and fluids are one catalogue item for cholangitis: merged, not duplicated.
     assert len([t for t in chol["treatments"] if t["code"] == "abx_fluids"]) == 1
     for t in chol["treatments"]:

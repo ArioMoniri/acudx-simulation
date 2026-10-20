@@ -403,6 +403,14 @@ class CaseContext:
         self.t_h = self.onset_h + self.sim_time_ms / MS_PER_H
         self.treatments = map_treatments(case_state, self.onset_h)
         self.vitals = vitals_at(case_state, sim_time_ms)
+        # Acceptance 2026-10-20: lactate 5.5 to 8.2 mmol/L appeared in patients
+        # with a normal blood pressure. Septic shock is hypotension needing
+        # vasopressors for a MAP of 65 mmHg with lactate above 2 after fluids
+        # (Sepsis-3, Singer et al. JAMA 2016;315:801, doi 10.1001/jama.2016.0287);
+        # without hypotension the hyperlactataemia of sepsis is usually 2 to 4.
+        sbp = float(self.vitals.get("systolic", 120) or 120)
+        dbp = float(self.vitals.get("diastolic", 70) or 70)
+        self.hypotensive = sbp < 90 or (sbp + 2 * dbp) / 3 < 65
         self.authored_labs = {str(lab.get("code")): lab for lab in case_state.get("labs") or [] if isinstance(lab, dict) and lab.get("code")}
         self.authored_imaging = [im for im in case_state.get("imaging") or [] if isinstance(im, dict)]
         self.weight_kg = float(demo.get("weight_kg", 70) or 70)
@@ -411,6 +419,9 @@ class CaseContext:
 # --------------------------------------------------------------------------- #
 # Analyte evaluation                                                           #
 # --------------------------------------------------------------------------- #
+NORMOTENSIVE_LACTATE_SEVERITY = 0.25
+
+
 def _model_value(ctx: CaseContext, loinc: str, spec: Optional[tuple], t_h: float) -> tuple[float, Optional[str]]:
     base = _baseline(loinc, ctx.sex, ctx.age, ctx.seed)
     if spec is None:
@@ -422,7 +433,8 @@ def _model_value(ctx: CaseContext, loinc: str, spec: Optional[tuple], t_h: float
         assay = spec[1] or load_ranges()["_by_loinc"].get(loinc, {}).get("assay", "hs_ctnt")
         return k.troponin(assay, t_h, sev, tr, ctx.sex), "troponin"
     if kind == "lactate":
-        return k.lactate(t_h, sev, tr), "lactate"
+        # A normotensive patient's plateau stays at or below 1 + 9 * 0.25 = 3.25.
+        return k.lactate(t_h, sev if ctx.hypotensive else min(sev, NORMOTENSIVE_LACTATE_SEVERITY), tr), "lactate"
     if kind == "crp":
         return k.crp(t_h, sev, tr), "crp"
     if kind == "pct":
@@ -554,6 +566,50 @@ def _apply_ua_pattern(ctx: CaseContext, observations: list[dict[str, Any]]) -> N
         obs["value"] = override
         obs["flag"] = "A"
         obs["interpretation"] = f"{obs['name']}: {override} (consistent with the clinical picture)."
+
+
+def _reconcile_differential(ctx: CaseContext, observations: list[dict[str, Any]]) -> None:
+    """Make the absolute neutrophil and lymphocyte counts fit inside the total.
+
+    Acceptance 2026-10-20 D-23: a malaria CBC reported WBC 16.8 with neutrophils
+    3.9 and lymphocytes 2.2 (6.1 of 16.8). The white count is the sum of the
+    differential, so neutrophils + lymphocytes are scaled to the total minus the
+    other cells (monocytes, eosinophils and basophils, about 8 percent of the
+    count, 0.2 to 1.0 x 10^9/L; MedlinePlus Blood differential test,
+    https://medlineplus.gov/ency/article/003657.htm). Authored (case) values are
+    never rescaled; the free analyte absorbs the difference."""
+    by = {o["loinc"]: o for o in observations if not o.get("qualitative")}
+    wbc, anc, alc = by.get("6690-2"), by.get("751-8"), by.get("731-0")
+    if not (wbc and anc and alc):
+        return
+    total = float(wbc["value"])
+    other = min(1.0, max(0.2, 0.08 * total)) if total >= 2.5 else 0.08 * total
+    room = max(0.0, total - other)
+    n, ly = float(anc["value"]), float(alc["value"])
+    if anc["ground_truth"] and alc["ground_truth"]:
+        return
+    if anc["ground_truth"]:
+        ly = max(0.0, room - n)
+    elif alc["ground_truth"]:
+        n = max(0.0, room - ly)
+    elif n + ly > room or ly >= room:
+        scale = room / (n + ly) if n + ly > 0 else 0.0
+        n, ly = n * scale, ly * scale
+    else:
+        # A raised total is a neutrophilia unless the case authored otherwise.
+        n = room - ly
+    hb, hct = by.get("718-7"), by.get("4544-3")
+    if hb and hct and hb["ground_truth"] and not hct["ground_truth"]:
+        # Haematocrit is about three times the haemoglobin in g/dL (MedlinePlus 003646).
+        hct["value"] = _round("4544-3", 3.0 * float(hb["value"]))
+        hct["flag"], hct["critical"] = flag_value("4544-3", hct["value"], ctx.sex, ctx.age)
+        hct["interpretation"] = _interpret("4544-3", hct["value"], hct["flag"], None, ctx, None)
+    for obs, val in ((anc, n), (alc, ly)):
+        if obs["ground_truth"]:
+            continue
+        obs["value"] = _round(obs["loinc"], val)
+        obs["flag"], obs["critical"] = flag_value(obs["loinc"], obs["value"], ctx.sex, ctx.age)
+        obs["interpretation"] = _interpret(obs["loinc"], obs["value"], obs["flag"], obs.get("kinetics"), ctx, None)
 
 
 def _tat_category(loincs: list[str], order_code: str) -> str:
@@ -705,6 +761,8 @@ def resolve_order(
     elif order_code in ranges["panels"] or order_code in ranges["_by_loinc"]:
         loincs = ranges["panels"].get(order_code) or [order_code]
         observations = [_observation(ctx, l, prior) for l in loincs]
+        if order_code == "6690-2":
+            _reconcile_differential(ctx, observations)
         if order_code == "ua":
             _apply_ua_pattern(ctx, observations)
         body = {"kind": "lab", "status": "ok", "observations": observations,

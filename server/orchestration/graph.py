@@ -496,7 +496,7 @@ def build_casegen_graph(deps: CaseGenDeps):
         draft.pop("guideline_anchor_ids", None)
         draft["guideline_anchors"] = [
             {"statement_en": a["statement_en"], "statement_tr": a["statement_tr"],
-             "source": a["source"], "citation": a["citation"]}
+             "source": a["source"], "citation": a["citation"], "codes": a.get("codes", [])}
             for a in state.get("anchors") or []
         ]
         notes: list[str] = []
@@ -601,11 +601,13 @@ def template_spec(request: dict[str, Any]) -> dict[str, Any]:
         rng=random.Random(req["seed"] ^ 0x5DEECE66),
     )
     anchors, _ = resolve_anchors([], cond)
-    spec["guideline_anchors"] = [
-        {"statement_en": a["statement_en"], "statement_tr": a["statement_tr"],
-         "source": a["source"], "citation": a["citation"], "statement_id": a["statement_id"]}
-        for a in anchors
-    ]
+    if anchors:
+        spec["guideline_anchors"] = [
+            {"statement_en": a["statement_en"], "statement_tr": a["statement_tr"],
+             "source": a["source"], "citation": a["citation"], "statement_id": a["statement_id"],
+             "codes": a.get("codes", [])}
+            for a in anchors
+        ]
     out = GeneratedCaseSpec.model_validate(spec).model_dump()
     out["guideline_anchors"] = spec["guideline_anchors"]
     out["meta"] = {

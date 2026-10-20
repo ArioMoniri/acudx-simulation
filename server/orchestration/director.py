@@ -82,8 +82,12 @@ GENERIC_EFFECTS: tuple[tuple[tuple[str, ...], str, list[dict[str, Any]]], ...] =
     (("naloxon",), "", [{"key": "rr", "delta": 4, "onsetMs": 60_000}, {"key": "spo2", "delta": 4, "onsetMs": 60_000}]),
     (("beta", "metoprol", "esmolol", "diltiaz"), "hr>90",
      [{"key": "hr", "delta": -15, "onsetMs": 300_000}, {"key": "systolic", "delta": -10, "onsetMs": 300_000}]),
-    (("antibiot", "ceftriax", "pipera", "merope", "vancomy", "amoxic"), "tempC>38",
-     [{"key": "tempC", "delta": -0.6, "onsetMs": 1_800_000}, {"key": "hr", "delta": -8, "onsetMs": 1_800_000}]),
+    # Acceptance 2026-10-20: antibiotics do not defervesce a patient inside a
+    # session (median time to clinical stability in CAP is about 3 days, Halm et
+    # al. JAMA 1998, https://jamanetwork.com/journals/jama/fullarticle/187516);
+    # the old -0.6 C at 30 min contradicted review 02 finding 14.
+    (("antibiot", "ceftriax", "pipera", "merope", "vancomy", "amoxic", "levoflox", "clarithro", "doxycyc",
+      "gentamic", "clindamy", "metronid", "chloramph", "artesun", "oseltam", "antivir", "antimalar"), "", []),
 )
 
 
@@ -204,6 +208,12 @@ class CaseState(BaseModel):
         state.affect = _affect_from_vitals(state.vitals, state.affect, esi)
         deadline = DEADLINE_BY_ESI_MS.get(esi)
         indicated = [t.code for t in treatments if t.appropriateness == "indicated"]
+        # D-18: paracetamol, cultures and assessment rows do not avert the
+        # deadline; only a definitive treatment does (antibiotics, fluids,
+        # source control, the condition's specific therapy).
+        definitive = [t.code for t in treatments if t.appropriateness == "indicated"
+                      and not any(s in f"{t.code} {t.label_en}".lower() for s in SUPPORTIVE_ROW_STEMS)]
+        indicated = definitive or indicated
         if deadline is not None and indicated:
             state.pending_complications.append(Complication(
                 id="missed_time_critical_treatment",
@@ -296,7 +306,28 @@ FORMULARY_NAMES: dict[str, str] = {
     "448": "adenosine", "5856": "insulin infusion", "7242": "naloxone", "6470": "lorazepam",
     "161": "paracetamol antipyretic analgesic", "26225": "ondansetron", "3992-im": "adrenaline im",
     "3992": "adrenaline iv", "8410": "alteplase",
+    # Acceptance 2026-10-20 D-17: non-beta-lactam and allergy-safe antimicrobials.
+    "11124": "vancomycin antibiotic", "82122": "levofloxacin antibiotic", "21212": "clarithromycin antibiotic",
+    "3640": "doxycycline antibiotic", "4413": "gentamicin antibiotic", "2582": "clindamycin antibiotic",
+    "29561": "meropenem antibiotic", "6922": "metronidazole antibiotic", "2348": "chloramphenicol antibiotic",
+    "pip-tazo": "piperacillin-tazobactam antibiotic", "artesunate": "artesunate antimalarial",
+    "260101": "oseltamivir antiviral", "3264": "dexamethasone corticosteroid",
 }
+
+# Formulary antimicrobials. Any of them satisfies an "antibiotics" row; a
+# drug-named row ("ceftriaxone + dexamethasone") is satisfied by its stem too.
+ANTIBIOTIC_CODES: frozenset[str] = frozenset({
+    "2193", "11124", "82122", "21212", "3640", "4413", "2582", "29561", "6922", "2348", "pip-tazo",
+})
+_ABX_ROW_STEMS: tuple[str, ...] = ("antibiot", "abx", "antimicrob")
+# Rows that are tests or procedures, never satisfied by giving a drug (acceptance
+# 2026-10-20: "Blood cultures before antibiotics" matched the antibiotic stem).
+DIAGNOSTIC_ROW_STEMS: tuple[str, ...] = ("culture", "film", "test", "aspirat", "swab", "mark ", "look for",
+                                         "drain", "washout", "ercp", "decompress", "referral", "source control")
+# Supportive rows that must not avert the "missed time-critical treatment"
+# deadline on their own: paracetamol does not treat sepsis (D-18).
+SUPPORTIVE_ROW_STEMS: tuple[str, ...] = ("antipyr", "paracetam", "analges", "culture", "film", "test", "mark ",
+                                         "look for", "assess", "monitor", "observ", "document")
 
 # Word stems that let a formulary drug stand for a case's abstract treatment row
 # ("IV antibiotics + fluids", "Immediate IV ceftriaxone + dexamethasone").
@@ -304,6 +335,19 @@ FORMULARY_NAMES: dict[str, str] = {
 # antibiotic is never "Delay antibiotics pending cultures".
 FORMULARY_ROW_STEMS: dict[str, tuple[str, ...]] = {
     "2193": ("antibiot", "abx", "ceftriax"),
+    "11124": _ABX_ROW_STEMS + ("vancomy",),
+    "82122": _ABX_ROW_STEMS + ("levoflox", "fluoroquin", "quinolon"),
+    "21212": _ABX_ROW_STEMS + ("clarithro", "macrolid"),
+    "3640": _ABX_ROW_STEMS + ("doxycyc",),
+    "4413": _ABX_ROW_STEMS + ("gentamic", "aminoglyc"),
+    "2582": _ABX_ROW_STEMS + ("clindamy",),
+    "29561": _ABX_ROW_STEMS + ("merope", "carbapen"),
+    "6922": _ABX_ROW_STEMS + ("metronid",),
+    "2348": _ABX_ROW_STEMS + ("chloramph",),
+    "pip-tazo": _ABX_ROW_STEMS + ("pipera", "tazobac"),
+    "artesunate": ("artesun", "antimalar"),
+    "260101": ("oseltam", "antivir"),
+    "3264": ("dexameth", "steroid", "corticost"),
     "313002": ("fluid", "crystalloid", "saline"),
     "7806": ("oxygen",),
     "161": ("analges", "antipyr", "paracetam"),
@@ -329,9 +373,12 @@ def match_treatment_row(state: "CaseState", code: str) -> "TreatmentRow | None":
         if row.appropriateness == "contraindicated":
             continue
         hay = f"{row.code} {row.label_en}".lower()
+        lead = row.label_en.lower()
+        if any(lead.startswith(s) or f" {s}" in f" {lead[:40]}" for s in DIAGNOSTIC_ROW_STEMS):
+            continue
         # A combined "antibiotics + fluids" row is satisfied by the antibiotic,
         # never by the fluid bolus or oxygen alone.
-        if code != "2193" and any(s in hay for s in FORMULARY_ROW_STEMS["2193"]):
+        if code not in ANTIBIOTIC_CODES and any(s in hay for s in FORMULARY_ROW_STEMS["2193"]):
             continue
         if any(s in hay for s in stems):
             return row

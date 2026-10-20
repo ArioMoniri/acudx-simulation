@@ -122,22 +122,79 @@ def anchor_from_statement(st: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def resolve_anchors(proposed_ids: list[Any], cond: dict[str, Any], *, limit: int = 3) -> tuple[list[dict[str, Any]], list[str]]:
-    """Keep proposed ids that exist, then top deterministic candidates.
+def _verified_rows() -> dict[str, dict[str, Any]]:
+    from server.case_generator import _verified_statements
 
+    return _verified_statements()
+
+
+def anchor_from_verified(row: dict[str, Any], codes: tuple[str, ...] | list[str] = ()) -> dict[str, Any]:
+    """An anchor built from a verified GuidelineStatement (the store export)."""
+    return {
+        "statement_id": row["id"],
+        "statement_en": str(row.get("statement_en") or ""),
+        "statement_tr": str(row.get("statement_tr") or ""),
+        "source": str(row.get("source_body") or ""),
+        "citation": str(row.get("source_url") or ""),
+        "title": str(row.get("source_title") or ""),
+        "reference": str(row.get("edition_or_version") or ""),
+        "codes": list(codes),
+    }
+
+
+def _verified_for_condition(cond: dict[str, Any]) -> list[tuple[str, tuple[str, ...]]]:
+    """Curated verified statements for the condition (case_fixtures.CONDITION_STATEMENTS),
+    then any verified statement whose ICD-10 codes match the condition."""
+    from server import case_fixtures
+    from server.guidelines.store import code_matches
+
+    rows = _verified_rows()
+    out: list[tuple[str, tuple[str, ...]]] = [
+        (sid, tuple(codes)) for sid, codes in case_fixtures.CONDITION_STATEMENTS.get(str(cond.get("id") or ""), [])
+        if sid in rows
+    ]
+    icd = str(cond.get("icd10") or "")
+    if icd:
+        for sid in sorted(rows):
+            if any(sid == k for k, _ in out):
+                continue
+            if any(code_matches(icd, c) for c in rows[sid].get("condition_codes") or []):
+                out.append((sid, ()))
+    return out
+
+
+def resolve_anchors(proposed_ids: list[Any], cond: dict[str, Any], *, limit: int = 3) -> tuple[list[dict[str, Any]], list[str]]:
+    """Verified statements for the condition first, then proposed ids and seed
+    candidates that are themselves verified.
+
+    Acceptance 2026-10-20 D-11: anchors used to point at legacy seed ids whose
+    store row had FAILED verification (``gs_nice_pyelonephritis``), so every
+    work-up row showed "Source unavailable". A seed id is kept only when the
+    verified store holds it; an unverified statement is refused, never cited.
     Returns ``(anchors, dropped_ids)``. Never fabricates an anchor."""
     index = statement_index()
-    kept: list[str] = []
+    rows = _verified_rows()
+    curated = _verified_for_condition(cond)
+    limit = max(limit, len([c for c in curated if c[1]]) + 1)
+    kept: list[tuple[str, tuple[str, ...]]] = []
     dropped: list[str] = []
+
+    def keep(sid: str, codes: tuple[str, ...] = ()) -> None:
+        if all(k != sid for k, _ in kept):
+            kept.append((sid, codes))
+
     for pid in proposed_ids or []:
         sid = str(pid).strip()
-        if sid in index and sid not in kept:
-            kept.append(sid)
+        if sid in rows:
+            keep(sid)
         elif sid:
             dropped.append(sid)
+    for sid, codes in curated:
+        keep(sid, codes)
     for sid in candidate_ids(cond):
-        if len(kept) >= limit:
-            break
-        if sid not in kept:
-            kept.append(sid)
-    return [anchor_from_statement(index[sid]) for sid in kept[:limit]], dropped
+        if sid in rows and sid in index:
+            keep(sid)
+    # Curated rows carry their order codes even when the model proposed the id.
+    codes_by_id = dict(curated)
+    out = [anchor_from_verified(rows[sid], codes or codes_by_id.get(sid, ())) for sid, codes in kept[:limit]]
+    return out, dropped
