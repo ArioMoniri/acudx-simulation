@@ -924,7 +924,7 @@ export function InterviewTab({
           lang={lang}
           callContext={() => {
             // The live-video call answers from the same case state as the typed turn.
-            const r = buildPatientTurnRequest("");
+            const r = buildPatientTurnRequest("", null);
             return {
               case_state: r.case_state as Record<string, unknown>,
               persona: r.persona as Record<string, unknown> | undefined,
