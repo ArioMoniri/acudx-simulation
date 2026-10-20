@@ -1,0 +1,1422 @@
+{
+  "width": 1920,
+  "height": 1080,
+  "duration": 364.921,
+  "base": "http://localhost:4197",
+  "recordedAt": "2026-10-20T10:26:11.184Z",
+  "events": [
+    {
+      "t": 0,
+      "chapter": "profile",
+      "action": "chapter"
+    },
+    {
+      "t": 0,
+      "chapter": "profile",
+      "action": "skip-begin",
+      "label": "first load"
+    },
+    {
+      "t": 1.888,
+      "chapter": "profile",
+      "action": "skip-end",
+      "label": "first load"
+    },
+    {
+      "t": 3.377,
+      "chapter": "profile",
+      "action": "click",
+      "label": "Create your profile",
+      "box": {
+        "x": 867,
+        "y": 310,
+        "w": 406,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.4
+    },
+    {
+      "t": 4.984,
+      "chapter": "profile",
+      "action": "type",
+      "label": "Full name",
+      "text": "Elif Kaya",
+      "box": {
+        "x": 731,
+        "y": 400.5,
+        "w": 678,
+        "h": 36
+      },
+      "focus": {
+        "x": 731,
+        "y": 246.5,
+        "w": 678,
+        "h": 552
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 6.739,
+      "chapter": "profile",
+      "action": "select",
+      "label": "Role: student",
+      "box": {
+        "x": 731,
+        "y": 508.5,
+        "w": 327,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.5
+    },
+    {
+      "t": 8.271,
+      "chapter": "profile",
+      "action": "type",
+      "label": "Institution",
+      "text": "Ankara Faculty of Medicine",
+      "box": {
+        "x": 731,
+        "y": 594.5,
+        "w": 678,
+        "h": 36
+      },
+      "focus": {
+        "x": 731,
+        "y": 246.5,
+        "w": 678,
+        "h": 552
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 10.728,
+      "chapter": "profile",
+      "action": "click",
+      "label": "Create profile",
+      "box": {
+        "x": 731,
+        "y": 766.5,
+        "w": 108.7,
+        "h": 32
+      },
+      "focus": {
+        "x": 731,
+        "y": 246.5,
+        "w": 678,
+        "h": 552
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 11.214,
+      "chapter": "profile",
+      "action": "skip-begin",
+      "label": "home load"
+    },
+    {
+      "t": 11.814,
+      "chapter": "profile",
+      "action": "skip-end",
+      "label": "home load"
+    },
+    {
+      "t": 12.975,
+      "chapter": "case",
+      "action": "chapter"
+    },
+    {
+      "t": 14.799,
+      "chapter": "case",
+      "action": "click",
+      "label": "Cases",
+      "box": {
+        "x": 8,
+        "y": 126,
+        "w": 203,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 15.263,
+      "chapter": "case",
+      "action": "skip-begin",
+      "label": "cases load"
+    },
+    {
+      "t": 18.586,
+      "chapter": "case",
+      "action": "skip-end",
+      "label": "cases load"
+    },
+    {
+      "t": 19.9,
+      "chapter": "case",
+      "action": "select",
+      "label": "Chief complaint: Infectious",
+      "box": {
+        "x": 311,
+        "y": 403,
+        "w": 655.6,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.45
+    },
+    {
+      "t": 21.838,
+      "chapter": "case",
+      "action": "click",
+      "label": "Quick generate",
+      "box": {
+        "x": 508.1,
+        "y": 492,
+        "w": 129.5,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.45
+    },
+    {
+      "t": 23.684,
+      "chapter": "case",
+      "action": "focus",
+      "label": "Generated case: cough, fever and breathlessness",
+      "box": {
+        "x": 295,
+        "y": 958.5,
+        "w": 1550,
+        "h": 57
+      },
+      "focus": {
+        "x": 295,
+        "y": 958.5,
+        "w": 1550,
+        "h": 57
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 26.202,
+      "chapter": "case",
+      "action": "click",
+      "label": "Start",
+      "box": {
+        "x": 1765.4,
+        "y": 973,
+        "w": 67.6,
+        "h": 28
+      },
+      "focus": {
+        "x": 295,
+        "y": 958.5,
+        "w": 1550,
+        "h": 57
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 26.658,
+      "chapter": "case",
+      "action": "skip-begin",
+      "label": "encounter load"
+    },
+    {
+      "t": 27.003,
+      "chapter": "case",
+      "action": "skip-end",
+      "label": "encounter load"
+    },
+    {
+      "t": 27.705,
+      "chapter": "chart",
+      "action": "chapter"
+    },
+    {
+      "t": 29.298,
+      "chapter": "chart",
+      "action": "focus",
+      "label": "Patient banner",
+      "box": {
+        "x": 270,
+        "y": 49,
+        "w": 1600,
+        "h": 104
+      },
+      "focus": {
+        "x": 270,
+        "y": 49,
+        "w": 1600,
+        "h": 104
+      },
+      "zoom": 1.45
+    },
+    {
+      "t": 32.838,
+      "chapter": "chart",
+      "action": "focus",
+      "label": "Vitals snapshot",
+      "box": {
+        "x": 295,
+        "y": 697.5,
+        "w": 258,
+        "h": 141
+      },
+      "focus": {
+        "x": 295,
+        "y": 697.5,
+        "w": 258,
+        "h": 141
+      },
+      "zoom": 1.6
+    },
+    {
+      "t": 34.339,
+      "chapter": "interview",
+      "action": "chapter"
+    },
+    {
+      "t": 35.38,
+      "chapter": "interview",
+      "action": "click",
+      "label": "Interview tab",
+      "box": {
+        "x": 698.5,
+        "y": 222,
+        "w": 99.5,
+        "h": 39.5
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 37.554,
+      "chapter": "interview",
+      "action": "type",
+      "label": "Question 1",
+      "text": "When did the cough start?",
+      "box": {
+        "x": 591,
+        "y": 559.5,
+        "w": 792.1,
+        "h": 36
+      },
+      "focus": {
+        "x": 575,
+        "y": 294.5,
+        "w": 954,
+        "h": 240
+      },
+      "zoom": 1.3
+    },
+    {
+      "t": 41.363,
+      "chapter": "interview",
+      "action": "type",
+      "label": "Question 2",
+      "text": "Have you had a fever along with it?",
+      "box": {
+        "x": 591,
+        "y": 559.5,
+        "w": 792.1,
+        "h": 36
+      },
+      "focus": {
+        "x": 575,
+        "y": 294.5,
+        "w": 954,
+        "h": 240
+      },
+      "zoom": 1.3
+    },
+    {
+      "t": 45.554,
+      "chapter": "interview",
+      "action": "type",
+      "label": "Question 3",
+      "text": "How severe is the breathlessness?",
+      "box": {
+        "x": 591,
+        "y": 800.3,
+        "w": 792.1,
+        "h": 36
+      },
+      "focus": {
+        "x": 575,
+        "y": 294.5,
+        "w": 954,
+        "h": 480.8
+      },
+      "zoom": 1.3
+    },
+    {
+      "t": 49.301,
+      "chapter": "interview",
+      "action": "type",
+      "label": "Question 4",
+      "text": "Any risk factors, like a chronic lung condition?",
+      "box": {
+        "x": 591,
+        "y": 816.3,
+        "w": 792.1,
+        "h": 36
+      },
+      "focus": {
+        "x": 575,
+        "y": 294.5,
+        "w": 954,
+        "h": 496.8
+      },
+      "zoom": 1.3
+    },
+    {
+      "t": 53.635,
+      "chapter": "interview",
+      "action": "focus",
+      "label": "Transcript with patient replies",
+      "box": {
+        "x": 575,
+        "y": 294.5,
+        "w": 954,
+        "h": 496.8
+      },
+      "focus": {
+        "x": 575,
+        "y": 294.5,
+        "w": 954,
+        "h": 496.8
+      },
+      "zoom": 1.3
+    },
+    {
+      "t": 55.664,
+      "chapter": "exam",
+      "action": "chapter"
+    },
+    {
+      "t": 57.597,
+      "chapter": "exam",
+      "action": "click",
+      "label": "Auscultate lungs",
+      "box": {
+        "x": 1681.8,
+        "y": 882,
+        "w": 118.1,
+        "h": 26
+      },
+      "focus": null,
+      "zoom": 1.45
+    },
+    {
+      "t": 60.017,
+      "chapter": "exam",
+      "action": "click",
+      "label": "Recheck vitals",
+      "box": {
+        "x": 1694.6,
+        "y": 850,
+        "w": 105.1,
+        "h": 26
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 62.05,
+      "chapter": "exam",
+      "action": "focus",
+      "label": "Exam findings in the chart rail",
+      "box": {
+        "x": 295,
+        "y": 747.5,
+        "w": 258,
+        "h": 94.3
+      },
+      "focus": {
+        "x": 295,
+        "y": 747.5,
+        "w": 258,
+        "h": 94.3
+      },
+      "zoom": 1.6
+    },
+    {
+      "t": 63.551,
+      "chapter": "orders",
+      "action": "chapter"
+    },
+    {
+      "t": 65.173,
+      "chapter": "orders",
+      "action": "click",
+      "label": "Orders tab",
+      "box": {
+        "x": 1000.7,
+        "y": 222,
+        "w": 84.5,
+        "h": 39.5
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 67.014,
+      "chapter": "orders",
+      "action": "type",
+      "label": "Search CBC",
+      "text": "CBC",
+      "box": {
+        "x": 574,
+        "y": 343,
+        "w": 916,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 68.463,
+      "chapter": "orders",
+      "action": "click",
+      "label": "Order CBC",
+      "box": {
+        "x": 1402.3,
+        "y": 449.8,
+        "w": 74.7,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 69.986,
+      "chapter": "orders",
+      "action": "type",
+      "label": "Search CRP",
+      "text": "CRP",
+      "box": {
+        "x": 574,
+        "y": 343,
+        "w": 916,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 71.487,
+      "chapter": "orders",
+      "action": "click",
+      "label": "Order CRP",
+      "box": {
+        "x": 1402.3,
+        "y": 449.8,
+        "w": 74.7,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 73.107,
+      "chapter": "orders",
+      "action": "type",
+      "label": "Search lactate",
+      "text": "lactate",
+      "box": {
+        "x": 574,
+        "y": 343,
+        "w": 916,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 74.806,
+      "chapter": "orders",
+      "action": "click",
+      "label": "Order lactate",
+      "box": {
+        "x": 1402.3,
+        "y": 504.3,
+        "w": 74.7,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 76.289,
+      "chapter": "orders",
+      "action": "type",
+      "label": "Search blood culture",
+      "text": "blood culture",
+      "box": {
+        "x": 574,
+        "y": 343,
+        "w": 916,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 78.329,
+      "chapter": "orders",
+      "action": "click",
+      "label": "Order blood culture",
+      "box": {
+        "x": 1402.3,
+        "y": 449.8,
+        "w": 74.7,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 79.92,
+      "chapter": "orders",
+      "action": "type",
+      "label": "Search chest x-ray",
+      "text": "chest x-ray",
+      "box": {
+        "x": 574,
+        "y": 343,
+        "w": 916,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 82.088,
+      "chapter": "orders",
+      "action": "click",
+      "label": "Order chest x-ray",
+      "box": {
+        "x": 1402.3,
+        "y": 449.8,
+        "w": 74.7,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 83.637,
+      "chapter": "orders",
+      "action": "type",
+      "label": "Search ECG",
+      "text": "ECG",
+      "box": {
+        "x": 574,
+        "y": 343,
+        "w": 916,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 85.21,
+      "chapter": "orders",
+      "action": "click",
+      "label": "Order ECG",
+      "box": {
+        "x": 1402.3,
+        "y": 449.8,
+        "w": 74.7,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.25
+    },
+    {
+      "t": 86.478,
+      "chapter": "results",
+      "action": "chapter"
+    },
+    {
+      "t": 87.097,
+      "chapter": "results",
+      "action": "focus",
+      "label": "Order tracker",
+      "box": {
+        "x": 1506,
+        "y": 293.5,
+        "w": 340,
+        "h": 20.6
+      },
+      "focus": {
+        "x": 1506,
+        "y": 293.5,
+        "w": 340,
+        "h": 20.6
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 88.598,
+      "chapter": "results",
+      "action": "skip-begin",
+      "label": "results turnaround"
+    },
+    {
+      "t": 259.229,
+      "chapter": "results",
+      "action": "skip-end",
+      "label": "results turnaround"
+    },
+    {
+      "t": 259.763,
+      "chapter": "results",
+      "action": "focus",
+      "label": "All six resulted",
+      "box": {
+        "x": 1506,
+        "y": 293.5,
+        "w": 207,
+        "h": 413.9
+      },
+      "focus": {
+        "x": 1506,
+        "y": 293.5,
+        "w": 207,
+        "h": 413.9
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 262.054,
+      "chapter": "results",
+      "action": "click",
+      "label": "Results tab",
+      "box": {
+        "x": 1111.2,
+        "y": 222,
+        "w": 135.5,
+        "h": 39.5
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 264.341,
+      "chapter": "results",
+      "action": "focus",
+      "label": "Result summary and critical value",
+      "box": {
+        "x": 587,
+        "y": 306.5,
+        "w": 1243,
+        "h": 99
+      },
+      "focus": {
+        "x": 587,
+        "y": 306.5,
+        "w": 1243,
+        "h": 99
+      },
+      "zoom": 1.35
+    },
+    {
+      "t": 266.435,
+      "chapter": "results",
+      "action": "focus",
+      "label": "Provenance chips",
+      "box": {
+        "x": 574,
+        "y": 520.8,
+        "w": 462.5,
+        "h": 162.8
+      },
+      "focus": {
+        "x": 574,
+        "y": 520.8,
+        "w": 462.5,
+        "h": 162.8
+      },
+      "zoom": 1.6
+    },
+    {
+      "t": 268.168,
+      "chapter": "results",
+      "action": "scroll",
+      "label": "Scroll to the ECG",
+      "dy": 1381
+    },
+    {
+      "t": 270.154,
+      "chapter": "results",
+      "action": "focus",
+      "label": "12-lead ECG strip",
+      "box": {
+        "x": 656.9,
+        "y": 250.3,
+        "w": 1106.2,
+        "h": 448
+      },
+      "focus": {
+        "x": 656.9,
+        "y": 250.3,
+        "w": 1106.2,
+        "h": 448
+      },
+      "zoom": 1.3
+    },
+    {
+      "t": 272.882,
+      "chapter": "guidance",
+      "action": "chapter"
+    },
+    {
+      "t": 274.635,
+      "chapter": "guidance",
+      "action": "click",
+      "label": "Guidance tab",
+      "box": {
+        "x": 1224.6,
+        "y": 222,
+        "w": 101.2,
+        "h": 39.5
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 276.791,
+      "chapter": "guidance",
+      "action": "focus",
+      "label": "Attending tips",
+      "box": {
+        "x": 1243,
+        "y": 326.5,
+        "w": 216.8,
+        "h": 448.8
+      },
+      "focus": {
+        "x": 1243,
+        "y": 326.5,
+        "w": 216.8,
+        "h": 448.8
+      },
+      "zoom": 1.4
+    },
+    {
+      "t": 279.115,
+      "chapter": "guidance",
+      "action": "focus",
+      "label": "Citation chips",
+      "box": {
+        "x": 1293.4,
+        "y": 824.5,
+        "w": 171.5,
+        "h": 46
+      },
+      "focus": {
+        "x": 1293.4,
+        "y": 824.5,
+        "w": 171.5,
+        "h": 46
+      },
+      "zoom": 1.7
+    },
+    {
+      "t": 280.816,
+      "chapter": "treat",
+      "action": "chapter"
+    },
+    {
+      "t": 281.912,
+      "chapter": "treat",
+      "action": "click",
+      "label": "Orders tab",
+      "box": {
+        "x": 1000.7,
+        "y": 222,
+        "w": 110.5,
+        "h": 39.5
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 283.766,
+      "chapter": "treat",
+      "action": "click",
+      "label": "Treatments",
+      "box": {
+        "x": 659.2,
+        "y": 293.5,
+        "w": 70.4,
+        "h": 33.5
+      },
+      "focus": null,
+      "zoom": 1.3
+    },
+    {
+      "t": 286.657,
+      "chapter": "treat",
+      "action": "click",
+      "label": "Administer paracetamol",
+      "box": {
+        "x": 1373.1,
+        "y": 485.3,
+        "w": 103.9,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.35
+    },
+    {
+      "t": 288.002,
+      "chapter": "treat",
+      "action": "focus",
+      "label": "Dose, route and indication form",
+      "box": {
+        "x": 587,
+        "y": 478.5,
+        "w": 877,
+        "h": 143
+      },
+      "focus": {
+        "x": 587,
+        "y": 478.5,
+        "w": 877,
+        "h": 143
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 291.469,
+      "chapter": "treat",
+      "action": "click",
+      "label": "Confirm and administer",
+      "box": {
+        "x": 1418.3,
+        "y": 569,
+        "w": 45.7,
+        "h": 28
+      },
+      "focus": {
+        "x": 1418.3,
+        "y": 569,
+        "w": 45.7,
+        "h": 28
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 292.511,
+      "chapter": "treat",
+      "action": "focus",
+      "label": "Given and charted",
+      "box": {
+        "x": 587,
+        "y": 478.5,
+        "w": 877,
+        "h": 143
+      },
+      "focus": {
+        "x": 587,
+        "y": 478.5,
+        "w": 877,
+        "h": 143
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 293.814,
+      "chapter": "diagnose",
+      "action": "chapter"
+    },
+    {
+      "t": 295.656,
+      "chapter": "diagnose",
+      "action": "click",
+      "label": "Problem List tab",
+      "box": {
+        "x": 1325.8,
+        "y": 222,
+        "w": 156.8,
+        "h": 39.5
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 297.782,
+      "chapter": "diagnose",
+      "action": "type",
+      "label": "Search diagnoses",
+      "text": "pneumonia",
+      "box": {
+        "x": 591,
+        "y": 388.5,
+        "w": 609,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.35
+    },
+    {
+      "t": 299.547,
+      "chapter": "diagnose",
+      "action": "click",
+      "label": "Add Community-acquired pneumonia",
+      "box": {
+        "x": 1136.7,
+        "y": 468,
+        "w": 63.3,
+        "h": 26
+      },
+      "focus": null,
+      "zoom": 1.35
+    },
+    {
+      "t": 301.002,
+      "chapter": "diagnose",
+      "action": "click",
+      "label": "Commit diagnosis",
+      "box": {
+        "x": 1718.3,
+        "y": 446.5,
+        "w": 99.7,
+        "h": 22.5
+      },
+      "focus": null,
+      "zoom": 1.35
+    },
+    {
+      "t": 303.4,
+      "chapter": "diagnose",
+      "action": "focus",
+      "label": "Verdict",
+      "box": {
+        "x": 591,
+        "y": 678.5,
+        "w": 1238,
+        "h": 190.5
+      },
+      "focus": {
+        "x": 591,
+        "y": 678.5,
+        "w": 1238,
+        "h": 190.5
+      },
+      "zoom": 1.3
+    },
+    {
+      "t": 304.903,
+      "chapter": "feedback",
+      "action": "chapter"
+    },
+    {
+      "t": 305.777,
+      "chapter": "feedback",
+      "action": "click",
+      "label": "View attending debrief",
+      "box": {
+        "x": 591,
+        "y": 841,
+        "w": 1238,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.3
+    },
+    {
+      "t": 307.107,
+      "chapter": "feedback",
+      "action": "focus",
+      "label": "Attending debrief",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "focus": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "zoom": 1.15
+    },
+    {
+      "t": 311.102,
+      "chapter": "feedback",
+      "action": "click",
+      "label": "View full report",
+      "box": {
+        "x": 1145.4,
+        "y": 983.8,
+        "w": 125.6,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.3
+    },
+    {
+      "t": 311.568,
+      "chapter": "feedback",
+      "action": "skip-begin",
+      "label": "feedback load"
+    },
+    {
+      "t": 314.896,
+      "chapter": "feedback",
+      "action": "skip-end",
+      "label": "feedback load"
+    },
+    {
+      "t": 315.843,
+      "chapter": "feedback",
+      "action": "scroll",
+      "label": "Scroll to the calibration plot",
+      "dy": 251
+    },
+    {
+      "t": 317.83,
+      "chapter": "feedback",
+      "action": "focus",
+      "label": "Calibration plot",
+      "box": {
+        "x": 940,
+        "y": 69.5,
+        "w": 661,
+        "h": 48
+      },
+      "focus": {
+        "x": 940,
+        "y": 69.5,
+        "w": 661,
+        "h": 48
+      },
+      "zoom": 1.45
+    },
+    {
+      "t": 319.713,
+      "chapter": "feedback",
+      "action": "focus",
+      "label": "A domain on the plot",
+      "box": {
+        "x": 1429.6,
+        "y": 240.6,
+        "w": 62,
+        "h": 62
+      },
+      "focus": {
+        "x": 940,
+        "y": 69.5,
+        "w": 661,
+        "h": 48
+      },
+      "zoom": 1.45
+    },
+    {
+      "t": 321.537,
+      "chapter": "dean",
+      "action": "chapter"
+    },
+    {
+      "t": 322.931,
+      "chapter": "dean",
+      "action": "click",
+      "label": "Account",
+      "box": {
+        "x": 1864,
+        "y": 8,
+        "w": 32,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 323.419,
+      "chapter": "dean",
+      "action": "skip-begin",
+      "label": "account load"
+    },
+    {
+      "t": 323.756,
+      "chapter": "dean",
+      "action": "skip-end",
+      "label": "account load"
+    },
+    {
+      "t": 325.301,
+      "chapter": "dean",
+      "action": "select",
+      "label": "Role: Platform administrator (local profile)",
+      "box": {
+        "x": 731,
+        "y": 598.5,
+        "w": 327,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.5
+    },
+    {
+      "t": 326.692,
+      "chapter": "dean",
+      "action": "click",
+      "label": "Save changes",
+      "box": {
+        "x": 731,
+        "y": 856.5,
+        "w": 111.1,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 1.5
+    },
+    {
+      "t": 329.721,
+      "chapter": "dean",
+      "action": "click",
+      "label": "Institution",
+      "box": {
+        "x": 8,
+        "y": 126,
+        "w": 203,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 330.193,
+      "chapter": "dean",
+      "action": "skip-begin",
+      "label": "dean load"
+    },
+    {
+      "t": 333.528,
+      "chapter": "dean",
+      "action": "skip-end",
+      "label": "dean load"
+    },
+    {
+      "t": 335.342,
+      "chapter": "dean",
+      "action": "focus",
+      "label": "Headline metrics",
+      "box": {
+        "x": 294,
+        "y": 323,
+        "w": 1444.1,
+        "h": 61
+      },
+      "focus": {
+        "x": 294,
+        "y": 323,
+        "w": 1444.1,
+        "h": 61
+      },
+      "zoom": 1.25
+    },
+    {
+      "t": 336.862,
+      "chapter": "dean",
+      "action": "scroll",
+      "label": "Scroll to the heatmap",
+      "dy": 773
+    },
+    {
+      "t": 338.506,
+      "chapter": "dean",
+      "action": "focus",
+      "label": "Competency heatmap",
+      "box": {
+        "x": 315,
+        "y": 80.3,
+        "w": 1510,
+        "h": 377
+      },
+      "focus": {
+        "x": 315,
+        "y": 80.3,
+        "w": 1510,
+        "h": 377
+      },
+      "zoom": 1.2
+    },
+    {
+      "t": 340.537,
+      "chapter": "admin",
+      "action": "chapter"
+    },
+    {
+      "t": 343.148,
+      "chapter": "admin",
+      "action": "click",
+      "label": "Admin",
+      "box": {
+        "x": 8,
+        "y": 93,
+        "w": 203,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 343.607,
+      "chapter": "admin",
+      "action": "skip-begin",
+      "label": "admin load"
+    },
+    {
+      "t": 343.925,
+      "chapter": "admin",
+      "action": "skip-end",
+      "label": "admin load"
+    },
+    {
+      "t": 345.642,
+      "chapter": "admin",
+      "action": "focus",
+      "label": "Admin token gate",
+      "box": {
+        "x": 867,
+        "y": 288,
+        "w": 406,
+        "h": 176
+      },
+      "focus": {
+        "x": 867,
+        "y": 288,
+        "w": 406,
+        "h": 176
+      },
+      "zoom": 1.6
+    },
+    {
+      "t": 347.295,
+      "chapter": "admin",
+      "action": "click",
+      "label": "Admin token field",
+      "box": {
+        "x": 867,
+        "y": 380,
+        "w": 406,
+        "h": 36
+      },
+      "focus": null,
+      "zoom": 1.6
+    },
+    {
+      "t": 348.485,
+      "chapter": "atlas",
+      "action": "chapter"
+    },
+    {
+      "t": 349.874,
+      "chapter": "atlas",
+      "action": "click",
+      "label": "View as Learner",
+      "box": {
+        "x": 1389.9,
+        "y": 10,
+        "w": 83,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 351.99,
+      "chapter": "atlas",
+      "action": "click",
+      "label": "Atlas",
+      "box": {
+        "x": 8,
+        "y": 225,
+        "w": 203,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 352.442,
+      "chapter": "atlas",
+      "action": "skip-begin",
+      "label": "atlas load"
+    },
+    {
+      "t": 352.764,
+      "chapter": "atlas",
+      "action": "skip-end",
+      "label": "atlas load"
+    },
+    {
+      "t": 354.134,
+      "chapter": "atlas",
+      "action": "click",
+      "label": "3D organs",
+      "box": {
+        "x": 691.4,
+        "y": 208,
+        "w": 92.8,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 1.3
+    },
+    {
+      "t": 354.587,
+      "chapter": "atlas",
+      "action": "skip-begin",
+      "label": "3D load"
+    },
+    {
+      "t": 358.466,
+      "chapter": "atlas",
+      "action": "skip-end",
+      "label": "3D load"
+    },
+    {
+      "t": 359.276,
+      "chapter": "atlas",
+      "action": "click",
+      "label": "Spin",
+      "box": {
+        "x": 583,
+        "y": 739.5,
+        "w": 60.4,
+        "h": 24.5
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 360.261,
+      "chapter": "atlas",
+      "action": "focus",
+      "label": "3D organs from TotalSegmentator",
+      "box": {
+        "x": 571,
+        "y": 292,
+        "w": 998,
+        "h": 480
+      },
+      "focus": {
+        "x": 571,
+        "y": 292,
+        "w": 998,
+        "h": 480
+      },
+      "zoom": 1.2
+    }
+  ]
+}
