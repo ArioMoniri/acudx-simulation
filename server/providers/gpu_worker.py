@@ -19,6 +19,8 @@ domain at boot; the manager derives it from the API-reported IP for probes.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import secrets
@@ -45,6 +47,12 @@ log = logging.getLogger("acudx.gpu_worker")
 DEFAULT_ALLOWLIST = ["gpu_1x_a100_sxm4", "gpu_1x_a10", "gpu_1x_a100", "gpu_1x_h100_pcie"]
 DEFAULT_TEMPLATE = Path(__file__).resolve().parents[2] / "infra" / "gpu-worker" / "cloud-init.yaml"
 SERVED_MODEL_NAME = "acudx-llm"   # --served-model-name in the worker's vLLM
+
+# Review 04 O1: the boot-diagnostics path carries a value DERIVED from the worker token, never
+# the token itself (the bearer must not travel in a plaintext URL on port 80). The worker
+# computes the same value with openssl in infra/gpu-worker/cloud-init.yaml.
+DIAG_SECRET_LABEL = b"acudx-diag-v1"
+PROVIDER_GONE_STATUSES = ("terminated", "terminating", "preempted")
 
 _MARKERS = {"__WORKER_TOKEN__": "token", "__WORKER_LLM_MODEL__": "llm_model", "__WORKER_DOMAIN__": "domain"}
 ACTIVE_STATUSES = ("launching", "booting", "ready")
@@ -152,6 +160,16 @@ def render_cloud_init(template: str, *, token: str, llm_model: str, domain: str)
         start = out.index("__WORKER_")
         raise ValueError(f"unfilled cloud-init marker near {out[start:start + 40]!r}")
     return out
+
+
+def diag_secret(token: str) -> str:
+    """HMAC-SHA256(key=token, message="acudx-diag-v1"), hex, first 32 characters.
+
+    Shell equivalent on the worker:
+    ``printf '%s' acudx-diag-v1 | openssl dgst -sha256 -hmac "$WORKER_TOKEN" -r | cut -c1-32``.
+    Knowing it opens the redacted boot diagnostics only, never the LLM, TTS or STT routes.
+    """
+    return hmac.new(token.encode("utf-8"), DIAG_SECRET_LABEL, hashlib.sha256).hexdigest()[:32]
 
 
 def _day_start(ts: float) -> float:
@@ -438,6 +456,8 @@ class WorkerManager:
                         self.boot_timeout_s + self.ready_timeout_s)
             await self.terminate(reason="stale_boot")
             return True
+        if w.status == "ready" and await self.reconcile(w):
+            return True
         spent = self.spent_today_usd()
         if spent >= self.policy.daily_budget_usd:
             log.warning("gpu worker %s: spent %.2f USD today >= budget %.2f USD; terminating", w.instance_id,
@@ -450,6 +470,35 @@ class WorkerManager:
         log.info("gpu worker %s idle for %.0fs > %d min; terminating", w.instance_id, idle_s,
                  self.policy.idle_minutes)
         await self.terminate(reason="idle")
+        return True
+
+    async def reconcile(self, w: WorkerRecord) -> bool:
+        """Review 04 O4: compare the row with the provider. When Lambda reports the instance
+        terminated, terminating or preempted, or no longer knows it (404), close the ledger and
+        mark the row failed at once, instead of booking cost until the idle window and blocking
+        ``ensure_worker`` in a 25 minute readiness wait. Returns True when the row was closed.
+
+        Lambda's instance object carries no termination timestamp, so the ledger closes at the
+        time the gateway observed the provider state (at most one reaper interval late, which
+        errs on the side of the budget). A provider error other than not-found changes nothing.
+        """
+        try:
+            inst = await self._lambda().get_instance(w.instance_id)
+            gone = inst.status if inst.status in PROVIDER_GONE_STATUSES else None
+        except LambdaCloudError as exc:
+            if exc.status_code != 404 and "not-found" not in exc.code:
+                log.warning("gpu worker %s: provider reconcile failed: %s", w.instance_id, exc)
+                return False
+            gone = "missing"
+        except httpx.HTTPError as exc:
+            log.warning("gpu worker %s: provider reconcile unreachable: %s", w.instance_id, type(exc).__name__)
+            return False
+        if gone is None:
+            return False
+        now = self._clock()
+        log.warning("gpu worker %s: provider reports %s; closing the ledger", w.instance_id, gone)
+        self.store.close_ledger(w.instance_id, now, f"provider:{gone}")
+        self.store.update_worker(w.id, status="failed", terminated_at=now)
         return True
 
     @property
@@ -539,10 +588,13 @@ class WorkerManager:
         t0 = self._clock()
         log.info("gpu worker %s: waiting for readiness (boot budget %.0fs, ready budget %.0fs, poll %.0fs)",
                  w.instance_id, self.boot_timeout_s, self.ready_timeout_s, self.poll_interval_s)
+        if w.ip and w.status == "ready" and await self.reconcile(w):
+            # Re-attaching to a ready row whose instance is gone: fail now, not after ready_timeout_s.
+            raise WorkerFailed(f"instance {w.instance_id} is no longer running on the provider side")
         if not w.ip:
             for _ in range(self._attempts(self.boot_timeout_s)):
                 inst = await api.get_instance(w.instance_id)
-                if inst.status in ("terminated", "terminating", "preempted"):
+                if inst.status in PROVIDER_GONE_STATUSES:
                     self.store.close_ledger(w.instance_id, self._clock(), f"provider:{inst.status}")
                     self.store.update_worker(w.id, status="failed", terminated_at=self._clock())
                     raise WorkerFailed(f"instance {w.instance_id} is {inst.status} on the provider side")
@@ -565,27 +617,40 @@ class WorkerManager:
         raise WorkerFailed(f"worker {w.domain} did not pass /healthz in {self.ready_timeout_s:.0f}s")
 
     async def boot_log(self, tail_lines: int = 200) -> dict[str, Any]:
-        """Read the worker's cloud-init output and docker status over plain HTTP on port 80 (/diag/<token>/).
+        """Read the worker's redacted cloud-init output and docker status (review 04 O1).
 
-        The path embeds the worker token, so only the gateway (which holds it) can read it.
-        Returns {available, cloud_init, docker_status, error}; never raises.
+        The files live under ``/diag/<diag_secret(token)>/``. While the worker boots they are
+        served over plain HTTP on port 80 by the worker's diagnostics server; once vLLM has been
+        healthy for 5 minutes that server stops itself and the final snapshot is served by Caddy
+        on 443 behind the bearer. The bearer token is only ever sent over TLS, in the
+        ``Authorization`` header, never in a URL. Returns {available, cloud_init, docker_status,
+        source, error}; never raises.
         """
         w = self.store.active_worker()
         if w is None or not w.ip:
             return {"available": False, "error": "no active worker with an ip"}
         out: dict[str, Any] = {"available": False, "instance_id": w.instance_id, "ip": w.ip}
-        base = f"http://{w.ip}/diag/{w.token}"
+        secret = diag_secret(w.token)
+        plain = (f"http://{w.ip}/diag/{secret}", {})
+        tls = (f"https://{w.domain}/diag/{secret}", {"Authorization": f"Bearer {w.token}"}) if w.domain else None
+        # Booting: the port 80 server is the one that answers. Ready: Caddy holds the snapshot.
+        sources = [s for s in ((tls, plain) if w.status == "ready" else (plain, tls)) if s is not None]
         for key, name in (("cloud_init", "cloud-init-output.log"), ("docker_status", "docker-status.txt")):
-            try:
-                r = await self._probe_client().get(f"{base}/{name}")
+            last = "unreachable"
+            for base, headers in sources:
+                try:
+                    r = await self._probe_client().get(f"{base}/{name}", headers=headers)
+                except httpx.HTTPError as exc:
+                    last = f"unreachable: {exc.__class__.__name__}"
+                    continue
                 if r.status_code == 200:
-                    lines = r.text.splitlines()
-                    out[key] = "\n".join(lines[-tail_lines:])
+                    out[key] = "\n".join(r.text.splitlines()[-tail_lines:])
                     out["available"] = True
-                else:
-                    out[key] = f"http {r.status_code}"
-            except httpx.HTTPError as exc:
-                out[key] = f"unreachable: {exc.__class__.__name__}"
+                    out.setdefault("source", "tls" if base.startswith("https://") else "port80")
+                    break
+                last = f"http {r.status_code}"
+            else:
+                out[key] = last
         return out
 
     async def _healthy(self, w: WorkerRecord) -> bool:

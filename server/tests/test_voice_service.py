@@ -216,3 +216,20 @@ async def test_capabilities_describe_hosted_rows_pending_worker_and_avatar(tmp_p
     assert caps["avatar"] == {"enabled": True, "provider": "lk", "transport": "livekit", "renderer": "simli",
                               "source": "registry"}
     assert worker.ensure_calls == 0   # capabilities never launch a worker
+
+
+async def test_capabilities_probe_the_worker_tts_route_not_just_healthz(tmp_path):
+    """Task 24: /healthz is vLLM only and Chatterbox builds after vLLM is up, so a ready worker
+    must not advertise TTS until the side-car itself answers /tts/health."""
+    sc = WorkerScenario(tts_health_status=503)
+    worker = FakeWorkerManager(ready=True)
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=worker, scenario=sc)
+    caps = await svc.capabilities(probe_worker=True)
+    assert caps["tts"]["enabled"] is False and "gpu-worker: /tts/health HTTP 503" in caps["tts"]["reasons"]
+    assert caps["gpu_worker"]["tts"] == {"path": "/tts/health", "ok": False, "detail": "HTTP 503"}
+    assert caps["stt"]["enabled"] is True and caps["stt"]["source"] == "gpu_worker"
+    sc.tts_health_status = 200
+    caps = await svc.capabilities(probe_worker=True)
+    assert caps["tts"]["enabled"] is True and caps["tts"]["provider"] == "gpu-worker"
+    assert caps["gpu_worker"]["tts"]["ok"] is True
+    assert worker.ensure_calls == 0
