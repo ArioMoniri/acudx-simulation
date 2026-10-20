@@ -3,7 +3,13 @@
     POST /v2/case/generate/stream      SSE: start, kernel, opening.delta*, opening.ready, then the
                                        same-thread continuation (layer.pending / layer.ready / judge)
                                        and done. Contract: review 06a section 4.6.
-    GET  /v2/case/{thread_id}/events   SSE reconnect: replays the thread log after ``?after=<id>``
+    GET  /v2/case/{thread_id}/events   SSE reconnect: replays the thread log after ``?after=<id>``;
+                                       ``?follow=1`` keeps it open after ``done`` (room members,
+                                       Director updates, branch events) until the cap
+    POST /v2/case/{thread_id}/room     the owner binds the thread to a team room (join code)
+    POST /v2/case/{thread_id}/join     a room member joins the thread with the room's join code
+    POST /v2/case/{thread_id}/layer/{layer}/render
+                                       a TR rendering of a layer already seen (one call, cached)
     POST /v2/case/{thread_id}/layer/{layer}
                                        one layer, generated on first access (or awaited when the
                                        continuation is already writing it)
@@ -23,8 +29,9 @@ Access (review 04 O3): ``GET /v2/learner/{learner_id}`` and every ``/v2/case/{th
 read need a signed-in caller (``current_user``); a ``learner_id`` in a generate or Director body
 needs one too. The caller may only name their own learner id (the principal ``sub``, which is
 the local profile id in local mode, or its ``user_hash``) unless they hold ``faculty`` or
-above. A thread generated for a learner is readable by that learner and by faculty; for
-anyone else it answers the same 404 as a missing thread.
+above. A thread generated for a learner is readable by that learner, by faculty and by the
+members of the team room the owner bound it to (``CaseStore`` room membership, joined with
+the room's code); for anyone else it answers the same 404 as a missing thread.
 
 SSE streams are capped at ``SSE_MAX_DURATION_S`` (review 04 O11): the stream then ends with an
 ``error`` event (``stream_timeout``, 504) and the client reconnects with ``?after=``.
@@ -56,7 +63,8 @@ from server.orchestration.director import Action, CaseState, anext_state
 from server.orchestration.llm import StructuredLLM, WorkerCostSource
 from server.orchestration.memory import LearnerMemory, memory_store
 from server.orchestration.staged import (
-    StagedRuntime, director_state_from_spec, layers_for_action, refresh_director, valid_layer,
+    StagedRuntime, debrief_extra, director_state_from_spec, layers_for_action, refresh_director, renderable,
+    valid_layer,
 )
 from server.orchestration.store import CaseStore, DirectorStoreView, set_case_store
 from server.orchestration.trace import summarize
@@ -193,8 +201,8 @@ def _learner_guard(learner_id: str | None, user: Principal | None) -> JSONRespon
     return None
 
 
-def _thread_for(rt: OrchestrationRuntime, thread_id: str, user: Principal | None) -> dict[str, Any] | None:
-    """The thread state when ``user`` may read it; None for a missing or foreign thread.
+def _owned_thread(rt: OrchestrationRuntime, thread_id: str, user: Principal | None) -> dict[str, Any] | None:
+    """The thread state when ``user`` owns it (or is faculty); None otherwise.
 
     A thread with an owner is readable by that owner and faculty. A thread generated
     without a learner id is bound to the principal that requested it (``requester``),
@@ -209,6 +217,19 @@ def _thread_for(rt: OrchestrationRuntime, thread_id: str, user: Principal | None
         return st if owns_learner(user, str(owner)) else None
     # Requested with no identity at all: only faculty may open it (never another learner).
     return st if user.has("faculty") else None
+
+
+def _thread_for(rt: OrchestrationRuntime, thread_id: str, user: Principal | None) -> dict[str, Any] | None:
+    """The thread state when ``user`` may read it: the owner, faculty, or a member of the team
+    room the owner bound the thread to. None for a missing or foreign thread."""
+    st = _owned_thread(rt, thread_id, user)
+    if st is not None or user is None:
+        return st
+    st = rt.cases.get(thread_id)
+    if st is None or st.get("source") != "model":
+        return None
+    members = set(((st.get("room") or {}).get("members")) or [])
+    return st if (user.sub in members or (user.user_hash and user.user_hash in members)) else None
 
 
 # --------------------------------------------------------------------------- #
@@ -237,6 +258,9 @@ class GenerateV2Request(BaseModel):
 
 class DirectorStepRequest(BaseModel):
     thread_id: str | None = None
+    # The browser tab that sent the step: echoed on the thread's ``director`` event so the
+    # sender does not apply its own step twice (room members apply the others').
+    client_id: str | None = Field(default=None, max_length=64)
     # Faculty diagnostics only (no thread): step a model-generated spec once, statelessly.
     # A client-sent case_state is never accepted: the state lives in CaseStore.
     spec: dict[str, Any] | None = None
@@ -247,6 +271,16 @@ class DirectorStepRequest(BaseModel):
 
 class LayerRequest(BaseModel):
     reason: str | None = None
+    # Debrief on commit: the committed diagnosis (picklist code and display).
+    diagnosis: dict[str, str] | None = None
+
+
+class RoomRequest(BaseModel):
+    room_code: str = Field(min_length=3, max_length=32)
+
+
+class RenderRequest(BaseModel):
+    locale: str = "tr"
 
 
 def _error(status: int, code: str, detail: str, **extra: Any) -> JSONResponse:
@@ -299,7 +333,7 @@ async def _preflight(rt: OrchestrationRuntime) -> JSONResponse | None:
 # Generation                                                                   #
 # --------------------------------------------------------------------------- #
 async def _tail_sse(rt: OrchestrationRuntime, thread_id: str, after: int,
-                    ctx: dict[str, Any] | None = None) -> AsyncIterator[str]:
+                    ctx: dict[str, Any] | None = None, *, follow: bool = False) -> AsyncIterator[str]:
     # The body runs after the request middleware returned, so the telemetry
     # context (route, tenant, user) captured in the handler is bound again here.
     token = bind_context(**(ctx or {"route": "/v2/case/generate/stream"}))
@@ -308,10 +342,13 @@ async def _tail_sse(rt: OrchestrationRuntime, thread_id: str, after: int,
     last = after
     finished = False
     try:
-        async for eid, name, data in rt.staged.tail(thread_id, after, cap_s=SSE_MAX_DURATION_S):
+        async for eid, name, data in rt.staged.tail(thread_id, after, cap_s=SSE_MAX_DURATION_S, follow=follow):
+            if not name:
+                yield ": keepalive\n\n"
+                continue
             last = eid
             yield _sse(name, data, eid)
-            if name == "done" or (name == "error" and data.get("fatal")):
+            if not follow and (name == "done" or (name == "error" and data.get("fatal"))):
                 finished = True
         if not finished and loop.time() >= deadline - 0.05:
             yield _sse("error", {"stage": "stream", "error": "stream_timeout", "status": 504, "retryable": True,
@@ -345,7 +382,7 @@ async def generate_stream(req: GenerateV2Request, request: Request,
 
 
 @router.get("/case/{thread_id}/events")
-async def case_events(thread_id: str, request: Request, after: int = 0,
+async def case_events(thread_id: str, request: Request, after: int = 0, follow: bool = False,
                       user: Optional[Principal] = Depends(optional_user)) -> Response:
     rt = await get_runtime(request)
     if _thread_for(rt, thread_id, user) is None:
@@ -353,7 +390,33 @@ async def case_events(thread_id: str, request: Request, after: int = 0,
     last_id = request.headers.get("last-event-id") or ""
     if last_id.isdigit():
         after = max(after, int(last_id))
-    return _stream_response(_tail_sse(rt, thread_id, after))
+    return _stream_response(_tail_sse(rt, thread_id, after, follow=follow))
+
+
+@router.post("/case/{thread_id}/room")
+async def bind_room(thread_id: str, body: RoomRequest, request: Request,
+                    user: Principal = Depends(current_user)) -> JSONResponse:
+    """The owner binds the thread to a team room by the room's join code."""
+    rt = await get_runtime(request)
+    if _owned_thread(rt, thread_id, user) is None:
+        return _error(404, "thread_not_found", f"no case thread {thread_id!r}")
+    rt.cases.set_room(thread_id, body.room_code)
+    return JSONResponse(content={"thread_id": thread_id, "room": True})
+
+
+@router.post("/case/{thread_id}/join")
+async def join_room_thread(thread_id: str, body: RoomRequest, request: Request,
+                           user: Principal = Depends(current_user)) -> JSONResponse:
+    """A team-room member joins the thread with the room's join code; a wrong code, a thread
+    without a room or a missing thread all answer the same 404."""
+    rt = await get_runtime(request)
+    st = rt.cases.get(thread_id)
+    if st is None or st.get("source") != "model" or not rt.cases.add_member(thread_id, user.sub, body.room_code):
+        if _owned_thread(rt, thread_id, user) is None:
+            return _error(404, "thread_not_found", f"no case thread {thread_id!r}")
+    events = rt.cases.events(thread_id)
+    return JSONResponse(content={"thread_id": thread_id, "member": True,
+                                 "last_event_id": events[-1][0] if events else 0})
 
 
 @router.post("/case/generate")
@@ -441,19 +504,57 @@ async def read_layer(thread_id: str, layer: str, request: Request, body: LayerRe
         return _error(422, "invalid_layer", f"unknown layer {layer!r}")
     if not st.get("opening"):
         return _error(409, "opening_not_ready", "the case opening is not ready yet")
+    extra = ""
+    if layer == "debrief" and body is not None and body.diagnosis:
+        # Debrief on commit: the outcome is recorded on the thread and named in the prompt.
+        diagnosis = {"code": str(body.diagnosis.get("code") or "")[:32],
+                     "display": str(body.diagnosis.get("display") or "")[:120]}
+        extra = debrief_extra(diagnosis)
+        rt.cases.update(thread_id, lambda s: s.update(outcome={**(s.get("outcome") or {}),
+                                                               "diagnosis": diagnosis["code"] or diagnosis["display"],
+                                                               "display": diagnosis["display"]}))
     try:
         entry = await asyncio.wait_for(
-            rt.staged.ensure_layer(thread_id, layer, reason=(body.reason if body else None) or "access"),
+            rt.staged.ensure_layer(thread_id, layer, reason=(body.reason if body else None) or "access", extra=extra),
             LAYER_WAIT_S)
     except asyncio.TimeoutError:
         return _error(504, "layer_timeout", f"layer {layer} is still being written", retryable=True)
     if entry.get("status") != "ready":
         err = entry.get("error") or "layer_failed"
-        return _error(503 if err == "model_unreachable" else 502, err, f"layer {layer} could not be written",
-                      retryable=True)
+        return _error(503 if err == "model_unreachable" else 502, err,
+                      entry.get("reason") or f"layer {layer} could not be written", retryable=True,
+                      reason=entry.get("reason"), issues=entry.get("issues") or [])
     _mark_seen(rt, thread_id, [layer])
     now = rt.cases.get(thread_id) or {}
     return JSONResponse(content={"thread_id": thread_id, "layer": layer, "status": "ready",
+                                 "data": entry.get("data"), "spec": now.get("spec")})
+
+
+@router.post("/case/{thread_id}/layer/{layer}/render")
+async def render_layer(thread_id: str, layer: str, body: RenderRequest, request: Request,
+                       user: Optional[Principal] = Depends(optional_user)) -> JSONResponse:
+    """A rendering of a layer already seen in another UI language (TR for an EN case): one call
+    per layer, cached on the thread. The source text stays authoritative."""
+    rt = await get_runtime(request)
+    if _thread_for(rt, thread_id, user) is None:
+        return _error(404, "thread_not_found", f"no case thread {thread_id!r}")
+    if not renderable(layer):
+        return _error(422, "invalid_layer", f"unknown layer {layer!r}")
+    try:
+        entry = await asyncio.wait_for(rt.staged.render_layer(thread_id, layer, body.locale), LAYER_WAIT_S)
+    except ValueError:
+        return _error(422, "unsupported_locale", f"no {body.locale!r} rendering for this case (its source locale, "
+                                                 "or a locale without renderings)")
+    except LookupError:
+        return _error(409, "layer_not_ready", f"layer {layer} is not written yet")
+    except asyncio.TimeoutError:
+        return _error(504, "render_timeout", f"the rendering of {layer} is still being written", retryable=True)
+    if entry.get("status") != "ready":
+        err = entry.get("error") or "rendering_failed"
+        return _error(503 if err == "model_unreachable" else 502, err, f"layer {layer} could not be rendered",
+                      retryable=True, issues=entry.get("issues") or [])
+    now = rt.cases.get(thread_id) or {}
+    return JSONResponse(content={"thread_id": thread_id, "layer": layer, "locale": body.locale, "status": "ready",
                                  "data": entry.get("data"), "spec": now.get("spec")})
 
 
@@ -526,6 +627,12 @@ async def director_step(req: DirectorStepRequest, request: Request,
                 entry["seen"] = True
 
     rt.cases.update(req.thread_id, write)
+    # Every member of the room follows the same Director: the step lands on the thread log.
+    rt.staged.emit(req.thread_id, "director", {
+        "thread_id": req.thread_id, "client_id": req.client_id, "action": action.model_dump(mode="json"),
+        "case_state": new_state.model_dump(mode="json"), "patient_visible_changes": visible,
+        "director_notes": notes,
+    })
     _record_errors(rt, req.learner_id, prev_state or CaseState.from_spec(st["spec"], case_id=req.thread_id),
                    new_state)
     # A branch opened: author its bedside event for THIS thread in the background (S6).

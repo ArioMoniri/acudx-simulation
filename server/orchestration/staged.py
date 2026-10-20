@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import os
 import random
@@ -81,6 +82,7 @@ from server.orchestration.trace import make_event
 S1_MAX_TOKENS = 380
 MAX_TOKENS: dict[str, int] = {
     "kernel": 320, "history": 360, "exam": 180, "treatments": 560, "results": 400, "event": 200, "debrief": 260, "patch": 300,
+    "render": 900,
 }
 TEMPERATURE = {"s1": 0.7, "layer": 0.5, "patch": 0.3}
 # Background continuation calls in flight per runtime. Live 2026-10-20 (one A100, vLLM eager
@@ -424,6 +426,12 @@ class LayerRejected(ValueError):
         self.issues = issues
 
 
+class SafetyVeto(LayerRejected):
+    """The safety gate (deterministic treatment checks, the blocking safety judge, or the event
+    safety judge) rejected a drug-bearing layer. After the allowed rewrite the layer fails with
+    ``error: "safety_veto"`` and its reason; nothing is substituted for it (06b F30)."""
+
+
 def _num(v: Any, default: float) -> float:
     try:
         return float(v)
@@ -599,7 +607,7 @@ def gate_layer(layer: str, data: dict[str, Any], state: dict[str, Any]) -> tuple
         hard = [i for i in det["issues"] if "no indicated" in i or "marked indicated" in i
                 or "marked contraindicated" in i or "no treatments" in i]
         if hard:
-            raise LayerRejected(hard)
+            raise SafetyVeto(hard)
         notes.extend(i for i in det["issues"] if i not in hard)
         disp = str(data.get("disposition") or "")
         data = {"treatments": rows, "disposition": disp if disp in DISPOSITIONS else (cond.get("disposition")
@@ -655,6 +663,31 @@ def gate_layer(layer: str, data: dict[str, Any], state: dict[str, Any]) -> tuple
     return data, notes
 
 
+def failure_reason(layer: str, code: str, attempts: int) -> str:
+    """One plain sentence for a failed layer (shown with Retry; never a substitute layer)."""
+    kind = layer_kind(layer)
+    what = {"treatments": "the treatment table", "event": "the bedside event", "results": "the results",
+            "debrief": "the debrief", "history": "this part of the history",
+            "exam": "these examination findings"}.get(kind, "this part of the case")
+    if code == "safety_veto":
+        tries = "the rewrite" if attempts > 1 else "the first draft"
+        return f"The safety review rejected {what} after {tries}; it is not shown until a safe version is written."
+    if code == "model_unreachable":
+        return f"The model could not be reached, so {what} was not written."
+    return f"The model did not write a usable version of {what}."
+
+
+def debrief_extra(diagnosis: Optional[dict[str, Any]]) -> str:
+    """The committed diagnosis as one short prompt line (picklist code and display, no free text)."""
+    if not isinstance(diagnosis, dict):
+        return ""
+    code = re.sub(r"[^A-Za-z0-9.\-]", "", str(diagnosis.get("code") or ""))[:16]
+    display = re.sub(r"\s+", " ", str(diagnosis.get("display") or "")).strip()[:80]
+    if not code and not display:
+        return ""
+    return f"The learner committed the diagnosis {display or code} ({code or 'no code'}): say whether it fits."
+
+
 _DRUG_WORDS: Optional[re.Pattern[str]] = None
 
 
@@ -667,6 +700,155 @@ def drug_bearing(text: str) -> bool:
                                                                       "therapy", "support", "position"})
         _DRUG_WORDS = re.compile(r"\b(?:" + "|".join(map(re.escape, words)) + r")\b", re.I) if words else re.compile(r"$^")
     return bool(_DOSE_RE.search(text or "") or _DRUG_WORDS.search(text or ""))
+
+
+# --------------------------------------------------------------------------- #
+# Renderings: a TR rendering of a layer already seen, on demand (doc 15 12.7)   #
+# --------------------------------------------------------------------------- #
+RENDER_LOCALES = ("tr",)
+_NUM_RE = re.compile(r"\d+(?:[.,]\d+)?")
+Path = tuple[Any, ...]
+
+
+def renderable(layer: str) -> bool:
+    return layer == "opening" or valid_layer(layer)
+
+
+def render_paths(layer: str, data: dict[str, Any]) -> list[tuple[Path, str]]:
+    """The learner-visible text leaves of one layer, in a stable order. Codes, numbers outside
+    text, flags and citations are not rendered: they stay exactly as authored."""
+    kind = layer_kind(layer)
+    out: list[tuple[Path, str]] = []
+
+    def leaf(path: Path) -> None:
+        cur: Any = data
+        for k in path:
+            try:
+                cur = cur[k]
+            except (KeyError, IndexError, TypeError):
+                return
+        if isinstance(cur, str) and cur.strip():
+            out.append((path, cur))
+
+    def each(key: str, *fields: str) -> None:
+        for i, _it in enumerate(data.get(key) or []):
+            if fields:
+                for f in fields:
+                    leaf((key, i, f))
+            else:
+                leaf((key, i))
+
+    if layer == "opening":
+        leaf(("chief_complaint",))
+        each("opening_statements", "text")
+    elif kind == "history":
+        each("items", "text")
+        for f in ("pmh", "meds", "allergies"):
+            leaf((f,))
+    elif kind == "exam":
+        each("items", "system", "finding")
+    elif kind == "treatments":
+        each("treatments", "label_en", "narrative")
+    elif kind == "results":
+        each("labs", "label_en")
+        each("imaging", "modality_en", "findings_en")
+    elif kind == "event":
+        each("facts")
+        leaf(("nurse_call",))
+        each("exam_changes", "finding")
+        leaf(("affect",))
+    elif kind == "debrief":
+        each("teaching_points")
+        each("missed_cues")
+    return out
+
+
+def render_source(state: dict[str, Any], layer: str) -> Optional[dict[str, Any]]:
+    """The source data a rendering translates: the opening or a ready layer."""
+    if layer == "opening":
+        return state.get("opening") or None
+    entry = (state.get("layers") or {}).get(layer) or {}
+    return entry.get("data") if entry.get("status") == "ready" else None
+
+
+def render_fingerprint(layer: str, data: dict[str, Any]) -> str:
+    blob = json.dumps([[list(p), t] for p, t in render_paths(layer, data)], ensure_ascii=False)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+
+
+def apply_rendering(layer: str, data: dict[str, Any], texts: list[str]) -> dict[str, Any]:
+    """A deep copy of ``data`` with the rendered texts at their paths (same shape)."""
+    out = json.loads(json.dumps(data))
+    for (path, _src), text in zip(render_paths(layer, data), texts):
+        cur: Any = out
+        for k in path[:-1]:
+            cur = cur[k]
+        cur[path[-1]] = text
+    return out
+
+
+def gate_rendering(sources: list[str], texts: list[Any]) -> list[str]:
+    """Same count, no empty text, and every number of the source kept (doses, ages, vitals)."""
+    if len(texts) != len(sources):
+        raise LayerRejected([f"return exactly {len(sources)} texts in the same order, not {len(texts)}"])
+    clean = [re.sub(r"\s+", " ", str(t or "")).strip() for t in texts]
+    issues: list[str] = []
+    for i, (src, dst) in enumerate(zip(sources, clean)):
+        if not dst:
+            issues.append(f"text {i} is empty")
+            continue
+        want = {n.replace(",", ".") for n in _NUM_RE.findall(src)}
+        have = {n.replace(",", ".") for n in _NUM_RE.findall(dst)}
+        missing = sorted(want - have)
+        if missing:
+            issues.append(f"text {i} must keep the numbers {', '.join(missing)}")
+    if issues:
+        raise LayerRejected(issues)
+    return clean
+
+
+def render_messages(layer: str, sources: list[str], locale: str) -> list[dict[str, str]]:
+    lang = _LOCALE_NAME.get(locale, "Turkish")
+    system = ("ROLE: author.render\nYou translate the learner-visible text of a SYNTHETIC medical training case "
+              f"into {lang}. Keep every number, unit, drug name and abbreviation exactly as written. Keep the "
+              "meaning and the register: a patient speaks in lay words, a clinician documents tersely. Add "
+              "nothing. Output ONE JSON object {\"texts\": [...]} with the same number of strings, in order.")
+    user = (f"LAYER: {layer}\nTARGET: {lang}\nCOUNT: {len(sources)}\nTEXTS\n"
+            + json.dumps(sources, ensure_ascii=False))
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
+
+def render_schema(n: int) -> dict[str, Any]:
+    return _obj({"texts": _arr(_str(1, 600), n, n)})
+
+
+def rendered(state: dict[str, Any], layer: str, locale: str = "tr") -> Optional[dict[str, Any]]:
+    """The current rendering of a layer (None when absent, failed or stale)."""
+    if state.get("locale") == locale:
+        return None
+    entry = ((state.get("renderings") or {}).get(locale) or {}).get(layer) or {}
+    src = render_source(state, layer)
+    if entry.get("status") != "ready" or src is None or entry.get("source") != render_fingerprint(layer, src):
+        return None
+    data = entry.get("data")
+    return data if isinstance(data, dict) else None
+
+
+def _at(data: Optional[dict[str, Any]], *path: Any) -> Optional[str]:
+    cur: Any = data
+    for k in path:
+        try:
+            cur = cur[k]
+        except (KeyError, IndexError, TypeError):
+            return None
+    return cur if isinstance(cur, str) and cur.strip() else None
+
+
+def _pair(src: Any, tr: Optional[str]) -> tuple[str, str]:
+    """(source slot, TR slot): the source text stays authoritative; a TR rendering fills only
+    the TR slot of an EN case."""
+    a, b = _bi(src)
+    return a, (tr or b)
 
 
 # --------------------------------------------------------------------------- #
@@ -706,10 +888,11 @@ def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
     layers = state.get("layers") or {}
     order = list(state.get("layer_order") or [])
     demo = opening.get("demographics") or {}
-    cc_en, cc_tr = _bi(opening.get("chief_complaint"))
+    r_open = rendered(state, "opening")
+    cc_en, cc_tr = _pair(opening.get("chief_complaint"), _at(r_open, "chief_complaint"))
     hpi: list[dict[str, Any]] = []
     for i, s in enumerate(opening.get("opening_statements") or []):
-        a, b = _bi(s.get("text"))
+        a, b = _pair(s.get("text"), _at(r_open, "opening_statements", i, "text"))
         hpi.append({"uid": f"op.{i}", "layer": "opening", "intent": s.get("intent") or "onset",
                     "answer_en": a, "answer_tr": b, "red_flag": False, "topic": ""})
     exam: list[dict[str, Any]] = []
@@ -717,6 +900,9 @@ def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
     imaging: list[dict[str, Any]] = []
     treatments: list[dict[str, Any]] = []
     pmh = meds = allergies = ""
+    pmh_r: Optional[str] = None
+    meds_r: Optional[str] = None
+    allergies_r: Optional[str] = None
     disposition = cond.get("disposition") or "observation"
     events: list[dict[str, Any]] = []
     for name in order:
@@ -724,52 +910,58 @@ def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
         if entry.get("status") != "ready":
             continue
         data = entry.get("data") or {}
+        rd = rendered(state, name)
         kind, _, sub = name.partition(".")
         if kind == "history":
             for i, it in enumerate(data.get("items") or []):
-                a, b = _bi(it.get("text"))
+                a, b = _pair(it.get("text"), _at(rd, "items", i, "text"))
                 hpi.append({"uid": f"{name}.{i}", "layer": name, "intent": it["intent"], "answer_en": a,
                             "answer_tr": b, "red_flag": bool(it.get("red_flag")), "topic": it.get("topic") or ""})
             if sub == "background":
                 pmh, meds, allergies = (str(data.get("pmh") or ""), str(data.get("meds") or ""),
                                         str(data.get("allergies") or ""))
+                pmh_r, meds_r, allergies_r = _at(rd, "pmh"), _at(rd, "meds"), _at(rd, "allergies")
         elif kind == "exam":
             for i, it in enumerate(data.get("items") or []):
-                sa, sb = _bi(it.get("system"))
-                fa, fb = _bi(it.get("finding"))
+                sa, sb = _pair(it.get("system"), _at(rd, "items", i, "system"))
+                fa, fb = _pair(it.get("finding"), _at(rd, "items", i, "finding"))
                 exam.append({"uid": f"{name}.{i}", "layer": name, "maneuver": it["maneuver"], "system_en": sa,
                              "system_tr": sb, "finding_en": fa, "finding_tr": fb, "abnormal": bool(it.get("abnormal"))})
         elif kind == "treatments":
-            for t in data.get("treatments") or []:
-                la, lb = _bi(t.get("label_en"))
-                na, nb = _bi(t.get("narrative"))
+            for i, t in enumerate(data.get("treatments") or []):
+                la, lb = _pair(t.get("label_en"), _at(rd, "treatments", i, "label_en"))
+                na, nb = _pair(t.get("narrative"), _at(rd, "treatments", i, "narrative"))
                 treatments.append({"code": t["code"], "label_en": la, "label_tr": lb,
                                    "appropriateness": t["appropriateness"], "effects": t.get("effects") or [],
                                    "narrative_en": na, "narrative_tr": nb})
             disposition = data.get("disposition") or disposition
         elif kind == "results":
             for i, lab in enumerate(data.get("labs") or []):
-                la, lb = _bi(lab.get("label_en"))
+                la, lb = _pair(lab.get("label_en"), _at(rd, "labs", i, "label_en"))
                 labs.append({**lab, "uid": f"results.lab.{i}", "label_en": la, "label_tr": lb,
                              "category": "chemistry"})
             for i, im in enumerate(data.get("imaging") or []):
-                ma, mb = _bi(im.get("modality_en"))
-                fa, fb = _bi(im.get("findings_en"))
+                ma, mb = _pair(im.get("modality_en"), _at(rd, "imaging", i, "modality_en"))
+                fa, fb = _pair(im.get("findings_en"), _at(rd, "imaging", i, "findings_en"))
                 qa, qb = _bi(im.get("image_query_en"))
                 imaging.append({"uid": f"results.img.{i}", "code": im.get("code") or "", "modality_en": ma,
                                 "modality_tr": mb, "findings_en": fa, "findings_tr": fb,
                                 "image_query_en": qa, "image_query_tr": qb})
         elif kind == "event":
             for i, ch in enumerate(data.get("exam_changes") or []):
-                fa, fb = _bi(ch.get("finding"))
+                fa, fb = _pair(ch.get("finding"), _at(rd, "exam_changes", i, "finding"))
                 exam.append({"uid": f"{name}.{i}", "layer": name, "maneuver": ch["maneuver"],
                              "system_en": ch["maneuver"], "system_tr": ch["maneuver"],
                              "finding_en": fa, "finding_tr": fb, "abnormal": True})
-            events.append({"id": sub, "layer": name, "at_ms": entry.get("at_ms"), "facts": data.get("facts") or [],
-                           "nurse_call": data.get("nurse_call") or "", "affect": data.get("affect") or ""})
-    pa, pb = _bi(pmh)
-    ma, mb = _bi(meds)
-    aa, ab = _bi(allergies)
+            ev_row: dict[str, Any] = {"id": sub, "layer": name, "at_ms": entry.get("at_ms"),
+                                      "facts": data.get("facts") or [], "nurse_call": data.get("nurse_call") or "",
+                                      "affect": data.get("affect") or ""}
+            if rd:
+                ev_row.update(facts_tr=rd.get("facts") or [], nurse_call_tr=rd.get("nurse_call") or "")
+            events.append(ev_row)
+    pa, pb = _pair(pmh, pmh_r)
+    ma, mb = _pair(meds, meds_r)
+    aa, ab = _pair(allergies, allergies_r)
     triage = dict(opening.get("triage_vitals") or {})
     spec: dict[str, Any] = {
         "seed": state["seed"], "locale": state["locale"],
@@ -802,7 +994,10 @@ def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
         "layers": {n: (layers.get(n) or {}).get("status") for n in order},
         "council": state.get("council"), "corrections": list(state.get("corrections") or []),
         "gap_filled": [], "normalization": list(state.get("normalization") or [])[-60:],
-        "degraded": bool(state.get("degraded")), "note": state.get("degraded_note"),
+        # The staged path never degrades a case: a layer is written by the model or fails (F30).
+        "degraded": False, "note": None,
+        "renderings": {loc: names for loc in RENDER_LOCALES
+                       if (names := [n for n in ["opening", *order] if rendered(state, n, loc) is not None])},
         "latency_ms": (state.get("timings") or {}).get("t_opening_ms"),
         "timings": dict(state.get("timings") or {}),
     }
@@ -849,6 +1044,7 @@ class StagedRuntime:
         self.layer_attempts = max(1, layer_attempts)
         self._tasks: dict[str, asyncio.Task[Any]] = {}
         self._layer_tasks: dict[tuple[str, str], asyncio.Task[Any]] = {}
+        self._render_tasks: dict[tuple[str, str, str], asyncio.Task[Any]] = {}
         self._notify: dict[str, asyncio.Event] = {}
         self._spawned: set[asyncio.Task[Any]] = set()
         self._sem = asyncio.Semaphore(LAYER_CONCURRENCY)
@@ -866,9 +1062,12 @@ class StagedRuntime:
         return {k: int(statistics.median(v)) if v else DEFAULT_ETA_MS[k] for k, v in self._medians.items()}
 
     async def tail(self, thread_id: str, after: int = 0, *, cap_s: float = 900.0,
-                   until: tuple[str, ...] = ("done",)) -> AsyncIterator[tuple[int, str, dict[str, Any]]]:
+                   until: tuple[str, ...] = ("done",), follow: bool = False
+                   ) -> AsyncIterator[tuple[int, str, dict[str, Any]]]:
         """Replay events after ``after`` and follow the log until an ``until`` event or the cap.
-        A fatal error (S1 failed) also ends the tail."""
+        A fatal error (S1 failed) also ends the tail. With ``follow`` the tail stays open after
+        ``done`` until the cap (room members receive later branch events, renderings and Director
+        updates) and yields ``(cursor, "", {})`` as a keepalive while the log is idle."""
         loop = asyncio.get_running_loop()
         deadline = loop.time() + cap_s
         cursor = int(after or 0)
@@ -879,9 +1078,11 @@ class StagedRuntime:
             for eid, name, data in rows:
                 cursor = eid
                 yield eid, name, data
-                if name in until or (name == "error" and data.get("fatal")):
+                if not follow and (name in until or (name == "error" and data.get("fatal"))):
                     return
-            if not self.running(thread_id) and not rows:
+            if rows:
+                continue        # read again before waiting: the log may already hold more
+            if not follow and not self.running(thread_id):
                 return
             remaining = deadline - loop.time()
             if remaining <= 0:
@@ -889,6 +1090,8 @@ class StagedRuntime:
             try:
                 await asyncio.wait_for(ev.wait(), min(remaining, 15.0))
             except asyncio.TimeoutError:
+                if follow and deadline - loop.time() > 0:
+                    yield cursor, "", {}
                 continue
 
     def spawn(self, coro: Any) -> asyncio.Task[Any]:
@@ -1176,7 +1379,7 @@ class StagedRuntime:
         notes: list[str] = []
         error: Optional[tuple[str, int, str]] = None
         async with (self._sem if background else contextlib.nullcontext()):
-            for attempt in range(self.layer_attempts):
+            for _attempt in range(self.layer_attempts):
                 state = self.store.get(thread_id) or {}
                 schema, cap = layer_schema(layer)
                 try:
@@ -1185,20 +1388,25 @@ class StagedRuntime:
                                              schema, max_tokens=cap, temperature=TEMPERATURE["layer"])
                     data, notes = gate_layer(layer, dict(reply.data), state)
                     if kind == "treatments":
-                        data, more = await self._safety_gate_treatments(
-                            thread_id, data, state, last_attempt=attempt + 1 >= self.layer_attempts)
-                        notes += more
+                        await self._safety_gate_treatments(thread_id, data, state)
                     elif kind == "event":
                         data = await self._safety_gate_event(thread_id, layer, data, state)
                     error = None
                     break
+                except SafetyVeto as exc:
+                    issues = exc.issues
+                    data = None
+                    error = ("safety_veto", 502, "; ".join(exc.issues))
                 except LayerRejected as exc:
                     issues = exc.issues
+                    data = None
                     error = ("layer_rejected", 502, "; ".join(exc.issues))
                 except ModelOutputInvalid as exc:
                     issues = ["the reply was not valid JSON"]
+                    data = None
                     error = ("model_output_invalid", 502, str(exc))
                 except ModelUnreachable as exc:
+                    data = None
                     error = ("model_unreachable", 503, str(exc))
                     break
         latency = (time.monotonic() - started) * 1000.0
@@ -1206,18 +1414,22 @@ class StagedRuntime:
             self._medians[kind].append(latency)
         if data is None:
             err = error or ("layer_failed", 502, "")
+            reason = failure_reason(layer, err[0], self.layer_attempts)
+            failed_issues = [str(i)[:200] for i in issues][:6]
 
             def failed(s: dict[str, Any]) -> None:
                 s.setdefault("layers", {})[layer] = {**(s["layers"].get(layer) or {}), "status": "failed",
-                                                     "error": err[0]}
+                                                     "error": err[0], "reason": reason, "issues": failed_issues}
             self.store.update(thread_id, failed)
             self.emit(thread_id, "error", {"stage": layer, "error": err[0], "status": err[1], "retryable": True,
+                                           "reason": reason, "issues": failed_issues,
                                            "detail": err[2][:300], "thread_id": thread_id})
             return
         final = data
 
         def ready(s: dict[str, Any]) -> None:
             prev = s.setdefault("layers", {}).get(layer) or {}
+            prev.pop("error", None)
             s["layers"][layer] = {"status": "ready", "data": final, "attempts": int(prev.get("attempts") or 0) + 1,
                                   "seen": bool(prev.get("seen")), "latency_ms": round(latency, 1),
                                   **({"at_ms": at_ms} if at_ms is not None else {})}
@@ -1233,12 +1445,97 @@ class StagedRuntime:
         validate_spec(st["spec"])
         self.emit(thread_id, "layer.ready", {"layer": layer, "data": final, "spec": st["spec"]})
 
+    # ---------------------------------------------------------- renderings (on demand)
+    async def render_layer(self, thread_id: str, layer: str, locale: str) -> dict[str, Any]:
+        """A rendering of a layer the learner has seen, in ``locale``: one model call per layer,
+        cached on the thread (``state["renderings"][locale][layer]``) and reused until the source
+        layer changes. The source text stays authoritative: the Director, the judges and grading
+        read it, and the rendering fills only the TR slot of the spec. Raises KeyError (no
+        thread or unknown layer), ValueError (the case's own locale, or a locale without
+        renderings) and LookupError (the layer is not written yet)."""
+        if not renderable(layer):
+            raise KeyError(layer)
+        state = self.store.get(thread_id)
+        if state is None:
+            raise KeyError(thread_id)
+        if locale not in RENDER_LOCALES or locale == state.get("locale"):
+            raise ValueError(locale)
+        src = render_source(state, layer)
+        if src is None:
+            raise LookupError(layer)
+        cached = ((state.get("renderings") or {}).get(locale) or {}).get(layer) or {}
+        if cached.get("status") == "ready" and cached.get("source") == render_fingerprint(layer, src):
+            return cached
+        key = (thread_id, locale, layer)
+        task = self._render_tasks.get(key)
+        if task is None or task.done():
+            task = asyncio.create_task(self._render(thread_id, layer, locale))
+            self._render_tasks[key] = task
+        await asyncio.shield(task)
+        st = self.store.get(thread_id) or {}
+        return ((st.get("renderings") or {}).get(locale) or {}).get(layer) or {}
+
+    async def _render(self, thread_id: str, layer: str, locale: str) -> None:
+        state = self.store.get(thread_id) or {}
+        src = render_source(state, layer) or {}
+        paths = render_paths(layer, src)
+        sources = [t for _p, t in paths]
+        fingerprint = render_fingerprint(layer, src)
+        issues: list[str] = []
+        texts: Optional[list[str]] = None
+        error = "rendering_rejected"
+        if sources:
+            cap = min(MAX_TOKENS["render"], 80 + sum(len(t) for t in sources))
+            for _attempt in range(self.layer_attempts):
+                msgs = render_messages(layer, sources, locale)
+                if issues:
+                    msgs[1]["content"] += "\nFIX: " + "; ".join(issues[:6])
+                try:
+                    reply = await self._call(thread_id, f"render:{layer}", msgs, render_schema(len(sources)),
+                                             max_tokens=cap, temperature=TEMPERATURE["patch"])
+                    texts = gate_rendering(sources, list(reply.data.get("texts") or []))
+                    break
+                except LayerRejected as exc:
+                    issues = exc.issues
+                except ModelOutputInvalid:
+                    issues = ["the reply was not valid JSON"]
+                    error = "model_output_invalid"
+                except ModelUnreachable:
+                    error = "model_unreachable"
+                    break
+        else:
+            texts = []
+        if texts is None:
+            entry: dict[str, Any] = {"status": "failed", "error": error, "issues": issues[:6], "source": fingerprint}
+        else:
+            entry = {"status": "ready", "data": apply_rendering(layer, src, texts), "source": fingerprint}
+        final = entry
+
+        def put(s: dict[str, Any]) -> None:
+            s.setdefault("renderings", {}).setdefault(locale, {})[layer] = final
+            if s.get("opening"):
+                s["spec"] = assemble_spec(s)
+
+        st = self.store.update(thread_id, put)
+        if st is None:
+            return
+        if final["status"] == "ready":
+            validate_spec(st["spec"])
+            self.emit(thread_id, "layer.rendered", {"layer": layer, "locale": locale, "data": final["data"],
+                                                    "spec": st["spec"]})
+        else:
+            self.emit(thread_id, "error", {"stage": f"render:{layer}", "error": final["error"], "status": 502,
+                                           "retryable": True, "locale": locale, "issues": final["issues"],
+                                           "reason": f"The {_LOCALE_NAME.get(locale, locale)} rendering of this "
+                                                     "part could not be written; the source text is shown.",
+                                           "thread_id": thread_id})
+
     # ---------------------------------------------------------- safety (blocking)
-    async def _safety_gate_treatments(self, thread_id: str, data: dict[str, Any], state: dict[str, Any],
-                                      *, last_attempt: bool) -> tuple[dict[str, Any], list[str]]:
-        """The safety judge blocks the treatment layer: deterministic fixture oracle first, then the
-        model judge on the case with this table. A bound veto rejects the layer (regenerated with
-        the issues); when the attempts run out, fixture appropriateness is enforced."""
+    async def _safety_gate_treatments(self, thread_id: str, data: dict[str, Any], state: dict[str, Any]) -> None:
+        """The safety judge blocks the treatment layer: the deterministic checks first, then the
+        model judge on the case with this table. A veto raises :class:`SafetyVeto`; the layer is
+        rewritten once with the issues and otherwise fails honestly (06b F30). The fixture is a
+        validation oracle only: its appropriateness is never written into the table."""
         draft = {**(state.get("spec") or {}), "treatments": [
             {**t, "label_tr": t.get("label_en")} for t in data["treatments"]]}
         vote, event = await J.run_judge("safety_dosing", draft, state["condition"], self.llm, round_no=0)
@@ -1246,19 +1543,8 @@ class StagedRuntime:
         self.emit(thread_id, "judge", {"layer": "treatments", "judge": "safety_dosing", "blocking": True,
                                        "decision": "accept" if vote["verdict"] == "pass" else "rejected",
                                        "issues": vote.get("issues") or []})
-        if vote["verdict"] == "pass":
-            return data, []
-        if not last_attempt:
-            raise LayerRejected(list(vote.get("issues") or ["safety judge vetoed the table"]))
-        from server.orchestration.graph import apply_safety_overrides
-
-        notes = apply_safety_overrides(draft, state["condition"])
-        fixed = {t["code"]: t["appropriateness"] for t in draft["treatments"]}
-        for t in data["treatments"]:
-            t["appropriateness"] = fixed.get(t["code"], t["appropriateness"])
-        self.store.update(thread_id, lambda s: s.update(degraded=True,
-                                                        degraded_note="treatments: safety overrides applied"))
-        return data, notes
+        if vote["verdict"] != "pass":
+            raise SafetyVeto(list(vote.get("issues") or ["safety judge vetoed the table"]))
 
     async def _safety_gate_event(self, thread_id: str, layer: str, data: dict[str, Any], state: dict[str, Any]
                                  ) -> dict[str, Any]:
@@ -1279,7 +1565,7 @@ class StagedRuntime:
                                        "decision": "accept" if ok else "rejected",
                                        "issues": list(reply.data.get("issues") or [])})
         if not ok:
-            raise LayerRejected(list(reply.data.get("issues") or ["unsafe drug statement in event"]))
+            raise SafetyVeto(list(reply.data.get("issues") or ["unsafe drug statement in event"]))
         return data
 
     # ---------------------------------------------------------- async judges -> patches
