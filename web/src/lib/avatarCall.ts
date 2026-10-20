@@ -44,7 +44,17 @@ export interface AvatarCallHandle {
   metrics: AvatarCallMetrics;
   samples: AvatarSample[];
   speak: (text: string) => Promise<boolean>;
+  /** Receiver-side numbers from getStats (audio energy proves the voice arrived, not just packets). */
+  stats: () => Promise<AvatarCallStats>;
   end: () => void;
+}
+
+export interface AvatarCallStats {
+  audioPackets: number;
+  audioEnergy: number;
+  videoFrames: number;
+  videoFps: number | null;
+  rttMs: number | null;
 }
 
 export interface StartAvatarCallOptions {
@@ -307,5 +317,22 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
     return true;
   };
 
-  return { session, metrics, samples, speak, end };
+  const stats = async (): Promise<AvatarCallStats> => {
+    const out: AvatarCallStats = { audioPackets: 0, audioEnergy: 0, videoFrames: 0, videoFps: null, rttMs: null };
+    const report = await pc.getStats();
+    report.forEach((r: Record<string, unknown>) => {
+      if (r.type === "inbound-rtp" && r.kind === "audio") {
+        out.audioPackets = Number(r.packetsReceived ?? 0);
+        out.audioEnergy = Number(r.totalAudioEnergy ?? 0);
+      } else if (r.type === "inbound-rtp" && r.kind === "video") {
+        out.videoFrames = Number(r.framesDecoded ?? 0);
+        out.videoFps = r.framesPerSecond != null ? Number(r.framesPerSecond) : null;
+      } else if (r.type === "candidate-pair" && r.nominated && r.currentRoundTripTime != null) {
+        out.rttMs = Math.round(Number(r.currentRoundTripTime) * 1000);
+      }
+    });
+    return out;
+  };
+
+  return { session, metrics, samples, speak, stats, end };
 }

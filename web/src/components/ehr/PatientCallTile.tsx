@@ -234,6 +234,7 @@ export function PatientCallTile({
           metrics: { prepareMs: null, answerMs: null, firstFrameMs: null, speechStartMs: null, lipLagMs: null, ttsMs: null, provider: "tavus" },
           samples: [],
           speak: async () => false,
+          stats: async () => ({ audioPackets: 0, audioEnergy: 0, videoFrames: 0, videoFps: null, rttMs: null }),
           end: () => void voiceApi.avatarEnd(ses.data.session_id),
         };
         setMode("tavus");
