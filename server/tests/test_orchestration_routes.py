@@ -12,6 +12,31 @@ from server.orchestration.routes import OrchestrationRuntime
 from server.tests.conftest import make_settings
 from server.tests.openai_double import Scenario, build_double
 
+# Local-mode principal whose sub is the learner id the requests name (review 04 O3).
+ME = {"X-User-Id": "L-route"}
+
+
+ADMIN = "adm-orch"
+
+
+@pytest.fixture(autouse=True)
+def local_auth(tmp_path):
+    """The lifespan is not run under ASGITransport: install a local-mode auth service."""
+    from types import SimpleNamespace
+
+    from server.auth.deps import AuthService
+    from server.auth.store import UserRoleStore
+    from server.registry.store import RegistryStore
+
+    state = app_module.app.state
+    saved = {k: getattr(state, k, None) for k in ("auth", "settings")}
+    db = str(tmp_path / "auth.db")
+    state.auth = AuthService(RegistryStore(db, secret_key=None), UserRoleStore(db), env_mode="local")
+    state.settings = SimpleNamespace(admin_token=ADMIN)
+    yield
+    for k, v in saved.items():
+        setattr(state, k, v)
+
 
 @pytest.fixture
 async def client(runtime: OrchestrationRuntime):
@@ -116,13 +141,13 @@ async def test_stream_event_order(client: httpx.AsyncClient):
 async def test_checkpoint_read_after_generate(client: httpx.AsyncClient):
     r = await client.post("/v2/case/generate", json={"seed": 3, "thread_id": "th-read"})
     assert r.status_code == 200
-    r2 = await client.get("/v2/case/th-read")
+    r2 = await client.get("/v2/case/th-read", headers=ME)
     assert r2.status_code == 200
     body = r2.json()
     assert body["status"] == "done"
     assert body["spec"]["seed"] == r.json()["spec"]["seed"]
     assert body["trace_summary"]["nodes"][-1] == "finalize"
-    r3 = await client.get("/v2/case/does-not-exist")
+    r3 = await client.get("/v2/case/does-not-exist", headers=ME)
     assert r3.status_code == 404 and r3.json()["error"] == "thread_not_found"
 
 
@@ -131,7 +156,7 @@ async def test_director_step_from_spec_then_from_state(client: httpx.AsyncClient
     spec = gen.json()["spec"]
     r = await client.post("/v2/director/step", json={
         "spec": spec, "action": {"kind": "question", "ref": "onset"}, "learner_id": "L-route", "use_model": False,
-    })
+    }, headers=ME)
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["patient_visible_changes"]["new_facts"]
@@ -141,13 +166,109 @@ async def test_director_step_from_spec_then_from_state(client: httpx.AsyncClient
     contra = next(t["code"] for t in spec["treatments"] if t["appropriateness"] == "contraindicated")
     r2 = await client.post("/v2/director/step", json={
         "case_state": state, "action": {"kind": "treatment", "ref": contra}, "learner_id": "L-route", "use_model": True,
-    })
+    }, headers=ME)
     assert r2.status_code == 200
     body2 = r2.json()
     assert any(n["note"].startswith("contraindicated treatment") for n in body2["director_notes"])
     assert body2["patient_visible_changes"]["utterance_en"] == "It hurts, doctor, please help."
-    profile = (await client.get("/v2/learner/L-route")).json()
+    profile = (await client.get("/v2/learner/L-route", headers=ME)).json()
     assert profile["error_count"] == 1 and profile["weak_systems"] == ["cardiology"]
     assert profile["conditions_seen"] == []  # generation had no learner_id
     bad = await client.post("/v2/director/step", json={"action": {"kind": "question", "ref": "onset"}})
     assert bad.status_code == 422
+
+
+# --- review 04 O3: learner memory and checkpoints belong to their learner ---- #
+
+async def test_learner_memory_requires_a_caller_and_only_their_own_id(client: httpx.AsyncClient):
+    assert (await client.get("/v2/learner/L-victim")).status_code == 401
+    other = await client.get("/v2/learner/L-victim", headers={"X-User-Id": "L-attacker"})
+    assert other.status_code == 403 and other.json()["error"] == "forbidden_learner"
+    assert (await client.get("/v2/learner/L-victim", headers={"X-User-Id": "L-victim"})).status_code == 200
+    # The hashed form of the caller's own id is accepted too.
+    from server.auth.deps import Principal
+
+    hashed = Principal(sub="L-victim", email=None, name=None, roles=["student"], org="local", verified=False,
+                       mode="local").user_hash
+    assert (await client.get(f"/v2/learner/{hashed}", headers={"X-User-Id": "L-victim"})).status_code == 200
+    # A spoofed faculty header is capped at resident in local mode (O2), so it cannot read others.
+    spoof = await client.get("/v2/learner/L-victim", headers={"X-User-Id": "x", "X-User-Role": "faculty"})
+    assert spoof.status_code == 403
+
+
+async def test_faculty_with_the_admin_token_may_read_any_learner(client: httpx.AsyncClient):
+    r = await client.get("/v2/learner/L-victim",
+                         headers={"X-User-Id": "fac", "X-User-Role": "faculty", "X-Admin-Token": ADMIN})
+    assert r.status_code == 200
+
+
+async def test_director_step_cannot_write_another_learners_memory(client: httpx.AsyncClient):
+    gen = await client.post("/v2/case/generate", json={"system": "cardiology", "complaint": "STEMI", "seed": 1})
+    body = {"spec": gen.json()["spec"], "action": {"kind": "question", "ref": "onset"}, "use_model": False}
+    assert (await client.post("/v2/director/step", json=body)).status_code == 200      # no learner_id: anonymous ok
+    assert (await client.post("/v2/director/step", json={**body, "learner_id": "L-victim"})).status_code == 401
+    poisoned = await client.post("/v2/director/step", json={**body, "learner_id": "L-victim"},
+                                 headers={"X-User-Id": "L-attacker"})
+    assert poisoned.status_code == 403
+    gen_other = await client.post("/v2/case/generate", json={"seed": 2, "learner_id": "L-victim"},
+                                  headers={"X-User-Id": "L-attacker"})
+    assert gen_other.status_code == 403
+
+
+async def test_checkpoint_of_a_learner_is_hidden_from_other_callers(client: httpx.AsyncClient):
+    r = await client.post("/v2/case/generate", json={"system": "cardiology", "seed": 3, "thread_id": "th-own",
+                                                     "learner_id": "L-owner"}, headers={"X-User-Id": "L-owner"})
+    assert r.status_code == 200, r.text
+    assert (await client.get("/v2/case/th-own")).status_code == 401
+    hidden = await client.get("/v2/case/th-own", headers={"X-User-Id": "L-other"})
+    assert hidden.status_code == 404 and hidden.json()["error"] == "thread_not_found"
+    assert (await client.get("/v2/case/th-own", headers={"X-User-Id": "L-owner"})).status_code == 200
+
+
+# --- review 04 O7 / O11: one runtime under concurrency, capped SSE ---------- #
+
+async def test_get_runtime_creates_exactly_one_runtime_under_concurrent_first_requests(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+
+    from server.orchestration import routes as orch
+
+    created: list[object] = []
+
+    async def slow_create(settings=None, **_kw):
+        await asyncio.sleep(0.01)
+        rt = object()
+        created.append(rt)
+        return rt
+
+    monkeypatch.setattr(orch.OrchestrationRuntime, "create", staticmethod(slow_create))
+    state = SimpleNamespace(settings=None)
+    request = SimpleNamespace(app=SimpleNamespace(state=state))
+    got = await asyncio.gather(*(orch.get_runtime(request) for _ in range(5)))
+    assert len(created) == 1 and all(g is created[0] for g in got)
+
+
+async def test_sse_stream_is_capped_server_side(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+
+    from server.orchestration import routes as orch
+
+    class StuckGraph:
+        def astream(self, *_a, **_kw):
+            async def gen():
+                yield {"sample_condition": {"status": "sampled", "trace": []}}
+                await asyncio.sleep(3600)          # a node that never returns
+                yield {}
+
+            return gen()
+
+    rt = SimpleNamespace(graph=StuckGraph(), config=lambda tid: {"configurable": {"thread_id": tid}})
+    monkeypatch.setattr(orch, "SSE_MAX_DURATION_S", 0.2)
+    req = orch.GenerateV2Request(thread_id="th-stuck")
+    events = []
+    async with asyncio.timeout(5):
+        async for chunk in orch._stream_events(rt, req):
+            events.extend(_parse_sse(chunk))
+    assert [e[0] for e in events] == ["start", "node", "error"]
+    assert events[-1][1]["error"] == "stream_timeout" and events[-1][1]["status"] == 504

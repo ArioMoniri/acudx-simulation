@@ -244,6 +244,9 @@ export function DeanPage() {
                   ? t("panels.dean.fallback.forbidden")
                   : t("panels.dean.fallback.body", { error: error ?? "unknown" })}
               </p>
+              {authMode === "local" && (error === "forbidden" || error === "unauthenticated") ? (
+                <p className="text-xs text-muted">{t("identity.badge.localPrivileged")}</p>
+              ) : null}
             </div>
             <Button size="sm" variant="secondary" onClick={refresh}>
               {t("panels.common.retry")}

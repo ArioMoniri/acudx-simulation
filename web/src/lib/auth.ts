@@ -142,6 +142,8 @@ export interface IdentityProviderPublic {
   role_claim_path: string;
   org_claim_path: string;
   flavor: string;
+  /** Server-side configuration error (for example an empty audience); bearers are refused while set. */
+  config_error?: string | null;
 }
 
 export interface DiscoveryPublic {

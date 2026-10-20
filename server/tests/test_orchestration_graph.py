@@ -213,3 +213,30 @@ def test_price_table_and_cost():
     assert cost_usd("openai/gpt-oss-120b", 1_000_000, 1_000_000) == pytest.approx(0.75)
     assert cost_usd("some-unknown-model", 10, 10) is None
     assert find_price(None) is None
+
+
+async def test_structured_call_disables_qwen3_thinking_and_does_not_retry_read_timeouts():
+    """Live findings 2026-10-20 on the GPU worker: Qwen3 spent the budget thinking, and a
+    read timeout was retried three times (282 s) before the honest 503."""
+    import httpx
+    from server.orchestration.llm import StructuredLLM
+    from server.tests.conftest import make_settings
+
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json as _json
+        seen.append(_json.loads(request.content))
+        raise httpx.ReadTimeout("slow", request=request)
+
+    settings = make_settings(casegen_base_url="http://127.0.0.1:3040/v1", casegen_model="acudx-llm")
+    llm = StructuredLLM(settings, transport=httpx.MockTransport(handler), retries=2)
+    import pytest
+    from server.orchestration.llm import ModelUnreachable
+    with pytest.raises(ModelUnreachable) as exc:
+        await llm.complete_json([{"role": "user", "content": "x"}], schema={"type": "object"},
+                             schema_name="t", role="casegen", temperature=0.1, max_tokens=10)
+    assert len(seen) == 1, "a read timeout must not be retried"
+    assert seen[0]["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "ReadTimeout" in str(exc.value)
+    await llm.aclose()

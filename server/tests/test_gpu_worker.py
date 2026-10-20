@@ -74,8 +74,14 @@ def _mock_launch_flow():
         return_value=httpx.Response(200, json={"data": {"instance_ids": [INSTANCE_ID]}}))
     inst = load_fixture("instances")["data"][1]
     booting = {**inst, "status": "booting", "ip": None}
-    respx.get(f"{LAMBDA_API_BASE}/instances/{INSTANCE_ID}").mock(side_effect=[
-        httpx.Response(200, json={"data": booting}), httpx.Response(200, json={"data": inst})])
+    # First poll: booting; every later read (launch poll, reaper reconcile): active.
+    polls = {"n": 0}
+
+    def _instance(_request: httpx.Request) -> httpx.Response:
+        polls["n"] += 1
+        return httpx.Response(200, json={"data": booting if polls["n"] == 1 else inst})
+
+    respx.get(f"{LAMBDA_API_BASE}/instances/{INSTANCE_ID}").mock(side_effect=_instance)
     health = respx.get(f"https://{DOMAIN}/healthz").mock(side_effect=[
         httpx.Response(502), httpx.Response(200, text="ok")])
     return put, launch, health
@@ -111,7 +117,7 @@ def test_policy_defaults_and_persist(tmp_path):
     store.set_policy(WorkerPolicy(idle_minutes=5, daily_budget_usd=3.5))
     again = WorkerStore(str(tmp_path / "acudx.db")).get_policy()
     assert again.idle_minutes == 5 and again.daily_budget_usd == 3.5
-    assert again.llm_model == "Qwen/Qwen3-32B-AWQ"
+    assert again.llm_model == "Qwen/Qwen3-14B-AWQ"
     assert again.allowlist[0] == "gpu_1x_a100_sxm4"
 
 
@@ -376,3 +382,261 @@ async def test_reaper_terminates_an_orphaned_boot_after_both_budgets(tmp_path):
         assert m.store.ledger(limit=1)[0].reason == "stale_boot"
     finally:
         await m.aclose()
+
+
+# --- review 04 O1: the bearer token never travels in a plaintext URL -------- #
+
+def _ready_worker(m: WorkerManager, clock: FakeClock, token: str = "tok-abc_123", status: str = "ready"):
+    w = m.store.insert_worker(instance_id=INSTANCE_ID, instance_type="gpu_1x_a10", region="us-east-1", token=token,
+                              status=status, price_cents_per_hour=129, launched_at=clock.t, last_used_at=clock.t,
+                              ip=IP, domain=DOMAIN)
+    m.store.open_ledger(w)
+    return w
+
+
+def test_diag_secret_is_an_hmac_of_the_token_and_matches_the_worker_side_openssl_command():
+    import hashlib
+    import hmac
+    import shutil
+    import subprocess
+
+    from server.providers.gpu_worker import diag_secret
+
+    token = "tok-abc_123"
+    expected = hmac.new(token.encode(), b"acudx-diag-v1", hashlib.sha256).hexdigest()[:32]
+    assert diag_secret(token) == expected == "68557a6d26d970bccb1ed2fdf6dddeb1"
+    assert token not in diag_secret(token) and len(diag_secret(token)) == 32
+    cmd = "printf '%s' acudx-diag-v1 | openssl dgst -sha256 -hmac \"$WORKER_TOKEN\" -r | cut -c1-32"
+    assert cmd in CLOUD_INIT.read_text(encoding="utf-8")
+    if shutil.which("openssl") and shutil.which("bash"):
+        got = subprocess.run(["bash", "-c", cmd], env={"WORKER_TOKEN": token, "PATH": "/usr/bin:/bin"},
+                             capture_output=True, text=True, check=True).stdout.strip()
+        assert got == expected
+
+
+@respx.mock
+async def test_boot_log_uses_the_derived_secret_and_sends_the_bearer_only_over_tls(tmp_path):
+    from server.providers.gpu_worker import diag_secret
+
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    token = "tok-abc_123"
+    secret = diag_secret(token)
+    plain = respx.get(url__startswith=f"http://{IP}/").mock(return_value=httpx.Response(200, text="line1\nline2"))
+    tls = respx.get(url__startswith=f"https://{DOMAIN}/diag/").mock(return_value=httpx.Response(200, text="snap"))
+    try:
+        _ready_worker(m, clock, token=token, status="booting")
+        booting = await m.boot_log()
+        assert booting["available"] and booting["source"] == "port80" and booting["cloud_init"] == "line1\nline2"
+        m.store.update_worker(m.store.active_worker().id, status="ready")
+        ready = await m.boot_log()
+        assert ready["available"] and ready["source"] == "tls" and ready["docker_status"] == "snap"
+    finally:
+        await m.aclose()
+    assert respx.calls
+    for call in respx.calls:
+        assert token not in str(call.request.url), call.request.url
+        assert f"/diag/{secret}/" in str(call.request.url)
+    assert plain.calls and all("authorization" not in c.request.headers for c in plain.calls)
+    assert tls.calls and all(c.request.headers["authorization"] == f"Bearer {token}" for c in tls.calls)
+
+
+@respx.mock
+async def test_boot_log_falls_back_to_port_80_when_the_tls_snapshot_is_not_there_yet(tmp_path):
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    respx.get(url__startswith=f"https://{DOMAIN}/diag/").mock(return_value=httpx.Response(404))
+    respx.get(url__startswith=f"http://{IP}/diag/").mock(return_value=httpx.Response(200, text="boot"))
+    try:
+        _ready_worker(m, clock)
+        out = await m.boot_log()
+    finally:
+        await m.aclose()
+    assert out["available"] and out["source"] == "port80" and out["cloud_init"] == "boot"
+
+
+def _cloud_init() -> dict:
+    import yaml
+
+    return yaml.safe_load(CLOUD_INIT.read_text(encoding="utf-8"))
+
+
+def _written(path_suffix: str) -> str:
+    return next(f["content"] for f in _cloud_init()["write_files"] if f["path"].endswith(path_suffix))
+
+
+def _compose() -> dict:
+    import yaml
+
+    return yaml.safe_load(_written("/docker-compose.yml"))
+
+
+def test_caddy_checks_the_bearer_before_any_handler_and_serves_the_final_diag_snapshot():
+    """Caddy orders a bare `respond` after `handle`, so the old top-level `respond @unauth 401`
+    never ran next to the catch-all `handle`: every worker route was open. The check must be
+    the first thing inside one ordered `route` block (validated with caddy 2.9.1 adapt)."""
+    caddy = _written("/Caddyfile")
+    route_at = caddy.index("route {")
+    unauth_at = caddy.index('@unauth not header Authorization "Bearer {$WORKER_TOKEN}"')
+    respond_at = caddy.index("respond @unauth 401")
+    first_handle = min(caddy.index(h) for h in ("handle_path ", "handle /", "handle {"))
+    assert route_at < unauth_at < respond_at < first_handle
+    assert "handle /diag/{$WORKER_DIAG_SECRET}/* {" in caddy and "file_server" in caddy
+    caddy_svc = _compose()["services"]["caddy"]
+    assert "/opt/acudx/public/diag:/srv/diag:ro" in caddy_svc["volumes"]
+    assert caddy_svc["image"] == "caddy:2.9.1"
+
+
+def test_diag_server_is_redacted_secret_scoped_and_stops_once_vllm_is_healthy():
+    diag = _written("/diag.sh")
+    assert 'd="$pub/diag/$WORKER_DIAG_SECRET"' in diag and "$WORKER_TOKEN/" not in diag
+    # Only docker ps plus the last 40 lines of vllm and caddy, each through the redaction filter.
+    assert 'logs --no-color --tail 40 "$svc" 2>&1 | redact' in diag and "for svc in vllm caddy" in diag
+    assert "compose logs --tail" not in diag
+    assert "grep -viE 'authorization|bearer|token|api[_-]?key|secret|passw'" in diag
+    assert 'grep -vF -- "$WORKER_TOKEN"' in diag
+    # The cloud-init log is copied through the filter, never symlinked raw.
+    assert "ln -s" not in diag and "redact < /var/log/cloud-init-output.log" in diag
+    # Self-stop after 300 s of consecutive vLLM /health 200s.
+    assert "healthy_for_s=300" in diag and 'kill "$srv"' in diag
+    assert "exec -T vllm curl -sf -o /dev/null http://localhost:8000/health" in diag
+    runcmd = "\n".join(_cloud_init()["runcmd"])
+    assert runcmd.index("WORKER_DIAG_SECRET=$s") < runcmd.index("nohup /opt/acudx/diag.sh")
+
+
+def test_chatterbox_build_keeps_cuda_torch_and_attaches_the_gpu():
+    """Task 24: the Chatterbox container logged "No CUDA GPUs are available"."""
+    dockerfile = _written("/chatterbox.Dockerfile")
+    assert dockerfile.startswith("FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04")
+    assert "ghcr.io/astral-sh/uv:0.8.22" in dockerfile and ":latest" not in dockerfile
+    assert "ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124" in dockerfile
+    assert "ARG TORCH_VERSION=2.6.0+cu124" in dockerfile and "--constraint /app/torch-constraints.txt" in dockerfile
+    assert "chatterbox-multilingual.git@${CHATTERBOX_MULTILINGUAL_REF}" in dockerfile and "@exp" not in dockerfile
+    assert "sys.exit(0 if torch.version.cuda else 1)" in dockerfile
+    svc = _compose()["services"]["chatterbox"]
+    assert svc["build"]["dockerfile"] == "docker/Dockerfile.acudx.gpu" and svc["runtime"] == "nvidia"
+    assert svc["image"] == "acudx/chatterbox-tts-api:a5f4661-cu124"
+    assert svc["deploy"]["resources"]["reservations"]["devices"][0]["capabilities"] == ["gpu"]
+    runcmd = "\n".join(_cloud_init()["runcmd"])
+    assert "docker/Dockerfile.acudx.gpu" in runcmd and "torch.cuda.is_available()" in runcmd
+    # /healthz is vLLM only: the side-cars never gate worker readiness.
+    caddy = _written("/Caddyfile")
+    block = caddy[caddy.index("handle /healthz {"):]
+    assert block[:block.index("}")].count("reverse_proxy vllm:8000") == 1
+
+
+# --- review 04 O4: provider-side state is reconciled every reaper pass ------ #
+
+@respx.mock
+@pytest.mark.parametrize("provider", ["terminated", "preempted", "missing"])
+async def test_reaper_closes_the_ledger_when_the_provider_no_longer_runs_a_ready_worker(tmp_path, provider):
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    inst = load_fixture("instances")["data"][1]
+    route = respx.get(f"{LAMBDA_API_BASE}/instances/{INSTANCE_ID}")
+    if provider == "missing":
+        route.mock(return_value=httpx.Response(404, json={"error": {"code": "global/object-does-not-exist",
+                                                                    "message": "not found"}}))
+    else:
+        route.mock(return_value=httpx.Response(200, json={"data": {**inst, "status": provider}}))
+    term = respx.post(f"{LAMBDA_API_BASE}/instance-operations/terminate").mock(
+        return_value=httpx.Response(200, json={"data": {"terminated_instances": []}}))
+    try:
+        _ready_worker(m, clock)
+        clock.advance(30 * 60)
+        m.touch()                                    # busy, under budget: only the provider state ends it
+        assert await m.reap_once() is True
+    finally:
+        await m.aclose()
+    assert not term.called, "an instance the provider already ended is not terminated again"
+    assert m.store.active_worker() is None
+    entry = m.store.ledger(limit=1)[0]
+    assert entry.reason == f"provider:{provider}" and entry.ended_at == clock.t
+    assert entry.cost_usd == pytest.approx(1.29 * 0.5, abs=0.001)
+
+
+@respx.mock
+async def test_reaper_keeps_a_ready_worker_when_the_provider_is_only_flaky(tmp_path):
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    respx.get(f"{LAMBDA_API_BASE}/instances/{INSTANCE_ID}").mock(
+        return_value=httpx.Response(500, json={"error": {"code": "global/internal-error", "message": "boom"}}))
+    try:
+        _ready_worker(m, clock)
+        assert await m.reap_once() is False
+        assert m.store.active_worker().status == "ready"
+    finally:
+        await m.aclose()
+
+
+@respx.mock
+async def test_ensure_worker_fails_fast_when_a_ready_row_is_gone_on_the_provider(tmp_path):
+    from server.providers.gpu_worker import WorkerFailed
+
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    inst = load_fixture("instances")["data"][1]
+    respx.get(f"https://{DOMAIN}/healthz").mock(return_value=httpx.Response(502))
+    respx.get(f"{LAMBDA_API_BASE}/instances/{INSTANCE_ID}").mock(
+        return_value=httpx.Response(200, json={"data": {**inst, "status": "terminated"}}))
+    try:
+        _ready_worker(m, clock)
+        with pytest.raises(WorkerFailed):
+            await m.ensure_worker()
+    finally:
+        await m.aclose()
+    assert m.store.ledger(limit=1)[0].reason == "provider:terminated"
+
+
+# --- evidence retention: a ready_timeout termination leaves the boot log behind --- #
+
+@respx.mock
+async def test_ready_timeout_leaves_the_last_boot_log_snapshot_and_the_probe_outcome(tmp_path, caplog):
+    import logging
+
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    m.boot_log_interval_s = 0                       # capture on every poll in this test
+    respx.get(f"https://{DOMAIN}/healthz").mock(side_effect=httpx.ConnectError("Connection reset by peer"))
+    respx.get(url__startswith=f"http://{IP}/diag/").mock(
+        return_value=httpx.Response(200, text="vllm-1 | RuntimeError: Engine core initialization failed"))
+    respx.get(url__startswith=f"https://{DOMAIN}/diag/").mock(side_effect=httpx.ConnectError("reset"))
+    respx.post(f"{LAMBDA_API_BASE}/instance-operations/terminate").mock(
+        return_value=httpx.Response(200, json={"data": {"terminated_instances": []}}))
+    from server.providers.gpu_worker import WorkerFailed
+
+    try:
+        w = _ready_worker(m, clock, status="booting")
+        with caplog.at_level(logging.WARNING, logger="acudx.gpu_worker"):
+            with pytest.raises(WorkerFailed):
+                await m._wait_ready(w)
+        stored = m.stored_boot_log(w.id)
+    finally:
+        await m.aclose()
+    assert m.store.active_worker() is None and m.store.ledger(limit=1)[0].reason == "ready_timeout"
+    assert stored is not None and stored["stored"] is True and stored["worker_id"] == w.id
+    assert "Engine core initialization failed" in stored["docker_status"]
+    assert stored["last_health_probe"].startswith("ConnectError: Connection reset by peer")
+    # The probe outcome is logged once with its exception class, not once per poll.
+    probe_lines = [r.getMessage() for r in caplog.records if "/healthz probe" in r.getMessage()]
+    assert probe_lines == [f"gpu worker {INSTANCE_ID}: /healthz probe -> ConnectError: Connection reset by peer"]
+    assert any("last probe: ConnectError" in r.getMessage() for r in caplog.records)
+
+
+@respx.mock
+async def test_healthy_logs_the_http_status_of_a_failing_worker(tmp_path, caplog):
+    import logging
+
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    respx.get(f"https://{DOMAIN}/healthz").mock(side_effect=[httpx.Response(502), httpx.Response(200)])
+    try:
+        w = _ready_worker(m, clock)
+        with caplog.at_level(logging.INFO, logger="acudx.gpu_worker"):
+            assert await m._healthy(w) is False
+            assert await m._healthy(w) is True
+    finally:
+        await m.aclose()
+    msgs = [r.getMessage() for r in caplog.records if "/healthz probe" in r.getMessage()]
+    assert msgs == [f"gpu worker {INSTANCE_ID}: /healthz probe -> HTTP 502",
+                    f"gpu worker {INSTANCE_ID}: /healthz probe -> HTTP 200"]

@@ -21,6 +21,7 @@ from typing import Any
 
 import httpx
 
+from server import net_guard
 from server.config import EgressBlocked, Settings
 from server.registry.store import ProviderRecord, RegistryStore
 
@@ -69,6 +70,25 @@ async def probe_provider(rec: ProviderRecord, *, api_key: str | None, settings: 
         result.update(error="EgressBlocked", detail=str(exc))
         _persist(store, rec.id, result)
         return result
+
+    try:
+        # SSRF guard (review 04 O5): never metadata or link-local; a name resolving privately
+        # must be on LOCAL_ALLOWLIST (literal private IPs stay allowed for on-prem providers).
+        await net_guard.check_probe_url(rec.base_url, allow_private=settings.local_allowlist)
+    except net_guard.BlockedDestination as exc:
+        result.update(error="BlockedDestination", detail=str(exc))
+        _persist(store, rec.id, result)
+        return result
+
+    if rec.kind == "identity":
+        from server.auth.config import identity_config_from_record
+
+        cfg_error = identity_config_from_record(rec).config_error
+        if cfg_error:
+            # Review 04 O9: surfaced as the row's probe error in the admin providers panel.
+            result.update(error="IdentityMisconfigured", detail=cfg_error)
+            _persist(store, rec.id, result)
+            return result
 
     headers = _auth_headers(rec.kind, api_key)
     base = rec.base_url.rstrip("/")

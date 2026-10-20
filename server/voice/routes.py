@@ -138,6 +138,13 @@ async def room(request: Request, body: RoomBody, user: Principal = Depends(curre
 # --------------------------------------------------------------------------- #
 # agent worker configuration (server to server, admin token)                   #
 # --------------------------------------------------------------------------- #
+# Review 04 O8: the agent worker gets an allow-list of ``extra`` keys, never the whole dict,
+# so a secret an operator parks in ``extra`` does not ship. These are exactly the keys
+# workers/voice_agent/selection.py reads.
+AGENT_ENGINE_EXTRA_KEYS = ("voices",)
+AGENT_AVATAR_OPTION_KEYS = ("face_id", "emotion_id", "avatar_id", "persona_name", "runner_identity")
+
+
 def _agent_block(ep, adapters: dict[str, Any]) -> dict[str, Any] | None:
     if ep is None:
         return None
@@ -145,7 +152,7 @@ def _agent_block(ep, adapters: dict[str, Any]) -> dict[str, Any] | None:
     adapter = adapters[name]
     return {"provider": ep.name, "adapter": name, "base_url": ep.base_url, "api_key": ep.api_key,
             "model": adapter.model_for(ep) if hasattr(adapter, "model_for") else ep.model, "source": ep.source,
-            "extra": {k: v for k, v in ep.extra.items() if k not in ("seeded_from",)}}
+            "extra": {k: ep.extra[k] for k in AGENT_ENGINE_EXTRA_KEYS if k in ep.extra}}
 
 
 @admin_router.get("/agent-config")
@@ -165,8 +172,7 @@ async def agent_config(request: Request) -> dict[str, Any]:
             livekit = {"url": cfg.url, "api_key": cfg.api_key, "api_secret": cfg.api_secret}
             avatar = {"renderer": cfg.renderer, "provider": ep.name,
                       "api_key": str(ep.extra.get("renderer_api_key") or ""),
-                      "options": {k: v for k, v in ep.extra.items()
-                                  if k not in ("livekit_api_key", "renderer_api_key", "transport", "avatar")}}
+                      "options": {k: ep.extra[k] for k in AGENT_AVATAR_OPTION_KEYS if k in ep.extra}}
     out["avatar"] = avatar
     out["livekit"] = livekit
     return out

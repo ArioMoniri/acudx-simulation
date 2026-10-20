@@ -6,7 +6,10 @@ An identity provider is a registry row with ``kind="identity"``:
                  Supabase: ``https://<ref>.supabase.co/auth/v1``)
 * ``model``      unused for identity; ``extra`` carries the OIDC settings:
   - ``client_id``        public PKCE client (default ``acudx-web``)
-  - ``audience``         expected ``aud`` (default: the client id; ``""`` disables the check)
+  - ``audience``         expected ``aud`` (default: the client id). An empty value is a
+                         configuration error (review 04 O9): the ``aud`` check is never
+                         disabled; bearers are refused with 503 ``identity_misconfigured``
+                         until the row names an audience.
   - ``scopes``           space separated (default ``openid profile email``)
   - ``role_claim_path``  dotted path to the roles claim (Keycloak ``realm_access.roles``,
                          Supabase ``app_metadata.roles``; default ``roles``)
@@ -20,10 +23,13 @@ overrides the ``AUTH_MODE`` environment default.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 from server.registry.store import ProviderRecord, RegistryStore
+
+log = logging.getLogger("acudx.auth")
 
 AUTH_MODES: tuple[str, ...] = ("local", "oidc")
 DEFAULT_SCOPES = "openid profile email"
@@ -49,6 +55,7 @@ class IdentityConfig:
     flavor: str
     discovery_url: str | None
     updated_at: float
+    config_error: str | None = None
 
     @property
     def cache_key(self) -> tuple[int, float]:
@@ -65,6 +72,7 @@ class IdentityConfig:
             "role_claim_path": self.role_claim_path,
             "org_claim_path": self.org_claim_path,
             "flavor": self.flavor,
+            "config_error": self.config_error,
         }
 
 
@@ -73,7 +81,12 @@ def identity_config_from_record(rec: ProviderRecord) -> IdentityConfig:
     flavor = str(extra.get("flavor") or "oidc").lower()
     client_id = str(extra.get("client_id") or "acudx-web")
     aud_raw = extra.get("audience", client_id)
-    audience = None if aud_raw in ("", None) else str(aud_raw)
+    audience = None if aud_raw is None or not str(aud_raw).strip() else str(aud_raw).strip()
+    config_error = None
+    if audience is None:
+        config_error = ("audience is empty: the aud check cannot be disabled; set extra.audience to the "
+                        "client id (or the API audience) of this identity provider")
+        log.warning("identity provider %r (id %s): %s", rec.name, rec.id, config_error)
     role_path = str(extra.get("role_claim_path") or _FLAVOR_DEFAULT_ROLE_PATH.get(flavor, DEFAULT_ROLE_CLAIM))
     return IdentityConfig(
         provider_id=rec.id,
@@ -87,6 +100,7 @@ def identity_config_from_record(rec: ProviderRecord) -> IdentityConfig:
         flavor=flavor,
         discovery_url=extra.get("discovery_url") or None,
         updated_at=rec.updated_at,
+        config_error=config_error,
     )
 
 

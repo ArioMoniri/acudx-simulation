@@ -19,6 +19,8 @@ domain at boot; the manager derives it from the API-reported IP for probes.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import secrets
@@ -45,6 +47,12 @@ log = logging.getLogger("acudx.gpu_worker")
 DEFAULT_ALLOWLIST = ["gpu_1x_a100_sxm4", "gpu_1x_a10", "gpu_1x_a100", "gpu_1x_h100_pcie"]
 DEFAULT_TEMPLATE = Path(__file__).resolve().parents[2] / "infra" / "gpu-worker" / "cloud-init.yaml"
 SERVED_MODEL_NAME = "acudx-llm"   # --served-model-name in the worker's vLLM
+
+# Review 04 O1: the boot-diagnostics path carries a value DERIVED from the worker token, never
+# the token itself (the bearer must not travel in a plaintext URL on port 80). The worker
+# computes the same value with openssl in infra/gpu-worker/cloud-init.yaml.
+DIAG_SECRET_LABEL = b"acudx-diag-v1"
+PROVIDER_GONE_STATUSES = ("terminated", "terminating", "preempted")
 
 _MARKERS = {"__WORKER_TOKEN__": "token", "__WORKER_LLM_MODEL__": "llm_model", "__WORKER_DOMAIN__": "domain"}
 ACTIVE_STATUSES = ("launching", "booting", "ready")
@@ -86,7 +94,7 @@ class WorkerPolicy(BaseModel):
     idle_minutes: int = Field(default=20, ge=1, le=24 * 60)
     daily_budget_usd: float = Field(default=25.0, ge=0)
     allowlist: list[str] = Field(default_factory=lambda: list(DEFAULT_ALLOWLIST), min_length=1)
-    llm_model: str = Field(default="Qwen/Qwen3-32B-AWQ", min_length=1)
+    llm_model: str = Field(default="Qwen/Qwen3-14B-AWQ", min_length=1)
     region_preference: list[str] = Field(default_factory=list)
     # Optional Lambda filesystem (same region) mounted on the worker; the cloud-init keeps the
     # HF cache there so later boots skip the model download.
@@ -154,6 +162,16 @@ def render_cloud_init(template: str, *, token: str, llm_model: str, domain: str)
     return out
 
 
+def diag_secret(token: str) -> str:
+    """HMAC-SHA256(key=token, message="acudx-diag-v1"), hex, first 32 characters.
+
+    Shell equivalent on the worker:
+    ``printf '%s' acudx-diag-v1 | openssl dgst -sha256 -hmac "$WORKER_TOKEN" -r | cut -c1-32``.
+    Knowing it opens the redacted boot diagnostics only, never the LLM, TTS or STT routes.
+    """
+    return hmac.new(token.encode("utf-8"), DIAG_SECRET_LABEL, hashlib.sha256).hexdigest()[:32]
+
+
 def _day_start(ts: float) -> float:
     d = datetime.fromtimestamp(ts, tz=timezone.utc)
     return d.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
@@ -182,6 +200,9 @@ class WorkerStore:
                     id INTEGER PRIMARY KEY AUTOINCREMENT, instance_id TEXT NOT NULL,
                     instance_type TEXT NOT NULL, region TEXT NOT NULL, price_cents_per_hour INTEGER NOT NULL,
                     started_at REAL NOT NULL, ended_at REAL, cost_usd REAL, reason TEXT);
+                CREATE TABLE IF NOT EXISTS gpu_boot_logs (
+                    worker_id INTEGER PRIMARY KEY, instance_id TEXT NOT NULL,
+                    captured_at REAL NOT NULL, body TEXT NOT NULL);
                 """
             )
 
@@ -224,6 +245,33 @@ class WorkerStore:
             c.execute(f"UPDATE gpu_workers SET {sets} WHERE id = ?", (*fields.values(), worker_id))
             row = c.execute("SELECT * FROM gpu_workers WHERE id = ?", (worker_id,)).fetchone()
         return WorkerRecord.model_validate(dict(row))
+
+    def get_worker(self, worker_id: int) -> WorkerRecord | None:
+        with self._conn() as c:
+            row = c.execute("SELECT * FROM gpu_workers WHERE id = ?", (worker_id,)).fetchone()
+        return WorkerRecord.model_validate(dict(row)) if row else None
+
+    def latest_worker(self) -> WorkerRecord | None:
+        with self._conn() as c:
+            row = c.execute("SELECT * FROM gpu_workers ORDER BY id DESC LIMIT 1").fetchone()
+        return WorkerRecord.model_validate(dict(row)) if row else None
+
+    # -- boot-log evidence ----------------------------------------------------- #
+    def save_boot_log(self, worker_id: int, instance_id: str, captured_at: float, body: dict[str, Any]) -> None:
+        """Keep the last successful diagnostics snapshot per worker (outlives the instance)."""
+        with self._conn() as c:
+            c.execute("INSERT INTO gpu_boot_logs (worker_id, instance_id, captured_at, body) VALUES (?, ?, ?, ?) "
+                      "ON CONFLICT(worker_id) DO UPDATE SET instance_id = excluded.instance_id, "
+                      "captured_at = excluded.captured_at, body = excluded.body",
+                      (worker_id, instance_id, captured_at, json.dumps(body)))
+
+    def get_boot_log(self, worker_id: int) -> dict[str, Any] | None:
+        with self._conn() as c:
+            row = c.execute("SELECT * FROM gpu_boot_logs WHERE worker_id = ?", (worker_id,)).fetchone()
+        if row is None:
+            return None
+        return {**json.loads(row["body"]), "worker_id": row["worker_id"], "instance_id": row["instance_id"],
+                "captured_at": row["captured_at"], "stored": True}
 
     # -- ledger -------------------------------------------------------------- #
     def open_ledger(self, w: WorkerRecord) -> int:
@@ -272,7 +320,7 @@ class WorkerManager:
                  clock: Callable[[], float] = time.time,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  poll_interval_s: float = 5.0, boot_timeout_s: float = 900.0,
-                 ready_timeout_s: float = 1500.0):
+                 ready_timeout_s: float = 1500.0, boot_log_interval_s: float = 60.0):
         self.settings = settings
         self.store = store or WorkerStore(settings.acudx_db_path)
         self._client = client
@@ -283,6 +331,8 @@ class WorkerManager:
         self.poll_interval_s = poll_interval_s
         self.boot_timeout_s = boot_timeout_s
         self.ready_timeout_s = ready_timeout_s
+        self.boot_log_interval_s = boot_log_interval_s
+        self._last_probe: dict[int, str] = {}
         self._lock = asyncio.Lock()
         self._inflight: asyncio.Task[WorkerRecord] | None = None
         self._reaper: asyncio.Task[None] | None = None
@@ -438,6 +488,8 @@ class WorkerManager:
                         self.boot_timeout_s + self.ready_timeout_s)
             await self.terminate(reason="stale_boot")
             return True
+        if w.status == "ready" and await self.reconcile(w):
+            return True
         spent = self.spent_today_usd()
         if spent >= self.policy.daily_budget_usd:
             log.warning("gpu worker %s: spent %.2f USD today >= budget %.2f USD; terminating", w.instance_id,
@@ -450,6 +502,35 @@ class WorkerManager:
         log.info("gpu worker %s idle for %.0fs > %d min; terminating", w.instance_id, idle_s,
                  self.policy.idle_minutes)
         await self.terminate(reason="idle")
+        return True
+
+    async def reconcile(self, w: WorkerRecord) -> bool:
+        """Review 04 O4: compare the row with the provider. When Lambda reports the instance
+        terminated, terminating or preempted, or no longer knows it (404), close the ledger and
+        mark the row failed at once, instead of booking cost until the idle window and blocking
+        ``ensure_worker`` in a 25 minute readiness wait. Returns True when the row was closed.
+
+        Lambda's instance object carries no termination timestamp, so the ledger closes at the
+        time the gateway observed the provider state (at most one reaper interval late, which
+        errs on the side of the budget). A provider error other than not-found changes nothing.
+        """
+        try:
+            inst = await self._lambda().get_instance(w.instance_id)
+            gone = inst.status if inst.status in PROVIDER_GONE_STATUSES else None
+        except LambdaCloudError as exc:
+            if exc.status_code != 404 and "not-found" not in exc.code:
+                log.warning("gpu worker %s: provider reconcile failed: %s", w.instance_id, exc)
+                return False
+            gone = "missing"
+        except httpx.HTTPError as exc:
+            log.warning("gpu worker %s: provider reconcile unreachable: %s", w.instance_id, type(exc).__name__)
+            return False
+        if gone is None:
+            return False
+        now = self._clock()
+        log.warning("gpu worker %s: provider reports %s; closing the ledger", w.instance_id, gone)
+        self.store.close_ledger(w.instance_id, now, f"provider:{gone}")
+        self.store.update_worker(w.id, status="failed", terminated_at=now)
         return True
 
     @property
@@ -539,10 +620,13 @@ class WorkerManager:
         t0 = self._clock()
         log.info("gpu worker %s: waiting for readiness (boot budget %.0fs, ready budget %.0fs, poll %.0fs)",
                  w.instance_id, self.boot_timeout_s, self.ready_timeout_s, self.poll_interval_s)
+        if w.ip and w.status == "ready" and await self.reconcile(w):
+            # Re-attaching to a ready row whose instance is gone: fail now, not after ready_timeout_s.
+            raise WorkerFailed(f"instance {w.instance_id} is no longer running on the provider side")
         if not w.ip:
             for _ in range(self._attempts(self.boot_timeout_s)):
                 inst = await api.get_instance(w.instance_id)
-                if inst.status in ("terminated", "terminating", "preempted"):
+                if inst.status in PROVIDER_GONE_STATUSES:
                     self.store.close_ledger(w.instance_id, self._clock(), f"provider:{inst.status}")
                     self.store.update_worker(w.id, status="failed", terminated_at=self._clock())
                     raise WorkerFailed(f"instance {w.instance_id} is {inst.status} on the provider side")
@@ -553,47 +637,102 @@ class WorkerManager:
             else:
                 await self.terminate(reason="boot_timeout")
                 raise WorkerFailed(f"instance {w.instance_id} did not become active in {self.boot_timeout_s:.0f}s")
+        last_capture: float | None = None
         for _ in range(self._attempts(self.ready_timeout_s)):
             if await self._healthy(w):
                 now = self._clock()
+                await self.capture_boot_log(w)
                 return self.store.update_worker(w.id, status="ready", ready_at=w.ready_at or now,
                                                 last_used_at=now)
+            # Evidence retention: keep the latest diagnostics snapshot while waiting, so a
+            # ready_timeout termination still leaves cloud-init and container status behind.
+            now = self._clock()
+            if last_capture is None or now - last_capture >= self.boot_log_interval_s:
+                last_capture = now
+                await self.capture_boot_log(w)
             await self._sleep(self.poll_interval_s)
-        log.warning("gpu worker %s: /healthz never passed; elapsed %.0fs of %.0fs budget",
-                    w.instance_id, self._clock() - t0, self.ready_timeout_s)
+        log.warning("gpu worker %s: /healthz never passed; elapsed %.0fs of %.0fs budget (last probe: %s)",
+                    w.instance_id, self._clock() - t0, self.ready_timeout_s, self._last_probe.get(w.id, "none"))
+        await self.capture_boot_log(w)
         await self.terminate(reason="ready_timeout")
         raise WorkerFailed(f"worker {w.domain} did not pass /healthz in {self.ready_timeout_s:.0f}s")
 
-    async def boot_log(self, tail_lines: int = 200) -> dict[str, Any]:
-        """Read the worker's cloud-init output and docker status over plain HTTP on port 80 (/diag/<token>/).
+    async def capture_boot_log(self, w: WorkerRecord) -> bool:
+        """Fetch and persist one diagnostics snapshot for ``w`` when it is readable. Never raises."""
+        try:
+            snap = await self.boot_log(worker=w)
+        except Exception:  # noqa: BLE001 - evidence capture must never break a boot
+            log.exception("gpu worker %s: boot-log capture failed", w.instance_id)
+            return False
+        if not snap.get("available"):
+            return False
+        snap["last_health_probe"] = self._last_probe.get(w.id)
+        self.store.save_boot_log(w.id, w.instance_id, self._clock(), snap)
+        return True
 
-        The path embeds the worker token, so only the gateway (which holds it) can read it.
-        Returns {available, cloud_init, docker_status, error}; never raises.
+    def stored_boot_log(self, worker_id: int | None = None) -> dict[str, Any] | None:
+        """The persisted snapshot for ``worker_id`` (default: the most recent worker row)."""
+        if worker_id is None:
+            latest = self.store.latest_worker()
+            if latest is None:
+                return None
+            worker_id = latest.id
+        return self.store.get_boot_log(worker_id)
+
+    async def boot_log(self, tail_lines: int = 200, *, worker: WorkerRecord | None = None) -> dict[str, Any]:
+        """Read the worker's redacted cloud-init output and docker status (review 04 O1).
+
+        The files live under ``/diag/<diag_secret(token)>/``. While the worker boots they are
+        served over plain HTTP on port 80 by the worker's diagnostics server; once vLLM has been
+        healthy for 5 minutes that server stops itself and the final snapshot is served by Caddy
+        on 443 behind the bearer. The bearer token is only ever sent over TLS, in the
+        ``Authorization`` header, never in a URL. Returns {available, cloud_init, docker_status,
+        source, error}; never raises.
         """
-        w = self.store.active_worker()
+        w = worker or self.store.active_worker()
         if w is None or not w.ip:
             return {"available": False, "error": "no active worker with an ip"}
-        out: dict[str, Any] = {"available": False, "instance_id": w.instance_id, "ip": w.ip}
-        base = f"http://{w.ip}/diag/{w.token}"
+        out: dict[str, Any] = {"available": False, "worker_id": w.id, "instance_id": w.instance_id, "ip": w.ip}
+        secret = diag_secret(w.token)
+        plain = (f"http://{w.ip}/diag/{secret}", {})
+        tls = (f"https://{w.domain}/diag/{secret}", {"Authorization": f"Bearer {w.token}"}) if w.domain else None
+        # Booting: the port 80 server is the one that answers. Ready: Caddy holds the snapshot.
+        sources = [s for s in ((tls, plain) if w.status == "ready" else (plain, tls)) if s is not None]
         for key, name in (("cloud_init", "cloud-init-output.log"), ("docker_status", "docker-status.txt")):
-            try:
-                r = await self._probe_client().get(f"{base}/{name}")
+            last = "unreachable"
+            for base, headers in sources:
+                try:
+                    r = await self._probe_client().get(f"{base}/{name}", headers=headers)
+                except httpx.HTTPError as exc:
+                    last = f"unreachable: {exc.__class__.__name__}"
+                    continue
                 if r.status_code == 200:
-                    lines = r.text.splitlines()
-                    out[key] = "\n".join(lines[-tail_lines:])
+                    out[key] = "\n".join(r.text.splitlines()[-tail_lines:])
                     out["available"] = True
-                else:
-                    out[key] = f"http {r.status_code}"
-            except httpx.HTTPError as exc:
-                out[key] = f"unreachable: {exc.__class__.__name__}"
+                    out.setdefault("source", "tls" if base.startswith("https://") else "port80")
+                    break
+                last = f"http {r.status_code}"
+            else:
+                out[key] = last
         return out
 
     async def _healthy(self, w: WorkerRecord) -> bool:
+        """GET https://<domain>/healthz with the bearer. Every changed outcome is logged with the
+        exception class or HTTP status, so a proxy reset (ConnectError / RemoteProtocolError
+        from an egress proxy) can be told apart from the worker answering 502 or 401."""
         if not w.domain:
             return False
         try:
             r = await self._probe_client().get(f"https://{w.domain}/healthz",
                                                headers={"Authorization": f"Bearer {w.token}"})
-        except httpx.HTTPError:
+        except httpx.HTTPError as exc:
+            self._note_probe(w, f"{type(exc).__name__}: {str(exc)[:160]}")
             return False
+        self._note_probe(w, f"HTTP {r.status_code}")
         return r.status_code == 200
+
+    def _note_probe(self, w: WorkerRecord, outcome: str) -> None:
+        if self._last_probe.get(w.id) != outcome:
+            level = logging.INFO if outcome == "HTTP 200" else logging.WARNING
+            log.log(level, "gpu worker %s: /healthz probe -> %s", w.instance_id, outcome)
+        self._last_probe[w.id] = outcome

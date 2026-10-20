@@ -12,7 +12,8 @@ from __future__ import annotations
 import secrets
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
+from pydantic import ValidationError
 
 from server.auth.deps import bearer_admin
 from server.providers.gpu_worker import WorkerManager, WorkerPolicy, WorkerRefused
@@ -68,9 +69,24 @@ async def gpu_stop(request: Request) -> dict[str, Any]:
 
 
 @router.get("/gpu/boot-log", dependencies=[Depends(require_admin)])
-async def gpu_boot_log(request: Request, tail: int = 200) -> dict[str, Any]:
-    """Cloud-init output and docker status of the active worker (plain HTTP /diag/<token>/ on port 80)."""
-    return await _manager(request).boot_log(tail_lines=max(10, min(tail, 2000)))
+async def gpu_boot_log(request: Request, tail: int = 200, worker_id: int | None = None) -> dict[str, Any]:
+    """Redacted cloud-init output and docker status.
+
+    ``worker_id`` returns the snapshot the gateway persisted for that worker (it outlives the
+    instance, so a ready_timeout termination still leaves evidence). Without it, the active
+    worker is read live; when that fails, the latest persisted snapshot is returned instead.
+    """
+    m = _manager(request)
+    if worker_id is not None:
+        stored = m.stored_boot_log(worker_id)
+        if stored is None:
+            raise HTTPException(status_code=404, detail={"reason": "no_boot_log", "worker_id": worker_id})
+        return stored
+    live = await m.boot_log(tail_lines=max(10, min(tail, 2000)))
+    if live.get("available"):
+        return live
+    stored = m.stored_boot_log()
+    return {**stored, "live_error": live.get("error")} if stored else live
 
 
 @router.get("/gpu/ledger", dependencies=[Depends(require_admin)])
@@ -86,5 +102,19 @@ async def gpu_policy_get(request: Request) -> WorkerPolicy:
 
 
 @router.put("/gpu/policy", dependencies=[Depends(require_admin)])
-async def gpu_policy_put(request: Request, policy: WorkerPolicy) -> WorkerPolicy:
-    return _manager(request).set_policy(policy)
+async def gpu_policy_put(request: Request, patch: dict[str, Any] = Body(...)) -> WorkerPolicy:
+    """Merge the given fields into the current policy (unknown fields 422).
+
+    A partial body only changes the fields it names; it never resets the others to
+    their defaults (live finding 2026-10-20: a one-field PUT reset the budget,
+    allowlist and filesystem).
+    """
+    m = _manager(request)
+    unknown = set(patch) - set(WorkerPolicy.model_fields)
+    if unknown:
+        raise HTTPException(status_code=422, detail={"unknown_fields": sorted(unknown)})
+    try:
+        merged = WorkerPolicy.model_validate({**m.policy.model_dump(), **patch})
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors(include_url=False)) from exc
+    return m.set_policy(merged)

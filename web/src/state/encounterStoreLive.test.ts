@@ -52,6 +52,8 @@ interface Call {
 
 const calls: Call[] = [];
 let engineStatus = 200;
+/** When set, the Director answer waits for this promise (an in-flight step). */
+let directorHold: Promise<void> | null = null;
 let directorVitals = { hr: 128, systolic: 84, diastolic: 52, rr: 26, spo2: 88, tempC: 37.8 };
 
 function engineAnswer(body: Record<string, unknown>): OrderResult {
@@ -143,6 +145,7 @@ const fetchDouble: typeof fetch = async (input, init) => {
     return new Response(JSON.stringify(engineAnswer(body)), { status: 200, headers: { "content-type": "application/json" } });
   }
   if (url.endsWith("/v2/director/step")) {
+    if (directorHold) await directorHold;
     return new Response(JSON.stringify(directorAnswer(body)), { status: 200, headers: { "content-type": "application/json" } });
   }
   return new Response("not found", { status: 404 });
@@ -177,6 +180,7 @@ beforeEach(() => {
   now = 0;
   calls.length = 0;
   engineStatus = 200;
+  directorHold = null;
   directorVitals = { hr: 128, systolic: 84, diastolic: 52, rr: 26, spo2: 88, tempC: 37.8 };
   globalThis.fetch = fetchDouble;
   restoreClock = __setClock(() => now);
@@ -393,5 +397,34 @@ describe("encounterStore offline mode: honest labelling, no network", () => {
     expect(snapshot.results.every((r) => r.orderId.startsWith("ord-"))).toBe(true);
     expect(calls).toHaveLength(0);
     expect(snapshot.director.steps).toBe(0);
+  });
+});
+
+describe("encounterStore Live mode: switching Live off mid-step (review 04 O7)", () => {
+  it("drops a Director answer that lands after Live was switched off", async () => {
+    const c = makeCase(399);
+    run(() => setLiveEnabled(true));
+    run(() => startEncounter(c));
+    let release: () => void = () => {};
+    directorHold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    run(() => askQuestion(c.groundTruth.history[0].intent));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(directorCalls()).toHaveLength(1);
+    expect(snapshot.director.status).toBe("busy");
+
+    run(() => setLiveEnabled(false));
+    release();
+    await flush();
+
+    expect(snapshot.liveEnabled).toBe(false);
+    expect(snapshot.director.steps).toBe(0);
+    expect(snapshot.director.caseState).toBeNull();
+    expect(snapshot.director.overlay).toBeNull();
+    expect(snapshot.director.status).toBe("idle");
+    expect(snapshot.events.some((e) => e.meta?.director === true)).toBe(false);
   });
 });

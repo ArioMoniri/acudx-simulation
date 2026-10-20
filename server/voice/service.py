@@ -36,6 +36,10 @@ from server.voice.base import LanguageUnsupported, SttRequest, SttResult, TtsReq
 
 log = logging.getLogger("acudx.voice")
 
+# Chatterbox TTS API health route behind the worker's Caddy /tts prefix (bearer required).
+WORKER_TTS_HEALTH_PATH = "/tts/health"
+WORKER_PROBE_TIMEOUT_S = 3.0
+
 # Languages the self-hosted worker serves (Chatterbox Multilingual list, research doc section 3.2).
 WORKER_TTS_LANGUAGES = ("ar", "da", "de", "el", "en", "es", "fi", "fr", "he", "hi", "it", "ja", "ko", "ms", "nl",
                         "no", "pl", "pt", "ru", "sv", "sw", "tr")
@@ -225,6 +229,15 @@ class VoiceService:
         return {"enabled": True, "provider": ep.name, "source": ep.source, "adapter": name, "model": model,
                 "languages": languages, "reasons": reasons}
 
+    async def _probe_worker_path(self, url: str, token: str) -> tuple[bool, str]:
+        """One bearer GET against a worker side-car route; never raises."""
+        try:
+            r = await self.client.get(url, headers={"Authorization": f"Bearer {token}"},
+                                      timeout=WORKER_PROBE_TIMEOUT_S)
+        except httpx.HTTPError as exc:
+            return False, f"unreachable ({type(exc).__name__})"
+        return (True, "ok") if r.status_code == 200 else (False, f"HTTP {r.status_code}")
+
     async def capabilities(self, *, probe_worker: bool = False) -> dict[str, Any]:
         """What is enabled now. ``probe_worker`` also counts a launchable GPU worker (never launches one)."""
         out: dict[str, Any] = {"airgapped": self.settings.airgapped}
@@ -248,6 +261,15 @@ class VoiceService:
                     origin = origin[:-3] if origin.endswith("/v1") else origin
                     ep = ProviderEndpoint(kind=kind, name="gpu-worker", base_url=origin + WORKER_PATHS[kind],
                                           model=WORKER_MODELS[kind], api_key="", source="gpu_worker")
+                    if kind == "tts":
+                        # The worker's /healthz is vLLM only, and Chatterbox is built after vLLM
+                        # starts, so a ready worker does not imply TTS: ask the side-car itself.
+                        ok, detail = await self._probe_worker_path(origin + WORKER_TTS_HEALTH_PATH,
+                                                                   str(ready.get("api_key") or ""))
+                        out["gpu_worker"]["tts"] = {"path": WORKER_TTS_HEALTH_PATH, "ok": ok, "detail": detail}
+                        if not ok:
+                            reasons.append(f"gpu-worker: {WORKER_TTS_HEALTH_PATH} {detail}")
+                            ep = None
                 elif probe_worker and out["gpu_worker"]["can_launch"]:
                     launchable = True
                 elif out["gpu_worker"].get("refusal"):

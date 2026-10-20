@@ -7,6 +7,13 @@
  * ever returned by the server (only `has_key` + `key_last4`), and the client
  * never stores one: the key input is write-only and sent once in the request.
  *
+ * Trade-off (review 04 O10): sessionStorage is tab-scoped but readable by any
+ * script in this origin, so an XSS in the admin bundle can exfiltrate the token.
+ * It is a bootstrap credential: once an identity provider is configured, sign in
+ * with a verified admin bearer (accepted by every /admin route), unset
+ * ADMIN_TOKEN on the gateway and rotate it after classroom seeding. See
+ * docs/architecture/19 section 9.
+ *
  * Shapes mirror the FastAPI models. Every function returns a discriminated
  * `AdminResult` and never throws into the UI.
  */

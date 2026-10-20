@@ -898,6 +898,12 @@ async function runDirectorStep(action: DirectorAction, caseId: string): Promise<
   });
   // The encounter may have changed under us; never apply a stale answer.
   if (!state.caseInstance || state.caseInstance.id !== caseId) return;
+  // Live was switched off while the step was in flight (review 04 O7): the encounter is
+  // offline now, so the answer is dropped and the Director is left idle, not busy.
+  if (!liveEnabled) {
+    if (state.director.status === "busy") setState({ ...state, director: { ...state.director, status: "idle" } });
+    return;
+  }
   if (!res.ok) {
     setState({ ...state, director: { ...state.director, status: "error", error: res.error } });
     return;

@@ -51,10 +51,13 @@ async def test_audience_may_be_a_list(keys):
     assert claims["sub"] == "u-1"
 
 
-async def test_audience_check_can_be_disabled(keys):
-    v = _verifier(keys, audience=None)
-    claims = await v.verify(keys.mint(aud=None))
-    assert claims["sub"] == "u-1"
+async def test_empty_audience_is_refused_not_a_disabled_check(keys):
+    """Review 04 O9: a verifier without an audience refuses every token."""
+    for aud in (None, ""):
+        v = _verifier(keys, audience=aud)
+        with pytest.raises(TokenInvalid) as exc:
+            await v.verify(keys.mint(aud=None))
+        assert exc.value.reason == "audience_not_configured"
 
 
 async def test_wrong_key_is_rejected(keys):

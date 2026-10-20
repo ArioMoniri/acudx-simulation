@@ -167,7 +167,11 @@ def test_agent_config_is_admin_only_and_carries_resolved_keys(tmp_path):
     store.create_provider(ProviderIn(kind="stt", name="dg", base_url="https://api.deepgram.com", api_key="dg-secret"))
     store.create_provider(ProviderIn(kind="avatar", name="lk", base_url="https://lk.example.org", api_key="lk-secret",
                                      extra={"transport": "livekit", "livekit_api_key": "APIabc", "avatar": "simli",
-                                            "renderer_api_key": "simli-key", "face_id": "face-1"}))
+                                            "renderer_api_key": "simli-key", "face_id": "face-1",
+                                            "webhook_secret": "parked-avatar-secret"}))
+    store.create_provider(ProviderIn(kind="tts", name="el", base_url="https://api.elevenlabs.io", api_key="xi",
+                                     extra={"voices": {"tr": {"female": "v1"}}, "model_id": "eleven_v3",
+                                            "api_secret": "parked-tts-secret", "seeded_from": "env"}))
     c = TestClient(app)
     assert c.get("/admin/voice/agent-config").status_code == 401
     r = c.get("/admin/voice/agent-config", headers=HDR)
@@ -175,8 +179,9 @@ def test_agent_config_is_admin_only_and_carries_resolved_keys(tmp_path):
     j = r.json()
     assert j["stt"] == {"provider": "dg", "adapter": "deepgram", "base_url": "https://api.deepgram.com",
                         "api_key": "dg-secret", "model": "nova-3", "source": "registry", "extra": {}}
-    assert j["tts"]["source"] == "gpu_worker" and j["tts"]["base_url"] == "http://worker.test/tts"
-    assert j["tts"]["api_key"] == WORKER_TOKEN
+    # Only the allow-listed extra keys reach the agent (review 04 O8).
+    assert j["tts"]["provider"] == "el" and j["tts"]["extra"] == {"voices": {"tr": {"female": "v1"}}}
+    assert "parked-tts-secret" not in r.text and "parked-avatar-secret" not in r.text
     assert j["livekit"] == {"url": "wss://lk.example.org", "api_key": "APIabc", "api_secret": "lk-secret"}
     assert j["avatar"] == {"renderer": "simli", "provider": "lk", "api_key": "simli-key", "options": {"face_id": "face-1"}}
     assert j["gateway"]["patient_turn_path"] == "/v1/patient/turn"
@@ -187,3 +192,10 @@ def test_main_app_mounts_voice_routes():
     paths = set(main_app.openapi()["paths"])
     assert {"/v1/voice/tts", "/v1/voice/stt", "/v1/voice/capabilities", "/v1/voice/room",
             "/admin/voice/agent-config"} <= paths
+
+
+def test_agent_config_falls_back_to_the_gpu_worker_with_its_bearer(tmp_path):
+    app, store, _ = _app(tmp_path, worker=FakeWorkerManager(ready=True))
+    j = TestClient(app).get("/admin/voice/agent-config", headers=HDR).json()
+    assert j["tts"]["source"] == "gpu_worker" and j["tts"]["base_url"] == "http://worker.test/tts"
+    assert j["tts"]["api_key"] == WORKER_TOKEN and j["tts"]["extra"] == {}

@@ -13,7 +13,8 @@
     "badge": {
       "verified": "Kurumunuz tarafından doğrulandı",
       "local": "Yerel, doğrulanmamış",
-      "localHint": "Bu kimlik yalnızca bu tarayıcıda saklanan yerel bir profildir. Sunucu yerel modda çalışır ve kimliği doğrulamaz."
+      "localHint": "Bu kimlik yalnızca bu tarayıcıda saklanan yerel bir profildir. Sunucu yerel modda çalışır ve kimliği doğrulamaz.",
+      "localPrivileged": "Yerel modda öğretim üyesi, dekan ve yönetici panelleri yönetici belirteci ya da kurum girişi (SSO) gerektirir; tek başına yerel profil yalnızca öğrenci erişimi verir."
     },
     "signIn": {
       "ssoHeading": "Kurumunuzla giriş yapın",
@@ -24,7 +25,7 @@
       "ssoNotConfigured": "Bu kurulum kurum girişi gerektiriyor ancak henüz bir kimlik sağlayıcı tanımlı değil. Yöneticinizden Yönetim, Sağlayıcılar altında identity türünde bir sağlayıcı eklemesini isteyin.",
       "callbackError": "Son giriş denemesi başarısız oldu: {{reason}}",
       "gatewayDown": "AcuDx ağ geçidine ulaşılamadı; şu an yalnızca yerel profil kullanılabilir.",
-      "localNote": "Yerel profiller internetsiz demolar içindir. Yerel profille açılan dekan, öğretim üyesi ve yönetici ekranları doğrulanmamıştır ve sunucu her yanıtı X-Auth-Mode: local ile işaretler."
+      "localNote": "Yerel profiller internetsiz demolar içindir. Sunucu yerel profili en fazla asistan hekim olarak kabul eder ve her yanıtı X-Auth-Mode: local ile işaretler."
     },
     "callback": {
       "eyebrow": "Kurum girişi",
