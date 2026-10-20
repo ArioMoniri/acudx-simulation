@@ -1,0 +1,9 @@
+{
+  "ehr": {
+    "tabs": {
+      "newResults_one": "Sonuçlar sekmesinde {{count}} yeni sonuç bekliyor.",
+      "newResults_other": "Sonuçlar sekmesinde {{count}} yeni sonuç bekliyor.",
+      "unseenBadge": "{{count}} yeni"
+    }
+  }
+}

@@ -6,7 +6,7 @@ import { Card, Badge, Button, SectionLabel, StatusDot } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { RoleAvatar } from "./RoleAvatar";
 import { ROLE_ICON } from "./roleMeta";
-import { joinRoom } from "./roomStore";
+import { isSelfParticipant, joinRoom } from "./roomStore";
 import {
   effectiveHolder,
   seatFill,
@@ -150,7 +150,7 @@ export function RoomCard({ room, lang }: RoomCardProps) {
         <span className="inline-flex items-center gap-2 text-xs text-muted">
           <RoleAvatar participant={room.host} size="sm" />
           {t("rooms.card.hostedBy", {
-            name: room.host.id === "u-me" ? t("rooms.you") : room.host.name,
+            name: isSelfParticipant(room.host) ? t("rooms.you") : room.host.name,
           })}
         </span>
         <Button

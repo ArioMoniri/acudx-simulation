@@ -152,13 +152,33 @@ export function ActivityTabs({
   // so the controlled-only effect knows not to push the stage back (some stages
   // — e.g. exam — legitimately map onto a tab whose own stage differs).
   const syncingFromStageRef = useRef(false);
+  // The store stage moves on its own when a result lands (orders -> results).
+  // That used to pull the learner off the tab they were working in (typing in
+  // Interview, placing orders). The strip now follows the stage ONLY while the
+  // learner is idle on Chart Review; everywhere else the landing result is
+  // announced (badge + polite live region) and the learner switches themselves.
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
   useEffect(() => {
     if (state.stage !== prevStageRef.current) {
       prevStageRef.current = state.stage;
+      if (activeTabRef.current !== "chart-review") return;
       syncingFromStageRef.current = true;
       commitTab(stageToTab(state.stage));
     }
   }, [state.stage, commitTab]);
+
+  // Results the learner has not opened the Results tab for since they landed.
+  // The seen count resets whenever Results is the active tab, so the badge and
+  // the announcement only ever describe results that arrived while they were away.
+  const [seenResults, setSeenResults] = useState(state.results.length);
+  useEffect(() => {
+    if (activeTab === "results") setSeenResults(state.results.length);
+  }, [activeTab, state.results.length]);
+  const unseenResults =
+    activeTab === "results" ? 0 : Math.max(0, state.results.length - seenResults);
 
   // Controlled-only: when the parent drives the tab (palette / number hotkeys),
   // advance the store stage to match — mirroring a click — guarded by the same
@@ -270,7 +290,11 @@ export function ActivityTabs({
                     aria-hidden
                   />
                   {t(`ehr.tabs.${camel(key)}`)}
-                  {typeof count === "number" && count > 0 ? (
+                  {key === "results" && unseenResults > 0 ? (
+                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+                      {t("ehr.tabs.unseenBadge", { count: unseenResults })}
+                    </span>
+                  ) : typeof count === "number" && count > 0 ? (
                     <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-full bg-brand-tint px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-brand">
                       {count}
                     </span>
@@ -280,6 +304,13 @@ export function ActivityTabs({
             })}
           </TabsList>
         </div>
+        {/* Non-stealing notification: a landing result is announced here instead
+            of moving the tab strip. Always mounted so the change is spoken. A
+            plain polite live region, not role=status: RouteFallback's status
+            spinner is what "the route has settled" checks wait on. */}
+        <span aria-live="polite" aria-atomic="true" className="sr-only">
+          {unseenResults > 0 ? t("ehr.tabs.newResults", { count: unseenResults }) : ""}
+        </span>
         <span
           aria-hidden
           className={cn(

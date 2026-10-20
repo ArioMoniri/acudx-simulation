@@ -115,7 +115,12 @@ export function TopNav() {
 
         <div className="ms-auto flex items-center gap-2">
           <GuidedTour className="hidden lg:inline-flex" />
-          <RoleSwitcher className="hidden sm:flex" />
+          {/* View-as: the full segmented control needs ~250px, which together
+              with the other controls pushed a 768px page to 985px. Below lg it
+              collapses into one labelled select; the segmented control returns
+              at lg and up, where the inline nav links also appear. */}
+          <RoleSwitcher variant="segmented" className="hidden lg:flex" />
+          <RoleSwitcher variant="menu" className="hidden sm:inline-flex lg:hidden" />
           <LanguageSwitcher className="hidden sm:inline-flex" />
           <ThemeToggle />
           <NavLink
@@ -137,7 +142,7 @@ export function TopNav() {
       {/* Compact nav for small screens — kept on one row, scrolls if needed */}
       <div className="flex items-center gap-2 overflow-x-auto border-t border-border px-4 py-1.5 lg:hidden">
         <GuidedTour className="shrink-0" />
-        <RoleSwitcher className="shrink-0 sm:hidden" />
+        <RoleSwitcher variant="menu" className="shrink-0 sm:hidden" />
         <ul className="flex items-center gap-1">
           {links.map((l) => (
             <li key={l.key} className="shrink-0">

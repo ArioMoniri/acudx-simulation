@@ -399,18 +399,24 @@ export function startEncounter(caseInstance: CaseInstance, opts: StartEncounterO
   if (liveEnabled) startDirectorClock();
 }
 
-/** Ask a history question by intent. Reveals matching history + logs the event. */
-export function askQuestion(intent: QuestionIntent): void {
+/**
+ * Ask a history question by intent. Reveals matching history + logs the event.
+ * `utterance` carries the learner's own words when the intent was inferred from
+ * free text (offline guard path), so the transcript can show what they typed.
+ */
+export function askQuestion(intent: QuestionIntent, opts?: { utterance?: string }): void {
   const c = state.caseInstance;
   if (!c) return;
   const resolved = resolveReveal(c, { kind: "question", ref: intent });
   const hit = resolved?.datumKind === "history";
   const datumIds = hit ? resolved!.datumIds : [];
   const alreadyKnown = datumIds.every((id) => state.discovered.has(id));
+  const utterance = opts?.utterance?.trim();
   const ev = appendEvent("question", intent, {
     hit,
     redundant: hit && alreadyKnown,
     revealed: datumIds,
+    ...(utterance ? { utterance: utterance.slice(0, 280) } : {}),
   });
   setState({
     ...state,

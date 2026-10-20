@@ -92,9 +92,14 @@ test.describe("encounter", () => {
     const administer = page.getByRole("button", { name: /^Administer / }).first();
     await expect(administer).toBeVisible();
     await administer.click();
-    await page.getByRole("button", { name: /^Confirm and administer / }).first().click();
+    // A medication is never given by a bare click (clinical review 02, finding
+    // 9): Administer opens the dose / route / indication form prefilled from the
+    // formulary, and "Give" submits it through the five-rights + allergy check.
+    const give = page.getByRole("button", { name: /^Confirm and administer / }).first();
+    await expect(give).toBeVisible();
+    await give.click();
     // Treatments are repeatable, so the control keeps its "Administer" label
-    // and the given-count badge + timestamp record the dose.
+    // and the given-count badge + MAR line record the dose.
     await expect(page.getByText("1 given")).toBeVisible();
 
     // Diagnosis: add a candidate to the differential and commit it.

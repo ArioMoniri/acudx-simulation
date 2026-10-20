@@ -66,7 +66,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
-  workers: process.env.CI ? 2 : 4,
+  // Locally, Playwright's default (half the cores) is kept: a fixed 4 workers
+  // oversubscribed a 4-core box that also hosts the Vite dev server, the relay
+  // and other sessions, and the longest crawls (buttons on /atlas, /exam) ran
+  // 3-4x slower than in isolation and blew their 60 s budget. CI pins 2.
+  workers: process.env.CI ? 2 : undefined,
   timeout: 120_000,
   expect: { timeout: 10_000 },
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],

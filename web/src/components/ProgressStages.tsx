@@ -24,7 +24,11 @@ export function ProgressStages({
 }: ProgressStagesProps) {
   return (
     <nav aria-label={ariaLabel}>
-      <ol className="flex items-center gap-1 overflow-x-auto pb-0.5">
+      <ol
+        tabIndex={0}
+        aria-label={ariaLabel}
+        className="flex items-center gap-1 overflow-x-auto pb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
         {stages.map((stage, i) => {
           const status =
             i < currentIndex ? "done" : i === currentIndex ? "current" : "todo";

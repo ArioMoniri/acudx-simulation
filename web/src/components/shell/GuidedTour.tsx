@@ -293,7 +293,11 @@ export function GuidedTour({ className }: { className?: string }) {
             )}
 
             {/* Ordered stop list */}
-            <ol className="mt-4 flex max-h-[min(50vh,22rem)] flex-col gap-1.5 overflow-y-auto">
+            <ol
+              tabIndex={0}
+              aria-label={t("tour.title")}
+              className="mt-4 flex max-h-[min(50vh,22rem)] flex-col gap-1.5 overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
               {tourStops.map((stop, i) => {
                 const isCurrent = i === currentIndex;
                 const isVisited = currentIndex >= 0 && i < currentIndex;

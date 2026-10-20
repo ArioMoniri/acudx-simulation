@@ -108,7 +108,7 @@ export function SimBadge({ variant = "chip", generation = null, className }: Sim
     >
       <Flask weight="bold" className="h-3.5 w-3.5 shrink-0" aria-hidden />
       <span className="uppercase tracking-wide">{t("ehr.sim.tag")}</span>
-      <span className="hidden sm:inline text-muted/80">
+      <span className="hidden sm:inline text-muted">
         {t("ehr.sim.short")}
       </span>
       {generation ? <ProvenanceTail generation={generation} /> : null}

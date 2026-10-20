@@ -334,7 +334,7 @@ export function ProblemListTab({ caseInstance, lang }: ProblemListTabProps) {
             "Search the catalogue, add candidates, then rank each by likelihood and note your reasoning.",
         })}
       >
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {/* Search + suggested (the builder) */}
           <DiagnosisPicker
             lang={lang}

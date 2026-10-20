@@ -94,7 +94,6 @@ export function OrganLegend({
                 className={cn(
                   "flex items-center gap-2 rounded-control px-2 py-1 transition-colors",
                   isActive ? "bg-brand-tint" : "hover:bg-bg-subtle",
-                  !present && "opacity-45",
                 )}
               >
                 <input
@@ -118,9 +117,15 @@ export function OrganLegend({
                   onBlur={() => onHover(null)}
                   className="flex min-w-0 flex-1 items-center gap-2 rounded-chip py-0.5 text-left focus-visible:outline-none"
                 >
+                  {/* An organ absent from this slice dims its swatch only; the
+                      label keeps full contrast (opacity on the whole row took
+                      the text below AA). */}
                   <span
                     aria-hidden
-                    className="h-3 w-3 shrink-0 rounded-[3px] ring-1 ring-inset ring-black/15"
+                    className={cn(
+                      "h-3 w-3 shrink-0 rounded-[3px] ring-1 ring-inset ring-black/15",
+                      !present && "opacity-45",
+                    )}
                     style={{ backgroundColor: organ.color }}
                   />
                   <span

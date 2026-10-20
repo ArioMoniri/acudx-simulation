@@ -61,7 +61,8 @@ export function CaseCard({ data, lang }: CaseCardProps) {
         </span>
         <span
           className="inline-flex items-center gap-1"
-          aria-label={`${t("caseCard.languages")}: ${data.languages
+          role="group"
+            aria-label={`${t("caseCard.languages")}: ${data.languages
             .map((l) => l.toUpperCase())
             .join(", ")}`}
         >

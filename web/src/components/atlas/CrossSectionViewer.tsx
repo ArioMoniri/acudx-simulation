@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { ArrowSquareOut, Scan, Warning } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/cn";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui";
 import {
   ATLAS_ATTRIBUTION,
   atlasImageUrl,
@@ -43,9 +42,6 @@ const SEG_ITEM =
   "ease-out focus-visible:outline-none text-monitor-dim hover:text-monitor-fg";
 const SEG_ITEM_ON =
   "bg-[color-mix(in_srgb,var(--monitor-fg)_15%,transparent)] text-monitor-fg";
-const SEG_ITEM_TAB =
-  "data-[state=active]:bg-[color-mix(in_srgb,var(--monitor-fg)_15%,transparent)] " +
-  "data-[state=active]:text-monitor-fg";
 
 export interface CrossSectionViewerProps {
   /** The slice currently on screen (already resolved for plane + level). */
@@ -164,27 +160,31 @@ export function CrossSectionViewer({
 
       {/* Controls: plane selector + window preset */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-monitor-border px-4 py-3">
-        <Tabs
-          value={plane}
-          onValueChange={(v) => onPlaneChange(v as AtlasPlane)}
+        {/* Plane selector: a pressed-button group (not Radix Tabs) because the
+            planes switch the slice in place and have no tab panels of their own;
+            a tablist whose triggers control nothing fails aria-valid-attr-value. */}
+        <div
+          role="group"
+          aria-label={t("atlas.planeGroup", {
+            defaultValue: "Cross-section plane",
+          })}
+          className={SEG_LIST}
         >
-          <TabsList
-            className={SEG_LIST}
-            aria-label={t("atlas.planeGroup", {
-              defaultValue: "Cross-section plane",
-            })}
-          >
-            {PLANES.map((p) => (
-              <TabsTrigger
+          {PLANES.map((p) => {
+            const on = p === plane;
+            return (
+              <button
                 key={p}
-                value={p}
-                className={cn(SEG_ITEM, SEG_ITEM_TAB)}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onPlaneChange(p)}
+                className={cn(SEG_ITEM, on && SEG_ITEM_ON)}
               >
                 {planeLabels[p]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+              </button>
+            );
+          })}
+        </div>
 
         <div
           role="group"

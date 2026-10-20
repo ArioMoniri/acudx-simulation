@@ -57,7 +57,7 @@ export function PipelineRail() {
 
   return (
     <ol
-      className="flex flex-col gap-2 md:flex-row md:items-stretch md:gap-0"
+      className="flex flex-col gap-2 lg:flex-row lg:items-stretch lg:gap-0"
       aria-label={t("authoring.pipeline.aria")}
     >
       {pipelineStages.map((stage, i) => {
@@ -69,7 +69,7 @@ export function PipelineRail() {
         const stateWord = t(`authoring.pipeline.state.${stage.state}`);
 
         return (
-          <li key={stage.key} className="flex items-stretch md:flex-1">
+          <li key={stage.key} className="flex items-stretch lg:flex-1">
             <div
               aria-current={isActive ? "step" : undefined}
               className={cn(
@@ -135,7 +135,7 @@ export function PipelineRail() {
             </div>
             {i < pipelineStages.length - 1 ? (
               <span
-                className="hidden shrink-0 items-center px-1 text-border md:flex"
+                className="hidden shrink-0 items-center px-1 text-border lg:flex"
                 aria-hidden
               >
                 <ArrowRight weight="bold" className="h-4 w-4" />

@@ -131,7 +131,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listboxId : undefined}
-        aria-label={t("language.label")}
+        aria-label={`${t("language.label")}: ${currentMeta.nativeName}`}
         title={t("language.label")}
         className={cn(
           "inline-flex min-h-8 items-center gap-1.5 rounded-control border border-border bg-bg-subtle px-2.5",
