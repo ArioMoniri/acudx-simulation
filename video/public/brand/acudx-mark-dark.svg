@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="t">
   <title id="t">AcuDx</title>
-  <g fill="none" stroke="#60a5fa" stroke-width="32" stroke-linecap="round">
-    <path d="M31 212 L128 44 L225 212" stroke-linejoin="miter" stroke-miterlimit="4"/>
-    <path d="M14 158 H242"/>
+  <g fill="#60a5fa">
+    <path id="upper" d="M12 158 H62.2 L128 44 L193.8 158 H244 V70 A58 58 0 0 0 186 12 H70 A58 58 0 0 0 12 70 Z"/>
+    <path id="lower" d="M12 186 H78.3 L128 100 L177.7 186 H244 V186 A58 58 0 0 1 186 244 H70 A58 58 0 0 1 12 186 Z"/>
   </g>
 </svg>
