@@ -586,3 +586,57 @@ async def test_ensure_worker_fails_fast_when_a_ready_row_is_gone_on_the_provider
     finally:
         await m.aclose()
     assert m.store.ledger(limit=1)[0].reason == "provider:terminated"
+
+
+# --- evidence retention: a ready_timeout termination leaves the boot log behind --- #
+
+@respx.mock
+async def test_ready_timeout_leaves_the_last_boot_log_snapshot_and_the_probe_outcome(tmp_path, caplog):
+    import logging
+
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    m.boot_log_interval_s = 0                       # capture on every poll in this test
+    respx.get(f"https://{DOMAIN}/healthz").mock(side_effect=httpx.ConnectError("Connection reset by peer"))
+    respx.get(url__startswith=f"http://{IP}/diag/").mock(
+        return_value=httpx.Response(200, text="vllm-1 | RuntimeError: Engine core initialization failed"))
+    respx.get(url__startswith=f"https://{DOMAIN}/diag/").mock(side_effect=httpx.ConnectError("reset"))
+    respx.post(f"{LAMBDA_API_BASE}/instance-operations/terminate").mock(
+        return_value=httpx.Response(200, json={"data": {"terminated_instances": []}}))
+    from server.providers.gpu_worker import WorkerFailed
+
+    try:
+        w = _ready_worker(m, clock, status="booting")
+        with caplog.at_level(logging.WARNING, logger="acudx.gpu_worker"):
+            with pytest.raises(WorkerFailed):
+                await m._wait_ready(w)
+        stored = m.stored_boot_log(w.id)
+    finally:
+        await m.aclose()
+    assert m.store.active_worker() is None and m.store.ledger(limit=1)[0].reason == "ready_timeout"
+    assert stored is not None and stored["stored"] is True and stored["worker_id"] == w.id
+    assert "Engine core initialization failed" in stored["docker_status"]
+    assert stored["last_health_probe"].startswith("ConnectError: Connection reset by peer")
+    # The probe outcome is logged once with its exception class, not once per poll.
+    probe_lines = [r.getMessage() for r in caplog.records if "/healthz probe" in r.getMessage()]
+    assert probe_lines == [f"gpu worker {INSTANCE_ID}: /healthz probe -> ConnectError: Connection reset by peer"]
+    assert any("last probe: ConnectError" in r.getMessage() for r in caplog.records)
+
+
+@respx.mock
+async def test_healthy_logs_the_http_status_of_a_failing_worker(tmp_path, caplog):
+    import logging
+
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    respx.get(f"https://{DOMAIN}/healthz").mock(side_effect=[httpx.Response(502), httpx.Response(200)])
+    try:
+        w = _ready_worker(m, clock)
+        with caplog.at_level(logging.INFO, logger="acudx.gpu_worker"):
+            assert await m._healthy(w) is False
+            assert await m._healthy(w) is True
+    finally:
+        await m.aclose()
+    msgs = [r.getMessage() for r in caplog.records if "/healthz probe" in r.getMessage()]
+    assert msgs == [f"gpu worker {INSTANCE_ID}: /healthz probe -> HTTP 502",
+                    f"gpu worker {INSTANCE_ID}: /healthz probe -> HTTP 200"]

@@ -73,3 +73,20 @@ def test_main_app_mounts_admin_router():
     paths = set(app.openapi()["paths"])
     assert {"/admin/gpu/status", "/admin/gpu/start", "/admin/gpu/stop",
             "/admin/gpu/ledger", "/admin/gpu/policy"} <= paths
+
+
+def test_boot_log_by_worker_id_survives_the_worker(tmp_path):
+    app, m = _app(tmp_path)
+    c = TestClient(app)
+    h = {"X-Admin-Token": "adm-secret"}
+    w = m.store.insert_worker(instance_id="i-gone", instance_type="gpu_1x_a10", region="us-east-1", token="t",
+                              status="terminated", price_cents_per_hour=75, launched_at=1.0, last_used_at=1.0)
+    assert c.get(f"/admin/gpu/boot-log?worker_id={w.id}", headers=h).status_code == 404
+    m.store.save_boot_log(w.id, w.instance_id, 2.0, {"available": True, "cloud_init": "ci", "docker_status": "ds"})
+    got = c.get(f"/admin/gpu/boot-log?worker_id={w.id}", headers=h).json()
+    assert got["docker_status"] == "ds" and got["stored"] is True and got["instance_id"] == "i-gone"
+    assert "token" not in got
+    # No active worker: the live read fails and the latest stored snapshot is returned instead.
+    latest = c.get("/admin/gpu/boot-log", headers=h).json()
+    assert latest["cloud_init"] == "ci" and latest["live_error"] == "no active worker with an ip"
+    assert c.get(f"/admin/gpu/boot-log?worker_id={w.id}").status_code == 401

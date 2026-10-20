@@ -68,9 +68,24 @@ async def gpu_stop(request: Request) -> dict[str, Any]:
 
 
 @router.get("/gpu/boot-log", dependencies=[Depends(require_admin)])
-async def gpu_boot_log(request: Request, tail: int = 200) -> dict[str, Any]:
-    """Cloud-init output and docker status of the active worker (plain HTTP /diag/<token>/ on port 80)."""
-    return await _manager(request).boot_log(tail_lines=max(10, min(tail, 2000)))
+async def gpu_boot_log(request: Request, tail: int = 200, worker_id: int | None = None) -> dict[str, Any]:
+    """Redacted cloud-init output and docker status.
+
+    ``worker_id`` returns the snapshot the gateway persisted for that worker (it outlives the
+    instance, so a ready_timeout termination still leaves evidence). Without it, the active
+    worker is read live; when that fails, the latest persisted snapshot is returned instead.
+    """
+    m = _manager(request)
+    if worker_id is not None:
+        stored = m.stored_boot_log(worker_id)
+        if stored is None:
+            raise HTTPException(status_code=404, detail={"reason": "no_boot_log", "worker_id": worker_id})
+        return stored
+    live = await m.boot_log(tail_lines=max(10, min(tail, 2000)))
+    if live.get("available"):
+        return live
+    stored = m.stored_boot_log()
+    return {**stored, "live_error": live.get("error")} if stored else live
 
 
 @router.get("/gpu/ledger", dependencies=[Depends(require_admin)])
