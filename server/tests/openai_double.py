@@ -50,6 +50,7 @@ class Scenario:
     treatments_unsafe_first: bool = False  # first table marks a contraindicated row indicated
     event_unsafe: bool = False           # branch events name a drug and the event safety judge fails them
     render_drops_numbers: bool = False   # TR renderings drop every digit (the rendering gate must reject)
+    director_reply: dict[str, Any] = field(default_factory=dict)  # fields that replace the narrator's reply
     prompt_tokens: int = 1200
     completion_tokens: int = 800
     calls: list[dict[str, Any]] = field(default_factory=list)
@@ -310,7 +311,7 @@ def build_double(sc: Scenario) -> FastAPI:
             content = json.dumps(_judge_reply(role, sc, user_text))
         elif role == "director":
             content = json.dumps({"utterance_en": "It hurts, doctor, please help.", "utterance_tr": "Acıyor doktor, lütfen yardım edin.",
-                                  "pain": 7, "mood_en": "scared", "mood_tr": "korkmuş"})
+                                  "pain": 7, "mood_en": "scared", "mood_tr": "korkmuş", **sc.director_reply})
         else:
             content = "{}"
         if body.get("stream"):
