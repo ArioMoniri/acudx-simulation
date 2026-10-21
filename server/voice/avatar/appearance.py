@@ -32,7 +32,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 SIGN_ORDER = ("fever_flush", "diaphoresis", "pallor", "mottling", "cyanosis", "jaundice", "resp_distress",
-              "accessory_muscles", "pain", "drowsy", "unresponsive")
+              "accessory_muscles", "pain", "drowsy", "unresponsive",
+              # Findings a case states on the face or neck (2026-10-21, owner list). Appended, so the
+              # keys of looks made before stay the same.
+              "petechiae", "purpura", "urticaria", "scleral_icterus", "flushing", "periorbital_oedema",
+              "facial_droop", "facial_swelling", "dehydration", "wound", "burn")
+# Rashes and skin lesions: the "clear, uniform skin" instruction is dropped when one of these is drawn.
+SKIN_LESIONS = ("mottling", "petechiae", "purpura", "urticaria", "wound", "burn")
 # Signs the live state can change from one Director step to the next (the ladder varies these);
 # the others are findings the case text states and stay until the patient improves.
 LIVE_SIGNS = ("fever_flush", "resp_distress", "accessory_muscles", "pain", "drowsy", "pallor", "mottling", "cyanosis")
@@ -49,6 +55,28 @@ _TEXT_EVIDENCE: dict[str, re.Pattern[str]] = {
                                     r"yardımcı solunum kas", re.I),
     "resp_distress": re.compile(r"respiratory distress|short(?:ness)? of breath|breathless|dyspn|tachypn|"
                                 r"difficulty breathing|laboured breathing|labored breathing|nefes darlığı|takipne", re.I),
+    "petechiae": re.compile(r"petechia|peteşi", re.I),
+    # Meningococcal and other non-blanching purpuric rashes.
+    "purpura": re.compile(r"purpur|non-?blanching (?:rash|spots|lesions)|solmayan döküntü|purpura", re.I),
+    "urticaria": re.compile(r"urticari|hives|wheals|ürtiker|kurdeşen", re.I),
+    "scleral_icterus": re.compile(r"scleral icterus|icteric sclera|yellow sclera|skleral ikter|skleralar? sarı", re.I),
+    # Non-febrile flushing (anaphylaxis, carcinoid, niacin); a fever flush comes from the temperature.
+    "flushing": re.compile(r"\bflush(?:ed|ing)\b|yüz kızarması|yüzde kızarıklık", re.I),
+    "periorbital_oedema": re.compile(r"periorbital (?:o?edema|swelling|puffiness)|puffy eyelids|swollen eyelids|"
+                                     r"göz çevresinde ödem|periorbital ödem", re.I),
+    "facial_droop": re.compile(r"facial droop|drooping of the (?:face|mouth)|mouth droop|facial (?:palsy|weakness)|"
+                               r"asymmetric smile|yüzde kayma|ağız kenarında düşüklük|fasiyal paralizi", re.I),
+    "facial_swelling": re.compile(r"(?:facial|lip|tongue|face|lips) (?:swelling|o?edema)|swollen (?:face|lips?|tongue)|"
+                                  r"angio-?o?edema|anjiyoödem|dudaklarda şişlik|yüzde şişlik", re.I),
+    "dehydration": re.compile(r"dehydrat|dry (?:mucous membranes|mucosa|lips)|sunken eyes|dry mouth|"
+                              r"dehidrat|ağız kuruluğu|çökük göz", re.I),
+    # Wounds and burns are drawn only where a head-and-shoulders portrait shows them.
+    "wound": re.compile(r"(?:lacerat\w*|abrasion|wound|cut|graze|bruis\w*|hematoma|haematoma)\s+(?:\w+\s+){0,4}"
+                        r"(?:forehead|scalp|face|cheek|chin|brow|eyebrow|temple|lip|nose|neck)|"
+                        r"(?:forehead|scalp|facial|cheek|chin|brow|lip)\s+(?:lacerat|abrasion|wound|cut|bruis|hematoma|haematoma)|"
+                        r"alında (?:kesi|yara)|yüzde (?:kesi|yara)", re.I),
+    "burn": re.compile(r"(?:burns?|scald\w*)\s+(?:\w+\s+){0,4}(?:face|forehead|cheek|neck|chin)|"
+                       r"(?:facial|face|neck)\s+burns?|singed (?:eyebrows|facial hair|nasal hair)|yüzde yanık", re.I),
 }
 _COUGH = re.compile(r"cough|öksür", re.I)
 # A finding inside a negated clause ("no signs of cyanosis or clubbing", "not jaundiced", "denies
@@ -92,6 +120,21 @@ _PHRASES: dict[str, tuple[str, str]] = {
     "pain": ("a pained expression with the brow slightly furrowed", "grimacing in pain, brow tightly furrowed, eyes narrowed"),
     "drowsy": ("heavy eyelids, looks tired and drowsy", "half-closed eyes, looks exhausted and barely awake"),
     "unresponsive": ("eyes closed, face slack", "eyes closed, face slack and grey, unresponsive"),
+    "petechiae": ("a few tiny pinpoint dark red dots on the cheeks and neck that look like they would not fade under pressure",
+                  "many tiny pinpoint dark red petechial dots scattered over the face and neck"),
+    "purpura": ("a few small irregular purple-red non-blanching spots on the cheek and neck",
+                "several purple-red non-blanching purpuric patches on the face and neck"),
+    "urticaria": ("a few raised pink wheals (hives) on the neck and cheek",
+                  "many raised pink-white wheals (hives) with red edges on the face and neck"),
+    "scleral_icterus": ("a faint yellow tinge to the whites of the eyes", "clearly yellow whites of the eyes"),
+    "flushing": ("an even pink flush over the cheeks and neck", "a deep even red flush over the whole face and neck"),
+    "periorbital_oedema": ("slightly puffy swollen eyelids", "markedly swollen puffy eyelids, eyes narrowed by the swelling"),
+    "facial_droop": ("a slight droop of one corner of the mouth", "a clear droop of one side of the face and mouth"),
+    "facial_swelling": ("mildly swollen lips", "markedly swollen lips and puffy swollen face"),
+    "dehydration": ("dry cracked lips and slightly sunken eyes", "very dry cracked lips, sunken eyes and dark circles"),
+    "wound": ("a small cleaned laceration with a little dried blood on the forehead",
+              "a sutured laceration on the forehead with bruising around it"),
+    "burn": ("a patch of red, superficial burn on one cheek", "red, blistered partial-thickness burn on one cheek and the chin"),
 }
 
 
@@ -160,6 +203,10 @@ def look_from_case(spec: dict[str, Any], director: dict[str, Any] | None) -> Loo
     temp = _num(vitals.get("tempC"))
     if temp is not None and temp >= 38.0:
         signs["fever_flush"] = 2 if temp >= 39.0 else 1
+    if signs.get("fever_flush"):
+        # A febrile "flushed" face is the fever flush (an even tint added after the edit); asking the
+        # model for a flush as well drew blotches (prompt tuning 2026-10-21).
+        signs.pop("flushing", None)
     rr, spo2 = _num(vitals.get("rr")), _num(vitals.get("spo2"))
     if (rr is not None and rr >= 30) or (spo2 is not None and spo2 < 88):
         signs["resp_distress"] = 2
@@ -219,10 +266,16 @@ def edit_prompt(look: Look) -> str:
     mouth = "Keep the mouth closed and relaxed." if not look.signs.get("unresponsive") else "Keep the mouth closed."
     # Never a sign the case does not have: a colour change drifted into blotches that read as a rash on
     # some faces (live 2026-10-21, p35), so clear, uniform skin is part of every instruction.
-    skin = ("" if look.signs.get("mottling") else
+    skin = ("" if any(look.signs.get(s) for s in SKIN_LESIONS) else
             " Keep the skin clear and uniform: no blotches, no rash, no spots, no patches.")
+    if look.signs.get("facial_droop"):
+        mouth = "Keep the mouth closed."
+    # Our own guardrails (the open-weight model runs without a hosted filter): a clothed head-and-shoulders
+    # clinical photo, only the listed findings, no blood or injury unless a wound or burn is listed.
+    guard = (" Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual"
+             + ("" if look.signs.get("wound") or look.signs.get("burn") else ", no blood, no injuries") + ".")
     head = (f"Edit this photo of a hospital patient{person}. Keep the same person: identical face identity, age, "
-            "hairstyle, clothing, head position, camera framing, background and lighting. " + mouth + skin)
+            "hairstyle, clothing, head position, camera framing, background and lighting. " + mouth + skin + guard)
     if not changes:
         return head + " Make the person look well and comfortable. Photorealistic, natural skin texture, no text."
     return head + " Change only this: " + "; ".join(changes) + ". Photorealistic, natural skin texture, no text."
