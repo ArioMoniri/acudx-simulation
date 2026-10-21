@@ -15,9 +15,15 @@
  *  - local (the default and the AIRGAPPED fallback): the talking-head clip and a
  *    viseme overlay are driven by the ACTUAL patient audio through a Web Audio
  *    AnalyserNode (audioLipsync.ts), so the clip plays exactly as long as the
- *    voice and the mouth follows loudness, not text timing. Without audio (voice
- *    off, or no TTS provider) the text-timed `useSpeech` timeline still animates
- *    so the patient visibly talks.
+ *    voice and the mouth follows loudness, not text timing. While the GPU worker
+ *    boots the browser's speech synthesis voices the line (lib/tts.ts) and the clip
+ *    plays until that speech ends. Voice off keeps the text-timed `useSpeech`
+ *    timeline so the patient visibly talks.
+ *
+ * The GPU worker is strictly on demand: the call start (the voice turning on from a
+ * click) wakes it (POST /v1/voice/warm, lib/workerWake.ts), never mounting the tile.
+ * The tile then watches the capabilities until the live video can start or the
+ * launch failed, saying so ("the GPU is waking up, about N min" / retry).
  *
  * Call controls: mute, hold, end / rejoin, captions (live transcript of the last
  * patient line and the learner's last line). Symptom overlays come from the live
@@ -55,15 +61,32 @@ import type { CaseInstance } from "@/domain/case";
 import { cn } from "@/lib/cn";
 import { useSpeech, type MouthShape } from "@/lib/lipsync";
 import { createAnalyserEnvelope, overlayGeometry, type AnalyserEnvelope } from "@/lib/audioLipsync";
-import { getTtsAudioElement, pauseTts, resumeTts, setTtsMuted, speakAsPatient, stopTts, ttsMaybeAvailable } from "@/lib/tts";
+import {
+  browserSpeechAvailable,
+  getTtsAudioElement,
+  pauseTts,
+  resumeTts,
+  setTtsMuted,
+  speakAsPatient,
+  stopTts,
+  type SpeechEngine,
+} from "@/lib/tts";
 import { voiceApi, type VoiceCapabilities } from "@/lib/voiceApi";
+import { etaMinutes, wakeOnCallStart, watchWorker } from "@/lib/workerWake";
 import { sessionBody, startAvatarCall, type AvatarCallHandle, type AvatarCallMetrics } from "@/lib/avatarCall";
 import { getEncounterSnapshot } from "@/state/encounterStore";
 
 export type CallState = "connecting" | "live" | "hold" | "ended";
 export type CallMode = "realtime" | "webrtc" | "tavus" | "local";
 /** What the live-video path is doing right now (shown while it is not live). */
-export type LiveVideoPhase = "preparing" | "connecting" | "workerStarting" | "unavailable" | null;
+export type LiveVideoPhase =
+  | "preparing"
+  | "connecting"
+  | "workerStarting"
+  | "waking"
+  | "failed"
+  | "unavailable"
+  | null;
 
 export interface PatientCallContext {
   case_state?: Record<string, unknown>;
@@ -179,6 +202,14 @@ export function PatientCallTile({
   const [livePhase, setLivePhase] = useState<LiveVideoPhase>(null);
   const [liveMetrics, setLiveMetrics] = useState<AvatarCallMetrics | null>(null);
   const [tavusUrl, setTavusUrl] = useState<string | null>(null);
+  const [engine, setEngine] = useState<SpeechEngine | null>(null);
+  const [etaMin, setEtaMin] = useState(() => etaMinutes(null));
+  // Bumped to (re)start watching the woken GPU worker; 0 = no wake this call.
+  const [wakeSeq, setWakeSeq] = useState(0);
+  const wokenRef = useRef(false);
+  const sessionPendingRef = useRef(false);
+  const modeRef = useRef<CallMode>("local");
+  const prevVoiceRef = useRef(voiceOn);
   const avatarRef = useRef<AvatarCallHandle | null>(null);
   const contextRef = useRef(callContext);
 
@@ -202,14 +233,15 @@ export function PatientCallTile({
     speakRef.current = speak;
     stopRef.current = stop;
     contextRef.current = callContext;
-  }, [state, voiceOn, speak, stop, callContext]);
+    modeRef.current = mode;
+  }, [state, voiceOn, speak, stop, callContext, mode]);
 
   /**
    * Self-hosted live video: prepare the portrait on the worker runner, then connect.
    * Resolves true when the first frame arrived; false (with a phase explaining why) to
    * keep the honest local fallback.
    */
-  const startLiveVideo = useCallback(
+  const startLiveVideoOnce = useCallback(
     async (isCancelled: () => boolean): Promise<boolean> => {
       if (!encounterId || !videoRef.current || !remoteAudioRef.current) return false;
       setLivePhase("preparing");
@@ -225,8 +257,11 @@ export function PatientCallTile({
         }),
       );
       if (isCancelled()) return false;
+      sessionPendingRef.current = false;
       if (!ses.ok) {
-        setLivePhase("detail" in ses && ses.detail?.pending_launch ? "workerStarting" : "unavailable");
+        const pending = "detail" in ses && !!ses.detail?.pending_launch;
+        sessionPendingRef.current = pending;
+        setLivePhase(pending ? (wokenRef.current ? "waking" : "workerStarting") : "unavailable");
         return false;
       }
       if (ses.data.transport === "tavus" && ses.data.conversation_url) {
@@ -281,6 +316,20 @@ export function PatientCallTile({
     },
     [encounterId, visual.photoId, visual.sexAtBirth, visual.age, lang],
   );
+  // One live-video start at a time (the mount check and a call-start wake can both get there).
+  const liveStartingRef = useRef(false);
+  const startLiveVideo = useCallback(
+    async (isCancelled: () => boolean): Promise<boolean> => {
+      if (liveStartingRef.current || avatarRef.current) return false;
+      liveStartingRef.current = true;
+      try {
+        return await startLiveVideoOnce(isCancelled);
+      } finally {
+        liveStartingRef.current = false;
+      }
+    },
+    [startLiveVideoOnce],
+  );
 
   // 1. Capabilities once; decide the path. Realtime needs an avatar row AND a room token.
   useEffect(() => {
@@ -333,10 +382,10 @@ export function PatientCallTile({
     };
   }, [encounterId, startLiveVideo]);
 
-  // While the GPU worker boots (the first spoken reply launches it), re-check every 30 s
-  // and move from the animated portrait to the live video once the runner is ready.
+  // Without a call start nothing launches the worker (opening a case must not), but one
+  // another learner woke may come up: re-check every 30 s for a while and move to live video.
   useEffect(() => {
-    if (livePhase !== "workerStarting" || mode !== "local") return;
+    if (livePhase !== "workerStarting" || mode !== "local" || wokenRef.current) return;
     let cancelled = false;
     let tries = 0;
     const timer = setInterval(() => {
@@ -360,6 +409,67 @@ export function PatientCallTile({
       clearInterval(timer);
     };
   }, [livePhase, mode, startLiveVideo]);
+
+  // The learner started the call (or turned the voice on): wake the on-demand GPU worker.
+  // Only an explicit start (a false -> true change of `voiceOn`, i.e. a click) wakes it,
+  // never mounting the tile or opening the case.
+  const wakeWorker = useCallback(() => {
+    if (modeRef.current !== "local") return;
+    wokenRef.current = true;
+    setLivePhase("waking");
+    setEtaMin(etaMinutes(null));
+    void wakeOnCallStart(voiceApi).then((st) => {
+      if (!voiceRef.current) return;
+      if (st.kind === "failed") {
+        setLivePhase("failed");
+        return;
+      }
+      setWakeSeq((n) => n + 1);
+    });
+  }, []);
+
+  useEffect(() => {
+    const was = prevVoiceRef.current;
+    prevVoiceRef.current = voiceOn;
+    if (voiceOn && !was) wakeWorker();
+  }, [voiceOn, wakeWorker]);
+
+  // While the woken worker boots: re-read the capabilities until the live video can start
+  // or the launch failed. No try limit while the call is active; ending the call, turning
+  // the voice off or unmounting stops it.
+  useEffect(() => {
+    if (wakeSeq === 0) return;
+    let cancelled = false;
+    const stopWatch = watchWorker({
+      api: voiceApi,
+      isActive: () => !cancelled && voiceRef.current && stateRef.current !== "ended" && modeRef.current === "local",
+      onStatus: (st, data) => {
+        if (cancelled) return;
+        setCaps(data);
+        if (st.kind === "waking") {
+          setLivePhase("waking");
+          setEtaMin(st.minutes);
+          return;
+        }
+        if (st.kind === "failed") {
+          setLivePhase("failed");
+          return;
+        }
+        if (!encounterId) {
+          setLivePhase(null);
+          return;
+        }
+        void startLiveVideo(() => cancelled).then((ok) => {
+          // The worker answered ready but the call slot is still coming up: keep watching.
+          if (!ok && !cancelled && sessionPendingRef.current) setWakeSeq((n) => n + 1);
+        });
+      },
+    });
+    return () => {
+      cancelled = true;
+      stopWatch();
+    };
+  }, [wakeSeq, encounterId, startLiveVideo]);
 
   // 2. Analyser loop: sample the shared patient <audio> while it plays.
   const stopLoop = useCallback(() => {
@@ -402,7 +512,7 @@ export function PatientCallTile({
       return;
     }
     const textTimed = () => speakRef.current(text, { voice: false, lang });
-    if (!voiceRef.current || !ttsMaybeAvailable()) {
+    if (!voiceRef.current) {
       textTimed();
       return () => stopRef.current();
     }
@@ -416,9 +526,17 @@ export function PatientCallTile({
         if (cancelled) return;
         setFirstAudioMs(ms);
       },
-      onStart: (durationMs) => {
+      onStart: (durationMs, used) => {
         if (cancelled) return;
         began = true;
+        setEngine(used);
+        if (used === "browser") {
+          // The browser voice (GPU worker still booting) is not on the shared <audio>, so the
+          // analyser hears nothing: keep the talk clip playing until the speech's onend,
+          // with a generous cap in case the browser never reports the end.
+          speakRef.current(text, { voice: false, lang, durationMs: Math.round(durationMs * 1.5) + 2000 });
+          return;
+        }
         const live = startLoop();
         // Keep the "speaking" flag (clip playback) tied to the audio: the
         // text-timed hook only fills in when the analyser cannot run.
@@ -521,7 +639,11 @@ export function PatientCallTile({
   const statusLabel = t(`voice2.tile.status.${statusKey}`);
   const geometry = useMemo(() => overlayGeometry(frame), [frame]);
   const showOverlay = audioDriven && !reduced && state === "live" && !liveVideo;
-  const providerLabel = caps?.tts.enabled ? caps.tts.provider : null;
+  const providerLabel = engine === "browser" ? null : caps?.tts.enabled ? caps.tts.provider : null;
+  const retryVideo = () => {
+    setLivePhase(null);
+    wakeWorker();
+  };
 
   return (
     <section
@@ -612,6 +734,7 @@ export function PatientCallTile({
               alt={t("patientviewer.syntheticNote")}
               className="h-full w-full"
               bare
+              preloadTalk
             />
           ) : null}
 
@@ -737,10 +860,23 @@ export function PatientCallTile({
 
       {/* Degraded / provenance line (text carries the meaning, never color alone) */}
       <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted">
-        {caps && !ttsEnabled ? <span>{t("voice2.tile.noVoice")}</span> : null}
+        {caps && !ttsEnabled && !browserSpeechAvailable() ? <span>{t("voice2.tile.noVoice")}</span> : null}
         {caps && ttsEnabled && !voiceOn ? <span>{t("voice2.tile.voiceOff")}</span> : null}
         {caps && caps.avatar.enabled && !liveVideo && state === "live" && !livePhase ? <span>{t("voice2.tile.degraded")}</span> : null}
-        {livePhase && !liveVideo ? <span data-testid="live-phase">{t(`voice2.tile.liveVideo.${livePhase}`)}</span> : null}
+        {livePhase && !liveVideo && (voiceOn || (livePhase !== "waking" && livePhase !== "failed")) ? (
+          <span data-testid="live-phase">{t(`voice2.tile.liveVideo.${livePhase}`, { minutes: etaMin })}</span>
+        ) : null}
+        {livePhase === "failed" && !liveVideo && voiceOn ? (
+          <button
+            type="button"
+            onClick={retryVideo}
+            className="rounded-full border border-border bg-surface px-2 py-0.5 font-medium text-fg hover:bg-bg-subtle"
+            data-testid="retry-live-video"
+          >
+            {t("voice2.tile.controls.retryVideo")}
+          </button>
+        ) : null}
+        {engine === "browser" && voiceOn && !liveVideo ? <span>{t("voice2.tile.provenance.browserVoice")}</span> : null}
         {providerLabel && voiceOn ? <span>{t("voice2.tile.provenance.voice", { provider: providerLabel })}</span> : null}
         {liveVideo && caps ? <span>{t("voice2.tile.provenance.renderer", { renderer: caps.avatar.renderer })}</span> : null}
         {showRealtimeVideo && liveMetrics?.firstFrameMs != null ? (

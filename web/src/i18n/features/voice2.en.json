@@ -26,7 +26,8 @@
         "captionsOn": "Hide captions",
         "captionsOff": "Show captions",
         "voiceOn": "Voice on",
-        "voiceOff": "Voice off"
+        "voiceOff": "Voice off",
+        "retryVideo": "Retry video"
       },
       "captions": {
         "label": "Live captions",
@@ -41,7 +42,8 @@
         "renderer": "Video: {{renderer}}",
         "firstFrame": "First frame {{ms}} ms",
         "speechStart": "Speech start {{ms}} ms",
-        "lipLag": "Voice to lips {{ms}} ms"
+        "lipLag": "Voice to lips {{ms}} ms",
+        "browserVoice": "Voice: browser (the GPU voice is starting)"
       },
       "signs": "Presentation",
       "endedNote": "The patient is still here. Rejoin to continue the voice call; typing always works.",
@@ -50,6 +52,8 @@
         "preparing": "Preparing the patient's face for live video",
         "connecting": "Connecting live video",
         "workerStarting": "Live video starts when the GPU worker is up; showing the animated portrait",
+        "waking": "Video connecting, the GPU is waking up (about {{minutes}} min)",
+        "failed": "Live video could not start (the GPU did not come up); showing the animated portrait",
         "unavailable": "Live video unavailable; showing the animated portrait"
       }
     }

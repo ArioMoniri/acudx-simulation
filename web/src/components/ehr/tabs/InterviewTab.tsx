@@ -459,17 +459,18 @@ export function InterviewTab({
     return "";
   }, [allTurns, lang]);
 
-  // Opt-in spoken replies; OFF by default so shared spaces stay silent.
+  // Opt-in spoken replies; OFF by default so shared spaces stay silent. Turning the voice
+  // on (the call button or the tile's Voice toggle) is the call start: the tile wakes the
+  // on-demand GPU worker then, never on mount.
   const [voiceOn, setVoiceOn] = useState(false);
   const toggleVoice = useCallback(() => {
-    setVoiceOn((v) => {
-      const next = !v;
-      // Unlock audio inside this click so the async replies can play.
-      if (next) unlockTts();
-      else stopTts();
-      return next;
-    });
-  }, []);
+    const next = !voiceOn;
+    // Unlock audio directly in this click handler (a state updater may run outside the
+    // gesture, or twice under StrictMode) so the async replies can play.
+    if (next) unlockTts();
+    else stopTts();
+    setVoiceOn(next);
+  }, [voiceOn]);
   const callEntry = useCallback(() => {
     toggleVoice();
     const tile = callRef.current?.querySelector<HTMLElement>("section[data-call-state]");
