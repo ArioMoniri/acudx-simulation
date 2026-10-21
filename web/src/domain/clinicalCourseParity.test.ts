@@ -88,6 +88,34 @@ describe("06b client binding: spec to course and formulary codes to events", () 
   });
 });
 
+describe("ARDS ventilatory support (product owner decision 2026-10-21, ESICM 2023 rec. 3.1)", () => {
+  const ards = (label: string) => {
+    const pc = fixture.cases.find((c) => c.condition_id === "ards" && c.label === label);
+    if (!pc) throw new Error(`no ards [${label}] parity case`);
+    return pc;
+  };
+
+  it("the ARDS group is met by HFNC, NIV or intubation, never plain oxygen", () => {
+    const g = COURSE_TABLES.rules.ards.groups.find((x) => x.id === "ventilation");
+    expect(g?.classes).toEqual(["hfnc", "niv", "intubation"]);
+    expect(g?.classes).not.toContain("oxygen");
+    expect(COURSE_TABLES.supportClasses).toEqual(["hfnc", "niv", "intubation"]);
+    expect(COURSE_TABLES.handledClasses).toContain("hfnc");
+  });
+
+  it("HFNC, NIV and intubation improve the course in the browser mirror; an NRB alone does not", () => {
+    const nrb = simulateCourse(ards("nrb").input, 120 * 60_000);
+    expect(nrb.phase).toBe("peri_arrest");
+    for (const label of ["hfnc", "niv", "intubation"]) {
+      const snap = simulateCourse(ards(label).input, 120 * 60_000);
+      expect(snap.phase, label).toBe("improving");
+      expect(snap.vitals.spo2, label).toBeGreaterThan(nrb.vitals.spo2);
+    }
+    const hfncEvent = ards("hfnc").input.events?.find((e) => e.code === "hfnc_60l");
+    expect(hfncEvent?.classes).toEqual(["oxygen", "hfnc"]);
+  });
+});
+
 describe("named antimicrobial spectrum (mirror of director.named_agents)", () => {
   it("reads agents from free-text codes the same way the server does", () => {
     expect(namedAgents("co_amoxiclav")).toEqual(["anaerobe", "gram_neg", "gram_pos"]);

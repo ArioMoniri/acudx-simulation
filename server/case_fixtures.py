@@ -3740,8 +3740,14 @@ CONDITION_COURSE: dict[str, dict[str, Any]] = {
     },
     "ards": {
         "pattern": "hypoxic_resp", "s0": 0.6, "rate_h": 0.15, "recover_h": 0.1, "o2_response": 0.15,
-        "groups": [_grp("ventilation", ("lung_protective", "prone"), (), lag_min=30, en="Lung-protective ventilation", tr="Akciğer koruyucu ventilasyon")],
-        "targets": [_tgt("ventilation", "ventilation", 60, "ESICM 2023 https://doi.org/10.1007/s00134-023-07050-7", basis="design")],
+        # Ventilatory support: high-flow nasal oxygen, CPAP or NIV, or intubation with
+        # lung-protective ventilation (product owner decision 2026-10-21; ESICM 2023
+        # recommendation 3.1 recommends HFNO over conventional oxygen in acute hypoxaemic
+        # respiratory failure, statement gs_esicm2023_hfno_ahrf). Low-flow oxygen (nasal
+        # cannula, face mask, NRB) is conventional oxygen and does not meet it.
+        "groups": [_grp("ventilation", ("lung_protective", "prone"), ("hfnc", "niv", "intubation"), lag_min=30,
+                        en="Ventilatory support (HFNO, NIV or intubation)", tr="Solunum desteği (YANO, NIV veya entübasyon)")],
+        "targets": [_tgt("ventilation", "ventilation", 60, "ESICM 2023 https://doi.org/10.1007/s00134-023-07050-7 (recommendation 3.1)", basis="design")],
         "row_harms": {"high_tidal": _harm({}, rate_mult=1.5, en="High tidal volumes injure the lung (ESICM 2023)", tr="Yüksek tidal hacim akciğeri hasarlar (ESICM 2023)")},
     },
     "perforated_ulcer": {

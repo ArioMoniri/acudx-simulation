@@ -51,6 +51,7 @@ def tables() -> dict:
         "agentAllergyClass": FX.AGENT_ALLERGY_CLASS,
         "rowClasses": dict(sorted(row_classes.items())),
         "handledClasses": sorted(C.HANDLED_CLASSES),
+        "supportClasses": list(C.SUPPORT_CLASSES),
         "bounds": {k: list(v) for k, v in C.BOUNDS.items()},
         "defaultBedside": C.DEFAULT_BEDSIDE,
         "icd10": {c["id"]: c["icd10"] for c in CATALOG if c["id"] in FX.CONDITION_COURSE},

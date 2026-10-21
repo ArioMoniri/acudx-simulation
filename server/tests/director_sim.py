@@ -36,6 +36,7 @@ T0: dict[str, dict[str, float]] = {
     "pulmonary_embolism": {"hr": 116, "systolic": 108, "diastolic": 68, "rr": 26, "spo2": 89, "tempC": 37.2},
     "anaphylaxis": {"hr": 128, "systolic": 82, "diastolic": 46, "rr": 28, "spo2": 91, "tempC": 36.9},
     "heart_failure_acute": {"hr": 116, "systolic": 162, "diastolic": 92, "rr": 30, "spo2": 87, "tempC": 36.8},
+    "ards": {"hr": 118, "systolic": 112, "diastolic": 66, "rr": 32, "spo2": 86, "tempC": 38.4},
 }
 
 
@@ -123,5 +124,9 @@ SCENARIOS: dict[str, list[tuple[str, list[tuple[int, str, str]]]]] = {
     "anaphylaxis": [("none", []), ("IM adrenaline", [(3, "treatment", "3992-im")]), ("fluids only", [(3, "treatment", "313002")])],
     "heart_failure_acute": [("none", []), ("3 L fluid", [(m, "treatment", "313002") for m in (5, 10, 15, 20, 25, 30)]),
                             ("decongestion", [(5, "treatment", "niv_nitrate"), (10, "treatment", "iv_diuretic")])],
+    # Ventilatory support in ARDS (product owner decision 2026-10-21, ESICM 2023 rec. 3.1):
+    # HFNO, NIV and intubation meet it; an NRB alone is conventional oxygen and does not.
+    "ards": [("nrb", [(5, "treatment", "nrb_15l")]), ("hfnc", [(5, "treatment", "hfnc_60l")]),
+             ("niv", [(5, "treatment", "cpap")]), ("intubation", [(5, "treatment", "lung_protective")])],
 }
 MARKS: tuple[int, ...] = (0, 10, 30, 60, 90, 120)

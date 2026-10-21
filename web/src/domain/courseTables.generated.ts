@@ -562,6 +562,7 @@ export const COURSE_TABLES: CourseTables = {
   "dextrose",
   "fluids",
   "glucagon",
+  "hfnc",
   "insulin_bolus",
   "insulin_dextrose",
   "insulin_frii",
@@ -747,7 +748,8 @@ export const COURSE_TABLES: CourseTables = {
    "benzodiazepine"
   ],
   "airway_niv": [
-   "niv"
+   "niv",
+   "intubation"
   ],
   "airway_support": [],
   "alpha_blockade": [],
@@ -1101,7 +1103,9 @@ export const COURSE_TABLES: CourseTables = {
   "insulin_low_k": [
    "insulin_frii"
   ],
-  "intubate_no_hypervent": [],
+  "intubate_no_hypervent": [
+   "intubation"
+  ],
   "iodine_first": [],
   "iv_abx_1h": [
    "antibiotic"
@@ -1142,7 +1146,9 @@ export const COURSE_TABLES: CourseTables = {
    "oxygen"
   ],
   "limit_correction": [],
-  "long_pauses": [],
+  "long_pauses": [
+   "intubation"
+  ],
   "low_rate_insulin": [
    "fluids",
    "insulin_frii"
@@ -1150,7 +1156,9 @@ export const COURSE_TABLES: CourseTables = {
   "lp_before_abx": [
    "antibiotic"
   ],
-  "lung_protective": [],
+  "lung_protective": [
+   "intubation"
+  ],
   "magnesium": [],
   "magnesium_load": [],
   "mark_margin": [],
@@ -1325,7 +1333,9 @@ export const COURSE_TABLES: CourseTables = {
   "surgical_referral": [
    "procedure"
   ],
-  "suxamethonium": [],
+  "suxamethonium": [
+   "intubation"
+  ],
   "swab_delay": [
    "antibiotic"
   ],
@@ -2591,14 +2601,18 @@ export const COURSE_TABLES: CourseTables = {
    "groups": [
     {
      "active_min": null,
-     "classes": [],
+     "classes": [
+      "hfnc",
+      "niv",
+      "intubation"
+     ],
      "codes": [
       "lung_protective",
       "prone"
      ],
      "id": "ventilation",
-     "label_en": "Lung-protective ventilation",
-     "label_tr": "Akciğer koruyucu ventilasyon",
+     "label_en": "Ventilatory support (HFNO, NIV or intubation)",
+     "label_tr": "Solunum desteği (YANO, NIV veya entübasyon)",
      "lag_min": 30,
      "modifies": true,
      "needs": [],
@@ -2644,7 +2658,7 @@ export const COURSE_TABLES: CourseTables = {
      "by_min": 60,
      "group": "ventilation",
      "id": "ventilation",
-     "source": "ESICM 2023 https://doi.org/10.1007/s00134-023-07050-7"
+     "source": "ESICM 2023 https://doi.org/10.1007/s00134-023-07050-7 (recommendation 3.1)"
     }
    ],
    "well": {
@@ -11346,5 +11360,10 @@ export const COURSE_TABLES: CourseTables = {
   "start_arrest": null,
   "targets": [],
   "well": {}
- }
+ },
+ "supportClasses": [
+  "hfnc",
+  "niv",
+  "intubation"
+ ]
 };

@@ -168,6 +168,11 @@ SRC: Dict[str, Dict[str, str]] = {
     "splf23": dict(body="SPLF/SMFU/SRLF/SFAR/SFCTCV", title="Guidelines for the management of patients with primary spontaneous pneumothorax",
                    edition="Annals of Intensive Care 2023;13:88", url="https://doi.org/10.1186/s13613-023-01181-2",
                    fetch=EPMC.format(pmc="PMC10509123"), doi="10.1186/s13613-023-01181-2", published="2023-09-19"),
+    # CC BY-NC 4.0 (PMC10354163): condensed and cited, not reproduced.
+    "esicm23ards": dict(body="ESICM", title="ESICM guidelines on acute respiratory distress syndrome: definition, phenotyping and respiratory support strategies",
+                        edition="Intensive Care Medicine 2023;49:727-759", url="https://doi.org/10.1007/s00134-023-07050-7",
+                        fetch=EPMC.format(pmc="PMC10354163"), doi="10.1007/s00134-023-07050-7", published="2023-06-16",
+                        license="copyrighted-summarized"),
     "wses25ptx": dict(body="WSES", title="Meta-analysis of the optimal needle length and decompression site for tension pneumothorax and consensus recommendations",
                       edition="World Journal of Emergency Surgery 2025", url="https://doi.org/10.1186/s13017-025-00613-7",
                       fetch=EPMC.format(pmc="PMC12087068"), doi="10.1186/s13017-025-00613-7", published="2025-05-01"),
@@ -485,6 +490,12 @@ def open_statements() -> List[GuidelineStatement]:  # noqa: C901 - a flat author
         "Tension pneumothorax is a life-threatening emergency: the progressive increase in intrathoracic pressure displaces the mediastinum towards the opposite side, leading to reduced venous return to the heart and resulting in hemodynamic instability; immediate needle decompression is the first line of treatment, aiming to convert the tension into a simple pneumothorax, followed by insertion of an intercostal chest drain as the definitive treatment.",
         "Tansiyon pnömotoraks yaşamı tehdit eden bir acildir: intratorasik basıncın ilerleyici artışı mediasteni karşı tarafa iter, kalbe venöz dönüşü azaltır ve hemodinamik instabiliteye yol açar; birinci basamak tedavi, tansiyonu basit pnömotoraksa çevirmeyi amaçlayan hemen iğne dekompresyonudur; ardından kesin tedavi olarak interkostal göğüs dreni yerleştirilir.",
         ["J93.0"], specialties=["pulmonology"]))
+
+    # ---- ARDS and acute hypoxaemic respiratory failure (ESICM 2023) -------
+    S.append(_s("gs_esicm2023_hfno_ahrf", "esicm23ards",
+        "We recommend that non-mechanically ventilated patients with acute hypoxemic respiratory failure not due to cardiogenic pulmonary edema or acute exacerbation of COPD receive high-flow nasal oxygen (HFNO) as compared to conventional oxygen therapy to reduce the risk of intubation.",
+        "Kardiyojenik pulmoner ödem veya KOAH akut alevlenmesine bağlı olmayan akut hipoksemik solunum yetmezliği olan, mekanik ventilasyon uygulanmayan hastalarda entübasyon riskini azaltmak için konvansiyonel oksijen tedavisi yerine yüksek akımlı nazal oksijen (HFNO) önerilir.",
+        ["J80", "J96.0"], specialties=["critical_care", "pulmonology"]))
 
     # ---- Appendicitis (WSES 2020) -----------------------------------------
     APPY = ["K35.80", "K35.2", "K35.3", "R10.4"]

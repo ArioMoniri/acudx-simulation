@@ -59,11 +59,15 @@ BOUNDS: dict[str, tuple[float, float]] = {
 # Classes whose vital effect the engine computes itself; authored row effects
 # are ignored for them so a model cannot author oxygen lowering SpO2 (06b F21).
 HANDLED_CLASSES: frozenset[str] = frozenset({
-    "fluids", "oxygen", "niv", "vasopressor", "adrenaline_iv", "adrenaline_im", "nitrate", "opioid", "benzodiazepine",
+    "fluids", "oxygen", "niv", "hfnc", "vasopressor", "adrenaline_iv", "adrenaline_im", "nitrate", "opioid", "benzodiazepine",
     "analgesia", "naloxone", "antipyretic", "bronchodilator", "loop_diuretic", "beta_blocker_iv", "glucagon",
     "thrombolytic", "antibiotic", "antiplatelet", "anticoagulant", "corticosteroid", "antihistamine", "insulin_frii",
     "dextrose", "potassium", "insulin_dextrose", "insulin_bolus", "antiemetic", "antimalarial", "antiviral", "rhythm",
 })
+# Continuous respiratory support: a device already running when a branch opens a new
+# process (pneumonia to ARDS) counts for that process's group from the opening minute,
+# because the patient is still on it (product owner decision 2026-10-21).
+SUPPORT_CLASSES: tuple[str, ...] = ("hfnc", "niv", "intubation")
 RULE_KEYS: tuple[str, ...] = (
     "s0", "rate_h", "recover_h", "floor", "lag_min", "arrest_rhythm", "start_arrest", "fluid", "fluid_limit_ml",
     "fluid_persistent", "o2_response", "hypercapnic", "metabolic", "resolve_below", "peri", "well", "bedside0",
@@ -286,6 +290,11 @@ class _Sim:
         if not primary:
             self.log.append({"at_ms": minute * MIN_MS, "kind": "branch", "id": rid, "parent": parent["id"] if parent else "",
                              "why_en": why_en, "why_tr": why_tr, "say_en": say_en, "say_tr": say_tr})
+            for g in rule["groups"]:
+                if g.get("needs") or g.get("active_min"):
+                    continue
+                if any(c in g["classes"] and any(d <= minute for d in self.class_doses.get(c, [])) for c in SUPPORT_CLASSES):
+                    self.met.setdefault(self._gkey(proc, g), minute)
 
     def _live(self) -> list[dict[str, Any]]:
         return [p for p in self.procs if not p["superseded"]]

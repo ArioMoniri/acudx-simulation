@@ -616,6 +616,8 @@ export interface CourseTables {
   agentAllergyClass: Dict<string>;
   rowClasses: Dict<string[]>;
   handledClasses: string[];
+  /** Continuous respiratory support classes that carry over to a process a branch opens (server course.SUPPORT_CLASSES). */
+  supportClasses: string[];
   bounds: Dict<number[]>;
   defaultBedside: Dict<number>;
   icd10: Dict<string>;
@@ -906,6 +908,14 @@ class CourseSim {
     if (!o.primary) {
       this.log.push({ at_ms: minute * MIN_MS, kind: "branch", id: rid, parent: parent ? parent.id : "",
         why_en: o.why_en, why_tr: o.why_tr, say_en: o.say_en ?? "", say_tr: o.say_tr ?? "" });
+      // A support device already running counts for the new process from the opening minute.
+      for (const g of rule.groups) {
+        if ((g.needs ?? []).length || g.active_min) continue;
+        const running = COURSE_TABLES.supportClasses.some(
+          (c) => g.classes.includes(c) && (this.classDoses[c] ?? []).some((d) => d <= minute));
+        const key = this.gkey(proc, g);
+        if (running && !(key in this.met)) this.met[key] = minute;
+      }
     }
   }
 

@@ -1,9 +1,9 @@
 {
  "schema": "acudx.GuidelineStatement/1",
- "exported_at": "2026-10-20T10:05:40+00:00",
+ "exported_at": "2026-10-21T20:19:15+00:00",
  "counts": {
   "draft": 0,
-  "verified": 130,
+  "verified": 131,
   "failed": 42,
   "retired": 0
  },
@@ -993,6 +993,45 @@
    ],
    "topic": "cardiac_tamponade_management",
    "status": "failed"
+  },
+  {
+   "id": "gs_esicm2023_hfno_ahrf",
+   "statement_en": "We recommend that non-mechanically ventilated patients with acute hypoxemic respiratory failure not due to cardiogenic pulmonary edema or acute exacerbation of COPD receive high-flow nasal oxygen (HFNO) as compared to conventional oxygen therapy to reduce the risk of intubation.",
+   "statement_tr": "Kardiyojenik pulmoner ödem veya KOAH akut alevlenmesine bağlı olmayan akut hipoksemik solunum yetmezliği olan, mekanik ventilasyon uygulanmayan hastalarda entübasyon riskini azaltmak için konvansiyonel oksijen tedavisi yerine yüksek akımlı nazal oksijen (HFNO) önerilir.",
+   "source_body": "ESICM",
+   "source_title": "ESICM guidelines on acute respiratory distress syndrome: definition, phenotyping and respiratory support strategies",
+   "source_url": "https://doi.org/10.1007/s00134-023-07050-7",
+   "fetch_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10354163/fullTextXML",
+   "doi": "10.1007/s00134-023-07050-7",
+   "edition_or_version": "Intensive Care Medicine 2023;49:727-759",
+   "published_date": "2023-06-16",
+   "retrieved_at": "2026-10-21T20:19:15+00:00",
+   "verified_at": "2026-10-21T20:19:15+00:00",
+   "verified_by": "agent:acudx-guideline-verifier/0.1",
+   "verification_method": "lexical",
+   "verification_quote": "Domain 3: High-flow nasal oxygen Question 3.1: In non-mechanically ventilated patients with acute hypoxemic respiratory failure not due to cardiogenic pulmonary edema or acute exacerbation of chronic obstructive pulmonary disease (COPD), does HFNO compared to conventional oxygen therapy (COT) reduce mortality or intubation? [...] Recommendation 3.1 We recommend that non-mechanically ventilated patients with AHRF not due to cardiogenic pulmonary edema or acute exacerbation of COPD receive HFNO as compared to conventional oxygen therapy to reduce the risk of intubation Strong recommendation; moderate level of evidence in favor We are unable to make a recommendation for or against the use of HFNO over conventional oxygen therapy to reduce mortality No recommendation; high level of evidence of no effect This recommendation applies also to AHRF from COVID-19 Strong recommendation; low level…",
+   "verification_url": "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC10354163/fullTextXML",
+   "verification_note": "score 1.00; 24/24 terms; composite quote; xml 100810 chars",
+   "license_tag": "copyrighted-summarized",
+   "scope": {
+    "countries": [
+     "GLOBAL"
+    ],
+    "specialties": [
+     "critical_care",
+     "pulmonology"
+    ],
+    "population": "adult",
+    "care_setting": [
+     "ED"
+    ]
+   },
+   "condition_codes": [
+    "J80",
+    "J96.0"
+   ],
+   "topic": "gs_esicm2023_hfno_ahrf",
+   "status": "verified"
   },
   {
    "id": "gs_gold_copd_exacerbation",

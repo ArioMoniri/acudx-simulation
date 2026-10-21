@@ -254,6 +254,27 @@ TREATMENT_CLASSES: dict[str, dict[str, Any]] = {
         "onset": (5 * _MIN, 20 * _MIN), "caps": {"spo2": 8, "rr": 6, "hr": 6},
         "source": "ESC 2021 HF; BTS/ICS 2016 NIV https://doi.org/10.1136/thoraxjnl-2015-208209",
     },
+    # High-flow nasal oxygen is oxygen AND its own class: it is respiratory support in acute
+    # hypoxaemic respiratory failure and ARDS (product owner decision 2026-10-21, ESICM 2023
+    # recommendation 3.1, statement gs_esicm2023_hfno_ahrf). Only the nasal high-flow device
+    # counts: a bare "high flow oxygen" (15 L via a reservoir mask, "yüksek akım %100 oksijen")
+    # is conventional oxygen.
+    "hfnc": {
+        "keywords": ("hfnc", "hfno", "hfnot", "high flow nasal", "nasal high flow", "high flow nasal cannula",
+                     "yüksek akım nazal", "yüksek akımlı nazal", "yuksek akim nazal", "yuksek akimli nazal",
+                     "nazal yüksek akım", "nazal yuksek akim", "yüksek akışlı nazal", "yuksek akisli nazal"),
+        "onset": (1 * _MIN, 15 * _MIN), "caps": {"spo2": 8, "rr": 4, "hr": 6},
+        "source": "ESICM 2023 ARDS guideline, recommendation 3.1 https://doi.org/10.1007/s00134-023-07050-7",
+    },
+    # Invasive ventilation: intubation and mechanical ventilation (the ARDS ventilatory
+    # support need, ESICM 2023). No vital curve of its own; the disease course carries it.
+    "intubation": {
+        "keywords": ("intubation", "intubate", "endotracheal", "rapid sequence induction", "rapid sequence intubation", "rsi",
+                     "mechanical ventilation", "invasive ventilation", "entübasyon", "entubasyon", "entübe",
+                     "mekanik ventilasyon"),
+        "onset": (1 * _MIN, 30 * _MIN), "caps": {"spo2": 10, "rr": 10, "hr": 10},
+        "source": "ESICM 2023 ARDS guideline https://doi.org/10.1007/s00134-023-07050-7",
+    },
     "insulin_dextrose": {
         "keywords": ("insulin dextrose", "insulin glucose", "insulin and glucose", "insulin with glucose"),
         "onset": (15 * _MIN, 60 * _MIN), "caps": {},
@@ -325,6 +346,14 @@ def classify_treatment(text: str) -> list[str]:
     # NIV and CPAP are their own class, not plain oxygen.
     if "niv" in out and "oxygen" in out and not any(_phrase_in(k, text) for k in ("oxygen", "o2", "high flow")):
         out.remove("oxygen")
+    # High-flow nasal oxygen is always oxygen too (SpO2 response, the o2 flag and the
+    # hypercapnia harm rule of BTS 2017 still apply to it).
+    if "hfnc" in out and "oxygen" not in out:
+        out.append("oxygen")
+    # "Non-invasive (mechanical) ventilation" is NIV, not intubation.
+    if "intubation" in out and (_phrase_in("non invasive", text) or _phrase_in("noninvasive", text)) \
+            and not any(_phrase_in(k, text) for k in ("intubation", "intubate", "endotracheal", "entübasyon", "entubasyon")):
+        out.remove("intubation")
     # 06b F23: adrenaline given IM, or at a dose of 0.5 mg or less outside an
     # infusion, is the anaphylaxis class, not an IV pressor.
     if ("adrenaline_im" not in out and (_phrase_in("adrenaline", text) or _phrase_in("epinephrine", text))

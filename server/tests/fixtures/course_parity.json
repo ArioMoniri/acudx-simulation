@@ -3836,6 +3836,455 @@
     }
    },
    "label": "decongestion"
+  },
+  {
+   "condition_id": "ards",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 66.0,
+      "hr": 119.0,
+      "rr": 32.0,
+      "spo2": 87.0,
+      "systolic": 111.0,
+      "tempC": 38.4
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 7.0,
+     "lactate": 1.1,
+     "phase": "peri_arrest",
+     "vitals": {
+      "diastolic": 60.0,
+      "hr": 134.0,
+      "rr": 38.0,
+      "spo2": 76.0,
+      "systolic": 103.0,
+      "tempC": 38.4
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 122.0,
+      "rr": 33.0,
+      "spo2": 85.0,
+      "systolic": 110.0,
+      "tempC": 38.4
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 12.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 63.0,
+      "hr": 126.0,
+      "rr": 35.0,
+      "spo2": 82.0,
+      "systolic": 108.0,
+      "tempC": 38.4
+     }
+    }
+   },
+   "input": {
+    "condition_id": "ards",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 300000,
+      "classes": [
+       "oxygen"
+      ],
+      "code": "nrb_15l",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 33.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 66.0,
+     "hr": 118.0,
+     "rr": 32.0,
+     "spo2": 86.0,
+     "systolic": 112.0,
+     "tempC": 38.4
+    }
+   },
+   "label": "nrb"
+  },
+  {
+   "condition_id": "ards",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 66.0,
+      "hr": 119.0,
+      "rr": 32.0,
+      "spo2": 87.0,
+      "systolic": 111.0,
+      "tempC": 38.4
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 67.0,
+      "hr": 115.0,
+      "rr": 31.0,
+      "spo2": 89.0,
+      "systolic": 113.0,
+      "tempC": 38.4
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 122.0,
+      "rr": 33.0,
+      "spo2": 85.0,
+      "systolic": 110.0,
+      "tempC": 38.4
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.1,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 120.0,
+      "rr": 33.0,
+      "spo2": 86.0,
+      "systolic": 111.0,
+      "tempC": 38.4
+     }
+    }
+   },
+   "input": {
+    "condition_id": "ards",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 300000,
+      "classes": [
+       "oxygen",
+       "hfnc"
+      ],
+      "code": "hfnc_60l",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 33.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 66.0,
+     "hr": 118.0,
+     "rr": 32.0,
+     "spo2": 86.0,
+     "systolic": 112.0,
+     "tempC": 38.4
+    }
+   },
+   "label": "hfnc"
+  },
+  {
+   "condition_id": "ards",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 66.0,
+      "hr": 119.0,
+      "rr": 30.0,
+      "spo2": 88.0,
+      "systolic": 111.0,
+      "tempC": 38.4
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 67.0,
+      "hr": 115.0,
+      "rr": 27.0,
+      "spo2": 93.0,
+      "systolic": 113.0,
+      "tempC": 38.4
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 122.0,
+      "rr": 29.0,
+      "spo2": 89.0,
+      "systolic": 110.0,
+      "tempC": 38.4
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.1,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 120.0,
+      "rr": 29.0,
+      "spo2": 90.0,
+      "systolic": 111.0,
+      "tempC": 38.4
+     }
+    }
+   },
+   "input": {
+    "condition_id": "ards",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "neutral",
+      "at_ms": 300000,
+      "classes": [
+       "niv"
+      ],
+      "code": "cpap",
+      "effects": [],
+      "kind": "treatment",
+      "row": "",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 33.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 66.0,
+     "hr": 118.0,
+     "rr": 32.0,
+     "spo2": 86.0,
+     "systolic": 112.0,
+     "tempC": 38.4
+    }
+   },
+   "label": "niv"
+  },
+  {
+   "condition_id": "ards",
+   "expect": {
+    "10": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 66.0,
+      "hr": 119.0,
+      "rr": 32.0,
+      "spo2": 85.0,
+      "systolic": 111.0,
+      "tempC": 38.4
+     }
+    },
+    "120": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 15.0,
+     "lactate": 1.1,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 67.0,
+      "hr": 115.0,
+      "rr": 31.0,
+      "spo2": 87.0,
+      "systolic": 113.0,
+      "tempC": 38.4
+     }
+    },
+    "30": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.2,
+     "phase": "deteriorating",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 122.0,
+      "rr": 33.0,
+      "spo2": 83.0,
+      "systolic": 110.0,
+      "tempC": 38.4
+     }
+    },
+    "60": {
+     "active_diagnoses": [
+      "ards"
+     ],
+     "gcs": 14.0,
+     "lactate": 1.1,
+     "phase": "improving",
+     "vitals": {
+      "diastolic": 65.0,
+      "hr": 120.0,
+      "rr": 33.0,
+      "spo2": 84.0,
+      "systolic": 111.0,
+      "tempC": 38.4
+     }
+    }
+   },
+   "input": {
+    "condition_id": "ards",
+    "events": [
+     {
+      "agents": [],
+      "allergy_class": "",
+      "appropriateness": "indicated",
+      "at_ms": 300000,
+      "classes": [
+       "intubation"
+      ],
+      "code": "lung_protective",
+      "effects": [],
+      "kind": "treatment",
+      "row": "lung_protective",
+      "seq": 0,
+      "volume_ml": 500.0
+     }
+    ],
+    "patient": {
+     "age": 33.0,
+     "allergies": [
+      {
+       "agent_class": "opioid",
+       "reaction": "rash"
+      }
+     ],
+     "curb65": 1,
+     "difficulty": 3,
+     "flags": [],
+     "weight_kg": 70.0
+    },
+    "seed": 7,
+    "t0": {
+     "diastolic": 66.0,
+     "hr": 118.0,
+     "rr": 32.0,
+     "spo2": 86.0,
+     "systolic": 112.0,
+     "tempC": 38.4
+    }
+   },
+   "label": "intubation"
   }
  ],
  "marks": [
