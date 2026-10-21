@@ -751,6 +751,19 @@ def test_chatterbox_keeps_pkg_resources_for_the_perth_watermarker():
     assert "sys.exit(0 if perth.PerthImplicitWatermarker else 1)" in dockerfile
 
 
+def test_the_voice_image_does_not_depend_on_the_deadsnakes_ppa_and_its_build_is_retried():
+    """Live 2026-10-21: ppa.launchpadcontent.net answered 503, the Chatterbox build failed, the worker
+    had no voice and the runner waited 30 minutes for it."""
+    dockerfile = _written("/chatterbox.Dockerfile")
+    assert "ppa:deadsnakes" not in dockerfile and "add-apt-repository" not in dockerfile
+    assert "uv python install 3.11 && uv venv --python 3.11" in dockerfile
+    assert "Acquire::Retries=8" in dockerfile
+    runcmd = "\n".join(_cloud_init()["runcmd"])
+    assert "for i in 1 2 3; do docker compose up -d --build chatterbox && break" in runcmd
+    avatar_sh = _written("/avatar.sh")
+    assert '[ -z "$cid" ] && [ -f /var/lib/cloud/instance/boot-finished ] && break' in avatar_sh
+
+
 def test_the_turn_bridge_can_carry_a_browsers_tls_session_to_the_public_443_router():
     """Proof from a network with HTTPS-only egress: the browser's own turns:turn.<domain>:443 session
     (TLS to coturn, picked by the SNI router) is piped byte for byte, nothing terminated in between."""

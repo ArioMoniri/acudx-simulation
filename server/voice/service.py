@@ -42,6 +42,7 @@ log = logging.getLogger("acudx.voice")
 
 # Chatterbox TTS API health route behind the worker's Caddy /tts prefix (bearer required).
 WORKER_TTS_HEALTH_PATH = "/tts/health"
+WORKER_KOKORO_PATH = "/tts-en"   # Kokoro FastAPI behind the worker's Caddy (English voices)
 WORKER_PROBE_TIMEOUT_S = 3.0
 
 # Languages the self-hosted worker serves (Chatterbox Multilingual list, research doc section 3.2).
@@ -136,6 +137,15 @@ class VoiceService:
         worker = await self._worker_for_tts(flags)
         if worker is not None:
             yield worker
+            # The worker's Kokoro (English only, /tts-en): the patient keeps an English voice when the
+            # worker's Chatterbox is down (live 2026-10-21: its image build failed on a PPA outage).
+            origin = worker.base_url.rstrip("/")
+            origin = origin[: -len(WORKER_PATHS["tts"])] if origin.endswith(WORKER_PATHS["tts"]) else origin
+            yield ProviderEndpoint(kind="tts", name="gpu-worker-kokoro", base_url=origin + WORKER_KOKORO_PATH,
+                                   model="kokoro", api_key=worker.api_key, source="gpu_worker",
+                                   extra={"voice_family": "kokoro", "languages": ["en"],
+                                          # Kokoro streams its plain /speech route (chunked).
+                                          "tts_stream_path": "/speech", "tts_stream_body": {}})
 
     # -- on-demand GPU worker ---------------------------------------------------- #
     def wake_worker(self) -> asyncio.Task[ProviderEndpoint | None] | None:
