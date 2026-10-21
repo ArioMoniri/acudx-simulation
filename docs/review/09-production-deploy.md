@@ -114,3 +114,19 @@ URL, `verify-roles.mjs` output with `START_CASE=1`, the Lambda instance id of th
 case start launched, its stop through `/admin/gpu/stop` and the Lambda API answer showing it
 `terminated`, and the final `rotate-code.sh --reset-passwords` run. Screenshots go to
 `docs/review/evidence/09-production-live/`.
+
+### Launch attempt 2026-10-21 (cloud session): stopped at step 3
+
+- Step 1: the IAM keys authenticate as `user/acudx-deploy` only when `AWS_SESSION_TOKEN` is
+  not set. The session carried an unrelated session token that made STS answer
+  `InvalidClientTokenId`. Long-lived IAM user keys take no session token: run the scripts with
+  `env -u AWS_SESSION_TOKEN` (or unset it) in such a session.
+- Step 2: outbound TCP 22 is blocked from the session (tested against github.com and an
+  AWS eu-central-1 address); egress goes only through the HTTPS proxy (egress IP
+  160.79.106.142). Per the README the run stopped here: provision, verify and rotate all need
+  SSH to the host, and with no instance profile SSM Run Command is not an alternative.
+- Step 3: `shellcheck -x` clean; `DRY_RUN=1 provision.sh` exit 0, no secret value in output.
+- Steps 4 to 8 not run. No AWS resource was created (no security group, key pair, Elastic IP
+  or instance) and no Lambda worker was launched.
+- To finish: run steps 1 to 8 from a machine or environment that allows outbound SSH on
+  port 22.
