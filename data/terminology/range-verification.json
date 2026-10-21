@@ -1,0 +1,1248 @@
+{
+ "verified_at": "2026-10-21",
+ "analytes": [
+  {
+   "loinc": "2951-2",
+   "name": "Sodium",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2823-3",
+   "name": "Potassium",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2075-0",
+   "name": "Chloride",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1963-8",
+   "name": "Bicarbonate",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3094-0",
+   "name": "Urea nitrogen (BUN)",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2160-0",
+   "name": "Creatinine",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2345-7",
+   "name": "Glucose",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "17861-6",
+   "name": "Calcium, total",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "19123-9",
+   "name": "Magnesium",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2777-1",
+   "name": "Phosphate (inorganic phosphorus)",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1920-8",
+   "name": "Aspartate aminotransferase",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1742-6",
+   "name": "Alanine aminotransferase",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "6768-6",
+   "name": "Alkaline phosphatase",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1975-2",
+   "name": "Bilirubin, total",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1968-7",
+   "name": "Bilirubin, direct",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1751-7",
+   "name": "Albumin",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2885-2",
+   "name": "Protein, total",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1798-8",
+   "name": "Amylase",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3040-3",
+   "name": "Lipase",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2157-6",
+   "name": "Creatine kinase",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "14804-9",
+   "name": "Lactate dehydrogenase",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2692-2",
+   "name": "Osmolality, serum",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3084-1",
+   "name": "Uric acid",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2276-4",
+   "name": "Ferritin",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "22763-7",
+   "name": "Ammonia",
+   "source": "https://medlineplus.gov/ency/article/003506.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2524-7",
+   "name": "Lactate",
+   "source": "https://medlineplus.gov/ency/article/003507.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "6873-4",
+   "name": "Beta-hydroxybutyrate (blood ketones)",
+   "source": "https://abcd.care/sites/default/files/site_uploads/JBDS_Guidelines_Current/JBDS_02_DKA_Guideline_with_QR_code_March_2023.pdf",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1988-5",
+   "name": "C-reactive protein",
+   "source": "https://medlineplus.gov/ency/article/003356.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "33959-8",
+   "name": "Procalcitonin",
+   "source": "https://doi.org/10.1186/1741-7015-9-107",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "67151-1",
+   "name": "Troponin T, high sensitivity",
+   "source": "https://doi.org/10.1016/j.jacc.2013.12.032",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "89579-7",
+   "name": "Troponin I, high sensitivity",
+   "source": "https://doi.org/10.1373/clinchem.2011.165795",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "30934-4",
+   "name": "B-type natriuretic peptide",
+   "source": "https://medlineplus.gov/ency/article/007509.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "33762-6",
+   "name": "NT-proBNP",
+   "source": "https://doi.org/10.1093/eurheartj/ehab368",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "48065-7",
+   "name": "D-dimer (FEU)",
+   "source": "https://doi.org/10.1001/jama.2014.2135",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "6690-2",
+   "name": "Leukocytes (WBC)",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "751-8",
+   "name": "Neutrophils, absolute",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "some numbers not found on page",
+   "all_numbers_found": false
+  },
+  {
+   "loinc": "731-0",
+   "name": "Lymphocytes, absolute",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "718-7",
+   "name": "Haemoglobin",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "4544-3",
+   "name": "Haematocrit",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "777-3",
+   "name": "Platelets",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "787-2",
+   "name": "Mean corpuscular volume",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "4679-7",
+   "name": "Reticulocytes",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "4537-7",
+   "name": "Erythrocyte sedimentation rate",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "5902-2",
+   "name": "Prothrombin time",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "6301-6",
+   "name": "INR",
+   "source": "https://medlineplus.gov/ency/article/003652.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3173-2",
+   "name": "Activated partial thromboplastin time",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3255-7",
+   "name": "Fibrinogen",
+   "source": "https://medlineplus.gov/ency/article/003650.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3016-3",
+   "name": "Thyroid stimulating hormone",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3026-2",
+   "name": "Thyroxine (T4), total",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2143-6",
+   "name": "Cortisol, 0800 h",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "4548-4",
+   "name": "Haemoglobin A1c",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "21198-7",
+   "name": "Beta-hCG, quantitative",
+   "source": "https://medlineplus.gov/ency/article/003510.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2106-3",
+   "name": "hCG, urine, qualitative",
+   "source": "https://medlineplus.gov/ency/article/003510.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "2744-1",
+   "name": "pH, arterial",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2019-8",
+   "name": "pCO2, arterial",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2703-7",
+   "name": "pO2, arterial",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1960-4",
+   "name": "Bicarbonate, arterial",
+   "source": "https://medlineplus.gov/ency/article/003855.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2708-6",
+   "name": "Oxygen saturation, arterial",
+   "source": "https://medlineplus.gov/ency/article/003855.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2746-6",
+   "name": "pH, venous",
+   "source": "https://doi.org/10.1111/resp.12225",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "2021-4",
+   "name": "pCO2, venous",
+   "source": "https://doi.org/10.1111/resp.12225",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "2705-2",
+   "name": "pO2, venous",
+   "source": "https://doi.org/10.1111/resp.12225",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "14627-4",
+   "name": "Bicarbonate, venous",
+   "source": "https://doi.org/10.1177/102490791302000307",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "5811-5",
+   "name": "Urine specific gravity",
+   "source": "https://medlineplus.gov/ency/article/003587.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "5803-2",
+   "name": "Urine pH",
+   "source": "https://medlineplus.gov/ency/article/003583.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "5804-0",
+   "name": "Urine protein, dipstick",
+   "source": "https://medlineplus.gov/ency/article/003579.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "5792-7",
+   "name": "Urine glucose, dipstick",
+   "source": "https://medlineplus.gov/ency/article/003579.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "5797-6",
+   "name": "Urine ketones, dipstick",
+   "source": "https://medlineplus.gov/ency/article/003579.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "5794-3",
+   "name": "Urine blood (haemoglobin), dipstick",
+   "source": "https://medlineplus.gov/ency/article/003579.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "5802-4",
+   "name": "Urine nitrite",
+   "source": "https://medlineplus.gov/ency/article/003579.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "5799-2",
+   "name": "Urine leukocyte esterase",
+   "source": "https://medlineplus.gov/ency/article/003579.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "5821-4",
+   "name": "Urine white blood cells, microscopy",
+   "source": "https://medlineplus.gov/ency/article/003579.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "13945-1",
+   "name": "Urine red blood cells, microscopy",
+   "source": "https://medlineplus.gov/ency/article/003579.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "25145-4",
+   "name": "Urine bacteria, microscopy",
+   "source": "https://medlineplus.gov/ency/article/003579.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "3298-7",
+   "name": "Acetaminophen (paracetamol), serum",
+   "source": "https://www.gov.uk/drug-safety-update/treating-paracetamol-overdose-with-intravenous-acetylcysteine-new-guidance",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "4024-6",
+   "name": "Salicylate, serum",
+   "source": "https://litfl.com/salicylate-toxicity/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "5643-2",
+   "name": "Ethanol, blood",
+   "source": "https://medlineplus.gov/ency/article/003578.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "600-7",
+   "name": "Blood culture",
+   "source": "https://medlineplus.gov/ency/article/003744.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "630-4",
+   "name": "Urine culture",
+   "source": "https://medlineplus.gov/ency/article/003751.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "33037-3",
+   "name": "Anion gap",
+   "source": "https://doi.org/10.2215/CJN.03020906",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "98979-8",
+   "name": "eGFR (CKD-EPI 2021, creatinine)",
+   "source": "https://medlineplus.gov/lab-tests/estimated-glomerular-filtration-rate-egfr-and-gfr-tests/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1994-3",
+   "name": "Calcium, ionised",
+   "source": "https://medlineplus.gov/ency/article/003486.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2324-2",
+   "name": "Gamma-glutamyl transferase",
+   "source": "https://medlineplus.gov/ency/article/003458.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "10834-0",
+   "name": "Globulin (calculated)",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2639-3",
+   "name": "Myoglobin",
+   "source": "https://medlineplus.gov/ency/article/003663.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2498-4",
+   "name": "Iron",
+   "source": "https://medlineplus.gov/ency/article/003488.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2500-7",
+   "name": "Total iron-binding capacity",
+   "source": "https://medlineplus.gov/ency/article/003488.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2502-3",
+   "name": "Transferrin saturation",
+   "source": "https://medlineplus.gov/ency/article/003488.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3034-6",
+   "name": "Transferrin",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2132-9",
+   "name": "Vitamin B12 (cobalamin)",
+   "source": "https://medlineplus.gov/ency/article/003705.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2284-8",
+   "name": "Folate",
+   "source": "https://medlineplus.gov/ency/article/003686.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2093-3",
+   "name": "Cholesterol, total",
+   "source": "https://medlineplus.gov/ency/article/007813.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2085-9",
+   "name": "HDL cholesterol",
+   "source": "https://medlineplus.gov/ency/article/007810.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "13457-7",
+   "name": "LDL cholesterol (calculated)",
+   "source": "https://medlineplus.gov/ency/article/007811.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2571-8",
+   "name": "Triglycerides",
+   "source": "https://medlineplus.gov/ency/article/003493.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "4542-7",
+   "name": "Haptoglobin",
+   "source": "https://medlineplus.gov/ency/article/003634.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1986-9",
+   "name": "C-peptide",
+   "source": "https://medlineplus.gov/ency/article/003701.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "789-8",
+   "name": "Red cell count",
+   "source": "https://medlineplus.gov/ency/article/003644.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "785-6",
+   "name": "Mean corpuscular haemoglobin",
+   "source": "https://medlineplus.gov/ency/article/003648.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "786-4",
+   "name": "Mean corpuscular haemoglobin concentration",
+   "source": "https://medlineplus.gov/ency/article/003648.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "711-2",
+   "name": "Eosinophils (absolute)",
+   "source": "https://medlineplus.gov/ency/article/003649.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3024-7",
+   "name": "Free thyroxine",
+   "source": "https://www.nbme.org/laboratory-values/",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3051-0",
+   "name": "Free triiodothyronine",
+   "source": "https://medlineplus.gov/ency/article/003687.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2731-8",
+   "name": "Parathyroid hormone, intact",
+   "source": "https://medlineplus.gov/ency/article/003690.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2842-3",
+   "name": "Prolactin",
+   "source": "https://medlineplus.gov/ency/article/003718.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2986-8",
+   "name": "Testosterone, total",
+   "source": "https://medlineplus.gov/ency/article/003707.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2243-4",
+   "name": "Estradiol",
+   "source": "https://medlineplus.gov/ency/article/003711.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2141-0",
+   "name": "ACTH (morning)",
+   "source": "https://medlineplus.gov/ency/article/003695.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2915-7",
+   "name": "Plasma renin activity",
+   "source": "https://medlineplus.gov/ency/article/003698.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2857-1",
+   "name": "Prostate-specific antigen",
+   "source": "https://medlineplus.gov/ency/article/003346.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2039-6",
+   "name": "Carcinoembryonic antigen",
+   "source": "https://medlineplus.gov/ency/article/003574.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "1834-1",
+   "name": "Alpha-fetoprotein",
+   "source": "https://medlineplus.gov/ency/article/003573.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "10334-1",
+   "name": "Cancer antigen 125",
+   "source": "https://medlineplus.gov/ency/article/007217.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "11572-5",
+   "name": "Rheumatoid factor",
+   "source": "https://medlineplus.gov/ency/article/003548.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "4485-9",
+   "name": "Complement C3",
+   "source": "https://medlineplus.gov/ency/article/003539.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "4498-2",
+   "name": "Complement C4",
+   "source": "https://medlineplus.gov/ency/article/003354.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2465-3",
+   "name": "Immunoglobulin G",
+   "source": "https://medlineplus.gov/ency/article/003544.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2458-8",
+   "name": "Immunoglobulin A",
+   "source": "https://medlineplus.gov/ency/article/003544.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2472-9",
+   "name": "Immunoglobulin M",
+   "source": "https://medlineplus.gov/ency/article/003544.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "5048-4",
+   "name": "Antinuclear antibody (IFA titre)",
+   "source": "https://medlineplus.gov/ency/article/003535.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "2955-3",
+   "name": "Urine sodium (random)",
+   "source": "https://medlineplus.gov/ency/article/003599.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2828-2",
+   "name": "Urine potassium (random)",
+   "source": "https://medlineplus.gov/ency/article/003600.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "9318-7",
+   "name": "Urine albumin/creatinine ratio",
+   "source": "https://medlineplus.gov/ency/article/003591.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2695-5",
+   "name": "Urine osmolality",
+   "source": "https://medlineplus.gov/ency/article/003609.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "10535-3",
+   "name": "Digoxin",
+   "source": "https://medlineplus.gov/ency/article/003430.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "14334-7",
+   "name": "Lithium",
+   "source": "https://medlineplus.gov/ency/article/003430.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3968-5",
+   "name": "Phenytoin (total)",
+   "source": "https://medlineplus.gov/ency/article/003430.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "4086-5",
+   "name": "Valproate",
+   "source": "https://medlineplus.gov/ency/article/003430.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "3432-2",
+   "name": "Carbamazepine",
+   "source": "https://medlineplus.gov/ency/article/003430.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "5693-7",
+   "name": "Methanol",
+   "source": "https://medlineplus.gov/ency/article/003563.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "5646-5",
+   "name": "Ethylene glycol",
+   "source": "https://medlineplus.gov/ency/article/003564.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "3397-7",
+   "name": "Cocaine metabolite (urine screen)",
+   "source": "https://medlineplus.gov/ency/article/003364.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "19343-3",
+   "name": "Amphetamines (urine screen)",
+   "source": "https://medlineplus.gov/ency/article/003364.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "19295-5",
+   "name": "Opiates (urine screen)",
+   "source": "https://medlineplus.gov/ency/article/003364.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "18282-4",
+   "name": "Cannabinoids (urine screen)",
+   "source": "https://medlineplus.gov/ency/article/003364.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "14316-4",
+   "name": "Benzodiazepines (urine screen)",
+   "source": "https://medlineplus.gov/ency/article/003364.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "19270-8",
+   "name": "Barbiturates (urine screen)",
+   "source": "https://medlineplus.gov/ency/article/003364.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "19659-2",
+   "name": "Phencyclidine (urine screen)",
+   "source": "https://medlineplus.gov/ency/article/003364.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "19550-3",
+   "name": "Methadone (urine screen)",
+   "source": "https://medlineplus.gov/ency/article/003364.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "26465-5",
+   "name": "CSF white cell count",
+   "source": "https://medlineplus.gov/ency/article/003625.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "26454-9",
+   "name": "CSF red cell count",
+   "source": "https://medlineplus.gov/ency/article/003625.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2880-3",
+   "name": "CSF protein",
+   "source": "https://medlineplus.gov/ency/article/003628.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "2342-4",
+   "name": "CSF glucose",
+   "source": "https://medlineplus.gov/ency/article/003633.htm",
+   "check": "numbers found on page",
+   "all_numbers_found": true
+  },
+  {
+   "loinc": "606-4",
+   "name": "CSF culture",
+   "source": "https://medlineplus.gov/ency/article/003769.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "664-3",
+   "name": "Gram stain",
+   "source": "https://medlineplus.gov/ency/article/007621.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "2882-9",
+   "name": "Pleural fluid protein",
+   "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "60022-1",
+   "name": "Pleural fluid LDH",
+   "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "2346-5",
+   "name": "Pleural fluid glucose",
+   "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "2748-2",
+   "name": "Body fluid pH",
+   "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "26467-1",
+   "name": "Pleural fluid white cells",
+   "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "2883-7",
+   "name": "Ascitic fluid protein",
+   "source": "https://doi.org/10.1002/hep.31884",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "1749-1",
+   "name": "Ascitic fluid albumin",
+   "source": "https://doi.org/10.1002/hep.31884",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "26468-9",
+   "name": "Ascitic fluid white cells",
+   "source": "https://doi.org/10.1002/hep.31884",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "26514-0",
+   "name": "Ascitic fluid neutrophils",
+   "source": "https://doi.org/10.1002/hep.31884",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "26469-7",
+   "name": "Synovial fluid white cells",
+   "source": "https://doi.org/10.1001/jama.297.13.1478",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "17836-8",
+   "name": "Synovial fluid neutrophils",
+   "source": "https://doi.org/10.1001/jama.297.13.1478",
+   "check": "DOI source: not machine-checked; a reviewer confirms against the paper"
+  },
+  {
+   "loinc": "5781-0",
+   "name": "Synovial fluid crystals",
+   "source": "https://doi.org/10.1001/jama.297.13.1478",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "611-4",
+   "name": "Body fluid culture",
+   "source": "https://medlineplus.gov/lab-tests/bacteria-culture-test/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "882-1",
+   "name": "ABO and Rh group",
+   "source": "https://medlineplus.gov/ency/article/003345.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "890-4",
+   "name": "Antibody screen",
+   "source": "https://medlineplus.gov/lab-tests/red-blood-cell-antibody-screen/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "1007-4",
+   "name": "Direct antiglobulin test (polyspecific)",
+   "source": "https://medlineplus.gov/ency/article/003344.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "4621-9",
+   "name": "Haemoglobin S (sickle screen)",
+   "source": "https://medlineplus.gov/ency/article/003666.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "2356-4",
+   "name": "G6PD screen",
+   "source": "https://medlineplus.gov/ency/article/003671.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "56888-1",
+   "name": "HIV-1/2 antigen/antibody (4th generation)",
+   "source": "https://medlineplus.gov/lab-tests/hiv-screening-test/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "5196-1",
+   "name": "Hepatitis B surface antigen",
+   "source": "https://medlineplus.gov/ency/article/003558.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "16933-4",
+   "name": "Hepatitis B core antibody (total)",
+   "source": "https://medlineplus.gov/ency/article/003558.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "31204-1",
+   "name": "Hepatitis B core IgM antibody",
+   "source": "https://medlineplus.gov/ency/article/003558.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "22322-2",
+   "name": "Hepatitis B surface antibody",
+   "source": "https://medlineplus.gov/ency/article/003558.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "13955-0",
+   "name": "Hepatitis C antibody",
+   "source": "https://medlineplus.gov/ency/article/003558.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "13950-1",
+   "name": "Hepatitis A IgM antibody",
+   "source": "https://medlineplus.gov/ency/article/003558.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "20507-0",
+   "name": "Rapid plasma reagin (RPR)",
+   "source": "https://medlineplus.gov/ency/article/003533.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "47236-5",
+   "name": "Treponema pallidum antibody (IgG+IgM)",
+   "source": "https://medlineplus.gov/lab-tests/syphilis-tests/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "31418-7",
+   "name": "Heterophile antibody (Monospot)",
+   "source": "https://medlineplus.gov/ency/article/003454.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "94500-6",
+   "name": "SARS-CoV-2 RNA (NAAT)",
+   "source": "https://medlineplus.gov/ency/article/007769.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "92142-9",
+   "name": "Influenza A RNA (NAAT)",
+   "source": "https://medlineplus.gov/lab-tests/flu-influenza-test/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "92141-1",
+   "name": "Influenza B RNA (NAAT)",
+   "source": "https://medlineplus.gov/lab-tests/flu-influenza-test/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "92131-2",
+   "name": "RSV RNA (NAAT)",
+   "source": "https://medlineplus.gov/lab-tests/respiratory-syncytial-virus-rsv-tests/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "78012-2",
+   "name": "Group A Streptococcus antigen (rapid)",
+   "source": "https://medlineplus.gov/lab-tests/strep-a-test/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "32781-7",
+   "name": "Legionella urinary antigen",
+   "source": "https://medlineplus.gov/lab-tests/legionella-tests/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "24027-5",
+   "name": "Streptococcus pneumoniae urinary antigen",
+   "source": "https://medlineplus.gov/lab-tests/pneumococcal-disease-tests/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "34713-8",
+   "name": "Clostridioides difficile toxin A+B",
+   "source": "https://medlineplus.gov/lab-tests/c-diff-testing/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "54067-4",
+   "name": "Clostridioides difficile toxin gene PCR",
+   "source": "https://medlineplus.gov/lab-tests/c-diff-testing/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "76772-3",
+   "name": "Plasmodium falciparum antigen (rapid)",
+   "source": "https://medlineplus.gov/lab-tests/malaria-tests/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "32700-7",
+   "name": "Malaria smear (thick and thin films)",
+   "source": "https://medlineplus.gov/lab-tests/malaria-tests/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "71773-6",
+   "name": "TB interferon-gamma release assay",
+   "source": "https://medlineplus.gov/lab-tests/tuberculosis-screening/",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "11545-1",
+   "name": "Acid-fast bacilli smear",
+   "source": "https://medlineplus.gov/ency/article/003766.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "625-4",
+   "name": "Stool culture",
+   "source": "https://medlineplus.gov/ency/article/003758.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "626-2",
+   "name": "Throat culture",
+   "source": "https://medlineplus.gov/ency/article/003746.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "624-7",
+   "name": "Sputum culture",
+   "source": "https://medlineplus.gov/ency/article/003723.htm",
+   "check": "qualitative (normal value only)"
+  },
+  {
+   "loinc": "6462-6",
+   "name": "Wound culture",
+   "source": "https://medlineplus.gov/lab-tests/bacteria-culture-test/",
+   "check": "qualitative (normal value only)"
+  }
+ ]
+}

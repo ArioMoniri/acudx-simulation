@@ -1803,7 +1803,8 @@ FEBRILE_FIXTURES: dict[str, dict[str, Any]] = {
             ("6690-2", "White cell count", "Lökosit", 19.4, "10^9/L", 4.0, 11.0, "H", "haematology", 1.5),
             ("1988-5", "C-reactive protein", "CRP", 210, "mg/L", 0, 5, "H", "chemistry", 20),
             ("30405-5", "CSF white cells (neutrophilic)", "BOS lökosit (nötrofilik)", 2200, "10^6/L", 0, 5, "HH", "csf", 200),
-            ("2342-4", "CSF glucose (low)", "BOS glukozu (düşük)", 1.6, "mmol/L", 2.8, 4.2, "L", "csf", 0.2),
+            # LOINC 2342-4 is CSF glucose [Mass/volume]: mg/dL (1.6 mmol/L = 29 mg/dL; MedlinePlus 003633 range 50 to 80).
+            ("2342-4", "CSF glucose (low)", "BOS glukozu (düşük)", 29, "mg/dL", 50, 80, "L", "csf", 4),
         ],
         "imaging": ("30799-1", "CT head (if indicated before LP)", "LP öncesi endike ise beyin BT",
                     "No mass lesion, no effacement of the basal cisterns.", "Kitle lezyonu yok, bazal sisternlerde silinme yok.",

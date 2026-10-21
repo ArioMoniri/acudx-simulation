@@ -53,6 +53,7 @@ import {
   type AdministeredTreatment,
   type CurrentVitals,
 } from "@/domain/clinicalCourse";
+import { SERVER_CATALOG } from "@/domain/serverCatalog";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                       */
@@ -71,6 +72,16 @@ export interface Orderable {
   category: OrderCategory;
   /** Optional short panel name, bilingual-agnostic (e.g. "CBC", "BMP"). */
   panel?: string;
+  /** LOINC order code (LOINC 2.82, verified), shown as a small secondary tag. */
+  loinc?: string | null;
+  /** Server catalogue section (haematology, chemistry, microbiology ...). */
+  section?: string;
+  /** Search synonyms ("fbc", "u&e", "lp"). */
+  synonyms?: string[];
+  /** Realistic order-to-report minutes from the server catalogue (sim time). */
+  turnaroundMinutes?: number;
+  /** Preliminary report minutes (cultures, CT and ultrasound). */
+  preliminaryMinutes?: number | null;
 }
 
 /** One measurand within a synthetic panel, with its within-normal band. */
@@ -426,7 +437,8 @@ export const ORDERABLES_BY_GROUP: Record<OrderCategory, Orderable[]> = {
     lab("phos", { en: "Phosphate", tr: "Fosfat" }),
     lab("ca", { en: "Calcium (total + ionised)", tr: "Kalsiyum (total + iyonize)" }),
     lab("ck", { en: "Creatine kinase (CK)", tr: "Kreatin kinaz (CK)" }),
-    lab("ckmb", { en: "CK-MB", tr: "CK-MB" }),
+    // CK-MB is not offered: high-sensitivity troponin replaced it (ESC 2023 ACS
+    // guideline, doi 10.1093/eurheartj/ehad191) and it has no results-engine path.
     lab("bhb", { en: "β-hydroxybutyrate (serum ketone)", tr: "β-hidroksibutirat (serum keton)" }),
     lab("osmo", { en: "Serum osmolality", tr: "Serum ozmolalitesi" }),
     lab("ammonia", { en: "Ammonia", tr: "Amonyak" }),
@@ -509,6 +521,63 @@ export const ORDERABLES_BY_GROUP: Record<OrderCategory, Orderable[]> = {
     { code: "11524-6", label: { en: "12-lead ECG", tr: "12 derivasyonlu EKG" }, kind: "imaging", category: "poc" },
   ],
 };
+
+/** Server catalogue section -> order-entry group. */
+const SECTION_GROUP: Record<string, OrderCategory> = {
+  microbiology: "micro",
+  serology: "micro",
+  csf: "micro",
+  body_fluid: "micro",
+  blood_gas: "bloodgas",
+  poc: "poc",
+};
+
+/**
+ * Review 2026-10-21: complete the order list from the server catalogue (labs,
+ * microbiology, serology, CSF and body fluids, imaging) and stamp every entry
+ * with its LOINC code, section and realistic turnaround. Hand-written labels
+ * above are kept; the catalogue adds the rest.
+ */
+function mergeServerCatalog(groups: Record<OrderCategory, Orderable[]>): void {
+  const known = new Map<string, Orderable>();
+  for (const list of Object.values(groups)) for (const o of list) known.set(o.code, o);
+  for (const l of SERVER_CATALOG.labs) {
+    const extra = {
+      loinc: l.loinc,
+      section: l.section,
+      synonyms: l.synonyms,
+      turnaroundMinutes: l.turnaround_minutes,
+      preliminaryMinutes: l.preliminary_minutes,
+    };
+    const existing = known.get(l.code);
+    if (existing) {
+      Object.assign(existing, extra);
+      continue;
+    }
+    const category = SECTION_GROUP[l.section] ?? "labs";
+    const o: Orderable = { code: l.code, label: { en: l.label_en, tr: l.label_tr }, kind: "laboratory", category, ...extra };
+    groups[category].push(o);
+    known.set(o.code, o);
+  }
+  for (const p of SERVER_CATALOG.imaging) {
+    const extra = {
+      loinc: p.loinc,
+      section: p.modality,
+      synonyms: p.synonyms,
+      turnaroundMinutes: p.turnaround_minutes,
+      preliminaryMinutes: p.preliminary_minutes,
+    };
+    const existing = known.get(p.code);
+    if (existing) {
+      Object.assign(existing, extra);
+      continue;
+    }
+    const o: Orderable = { code: p.code, label: { en: p.label_en, tr: p.label_tr }, kind: "imaging", category: "imaging", ...extra };
+    groups.imaging.push(o);
+    known.set(o.code, o);
+  }
+}
+mergeServerCatalog(ORDERABLES_BY_GROUP);
 
 /** The catalog as a flat list. */
 export const ORDERABLES: Orderable[] = Object.values(ORDERABLES_BY_GROUP).flat();

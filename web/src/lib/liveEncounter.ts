@@ -65,7 +65,7 @@ export function caseMetaProvenanceKey(
  * one of these in `meta.source` so a reviewer can tell measured-by-engine from
  * authored-by-case from the offline synthetic normal.
  */
-export type ResultSource = "engine" | "case" | "offline-synthetic-normal";
+export type ResultSource = "engine" | "case" | "offline-synthetic-normal" | "engine-unavailable";
 
 /* -------------------------------------------------------------------------- */
 /* CaseInstance -> wire spec                                                   */

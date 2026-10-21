@@ -52,12 +52,15 @@ import {
 } from "@/domain/orderables";
 import {
   administerMedication,
+  advanceSimTime,
   getEncounterClockMs,
+  nextResultInMs,
   placeOrder,
   treatmentsLocked,
   useEncounterState,
 } from "@/state/encounterStore";
 import { TreatmentTableNotice } from "@/components/ehr/TreatmentTableNotice";
+import { formatSimMinutes, SERVER_CATALOG } from "@/domain/serverCatalog";
 import type { PlacedOrder } from "@/state/encounterStore";
 import { minutesOf, pick } from "../labels";
 import type { Bilingual, Lang } from "@/data/schema";
@@ -154,7 +157,9 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
     q === "" ||
     o.label.en.toLowerCase().includes(q) ||
     o.label.tr.toLowerCase().includes(q) ||
-    o.code.toLowerCase().includes(q);
+    o.code.toLowerCase().includes(q) ||
+    (o.loinc ?? "").includes(q) ||
+    (o.synonyms ?? []).some((syn) => syn.toLowerCase().includes(q));
 
   const placedCodes = new Set(state.orders.map((o) => o.code));
   const orderCounts = useMemo(() => {
@@ -171,7 +176,10 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
   const anyMatch = ORDER_GROUPS.some((g) => groups[g].some(matches));
 
   const nowMs = getEncounterClockMs(state);
-  const isResulted = (o: PlacedOrder) => o.resolved || nowMs >= o.resultsReadyAt;
+  // Review 2026-10-21: an order is resulted when the store resolved it on the sim clock.
+  const isResulted = (o: PlacedOrder) => o.resolved;
+  const nextWaitMs = nextResultInMs(state);
+  const resultedAtById = useMemo(() => new Map(state.results.map((r) => [r.orderId, r.at])), [state.results]);
   const pending = state.orders.filter((o) => !isResulted(o));
   const resulted = state.orders.filter(isResulted);
   useSecondTick(pending.length > 0);
@@ -262,18 +270,25 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
                   >
                     {t(`orders2.group.${group}`)}
                   </SectionLabel>
-                  <ul className="flex flex-col divide-y divide-border">
-                    {items.map((o) => (
-                      <OrderRow
-                        key={o.code}
-                        orderable={o}
-                        lang={lang}
-                        placed={placedCodes.has(o.code)}
-                        count={orderCounts.get(o.code) ?? 0}
-                        rubric={rubric.get(o.code)}
-                      />
-                    ))}
-                  </ul>
+                  {bySection(items).map(([section, list]) => (
+                    <div key={section || "all"}>
+                      {section && group !== "imaging" ? (
+                        <p className="eyebrow mt-2 text-[0.625rem] text-subtle">{t(`results3.section.${section}`, { defaultValue: section })}</p>
+                      ) : null}
+                      <ul className="flex flex-col divide-y divide-border">
+                        {list.map((o) => (
+                          <OrderRow
+                            key={o.code}
+                            orderable={o}
+                            lang={lang}
+                            placed={placedCodes.has(o.code)}
+                            count={orderCounts.get(o.code) ?? 0}
+                            rubric={rubric.get(o.code)}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </Card>
               );
             })}
@@ -331,6 +346,17 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
             </p>
           ) : null}
         </div>
+        {nextWaitMs != null && nextWaitMs > 0 ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="w-max"
+            onClick={() => advanceSimTime(nextWaitMs)}
+            title={t("results3.advanceHint")}
+          >
+            {t("results3.advance", { time: formatSimMinutes(nextWaitMs / 60_000, lang) })}
+          </Button>
+        ) : null}
 
         {state.orders.length === 0 ? (
           <p className="py-2 text-xs text-muted">{t("orders2.tracker.empty")}</p>
@@ -349,7 +375,7 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
                   <TrackerRow key={`p-${o.code}-${i}`} order={o} lang={lang} nowMs={nowMs} />
                 ))}
                 {resulted.map((o, i) => (
-                  <TrackerRow key={`r-${o.code}-${i}`} order={o} lang={lang} nowMs={nowMs} />
+                  <TrackerRow key={`r-${o.code}-${i}`} order={o} lang={lang} nowMs={nowMs} resultedAt={resultedAtById.get(o.id)} />
                 ))}
               </TBody>
             </Table>
@@ -358,7 +384,7 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
 
         <p className="text-[0.6875rem] text-muted">{t("orders2.tracker.hint")}</p>
         {/* Acceptance 2026-10-20 D-27: explain the sim-time compression. */}
-        <p className="text-[0.6875rem] text-muted">{t("orders2.tracker.timeLegend")}</p>
+        <p className="text-[0.6875rem] text-muted">{t("results3.timeLegend")}</p>
       </motion.aside>
     </div>
   );
@@ -660,20 +686,22 @@ function TrackerRow({
   order,
   lang,
   nowMs,
+  resultedAt,
 }: {
   order: PlacedOrder;
   lang: Lang;
   nowMs: number;
+  resultedAt?: number;
 }) {
   const { t } = useTranslation();
   const name = lang === "tr" ? order.labelTr : order.labelEn;
   const clinicalEta = lang === "tr" ? order.clinicalLabelTr : order.clinicalLabelEn;
-  const done = order.resolved || nowMs >= order.resultsReadyAt;
+  const done = order.resolved;
 
   const total = Math.max(1, order.resultsReadyAt - order.placedAt);
   const elapsed = Math.min(total, Math.max(0, nowMs - order.placedAt));
   const pct = done ? 100 : Math.round((elapsed / total) * 100);
-  const etaSec = Math.max(0, Math.ceil((order.resultsReadyAt - nowMs) / 1000));
+  const leftMin = Math.max(0, (order.resultsReadyAt - nowMs) / 60_000);
 
   return (
     <Tr>
@@ -690,7 +718,7 @@ function TrackerRow({
           <div className="flex flex-col gap-0.5">
             <StatusDot tone="normal" label={t("orders2.tracker.resultedTag")} size="sm" />
             <span className="font-mono text-[0.6875rem] text-subtle">
-              {t("orders2.tracker.resultedAt", { min: minutesOf(nowMs) })}
+              {t("orders2.tracker.resultedAt", { min: minutesOf(resultedAt ?? order.resultsReadyAt) })}
             </span>
           </div>
         ) : (
@@ -716,7 +744,7 @@ function TrackerRow({
               />
             </div>
             <span className="font-mono text-[0.6875rem] text-subtle" aria-live="off">
-              {etaSec > 0 ? t("orders2.tracker.readyIn", { sec: etaSec }) : t("orders2.tracker.readyNow")}
+              {leftMin > 0 ? t("results3.readyIn", { time: formatSimMinutes(leftMin, lang) }) : t("orders2.tracker.readyNow")}
             </span>
           </div>
         )}
@@ -728,6 +756,23 @@ function TrackerRow({
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                     */
 /* -------------------------------------------------------------------------- */
+
+/** Order a group's items by server catalogue section (haematology, chemistry ...), keeping order within a section. */
+function bySection(items: Orderable[]): Array<[string, Orderable[]]> {
+  const order = SERVER_CATALOG.sections;
+  const buckets = new Map<string, Orderable[]>();
+  for (const o of items) {
+    const key = o.section ?? "";
+    const list = buckets.get(key) ?? [];
+    list.push(o);
+    buckets.set(key, list);
+  }
+  return [...buckets.entries()].sort((a, b) => {
+    const ia = order.indexOf(a[0]);
+    const ib = order.indexOf(b[0]);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+}
 
 /** Group the treatment catalog by pharmacologic class, preserving order. */
 /**

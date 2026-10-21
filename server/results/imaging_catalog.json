@@ -1,0 +1,827 @@
+{
+ "schema_version": 1,
+ "reviewed_at": "2026-10-21",
+ "description": "Imaging procedures with LOINC radiology codes (LOINC 2.82) and LOINC/RSNA Radiology Playbook attributes (modality, body part, contrast). Each maps to the imaging bank by modality and region; report turnaround classes are in server/results/engine.py TURNAROUND.",
+ "playbook": {
+  "name": "LOINC/RSNA Radiology Playbook",
+  "url": "https://playbook.radlex.org/",
+  "note": "Playbook RPID cross-references ship in the LOINC release (account required); this catalogue records the Playbook attribute values for each LOINC code and links out."
+ },
+ "procedures": [
+  {
+   "code": "cxr",
+   "loinc": "36643-5",
+   "label_en": "Chest X-ray (PA and lateral)",
+   "label_tr": "Akciğer grafisi (PA ve lateral)",
+   "modality": "xr",
+   "region": "chest",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Chest",
+    "contrast": "none"
+   },
+   "view": "PA",
+   "laterality_required": false,
+   "turnaround": "xr",
+   "synonyms": [
+    "cxr",
+    "chest film"
+   ],
+   "legacy_codes": [
+    "42272-5"
+   ]
+  },
+  {
+   "code": "cxr-portable",
+   "loinc": "36589-0",
+   "label_en": "Portable chest X-ray (AP)",
+   "label_tr": "Portatif akciğer grafisi (AP)",
+   "modality": "xr",
+   "region": "chest",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Chest",
+    "contrast": "none"
+   },
+   "view": "AP",
+   "laterality_required": false,
+   "turnaround": "xr_portable",
+   "synonyms": [],
+   "legacy_codes": [
+    "30746-2"
+   ]
+  },
+  {
+   "code": "axr",
+   "loinc": "24799-9",
+   "label_en": "Abdominal X-ray (AP, KUB)",
+   "label_tr": "Direkt karın grafisi (AP, KUB)",
+   "modality": "xr",
+   "region": "abdomen",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Abdomen",
+    "contrast": "none"
+   },
+   "view": "AP",
+   "laterality_required": false,
+   "turnaround": "xr",
+   "synonyms": [
+    "kub",
+    "axr"
+   ],
+   "legacy_codes": []
+  },
+  {
+   "code": "xr-pelvis",
+   "loinc": "37622-8",
+   "label_en": "Pelvis X-ray (AP)",
+   "label_tr": "Pelvis grafisi (AP)",
+   "modality": "xr",
+   "region": "extremity",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Pelvis",
+    "contrast": "none"
+   },
+   "view": "AP",
+   "laterality_required": false,
+   "turnaround": "xr",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "xr-cspine",
+   "loinc": "24946-6",
+   "label_en": "Cervical spine X-ray",
+   "label_tr": "Servikal vertebra grafisi",
+   "modality": "xr",
+   "region": "cspine",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Cervical spine",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "xr",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "xr-lspine",
+   "loinc": "24972-2",
+   "label_en": "Lumbar spine X-ray",
+   "label_tr": "Lomber vertebra grafisi",
+   "modality": "xr",
+   "region": "lspine",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Lumbar spine",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "xr",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "xr-extremity",
+   "loinc": "43468-8",
+   "label_en": "Extremity X-ray (two views)",
+   "label_tr": "Ekstremite grafisi (iki yön)",
+   "modality": "xr",
+   "region": "extremity",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Extremity",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": true,
+   "turnaround": "xr",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "xr-wrist",
+   "loinc": "24619-9",
+   "label_en": "Wrist X-ray",
+   "label_tr": "El bileği grafisi",
+   "modality": "xr",
+   "region": "extremity",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Wrist",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": true,
+   "turnaround": "xr",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "xr-forearm",
+   "loinc": "36698-9",
+   "label_en": "Forearm X-ray (AP and lateral)",
+   "label_tr": "Önkol grafisi (AP ve lateral)",
+   "modality": "xr",
+   "region": "extremity",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Radius and ulna",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": true,
+   "turnaround": "xr",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "xr-shoulder",
+   "loinc": "24909-4",
+   "label_en": "Shoulder X-ray",
+   "label_tr": "Omuz grafisi",
+   "modality": "xr",
+   "region": "extremity",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Shoulder",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": true,
+   "turnaround": "xr",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "xr-ankle",
+   "loinc": "24541-5",
+   "label_en": "Ankle X-ray",
+   "label_tr": "Ayak bileği grafisi",
+   "modality": "xr",
+   "region": "extremity",
+   "playbook": {
+    "modality": "XR",
+    "body_part": "Ankle",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": true,
+   "turnaround": "xr",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "ct-head-noncon",
+   "loinc": "30799-1",
+   "label_en": "CT head (non-contrast)",
+   "label_tr": "Beyin BT (kontrastsız)",
+   "modality": "ct",
+   "region": "head",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Head",
+    "contrast": "none"
+   },
+   "view": "axial",
+   "laterality_required": false,
+   "turnaround": "ct_head",
+   "synonyms": [
+    "ct brain"
+   ],
+   "legacy_codes": [
+    "24725-4"
+   ]
+  },
+  {
+   "code": "ct-head-contrast",
+   "loinc": "24727-0",
+   "label_en": "CT head with IV contrast",
+   "label_tr": "Kontrastlı beyin BT",
+   "modality": "ct",
+   "region": "head",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Head",
+    "contrast": "iv"
+   },
+   "view": "axial",
+   "laterality_required": false,
+   "turnaround": "ct",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "cta-head-neck",
+   "loinc": "37498-3",
+   "label_en": "CT angiogram head and neck (stroke protocol)",
+   "label_tr": "Baş-boyun BT anjiyografi (inme protokolü)",
+   "modality": "ct",
+   "region": "head",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Head and neck vessels",
+    "contrast": "iv"
+   },
+   "view": "axial-cta",
+   "laterality_required": false,
+   "turnaround": "cta",
+   "synonyms": [
+    "cta stroke"
+   ],
+   "legacy_codes": []
+  },
+  {
+   "code": "ct-cspine",
+   "loinc": "30592-0",
+   "label_en": "CT cervical spine (non-contrast)",
+   "label_tr": "Servikal vertebra BT (kontrastsız)",
+   "modality": "ct",
+   "region": "cspine",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Cervical spine",
+    "contrast": "none"
+   },
+   "view": "sagittal",
+   "laterality_required": false,
+   "turnaround": "ct",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "ct-facial",
+   "loinc": "24696-7",
+   "label_en": "CT facial bones",
+   "label_tr": "Yüz kemikleri BT",
+   "modality": "ct",
+   "region": "head",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Facial bones",
+    "contrast": "none"
+   },
+   "view": "axial",
+   "laterality_required": false,
+   "turnaround": "ct",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "ct-chest",
+   "loinc": "24628-0",
+   "label_en": "CT chest with IV contrast",
+   "label_tr": "Kontrastlı toraks BT",
+   "modality": "ct",
+   "region": "chest",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Chest",
+    "contrast": "iv"
+   },
+   "view": "axial",
+   "laterality_required": false,
+   "turnaround": "ct",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "ctpa",
+   "loinc": "79077-4",
+   "label_en": "CT pulmonary angiogram (CTPA, PE protocol)",
+   "label_tr": "BT pulmoner anjiyografi (BTPA, PE protokolü)",
+   "modality": "ct",
+   "region": "chest",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Pulmonary arteries",
+    "contrast": "iv"
+   },
+   "view": "axial-cta",
+   "laterality_required": false,
+   "turnaround": "cta",
+   "synonyms": [
+    "ctpa",
+    "pe study"
+   ],
+   "legacy_codes": [
+    "36953-5"
+   ]
+  },
+  {
+   "code": "cta-chest",
+   "loinc": "79077-4",
+   "label_en": "CT angiogram chest (CTA)",
+   "label_tr": "Toraks BT anjiyografi (CTA)",
+   "modality": "ct",
+   "region": "chest",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Pulmonary arteries",
+    "contrast": "iv"
+   },
+   "view": "axial-cta",
+   "laterality_required": false,
+   "turnaround": "cta",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "ct-aorta",
+   "loinc": "36141-0",
+   "label_en": "CT angiogram aorta (dissection protocol)",
+   "label_tr": "Aort BT anjiyografi (diseksiyon protokolü)",
+   "modality": "ct",
+   "region": "aorta",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Thoracic and abdominal aorta",
+    "contrast": "iv"
+   },
+   "view": "axial-cta",
+   "laterality_required": false,
+   "turnaround": "cta",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "ct-abdo-pelvis",
+   "loinc": "36813-4",
+   "label_en": "CT abdomen and pelvis with IV contrast",
+   "label_tr": "Kontrastlı batın ve pelvis BT",
+   "modality": "ct",
+   "region": "abdomen",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Abdomen and pelvis",
+    "contrast": "iv"
+   },
+   "view": "axial",
+   "laterality_required": false,
+   "turnaround": "ct",
+   "synonyms": [],
+   "legacy_codes": [
+    "42274-1"
+   ]
+  },
+  {
+   "code": "ct-kub",
+   "loinc": "36952-0",
+   "label_en": "CT KUB (non-contrast, renal stone protocol)",
+   "label_tr": "BT KUB (kontrastsız, taş protokolü)",
+   "modality": "ct",
+   "region": "abdomen",
+   "playbook": {
+    "modality": "CT",
+    "body_part": "Abdomen and pelvis",
+    "contrast": "none"
+   },
+   "view": "axial",
+   "laterality_required": false,
+   "turnaround": "ct",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-abdomen",
+   "loinc": "24558-9",
+   "label_en": "Ultrasound abdomen",
+   "label_tr": "Batın ultrasonu",
+   "modality": "us",
+   "region": "abdomen",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Abdomen",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "us",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-ruq",
+   "loinc": "24532-4",
+   "label_en": "Ultrasound right upper quadrant (biliary)",
+   "label_tr": "Sağ üst kadran ultrasonu (bilier)",
+   "modality": "us",
+   "region": "biliary",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Abdomen RUQ",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "us",
+   "synonyms": [
+    "gallbladder"
+   ],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-pelvis",
+   "loinc": "24869-0",
+   "label_en": "Ultrasound pelvis (transabdominal)",
+   "label_tr": "Pelvik ultrason (transabdominal)",
+   "modality": "us",
+   "region": "pelvis",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Pelvis",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "us",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-tvus",
+   "loinc": "24677-7",
+   "label_en": "Transvaginal ultrasound",
+   "label_tr": "Transvajinal ultrason",
+   "modality": "us",
+   "region": "pelvis",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Pelvis",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "us",
+   "synonyms": [
+    "tvus",
+    "transvaginal"
+   ],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-renal",
+   "loinc": "38036-0",
+   "label_en": "Renal and bladder ultrasound",
+   "label_tr": "Böbrek ve mesane ultrasonu",
+   "modality": "us",
+   "region": "kidney",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Kidney",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "us",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-dvt",
+   "loinc": "69385-3",
+   "label_en": "Lower-limb venous duplex (DVT)",
+   "label_tr": "Alt ekstremite venöz Doppler (DVT)",
+   "modality": "us",
+   "region": "vascular-leg",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Lower extremity veins",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": true,
+   "turnaround": "us",
+   "synonyms": [],
+   "legacy_codes": [
+    "39150-9"
+   ]
+  },
+  {
+   "code": "us-aorta",
+   "loinc": "69276-4",
+   "label_en": "Ultrasound abdominal aorta (AAA)",
+   "label_tr": "Abdominal aort ultrasonu (AAA)",
+   "modality": "us",
+   "region": "aorta",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Abdominal aorta",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "pocus",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-appendix",
+   "loinc": "24548-0",
+   "label_en": "Ultrasound appendix",
+   "label_tr": "Apendiks ultrasonu",
+   "modality": "us",
+   "region": "abdomen",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Appendix",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "us",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-scrotum",
+   "loinc": "80877-4",
+   "label_en": "Scrotal ultrasound with Doppler (torsion)",
+   "label_tr": "Skrotal Doppler ultrason (torsiyon)",
+   "modality": "us",
+   "region": "scrotum",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Scrotum and testicle",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "us",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-thyroid",
+   "loinc": "25010-0",
+   "label_en": "Thyroid ultrasound",
+   "label_tr": "Tiroid ultrasonu",
+   "modality": "us",
+   "region": "thyroid",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Thyroid gland",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "us_routine",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-carotid",
+   "loinc": "42146-1",
+   "label_en": "Carotid Doppler ultrasound",
+   "label_tr": "Karotis Doppler ultrasonu",
+   "modality": "us",
+   "region": "carotid",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Carotid arteries",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "us_routine",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "us-fast",
+   "loinc": null,
+   "label_en": "FAST ultrasound (trauma, bedside)",
+   "label_tr": "FAST ultrason (travma, yatak başı)",
+   "modality": "us",
+   "region": "abdomen",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Abdomen and pericardium",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "pocus",
+   "synonyms": [
+    "efast"
+   ],
+   "legacy_codes": []
+  },
+  {
+   "code": "echo",
+   "loinc": "59281-6",
+   "label_en": "Echocardiogram (transthoracic)",
+   "label_tr": "Ekokardiyografi (transtorasik)",
+   "modality": "echo",
+   "region": "heart",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Heart",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "echo",
+   "synonyms": [
+    "tte"
+   ],
+   "legacy_codes": []
+  },
+  {
+   "code": "echo-pocus",
+   "loinc": "42707-0",
+   "label_en": "Focused cardiac ultrasound (bedside)",
+   "label_tr": "Odaklı kardiyak ultrason (yatak başı)",
+   "modality": "echo",
+   "region": "heart",
+   "playbook": {
+    "modality": "US",
+    "body_part": "Heart",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "pocus",
+   "synonyms": [
+    "pocus"
+   ],
+   "legacy_codes": []
+  },
+  {
+   "code": "mri-brain",
+   "loinc": "30657-1",
+   "label_en": "MRI brain (non-contrast)",
+   "label_tr": "Beyin MR (kontrastsız)",
+   "modality": "mri",
+   "region": "head",
+   "playbook": {
+    "modality": "MR",
+    "body_part": "Brain",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "mri",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "mri-brain-contrast",
+   "loinc": "24587-8",
+   "label_en": "MRI brain with and without contrast",
+   "label_tr": "Kontrastlı ve kontrastsız beyin MR",
+   "modality": "mri",
+   "region": "head",
+   "playbook": {
+    "modality": "MR",
+    "body_part": "Brain",
+    "contrast": "wo_w_iv"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "mri",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "mri-cspine",
+   "loinc": "30667-0",
+   "label_en": "MRI cervical spine",
+   "label_tr": "Servikal vertebra MR",
+   "modality": "mri",
+   "region": "cspine",
+   "playbook": {
+    "modality": "MR",
+    "body_part": "Cervical spine",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "mri",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "mri-tspine",
+   "loinc": "36532-0",
+   "label_en": "MRI thoracic spine",
+   "label_tr": "Torakal vertebra MR",
+   "modality": "mri",
+   "region": "tspine",
+   "playbook": {
+    "modality": "MR",
+    "body_part": "Thoracic spine",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "mri",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "mri-lspine",
+   "loinc": "30679-5",
+   "label_en": "MRI lumbar spine",
+   "label_tr": "Lomber vertebra MR",
+   "modality": "mri",
+   "region": "lspine",
+   "playbook": {
+    "modality": "MR",
+    "body_part": "Lumbar spine",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "mri",
+   "synonyms": [
+    "cauda equina"
+   ],
+   "legacy_codes": []
+  },
+  {
+   "code": "mri-mrcp",
+   "loinc": "58740-2",
+   "label_en": "MRCP (MR cholangiopancreatography)",
+   "label_tr": "MRKP (MR kolanjiyopankreatografi)",
+   "modality": "mri",
+   "region": "biliary",
+   "playbook": {
+    "modality": "MR",
+    "body_part": "Biliary tree and pancreas",
+    "contrast": "none"
+   },
+   "view": null,
+   "laterality_required": false,
+   "turnaround": "mri",
+   "synonyms": [],
+   "legacy_codes": []
+  },
+  {
+   "code": "11524-6",
+   "loinc": "11524-6",
+   "label_en": "12-lead ECG",
+   "label_tr": "12 derivasyonlu EKG",
+   "modality": "ecg",
+   "region": "chest",
+   "playbook": {
+    "modality": "EKG",
+    "body_part": "Heart",
+    "contrast": "none"
+   },
+   "view": "12-lead",
+   "laterality_required": false,
+   "turnaround": "ecg",
+   "synonyms": [
+    "ekg",
+    "ecg"
+   ],
+   "legacy_codes": []
+  }
+ ]
+}

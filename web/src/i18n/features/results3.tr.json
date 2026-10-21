@@ -1,0 +1,62 @@
+{
+  "results3": {
+    "pending": "Bekliyor",
+    "preliminary": "Ön rapor",
+    "readyIn": "{{time}} sonra",
+    "advance": "Sonraki sonuca ilerle (+{{time}})",
+    "advanceHint": "Simülasyon saatini sonraki sonuca ilerletir. Hastanın seyri de ilerler.",
+    "engineFailed": "Sonuç motoru bu sonucu üretemedi.",
+    "retry": "Yeniden dene",
+    "unavailableBody": "Sonuç yok: sonuç motoru bu sonucu üretemedi. Uydurma bir değer yerine hiçbir değer gösterilmez.",
+    "loincTitle": "LOINC istem kodu (LOINC 2.82)",
+    "icdSource": "ICD-10-CM 2027",
+    "icdServerHeading": "Tam ICD-10-CM (2027)",
+    "icdSearching": "ICD-10-CM aranıyor",
+    "icd11Link": "ICD-11'de bak (DSÖ)",
+    "codeTagTitle": "{{system}} kodu",
+    "timeLegend": "Tahmini süre ve geri sayımlar simülasyon zamanıdır: acil biyokimya yaklaşık 50 dk, troponin 60 dk, BT yaklaşık 4 sa, kültürler 2 ila 5 gün. Saati sonraki sonuca getirmek için İlerle düğmesini kullanın.",
+    "section": {
+      "haematology": "Hematoloji",
+      "chemistry": "Biyokimya",
+      "cardiac": "Kardiyak belirteçler",
+      "coagulation": "Koagülasyon",
+      "inflammatory": "İnflamatuvar belirteçler",
+      "endocrine": "Endokrin",
+      "tumour_marker": "Tümör belirteçleri",
+      "immunology": "İmmünoloji",
+      "urine": "İdrar",
+      "toxicology": "Toksikoloji",
+      "therapeutic_drug": "Terapötik ilaç düzeyleri",
+      "blood_gas": "Kan gazı",
+      "poc": "Yatak başı",
+      "blood_bank": "Kan bankası",
+      "microbiology": "Mikrobiyoloji",
+      "serology": "Seroloji",
+      "csf": "Beyin omurilik sıvısı",
+      "body_fluid": "Vücut sıvıları"
+    }
+  },
+  "ehrTerms": {
+    "codeStatus": {
+      "label": "Resüsitasyon durumu",
+      "full": "Tam resüsitasyon",
+      "hint": "Tam kod: kalp veya solunum durursa KPR ve tüm resüsitasyon girişimleri uygulanır. Bu simüle hasta için resüsitasyon yapmama kararı kayıtlı değildir."
+    }
+  },
+  "labs2": {
+    "results": {
+      "analytes_one": "{{count}} analit",
+      "analytes_other": "{{count}} analit"
+    }
+  },
+  "live2": {
+    "results": {
+      "source": {
+        "engine-unavailable": "Sonuç yok"
+      },
+      "sourceHint": {
+        "engine-unavailable": "Ağ geçidi yanıt verdi ama sonuç motoru bu sonucu üretemedi. Yerine hiçbir şey gösterilmez."
+      }
+    }
+  }
+}
