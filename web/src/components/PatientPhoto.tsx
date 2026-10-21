@@ -124,6 +124,20 @@ export interface PatientPhotoProps {
    * overlapped.
    */
   bare?: boolean;
+  /**
+   * Load the talking-head clip before the first line (the call tile), so the first
+   * reply does not wait on a 3 to 4 MB download. Other surfaces load it on first speech.
+   */
+  preloadTalk?: boolean;
+}
+
+/**
+ * Whether the talking-head <video> is in the DOM. Once mounted it stays mounted (hidden
+ * and paused between lines) so each new line only toggles visibility and playback: a
+ * remount per line re-requested the clip and flashed the poster.
+ */
+function talkVideoMounted(opts: { canTalk: boolean; preload: boolean; armed: boolean; speaking: boolean }): boolean {
+  return opts.canTalk && (opts.preload || opts.armed || opts.speaking);
 }
 
 interface Physiology {
@@ -288,6 +302,7 @@ export function PatientPhoto({
   expandable,
   expandLabel,
   bare = false,
+  preloadTalk = false,
 }: PatientPhotoProps) {
   const { t } = useTranslation();
   const photo = useMemo(() => {
@@ -310,10 +325,17 @@ export function PatientPhoto({
   // moves as if talking) when one exists for this face and motion is ok — it wins
   // over the idle loop and the still so the patient visibly talks. Reduced-motion
   // viewers keep the still with the speaking pill + shimmer instead of a clip.
-  const useTalkVideo = isSpeaking && hasTalkVideo(photo.id) && !reduced;
+  const canTalk = hasTalkVideo(photo.id) && !reduced;
+  const useTalkVideo = isSpeaking && canTalk;
+  // Armed by the first line and kept (state adjusted during render, no effect pass).
+  const [talkArmed, setTalkArmed] = useState(false);
+  if (useTalkVideo && !talkArmed) setTalkArmed(true);
+  const mountTalk = talkVideoMounted({ canTalk, preload: preloadTalk, armed: talkArmed, speaking: isSpeaking });
   // Play the "alive" idle loop when one exists for this face and motion is ok;
-  // otherwise the still photo (also the video poster) stands in.
-  const useVideo = !useTalkVideo && hasPatientVideo(photo.id) && !reduced;
+  // otherwise the still photo (also the video poster) stands in. It stays mounted
+  // under the talk clip and only pauses while the patient talks.
+  const idleVideo = hasPatientVideo(photo.id) && !reduced;
+  const useVideo = !useTalkVideo && idleVideo;
 
   // Breathing — the chest & shoulders visibly rise and fall. It plays on the STILL
   // photo AND on the talking-head video (only the idle "alive" loop is left to
@@ -417,14 +439,25 @@ export function PatientPhoto({
     sweatSweep;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  // Autoplay policies can leave a muted <video> paused after mount; nudge it
-  // (for either the idle loop or the speaking talking-head loop).
+  const talkRef = useRef<HTMLVideoElement | null>(null);
+  // Autoplay policies can leave a muted <video> paused after mount; nudge the idle
+  // loop, and play / pause the (always mounted) talk clip as speech starts and stops.
   useEffect(() => {
-    const v = videoRef.current;
-    if ((!useVideo && !useTalkVideo) || !v) return;
-    const play = v.play();
-    if (play && typeof play.catch === "function") play.catch(() => {});
-  }, [useVideo, useTalkVideo, photo.id, isSpeaking]);
+    const nudge = (v: HTMLVideoElement | null) => {
+      if (!v) return;
+      const play = v.play();
+      if (play && typeof play.catch === "function") play.catch(() => {});
+    };
+    const idle = videoRef.current;
+    if (idle && idleVideo) {
+      if (useVideo) nudge(idle);
+      else idle.pause();
+    }
+    const talk = talkRef.current;
+    if (!talk) return;
+    if (useTalkVideo) nudge(talk);
+    else talk.pause();
+  }, [useVideo, idleVideo, useTalkVideo, mountTalk, photo.id]);
 
   const interactive = typeof onClick === "function";
   const showExpand = interactive && expandable !== false;
@@ -432,22 +465,30 @@ export function PatientPhoto({
   // The media element (built once so the breathing + distress wrappers can nest
   // it without duplicating markup). The physiology `filter` is applied here, so
   // pallor / fever / cyanosis / reduced-LOC tint the still AND both videos alike.
-  const mediaEl = useTalkVideo ? (
+  // The talk clip sits over the base media and stays mounted between lines: speaking
+  // only shows it and plays it (no remount, no new request for the 3 to 4 MB clip).
+  const talkEl = mountTalk ? (
     <video
       key={`talk-${photo.id}`}
-      ref={videoRef}
+      ref={talkRef}
       src={talkVideoUrl(photo.id)}
       poster={patientPhotoUrl(photo.id)}
-      aria-label={alt ?? "Synthetic patient — not a real individual"}
-      autoPlay
+      aria-label={useTalkVideo ? (alt ?? "Synthetic patient — not a real individual") : undefined}
+      aria-hidden={useTalkVideo ? undefined : true}
+      data-testid="patient-talk-video"
+      data-speaking={useTalkVideo ? "true" : "false"}
       loop
       muted
       playsInline
       preload="auto"
-      className="h-full w-full object-cover object-[50%_38%]"
+      className={cn(
+        "absolute inset-0 h-full w-full object-cover object-[50%_38%]",
+        useTalkVideo ? "visible opacity-100" : "invisible opacity-0",
+      )}
       style={filter ? { filter } : undefined}
     />
-  ) : useVideo ? (
+  ) : null;
+  const baseEl = idleVideo ? (
     <video
       key={`idle-${photo.id}`}
       ref={videoRef}
@@ -472,6 +513,16 @@ export function PatientPhoto({
       style={filter ? { filter } : undefined}
       draggable={false}
     />
+  );
+  // Wrapped whenever this face can talk (not only once the clip mounts), so mounting the
+  // clip never remounts the base media.
+  const mediaEl = canTalk ? (
+    <div className="relative h-full w-full">
+      {baseEl}
+      {talkEl}
+    </div>
+  ) : (
+    baseEl
   );
 
   return (

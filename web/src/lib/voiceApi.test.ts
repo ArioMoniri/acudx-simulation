@@ -129,6 +129,28 @@ describe("createVoiceApi", () => {
     }
   });
 
+  it("tells a booting worker (pending_launch) from a permanent refusal on a 503", async () => {
+    const { fn } = fakeFetch([
+      { status: 503, body: { error: "tts_unavailable", airgapped: false, pending_launch: true, reasons: ["gpu-worker: starting"] } },
+      { status: 503, body: { error: "tts_unavailable", airgapped: true, pending_launch: false, reasons: [] } },
+    ]);
+    const api = createVoiceApi({ baseUrl: base, fetchFn: fn });
+    const booting = await api.synthesize({ text: "hi", lang: "en", sex: "male", age: 40 });
+    const refused = await api.synthesize({ text: "hi", lang: "en", sex: "male", age: 40 });
+    expect(booting).toMatchObject({ ok: false, error: "unavailable", pendingLaunch: true, airgapped: false });
+    expect(refused).toMatchObject({ ok: false, error: "unavailable", pendingLaunch: false, airgapped: true });
+  });
+
+  it("wakes the GPU worker with a signed POST /v1/voice/warm", async () => {
+    const { fn, calls } = fakeFetch([{ status: 200, body: { ready: false, pending_launch: true, refusal: null } }]);
+    const api = createVoiceApi({ baseUrl: base, fetchFn: fn, identity: async () => ({ "X-User-Id": "stu-7" }) });
+    const r = await api.warm();
+    expect(r).toEqual({ ok: true, data: { ready: false, pending_launch: true, refusal: null } });
+    expect(calls[0].url).toBe(`${base}/v1/voice/warm`);
+    expect(calls[0].init.method).toBe("POST");
+    expect((calls[0].init.headers as Record<string, string>)["X-User-Id"]).toBe("stu-7");
+  });
+
   it("returns the streaming response and parsed headers on success", async () => {
     const { fn, calls } = fakeFetch([
       { status: 200, raw: new Uint8Array([0xff, 0xfb, 0x90]), headers: { "content-type": "audio/mpeg", "x-voice-provider": "eleven", "x-voice-ttfb-ms": "95" } },

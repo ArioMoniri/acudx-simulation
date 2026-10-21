@@ -10,6 +10,9 @@ Order of attempts for ``kind`` in {tts, stt}:
    ``/tts`` (Chatterbox Multilingual, Turkish included) or ``/stt`` (speaches,
    faster-whisper large-v3-turbo). Under ``AIRGAPPED`` the manager refuses to
    launch cloud capacity, so this step yields nothing and the route answers 503.
+   For TTS this step never waits on a cold boot: with no ready worker the launch runs in the
+   background (:meth:`VoiceService.wake_worker`) and the route answers a fast 503 with
+   ``pending_launch: true``, so the browser voices the line itself until the worker is up.
 
 Every attempt writes one telemetry row (``kind`` tts/stt) through
 :class:`~server.telemetry.events.TelemetryRecorder`; the cost comes from
@@ -19,6 +22,7 @@ billed unit (characters for TTS, whole audio seconds for STT).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass
@@ -44,13 +48,25 @@ WORKER_PROBE_TIMEOUT_S = 3.0
 WORKER_TTS_LANGUAGES = ("ar", "da", "de", "el", "en", "es", "fi", "fr", "he", "hi", "it", "ja", "ko", "ms", "nl",
                         "no", "pl", "pt", "ru", "sv", "sw", "tr")
 
+# A patient line never waits on a GPU cold boot (minutes) while the browser gives up after 30 s:
+# with no ready worker the TTS route starts one in the background, waits only this long (a worker
+# that is already up answers well within it), then answers a fast 503 ``pending_launch`` so the
+# browser speaks the line itself until the worker is ready.
+WORKER_TTS_BOOT_WAIT_S = 0.25
+# A worker marked ready gets longer: its health probe (TLS through any egress proxy) runs first.
+WORKER_TTS_READY_WAIT_S = 10.0
+# Typical cold boot of a worker (image pull, weights, vLLM, Chatterbox, MuseTalk), shown as an estimate.
+WORKER_BOOT_ESTIMATE_S = 600
+
 
 class NoVoiceProvider(RuntimeError):
-    def __init__(self, kind: str, reasons: list[str], *, airgapped: bool):
+    def __init__(self, kind: str, reasons: list[str], *, airgapped: bool, pending_launch: bool = False):
         super().__init__(f"no {kind} provider available: {'; '.join(reasons) or 'none configured'}")
         self.kind = kind
         self.reasons = reasons
         self.airgapped = airgapped
+        # True while the GPU worker is booting (or its TTS side-car is still loading): retry later.
+        self.pending_launch = pending_launch
 
 
 @dataclass
@@ -80,6 +96,10 @@ class VoiceService:
         self._owns_client = client is None
         # Calls being set up per worker origin (SessionStore.pending_on), wired by the app.
         self.avatar_calls: Any = None
+        # The background GPU worker launch (``wake_worker``): one at a time, shared by every caller.
+        self._wake: asyncio.Task[ProviderEndpoint | None] | None = None
+        self._wake_started_at: float | None = None
+        self._wake_error: str | None = None
 
     # -- lifecycle ------------------------------------------------------------ #
     @property
@@ -104,6 +124,81 @@ class VoiceService:
         worker = await self.resolver.resolve_worker(kind)
         if worker is not None:
             yield worker
+
+    async def _tts_candidates(self, flags: dict[str, bool]) -> AsyncIterator[ProviderEndpoint]:
+        """As :meth:`_candidates`, but the GPU worker step never waits on a cold boot: with no
+        ready worker it starts one in the background and sets ``flags["pending"]``."""
+        for ep in self.resolver.endpoints("tts"):
+            yield ep
+        worker = await self._worker_for_tts(flags)
+        if worker is not None:
+            yield worker
+
+    # -- on-demand GPU worker ---------------------------------------------------- #
+    def wake_worker(self) -> asyncio.Task[ProviderEndpoint | None] | None:
+        """Start (or join) a GPU worker launch WITHOUT waiting on its boot; None when no manager.
+
+        The launch runs as one shared task (``ensure_worker`` shields the boot itself, so a caller
+        that stops waiting never cancels it); its outcome feeds ``capabilities()["gpu_worker"]["wake"]``.
+        """
+        if self.resolver.worker_manager is None:
+            return None
+        task = self._wake
+        if task is None or task.done():
+            self._wake_error = None
+            self._wake_started_at = time.time()
+            task = asyncio.get_running_loop().create_task(self._wake_run())
+            self._wake = task
+        return task
+
+    async def _wake_run(self) -> ProviderEndpoint | None:
+        try:
+            ep = await self.resolver.resolve_worker("tts")
+        except Exception as exc:  # noqa: BLE001 - background launch: recorded for the status, never raised
+            log.warning("gpu worker launch failed: %s", type(exc).__name__)
+            self._wake_error = f"launch failed ({type(exc).__name__})"
+            return None
+        if ep is None:
+            self._wake_error = self.resolver.last_worker_refusal or "not available"
+        return ep
+
+    def _wake_state(self, status: dict[str, Any], ready: bool) -> dict[str, Any]:
+        """Where an on-demand launch stands: idle | starting | ready | failed, with the boot's elapsed time."""
+        booting = [w for w in (status.get("workers") or [])
+                   if isinstance(w, dict) and w.get("status") in ("launching", "booting")]
+        launching = bool((status.get("capacity") or {}).get("launching")) or bool(booting)
+        running = self._wake is not None and not self._wake.done()
+        started = [float(w["launched_at"]) for w in booting if w.get("launched_at")]
+        if self._wake_started_at is not None and running:
+            started.append(self._wake_started_at)
+        if ready:
+            state, detail = "ready", None
+        elif running or launching:
+            state, detail = "starting", None
+        elif self._wake_error:
+            state, detail = "failed", self._wake_error
+        else:
+            state, detail = "idle", None
+        elapsed = round(max(0.0, time.time() - min(started)), 1) if started and state == "starting" else None
+        return {"state": state, "detail": detail, "elapsed_s": elapsed, "estimate_s": WORKER_BOOT_ESTIMATE_S}
+
+    async def _worker_for_tts(self, flags: dict[str, bool]) -> ProviderEndpoint | None:
+        """The worker's TTS endpoint when it answers within a short wait, else None with a launch
+        running in the background and ``flags["pending"]`` set. A refusal yields None, not pending."""
+        wm = self.resolver.worker_manager
+        if wm is None:
+            return None
+        wait = WORKER_TTS_READY_WAIT_S if wm.llm_endpoint() else WORKER_TTS_BOOT_WAIT_S
+        task = self.wake_worker()
+        assert task is not None
+        try:
+            ep = await asyncio.wait_for(asyncio.shield(task), timeout=wait)
+        except asyncio.TimeoutError:
+            flags["pending"] = True
+            return None
+        if ep is not None:
+            flags["worker"] = True
+        return ep
 
     def _refusal_reasons(self, kind: str) -> list[str]:
         reasons = [f"{rec.name}: refused by AIRGAPPED (non-local {rec.base_url})" for rec in self.resolver.refused(kind)]
@@ -137,7 +232,8 @@ class VoiceService:
         lang = profiles.normalize_lang(lang)
         profile = profiles.profile_for(sex, age, lang)
         reasons: list[str] = []
-        async for ep in self._candidates("tts"):
+        flags = {"pending": False, "worker": False}
+        async for ep in self._tts_candidates(flags):
             name = adapter_name_for(ep)
             adapter = TTS_ADAPTERS[name]
             if adapter.languages is not None and lang not in adapter.languages:
@@ -164,11 +260,18 @@ class VoiceService:
                 reasons.append(f"{ep.name}: {detail}")
                 self._record(ep, kind="tts", model=req.model or ep.model or name, chars=len(text),
                              latency_ms=(time.monotonic() - t0) * 1000.0, ok=False, error=type(exc).__name__)
+                if ep.source == "gpu_worker":
+                    # Chatterbox is built after vLLM is up: a ready worker whose TTS side-car does not
+                    # answer yet is still booting, not a permanent refusal.
+                    flags["pending"] = True
                 continue
             ttfb = (time.monotonic() - t0) * 1000.0
             stream.chunks = self._metered(stream.chunks, ep, model=stream.model, chars=len(text), t0=t0)
             return TtsOutcome(stream=stream, endpoint=ep, adapter=name, voice_id=vid, ttfb_ms=ttfb)
-        raise NoVoiceProvider("tts", self._refusal_reasons("tts") + reasons, airgapped=self.settings.airgapped)
+        if flags["pending"] and not flags["worker"]:
+            reasons.append("gpu-worker: starting (launched on demand; retry shortly)")
+        raise NoVoiceProvider("tts", self._refusal_reasons("tts") + reasons, airgapped=self.settings.airgapped,
+                              pending_launch=flags["pending"])
 
     async def prewarm_tts(self, lang: str) -> str | None:
         """Open the connection the next ``tts(lang)`` call will use (TLS through any egress proxy, the
@@ -294,7 +397,7 @@ class VoiceService:
             worker_ready = ready is not None
             status = await wm.status()
             out["gpu_worker"] = {"ready": worker_ready, "can_launch": bool(status.get("can_launch")),
-                                 "refusal": status.get("refusal")}
+                                 "refusal": status.get("refusal"), "wake": self._wake_state(status, worker_ready)}
         for kind in ("tts", "stt"):
             eps = self.resolver.endpoints(kind)
             reasons = [f"{r.name}: refused by AIRGAPPED" for r in self.resolver.refused(kind)]

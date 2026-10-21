@@ -2,6 +2,7 @@
  * voiceApi: typed client for the gateway's voice routes (server/voice/routes.py).
  *
  *   GET  /v1/voice/capabilities  -> what is enabled now (provider, adapter, languages)
+ *   POST /v1/voice/warm          -> wake the on-demand GPU worker on call start (answers at once)
  *   POST /v1/voice/tts           -> chunked audio stream + provenance headers
  *   POST /v1/voice/stt           -> { text, language, confidence, provider }
  *   POST /v1/voice/room          -> LiveKit room token when an avatar row is configured
@@ -105,7 +106,28 @@ export interface VoiceCapabilities {
   tts: EngineCapabilities;
   stt: EngineCapabilities;
   avatar: AvatarCapabilities;
-  gpu_worker?: { ready: boolean | null; can_launch: boolean; refusal: { reason: string; message: string } | null };
+  gpu_worker?: {
+    ready: boolean | null;
+    can_launch: boolean;
+    refusal: { reason: string; message: string } | null;
+    /** Where an on-demand launch stands (server/voice/service.py `_wake_state`). */
+    wake?: WorkerWake;
+  };
+}
+
+/** The on-demand GPU worker's launch: idle, starting (with elapsed / estimated seconds), ready or failed. */
+export interface WorkerWake {
+  state: "idle" | "starting" | "ready" | "failed";
+  detail: string | null;
+  elapsed_s: number | null;
+  estimate_s: number;
+}
+
+/** POST /v1/voice/warm: the call started; the worker launches in the background. */
+export interface WarmResult {
+  ready: boolean;
+  pending_launch: boolean;
+  refusal: { reason: string; message: string } | null;
 }
 
 export interface SttResponse {
@@ -166,6 +188,9 @@ export interface TtsUnavailable {
   error: string;
   status?: number;
   reasons?: string[];
+  /** 503 while the GPU worker boots (retry later), as opposed to a permanent refusal. */
+  pendingLaunch?: boolean;
+  airgapped?: boolean;
 }
 
 export type TtsResult = TtsOk | TtsUnavailable;
@@ -322,6 +347,14 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
       return json<VoiceCapabilities>("/v1/voice/capabilities", { method: "GET" }, opts);
     },
 
+    /**
+     * The learner started the patient call: wake the on-demand GPU worker (voice and live video).
+     * Answers at once; readiness is then read from `capabilities().gpu_worker.wake`.
+     */
+    warm(opts: RequestOptions = {}): Promise<BackendResult<WarmResult>> {
+      return signedJson<WarmResult>("/v1/voice/warm", {}, { timeoutMs: 10_000, ...opts });
+    },
+
     /** Transcribe a recorded clip. `lang` is a hint ("en" | "tr"); omit to auto-detect. */
     transcribe(
       blob: Blob,
@@ -357,13 +390,17 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
       clear();
       if (res.status === 503) {
         let reasons: string[] | undefined;
+        let pendingLaunch = false;
+        let airgapped = false;
         try {
-          const j = (await res.json()) as { reasons?: string[] };
+          const j = (await res.json()) as { reasons?: string[]; pending_launch?: boolean; airgapped?: boolean };
           reasons = j.reasons;
+          pendingLaunch = j.pending_launch === true;
+          airgapped = j.airgapped === true;
         } catch {
           /* no body */
         }
-        return { ok: false, error: "unavailable", status: 503, reasons };
+        return { ok: false, error: "unavailable", status: 503, reasons, pendingLaunch, airgapped };
       }
       if (!res.ok || !res.body) return { ok: false, error: `http_${res.status}`, status: res.status };
       return { ok: true, response: res, meta: parseTtsHeaders(res.headers) };

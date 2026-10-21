@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
+
 import httpx
 import pytest
 import respx
@@ -267,3 +270,74 @@ async def test_a_row_declaring_its_languages_is_skipped_for_others(tmp_path):
     assert tr.endpoint.source == "gpu_worker" and not kokoro.called
     en = await svc.tts("I cannot breathe.", lang="en", sex="female", age=70, output_format="wav")
     assert en.endpoint.name == "worker-kokoro" and kokoro.called
+
+
+class BootingWorkerManager(FakeWorkerManager):
+    """A worker that is still cold-booting until ``boot.set()`` (the real boot takes minutes)."""
+
+    def __init__(self, **kw):
+        super().__init__(ready=False, **kw)
+        self.boot = asyncio.Event()
+
+    async def ensure_worker(self):
+        self.ensure_calls += 1
+        await self.boot.wait()
+        self._ready = True
+        return object()
+
+
+async def test_tts_answers_pending_at_once_while_the_worker_boots_then_uses_it(tmp_path):
+    """Production 2026-10-21: the browser gave up after 30 s while /tts waited on a 900 s cold boot,
+    so the patient stayed silent. Now the launch runs in the background and /tts answers at once."""
+    sc = WorkerScenario()
+    worker = BootingWorkerManager()
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=worker, scenario=sc)
+    t0 = time.monotonic()
+    with pytest.raises(NoVoiceProvider) as exc:
+        await svc.tts("Göğsüm ağrıyor", lang="tr", sex="female", age=60)
+    assert time.monotonic() - t0 < 2.0
+    assert exc.value.pending_launch is True and exc.value.airgapped is False
+    assert any("gpu-worker: starting" in r for r in exc.value.reasons)
+    # A second line during the boot joins the same launch (no second ensure_worker).
+    with pytest.raises(NoVoiceProvider) as again:
+        await svc.tts("Nefes alamıyorum", lang="tr", sex="female", age=60)
+    assert again.value.pending_launch is True and worker.ensure_calls == 1
+    caps = await svc.capabilities(probe_worker=True)
+    assert caps["gpu_worker"]["wake"]["state"] == "starting" and caps["gpu_worker"]["wake"]["elapsed_s"] is not None
+    worker.boot.set()
+    await asyncio.sleep(0)
+    out = await svc.tts("Daha iyiyim", lang="tr", sex="female", age=60, output_format="wav")
+    assert out.endpoint.source == "gpu_worker" and (await _collect(out.stream)) == wav_bytes(0.5)
+    caps = await svc.capabilities(probe_worker=True)
+    assert caps["gpu_worker"]["wake"]["state"] == "ready"
+
+
+async def test_tts_refusal_is_not_pending(tmp_path):
+    worker = FakeWorkerManager(ready=False, refuse=NotConfigured("LAMBDA_KEY is not set"), can_launch=False)
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=worker)
+    with pytest.raises(NoVoiceProvider) as exc:
+        await svc.tts("Hello", lang="en", sex="male", age=50)
+    assert exc.value.pending_launch is False and "gpu-worker: not_configured" in exc.value.reasons
+    caps = await svc.capabilities(probe_worker=True)
+    assert caps["gpu_worker"]["wake"]["state"] == "failed" and caps["gpu_worker"]["wake"]["detail"] == "not_configured"
+
+
+async def test_tts_side_car_still_loading_on_a_ready_worker_is_pending(tmp_path):
+    """Chatterbox builds after vLLM: a ready worker whose /tts fails is still booting, not refused."""
+    sc = WorkerScenario(tts_status=503)
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=FakeWorkerManager(ready=True), scenario=sc)
+    with pytest.raises(NoVoiceProvider) as exc:
+        await svc.tts("Hello", lang="en", sex="male", age=50, output_format="wav")
+    assert exc.value.pending_launch is True
+
+
+async def test_wake_worker_starts_one_background_launch(tmp_path):
+    worker = BootingWorkerManager()
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=worker)
+    first = svc.wake_worker()
+    second = svc.wake_worker()
+    await asyncio.sleep(0)
+    assert first is second and not first.done() and worker.ensure_calls == 1
+    worker.boot.set()
+    assert (await first) is not None
+    assert VoiceService(_settings(), RegistryResolver(store, _settings(), worker_manager=None)).wake_worker() is None

@@ -26,7 +26,8 @@
         "captionsOn": "Altyazıları gizle",
         "captionsOff": "Altyazıları göster",
         "voiceOn": "Ses açık",
-        "voiceOff": "Ses kapalı"
+        "voiceOff": "Ses kapalı",
+        "retryVideo": "Videoyu yeniden dene"
       },
       "captions": {
         "label": "Canlı altyazı",
@@ -41,7 +42,8 @@
         "renderer": "Video: {{renderer}}",
         "firstFrame": "İlk kare {{ms}} ms",
         "speechStart": "Konuşma başlangıcı {{ms}} ms",
-        "lipLag": "Sesten dudağa {{ms}} ms"
+        "lipLag": "Sesten dudağa {{ms}} ms",
+        "browserVoice": "Ses: tarayıcı (GPU sesi başlıyor)"
       },
       "signs": "Görünüm",
       "endedNote": "Hasta hâlâ burada. Sesli görüşmeye devam etmek için yeniden katılın; yazmak her zaman çalışır.",
@@ -50,6 +52,8 @@
         "preparing": "Hastanın yüzü canlı video için hazırlanıyor",
         "connecting": "Canlı video bağlanıyor",
         "workerStarting": "Canlı video GPU sunucusu açılınca başlar; hareketli portre gösteriliyor",
+        "waking": "Video bağlanıyor, GPU uyanıyor (yaklaşık {{minutes}} dk)",
+        "failed": "Canlı video başlatılamadı (GPU açılmadı); hareketli portre gösteriliyor",
         "unavailable": "Canlı video kullanılamıyor; hareketli portre gösteriliyor"
       }
     }
