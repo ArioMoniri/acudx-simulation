@@ -184,7 +184,13 @@ ECG
 
 Turnaround
 
-- Hawkins RC. Laboratory turnaround time. Clin Biochem Rev 2007;28:179-194. PMC1282400
+- Hawkins RC. Laboratory turnaround time. Clin Biochem Rev 2007;28:179-194. PMC2282400 (PMID 18392122; the earlier PMC1282400 was wrong)
+- Shorter laboratory turnaround time is associated with shorter ED length of stay (median TAT 51.1 min). BMC Emerg Med 2022. https://doi.org/10.1186/s12873-022-00763-w
+- Improving ED flow: reducing turnaround time for emergent CT (order to final report median 4.2 h). AMIA Annu Symp Proc 2018. PMC6371246
+- Impact of an in-house emergency radiologist on report turnaround time (preliminary 2.05 to 2.40 h, final 2.75 h). CJEM 2015. https://doi.org/10.2310/8000.2013.131235
+- Lean-driven interventions improve ED imaging turnaround (median 70 to 36 min). Emerg Radiol 2021. https://doi.org/10.1007/s10140-020-01803-3
+- Abbreviated MRI for dizziness: report turnaround (NCCT head 1.41 h, CTA 3.86 h, MRI 6.14 h). Emerg Radiol 2024. https://doi.org/10.1007/s10140-024-02273-7
+- Seasonal variations in blood culture time to positivity; 5-day standard incubation. Eur J Clin Microbiol Infect Dis 2021. https://doi.org/10.1007/s10096-021-04248-9
 - Lamy B et al. How to optimize the use of blood cultures for the diagnosis of bloodstream infections? Front Microbiol 2016;7:697. https://doi.org/10.3389/fmicb.2016.00697
 
 Imaging bank licensing
@@ -196,3 +202,48 @@ Imaging bank licensing
 - NIH ChestX-ray14 (Wang X et al., CVPR 2017, arXiv 1705.02315). https://nihcc.app.box.com/v/ChestXray-NIHCC ; card https://huggingface.co/datasets/timm/nih-chest-xray-14
 - Radiopaedia Terms (link out only). https://radiopaedia.org/terms
 - docs/research/15-imaging-labs-providers-oct-2026.md (provider survey this design follows)
+
+## 9. Order catalogue, sim-time turnaround and terminologies (2026-10-21)
+
+### 9.1 The reported fault
+
+A learner in a live encounter saw "Lactate dehydrogenase (LDH), 1 analytes, Offline synthetic normal, Ordered 0 min -> resulted 0 min". Root causes:
+
+1. Any failed engine request (timeout, HTTP error, or an engine exception on a model-written spec such as `age: "58 years"`) made the store finalize the order as `offline-synthetic-normal`, although the gateway was up. The engine now coerces every numeric field (`engine.num`), and the store retries (1 s, 3 s), shows "result unavailable" with a retry when the reachable engine refuses (4xx, 500), and uses the offline label only when the gateway is unreachable and Live mode is off.
+2. Results were revealed after a compressed wall-clock delay (18 s for chemistry), so both timestamps rounded to 0 min. Orders are now scheduled on the sim clock with the test's realistic turnaround and stay pending until it is reached; the learner can advance time to the next result (`advanceSimTime`, which also steps the Director by the same elapsed time, so the patient's course moves too).
+3. "1 analytes": `labs2.results.analytes_one/_other`.
+4. "Code: Full code" in the banner is the resuscitation status; it now reads "Resuscitation status: Full resuscitation" with the meaning in the hint. A test fails on any learner string that labels something "Code:".
+
+### 9.2 Catalogues
+
+| File | Content |
+|---|---|
+| `server/results/lab_catalog.json` | 105 orderables in 18 sections (haematology to body fluids) with LOINC order code, member analytes, specimen, turnaround class, generator |
+| `server/results/reference_ranges.json` | 189 analytes, each with UCUM unit, sex/age intervals (open-ended where the source is), source URL, review date |
+| `server/results/imaging_catalog.json` | 43 imaging procedures with LOINC radiology code and Playbook attributes (modality, body part, contrast), mapped to the imaging bank |
+| `server/results/catalog.py` | loaders, `TURNAROUND` with `basis` (measured, guideline or convention) and source, `public_catalog()` |
+| `server/results/specimens.py` | CSF, pleural/ascitic/synovial fluid, blood group and microbiology generators |
+
+Generators: `analyte` (ground truth, kinetics, seeded value in the interval, then electrolyte, protein and red-cell-index reconciliation and derived anion gap, CKD-EPI 2021 eGFR, globulin, Friedewald LDL), `micro` (profile organism and probability, culture preliminary at 24 h and final at 48 h or 5 days), `csf`, `body_fluid` (a fluid result exists only when the patient has that effusion; otherwise "no specimen obtainable"). Drug levels and toxic alcohols are "not detected" unless the case exposes the patient.
+
+Turnaround (sim minutes, order to report): POC 5, blood gas 10, chemistry 50 and haematology 45 (BMC Emerg Med 2022 median 51.1), troponin 60 (UDMI 2018), XR 60, NCCT head 85, CT 250 with a preliminary read at 125, CTA 230, US 165 (preliminary 125), MRI 370, cultures preliminary 24 h and final 48 h (blood culture 5 days when negative). Figures marked `convention` are AcuDx teaching defaults and say so.
+
+Fixes found while verifying codes against LOINC 2.82: 1841-5 (ammonia), 53060-9 (beta-hydroxybutyrate) and 5797-1 (urine ketones) do not exist (now 22763-7, 6873-4, 5797-6, with the old codes kept as aliases); the imaging map sent 30746-2 (portable chest XR) to CT aorta, 42272-5 (chest XR) to CT abdomen, 34534-8 (EKG panel) to echo and 24725-4 (CT head) to MRI spine, and used two codes that do not exist (36953-5, 39150-9).
+
+### 9.3 Terminologies
+
+`scripts/terminology/build_terminology.py` (standard library only) downloads into `data/terminology/cache/` (git-ignored), records SHA-256 and licence in `data/terminology/MANIFEST.json`, and writes:
+
+| Output | Source | Licence | In repo |
+|---|---|---|---|
+| `server/terminology/data/icd10cm-fy2027.json.gz` (98,403 codes, 74,879 billable, alphabetic-index synonyms) | CDC/NCHS FY2027 code descriptions and index | public domain | yes |
+| `server/terminology/data/icd11-mms-2026-01.json.gz` (35,664 coded entities, code + title + URI unmodified) | WHO simple tabulation 2026-01 | CC BY-ND 3.0 IGO; WHO terms 1.2.2 and 1.2.3 allow incorporation in software with code, title, URI and attribution; no crosswalk (1.2.4) | yes |
+| `server/terminology/data/loinc-verified.json` (244 codes) | LOINC 2.82 via `tx.fhir.org` `$lookup` | LOINC licence, notice in NOTICE | yes |
+| `data/terminology/range-verification.json` | each cited source page fetched; cited bounds searched on the page | n/a | yes |
+| `web/src/domain/generated/orderCatalog.generated.json` | `catalog.public_catalog()` | n/a | yes |
+
+LOINC full-table download needs a free loinc.org account: sign in at https://loinc.org/downloads/, download the LOINC Table File (CSV) for the current release, unzip to `data/terminology/cache/loinc/`, then run `build_terminology.py loinc --loinc-csv data/terminology/cache/loinc/LoincTable/Loinc.csv`. Without it the script resolves each code on the HL7 terminology server. The RSNA Radiology Playbook RPID files ship with the LOINC release; the catalogue records the Playbook attribute values and links to https://playbook.radlex.org/.
+
+Routes: `GET /v1/results/catalog`, `GET /v1/terminology/status`, `/v1/terminology/icd10cm/search?q=` (code prefix, words, index synonyms, a small table of clinical abbreviations marked as an AcuDx addition), `/v1/terminology/icd10cm/{code}` (with ancestors), `/v1/terminology/icd10cm/relate` (exact, more_specific, less_specific, same_category, same_block), `/v1/terminology/icd11/search`. The diagnosis picker merges server ICD-10-CM hits when the gateway is reachable; the debrief credits a more specific descendant of the case code and gives a same-category near miss for codes outside the curated catalogue.
+
+CI: `python scripts/terminology/build_terminology.py check` (offline) fails when an output drifts from the manifest, the web catalogue is stale, or a LOINC code in use is unverified or inactive. Tests: `server/tests/test_terminology_catalog.py` (every orderable resolves with sourced observations, no orphan web orders, ranges sourced, turnaround, preliminary reports, the LDH live spec, ICD search, no "code:" labels).

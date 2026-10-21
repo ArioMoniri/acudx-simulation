@@ -88,6 +88,8 @@ export interface Observation {
   source: string;
   reviewed_at: string;
   note?: string | null;
+  /** Normal value or criteria text when there is no numeric interval. */
+  reference_text?: string | null;
 }
 
 export interface Turnaround {
@@ -95,6 +97,11 @@ export interface Turnaround {
   minutes: number;
   ms: number;
   source: string;
+  /** measured (cited study median), guideline (target) or convention (AcuDx teaching default). */
+  basis?: "measured" | "guideline" | "convention";
+  /** Preliminary report (cultures, CT, ultrasound), sim minutes after the order. */
+  preliminary_minutes?: number | null;
+  preliminary_ms?: number | null;
 }
 
 export interface ImageProvenance {
@@ -191,6 +198,13 @@ export interface OrderResult {
   narrative: string | null;
   meta: { source: "engine"; seed: number; reference_ranges_version: string; degraded: boolean; is_synthetic_patient: boolean };
   reason?: string;
+  /** Human sentence for an unavailable result ("No pleural fluid to sample ..."). */
+  message?: string;
+  /** Preliminary report (culture growth, wet read) and when it is available (sim ms). */
+  preliminary?: { text: string; available_at_ms: number } | null;
+  /** The catalogue entry the order resolved to (human label, LOINC, section). */
+  orderable?: { code: string; loinc: string | null; label_en: string; label_tr: string; section: string; specimen: string };
+  procedure?: { code: string; loinc: string | null; label_en: string; label_tr: string; playbook: { modality: string; body_part: string; contrast: string } } | null;
 }
 
 export type EcgPattern =

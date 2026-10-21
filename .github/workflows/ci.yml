@@ -74,6 +74,12 @@ jobs:
       - name: Run tests
         run: python -m pytest server/tests -q
 
+      # Terminology gate (offline): the committed ICD-10-CM / ICD-11 / LOINC outputs
+      # match data/terminology/MANIFEST.json, the web order catalogue matches the
+      # server catalogues, and every LOINC code in use was verified and is active.
+      - name: Terminology and order catalogue check
+        run: python scripts/terminology/build_terminology.py check
+
   e2e:
     name: e2e (Playwright, 4 viewports)
     runs-on: ubuntu-latest

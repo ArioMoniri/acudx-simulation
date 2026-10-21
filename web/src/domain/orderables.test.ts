@@ -162,7 +162,7 @@ describe("orderables — comprehensive catalog", () => {
       // haematology
       "6690-2", "retic", "esr",
       // chemistry
-      "2160-0", "cmp", "lft", "lipase", "mg", "phos", "ca", "ck", "ckmb",
+      "2160-0", "cmp", "lft", "lipase", "mg", "phos", "ca", "ck",
       // cardiac
       "67151-1", "bnp", "33762-6", "48065-7",
       // coag / endocrine / inflammatory

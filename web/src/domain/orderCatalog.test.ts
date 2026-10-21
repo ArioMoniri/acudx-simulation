@@ -42,8 +42,12 @@ describe("orderCatalog — relative turnaround ordering", () => {
       en: "Blood culture",
       tr: "Kan kültürü",
     });
-    expect(culture.clinicalLabel.en).toMatch(/h$/); // "36–48 h"
+    // Review 2026-10-21: a blood culture has a 24 h preliminary and a 5 day final.
+    expect(culture.clinicalLabel.en).toBe("prelim 24 h, final 5 d");
+    expect(culture.turnaroundMs).toBe(5 * 24 * 60 * 60_000);
+    expect(culture.preliminaryMs).toBe(24 * 60 * 60_000);
     expect(culture.clinicalLabel.tr).toContain("sa");
+    expect(orderTiming("ldh", "laboratory", { en: "LDH", tr: "LDH" }).turnaroundMs).toBe(50 * 60_000);
   });
 });
 

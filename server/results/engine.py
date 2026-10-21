@@ -30,44 +30,20 @@ import re
 from functools import lru_cache
 from typing import Any, Optional
 
+from server.results import catalog
 from server.results import ecg as ecg_mod
 from server.results import imaging_bank
 from server.results import kinetics as k
+from server.results import specimens
 from server.results.kinetics import Treatment
 
 RANGES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reference_ranges.json")
 MS_PER_H = 3_600_000.0
 
-# --------------------------------------------------------------------------- #
-# Turnaround times (minutes) with sources.                                     #
-# --------------------------------------------------------------------------- #
-TURNAROUND: dict[str, dict[str, Any]] = {
-    "poc": {"minutes": 5, "source": "Point-of-care analysers report within minutes; Hawkins RC, Laboratory turnaround time, Clin Biochem Rev 2007;28:179 (PMC1282400)"},
-    "blood_gas": {"minutes": 10, "source": "Hawkins 2007 (PMC1282400): blood gas analysers are the fastest routine analytes"},
-    "ecg": {"minutes": 10, "source": "ESC 2023 ACS guideline: 12-lead ECG acquired and interpreted within 10 min of first medical contact, doi 10.1093/eurheartj/ehad191"},
-    "chemistry": {"minutes": 45, "source": "Hawkins 2007 (PMC1282400): ED median chemistry turnaround 40 to 60 min"},
-    "haematology": {"minutes": 40, "source": "Hawkins 2007 (PMC1282400)"},
-    "coagulation": {"minutes": 60, "source": "Hawkins 2007 (PMC1282400)"},
-    "cardiac": {"minutes": 60, "source": "Fourth Universal Definition of MI 2018: troponin result within 60 min of blood draw, doi 10.1093/eurheartj/ehy462"},
-    "inflammatory": {"minutes": 60, "source": "Hawkins 2007 (PMC1282400), routine immunoassay batch"},
-    "toxicology": {"minutes": 90, "source": "Hawkins 2007 (PMC1282400), send-out immunoassay"},
-    "endocrine": {"minutes": 120, "source": "Hawkins 2007 (PMC1282400), batch immunoassay"},
-    "urine": {"minutes": 30, "source": "Hawkins 2007 (PMC1282400), dipstick plus microscopy"},
-    "micro_prelim": {"minutes": 1440, "source": "Lamy B et al., How to optimize the use of blood cultures, Front Microbiol 2016;7:697 (doi 10.3389/fmicb.2016.00697): most positive cultures flag within 24 h"},
-    "micro_final": {"minutes": 2880, "source": "MedlinePlus Urine culture (003751): results in 24 to 48 hours; blood culture final at 48 h or later"},
-    "xr": {"minutes": 30, "source": "AcuDx convention, docs/00-overview/04 sense of time (web/src/domain/orderCatalog.ts)"},
-    "ct": {"minutes": 60, "source": "AcuDx convention, docs/00-overview/04 sense of time"},
-    "us": {"minutes": 45, "source": "AcuDx convention, docs/00-overview/04 sense of time"},
-    "echo": {"minutes": 60, "source": "AcuDx convention, docs/00-overview/04 sense of time"},
-    "mri": {"minutes": 120, "source": "AcuDx convention, docs/00-overview/04 sense of time"},
-}
-
-MICRO_CODES: dict[str, str] = {
-    "blood-culture": "600-7", "urine-culture": "630-4", "sputum-culture": "sputum", "gram-stain": "gram",
-    "resp-viral-panel": "rvp", "csf-studies": "csf", "hepatitis-panel": "hep", "hiv": "hiv", "monospot": "mono",
-    # Acceptance 2026-10-20 D-25: malaria films and rapid diagnostic test.
-    "malaria-film": "malaria", "malaria-rdt": "malaria_rdt",
-}
+# Turnaround classes with sources live in server/results/catalog.py; the micro
+# order codes in server/results/specimens.py. Both names stay importable here.
+TURNAROUND: dict[str, dict[str, Any]] = catalog.TURNAROUND
+MICRO_CODES: dict[str, str] = specimens.MICRO_CODES
 
 
 # --------------------------------------------------------------------------- #
@@ -78,29 +54,44 @@ def load_ranges(path: str = RANGES_PATH) -> dict[str, Any]:
     with open(path, encoding="utf-8") as fh:
         data = json.load(fh)
     data["_by_loinc"] = {a["loinc"]: a for a in data["analytes"]}
+    # Codes that never existed in LOINC resolve to their replacement so older
+    # case specs keep working (reference_ranges.json "retired_aliases").
+    data["_alias"] = {old: rec["replaced_by"] for old, rec in (data.get("retired_aliases") or {}).items()}
+    for old, new in data["_alias"].items():
+        data["_by_loinc"].setdefault(old, data["_by_loinc"][new])
+    # Every catalogue orderable is a panel of its member analytes.
+    panels = dict(data["panels"])
+    for o in catalog.lab_catalog()["orderables"]:
+        if o["generator"] == "analyte":
+            panels.setdefault(o["code"], list(o["members"]))
+    data["panels"] = panels
     return data
 
 
-def reference_range(loinc: str, sex: str = "any", age: int = 45) -> Optional[dict[str, Any]]:
+def canonical_loinc(code: str) -> str:
+    return load_ranges()["_alias"].get(code, code)
+
+
+def _pick_range(loinc: str, sex: str, age: int) -> Optional[dict[str, Any]]:
     a = load_ranges()["_by_loinc"].get(loinc)
     if a is None or a.get("qualitative"):
         return None
     rows = a.get("ranges", [])
-    pick = None
-    for r in rows:
-        if r["age_min"] <= age <= r["age_max"] and r["sex"] == sex:
-            pick = r
-            break
-    if pick is None:
+    for want in (sex, "any"):
         for r in rows:
-            if r["age_min"] <= age <= r["age_max"] and r["sex"] == "any":
-                pick = r
-                break
-    if pick is None and rows:
-        pick = rows[0]
+            if r["age_min"] <= age <= r["age_max"] and r["sex"] == want:
+                return r
+    return rows[0] if rows else None
+
+
+def reference_range(loinc: str, sex: str = "any", age: int = 45) -> Optional[dict[str, Any]]:
+    """The interval for a sex and age. ``low`` or ``high`` is None when the
+    interval is open on that side (HDL at or above 40 mg/dL)."""
+    pick = _pick_range(loinc, sex, age)
     if pick is None:
         return None
-    low, high = float(pick["low"]), float(pick["high"])
+    low = None if pick.get("low") is None else float(pick["low"])
+    high = None if pick.get("high") is None else float(pick["high"])
     if pick.get("age_adjusted_rule") == "age_x10" and age > 50:
         high = float(age * 10)
     return {"low": low, "high": high, "note": pick.get("note")}
@@ -113,9 +104,9 @@ def flag_value(loinc: str, value: float, sex: str, age: int) -> tuple[str, bool]
     if a is None or rr is None:
         return "N", False
     flag = "N"
-    if value < rr["low"]:
+    if rr["low"] is not None and value < rr["low"]:
         flag = "L"
-    elif value > rr["high"]:
+    elif rr["high"] is not None and value > rr["high"]:
         flag = "H"
     crit = False
     if a.get("critical_low") is not None and value < float(a["critical_low"]):
@@ -134,12 +125,22 @@ def _unit(seed: Any, *parts: Any) -> float:
 
 
 def _baseline(loinc: str, sex: str, age: int, seed: Any) -> float:
+    """A seeded healthy value: the middle 60 percent of the interval, or the
+    analyte's ``baseline_band`` when the interval is open or very wide."""
+    a = load_ranges()["_by_loinc"].get(loinc, {})
     rr = reference_range(loinc, sex, age)
     if rr is None:
         return 0.0
-    span = rr["high"] - rr["low"]
+    band = a.get("baseline_band")
+    if band:
+        lo, hi = float(band[0]), float(band[1])
+    else:
+        lo = rr["low"] if rr["low"] is not None else (rr["high"] or 0.0) * 0.5
+        hi = rr["high"] if rr["high"] is not None else (rr["low"] or 1.0) * 1.6
+        span = hi - lo
+        lo, hi = lo + 0.2 * span, lo + 0.8 * span
     u = _unit(seed, "baseline", loinc)
-    return rr["low"] + span * (0.2 + 0.6 * u)
+    return lo + (hi - lo) * u
 
 
 def _round(loinc: str, value: float) -> float:
@@ -227,8 +228,8 @@ CONDITION_PROFILES: dict[str, dict[str, Any]] = {
     "migraine": {"onset_h": 6.0, "labs": {}, "severity_cap": 0.0, "imaging": {"ct:head": ("normal", "none", ["no acute abnormality"], "Normal CT head.")}},
     "spinal_cord_compression": {"onset_h": 48.0, "labs": {"17861-6": ("static", 11.4), "6768-6": ("mult", 2.0)}, "severity_cap": 0.3, "imaging": {"mri:cspine": ("disc_herniation", "none", ["epidural mass compressing the cord", "cord signal change"], "Cord compression; urgent neurosurgical review."), "mri:lspine": ("normal", "none", ["metastatic deposit T12 with epidural extension"], "Metastatic cord compression.")}},
     "cauda_equina": {"onset_h": 24.0, "labs": {}, "severity_cap": 0.1, "imaging": {"mri:lspine": ("normal", "none", ["large central L4/5 disc protrusion compressing the cauda equina"], "Cauda equina compression; representative normal image shown, see findings.")}},
-    "dka": {"onset_h": 12.0, "labs": {"2345-7": ("dka", "glucose"), "53060-9": ("dka", "ketones"), "1963-8": ("dka", "hco3"), "14627-4": ("dka", "hco3"), "1960-4": ("dka", "hco3"), "2744-1": ("dka", "ph"), "2746-6": ("dka", "ph_venous"), "2019-8": ("dka", "pco2"), "2021-4": ("dka", "pco2_venous"), "2823-3": ("dka", "potassium"), "2160-0": ("creatinine",), "2951-2": ("static", 133.0)}, "ua": "ketonuria", "ecg": "sinus_tachycardia"},
-    "hhs": {"onset_h": 72.0, "labs": {"2345-7": ("static", 720.0), "2692-2": ("static", 345.0), "2951-2": ("static", 150.0), "2160-0": ("creatinine",), "53060-9": ("static", 0.8)}, "ecg": "sinus_tachycardia"},
+    "dka": {"onset_h": 12.0, "labs": {"2345-7": ("dka", "glucose"), "6873-4": ("dka", "ketones"), "1963-8": ("dka", "hco3"), "14627-4": ("dka", "hco3"), "1960-4": ("dka", "hco3"), "2744-1": ("dka", "ph"), "2746-6": ("dka", "ph_venous"), "2019-8": ("dka", "pco2"), "2021-4": ("dka", "pco2_venous"), "2823-3": ("dka", "potassium"), "2160-0": ("creatinine",), "2951-2": ("static", 133.0)}, "ua": "ketonuria", "ecg": "sinus_tachycardia"},
+    "hhs": {"onset_h": 72.0, "labs": {"2345-7": ("static", 720.0), "2692-2": ("static", 345.0), "2951-2": ("static", 150.0), "2160-0": ("creatinine",), "6873-4": ("static", 0.8)}, "ecg": "sinus_tachycardia"},
     "hypoglycemia": {"onset_h": 0.5, "labs": {"2345-7": ("static", 38.0)}, "severity_cap": 0.3},
     "hyperkalemia": {"onset_h": 6.0, "labs": {"2823-3": ("potassium", 7.1), "2160-0": ("creatinine",), "1963-8": ("static", 17.0)}, "ecg": "hyperkalemia"},
     "hyperkalemia_esrd": {"onset_h": 24.0, "labs": {"2823-3": ("potassium", 7.4), "2160-0": ("static", 8.9), "3094-0": ("static", 92.0), "1963-8": ("static", 16.0), "718-7": ("static", 9.8)}, "ecg": "hyperkalemia"},
@@ -266,6 +267,29 @@ CONDITION_PROFILES: dict[str, dict[str, Any]] = {
 }
 
 DEFAULT_PROFILE: dict[str, Any] = {"onset_h": 6.0, "labs": {}, "imaging": {}, "ecg": None}
+
+# 11524-6 "EKG study"; 34534-8 "12 lead EKG panel" (case specs use either).
+ECG_CODES = ("11524-6", "34534-8")
+
+# Results added with the catalogue expansion (review 2026-10-21): the urine drug
+# screen, the newer microbiology tests and the specimen generators read these.
+# Each value is (result text, probability that this patient's test is positive).
+_PROFILE_EXTRAS: dict[str, dict[str, Any]] = {
+    "opioid_overdose": {"tox": {"19295-5": "Positive"}},
+    "pneumonia_cap": {"micro": {"pneumo_ag": ("Streptococcus pneumoniae urinary antigen detected", 0.6)}},
+    "tb_pulmonary": {"micro": {"afb": ("Acid-fast bacilli seen (2+)", 0.6), "igra": ("Positive", 0.8),
+                               "sputum": ("Mycobacterium tuberculosis complex (mycobacterial culture, final at 6 weeks)", 0.5)}},
+    "infectious_mononucleosis": {"micro": {"mono": ("Heterophile antibody detected", 0.85)}},
+    "infectious_diarrhea": {"micro": {"stool": ("Campylobacter jejuni", 0.4)}},
+    "septic_arthritis": {"micro": {"600-7": ("Staphylococcus aureus", 0.3)}},
+    "cellulitis": {"micro": {"wound": ("Streptococcus pyogenes", 0.3)}},
+}
+for _cid, _extra in _PROFILE_EXTRAS.items():
+    if _cid in CONDITION_PROFILES or _cid in ("tb_pulmonary", "infectious_mononucleosis", "infectious_diarrhea"):
+        _p = dict(CONDITION_PROFILES.get(_cid) or {**DEFAULT_PROFILE, "severity_cap": 0.3})
+        _p["micro"] = {**(_p.get("micro") or {}), **(_extra.get("micro") or {})}
+        _p["tox"] = {**(_p.get("tox") or {}), **(_extra.get("tox") or {})}
+        CONDITION_PROFILES[_cid] = _p
 
 
 # --------------------------------------------------------------------------- #
@@ -343,7 +367,7 @@ def map_treatments(case_state: dict[str, Any], onset_h: float) -> list[Treatment
         if not isinstance(item, dict):
             continue
         text = " ".join(str(item.get(key, "")) for key in ("code", "label", "label_en", "name")).lower()
-        t_h = onset_h + float(item.get("at_ms", 0) or 0) / MS_PER_H
+        t_h = onset_h + num(item.get("at_ms"), 0.0) / MS_PER_H
         amount = item.get("amount")
         amt = float(amount) if isinstance(amount, (int, float)) else None
         code = str(item.get("kinetics_code") or "")
@@ -375,12 +399,13 @@ def map_treatments(case_state: dict[str, Any], onset_h: float) -> list[Treatment
 
 def vitals_at(case_state: dict[str, Any], sim_time_ms: int) -> dict[str, float]:
     base = dict(case_state.get("triage_vitals") or {})
-    traj = sorted((p for p in case_state.get("vitals_trajectory") or [] if isinstance(p, dict)), key=lambda p: p.get("atMs", 0))
-    points = [{"atMs": 0, **base}] + [p for p in traj if p.get("atMs", 0) > 0]
+    traj = sorted((p for p in case_state.get("vitals_trajectory") or [] if isinstance(p, dict)), key=lambda p: num(p.get("atMs"), 0.0))
+    points = [{"atMs": 0, **base}] + [p for p in traj if num(p.get("atMs"), 0.0) > 0]
     keys = ("hr", "systolic", "diastolic", "rr", "spo2", "tempC")
     out: dict[str, float] = {}
     for key in keys:
-        series = [(p["atMs"], float(p[key])) for p in points if key in p and p[key] is not None]
+        series = [(num(p.get("atMs"), 0.0), num(p[key], float("nan"))) for p in points if key in p and p[key] is not None]
+        series = [(t, v) for t, v in series if math.isfinite(v)]
         if not series:
             continue
         if sim_time_ms <= series[0][0]:
@@ -396,23 +421,44 @@ def vitals_at(case_state: dict[str, Any], sim_time_ms: int) -> dict[str, float]:
     return out
 
 
+_NUM = re.compile(r"-?\d+(?:\.\d+)?")
+
+
+def num(value: Any, default: float) -> float:
+    """A number from a model-written field: 45, "45", "45 years", None -> default.
+
+    Review 2026-10-21: a live case whose spec carried ``age: "45 years"`` made
+    the engine raise, the client fell back to the offline synthetic normal and the
+    learner saw "Offline synthetic normal" in a live encounter."""
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        return float(value) if math.isfinite(float(value)) else default
+    if isinstance(value, str):
+        m = _NUM.search(value)
+        if m:
+            return float(m.group(0))
+    return default
+
+
 class CaseContext:
     def __init__(self, case_state: dict[str, Any], sim_time_ms: int, seed: Optional[int]) -> None:
-        self.case = case_state
-        self.seed = seed if seed is not None else int(case_state.get("seed", 0) or 0)
+        self.case = case_state = case_state if isinstance(case_state, dict) else {}
+        self.seed = seed if seed is not None else int(num(case_state.get("seed"), 0))
         self.condition_id = condition_id_for(case_state)
         self.profile = CONDITION_PROFILES.get(self.condition_id or "", DEFAULT_PROFILE)
-        demo = case_state.get("demographics") or {}
-        self.sex = str(demo.get("sex", "any")).lower()
+        demo = case_state.get("demographics") if isinstance(case_state.get("demographics"), dict) else {}
+        sex = str(demo.get("sex", "any")).strip().lower()
+        self.sex = {"m": "male", "f": "female", "man": "male", "woman": "female"}.get(sex, sex)
         if self.sex not in ("male", "female"):
             self.sex = "any"
-        self.age = int(demo.get("age", 45) or 45)
-        acuity = int(case_state.get("acuity_esi", 3) or 3)
+        self.age = int(max(0, min(120, num(demo.get("age"), 45))))
+        acuity = int(num(case_state.get("acuity_esi"), 3))
         sev = (6 - max(1, min(5, acuity))) / 5.0
         cap = self.profile.get("severity_cap")
         self.severity = min(sev, cap) if cap is not None else sev
-        self.onset_h = float(case_state.get("onset_h", self.profile.get("onset_h", DEFAULT_PROFILE["onset_h"])))
-        self.sim_time_ms = int(sim_time_ms)
+        self.onset_h = num(case_state.get("onset_h"), float(self.profile.get("onset_h", DEFAULT_PROFILE["onset_h"])))
+        self.sim_time_ms = max(0, int(sim_time_ms))
         self.t_h = self.onset_h + self.sim_time_ms / MS_PER_H
         self.treatments = map_treatments(case_state, self.onset_h)
         self.vitals = vitals_at(case_state, sim_time_ms)
@@ -441,13 +487,15 @@ class CaseContext:
                 self.severity = max(0.0, min(1.0, float(self.live.get("severity") or 0.0)))
             except (TypeError, ValueError):
                 pass
-            lv = self.live.get("vitals") or {}
-            self.vitals = {k: float(lv[k]) for k in ("hr", "systolic", "diastolic", "rr", "spo2", "tempC") if k in lv}
+            lv = self.live.get("vitals") if isinstance(self.live.get("vitals"), dict) else {}
+            self.vitals = {k: num(lv[k], 0.0) for k in ("hr", "systolic", "diastolic", "rr", "spo2", "tempC") if k in lv}
             mp = self.live.get("map")
-            self.hypotensive = bool(self.live.get("shock")) or (mp is not None and float(mp) < 65)
-        self.authored_labs = {str(lab.get("code")): lab for lab in case_state.get("labs") or [] if isinstance(lab, dict) and lab.get("code")}
+            self.hypotensive = bool(self.live.get("shock")) or (mp is not None and num(mp, 90.0) < 65)
+        self.authored_labs = {canonical_loinc(str(lab.get("code"))): lab for lab in case_state.get("labs") or [] if isinstance(lab, dict) and lab.get("code")}
         self.authored_imaging = [im for im in case_state.get("imaging") or [] if isinstance(im, dict)]
-        self.weight_kg = float(demo.get("weight_kg", 70) or 70)
+        self.weight_kg = num(demo.get("weight_kg"), 70.0) or 70.0
+        self.medications = " ".join(str(m.get("name") or m.get("drug") or m.get("label_en") or "") if isinstance(m, dict) else str(m)
+                                    for m in (case_state.get("medications") or []) if m).lower()
 
 
 # --------------------------------------------------------------------------- #
@@ -460,7 +508,7 @@ def _model_value(ctx: CaseContext, loinc: str, spec: Optional[tuple], t_h: float
     base = _baseline(loinc, ctx.sex, ctx.age, ctx.seed)
     if spec is None and ctx.live is not None and loinc in ("2345-7", "2339-0") and ctx.live.get("metabolic") in ("dka", "hypo") \
             and ctx.live.get("cbg") is not None:
-        return float(ctx.live["cbg"]) * 18.0, "director"
+        return num(ctx.live["cbg"], 5.5) * 18.0, "director"
     if spec is None:
         return base, None
     kind = spec[0]
@@ -469,15 +517,15 @@ def _model_value(ctx: CaseContext, loinc: str, spec: Optional[tuple], t_h: float
     live = ctx.live
     if live is not None:
         if kind == "lactate" and live.get("lactate") is not None:
-            return float(live["lactate"]), "director"
+            return num(live["lactate"], 1.0), "director"
         metabolic = live.get("metabolic")
         if kind == "dka" and spec[1] == "glucose" and live.get("cbg") is not None:
-            return float(live["cbg"]) * 18.0, "director"
+            return num(live["cbg"], 5.5) * 18.0, "director"
         if (kind == "potassium" or (kind == "dka" and spec[1] == "potassium")) and live.get("k") is not None \
                 and metabolic in ("dka", "hyperk"):
-            return float(live["k"]), "director"
+            return num(live["k"], 4.2), "director"
         if loinc in ("2345-7", "2339-0") and metabolic in ("dka", "hypo") and live.get("cbg") is not None:
-            return float(live["cbg"]) * 18.0, "director"
+            return num(live["cbg"], 5.5) * 18.0, "director"
     if kind == "troponin":
         assay = spec[1] or load_ranges()["_by_loinc"].get(loinc, {}).get("assay", "hs_ctnt")
         return k.troponin(assay, t_h, sev, tr, ctx.sex), "troponin"
@@ -555,20 +603,45 @@ def _prior_observation(prior: Optional[list[dict[str, Any]]], loinc: str) -> Opt
     return None
 
 
+def _qualitative(a: dict[str, Any], value: Any, ground_truth: bool, interpretation: Optional[str] = None,
+                 kinetics: Optional[str] = None) -> dict[str, Any]:
+    abnormal = str(value) != str(a.get("normal_value", value))
+    return {"loinc": a["loinc"], "name": a["name"], "short": a.get("short"), "value": value, "unit": a.get("unit", ""), "qualitative": True,
+            "ref_low": None, "ref_high": None, "reference_text": a.get("normal_value") or a.get("reference_text"), "flag": "A" if abnormal else "N", "critical": False,
+            "interpretation": interpretation or f"{a['name']}: {value}.", "delta": None, "kinetics": kinetics, "ground_truth": ground_truth,
+            "source": a["source"], "reviewed_at": a["reviewed_at"]}
+
+
+def _exposed(ctx: CaseContext, a: dict[str, Any]) -> bool:
+    """True when the case medication list names the drug of an absent-unless-exposed analyte."""
+    words = [w for w in re.findall(r"[a-z]+", a["name"].lower()) if len(w) > 4 and w not in ("level", "total", "screen", "urine")]
+    return any(w in ctx.medications for w in words)
+
+
 def _observation(ctx: CaseContext, loinc: str, prior: Optional[list[dict[str, Any]]]) -> dict[str, Any]:
+    loinc = canonical_loinc(loinc)
     a = load_ranges()["_by_loinc"].get(loinc)
     if a is None:
         raise KeyError(loinc)
     spec = ctx.profile.get("labs", {}).get(loinc)
     authored = ctx.authored_labs.get(loinc)
+    tox = (ctx.profile.get("tox") or {}).get(loinc)
     if a.get("qualitative"):
         value: Any = a["normal_value"]
         if authored is not None and isinstance(authored.get("value"), str):
             value = authored["value"]
-        return {"loinc": loinc, "name": a["name"], "short": a.get("short"), "value": value, "unit": a.get("unit", ""), "qualitative": True,
-                "ref_low": None, "ref_high": None, "flag": "A" if value != a["normal_value"] else "N", "critical": False,
-                "interpretation": f"{a['name']}: {value}.", "delta": None, "kinetics": None, "ground_truth": authored is not None,
-                "source": a["source"], "reviewed_at": a["reviewed_at"]}
+        elif tox is not None:
+            value = tox
+        return _qualitative(a, value, authored is not None, kinetics="condition_profile" if tox is not None and authored is None else None)
+    if a.get("absent_unless_exposed") and spec is None and authored is None and tox is None and not _exposed(ctx, a):
+        # A drug the patient does not take is not detected; it is never sampled
+        # from its therapeutic range (that range applies to treated patients only).
+        out = _qualitative(a, "Not detected", False,
+                           f"{a['name']}: not detected. The patient is not known to take it; the therapeutic range applies to treated patients.")
+        out["flag"] = "N"
+        rr = reference_range(loinc, ctx.sex, ctx.age) or {"low": None, "high": None}
+        out["ref_low"], out["ref_high"] = rr["low"], rr["high"]
+        return out
     model_now, kin = _model_value(ctx, loinc, spec, ctx.t_h)
     ground_truth = False
     if authored is not None and isinstance(authored.get("value"), (int, float)):
@@ -600,7 +673,7 @@ def _observation(ctx: CaseContext, loinc: str, prior: Optional[list[dict[str, An
 
 _UA_PATTERNS: dict[str, dict[str, str]] = {
     "infected": {"5802-4": "Positive", "5799-2": "Positive", "5821-4": "Many", "25145-4": "Many", "5794-3": "Trace"},
-    "ketonuria": {"5797-1": "Large", "5792-7": "Positive (3+)", "5811-5": "1.032"},
+    "ketonuria": {"5797-6": "Large", "5792-7": "Positive (3+)", "5811-5": "1.032"},
     "haematuria": {"5794-3": "Positive (moderate)", "13945-1": "Many"},
     "myoglobinuria": {"5794-3": "Positive (large)", "13945-1": "None seen"},
     "proteinuria": {"5804-0": "Positive (2+)"},
@@ -664,6 +737,9 @@ def _reconcile_differential(ctx: CaseContext, observations: list[dict[str, Any]]
 
 
 def _tat_category(loincs: list[str], order_code: str) -> str:
+    o = catalog.lab_orderable(order_code)
+    if o is not None:
+        return o["turnaround"]
     if order_code in ("poc-glucose", "istat"):
         return "poc"
     cats = {load_ranges()["_by_loinc"][l]["category"] for l in loincs if l in load_ranges()["_by_loinc"]}
@@ -675,9 +751,113 @@ def _tat_category(loincs: list[str], order_code: str) -> str:
     return "chemistry"
 
 
-def _turnaround(category: str) -> dict[str, Any]:
-    t = TURNAROUND[category]
-    return {"category": category, "minutes": t["minutes"], "ms": t["minutes"] * 60_000, "source": t["source"]}
+def _turnaround(category: str, *, positive: Optional[bool] = None) -> dict[str, Any]:
+    return catalog.turnaround(category, positive=positive)
+
+
+def _fixed(ctx: CaseContext, loinc: str) -> bool:
+    """True when the case or the condition sets this analyte (do not reconcile it)."""
+    return loinc in ctx.authored_labs or loinc in (ctx.profile.get("labs") or {})
+
+
+def _set_value(ctx: CaseContext, obs: dict[str, Any], value: float, kinetics: Optional[str] = None, note: Optional[str] = None) -> None:
+    obs["value"] = _round(obs["loinc"], value)
+    obs["flag"], obs["critical"] = flag_value(obs["loinc"], obs["value"], ctx.sex, ctx.age)
+    if kinetics:
+        obs["kinetics"] = kinetics
+    obs["interpretation"] = _interpret(obs["loinc"], obs["value"], obs["flag"], None, ctx, None) + (f" {note}" if note else "")
+
+
+def _reconcile_chemistry(ctx: CaseContext, observations: list[dict[str, Any]]) -> None:
+    """Keep a healthy patient's electrolytes, proteins and red cell indices
+    internally consistent.
+
+    Independent seeded draws can produce an anion gap of 20 or a globulin of
+    0.5 g/dL in a well patient. When the case and the condition leave these
+    analytes alone, chloride follows sodium and bicarbonate (gap 6 to 10 mmol/L,
+    inside the Kraut 2007 interval), total protein follows albumin (globulin
+    2.4 to 3.4 g/dL, NBME 2.3 to 3.5), and haematocrit, red cell count, MCH and
+    MCHC follow haemoglobin and MCV (Hct about 3 x Hb, MedlinePlus 003646;
+    MCV = Hct/RBC, MCH = Hb/RBC, MCHC = Hb/Hct, MedlinePlus RBC indices 003648)."""
+    by = {o["loinc"]: o for o in observations if not o.get("qualitative")}
+    na, cl, hco3 = by.get("2951-2"), by.get("2075-0"), by.get("1963-8")
+    if na and cl and hco3 and not any(_fixed(ctx, c) for c in ("2951-2", "2075-0", "1963-8")) and not cl["ground_truth"]:
+        gap = 6.0 + 4.0 * _unit(ctx.seed, "anion_gap")
+        rr = reference_range("2075-0", ctx.sex, ctx.age) or {"low": 95.0, "high": 105.0}
+        target = float(na["value"]) - float(hco3["value"]) - gap
+        _set_value(ctx, cl, min(max(target, float(rr["low"])), float(rr["high"])))
+        if abs(float(na["value"]) - float(cl["value"]) - float(hco3["value"]) - gap) > 1.0:
+            # Chloride hit its limit: let bicarbonate absorb the rest, within its interval.
+            rb = reference_range("1963-8", ctx.sex, ctx.age) or {"low": 22.0, "high": 28.0}
+            target = float(na["value"]) - float(cl["value"]) - gap
+            _set_value(ctx, hco3, min(max(target, float(rb["low"])), float(rb["high"])))
+    tp, alb = by.get("2885-2"), by.get("1751-7")
+    if tp and alb and not _fixed(ctx, "2885-2"):
+        rr = reference_range("2885-2", ctx.sex, ctx.age) or {"low": 6.0, "high": 7.8}
+        target = float(alb["value"]) + 2.4 + 1.0 * _unit(ctx.seed, "globulin")
+        _set_value(ctx, tp, min(max(target, float(rr["low"])), float(rr["high"])))
+    hb, hct, mcv = by.get("718-7"), by.get("4544-3"), by.get("787-2")
+    if hb and hct and not hct["ground_truth"] and "4544-3" not in (ctx.profile.get("labs") or {}):
+        _set_value(ctx, hct, 3.0 * float(hb["value"]) + (_unit(ctx.seed, "hct") - 0.5))
+    if hb and hct and mcv and float(mcv["value"]) > 0:
+        rbc, mch, mchc = by.get("789-8"), by.get("785-6"), by.get("786-4")
+        if rbc and not rbc["ground_truth"]:
+            _set_value(ctx, rbc, 10.0 * float(hct["value"]) / float(mcv["value"]))
+        if rbc and mch and not mch["ground_truth"] and float(rbc["value"]) > 0:
+            _set_value(ctx, mch, 10.0 * float(hb["value"]) / float(rbc["value"]))
+        if mchc and not mchc["ground_truth"] and float(hct["value"]) > 0:
+            _set_value(ctx, mchc, 100.0 * float(hb["value"]) / float(hct["value"]))
+
+
+def egfr_ckd_epi_2021(creatinine_mg_dl: float, age: int, sex: str) -> float:
+    """CKD-EPI 2021 race-free creatinine equation (Inker LA et al., N Engl J Med
+    2021;385:1737-1749, doi 10.1056/NEJMoa2102953):
+    142 x min(Scr/k, 1)^a x max(Scr/k, 1)^-1.200 x 0.9938^age [x 1.012 if female],
+    k 0.7 (female) or 0.9 (male), a -0.241 (female) or -0.302 (male)."""
+    female = sex == "female"
+    kappa, alpha = (0.7, -0.241) if female else (0.9, -0.302)
+    ratio = max(0.05, float(creatinine_mg_dl)) / kappa
+    v = 142.0 * min(ratio, 1.0) ** alpha * max(ratio, 1.0) ** -1.200 * 0.9938 ** max(18, age)
+    return v * (1.012 if female else 1.0)
+
+
+def _apply_derived(ctx: CaseContext, observations: list[dict[str, Any]], prior: Optional[list[dict[str, Any]]]) -> None:
+    """Compute calculated analytes from the other analytes of the same draw."""
+    ranges = load_ranges()["_by_loinc"]
+    by = {o["loinc"]: o for o in observations if not o.get("qualitative")}
+
+    def val(code: str) -> float:
+        o = by.get(code) or _observation(ctx, code, prior)
+        return float(o["value"])
+
+    for o in observations:
+        rule = ranges.get(o["loinc"], {}).get("derived")
+        if not rule or o["ground_truth"]:
+            continue
+        if rule == "anion_gap":
+            v, note = val("2951-2") - (val("2075-0") + val("1963-8")), "Calculated: Na - (Cl + HCO3)."
+        elif rule == "egfr_ckdepi2021":
+            v, note = egfr_ckd_epi_2021(val("2160-0"), ctx.age, ctx.sex), "Calculated: CKD-EPI 2021 creatinine equation."
+        elif rule == "globulin":
+            v, note = 10.0 * (val("2885-2") - val("1751-7")), "Calculated: total protein - albumin."
+        elif rule == "ldl_friedewald":
+            v, note = val("2093-3") - val("2085-9") - val("2571-8") / 5.0, "Calculated (Friedewald): TC - HDL - TG/5."
+        else:
+            continue
+        _set_value(ctx, o, v, "derived", note)
+
+
+def _lab_body(ctx: CaseContext, order_code: str, loincs: list[str], prior: Optional[list[dict[str, Any]]]) -> dict[str, Any]:
+    observations = [_observation(ctx, l, prior) for l in loincs]
+    if any(o["loinc"] in ("6690-2", "751-8") for o in observations):
+        _reconcile_differential(ctx, observations)
+    _reconcile_chemistry(ctx, observations)
+    _apply_derived(ctx, observations, prior)
+    if order_code == "ua":
+        _apply_ua_pattern(ctx, observations)
+    return {"kind": "lab", "status": "ok", "observations": observations,
+            "abnormal": any(o["flag"] != "N" for o in observations), "critical": any(o["critical"] for o in observations),
+            "turnaround": _turnaround(_tat_category(loincs, order_code))}
 
 
 # --------------------------------------------------------------------------- #
@@ -706,6 +886,13 @@ def _authored_imaging(ctx: CaseContext, order_code: str, modality: str) -> Optio
     return None
 
 
+def _imaging_tat_key(order_code: str, modality: str) -> str:
+    proc = catalog.imaging_procedure(order_code)
+    if proc is not None:
+        return proc["turnaround"]
+    return {"xr": "xr", "ct": "ct", "us": "us", "echo": "echo", "mri": "mri", "ecg": "ecg"}[modality]
+
+
 def _resolve_imaging(ctx: CaseContext, order_code: str) -> dict[str, Any]:
     finding, lat, findings, impression, modality, region = _imaging_request(ctx, order_code)
     authored = _authored_imaging(ctx, order_code, modality)
@@ -719,13 +906,15 @@ def _resolve_imaging(ctx: CaseContext, order_code: str) -> dict[str, Any]:
         e = hit["entry"]
         image = {"id": e["id"], "url": e["url"], "local_path": e.get("local_path"), "caption_en": e["caption_en"], "view": e["view"],
                  "modality": e["modality"], "region": e["region"], "finding": e["finding"], "laterality": e["laterality"]}
-    tat_key = {"xr": "xr", "ct": "ct", "us": "us", "echo": "echo", "mri": "mri", "ecg": "ecg"}[modality]
+    proc = catalog.imaging_procedure(order_code)
     return {
         "kind": "imaging", "status": "ok" if image else "unavailable",
+        "procedure": None if proc is None else {"code": proc["code"], "loinc": proc.get("loinc"), "label_en": proc["label_en"],
+                                                "label_tr": proc["label_tr"], "playbook": proc["playbook"]},
         "report": {"modality": modality, "region": region, "finding": finding, "laterality": lat, "findings": structured,
                    "impression": impression, "ground_truth": authored is not None,
                    "image": image, "provenance": hit.get("provenance"), "image_status": hit["status"], "image_reason": hit.get("reason")},
-        "turnaround": _turnaround(tat_key),
+        "turnaround": _turnaround(_imaging_tat_key(order_code, modality)),
     }
 
 
@@ -754,38 +943,168 @@ def _resolve_ecg(ctx: CaseContext) -> dict[str, Any]:
     }
 
 
+def _micro_member_obs(a: dict[str, Any], value: str, positive: bool, interpretation: str, note: Optional[str], critical: bool = False) -> dict[str, Any]:
+    out = _qualitative(a, value, False, interpretation, "condition_profile" if positive else None)
+    out["flag"] = "A" if positive else "N"
+    out["critical"] = critical
+    out["note"] = note
+    return out
+
+
 def _resolve_micro(ctx: CaseContext, order_code: str) -> dict[str, Any]:
+    """Cultures, smears, antigen, serology and NAAT from the condition profile."""
     key = MICRO_CODES[order_code]
     micro = ctx.profile.get("micro", {})
+    if key == "covid" and "covid" not in micro and "rvp" in micro and "sars-cov-2" in str(micro["rvp"][0]).lower():
+        micro = {**micro, "covid": micro["rvp"]}
     organism, p = micro.get(key, (None, 0.0))
     abx_before = any(t.code == "antibiotics" and t.t_h <= ctx.t_h for t in ctx.treatments)
-    if abx_before and organism:
+    culture = key in specimens.CULTURE_KEYS
+    if abx_before and organism and culture:
         p *= 0.5  # cultures drawn after antibiotics lose sensitivity (Lamy 2016)
     positive = organism is not None and _unit(ctx.seed, "micro", order_code) < p
-    if key in ("malaria", "malaria_rdt"):
-        # CDC malaria algorithm: films and RDT within hours; repeat films every
-        # 12-24 h (three sets) before excluding malaria.
-        result = organism if positive else ("No malaria parasites seen on thick and thin films; repeat in 12-24 h if still suspected"
-                                            if key == "malaria" else "Plasmodium antigen not detected")
-        tat = "haematology"
-    elif key in ("rvp", "csf", "hep", "hiv", "mono", "gram"):
-        result = organism if positive else ("Not detected" if key in ("rvp", "hiv", "hep", "mono") else "No organisms seen" if key == "gram" else "Clear CSF: WBC 2/uL, protein 0.35 g/L, glucose 3.6 mmol/L")
-        tat = "urine" if key in ("gram", "csf") else "inflammatory"
+    note = "Drawn after antibiotics: sensitivity reduced." if abx_before and organism and culture else None
+    orderable = catalog.lab_orderable(order_code) or {"members": [], "turnaround": "micro_culture"}
+    by = load_ranges()["_by_loinc"]
+    members = [m for m in orderable["members"] if m in by]
+    observations: list[dict[str, Any]] = []
+    preliminary: Optional[dict[str, Any]] = None
+    if culture:
+        a = by[members[0]] if members else {"loinc": order_code, "name": order_code, "short": order_code, "normal_value": "No growth",
+                                            "unit": "", "source": "https://doi.org/10.3389/fmicb.2016.00697", "reviewed_at": "2026-10-19"}
+        text = f"Growth: {organism}" if positive else ("No growth at 5 days" if key == "600-7" else a["normal_value"])
+        interp = ("Positive culture; correlate with the clinical picture; susceptibilities to follow." if positive else "No pathogen isolated.")
+        observations.append(_micro_member_obs(a, text, positive, interp, note, critical=bool(positive and key == "600-7")))
+        preliminary = {"text": specimens.culture_preliminary(key, positive, organism)}
+        tat = _turnaround(orderable["turnaround"], positive=positive)
     else:
-        result = f"Growth: {organism}" if positive else ("No growth at 48 h" if key in ("600-7", "sputum") else "No significant growth")
-        tat = "micro_final"
-    loinc = key if key in ("600-7", "630-4") else None
-    a = load_ranges()["_by_loinc"].get(loinc or "", {})
-    return {
-        "kind": "micro", "status": "ok",
-        "observations": [{"loinc": loinc or order_code, "name": a.get("name", order_code), "short": a.get("short", order_code), "value": result, "unit": "", "qualitative": True,
-                          "ref_low": None, "ref_high": None, "flag": "A" if positive else "N", "critical": bool(positive and key == "600-7"),
-                          "interpretation": ("Positive culture; correlate with clinical picture and sensitivities." if positive else "No pathogen identified."),
-                          "delta": None, "kinetics": None, "ground_truth": False,
-                          "source": a.get("source", "https://doi.org/10.3389/fmicb.2016.00697"), "reviewed_at": a.get("reviewed_at", "2026-10-19"),
-                          "note": "Drawn after antibiotics: sensitivity reduced." if abx_before and organism else None}],
-        "turnaround": _turnaround(tat),
-    }
+        lookup = specimens.MEMBER_BY_TEXT.get(key, [])
+        hit_member = None
+        if positive and organism:
+            low = organism.lower()
+            hit_member = next((code for words, code in lookup if words in low), members[0] if members else None)
+        for m in members:
+            a = by[m]
+            if positive and m == hit_member:
+                value = organism if key in ("malaria", "malaria_rdt", "gram", "afb") else specimens.POSITIVE_WORD.get(a["normal_value"], "Positive")
+                observations.append(_micro_member_obs(a, value, True, f"{a['name']}: {value}. {organism}." if value != organism else f"{a['name']}: {value}.", note))
+            else:
+                normal = a["normal_value"]
+                if key == "malaria" and not positive:
+                    normal = "No malaria parasites seen on thick and thin films; repeat in 12 to 24 h if still suspected"
+                observations.append(_micro_member_obs(a, normal, False, f"{a['name']}: {normal}.", None))
+        tat = _turnaround(orderable["turnaround"])
+    body: dict[str, Any] = {"kind": "micro", "status": "ok", "observations": observations,
+                            "abnormal": any(o["flag"] != "N" for o in observations), "critical": any(o["critical"] for o in observations),
+                            "turnaround": tat}
+    if preliminary is not None and tat.get("preliminary_ms"):
+        preliminary["available_at_ms"] = ctx.sim_time_ms + tat["preliminary_ms"]
+        body["preliminary"] = preliminary
+    return body
+
+
+def _resolve_csf(ctx: CaseContext, order_code: str, prior: Optional[list[dict[str, Any]]]) -> dict[str, Any]:
+    """CSF cell count, protein, glucose, Gram stain and culture."""
+    by = load_ranges()["_by_loinc"]
+    pattern = specimens.CSF_PATTERNS.get(ctx.condition_id or "")
+    if pattern is not None and _unit(ctx.seed, "csf") >= float(pattern.get("p", 1.0)):
+        pattern = None  # a minority of early meningitis taps are unremarkable
+    observations = []
+    orderable = catalog.lab_orderable(order_code) or {"members": []}
+    for code in orderable["members"]:
+        a = by[code]
+        if a.get("qualitative"):
+            if code == "664-3":
+                text = (pattern or {}).get("gram") or a["normal_value"]
+            else:
+                text = (pattern or {}).get("culture") or a["normal_value"]
+                text = f"Growth: {text}" if (pattern or {}).get("culture") else text
+            observations.append(_micro_member_obs(a, text, text != a["normal_value"], f"{a['name']}: {text}.", None))
+            continue
+        obs = _observation(ctx, code, prior)
+        if pattern is not None:
+            field = {"26465-5": "wbc", "26454-9": "rbc", "2880-3": "protein", "2342-4": "glucose"}[code]
+            _set_value(ctx, obs, float(pattern[field]), "specimen_profile")
+        elif code in ("26465-5", "26454-9"):
+            _set_value(ctx, obs, 0.0 if code == "26454-9" else round(4.0 * _unit(ctx.seed, "csf_wbc")))
+        observations.append(obs)
+    if pattern is not None:
+        observations[0]["interpretation"] += f" Differential: {pattern['cells']}."
+    serum_glucose = _observation(ctx, "2345-7", prior)["value"]
+    glu = next((o for o in observations if o["loinc"] == "2342-4"), None)
+    if glu is not None and pattern is None and isinstance(serum_glucose, (int, float)):
+        # CSF glucose is normally more than two thirds of blood glucose (MedlinePlus 003633).
+        _set_value(ctx, glu, max(float(glu["value"]), 0.66 * float(serum_glucose)))
+    tat = _turnaround("csf")
+    return {"kind": "lab", "status": "ok", "observations": observations,
+            "abnormal": any(o["flag"] != "N" for o in observations), "critical": any(o["critical"] for o in observations),
+            "turnaround": tat, "culture_final_at_ms": ctx.sim_time_ms + int(catalog.TURNAROUND["csf"]["culture_final_minutes"]) * 60_000}
+
+
+def _resolve_fluid(ctx: CaseContext, order_code: str, prior: Optional[list[dict[str, Any]]]) -> dict[str, Any]:
+    """Pleural, ascitic or synovial fluid: only when the patient has that fluid."""
+    orderable = catalog.lab_orderable(order_code) or {}
+    fluid = orderable.get("fluid", "")
+    pattern = specimens.FLUID_PATTERNS.get(fluid, {}).get(ctx.condition_id or "")
+    if pattern is not None and pattern.get("requires_effusion"):
+        prof_img = ctx.profile.get("imaging", {})
+        if not any("effusion" in " ".join(v[2]).lower() and "no effusion" not in " ".join(v[2]).lower() for v in prof_img.values()):
+            pattern = None
+    if pattern is None:
+        return {"kind": "lab", "status": "unavailable", "reason": "no_specimen", "message": specimens.NO_SPECIMEN.get(fluid, "No specimen obtainable."),
+                "observations": [], "turnaround": _turnaround("body_fluid")}
+    by = load_ranges()["_by_loinc"]
+    observations = []
+    for code in orderable["members"]:
+        a = by[code]
+        if a.get("qualitative"):
+            if code == "664-3":
+                text = pattern.get("gram") or a["normal_value"]
+            elif code == "5781-0":
+                text = pattern.get("crystals") or a["normal_value"]
+            else:
+                text = f"Growth: {pattern['culture']}" if pattern.get("culture") else a["normal_value"]
+            observations.append(_micro_member_obs(a, text, text != a["normal_value"], f"{a['name']}: {text}.", None))
+            continue
+        field = {"2882-9": "protein_g_l", "60022-1": "ldh", "2346-5": "glucose", "2748-2": "ph", "26467-1": "wbc",
+                 "26469-7": "wbc", "17836-8": "pmn"}.get(code)
+        value = float(pattern.get(field, 0.0)) if field else 0.0
+        obs = {"loinc": code, "name": a["name"], "short": a.get("short"), "value": _round(code, value), "unit": a.get("unit", ""),
+               "qualitative": False, "ref_low": None, "ref_high": None, "reference_text": a.get("reference_text"), "flag": "N",
+               "critical": False, "interpretation": f"{a['name']}: {_round(code, value)} {a.get('unit', '')}.", "delta": None,
+               "kinetics": "specimen_profile", "ground_truth": False, "source": a["source"], "reviewed_at": a["reviewed_at"]}
+        observations.append(obs)
+    summary = _fluid_interpretation(ctx, fluid, pattern, prior)
+    if observations:
+        observations[0]["interpretation"] += f" {summary}"
+        for o in observations:
+            if o["loinc"] in _FLUID_DRIVERS.get(pattern.get("kind", ""), ()):
+                o["flag"] = "A"
+    return {"kind": "lab", "status": "ok", "observations": observations, "interpretation": summary,
+            "abnormal": any(o["flag"] != "N" for o in observations), "critical": False, "turnaround": _turnaround("body_fluid")}
+
+
+# The fluid analytes that make a pattern abnormal (flagged "A"); the others are reported unflagged.
+_FLUID_DRIVERS: dict[str, tuple[str, ...]] = {
+    "exudate": ("2882-9", "60022-1"),
+    "septic": ("26469-7", "17836-8"),
+    "crystal": ("26469-7", "17836-8"),
+}
+
+
+def _fluid_interpretation(ctx: CaseContext, fluid: str, pattern: dict[str, Any], prior: Optional[list[dict[str, Any]]]) -> str:
+    if fluid == "pleural":
+        tp = float(_observation(ctx, "2885-2", prior)["value"]) * 10.0  # g/dL -> g/L
+        ldh_uln = float((reference_range("14804-9", ctx.sex, ctx.age) or {"high": 200.0})["high"] or 200.0)
+        ratio = pattern["protein_g_l"] / tp if tp else 0.0
+        exudate = ratio > 0.5 or pattern["ldh"] > (2.0 / 3.0) * ldh_uln
+        return (f"{'Exudate' if exudate else 'Transudate'} by Light's criteria (fluid/serum protein {ratio:.2f}; "
+                f"fluid LDH {pattern['ldh']:.0f} U/L against two thirds of the serum upper limit {2 * ldh_uln / 3:.0f} U/L).")
+    if fluid == "synovial":
+        septic = pattern["wbc"] > 50.0
+        return ("Synovial white count above 50,000/uL: septic arthritis likely until proven otherwise (Margaretten 2007)."
+                if septic else "Inflammatory synovial fluid; crystals as reported.")
+    return ""
 
 
 # --------------------------------------------------------------------------- #
@@ -802,6 +1121,7 @@ def resolve_order(
     """Resolve one order into a fully provenanced result. Deterministic given ``seed``."""
     ctx = CaseContext(case_state, sim_time_ms, seed)
     ranges = load_ranges()
+    order_code = str(order_code or "")
     base: dict[str, Any] = {
         "order_code": order_code, "sim_time_ms": ctx.sim_time_ms, "t_since_onset_h": round(ctx.t_h, 2),
         "condition_id": ctx.condition_id, "severity": round(ctx.severity, 2),
@@ -809,26 +1129,36 @@ def resolve_order(
         "narrative": None,
         "meta": {"source": "engine", "seed": ctx.seed, "reference_ranges_version": ranges["generated_at"], "degraded": False, "is_synthetic_patient": True},
     }
-    if order_code == "11524-6":
+    orderable = catalog.lab_orderable(order_code)
+    if orderable is not None:
+        base["orderable"] = {"code": orderable["code"], "loinc": orderable.get("loinc"), "label_en": orderable["label_en"],
+                             "label_tr": orderable["label_tr"], "section": orderable["section"], "specimen": orderable["specimen"]}
+    generator = orderable["generator"] if orderable else None
+    if order_code in ECG_CODES:
         body = _resolve_ecg(ctx)
-    elif order_code in imaging_bank.ORDER_MODALITY:
-        body = _resolve_imaging(ctx, order_code)
+    elif generator == "csf":
+        body = _resolve_csf(ctx, order_code, prior)
+    elif generator == "body_fluid":
+        body = _resolve_fluid(ctx, order_code, prior)
     elif order_code in MICRO_CODES:
         body = _resolve_micro(ctx, order_code)
+    elif order_code in imaging_bank.ORDER_MODALITY:
+        body = _resolve_imaging(ctx, order_code)
     elif order_code in ranges["panels"] or order_code in ranges["_by_loinc"]:
-        loincs = ranges["panels"].get(order_code) or [order_code]
-        observations = [_observation(ctx, l, prior) for l in loincs]
-        if order_code == "6690-2":
-            _reconcile_differential(ctx, observations)
-        if order_code == "ua":
-            _apply_ua_pattern(ctx, observations)
-        body = {"kind": "lab", "status": "ok", "observations": observations,
-                "abnormal": any(o["flag"] != "N" for o in observations), "critical": any(o["critical"] for o in observations),
-                "turnaround": _turnaround(_tat_category(loincs, order_code))}
+        loincs = ranges["panels"].get(order_code) or [canonical_loinc(order_code)]
+        body = _lab_body(ctx, order_code, loincs, prior)
+        if "882-1" in loincs:
+            grp = next(o for o in body["observations"] if o["loinc"] == "882-1")
+            grp["value"] = specimens.blood_group(ctx.seed)
+            grp["flag"], grp["kinetics"] = "N", "seeded_patient_property"
+            grp["interpretation"] = f"ABO and Rh group: {grp['value']}."
     else:
         body = {"kind": "unknown", "status": "unavailable", "reason": "order_code_not_in_catalog", "turnaround": _turnaround("chemistry")}
     base.update(body)
     base["available_at_ms"] = ctx.sim_time_ms + base["turnaround"]["ms"]
+    if base["turnaround"].get("preliminary_ms") and "preliminary" not in base and base["kind"] == "imaging":
+        base["preliminary"] = {"available_at_ms": ctx.sim_time_ms + base["turnaround"]["preliminary_ms"],
+                               "text": "Preliminary read by the on-call radiologist; final report to follow."}
     return base
 
 
@@ -839,4 +1169,11 @@ def supported_order_codes() -> dict[str, list[str]]:
         "imaging": sorted(c for c in imaging_bank.ORDER_MODALITY if c != "11524-6"),
         "ecg": ["11524-6"],
         "micro": sorted(MICRO_CODES.keys()),
+        "specimen": sorted(o["code"] for o in catalog.lab_catalog()["orderables"] if o["generator"] in ("csf", "body_fluid")),
     }
+
+
+def resolvable(code: str) -> bool:
+    """True when the engine has a result path for an order code (no orphan orders)."""
+    c = supported_order_codes()
+    return any(code in v for v in c.values()) or code in load_ranges()["_by_loinc"]

@@ -19,35 +19,17 @@ import os
 from functools import lru_cache
 from typing import Any, Optional
 
+from server.results import catalog
+
 BANK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "imaging_bank.json")
 
-# Order code -> (modality, region, default view). Covers web/src/domain/orderables.ts
-# imaging codes and the LOINC-style imaging codes used by server/case_fixtures.py.
-ORDER_MODALITY: dict[str, tuple[str, str, Optional[str]]] = {
-    "cxr": ("xr", "chest", "PA"), "36643-5": ("xr", "chest", "PA"),
-    "axr": ("xr", "abdomen", "AP"),
-    "xr-extremity": ("xr", "extremity", None), "43468-8": ("xr", "extremity", None),
-    "ct-head-noncon": ("ct", "head", "axial"), "30799-1": ("ct", "head", "axial"),
-    "ct-cspine": ("ct", "cspine", "sagittal"),
-    "ct-chest": ("ct", "chest", "axial"),
-    "ctpa": ("ct", "chest", "axial-cta"), "36953-5": ("ct", "chest", "axial-cta"),
-    "cta-chest": ("ct", "chest", "axial-cta"),
-    "ct-aorta": ("ct", "aorta", "axial-cta"), "30746-2": ("ct", "aorta", "axial-cta"),
-    "ct-abdo-pelvis": ("ct", "abdomen", "axial"), "42272-5": ("ct", "abdomen", "axial"),
-    "ct-kub": ("ct", "abdomen", "axial"), "42274-1": ("ct", "abdomen", "axial"),
-    "us-abdomen": ("us", "abdomen", None), "24558-9": ("us", "abdomen", None),
-    "us-ruq": ("us", "biliary", None),
-    "us-pelvis": ("us", "pelvis", None),
-    "us-renal": ("us", "kidney", None),
-    "us-dvt": ("us", "vascular-leg", None), "39150-9": ("us", "vascular-leg", None),
-    "us-fast": ("us", "abdomen", None),
-    "echo": ("echo", "heart", None), "34534-8": ("echo", "heart", None),
-    "mri-brain": ("mri", "head", None),
-    "mri-cspine": ("mri", "cspine", None),
-    "mri-lspine": ("mri", "lspine", None), "24725-4": ("mri", "lspine", None),
-    "mri-mrcp": ("mri", "biliary", None),
-    "11524-6": ("ecg", "chest", "12-lead"),
-}
+# Order code -> (modality, region, default view), built from imaging_catalog.json:
+# catalogue codes, their LOINC radiology codes (LOINC 2.82) and legacy codes.
+# Review 2026-10-21: the old literal mapped real LOINC codes to the wrong study
+# (30746-2 "Portable XR Chest" to CT aorta, 42272-5 "XR Chest PA and Lateral" to
+# CT abdomen, 34534-8 "12 lead EKG panel" to echo, 24725-4 "CT Head" to MRI spine)
+# and used two codes that do not exist (36953-5, 39150-9).
+ORDER_MODALITY: dict[str, tuple[str, str, Optional[str]]] = catalog.order_modality_map()
 
 SIDED = ("left", "right")
 

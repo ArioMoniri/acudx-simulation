@@ -7,13 +7,14 @@
  * gives every order a test-specific turnaround so the simulated encounter keeps
  * a believable ordering of results (docs/00-overview/04 — sense of time).
  *
- * Two clocks are modelled per order:
- *   - `playbackMs` — the REAL wall-clock delay the store schedules the result
- *     after (compressed so a demo stays watchable, but preserving the relative
- *     ordering: culture ≫ CT ≫ CBC ≫ POC).
- *   - `clinicalLabel` — the realistic clinical turnaround shown to the learner
- *     (e.g. "36–48 h" for a culture), which is what a clinician would actually
- *     expect and is deliberately NOT the compressed playback time.
+ * Per order:
+ *   - `turnaroundMs` / `preliminaryMs` — the realistic order-to-report time in
+ *     SIM time, from the server catalogue (server/results/catalog.py TURNAROUND,
+ *     each figure sourced or labelled a teaching convention). The encounter
+ *     store schedules results on the sim clock with it (review 2026-10-21).
+ *   - `clinicalLabel` — the same turnaround as the learner reads it.
+ *   - `playbackMs` — a compressed wall-clock delay kept only for the
+ *     multiplayer room board, preserving the relative ordering.
  *
  * Pure + deterministic: no Date.now, no Math.random. Category is inferred from
  * the order code and its bilingual label using EN + TR keyword heuristics, with
@@ -24,6 +25,7 @@
 
 import type { Bilingual } from "@/data/schema";
 import type { ServiceRequestKind } from "@/domain/fhir";
+import { catalogTurnaround, formatSimMinutes } from "@/domain/serverCatalog";
 
 /** Broad turnaround class an order falls into. */
 export type OrderCategory =
@@ -39,11 +41,46 @@ export type OrderCategory =
   | "other";
 
 export interface OrderTiming {
-  /** Real ms the store waits before the result resolves (compressed demo time). */
+  /** Compressed wall-clock delay, kept for the multiplayer room board only. */
   playbackMs: number;
-  /** Realistic clinical turnaround shown to the learner (bilingual, NOT playback). */
+  /**
+   * Review 2026-10-21: the realistic order-to-report time in SIM ms (stat
+   * chemistry about 50 min, cultures 2 to 5 days, CT about 4 h). The encounter
+   * store schedules results on the sim clock with this, so a result is pending
+   * until the sim clock reaches it (the learner can advance time).
+   */
+  turnaroundMs: number;
+  /** Preliminary report in sim ms (cultures, CT, ultrasound), or null. */
+  preliminaryMs: number | null;
+  /** Realistic clinical turnaround shown to the learner (bilingual). */
   clinicalLabel: Bilingual;
   category: OrderCategory;
+}
+
+/** Sim minutes per category when a code is not in the server catalogue (server/results/catalog.py). */
+const CATEGORY_SIM_MINUTES: Record<OrderCategory, number> = {
+  poc: 5,
+  lab: 50,
+  coag: 55,
+  cardiac: 60,
+  "imaging-xr": 60,
+  "imaging-us": 165,
+  "imaging-ct": 250,
+  "imaging-mri": 370,
+  "micro-culture": 2880,
+  other: 50,
+};
+
+function simLabel(minutes: number, preliminary: number | null): Bilingual {
+  const en = formatSimMinutes(minutes, "en");
+  const tr = formatSimMinutes(minutes, "tr");
+  if (preliminary) {
+    return {
+      en: `prelim ${formatSimMinutes(preliminary, "en")}, final ${en}`,
+      tr: `ön rapor ${formatSimMinutes(preliminary, "tr")}, kesin ${tr}`,
+    };
+  }
+  return { en: `~${en}`, tr: `~${tr}` };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -207,7 +244,21 @@ export function orderTiming(
 ): OrderTiming {
   const category = detectCategory(code, label) ?? kindFallback(kind);
   const meta = CATEGORY_META[category];
-  return { playbackMs: meta.playbackMs, clinicalLabel: meta.clinicalLabel, category };
+  const fromCatalog = catalogTurnaround(code);
+  const minutes = fromCatalog?.minutes ?? CATEGORY_SIM_MINUTES[category];
+  const preliminary = fromCatalog ? fromCatalog.preliminaryMinutes : category === "micro-culture" ? 1440 : null;
+  return {
+    playbackMs: meta.playbackMs,
+    turnaroundMs: minutes * 60_000,
+    preliminaryMs: preliminary ? preliminary * 60_000 : null,
+    clinicalLabel: simLabel(minutes, preliminary),
+    category,
+  };
+}
+
+/** The clinical label for an engine turnaround (minutes plus optional preliminary minutes). */
+export function simTurnaroundLabel(minutes: number, preliminaryMinutes?: number | null): Bilingual {
+  return simLabel(minutes, preliminaryMinutes ?? null);
 }
 
 /* -------------------------------------------------------------------------- */

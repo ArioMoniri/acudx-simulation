@@ -173,10 +173,21 @@ function icdChapter(code: string): string {
   return (code || "").toUpperCase().charAt(0);
 }
 
+/** Upper case, no dot: "i21.09" -> "I2109". */
+function icdKey(code: string): string {
+  return code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/** An ICD-10(-CM) shaped code: a letter, two digits or a digit and a letter, then up to four characters. */
+function isIcd10(key: string): boolean {
+  return /^[A-Z][0-9][0-9A-Z][0-9A-Z]{0,4}$/.test(key);
+}
+
 /**
  * Classify the committed diagnosis against the case ground truth — THE shared
  * comparison the A&P `VerdictPanel` and the debrief both use, so the two never
  * disagree. Exact match is correct; anything else is graded by relationship:
+ *   - a more specific ICD-10-CM descendant of the correct code -> correct;
  *   - a listed differential -> near-miss (`listed-differential`);
  *   - sharing the correct dx's ICD-10 3-char family -> near-miss (`same-category`,
  *     e.g. STEMI I21.3 vs NSTEMI I21.4) — caught even when NOT listed;
@@ -196,11 +207,24 @@ export function classifyDiagnosis(
   if (committed === correctCode) {
     return { verdict: "correct", correctCode, nearMissReason: null };
   }
+  // Review 2026-10-21: the picker now searches the whole ICD-10-CM FY2027
+  // release, so a learner can commit a more specific code than the case's
+  // (I21.09 for I21.0). A descendant code is the same diagnosis, coded more
+  // precisely, and is credited (server/terminology/icd.py relate_icd10).
+  const a = icdKey(committed);
+  const b = icdKey(correctCode);
+  if (isIcd10(a) && isIcd10(b) && a.length > b.length && a.startsWith(b)) {
+    return { verdict: "correct", correctCode, nearMissReason: null };
+  }
   if (differentialCodes.has(committed)) {
     return { verdict: "near-miss", correctCode, nearMissReason: "listed-differential" };
   }
   const correctEntry = getDiagnosis(correctCode);
   const committedEntry = getDiagnosis(committed);
+  if ((!correctEntry || !committedEntry) && isIcd10(a) && isIcd10(b) && a.slice(0, 3) === b.slice(0, 3)) {
+    // A code outside the curated catalogue still earns the same-category near miss.
+    return { verdict: "near-miss", correctCode, nearMissReason: "same-category" };
+  }
   if (correctEntry && committedEntry) {
     if (icdRoot(correctEntry.icd10) === icdRoot(committedEntry.icd10)) {
       return { verdict: "near-miss", correctCode, nearMissReason: "same-category" };

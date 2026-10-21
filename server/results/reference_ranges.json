@@ -1,169 +1,4449 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-19",
+  "generated_at": "2026-10-21",
   "unit_system": "UCUM (https://ucum.org/ucum, license https://ucum.org/license)",
-  "code_system": "LOINC (https://loinc.org/, license https://loinc.org/kb/license); codes are best-effort educational mappings to be re-verified against LOINC search before any clinical-facing use",
+  "code_system": "LOINC 2.82 (https://loinc.org/). Every code is checked against the HL7 terminology server by scripts/terminology/build_terminology.py loinc; the result is server/terminology/data/loinc-verified.json",
   "notes": [
     "Reference intervals are facts transcribed from the cited public tables; no source text is reproduced.",
     "Sex 'any' applies to both sexes. Age bands are adult (18 to 120) unless stated; paediatric bands are not yet authored (CALIPER import pending, see docs/architecture/14).",
     "critical_low / critical_high are the mean US critical limits reported by Kost 1990 unless another source is named in critical_source.",
-    "Every analyte carries source (URL) and reviewed_at; the engine refuses to emit a value for an analyte without them."
+    "Every analyte carries source (URL) and reviewed_at; the engine refuses to emit a value for an analyte without them.",
+    "low or high null means the interval is open on that side (for example HDL at or above 40 mg/dL).",
+    "source_numbers lists the figures as printed on the source page when the stored bound is a unit conversion of them.",
+    "absent_unless_exposed: a drug or toxin that is not detected unless the case exposes the patient to it.",
+    "derived: computed by the engine from other analytes of the same draw (anion gap, eGFR, globulin)."
   ],
   "sources": {
-    "nbme": {"title": "NBME Laboratory Values (conventional and SI)", "url": "https://www.nbme.org/laboratory-values/", "accessed": "2026-10-19"},
-    "kost1990": {"title": "Kost GJ. Critical limits for urgent clinician notification at US medical centers. JAMA 1990;263:704-707", "url": "https://doi.org/10.1001/jama.1990.03440050098042", "accessed": "2026-10-19", "note": "abstract verified via Europe PMC, PMID 2296127"},
-    "mlp_lactate": {"title": "MedlinePlus Medical Encyclopedia: Lactic acid test", "url": "https://medlineplus.gov/ency/article/003507.htm", "accessed": "2026-10-19", "reviewed": "2025-05-19"},
-    "mlp_crp": {"title": "MedlinePlus: C-reactive protein (CRP) blood test", "url": "https://medlineplus.gov/ency/article/003356.htm", "accessed": "2026-10-19", "reviewed": "2025-01-28"},
-    "mlp_ammonia": {"title": "MedlinePlus: Ammonia blood test", "url": "https://medlineplus.gov/ency/article/003506.htm", "accessed": "2026-10-19", "reviewed": "2025-02-13"},
-    "mlp_bnp": {"title": "MedlinePlus: Brain natriuretic peptide test", "url": "https://medlineplus.gov/ency/article/007509.htm", "accessed": "2026-10-19", "reviewed": "2024-07-14"},
-    "mlp_bloodgas": {"title": "MedlinePlus: Blood gases", "url": "https://medlineplus.gov/ency/article/003855.htm", "accessed": "2026-10-19", "reviewed": "2024-08-19"},
-    "mlp_ua": {"title": "MedlinePlus: Urinalysis", "url": "https://medlineplus.gov/ency/article/003579.htm", "accessed": "2026-10-19", "reviewed": "2025-01-01"},
-    "mlp_usg": {"title": "MedlinePlus: Urine specific gravity test", "url": "https://medlineplus.gov/ency/article/003587.htm", "accessed": "2026-10-19", "reviewed": "2025-07-13"},
-    "mlp_uph": {"title": "MedlinePlus: Urine pH test", "url": "https://medlineplus.gov/ency/article/003583.htm", "accessed": "2026-10-19", "reviewed": "2025-07-13"},
-    "mlp_hcg": {"title": "MedlinePlus: HCG blood test - quantitative", "url": "https://medlineplus.gov/ency/article/003510.htm", "accessed": "2026-10-19", "reviewed": "2024-10-15"},
-    "mlp_tsh": {"title": "MedlinePlus: TSH test", "url": "https://medlineplus.gov/ency/article/003684.htm", "accessed": "2026-10-19", "reviewed": "2026-01-25"},
-    "mlp_pt": {"title": "MedlinePlus: Prothrombin time (PT)", "url": "https://medlineplus.gov/ency/article/003652.htm", "accessed": "2026-10-19", "reviewed": "2025-02-03"},
-    "mlp_ptt": {"title": "MedlinePlus: Partial thromboplastin time (PTT)", "url": "https://medlineplus.gov/ency/article/003653.htm", "accessed": "2026-10-19", "reviewed": "2025-02-03"},
-    "mlp_fib": {"title": "MedlinePlus: Fibrinogen blood test", "url": "https://medlineplus.gov/ency/article/003650.htm", "accessed": "2026-10-19", "reviewed": "2025-02-03"},
-    "mlp_tox": {"title": "MedlinePlus: Toxicology screen", "url": "https://medlineplus.gov/ency/article/003578.htm", "accessed": "2026-10-19", "reviewed": "2025-01-08"},
-    "mlp_bcx": {"title": "MedlinePlus: Blood culture", "url": "https://medlineplus.gov/ency/article/003744.htm", "accessed": "2026-10-19", "reviewed": "2025-10-19"},
-    "mlp_ucx": {"title": "MedlinePlus: Urine culture", "url": "https://medlineplus.gov/ency/article/003751.htm", "accessed": "2026-10-19", "reviewed": "2024-10-09"},
-    "esc2020_nsteacs": {"title": "2020 ESC Guidelines for the management of acute coronary syndromes in patients presenting without persistent ST-segment elevation, Table 5", "url": "https://doi.org/10.1093/eurheartj/ehaa575", "accessed": "2026-10-19"},
-    "apple2012": {"title": "Apple FS, Collinson PO, IFCC Task Force on Clinical Applications of Cardiac Biomarkers. Analytical characteristics of high-sensitivity cardiac troponin assays. Clin Chem 2012;58:54-61", "url": "https://doi.org/10.1373/clinchem.2011.165795", "accessed": "2026-10-19"},
-    "gore2014": {"title": "Gore MO et al. Age- and sex-dependent upper reference limits for the high-sensitivity cardiac troponin T assay. J Am Coll Cardiol 2014;63:1441-1448", "url": "https://doi.org/10.1016/j.jacc.2013.12.032", "accessed": "2026-10-19"},
-    "esc2021_hf": {"title": "2021 ESC Guidelines for the diagnosis and treatment of acute and chronic heart failure, section 4.2 (BNP 35 pg/mL, NT-proBNP 125 pg/mL upper limits of normal, non-acute)", "url": "https://doi.org/10.1093/eurheartj/ehab368", "accessed": "2026-10-19"},
-    "righini2014": {"title": "Righini M et al. Age-adjusted D-dimer cutoff levels to rule out pulmonary embolism: the ADJUST-PE study. JAMA 2014;311:1117-1124", "url": "https://doi.org/10.1001/jama.2014.2135", "accessed": "2026-10-19"},
-    "jbds2023": {"title": "JBDS-IP. The Management of Diabetic Ketoacidosis in Adults, revised March 2023", "url": "https://abcd.care/sites/default/files/site_uploads/JBDS_Guidelines_Current/JBDS_02_DKA_Guideline_with_QR_code_March_2023.pdf", "accessed": "2026-10-19"},
-    "schuetz2011": {"title": "Schuetz P, Albrich W, Mueller B. Procalcitonin for diagnosis of infection and guide to antibiotic decisions. BMC Med 2011;9:107", "url": "https://doi.org/10.1186/1741-7015-9-107", "accessed": "2026-10-19"},
-    "sepsis3": {"title": "Singer M et al. The Third International Consensus Definitions for Sepsis and Septic Shock (Sepsis-3). JAMA 2016;315:801-810 (lactate above 2 mmol/L in septic shock definition)", "url": "https://doi.org/10.1001/jama.2016.0287", "accessed": "2026-10-19"},
-    "kdigo2012": {"title": "KDIGO Clinical Practice Guideline for Acute Kidney Injury, Table 2 (stage 3: creatinine 4.0 mg/dL or more)", "url": "https://kdigo.org/wp-content/uploads/2016/10/KDIGO-2012-AKI-Guideline-English.pdf", "accessed": "2026-10-19"},
-    "mhra2012": {"title": "MHRA Drug Safety Update: Treating paracetamol overdose with intravenous acetylcysteine: new guidance (treatment line 100 mg/L at 4 h to 15 mg/L at 15 h)", "url": "https://www.gov.uk/drug-safety-update/treating-paracetamol-overdose-with-intravenous-acetylcysteine-new-guidance", "accessed": "2026-10-19"},
-    "forrest1982": {"title": "Forrest JA, Clements JA, Prescott LF. Clinical pharmacokinetics of paracetamol. Clin Pharmacokinet 1982;7:93-107", "url": "https://doi.org/10.2165/00003088-198207020-00001", "accessed": "2026-10-19"},
-    "byrne2014": {"title": "Byrne AL et al. Peripheral venous and arterial blood gas analysis in adults: are they comparable? Respirology 2014;19:168-175 (venous pH 0.03 lower, PO2 36.9 mmHg lower)", "url": "https://doi.org/10.1111/resp.12225", "accessed": "2026-10-19"},
-    "kelly2013": {"title": "Kelly AM. Agreement between arterial and venous blood gases in emergency medical care: a systematic review. Hong Kong J Emerg Med 2013;20:166-171 (venous bicarbonate about 1.2 mmol/L lower)", "url": "https://doi.org/10.1177/102490791302000307", "accessed": "2026-10-19"},
-    "litfl_salicylate": {"title": "Long N. Salicylate toxicity. Life in the Fast Lane (LITFL), posted 2020-11-03 (CC BY-NC-SA 4.0 text; cited, not reproduced)", "url": "https://litfl.com/salicylate-toxicity/", "accessed": "2026-10-19"},
-    "uk_rta1988": {"title": "Road Traffic Act 1988 s.11: prescribed limit 80 mg alcohol per 100 mL blood (England and Wales)", "url": "https://www.legislation.gov.uk/ukpga/1988/52/section/11", "accessed": "2026-10-19"}
+    "nbme": {
+      "title": "NBME Laboratory Values (conventional and SI)",
+      "url": "https://www.nbme.org/laboratory-values/",
+      "accessed": "2026-10-21"
+    },
+    "kost1990": {
+      "title": "Kost GJ. Critical limits for urgent clinician notification at US medical centers. JAMA 1990;263:704-707",
+      "url": "https://doi.org/10.1001/jama.1990.03440050098042",
+      "accessed": "2026-10-19",
+      "note": "abstract verified via Europe PMC, PMID 2296127"
+    },
+    "mlp_lactate": {
+      "title": "MedlinePlus Medical Encyclopedia: Lactic acid test",
+      "url": "https://medlineplus.gov/ency/article/003507.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-05-19"
+    },
+    "mlp_crp": {
+      "title": "MedlinePlus: C-reactive protein (CRP) blood test",
+      "url": "https://medlineplus.gov/ency/article/003356.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-01-28"
+    },
+    "mlp_ammonia": {
+      "title": "MedlinePlus: Ammonia blood test",
+      "url": "https://medlineplus.gov/ency/article/003506.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-02-13"
+    },
+    "mlp_bnp": {
+      "title": "MedlinePlus: Brain natriuretic peptide test",
+      "url": "https://medlineplus.gov/ency/article/007509.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2024-07-14"
+    },
+    "mlp_bloodgas": {
+      "title": "MedlinePlus: Blood gases",
+      "url": "https://medlineplus.gov/ency/article/003855.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2024-08-19"
+    },
+    "mlp_ua": {
+      "title": "MedlinePlus: Urinalysis",
+      "url": "https://medlineplus.gov/ency/article/003579.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-01-01"
+    },
+    "mlp_usg": {
+      "title": "MedlinePlus: Urine specific gravity test",
+      "url": "https://medlineplus.gov/ency/article/003587.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-07-13"
+    },
+    "mlp_uph": {
+      "title": "MedlinePlus: Urine pH test",
+      "url": "https://medlineplus.gov/ency/article/003583.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-07-13"
+    },
+    "mlp_hcg": {
+      "title": "MedlinePlus: HCG blood test - quantitative",
+      "url": "https://medlineplus.gov/ency/article/003510.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2024-10-15"
+    },
+    "mlp_tsh": {
+      "title": "MedlinePlus: TSH test",
+      "url": "https://medlineplus.gov/ency/article/003684.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2026-01-25"
+    },
+    "mlp_pt": {
+      "title": "MedlinePlus: Prothrombin time (PT)",
+      "url": "https://medlineplus.gov/ency/article/003652.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-02-03"
+    },
+    "mlp_ptt": {
+      "title": "MedlinePlus: Partial thromboplastin time (PTT)",
+      "url": "https://medlineplus.gov/ency/article/003653.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-02-03"
+    },
+    "mlp_fib": {
+      "title": "MedlinePlus: Fibrinogen blood test",
+      "url": "https://medlineplus.gov/ency/article/003650.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-02-03"
+    },
+    "mlp_tox": {
+      "title": "MedlinePlus: Toxicology screen",
+      "url": "https://medlineplus.gov/ency/article/003578.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-01-08"
+    },
+    "mlp_bcx": {
+      "title": "MedlinePlus: Blood culture",
+      "url": "https://medlineplus.gov/ency/article/003744.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2025-10-19"
+    },
+    "mlp_ucx": {
+      "title": "MedlinePlus: Urine culture",
+      "url": "https://medlineplus.gov/ency/article/003751.htm",
+      "accessed": "2026-10-19",
+      "reviewed": "2024-10-09"
+    },
+    "esc2020_nsteacs": {
+      "title": "2020 ESC Guidelines for the management of acute coronary syndromes in patients presenting without persistent ST-segment elevation, Table 5",
+      "url": "https://doi.org/10.1093/eurheartj/ehaa575",
+      "accessed": "2026-10-19"
+    },
+    "apple2012": {
+      "title": "Apple FS, Collinson PO, IFCC Task Force on Clinical Applications of Cardiac Biomarkers. Analytical characteristics of high-sensitivity cardiac troponin assays. Clin Chem 2012;58:54-61",
+      "url": "https://doi.org/10.1373/clinchem.2011.165795",
+      "accessed": "2026-10-19"
+    },
+    "gore2014": {
+      "title": "Gore MO et al. Age- and sex-dependent upper reference limits for the high-sensitivity cardiac troponin T assay. J Am Coll Cardiol 2014;63:1441-1448",
+      "url": "https://doi.org/10.1016/j.jacc.2013.12.032",
+      "accessed": "2026-10-19"
+    },
+    "esc2021_hf": {
+      "title": "2021 ESC Guidelines for the diagnosis and treatment of acute and chronic heart failure, section 4.2 (BNP 35 pg/mL, NT-proBNP 125 pg/mL upper limits of normal, non-acute)",
+      "url": "https://doi.org/10.1093/eurheartj/ehab368",
+      "accessed": "2026-10-19"
+    },
+    "righini2014": {
+      "title": "Righini M et al. Age-adjusted D-dimer cutoff levels to rule out pulmonary embolism: the ADJUST-PE study. JAMA 2014;311:1117-1124",
+      "url": "https://doi.org/10.1001/jama.2014.2135",
+      "accessed": "2026-10-19"
+    },
+    "jbds2023": {
+      "title": "JBDS-IP. The Management of Diabetic Ketoacidosis in Adults, revised March 2023",
+      "url": "https://abcd.care/sites/default/files/site_uploads/JBDS_Guidelines_Current/JBDS_02_DKA_Guideline_with_QR_code_March_2023.pdf",
+      "accessed": "2026-10-19"
+    },
+    "schuetz2011": {
+      "title": "Schuetz P, Albrich W, Mueller B. Procalcitonin for diagnosis of infection and guide to antibiotic decisions. BMC Med 2011;9:107",
+      "url": "https://doi.org/10.1186/1741-7015-9-107",
+      "accessed": "2026-10-19"
+    },
+    "sepsis3": {
+      "title": "Singer M et al. The Third International Consensus Definitions for Sepsis and Septic Shock (Sepsis-3). JAMA 2016;315:801-810 (lactate above 2 mmol/L in septic shock definition)",
+      "url": "https://doi.org/10.1001/jama.2016.0287",
+      "accessed": "2026-10-19"
+    },
+    "kdigo2012": {
+      "title": "KDIGO Clinical Practice Guideline for Acute Kidney Injury, Table 2 (stage 3: creatinine 4.0 mg/dL or more)",
+      "url": "https://kdigo.org/wp-content/uploads/2016/10/KDIGO-2012-AKI-Guideline-English.pdf",
+      "accessed": "2026-10-19"
+    },
+    "mhra2012": {
+      "title": "MHRA Drug Safety Update: Treating paracetamol overdose with intravenous acetylcysteine: new guidance (treatment line 100 mg/L at 4 h to 15 mg/L at 15 h)",
+      "url": "https://www.gov.uk/drug-safety-update/treating-paracetamol-overdose-with-intravenous-acetylcysteine-new-guidance",
+      "accessed": "2026-10-19"
+    },
+    "forrest1982": {
+      "title": "Forrest JA, Clements JA, Prescott LF. Clinical pharmacokinetics of paracetamol. Clin Pharmacokinet 1982;7:93-107",
+      "url": "https://doi.org/10.2165/00003088-198207020-00001",
+      "accessed": "2026-10-19"
+    },
+    "byrne2014": {
+      "title": "Byrne AL et al. Peripheral venous and arterial blood gas analysis in adults: are they comparable? Respirology 2014;19:168-175 (venous pH 0.03 lower, PO2 36.9 mmHg lower)",
+      "url": "https://doi.org/10.1111/resp.12225",
+      "accessed": "2026-10-19"
+    },
+    "kelly2013": {
+      "title": "Kelly AM. Agreement between arterial and venous blood gases in emergency medical care: a systematic review. Hong Kong J Emerg Med 2013;20:166-171 (venous bicarbonate about 1.2 mmol/L lower)",
+      "url": "https://doi.org/10.1177/102490791302000307",
+      "accessed": "2026-10-19"
+    },
+    "litfl_salicylate": {
+      "title": "Long N. Salicylate toxicity. Life in the Fast Lane (LITFL), posted 2020-11-03 (CC BY-NC-SA 4.0 text; cited, not reproduced)",
+      "url": "https://litfl.com/salicylate-toxicity/",
+      "accessed": "2026-10-19"
+    },
+    "uk_rta1988": {
+      "title": "Road Traffic Act 1988 s.11: prescribed limit 80 mg alcohol per 100 mL blood (England and Wales)",
+      "url": "https://www.legislation.gov.uk/ukpga/1988/52/section/11",
+      "accessed": "2026-10-19"
+    },
+    "kraut2007": {
+      "title": "Kraut JA, Madias NE. Serum anion gap: its uses and limitations in clinical medicine. Clin J Am Soc Nephrol 2007;2:162-174",
+      "url": "https://doi.org/10.2215/CJN.03020906",
+      "accessed": "2026-10-21",
+      "note": "3 to 11 mmol/L with ion-selective electrode analysers; reviewer to confirm against the full text"
+    },
+    "light1972": {
+      "title": "Light RW et al. Pleural effusions: the diagnostic separation of transudates and exudates. Ann Intern Med 1972;77:507-513",
+      "url": "https://doi.org/10.7326/0003-4819-77-4-507",
+      "accessed": "2026-10-21"
+    },
+    "aasld2021": {
+      "title": "Biggins SW et al. Diagnosis, evaluation, and management of ascites, spontaneous bacterial peritonitis and hepatorenal syndrome: 2021 practice guidance by the AASLD. Hepatology 2021;74:1014-1048 (PMN 250/mm3 or more: SBP; SAAG 1.1 g/dL or more: portal hypertension)",
+      "url": "https://doi.org/10.1002/hep.31884",
+      "accessed": "2026-10-21"
+    },
+    "margaretten2007": {
+      "title": "Margaretten ME et al. Does this adult patient have septic arthritis? JAMA 2007;297:1478-1488 (synovial WBC above 50,000/uL raises the likelihood)",
+      "url": "https://doi.org/10.1001/jama.297.13.1478",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003486": {
+      "title": "MedlinePlus Medical Encyclopedia: Calcium - ionized",
+      "url": "https://medlineplus.gov/ency/article/003486.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003458": {
+      "title": "MedlinePlus Medical Encyclopedia: Gamma-glutamyl transferase (GGT) blood test",
+      "url": "https://medlineplus.gov/ency/article/003458.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003663": {
+      "title": "MedlinePlus Medical Encyclopedia: Myoglobin blood test",
+      "url": "https://medlineplus.gov/ency/article/003663.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003488": {
+      "title": "MedlinePlus Medical Encyclopedia: Serum iron test",
+      "url": "https://medlineplus.gov/ency/article/003488.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003705": {
+      "title": "MedlinePlus Medical Encyclopedia: Vitamin B12 level",
+      "url": "https://medlineplus.gov/ency/article/003705.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003686": {
+      "title": "MedlinePlus Medical Encyclopedia: Folic acid - test",
+      "url": "https://medlineplus.gov/ency/article/003686.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003493": {
+      "title": "MedlinePlus Medical Encyclopedia: Triglyceride level",
+      "url": "https://medlineplus.gov/ency/article/003493.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_007811": {
+      "title": "MedlinePlus Medical Encyclopedia: LDL test",
+      "url": "https://medlineplus.gov/ency/article/007811.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_007810": {
+      "title": "MedlinePlus Medical Encyclopedia: HDL test",
+      "url": "https://medlineplus.gov/ency/article/007810.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_007813": {
+      "title": "MedlinePlus Medical Encyclopedia: Total cholesterol",
+      "url": "https://medlineplus.gov/ency/article/007813.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003634": {
+      "title": "MedlinePlus Medical Encyclopedia: Haptoglobin blood test",
+      "url": "https://medlineplus.gov/ency/article/003634.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003701": {
+      "title": "MedlinePlus Medical Encyclopedia: Insulin C-peptide test",
+      "url": "https://medlineplus.gov/ency/article/003701.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003609": {
+      "title": "MedlinePlus Medical Encyclopedia: Osmolality urine test",
+      "url": "https://medlineplus.gov/ency/article/003609.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003644": {
+      "title": "MedlinePlus Medical Encyclopedia: RBC count",
+      "url": "https://medlineplus.gov/ency/article/003644.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003648": {
+      "title": "MedlinePlus Medical Encyclopedia: RBC indices",
+      "url": "https://medlineplus.gov/ency/article/003648.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003649": {
+      "title": "MedlinePlus Medical Encyclopedia: Eosinophil count - absolute",
+      "url": "https://medlineplus.gov/ency/article/003649.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003599": {
+      "title": "MedlinePlus Medical Encyclopedia: Sodium urine test",
+      "url": "https://medlineplus.gov/ency/article/003599.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003600": {
+      "title": "MedlinePlus Medical Encyclopedia: Potassium urine test",
+      "url": "https://medlineplus.gov/ency/article/003600.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003430": {
+      "title": "MedlinePlus Medical Encyclopedia: Therapeutic drug levels",
+      "url": "https://medlineplus.gov/ency/article/003430.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003563": {
+      "title": "MedlinePlus Medical Encyclopedia: Methanol test",
+      "url": "https://medlineplus.gov/ency/article/003563.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003564": {
+      "title": "MedlinePlus Medical Encyclopedia: Ethylene glycol blood test",
+      "url": "https://medlineplus.gov/ency/article/003564.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003687": {
+      "title": "MedlinePlus Medical Encyclopedia: T3 test",
+      "url": "https://medlineplus.gov/ency/article/003687.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003690": {
+      "title": "MedlinePlus Medical Encyclopedia: Parathyroid hormone (PTH) blood test",
+      "url": "https://medlineplus.gov/ency/article/003690.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003718": {
+      "title": "MedlinePlus Medical Encyclopedia: Prolactin blood test",
+      "url": "https://medlineplus.gov/ency/article/003718.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003707": {
+      "title": "MedlinePlus Medical Encyclopedia: Testosterone",
+      "url": "https://medlineplus.gov/ency/article/003707.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003711": {
+      "title": "MedlinePlus Medical Encyclopedia: Estradiol blood test",
+      "url": "https://medlineplus.gov/ency/article/003711.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003695": {
+      "title": "MedlinePlus Medical Encyclopedia: ACTH blood test",
+      "url": "https://medlineplus.gov/ency/article/003695.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003698": {
+      "title": "MedlinePlus Medical Encyclopedia: Renin blood test",
+      "url": "https://medlineplus.gov/ency/article/003698.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003346": {
+      "title": "MedlinePlus Medical Encyclopedia: Prostate-specific antigen (PSA) blood test",
+      "url": "https://medlineplus.gov/ency/article/003346.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003574": {
+      "title": "MedlinePlus Medical Encyclopedia: CEA blood test",
+      "url": "https://medlineplus.gov/ency/article/003574.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003573": {
+      "title": "MedlinePlus Medical Encyclopedia: Alpha fetoprotein",
+      "url": "https://medlineplus.gov/ency/article/003573.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_007217": {
+      "title": "MedlinePlus Medical Encyclopedia: CA-125 blood test",
+      "url": "https://medlineplus.gov/ency/article/007217.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003548": {
+      "title": "MedlinePlus Medical Encyclopedia: Rheumatoid factor (RF)",
+      "url": "https://medlineplus.gov/ency/article/003548.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003539": {
+      "title": "MedlinePlus Medical Encyclopedia: Complement component 3 (C3)",
+      "url": "https://medlineplus.gov/ency/article/003539.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003354": {
+      "title": "MedlinePlus Medical Encyclopedia: Complement component 4",
+      "url": "https://medlineplus.gov/ency/article/003354.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003544": {
+      "title": "MedlinePlus Medical Encyclopedia: Quantitative immunoglobulins",
+      "url": "https://medlineplus.gov/ency/article/003544.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003628": {
+      "title": "MedlinePlus Medical Encyclopedia: CSF total protein",
+      "url": "https://medlineplus.gov/ency/article/003628.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003625": {
+      "title": "MedlinePlus Medical Encyclopedia: CSF cell count",
+      "url": "https://medlineplus.gov/ency/article/003625.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003633": {
+      "title": "MedlinePlus Medical Encyclopedia: CSF glucose test",
+      "url": "https://medlineplus.gov/ency/article/003633.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003769": {
+      "title": "MedlinePlus Medical Encyclopedia: Cerebrospinal fluid (CSF) culture",
+      "url": "https://medlineplus.gov/ency/article/003769.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003591": {
+      "title": "MedlinePlus Medical Encyclopedia: Microalbuminuria test",
+      "url": "https://medlineplus.gov/ency/article/003591.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003344": {
+      "title": "MedlinePlus Medical Encyclopedia: Coombs test",
+      "url": "https://medlineplus.gov/ency/article/003344.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003345": {
+      "title": "MedlinePlus Medical Encyclopedia: Blood typing",
+      "url": "https://medlineplus.gov/ency/article/003345.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003666": {
+      "title": "MedlinePlus Medical Encyclopedia: Sickle cell test",
+      "url": "https://medlineplus.gov/ency/article/003666.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003671": {
+      "title": "MedlinePlus Medical Encyclopedia: Glucose-6-phosphate dehydrogenase test",
+      "url": "https://medlineplus.gov/ency/article/003671.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003558": {
+      "title": "MedlinePlus Medical Encyclopedia: Hepatitis virus panel",
+      "url": "https://medlineplus.gov/ency/article/003558.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003533": {
+      "title": "MedlinePlus Medical Encyclopedia: RPR test",
+      "url": "https://medlineplus.gov/ency/article/003533.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003512": {
+      "title": "MedlinePlus Medical Encyclopedia: FTA-ABS blood test",
+      "url": "https://medlineplus.gov/ency/article/003512.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003454": {
+      "title": "MedlinePlus Medical Encyclopedia: Mononucleosis spot test",
+      "url": "https://medlineplus.gov/ency/article/003454.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003758": {
+      "title": "MedlinePlus Medical Encyclopedia: Fecal culture",
+      "url": "https://medlineplus.gov/ency/article/003758.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003746": {
+      "title": "MedlinePlus Medical Encyclopedia: Throat swab culture",
+      "url": "https://medlineplus.gov/ency/article/003746.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003723": {
+      "title": "MedlinePlus Medical Encyclopedia: Sputum culture",
+      "url": "https://medlineplus.gov/ency/article/003723.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003766": {
+      "title": "MedlinePlus Medical Encyclopedia: Acid-fast stain",
+      "url": "https://medlineplus.gov/ency/article/003766.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_007621": {
+      "title": "MedlinePlus Medical Encyclopedia: Gram stain",
+      "url": "https://medlineplus.gov/ency/article/007621.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003364": {
+      "title": "MedlinePlus Medical Encyclopedia: Urine drug screen",
+      "url": "https://medlineplus.gov/ency/article/003364.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlp_007769": {
+      "title": "MedlinePlus Medical Encyclopedia: COVID-19 virus test",
+      "url": "https://medlineplus.gov/ency/article/007769.htm",
+      "accessed": "2026-10-21"
+    },
+    "mlt_estimated_glomerular_filtration_rate_egfr_and_gfr_tests": {
+      "title": "MedlinePlus Lab Tests: Estimated glomerular filtration rate (eGFR)",
+      "url": "https://medlineplus.gov/lab-tests/estimated-glomerular-filtration-rate-egfr-and-gfr-tests/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_flu_influenza_test": {
+      "title": "MedlinePlus Lab Tests: Flu (influenza) test",
+      "url": "https://medlineplus.gov/lab-tests/flu-influenza-test/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_respiratory_syncytial_virus_rsv_tests": {
+      "title": "MedlinePlus Lab Tests: Respiratory syncytial virus (RSV) tests",
+      "url": "https://medlineplus.gov/lab-tests/respiratory-syncytial-virus-rsv-tests/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_respiratory_pathogens_panel": {
+      "title": "MedlinePlus Lab Tests: Respiratory pathogens panel",
+      "url": "https://medlineplus.gov/lab-tests/respiratory-pathogens-panel/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_strep_a_test": {
+      "title": "MedlinePlus Lab Tests: Strep A test",
+      "url": "https://medlineplus.gov/lab-tests/strep-a-test/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_legionella_tests": {
+      "title": "MedlinePlus Lab Tests: Legionella tests",
+      "url": "https://medlineplus.gov/lab-tests/legionella-tests/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_pneumococcal_disease_tests": {
+      "title": "MedlinePlus Lab Tests: Pneumococcal disease tests",
+      "url": "https://medlineplus.gov/lab-tests/pneumococcal-disease-tests/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_c_diff_testing": {
+      "title": "MedlinePlus Lab Tests: C. diff testing",
+      "url": "https://medlineplus.gov/lab-tests/c-diff-testing/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_hiv_screening_test": {
+      "title": "MedlinePlus Lab Tests: HIV screening test",
+      "url": "https://medlineplus.gov/lab-tests/hiv-screening-test/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_malaria_tests": {
+      "title": "MedlinePlus Lab Tests: Malaria tests",
+      "url": "https://medlineplus.gov/lab-tests/malaria-tests/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_tuberculosis_screening": {
+      "title": "MedlinePlus Lab Tests: Tuberculosis screening",
+      "url": "https://medlineplus.gov/lab-tests/tuberculosis-screening/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_red_blood_cell_antibody_screen": {
+      "title": "MedlinePlus Lab Tests: Red blood cell antibody screen",
+      "url": "https://medlineplus.gov/lab-tests/red-blood-cell-antibody-screen/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_bacteria_culture_test": {
+      "title": "MedlinePlus Lab Tests: Bacteria culture test",
+      "url": "https://medlineplus.gov/lab-tests/bacteria-culture-test/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_mrsa_tests": {
+      "title": "MedlinePlus Lab Tests: MRSA tests",
+      "url": "https://medlineplus.gov/lab-tests/mrsa-tests/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_ccp_antibody_test": {
+      "title": "MedlinePlus Lab Tests: CCP antibody test",
+      "url": "https://medlineplus.gov/lab-tests/ccp-antibody-test/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_antineutrophil_cytoplasmic_antibodies_anca_test": {
+      "title": "MedlinePlus Lab Tests: ANCA test",
+      "url": "https://medlineplus.gov/lab-tests/antineutrophil-cytoplasmic-antibodies-anca-test/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_syphilis_tests": {
+      "title": "MedlinePlus Lab Tests: Syphilis tests",
+      "url": "https://medlineplus.gov/lab-tests/syphilis-tests/",
+      "accessed": "2026-10-21"
+    },
+    "mlt_hepatitis_testing": {
+      "title": "MedlinePlus Lab Tests: Hepatitis testing",
+      "url": "https://medlineplus.gov/lab-tests/hepatitis-testing/",
+      "accessed": "2026-10-21"
+    },
+    "mlp_003535": {
+      "title": "MedlinePlus Medical Encyclopedia: Antinuclear antibody panel",
+      "url": "https://medlineplus.gov/ency/article/003535.htm",
+      "accessed": "2026-10-21"
+    }
   },
   "panels": {
-    "6690-2": ["6690-2", "718-7", "4544-3", "777-3", "787-2", "751-8", "731-0"],
-    "2160-0": ["2951-2", "2823-3", "2075-0", "1963-8", "3094-0", "2160-0", "2345-7", "17861-6"],
-    "cmp": ["2951-2", "2823-3", "2075-0", "1963-8", "3094-0", "2160-0", "2345-7", "17861-6", "1751-7", "2885-2", "1920-8", "1742-6", "6768-6", "1975-2"],
-    "lft": ["1920-8", "1742-6", "6768-6", "1975-2", "1968-7", "1751-7", "2885-2"],
-    "lipase": ["3040-3", "1798-8"],
-    "mg": ["19123-9"],
-    "phos": ["2777-1"],
-    "ca": ["17861-6"],
-    "ck": ["2157-6"],
-    "bhb": ["53060-9"],
-    "osmo": ["2692-2"],
-    "ammonia": ["1841-5"],
-    "ferritin": ["2276-4"],
-    "ldh": ["14804-9"],
-    "uric-acid": ["3084-1"],
-    "67151-1": ["67151-1"],
-    "89579-7": ["89579-7"],
-    "bnp": ["30934-4"],
-    "33762-6": ["33762-6"],
-    "48065-7": ["48065-7"],
-    "coag-inr": ["5902-2", "6301-6", "3173-2", "3255-7"],
-    "tsh": ["3016-3", "3026-2"],
-    "hba1c": ["4548-4"],
-    "cortisol": ["2143-6"],
-    "1988-5": ["1988-5"],
-    "pct": ["33959-8"],
-    "2524-7": ["2524-7"],
-    "ua": ["5811-5", "5803-2", "5804-0", "5792-7", "5797-1", "5794-3", "5802-4", "5799-2", "5821-4", "13945-1", "25145-4"],
-    "bhcg": ["21198-7"],
-    "bhcg-quant": ["21198-7"],
-    "urine-hcg": ["2106-3"],
-    "acetaminophen": ["3298-7"],
-    "salicylate": ["4024-6"],
-    "ethanol": ["5643-2"],
-    "vbg": ["2746-6", "2021-4", "2705-2", "14627-4", "2524-7", "2823-3", "2951-2", "2345-7", "718-7"],
-    "abg": ["2744-1", "2019-8", "2703-7", "1960-4", "2708-6", "2524-7", "2823-3", "2951-2", "2345-7", "718-7"],
-    "poc-glucose": ["2345-7"],
-    "istat": ["2951-2", "2823-3", "2075-0", "2345-7", "3094-0", "2160-0", "4544-3", "718-7", "2524-7", "2746-6", "2021-4", "14627-4"],
-    "blood-culture": ["600-7"],
-    "urine-culture": ["630-4"]
+    "6690-2": [
+      "6690-2",
+      "718-7",
+      "4544-3",
+      "777-3",
+      "787-2",
+      "789-8",
+      "785-6",
+      "786-4",
+      "751-8",
+      "731-0",
+      "711-2"
+    ],
+    "2160-0": [
+      "2951-2",
+      "2823-3",
+      "2075-0",
+      "1963-8",
+      "33037-3",
+      "3094-0",
+      "2160-0",
+      "98979-8",
+      "2345-7",
+      "17861-6"
+    ],
+    "cmp": [
+      "2951-2",
+      "2823-3",
+      "2075-0",
+      "1963-8",
+      "33037-3",
+      "3094-0",
+      "2160-0",
+      "98979-8",
+      "2345-7",
+      "17861-6",
+      "1751-7",
+      "2885-2",
+      "10834-0",
+      "1920-8",
+      "1742-6",
+      "6768-6",
+      "1975-2"
+    ],
+    "lft": [
+      "1920-8",
+      "1742-6",
+      "6768-6",
+      "2324-2",
+      "1975-2",
+      "1968-7",
+      "1751-7",
+      "2885-2"
+    ],
+    "lipase": [
+      "3040-3",
+      "1798-8"
+    ],
+    "mg": [
+      "19123-9"
+    ],
+    "phos": [
+      "2777-1"
+    ],
+    "ca": [
+      "17861-6",
+      "1994-3"
+    ],
+    "ck": [
+      "2157-6"
+    ],
+    "bhb": [
+      "6873-4"
+    ],
+    "osmo": [
+      "2692-2"
+    ],
+    "ammonia": [
+      "22763-7"
+    ],
+    "ferritin": [
+      "2276-4"
+    ],
+    "ldh": [
+      "14804-9"
+    ],
+    "uric-acid": [
+      "3084-1"
+    ],
+    "67151-1": [
+      "67151-1"
+    ],
+    "89579-7": [
+      "89579-7"
+    ],
+    "bnp": [
+      "30934-4"
+    ],
+    "33762-6": [
+      "33762-6"
+    ],
+    "48065-7": [
+      "48065-7"
+    ],
+    "coag-inr": [
+      "5902-2",
+      "6301-6",
+      "3173-2",
+      "3255-7"
+    ],
+    "tsh": [
+      "3016-3",
+      "3024-7"
+    ],
+    "hba1c": [
+      "4548-4"
+    ],
+    "cortisol": [
+      "2143-6"
+    ],
+    "1988-5": [
+      "1988-5"
+    ],
+    "pct": [
+      "33959-8"
+    ],
+    "2524-7": [
+      "2524-7"
+    ],
+    "ua": [
+      "5811-5",
+      "5803-2",
+      "5804-0",
+      "5792-7",
+      "5797-6",
+      "5794-3",
+      "5802-4",
+      "5799-2",
+      "5821-4",
+      "13945-1",
+      "25145-4"
+    ],
+    "bhcg": [
+      "21198-7"
+    ],
+    "bhcg-quant": [
+      "21198-7"
+    ],
+    "urine-hcg": [
+      "2106-3"
+    ],
+    "acetaminophen": [
+      "3298-7"
+    ],
+    "salicylate": [
+      "4024-6"
+    ],
+    "ethanol": [
+      "5643-2"
+    ],
+    "vbg": [
+      "2746-6",
+      "2021-4",
+      "2705-2",
+      "14627-4",
+      "2524-7",
+      "2823-3",
+      "2951-2",
+      "2345-7",
+      "718-7"
+    ],
+    "abg": [
+      "2744-1",
+      "2019-8",
+      "2703-7",
+      "1960-4",
+      "2708-6",
+      "2524-7",
+      "2823-3",
+      "2951-2",
+      "2345-7",
+      "718-7"
+    ],
+    "poc-glucose": [
+      "2345-7"
+    ],
+    "istat": [
+      "2951-2",
+      "2823-3",
+      "2075-0",
+      "2345-7",
+      "3094-0",
+      "2160-0",
+      "4544-3",
+      "718-7",
+      "2524-7",
+      "2746-6",
+      "2021-4",
+      "14627-4"
+    ],
+    "blood-culture": [
+      "600-7"
+    ],
+    "urine-culture": [
+      "630-4"
+    ]
   },
   "analytes": [
-    {"loinc": "2951-2", "name": "Sodium", "short": "Na", "unit": "mmol/L", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 136, "high": 146}], "critical_low": 120, "critical_high": 158, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2823-3", "name": "Potassium", "short": "K", "unit": "mmol/L", "category": "chemistry", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 3.5, "high": 5.0}], "critical_low": 2.8, "critical_high": 6.2, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2075-0", "name": "Chloride", "short": "Cl", "unit": "mmol/L", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 95, "high": 105}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "1963-8", "name": "Bicarbonate", "short": "HCO3", "unit": "mmol/L", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 22, "high": 28}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "3094-0", "name": "Urea nitrogen (BUN)", "short": "BUN", "unit": "mg/dL", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 7, "high": 18}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2160-0", "name": "Creatinine", "short": "Cr", "unit": "mg/dL", "category": "chemistry", "decimals": 2, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.6, "high": 1.2}], "critical_high": 4.0, "critical_source": "kdigo2012", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2345-7", "name": "Glucose", "short": "Glu", "unit": "mg/dL", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 70, "high": 100, "note": "fasting; random non-fasting below 140"}], "critical_low": 47, "critical_high": 485, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "17861-6", "name": "Calcium, total", "short": "Ca", "unit": "mg/dL", "category": "chemistry", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 8.4, "high": 10.2}], "critical_low": 6.6, "critical_high": 12.9, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "19123-9", "name": "Magnesium", "short": "Mg", "unit": "mg/dL", "category": "chemistry", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 1.5, "high": 2.0}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2777-1", "name": "Phosphate (inorganic phosphorus)", "short": "PO4", "unit": "mg/dL", "category": "chemistry", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 3.0, "high": 4.5}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "1920-8", "name": "Aspartate aminotransferase", "short": "AST", "unit": "U/L", "category": "liver", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 12, "high": 38}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "1742-6", "name": "Alanine aminotransferase", "short": "ALT", "unit": "U/L", "category": "liver", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 10, "high": 40}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "6768-6", "name": "Alkaline phosphatase", "short": "ALP", "unit": "U/L", "category": "liver", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 25, "high": 100}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "1975-2", "name": "Bilirubin, total", "short": "Bili", "unit": "mg/dL", "category": "liver", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.1, "high": 1.0}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "1968-7", "name": "Bilirubin, direct", "short": "DBili", "unit": "mg/dL", "category": "liver", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.0, "high": 0.3}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "1751-7", "name": "Albumin", "short": "Alb", "unit": "g/dL", "category": "liver", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 3.5, "high": 5.5}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2885-2", "name": "Protein, total", "short": "TP", "unit": "g/dL", "category": "liver", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 6.0, "high": 7.8}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "1798-8", "name": "Amylase", "short": "Amy", "unit": "U/L", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 25, "high": 125}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "3040-3", "name": "Lipase", "short": "Lip", "unit": "U/L", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 13, "high": 60}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2157-6", "name": "Creatine kinase", "short": "CK", "unit": "U/L", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "male", "age_min": 18, "age_max": 120, "low": 25, "high": 90}, {"sex": "female", "age_min": 18, "age_max": 120, "low": 10, "high": 70}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "14804-9", "name": "Lactate dehydrogenase", "short": "LDH", "unit": "U/L", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 45, "high": 200}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2692-2", "name": "Osmolality, serum", "short": "Osm", "unit": "mosm/kg", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 275, "high": 295}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "3084-1", "name": "Uric acid", "short": "UA", "unit": "mg/dL", "category": "chemistry", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 3.0, "high": 8.2}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2276-4", "name": "Ferritin", "short": "Ferr", "unit": "ng/mL", "category": "haematology", "decimals": 0, "ranges": [{"sex": "male", "age_min": 18, "age_max": 120, "low": 20, "high": 250}, {"sex": "female", "age_min": 18, "age_max": 120, "low": 10, "high": 120}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "1841-5", "name": "Ammonia", "short": "NH3", "unit": "ug/dL", "category": "chemistry", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 15, "high": 45}], "source": "https://medlineplus.gov/ency/article/003506.htm", "source_key": "mlp_ammonia", "reviewed_at": "2026-10-19"},
-    {"loinc": "2524-7", "name": "Lactate", "short": "Lac", "unit": "mmol/L", "category": "chemistry", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.5, "high": 2.2}], "critical_high": 4.0, "critical_source": "sepsis3", "critical_note": "Sepsis-3 uses above 2 mmol/L for septic shock; 4 mmol/L is the Surviving Sepsis resuscitation trigger", "source": "https://medlineplus.gov/ency/article/003507.htm", "source_key": "mlp_lactate", "reviewed_at": "2026-10-19"},
-    {"loinc": "53060-9", "name": "Beta-hydroxybutyrate (blood ketones)", "short": "BHB", "unit": "mmol/L", "category": "chemistry", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.0, "high": 0.6}], "critical_high": 3.0, "critical_source": "jbds2023", "source": "https://abcd.care/sites/default/files/site_uploads/JBDS_Guidelines_Current/JBDS_02_DKA_Guideline_with_QR_code_March_2023.pdf", "source_key": "jbds2023", "reviewed_at": "2026-10-19"},
-    {"loinc": "1988-5", "name": "C-reactive protein", "short": "CRP", "unit": "mg/L", "category": "inflammatory", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.0, "high": 3.0, "note": "MedlinePlus: most healthy adults below 0.3 mg/dL (3 mg/L)"}], "source": "https://medlineplus.gov/ency/article/003356.htm", "source_key": "mlp_crp", "reviewed_at": "2026-10-19"},
-    {"loinc": "33959-8", "name": "Procalcitonin", "short": "PCT", "unit": "ng/mL", "category": "inflammatory", "decimals": 2, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.0, "high": 0.5, "note": "0.5 ng/mL sepsis-likely threshold; 2 ng/mL high likelihood"}], "critical_high": 2.0, "critical_source": "schuetz2011", "source": "https://doi.org/10.1186/1741-7015-9-107", "source_key": "schuetz2011", "reviewed_at": "2026-10-19"},
-    {"loinc": "67151-1", "name": "Troponin T, high sensitivity", "short": "hs-cTnT", "unit": "ng/L", "category": "cardiac", "decimals": 0, "assay": "hs_ctnt", "ranges": [{"sex": "female", "age_min": 18, "age_max": 120, "low": 0, "high": 9}, {"sex": "male", "age_min": 18, "age_max": 120, "low": 0, "high": 16}, {"sex": "any", "age_min": 18, "age_max": 120, "low": 0, "high": 14}], "critical_high": 52, "critical_source": "esc2020_nsteacs", "source": "https://doi.org/10.1016/j.jacc.2013.12.032", "source_key": "gore2014", "reviewed_at": "2026-10-19"},
-    {"loinc": "89579-7", "name": "Troponin I, high sensitivity", "short": "hs-cTnI", "unit": "ng/L", "category": "cardiac", "decimals": 0, "assay": "hs_ctni", "ranges": [{"sex": "female", "age_min": 18, "age_max": 120, "low": 0, "high": 16}, {"sex": "male", "age_min": 18, "age_max": 120, "low": 0, "high": 34}, {"sex": "any", "age_min": 18, "age_max": 120, "low": 0, "high": 26}], "critical_high": 64, "critical_source": "esc2020_nsteacs", "source": "https://doi.org/10.1373/clinchem.2011.165795", "source_key": "apple2012", "reviewed_at": "2026-10-19"},
-    {"loinc": "30934-4", "name": "B-type natriuretic peptide", "short": "BNP", "unit": "pg/mL", "category": "cardiac", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0, "high": 100, "note": "MedlinePlus: below 100 pg/mL suggests no heart failure; ESC 2021 non-acute upper limit 35 pg/mL"}], "source": "https://medlineplus.gov/ency/article/007509.htm", "source_key": "mlp_bnp", "reviewed_at": "2026-10-19"},
-    {"loinc": "33762-6", "name": "NT-proBNP", "short": "NT-proBNP", "unit": "pg/mL", "category": "cardiac", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0, "high": 125}], "source": "https://doi.org/10.1093/eurheartj/ehab368", "source_key": "esc2021_hf", "reviewed_at": "2026-10-19"},
-    {"loinc": "48065-7", "name": "D-dimer (FEU)", "short": "D-dimer", "unit": "ug/L", "category": "coagulation", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 50, "low": 0, "high": 500}, {"sex": "any", "age_min": 51, "age_max": 120, "low": 0, "high": 500, "age_adjusted_rule": "age_x10", "note": "ADJUST-PE: cutoff = age x 10 ug/L for patients over 50"}], "source": "https://doi.org/10.1001/jama.2014.2135", "source_key": "righini2014", "reviewed_at": "2026-10-19"},
-    {"loinc": "6690-2", "name": "Leukocytes (WBC)", "short": "WBC", "unit": "10*9/L", "category": "haematology", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 4.5, "high": 11.0}], "critical_low": 2.0, "critical_high": 37.0, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "751-8", "name": "Neutrophils, absolute", "short": "Neut", "unit": "10*9/L", "category": "haematology", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 1.8, "high": 7.7, "note": "derived: 40 to 70 percent of the NBME leukocyte range"}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "731-0", "name": "Lymphocytes, absolute", "short": "Lymph", "unit": "10*9/L", "category": "haematology", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 1.0, "high": 4.4, "note": "derived: 20 to 40 percent of the NBME leukocyte range"}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "718-7", "name": "Haemoglobin", "short": "Hb", "unit": "g/dL", "category": "haematology", "decimals": 1, "ranges": [{"sex": "male", "age_min": 18, "age_max": 120, "low": 13.5, "high": 17.5}, {"sex": "female", "age_min": 18, "age_max": 120, "low": 12.0, "high": 16.0}], "critical_low": 6.6, "critical_high": 19.9, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "4544-3", "name": "Haematocrit", "short": "Hct", "unit": "%", "category": "haematology", "decimals": 0, "ranges": [{"sex": "male", "age_min": 18, "age_max": 120, "low": 41, "high": 53}, {"sex": "female", "age_min": 18, "age_max": 120, "low": 36, "high": 46}], "critical_low": 18, "critical_high": 61, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "777-3", "name": "Platelets", "short": "Plt", "unit": "10*9/L", "category": "haematology", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 150, "high": 400}], "critical_low": 37, "critical_high": 910, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "787-2", "name": "Mean corpuscular volume", "short": "MCV", "unit": "fL", "category": "haematology", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 80, "high": 100}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "4679-7", "name": "Reticulocytes", "short": "Retic", "unit": "%", "category": "haematology", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.5, "high": 1.5}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "4537-7", "name": "Erythrocyte sedimentation rate", "short": "ESR", "unit": "mm/h", "category": "inflammatory", "decimals": 0, "ranges": [{"sex": "male", "age_min": 18, "age_max": 120, "low": 0, "high": 15}, {"sex": "female", "age_min": 18, "age_max": 120, "low": 0, "high": 20}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "5902-2", "name": "Prothrombin time", "short": "PT", "unit": "s", "category": "coagulation", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 11, "high": 15}], "critical_high": 27, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "6301-6", "name": "INR", "short": "INR", "unit": "{ratio}", "category": "coagulation", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.8, "high": 1.1, "note": "not on anticoagulants"}], "source": "https://medlineplus.gov/ency/article/003652.htm", "source_key": "mlp_pt", "reviewed_at": "2026-10-19"},
-    {"loinc": "3173-2", "name": "Activated partial thromboplastin time", "short": "aPTT", "unit": "s", "category": "coagulation", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 25, "high": 40}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "3255-7", "name": "Fibrinogen", "short": "Fib", "unit": "mg/dL", "category": "coagulation", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 200, "high": 400}], "source": "https://medlineplus.gov/ency/article/003650.htm", "source_key": "mlp_fib", "reviewed_at": "2026-10-19"},
-    {"loinc": "3016-3", "name": "Thyroid stimulating hormone", "short": "TSH", "unit": "m[IU]/L", "category": "endocrine", "decimals": 2, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 0.4, "high": 4.0}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "3026-2", "name": "Thyroxine (T4), total", "short": "T4", "unit": "ug/dL", "category": "endocrine", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 5, "high": 12}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2143-6", "name": "Cortisol, 0800 h", "short": "Cort", "unit": "ug/dL", "category": "endocrine", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 5, "high": 23}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "4548-4", "name": "Haemoglobin A1c", "short": "HbA1c", "unit": "%", "category": "endocrine", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 4.0, "high": 6.0, "note": "NBME: 6 percent or less"}], "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "21198-7", "name": "Beta-hCG, quantitative", "short": "hCG", "unit": "m[IU]/mL", "category": "endocrine", "decimals": 0, "ranges": [{"sex": "female", "age_min": 12, "age_max": 120, "low": 0, "high": 5, "note": "non-pregnant"}, {"sex": "male", "age_min": 12, "age_max": 120, "low": 0, "high": 2}], "source": "https://medlineplus.gov/ency/article/003510.htm", "source_key": "mlp_hcg", "reviewed_at": "2026-10-19"},
-    {"loinc": "2106-3", "name": "hCG, urine, qualitative", "short": "uhCG", "unit": "", "category": "endocrine", "qualitative": true, "normal_value": "Negative", "source": "https://medlineplus.gov/ency/article/003510.htm", "source_key": "mlp_hcg", "reviewed_at": "2026-10-19"},
-    {"loinc": "2744-1", "name": "pH, arterial", "short": "pH", "unit": "[pH]", "category": "blood_gas", "decimals": 2, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 7.35, "high": 7.45}], "critical_low": 7.21, "critical_high": 7.59, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2019-8", "name": "pCO2, arterial", "short": "PaCO2", "unit": "mm[Hg]", "category": "blood_gas", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 33, "high": 45}], "critical_low": 19, "critical_high": 67, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "2703-7", "name": "pO2, arterial", "short": "PaO2", "unit": "mm[Hg]", "category": "blood_gas", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 75, "high": 105}], "critical_low": 43, "critical_source": "kost1990", "source": "https://www.nbme.org/laboratory-values/", "source_key": "nbme", "reviewed_at": "2026-10-19"},
-    {"loinc": "1960-4", "name": "Bicarbonate, arterial", "short": "HCO3a", "unit": "mmol/L", "category": "blood_gas", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 22, "high": 28}], "source": "https://medlineplus.gov/ency/article/003855.htm", "source_key": "mlp_bloodgas", "reviewed_at": "2026-10-19"},
-    {"loinc": "2708-6", "name": "Oxygen saturation, arterial", "short": "SaO2", "unit": "%", "category": "blood_gas", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 94, "high": 100}], "source": "https://medlineplus.gov/ency/article/003855.htm", "source_key": "mlp_bloodgas", "reviewed_at": "2026-10-19"},
-    {"loinc": "2746-6", "name": "pH, venous", "short": "pHv", "unit": "[pH]", "category": "blood_gas", "decimals": 2, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 7.32, "high": 7.42, "note": "arterial range shifted by the 0.03 venoarterial difference"}], "source": "https://doi.org/10.1111/resp.12225", "source_key": "byrne2014", "reviewed_at": "2026-10-19"},
-    {"loinc": "2021-4", "name": "pCO2, venous", "short": "PvCO2", "unit": "mm[Hg]", "category": "blood_gas", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 38, "high": 52, "note": "arterial range plus the venoarterial bias; Byrne 2014 shows venous pCO2 only screens for hypercapnia"}], "source": "https://doi.org/10.1111/resp.12225", "source_key": "byrne2014", "reviewed_at": "2026-10-19"},
-    {"loinc": "2705-2", "name": "pO2, venous", "short": "PvO2", "unit": "mm[Hg]", "category": "blood_gas", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 30, "high": 50, "note": "arterial PO2 about 36.9 mmHg above venous (Byrne 2014)"}], "source": "https://doi.org/10.1111/resp.12225", "source_key": "byrne2014", "reviewed_at": "2026-10-19"},
-    {"loinc": "14627-4", "name": "Bicarbonate, venous", "short": "HCO3v", "unit": "mmol/L", "category": "blood_gas", "decimals": 0, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 21, "high": 27, "note": "arterial range shifted by the 1.2 mmol/L venoarterial difference"}], "source": "https://doi.org/10.1177/102490791302000307", "source_key": "kelly2013", "reviewed_at": "2026-10-19"},
-    {"loinc": "5811-5", "name": "Urine specific gravity", "short": "uSG", "unit": "{ratio}", "category": "urine", "decimals": 3, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 1.005, "high": 1.030}], "source": "https://medlineplus.gov/ency/article/003587.htm", "source_key": "mlp_usg", "reviewed_at": "2026-10-19"},
-    {"loinc": "5803-2", "name": "Urine pH", "short": "upH", "unit": "[pH]", "category": "urine", "decimals": 1, "ranges": [{"sex": "any", "age_min": 18, "age_max": 120, "low": 4.6, "high": 8.0}], "source": "https://medlineplus.gov/ency/article/003583.htm", "source_key": "mlp_uph", "reviewed_at": "2026-10-19"},
-    {"loinc": "5804-0", "name": "Urine protein, dipstick", "short": "uProt", "unit": "", "category": "urine", "qualitative": true, "normal_value": "Negative", "source": "https://medlineplus.gov/ency/article/003579.htm", "source_key": "mlp_ua", "reviewed_at": "2026-10-19"},
-    {"loinc": "5792-7", "name": "Urine glucose, dipstick", "short": "uGlu", "unit": "", "category": "urine", "qualitative": true, "normal_value": "Negative", "source": "https://medlineplus.gov/ency/article/003579.htm", "source_key": "mlp_ua", "reviewed_at": "2026-10-19"},
-    {"loinc": "5797-1", "name": "Urine ketones, dipstick", "short": "uKet", "unit": "", "category": "urine", "qualitative": true, "normal_value": "Negative", "source": "https://medlineplus.gov/ency/article/003579.htm", "source_key": "mlp_ua", "reviewed_at": "2026-10-19"},
-    {"loinc": "5794-3", "name": "Urine blood (haemoglobin), dipstick", "short": "uBld", "unit": "", "category": "urine", "qualitative": true, "normal_value": "Negative", "source": "https://medlineplus.gov/ency/article/003579.htm", "source_key": "mlp_ua", "reviewed_at": "2026-10-19"},
-    {"loinc": "5802-4", "name": "Urine nitrite", "short": "uNit", "unit": "", "category": "urine", "qualitative": true, "normal_value": "Negative", "source": "https://medlineplus.gov/ency/article/003579.htm", "source_key": "mlp_ua", "reviewed_at": "2026-10-19"},
-    {"loinc": "5799-2", "name": "Urine leukocyte esterase", "short": "uLE", "unit": "", "category": "urine", "qualitative": true, "normal_value": "Negative", "source": "https://medlineplus.gov/ency/article/003579.htm", "source_key": "mlp_ua", "reviewed_at": "2026-10-19", "note": "MedlinePlus lists white blood cells as not normally found; leukocyte esterase is the dipstick surrogate"},
-    {"loinc": "5821-4", "name": "Urine white blood cells, microscopy", "short": "uWBC", "unit": "/[HPF]", "category": "urine", "qualitative": true, "normal_value": "None seen", "source": "https://medlineplus.gov/ency/article/003579.htm", "source_key": "mlp_ua", "reviewed_at": "2026-10-19"},
-    {"loinc": "13945-1", "name": "Urine red blood cells, microscopy", "short": "uRBC", "unit": "/[HPF]", "category": "urine", "qualitative": true, "normal_value": "None seen", "source": "https://medlineplus.gov/ency/article/003579.htm", "source_key": "mlp_ua", "reviewed_at": "2026-10-19"},
-    {"loinc": "25145-4", "name": "Urine bacteria, microscopy", "short": "uBact", "unit": "/[HPF]", "category": "urine", "qualitative": true, "normal_value": "None seen", "source": "https://medlineplus.gov/ency/article/003579.htm", "source_key": "mlp_ua", "reviewed_at": "2026-10-19"},
-    {"loinc": "3298-7", "name": "Acetaminophen (paracetamol), serum", "short": "APAP", "unit": "mg/L", "category": "toxicology", "decimals": 0, "ranges": [{"sex": "any", "age_min": 12, "age_max": 120, "low": 0, "high": 0, "note": "not detected in a person not taking paracetamol; any measurable level is reported H and interpreted against the treatment nomogram, never against a reference interval"}], "critical_high": 100, "critical_source": "mhra2012", "critical_note": "UK treatment line: 100 mg/L at 4 h post-ingestion falling to 15 mg/L at 15 h; the engine evaluates the time-specific line", "source": "https://www.gov.uk/drug-safety-update/treating-paracetamol-overdose-with-intravenous-acetylcysteine-new-guidance", "source_key": "mhra2012", "reviewed_at": "2026-10-19"},
-    {"loinc": "4024-6", "name": "Salicylate, serum", "short": "Sal", "unit": "mg/L", "category": "toxicology", "decimals": 0, "ranges": [{"sex": "any", "age_min": 12, "age_max": 120, "low": 0, "high": 300, "note": "therapeutic range 150 to 300 mg/L (1.1 to 2.2 mmol/L) in a treated patient; not detected otherwise"}], "critical_high": 600, "critical_source": "litfl_salicylate", "critical_note": "600 mg/L (4.4 mmol/L) is the haemodialysis threshold when the level rises despite decontamination and alkalinisation", "source": "https://litfl.com/salicylate-toxicity/", "source_key": "litfl_salicylate", "reviewed_at": "2026-10-19"},
-    {"loinc": "5643-2", "name": "Ethanol, blood", "short": "EtOH", "unit": "mg/dL", "category": "toxicology", "decimals": 0, "ranges": [{"sex": "any", "age_min": 12, "age_max": 120, "low": 0, "high": 10, "note": "not detected in an abstinent person (MedlinePlus toxicology screen: negative means not present); assay reporting limit 10 mg/dL"}], "critical_high": 80, "critical_source": "uk_rta1988", "critical_note": "80 mg/100 mL is the UK driving limit; the engine flags HH above it as an interpretive threshold, not a laboratory critical limit", "source": "https://medlineplus.gov/ency/article/003578.htm", "source_key": "mlp_tox", "reviewed_at": "2026-10-19"},
-    {"loinc": "600-7", "name": "Blood culture", "short": "BCx", "unit": "", "category": "microbiology", "qualitative": true, "normal_value": "No growth", "source": "https://medlineplus.gov/ency/article/003744.htm", "source_key": "mlp_bcx", "reviewed_at": "2026-10-19"},
-    {"loinc": "630-4", "name": "Urine culture", "short": "UCx", "unit": "", "category": "microbiology", "qualitative": true, "normal_value": "No significant growth", "source": "https://medlineplus.gov/ency/article/003751.htm", "source_key": "mlp_ucx", "reviewed_at": "2026-10-19", "note": "MedlinePlus: results in 24 to 48 hours"}
-  ]
+    {
+      "loinc": "2951-2",
+      "name": "Sodium",
+      "short": "Na",
+      "unit": "mmol/L",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 136,
+          "high": 146
+        }
+      ],
+      "critical_low": 120,
+      "critical_high": 158,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2823-3",
+      "name": "Potassium",
+      "short": "K",
+      "unit": "mmol/L",
+      "category": "chemistry",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 3.5,
+          "high": 5.0
+        }
+      ],
+      "critical_low": 2.8,
+      "critical_high": 6.2,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2075-0",
+      "name": "Chloride",
+      "short": "Cl",
+      "unit": "mmol/L",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 95,
+          "high": 105
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "1963-8",
+      "name": "Bicarbonate",
+      "short": "HCO3",
+      "unit": "mmol/L",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 22,
+          "high": 28
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "3094-0",
+      "name": "Urea nitrogen (BUN)",
+      "short": "BUN",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 7,
+          "high": 18
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2160-0",
+      "name": "Creatinine",
+      "short": "Cr",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 2,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.6,
+          "high": 1.2
+        }
+      ],
+      "critical_high": 4.0,
+      "critical_source": "kdigo2012",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2345-7",
+      "name": "Glucose",
+      "short": "Glu",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 70,
+          "high": 100,
+          "note": "fasting; random non-fasting below 140"
+        }
+      ],
+      "critical_low": 47,
+      "critical_high": 485,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "17861-6",
+      "name": "Calcium, total",
+      "short": "Ca",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 8.4,
+          "high": 10.2
+        }
+      ],
+      "critical_low": 6.6,
+      "critical_high": 12.9,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "19123-9",
+      "name": "Magnesium",
+      "short": "Mg",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 1.5,
+          "high": 2.0
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2777-1",
+      "name": "Phosphate (inorganic phosphorus)",
+      "short": "PO4",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 3.0,
+          "high": 4.5
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "1920-8",
+      "name": "Aspartate aminotransferase",
+      "short": "AST",
+      "unit": "U/L",
+      "category": "liver",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 12,
+          "high": 38
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "1742-6",
+      "name": "Alanine aminotransferase",
+      "short": "ALT",
+      "unit": "U/L",
+      "category": "liver",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 10,
+          "high": 40
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "6768-6",
+      "name": "Alkaline phosphatase",
+      "short": "ALP",
+      "unit": "U/L",
+      "category": "liver",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 25,
+          "high": 100
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "1975-2",
+      "name": "Bilirubin, total",
+      "short": "Bili",
+      "unit": "mg/dL",
+      "category": "liver",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.1,
+          "high": 1.0
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "1968-7",
+      "name": "Bilirubin, direct",
+      "short": "DBili",
+      "unit": "mg/dL",
+      "category": "liver",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.0,
+          "high": 0.3
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "1751-7",
+      "name": "Albumin",
+      "short": "Alb",
+      "unit": "g/dL",
+      "category": "liver",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 3.5,
+          "high": 5.5
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2885-2",
+      "name": "Protein, total",
+      "short": "TP",
+      "unit": "g/dL",
+      "category": "liver",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 6.0,
+          "high": 7.8
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "1798-8",
+      "name": "Amylase",
+      "short": "Amy",
+      "unit": "U/L",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 25,
+          "high": 125
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "3040-3",
+      "name": "Lipase",
+      "short": "Lip",
+      "unit": "U/L",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 13,
+          "high": 60
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2157-6",
+      "name": "Creatine kinase",
+      "short": "CK",
+      "unit": "U/L",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 25,
+          "high": 90
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 10,
+          "high": 70
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "14804-9",
+      "name": "Lactate dehydrogenase",
+      "short": "LDH",
+      "unit": "U/L",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 45,
+          "high": 200
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2692-2",
+      "name": "Osmolality, serum",
+      "short": "Osm",
+      "unit": "mosm/kg",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 275,
+          "high": 295
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "3084-1",
+      "name": "Uric acid",
+      "short": "UA",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 3.0,
+          "high": 8.2
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2276-4",
+      "name": "Ferritin",
+      "short": "Ferr",
+      "unit": "ng/mL",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 20,
+          "high": 250
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 10,
+          "high": 120
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "22763-7",
+      "name": "Ammonia",
+      "short": "NH3",
+      "unit": "ug/dL",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 15,
+          "high": 45
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003506.htm",
+      "source_key": "mlp_ammonia",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2524-7",
+      "name": "Lactate",
+      "short": "Lac",
+      "unit": "mmol/L",
+      "category": "chemistry",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.5,
+          "high": 2.2
+        }
+      ],
+      "critical_high": 4.0,
+      "critical_source": "sepsis3",
+      "critical_note": "Sepsis-3 uses above 2 mmol/L for septic shock; 4 mmol/L is the Surviving Sepsis resuscitation trigger",
+      "source": "https://medlineplus.gov/ency/article/003507.htm",
+      "source_key": "mlp_lactate",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "6873-4",
+      "name": "Beta-hydroxybutyrate (blood ketones)",
+      "short": "BHB",
+      "unit": "mmol/L",
+      "category": "chemistry",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.0,
+          "high": 0.6
+        }
+      ],
+      "critical_high": 3.0,
+      "critical_source": "jbds2023",
+      "source": "https://abcd.care/sites/default/files/site_uploads/JBDS_Guidelines_Current/JBDS_02_DKA_Guideline_with_QR_code_March_2023.pdf",
+      "source_key": "jbds2023",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "1988-5",
+      "name": "C-reactive protein",
+      "short": "CRP",
+      "unit": "mg/L",
+      "category": "inflammatory",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.0,
+          "high": 3.0,
+          "note": "MedlinePlus: most healthy adults below 0.3 mg/dL (3 mg/L)"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003356.htm",
+      "source_key": "mlp_crp",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "33959-8",
+      "name": "Procalcitonin",
+      "short": "PCT",
+      "unit": "ng/mL",
+      "category": "inflammatory",
+      "decimals": 2,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.0,
+          "high": 0.5,
+          "note": "0.5 ng/mL sepsis-likely threshold; 2 ng/mL high likelihood"
+        }
+      ],
+      "critical_high": 2.0,
+      "critical_source": "schuetz2011",
+      "source": "https://doi.org/10.1186/1741-7015-9-107",
+      "source_key": "schuetz2011",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "67151-1",
+      "name": "Troponin T, high sensitivity",
+      "short": "hs-cTnT",
+      "unit": "ng/L",
+      "category": "cardiac",
+      "decimals": 0,
+      "assay": "hs_ctnt",
+      "ranges": [
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 9
+        },
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 16
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 14
+        }
+      ],
+      "critical_high": 52,
+      "critical_source": "esc2020_nsteacs",
+      "source": "https://doi.org/10.1016/j.jacc.2013.12.032",
+      "source_key": "gore2014",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "89579-7",
+      "name": "Troponin I, high sensitivity",
+      "short": "hs-cTnI",
+      "unit": "ng/L",
+      "category": "cardiac",
+      "decimals": 0,
+      "assay": "hs_ctni",
+      "ranges": [
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 16
+        },
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 34
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 26
+        }
+      ],
+      "critical_high": 64,
+      "critical_source": "esc2020_nsteacs",
+      "source": "https://doi.org/10.1373/clinchem.2011.165795",
+      "source_key": "apple2012",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "30934-4",
+      "name": "B-type natriuretic peptide",
+      "short": "BNP",
+      "unit": "pg/mL",
+      "category": "cardiac",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 100,
+          "note": "MedlinePlus: below 100 pg/mL suggests no heart failure; ESC 2021 non-acute upper limit 35 pg/mL"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/007509.htm",
+      "source_key": "mlp_bnp",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "33762-6",
+      "name": "NT-proBNP",
+      "short": "NT-proBNP",
+      "unit": "pg/mL",
+      "category": "cardiac",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 125
+        }
+      ],
+      "source": "https://doi.org/10.1093/eurheartj/ehab368",
+      "source_key": "esc2021_hf",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "48065-7",
+      "name": "D-dimer (FEU)",
+      "short": "D-dimer",
+      "unit": "ug/L",
+      "category": "coagulation",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 50,
+          "low": 0,
+          "high": 500
+        },
+        {
+          "sex": "any",
+          "age_min": 51,
+          "age_max": 120,
+          "low": 0,
+          "high": 500,
+          "age_adjusted_rule": "age_x10",
+          "note": "ADJUST-PE: cutoff = age x 10 ug/L for patients over 50"
+        }
+      ],
+      "source": "https://doi.org/10.1001/jama.2014.2135",
+      "source_key": "righini2014",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "6690-2",
+      "name": "Leukocytes (WBC)",
+      "short": "WBC",
+      "unit": "10*9/L",
+      "category": "haematology",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 4.5,
+          "high": 11.0
+        }
+      ],
+      "critical_low": 2.0,
+      "critical_high": 37.0,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "751-8",
+      "name": "Neutrophils, absolute",
+      "short": "Neut",
+      "unit": "10*9/L",
+      "category": "haematology",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 1.8,
+          "high": 7.7,
+          "note": "derived: 40 to 70 percent of the NBME leukocyte range"
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "731-0",
+      "name": "Lymphocytes, absolute",
+      "short": "Lymph",
+      "unit": "10*9/L",
+      "category": "haematology",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 1.0,
+          "high": 4.4,
+          "note": "derived: 20 to 40 percent of the NBME leukocyte range"
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "718-7",
+      "name": "Haemoglobin",
+      "short": "Hb",
+      "unit": "g/dL",
+      "category": "haematology",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 13.5,
+          "high": 17.5
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 12.0,
+          "high": 16.0
+        }
+      ],
+      "critical_low": 6.6,
+      "critical_high": 19.9,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "4544-3",
+      "name": "Haematocrit",
+      "short": "Hct",
+      "unit": "%",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 41,
+          "high": 53
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 36,
+          "high": 46
+        }
+      ],
+      "critical_low": 18,
+      "critical_high": 61,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "777-3",
+      "name": "Platelets",
+      "short": "Plt",
+      "unit": "10*9/L",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 150,
+          "high": 400
+        }
+      ],
+      "critical_low": 37,
+      "critical_high": 910,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "787-2",
+      "name": "Mean corpuscular volume",
+      "short": "MCV",
+      "unit": "fL",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 80,
+          "high": 100
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "4679-7",
+      "name": "Reticulocytes",
+      "short": "Retic",
+      "unit": "%",
+      "category": "haematology",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.5,
+          "high": 1.5
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "4537-7",
+      "name": "Erythrocyte sedimentation rate",
+      "short": "ESR",
+      "unit": "mm/h",
+      "category": "inflammatory",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 15
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 20
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "5902-2",
+      "name": "Prothrombin time",
+      "short": "PT",
+      "unit": "s",
+      "category": "coagulation",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 11,
+          "high": 15
+        }
+      ],
+      "critical_high": 27,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "6301-6",
+      "name": "INR",
+      "short": "INR",
+      "unit": "{ratio}",
+      "category": "coagulation",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.8,
+          "high": 1.1,
+          "note": "not on anticoagulants"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003652.htm",
+      "source_key": "mlp_pt",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "3173-2",
+      "name": "Activated partial thromboplastin time",
+      "short": "aPTT",
+      "unit": "s",
+      "category": "coagulation",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 25,
+          "high": 40
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "3255-7",
+      "name": "Fibrinogen",
+      "short": "Fib",
+      "unit": "mg/dL",
+      "category": "coagulation",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 200,
+          "high": 400
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003650.htm",
+      "source_key": "mlp_fib",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "3016-3",
+      "name": "Thyroid stimulating hormone",
+      "short": "TSH",
+      "unit": "m[IU]/L",
+      "category": "endocrine",
+      "decimals": 2,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.4,
+          "high": 4.0
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "3026-2",
+      "name": "Thyroxine (T4), total",
+      "short": "T4",
+      "unit": "ug/dL",
+      "category": "endocrine",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 5,
+          "high": 12
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2143-6",
+      "name": "Cortisol, 0800 h",
+      "short": "Cort",
+      "unit": "ug/dL",
+      "category": "endocrine",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 5,
+          "high": 23
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "4548-4",
+      "name": "Haemoglobin A1c",
+      "short": "HbA1c",
+      "unit": "%",
+      "category": "endocrine",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 4.0,
+          "high": 6.0,
+          "note": "NBME: 6 percent or less"
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "21198-7",
+      "name": "Beta-hCG, quantitative",
+      "short": "hCG",
+      "unit": "m[IU]/mL",
+      "category": "endocrine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "female",
+          "age_min": 12,
+          "age_max": 120,
+          "low": 0,
+          "high": 5,
+          "note": "non-pregnant"
+        },
+        {
+          "sex": "male",
+          "age_min": 12,
+          "age_max": 120,
+          "low": 0,
+          "high": 2
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003510.htm",
+      "source_key": "mlp_hcg",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2106-3",
+      "name": "hCG, urine, qualitative",
+      "short": "uhCG",
+      "unit": "",
+      "category": "endocrine",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003510.htm",
+      "source_key": "mlp_hcg",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2744-1",
+      "name": "pH, arterial",
+      "short": "pH",
+      "unit": "[pH]",
+      "category": "blood_gas",
+      "decimals": 2,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 7.35,
+          "high": 7.45
+        }
+      ],
+      "critical_low": 7.21,
+      "critical_high": 7.59,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2019-8",
+      "name": "pCO2, arterial",
+      "short": "PaCO2",
+      "unit": "mm[Hg]",
+      "category": "blood_gas",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 33,
+          "high": 45
+        }
+      ],
+      "critical_low": 19,
+      "critical_high": 67,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2703-7",
+      "name": "pO2, arterial",
+      "short": "PaO2",
+      "unit": "mm[Hg]",
+      "category": "blood_gas",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 75,
+          "high": 105
+        }
+      ],
+      "critical_low": 43,
+      "critical_source": "kost1990",
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "1960-4",
+      "name": "Bicarbonate, arterial",
+      "short": "HCO3a",
+      "unit": "mmol/L",
+      "category": "blood_gas",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 22,
+          "high": 28
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003855.htm",
+      "source_key": "mlp_bloodgas",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2708-6",
+      "name": "Oxygen saturation, arterial",
+      "short": "SaO2",
+      "unit": "%",
+      "category": "blood_gas",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 94,
+          "high": 100
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003855.htm",
+      "source_key": "mlp_bloodgas",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2746-6",
+      "name": "pH, venous",
+      "short": "pHv",
+      "unit": "[pH]",
+      "category": "blood_gas",
+      "decimals": 2,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 7.32,
+          "high": 7.42,
+          "note": "arterial range shifted by the 0.03 venoarterial difference"
+        }
+      ],
+      "source": "https://doi.org/10.1111/resp.12225",
+      "source_key": "byrne2014",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2021-4",
+      "name": "pCO2, venous",
+      "short": "PvCO2",
+      "unit": "mm[Hg]",
+      "category": "blood_gas",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 38,
+          "high": 52,
+          "note": "arterial range plus the venoarterial bias; Byrne 2014 shows venous pCO2 only screens for hypercapnia"
+        }
+      ],
+      "source": "https://doi.org/10.1111/resp.12225",
+      "source_key": "byrne2014",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "2705-2",
+      "name": "pO2, venous",
+      "short": "PvO2",
+      "unit": "mm[Hg]",
+      "category": "blood_gas",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 30,
+          "high": 50,
+          "note": "arterial PO2 about 36.9 mmHg above venous (Byrne 2014)"
+        }
+      ],
+      "source": "https://doi.org/10.1111/resp.12225",
+      "source_key": "byrne2014",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "14627-4",
+      "name": "Bicarbonate, venous",
+      "short": "HCO3v",
+      "unit": "mmol/L",
+      "category": "blood_gas",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 21,
+          "high": 27,
+          "note": "arterial range shifted by the 1.2 mmol/L venoarterial difference"
+        }
+      ],
+      "source": "https://doi.org/10.1177/102490791302000307",
+      "source_key": "kelly2013",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "5811-5",
+      "name": "Urine specific gravity",
+      "short": "uSG",
+      "unit": "{ratio}",
+      "category": "urine",
+      "decimals": 3,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 1.005,
+          "high": 1.03
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003587.htm",
+      "source_key": "mlp_usg",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "5803-2",
+      "name": "Urine pH",
+      "short": "upH",
+      "unit": "[pH]",
+      "category": "urine",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 4.6,
+          "high": 8.0
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003583.htm",
+      "source_key": "mlp_uph",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "5804-0",
+      "name": "Urine protein, dipstick",
+      "short": "uProt",
+      "unit": "",
+      "category": "urine",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003579.htm",
+      "source_key": "mlp_ua",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "5792-7",
+      "name": "Urine glucose, dipstick",
+      "short": "uGlu",
+      "unit": "",
+      "category": "urine",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003579.htm",
+      "source_key": "mlp_ua",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "5797-6",
+      "name": "Urine ketones, dipstick",
+      "short": "uKet",
+      "unit": "",
+      "category": "urine",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003579.htm",
+      "source_key": "mlp_ua",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "5794-3",
+      "name": "Urine blood (haemoglobin), dipstick",
+      "short": "uBld",
+      "unit": "",
+      "category": "urine",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003579.htm",
+      "source_key": "mlp_ua",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "5802-4",
+      "name": "Urine nitrite",
+      "short": "uNit",
+      "unit": "",
+      "category": "urine",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003579.htm",
+      "source_key": "mlp_ua",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "5799-2",
+      "name": "Urine leukocyte esterase",
+      "short": "uLE",
+      "unit": "",
+      "category": "urine",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003579.htm",
+      "source_key": "mlp_ua",
+      "reviewed_at": "2026-10-19",
+      "note": "MedlinePlus lists white blood cells as not normally found; leukocyte esterase is the dipstick surrogate"
+    },
+    {
+      "loinc": "5821-4",
+      "name": "Urine white blood cells, microscopy",
+      "short": "uWBC",
+      "unit": "/[HPF]",
+      "category": "urine",
+      "qualitative": true,
+      "normal_value": "None seen",
+      "source": "https://medlineplus.gov/ency/article/003579.htm",
+      "source_key": "mlp_ua",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "13945-1",
+      "name": "Urine red blood cells, microscopy",
+      "short": "uRBC",
+      "unit": "/[HPF]",
+      "category": "urine",
+      "qualitative": true,
+      "normal_value": "None seen",
+      "source": "https://medlineplus.gov/ency/article/003579.htm",
+      "source_key": "mlp_ua",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "25145-4",
+      "name": "Urine bacteria, microscopy",
+      "short": "uBact",
+      "unit": "",
+      "category": "urine",
+      "qualitative": true,
+      "normal_value": "None seen",
+      "source": "https://medlineplus.gov/ency/article/003579.htm",
+      "source_key": "mlp_ua",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "3298-7",
+      "name": "Acetaminophen (paracetamol), serum",
+      "short": "APAP",
+      "unit": "mg/L",
+      "category": "toxicology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 12,
+          "age_max": 120,
+          "low": 0,
+          "high": 0,
+          "note": "not detected in a person not taking paracetamol; any measurable level is reported H and interpreted against the treatment nomogram, never against a reference interval"
+        }
+      ],
+      "critical_high": 100,
+      "critical_source": "mhra2012",
+      "critical_note": "UK treatment line: 100 mg/L at 4 h post-ingestion falling to 15 mg/L at 15 h; the engine evaluates the time-specific line",
+      "source": "https://www.gov.uk/drug-safety-update/treating-paracetamol-overdose-with-intravenous-acetylcysteine-new-guidance",
+      "source_key": "mhra2012",
+      "reviewed_at": "2026-10-19",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "4024-6",
+      "name": "Salicylate, serum",
+      "short": "Sal",
+      "unit": "mg/L",
+      "category": "toxicology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 12,
+          "age_max": 120,
+          "low": 0,
+          "high": 300,
+          "note": "therapeutic range 150 to 300 mg/L (1.1 to 2.2 mmol/L) in a treated patient; not detected otherwise"
+        }
+      ],
+      "critical_high": 600,
+      "critical_source": "litfl_salicylate",
+      "critical_note": "600 mg/L (4.4 mmol/L) is the haemodialysis threshold when the level rises despite decontamination and alkalinisation",
+      "source": "https://litfl.com/salicylate-toxicity/",
+      "source_key": "litfl_salicylate",
+      "reviewed_at": "2026-10-19",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "5643-2",
+      "name": "Ethanol, blood",
+      "short": "EtOH",
+      "unit": "mg/dL",
+      "category": "toxicology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 12,
+          "age_max": 120,
+          "low": 0,
+          "high": 10,
+          "note": "not detected in an abstinent person (MedlinePlus toxicology screen: negative means not present); assay reporting limit 10 mg/dL"
+        }
+      ],
+      "critical_high": 80,
+      "critical_source": "uk_rta1988",
+      "critical_note": "80 mg/100 mL is the UK driving limit; the engine flags HH above it as an interpretive threshold, not a laboratory critical limit",
+      "source": "https://medlineplus.gov/ency/article/003578.htm",
+      "source_key": "mlp_tox",
+      "reviewed_at": "2026-10-19",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "600-7",
+      "name": "Blood culture",
+      "short": "BCx",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "No growth",
+      "source": "https://medlineplus.gov/ency/article/003744.htm",
+      "source_key": "mlp_bcx",
+      "reviewed_at": "2026-10-19"
+    },
+    {
+      "loinc": "630-4",
+      "name": "Urine culture",
+      "short": "UCx",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "No significant growth",
+      "source": "https://medlineplus.gov/ency/article/003751.htm",
+      "source_key": "mlp_ucx",
+      "reviewed_at": "2026-10-19",
+      "note": "MedlinePlus: results in 24 to 48 hours"
+    },
+    {
+      "loinc": "33037-3",
+      "name": "Anion gap",
+      "short": "AG",
+      "unit": "mmol/L",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 3,
+          "high": 11
+        }
+      ],
+      "source": "https://doi.org/10.2215/CJN.03020906",
+      "source_key": "kraut2007",
+      "reviewed_at": "2026-10-21",
+      "derived": "anion_gap"
+    },
+    {
+      "loinc": "98979-8",
+      "name": "eGFR (CKD-EPI 2021, creatinine)",
+      "short": "eGFR",
+      "unit": "mL/min/{1.73_m2}",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 60,
+          "high": null,
+          "note": "MedlinePlus: 90 to 100 probably no kidney disease, 60 to 90 possible early disease, below 60 possible kidney disease"
+        }
+      ],
+      "source": "https://medlineplus.gov/lab-tests/estimated-glomerular-filtration-rate-egfr-and-gfr-tests/",
+      "source_key": "mlt_estimated_glomerular_filtration_rate_egfr_and_gfr_tests",
+      "reviewed_at": "2026-10-21",
+      "derived": "egfr_ckdepi2021",
+      "source_numbers": [
+        60,
+        90
+      ]
+    },
+    {
+      "loinc": "1994-3",
+      "name": "Calcium, ionised",
+      "short": "iCa",
+      "unit": "mmol/L",
+      "category": "chemistry",
+      "decimals": 2,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 1.2,
+          "high": 1.4
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003486.htm",
+      "source_key": "mlp_003486",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2324-2",
+      "name": "Gamma-glutamyl transferase",
+      "short": "GGT",
+      "unit": "U/L",
+      "category": "liver",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 5,
+          "high": 40
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003458.htm",
+      "source_key": "mlp_003458",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "10834-0",
+      "name": "Globulin (calculated)",
+      "short": "Glob",
+      "unit": "g/L",
+      "category": "liver",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 23,
+          "high": 35
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-21",
+      "derived": "globulin"
+    },
+    {
+      "loinc": "2639-3",
+      "name": "Myoglobin",
+      "short": "Myo",
+      "unit": "ng/mL",
+      "category": "cardiac",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 72
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 58
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 72
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003663.htm",
+      "source_key": "mlp_003663",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2498-4",
+      "name": "Iron",
+      "short": "Fe",
+      "unit": "ug/dL",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 59,
+          "high": 158
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 37,
+          "high": 145
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 37,
+          "high": 158
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003488.htm",
+      "source_key": "mlp_003488",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2500-7",
+      "name": "Total iron-binding capacity",
+      "short": "TIBC",
+      "unit": "ug/dL",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 171,
+          "high": 505
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 149,
+          "high": 492
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 149,
+          "high": 505
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003488.htm",
+      "source_key": "mlp_003488",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2502-3",
+      "name": "Transferrin saturation",
+      "short": "TSAT",
+      "unit": "%",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 20,
+          "high": 50
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 15,
+          "high": 45
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 15,
+          "high": 50
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003488.htm",
+      "source_key": "mlp_003488",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "3034-6",
+      "name": "Transferrin",
+      "short": "Trf",
+      "unit": "mg/dL",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 200,
+          "high": 360
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2132-9",
+      "name": "Vitamin B12 (cobalamin)",
+      "short": "B12",
+      "unit": "pg/mL",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 299,
+          "high": 1054
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003705.htm",
+      "source_key": "mlp_003705",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2284-8",
+      "name": "Folate",
+      "short": "Fol",
+      "unit": "ng/mL",
+      "category": "haematology",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 2.7,
+          "high": 17.0
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003686.htm",
+      "source_key": "mlp_003686",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2093-3",
+      "name": "Cholesterol, total",
+      "short": "TC",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": null,
+          "high": 199
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/007813.htm",
+      "source_key": "mlp_007813",
+      "reviewed_at": "2026-10-21",
+      "source_numbers": [
+        200
+      ],
+      "baseline_band": [
+        150,
+        195
+      ]
+    },
+    {
+      "loinc": "2085-9",
+      "name": "HDL cholesterol",
+      "short": "HDL",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 40,
+          "high": null
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 50,
+          "high": null
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 40,
+          "high": null
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/007810.htm",
+      "source_key": "mlp_007810",
+      "reviewed_at": "2026-10-21",
+      "baseline_band": [
+        45,
+        70
+      ]
+    },
+    {
+      "loinc": "13457-7",
+      "name": "LDL cholesterol (calculated)",
+      "short": "LDL",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": null,
+          "high": 99,
+          "note": "primary-prevention goal under 100 mg/dL"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/007811.htm",
+      "source_key": "mlp_007811",
+      "reviewed_at": "2026-10-21",
+      "source_numbers": [
+        100
+      ],
+      "derived": "ldl_friedewald",
+      "baseline_band": [
+        60,
+        130
+      ]
+    },
+    {
+      "loinc": "2571-8",
+      "name": "Triglycerides",
+      "short": "TG",
+      "unit": "mg/dL",
+      "category": "chemistry",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": null,
+          "high": 149
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003493.htm",
+      "source_key": "mlp_003493",
+      "reviewed_at": "2026-10-21",
+      "source_numbers": [
+        150
+      ],
+      "baseline_band": [
+        70,
+        145
+      ]
+    },
+    {
+      "loinc": "4542-7",
+      "name": "Haptoglobin",
+      "short": "Hapto",
+      "unit": "mg/dL",
+      "category": "haematology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 41,
+          "high": 165
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003634.htm",
+      "source_key": "mlp_003634",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "1986-9",
+      "name": "C-peptide",
+      "short": "C-pep",
+      "unit": "ng/mL",
+      "category": "endocrine",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.3,
+          "high": 3.3
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003701.htm",
+      "source_key": "mlp_003701",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "789-8",
+      "name": "Red cell count",
+      "short": "RBC",
+      "unit": "10*6/uL",
+      "category": "haematology",
+      "decimals": 2,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 4.2,
+          "high": 5.7
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 3.8,
+          "high": 5.1
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 3.8,
+          "high": 5.7
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003644.htm",
+      "source_key": "mlp_003644",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "785-6",
+      "name": "Mean corpuscular haemoglobin",
+      "short": "MCH",
+      "unit": "pg",
+      "category": "haematology",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 27,
+          "high": 33
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 26,
+          "high": 33
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 26,
+          "high": 33
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003648.htm",
+      "source_key": "mlp_003648",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "786-4",
+      "name": "Mean corpuscular haemoglobin concentration",
+      "short": "MCHC",
+      "unit": "g/dL",
+      "category": "haematology",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 32,
+          "high": 36
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003648.htm",
+      "source_key": "mlp_003648",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "711-2",
+      "name": "Eosinophils (absolute)",
+      "short": "Eos",
+      "unit": "10*9/L",
+      "category": "haematology",
+      "decimals": 2,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 0.5
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003649.htm",
+      "source_key": "mlp_003649",
+      "reviewed_at": "2026-10-21",
+      "source_numbers": [
+        500
+      ]
+    },
+    {
+      "loinc": "3024-7",
+      "name": "Free thyroxine",
+      "short": "fT4",
+      "unit": "ng/dL",
+      "category": "endocrine",
+      "decimals": 2,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.9,
+          "high": 1.7
+        }
+      ],
+      "source": "https://www.nbme.org/laboratory-values/",
+      "source_key": "nbme",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "3051-0",
+      "name": "Free triiodothyronine",
+      "short": "fT3",
+      "unit": "pg/mL",
+      "category": "endocrine",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 2.1,
+          "high": 4.4
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003687.htm",
+      "source_key": "mlp_003687",
+      "reviewed_at": "2026-10-21",
+      "source_numbers": [
+        210,
+        440
+      ]
+    },
+    {
+      "loinc": "2731-8",
+      "name": "Parathyroid hormone, intact",
+      "short": "PTH",
+      "unit": "pg/mL",
+      "category": "endocrine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 10,
+          "high": 65
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003690.htm",
+      "source_key": "mlp_003690",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2842-3",
+      "name": "Prolactin",
+      "short": "PRL",
+      "unit": "ng/mL",
+      "category": "endocrine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 20
+        },
+        {
+          "sex": "female",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 25,
+          "note": "non-pregnant"
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 25
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003718.htm",
+      "source_key": "mlp_003718",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2986-8",
+      "name": "Testosterone, total",
+      "short": "Testo",
+      "unit": "ng/dL",
+      "category": "endocrine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 17,
+          "age_max": 50,
+          "low": 249,
+          "high": 836
+        },
+        {
+          "sex": "male",
+          "age_min": 51,
+          "age_max": 120,
+          "low": 193,
+          "high": 740
+        },
+        {
+          "sex": "female",
+          "age_min": 17,
+          "age_max": 50,
+          "low": 8.4,
+          "high": 48.1
+        },
+        {
+          "sex": "female",
+          "age_min": 51,
+          "age_max": 120,
+          "low": 2.9,
+          "high": 40.1
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003707.htm",
+      "source_key": "mlp_003707",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2243-4",
+      "name": "Estradiol",
+      "short": "E2",
+      "unit": "pg/mL",
+      "category": "endocrine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 10,
+          "high": 50
+        },
+        {
+          "sex": "female",
+          "age_min": 12,
+          "age_max": 50,
+          "low": 30,
+          "high": 400,
+          "note": "premenopausal; age 50 used as the menopause boundary"
+        },
+        {
+          "sex": "female",
+          "age_min": 51,
+          "age_max": 120,
+          "low": 0,
+          "high": 30,
+          "note": "postmenopausal"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003711.htm",
+      "source_key": "mlp_003711",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2141-0",
+      "name": "ACTH (morning)",
+      "short": "ACTH",
+      "unit": "pg/mL",
+      "category": "endocrine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 9,
+          "high": 52
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003695.htm",
+      "source_key": "mlp_003695",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2915-7",
+      "name": "Plasma renin activity",
+      "short": "PRA",
+      "unit": "ng/mL/h",
+      "category": "endocrine",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.5,
+          "high": 4.0,
+          "note": "standing, normal sodium diet"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003698.htm",
+      "source_key": "mlp_003698",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2857-1",
+      "name": "Prostate-specific antigen",
+      "short": "PSA",
+      "unit": "ng/mL",
+      "category": "tumour_marker",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "male",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 4.0
+        },
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 4.0
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003346.htm",
+      "source_key": "mlp_003346",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2039-6",
+      "name": "Carcinoembryonic antigen",
+      "short": "CEA",
+      "unit": "ng/mL",
+      "category": "tumour_marker",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 2.5,
+          "note": "smokers up to 5 ng/mL"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003574.htm",
+      "source_key": "mlp_003574",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "1834-1",
+      "name": "Alpha-fetoprotein",
+      "short": "AFP",
+      "unit": "ng/mL",
+      "category": "tumour_marker",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0.7,
+          "high": 9.3,
+          "note": "male or non-pregnant female"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003573.htm",
+      "source_key": "mlp_003573",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "10334-1",
+      "name": "Cancer antigen 125",
+      "short": "CA-125",
+      "unit": "[arb'U]/mL",
+      "category": "tumour_marker",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 35
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/007217.htm",
+      "source_key": "mlp_007217",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "11572-5",
+      "name": "Rheumatoid factor",
+      "short": "RF",
+      "unit": "[IU]/mL",
+      "category": "immunology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 15
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003548.htm",
+      "source_key": "mlp_003548",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "4485-9",
+      "name": "Complement C3",
+      "short": "C3",
+      "unit": "mg/dL",
+      "category": "immunology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 88,
+          "high": 201
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003539.htm",
+      "source_key": "mlp_003539",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "4498-2",
+      "name": "Complement C4",
+      "short": "C4",
+      "unit": "mg/dL",
+      "category": "immunology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 15,
+          "high": 45
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003354.htm",
+      "source_key": "mlp_003354",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2465-3",
+      "name": "Immunoglobulin G",
+      "short": "IgG",
+      "unit": "mg/dL",
+      "category": "immunology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 700,
+          "high": 1600
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003544.htm",
+      "source_key": "mlp_003544",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2458-8",
+      "name": "Immunoglobulin A",
+      "short": "IgA",
+      "unit": "mg/dL",
+      "category": "immunology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 103,
+          "high": 501
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003544.htm",
+      "source_key": "mlp_003544",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2472-9",
+      "name": "Immunoglobulin M",
+      "short": "IgM",
+      "unit": "mg/dL",
+      "category": "immunology",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 40,
+          "high": 230
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003544.htm",
+      "source_key": "mlp_003544",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "5048-4",
+      "name": "Antinuclear antibody (IFA titre)",
+      "short": "ANA",
+      "unit": "",
+      "category": "immunology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003535.htm",
+      "source_key": "mlp_003535",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2955-3",
+      "name": "Urine sodium (random)",
+      "short": "uNa",
+      "unit": "mmol/L",
+      "category": "urine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 20,
+          "high": null
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003599.htm",
+      "source_key": "mlp_003599",
+      "reviewed_at": "2026-10-21",
+      "baseline_band": [
+        40,
+        120
+      ]
+    },
+    {
+      "loinc": "2828-2",
+      "name": "Urine potassium (random)",
+      "short": "uK",
+      "unit": "mmol/L",
+      "category": "urine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 15,
+          "high": 40
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003600.htm",
+      "source_key": "mlp_003600",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "9318-7",
+      "name": "Urine albumin/creatinine ratio",
+      "short": "uACR",
+      "unit": "ug/mg{creat}",
+      "category": "urine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 0,
+          "high": 30
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003591.htm",
+      "source_key": "mlp_003591",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2695-5",
+      "name": "Urine osmolality",
+      "short": "uOsm",
+      "unit": "mosm/kg",
+      "category": "urine",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 18,
+          "age_max": 120,
+          "low": 50,
+          "high": 1200
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003609.htm",
+      "source_key": "mlp_003609",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "10535-3",
+      "name": "Digoxin",
+      "short": "Dig",
+      "unit": "ng/mL",
+      "category": "therapeutic_drug",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 0,
+          "age_max": 120,
+          "low": 0.8,
+          "high": 2.0,
+          "note": "therapeutic target range in a treated patient"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003430.htm",
+      "source_key": "mlp_003430",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "14334-7",
+      "name": "Lithium",
+      "short": "Li",
+      "unit": "mmol/L",
+      "category": "therapeutic_drug",
+      "decimals": 1,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 0,
+          "age_max": 120,
+          "low": 0.5,
+          "high": 1.2,
+          "note": "therapeutic target range in a treated patient"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003430.htm",
+      "source_key": "mlp_003430",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "3968-5",
+      "name": "Phenytoin (total)",
+      "short": "PHT",
+      "unit": "ug/mL",
+      "category": "therapeutic_drug",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 0,
+          "age_max": 120,
+          "low": 10,
+          "high": 20,
+          "note": "therapeutic target range in a treated patient"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003430.htm",
+      "source_key": "mlp_003430",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "4086-5",
+      "name": "Valproate",
+      "short": "VPA",
+      "unit": "ug/mL",
+      "category": "therapeutic_drug",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 0,
+          "age_max": 120,
+          "low": 50,
+          "high": 100,
+          "note": "therapeutic target range in a treated patient"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003430.htm",
+      "source_key": "mlp_003430",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "3432-2",
+      "name": "Carbamazepine",
+      "short": "CBZ",
+      "unit": "ug/mL",
+      "category": "therapeutic_drug",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 0,
+          "age_max": 120,
+          "low": 4,
+          "high": 12,
+          "note": "therapeutic target range in a treated patient"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003430.htm",
+      "source_key": "mlp_003430",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "5693-7",
+      "name": "Methanol",
+      "short": "MeOH",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Not detected",
+      "source": "https://medlineplus.gov/ency/article/003563.htm",
+      "source_key": "mlp_003563",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "5646-5",
+      "name": "Ethylene glycol",
+      "short": "EG",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Not detected",
+      "source": "https://medlineplus.gov/ency/article/003564.htm",
+      "source_key": "mlp_003564",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "3397-7",
+      "name": "Cocaine metabolite (urine screen)",
+      "short": "uCOC",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003364.htm",
+      "source_key": "mlp_003364",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "19343-3",
+      "name": "Amphetamines (urine screen)",
+      "short": "uAMP",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003364.htm",
+      "source_key": "mlp_003364",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "19295-5",
+      "name": "Opiates (urine screen)",
+      "short": "uOPI",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003364.htm",
+      "source_key": "mlp_003364",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "18282-4",
+      "name": "Cannabinoids (urine screen)",
+      "short": "uTHC",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003364.htm",
+      "source_key": "mlp_003364",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "14316-4",
+      "name": "Benzodiazepines (urine screen)",
+      "short": "uBZO",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003364.htm",
+      "source_key": "mlp_003364",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "19270-8",
+      "name": "Barbiturates (urine screen)",
+      "short": "uBAR",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003364.htm",
+      "source_key": "mlp_003364",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "19659-2",
+      "name": "Phencyclidine (urine screen)",
+      "short": "uPCP",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003364.htm",
+      "source_key": "mlp_003364",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "19550-3",
+      "name": "Methadone (urine screen)",
+      "short": "uMTD",
+      "unit": "",
+      "category": "toxicology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003364.htm",
+      "source_key": "mlp_003364",
+      "reviewed_at": "2026-10-21",
+      "absent_unless_exposed": true
+    },
+    {
+      "loinc": "26465-5",
+      "name": "CSF white cell count",
+      "short": "CSF WBC",
+      "unit": "/uL",
+      "category": "csf",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 0,
+          "age_max": 120,
+          "low": 0,
+          "high": 5
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003625.htm",
+      "source_key": "mlp_003625",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "26454-9",
+      "name": "CSF red cell count",
+      "short": "CSF RBC",
+      "unit": "/uL",
+      "category": "csf",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 0,
+          "age_max": 120,
+          "low": 0,
+          "high": 0
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003625.htm",
+      "source_key": "mlp_003625",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2880-3",
+      "name": "CSF protein",
+      "short": "CSF prot",
+      "unit": "mg/dL",
+      "category": "csf",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 0,
+          "age_max": 120,
+          "low": 15,
+          "high": 60
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003628.htm",
+      "source_key": "mlp_003628",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2342-4",
+      "name": "CSF glucose",
+      "short": "CSF glu",
+      "unit": "mg/dL",
+      "category": "csf",
+      "decimals": 0,
+      "ranges": [
+        {
+          "sex": "any",
+          "age_min": 0,
+          "age_max": 120,
+          "low": 50,
+          "high": 80,
+          "note": "or more than two thirds of the blood glucose"
+        }
+      ],
+      "source": "https://medlineplus.gov/ency/article/003633.htm",
+      "source_key": "mlp_003633",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "606-4",
+      "name": "CSF culture",
+      "short": "CSF Cx",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "No growth",
+      "source": "https://medlineplus.gov/ency/article/003769.htm",
+      "source_key": "mlp_003769",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "664-3",
+      "name": "Gram stain",
+      "short": "Gram",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "No organisms seen",
+      "source": "https://medlineplus.gov/ency/article/007621.htm",
+      "source_key": "mlp_007621",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2882-9",
+      "name": "Pleural fluid protein",
+      "short": "PF prot",
+      "unit": "g/L",
+      "category": "body_fluid",
+      "decimals": 0,
+      "ranges": [],
+      "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+      "source_key": "light1972",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "60022-1",
+      "name": "Pleural fluid LDH",
+      "short": "PF LDH",
+      "unit": "U/L",
+      "category": "body_fluid",
+      "decimals": 0,
+      "ranges": [],
+      "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+      "source_key": "light1972",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "2346-5",
+      "name": "Pleural fluid glucose",
+      "short": "PF glu",
+      "unit": "mg/dL",
+      "category": "body_fluid",
+      "decimals": 0,
+      "ranges": [],
+      "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+      "source_key": "light1972",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "2748-2",
+      "name": "Body fluid pH",
+      "short": "PF pH",
+      "unit": "[pH]",
+      "category": "body_fluid",
+      "decimals": 2,
+      "ranges": [],
+      "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+      "source_key": "light1972",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "26467-1",
+      "name": "Pleural fluid white cells",
+      "short": "PF WBC",
+      "unit": "10*3/uL",
+      "category": "body_fluid",
+      "decimals": 2,
+      "ranges": [],
+      "source": "https://doi.org/10.7326/0003-4819-77-4-507",
+      "source_key": "light1972",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "2883-7",
+      "name": "Ascitic fluid protein",
+      "short": "AF prot",
+      "unit": "g/L",
+      "category": "body_fluid",
+      "decimals": 0,
+      "ranges": [],
+      "source": "https://doi.org/10.1002/hep.31884",
+      "source_key": "aasld2021",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "1749-1",
+      "name": "Ascitic fluid albumin",
+      "short": "AF alb",
+      "unit": "g/L",
+      "category": "body_fluid",
+      "decimals": 0,
+      "ranges": [],
+      "source": "https://doi.org/10.1002/hep.31884",
+      "source_key": "aasld2021",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "26468-9",
+      "name": "Ascitic fluid white cells",
+      "short": "AF WBC",
+      "unit": "10*3/uL",
+      "category": "body_fluid",
+      "decimals": 2,
+      "ranges": [],
+      "source": "https://doi.org/10.1002/hep.31884",
+      "source_key": "aasld2021",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "26514-0",
+      "name": "Ascitic fluid neutrophils",
+      "short": "AF PMN%",
+      "unit": "%",
+      "category": "body_fluid",
+      "decimals": 0,
+      "ranges": [],
+      "source": "https://doi.org/10.1002/hep.31884",
+      "source_key": "aasld2021",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "26469-7",
+      "name": "Synovial fluid white cells",
+      "short": "SF WBC",
+      "unit": "10*3/uL",
+      "category": "body_fluid",
+      "decimals": 1,
+      "ranges": [],
+      "source": "https://doi.org/10.1001/jama.297.13.1478",
+      "source_key": "margaretten2007",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "17836-8",
+      "name": "Synovial fluid neutrophils",
+      "short": "SF PMN%",
+      "unit": "%",
+      "category": "body_fluid",
+      "decimals": 0,
+      "ranges": [],
+      "source": "https://doi.org/10.1001/jama.297.13.1478",
+      "source_key": "margaretten2007",
+      "reviewed_at": "2026-10-21",
+      "reference_text": "interpreted against the paired serum value; no reference interval",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "5781-0",
+      "name": "Synovial fluid crystals",
+      "short": "SF xtal",
+      "unit": "",
+      "category": "body_fluid",
+      "qualitative": true,
+      "normal_value": "None seen",
+      "source": "https://doi.org/10.1001/jama.297.13.1478",
+      "source_key": "margaretten2007",
+      "reviewed_at": "2026-10-21",
+      "generator": "body_fluid"
+    },
+    {
+      "loinc": "611-4",
+      "name": "Body fluid culture",
+      "short": "Fluid Cx",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "No growth",
+      "source": "https://medlineplus.gov/lab-tests/bacteria-culture-test/",
+      "source_key": "mlt_bacteria_culture_test",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "882-1",
+      "name": "ABO and Rh group",
+      "short": "ABO/Rh",
+      "unit": "",
+      "category": "blood_bank",
+      "qualitative": true,
+      "normal_value": "Determined",
+      "source": "https://medlineplus.gov/ency/article/003345.htm",
+      "source_key": "mlp_003345",
+      "reviewed_at": "2026-10-21",
+      "generator": "blood_group"
+    },
+    {
+      "loinc": "890-4",
+      "name": "Antibody screen",
+      "short": "Ab scr",
+      "unit": "",
+      "category": "blood_bank",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/lab-tests/red-blood-cell-antibody-screen/",
+      "source_key": "mlt_red_blood_cell_antibody_screen",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "1007-4",
+      "name": "Direct antiglobulin test (polyspecific)",
+      "short": "DAT",
+      "unit": "",
+      "category": "blood_bank",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003344.htm",
+      "source_key": "mlp_003344",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "4621-9",
+      "name": "Haemoglobin S (sickle screen)",
+      "short": "HbS",
+      "unit": "",
+      "category": "haematology",
+      "qualitative": true,
+      "normal_value": "Negative (no haemoglobin S)",
+      "source": "https://medlineplus.gov/ency/article/003666.htm",
+      "source_key": "mlp_003666",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "2356-4",
+      "name": "G6PD screen",
+      "short": "G6PD",
+      "unit": "",
+      "category": "haematology",
+      "qualitative": true,
+      "normal_value": "Normal activity (not deficient)",
+      "source": "https://medlineplus.gov/ency/article/003671.htm",
+      "source_key": "mlp_003671",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "56888-1",
+      "name": "HIV-1/2 antigen/antibody (4th generation)",
+      "short": "HIV Ag/Ab",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Non-reactive",
+      "source": "https://medlineplus.gov/lab-tests/hiv-screening-test/",
+      "source_key": "mlt_hiv_screening_test",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "5196-1",
+      "name": "Hepatitis B surface antigen",
+      "short": "HBsAg",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003558.htm",
+      "source_key": "mlp_003558",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "16933-4",
+      "name": "Hepatitis B core antibody (total)",
+      "short": "anti-HBc",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003558.htm",
+      "source_key": "mlp_003558",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "31204-1",
+      "name": "Hepatitis B core IgM antibody",
+      "short": "HBc IgM",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003558.htm",
+      "source_key": "mlp_003558",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "22322-2",
+      "name": "Hepatitis B surface antibody",
+      "short": "anti-HBs",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003558.htm",
+      "source_key": "mlp_003558",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "13955-0",
+      "name": "Hepatitis C antibody",
+      "short": "HCV Ab",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003558.htm",
+      "source_key": "mlp_003558",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "13950-1",
+      "name": "Hepatitis A IgM antibody",
+      "short": "HAV IgM",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003558.htm",
+      "source_key": "mlp_003558",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "20507-0",
+      "name": "Rapid plasma reagin (RPR)",
+      "short": "RPR",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Non-reactive",
+      "source": "https://medlineplus.gov/ency/article/003533.htm",
+      "source_key": "mlp_003533",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "47236-5",
+      "name": "Treponema pallidum antibody (IgG+IgM)",
+      "short": "TP Ab",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/lab-tests/syphilis-tests/",
+      "source_key": "mlt_syphilis_tests",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "31418-7",
+      "name": "Heterophile antibody (Monospot)",
+      "short": "Mono",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/ency/article/003454.htm",
+      "source_key": "mlp_003454",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "94500-6",
+      "name": "SARS-CoV-2 RNA (NAAT)",
+      "short": "SARS-CoV-2",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Not detected",
+      "source": "https://medlineplus.gov/ency/article/007769.htm",
+      "source_key": "mlp_007769",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "92142-9",
+      "name": "Influenza A RNA (NAAT)",
+      "short": "Flu A",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Not detected",
+      "source": "https://medlineplus.gov/lab-tests/flu-influenza-test/",
+      "source_key": "mlt_flu_influenza_test",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "92141-1",
+      "name": "Influenza B RNA (NAAT)",
+      "short": "Flu B",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Not detected",
+      "source": "https://medlineplus.gov/lab-tests/flu-influenza-test/",
+      "source_key": "mlt_flu_influenza_test",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "92131-2",
+      "name": "RSV RNA (NAAT)",
+      "short": "RSV",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Not detected",
+      "source": "https://medlineplus.gov/lab-tests/respiratory-syncytial-virus-rsv-tests/",
+      "source_key": "mlt_respiratory_syncytial_virus_rsv_tests",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "78012-2",
+      "name": "Group A Streptococcus antigen (rapid)",
+      "short": "Strep A",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/lab-tests/strep-a-test/",
+      "source_key": "mlt_strep_a_test",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "32781-7",
+      "name": "Legionella urinary antigen",
+      "short": "Legionella Ag",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/lab-tests/legionella-tests/",
+      "source_key": "mlt_legionella_tests",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "24027-5",
+      "name": "Streptococcus pneumoniae urinary antigen",
+      "short": "Pneumo Ag",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/lab-tests/pneumococcal-disease-tests/",
+      "source_key": "mlt_pneumococcal_disease_tests",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "34713-8",
+      "name": "Clostridioides difficile toxin A+B",
+      "short": "C diff toxin",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/lab-tests/c-diff-testing/",
+      "source_key": "mlt_c_diff_testing",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "54067-4",
+      "name": "Clostridioides difficile toxin gene PCR",
+      "short": "C diff PCR",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Not detected",
+      "source": "https://medlineplus.gov/lab-tests/c-diff-testing/",
+      "source_key": "mlt_c_diff_testing",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "76772-3",
+      "name": "Plasmodium falciparum antigen (rapid)",
+      "short": "Malaria RDT",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Not detected",
+      "source": "https://medlineplus.gov/lab-tests/malaria-tests/",
+      "source_key": "mlt_malaria_tests",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "32700-7",
+      "name": "Malaria smear (thick and thin films)",
+      "short": "Malaria film",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "No malaria parasites seen",
+      "source": "https://medlineplus.gov/lab-tests/malaria-tests/",
+      "source_key": "mlt_malaria_tests",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "71773-6",
+      "name": "TB interferon-gamma release assay",
+      "short": "IGRA",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Negative",
+      "source": "https://medlineplus.gov/lab-tests/tuberculosis-screening/",
+      "source_key": "mlt_tuberculosis_screening",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "11545-1",
+      "name": "Acid-fast bacilli smear",
+      "short": "AFB smear",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "No acid-fast bacilli seen",
+      "source": "https://medlineplus.gov/ency/article/003766.htm",
+      "source_key": "mlp_003766",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "625-4",
+      "name": "Stool culture",
+      "short": "Stool Cx",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "No Salmonella, Shigella, Campylobacter or STEC isolated",
+      "source": "https://medlineplus.gov/ency/article/003758.htm",
+      "source_key": "mlp_003758",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "626-2",
+      "name": "Throat culture",
+      "short": "Throat Cx",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Normal flora; no group A Streptococcus",
+      "source": "https://medlineplus.gov/ency/article/003746.htm",
+      "source_key": "mlp_003746",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "624-7",
+      "name": "Sputum culture",
+      "short": "Sputum Cx",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "Normal respiratory flora",
+      "source": "https://medlineplus.gov/ency/article/003723.htm",
+      "source_key": "mlp_003723",
+      "reviewed_at": "2026-10-21"
+    },
+    {
+      "loinc": "6462-6",
+      "name": "Wound culture",
+      "short": "Wound Cx",
+      "unit": "",
+      "category": "microbiology",
+      "qualitative": true,
+      "normal_value": "No growth",
+      "source": "https://medlineplus.gov/lab-tests/bacteria-culture-test/",
+      "source_key": "mlt_bacteria_culture_test",
+      "reviewed_at": "2026-10-21"
+    }
+  ],
+  "retired_aliases": {
+    "1841-5": {
+      "replaced_by": "22763-7",
+      "reason": "code not present in LOINC 2.82 (tx.fhir.org $lookup 404); kept so older case specs still resolve"
+    },
+    "53060-9": {
+      "replaced_by": "6873-4",
+      "reason": "code not present in LOINC 2.82 (tx.fhir.org $lookup 404); kept so older case specs still resolve"
+    },
+    "5797-1": {
+      "replaced_by": "5797-6",
+      "reason": "code not present in LOINC 2.82 (tx.fhir.org $lookup 404); kept so older case specs still resolve"
+    }
+  }
 }
