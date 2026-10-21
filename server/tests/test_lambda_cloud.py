@@ -124,6 +124,23 @@ async def test_api_error_is_typed(client):
 
 
 @respx.mock
+async def test_transport_errors_are_typed_too(client):
+    # A terminate that raised httpx.ConnectError left the worker row stuck in ``terminating``.
+    respx.post(f"{LAMBDA_API_BASE}/instance-operations/terminate").mock(side_effect=httpx.ConnectError("reset"))
+    with pytest.raises(LambdaCloudError) as exc:
+        await client.terminate(["i-1"])
+    assert exc.value.status_code == 0 and exc.value.code == "network/ConnectError"
+    assert not exc.value.not_found
+    assert isinstance(exc.value.__cause__, httpx.ConnectError)
+
+
+def test_not_found_covers_404_and_the_not_found_codes():
+    assert LambdaCloudError(404, "global/object-does-not-exist", "gone").not_found
+    assert LambdaCloudError(400, "instance-operations/terminate/not-found", "gone").not_found
+    assert not LambdaCloudError(500, "global/internal-error", "boom").not_found
+
+
+@respx.mock
 async def test_ssh_keys_and_firewall_rules_parse(client, ssh_keys_body, firewall_rules_body):
     respx.get(f"{LAMBDA_API_BASE}/ssh-keys").mock(return_value=httpx.Response(200, json=ssh_keys_body))
     respx.get(f"{LAMBDA_API_BASE}/firewall-rules").mock(return_value=httpx.Response(200, json=firewall_rules_body))

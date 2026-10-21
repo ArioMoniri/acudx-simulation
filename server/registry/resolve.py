@@ -34,6 +34,8 @@ log = logging.getLogger("acudx.registry.resolve")
 WORKER_PATHS: dict[str, str] = {"llm": "/v1", "tts": "/tts", "stt": "/stt"}
 # What the worker serves on each route (served model names are fixed by the image).
 WORKER_MODELS: dict[str, str] = {"tts": "chatterbox-multilingual", "stt": "deepdml/faster-whisper-large-v3-turbo-ct2"}
+# Consecutive failed probes before a keyed Claude row leaves the route (see anthropic_enabled).
+ANTHROPIC_PROBE_FAILURES_TO_DISABLE = 3
 
 
 class WorkerManagerLike(Protocol):
@@ -97,12 +99,20 @@ class RegistryResolver:
 
     def anthropic_enabled(self) -> bool:
         """The Claude route is selected: its row is enabled, not known dead, and no other
-        enabled LLM row has a lower priority. No row at all (scripts, tests) means enabled."""
+        enabled LLM row has a lower priority. No row at all (scripts, tests) means enabled.
+
+        With a key configured (env or sealed), one failed probe is a hiccup, not a dead route: the
+        row stays selected until ``ANTHROPIC_PROBE_FAILURES_TO_DISABLE`` probes in a row failed.
+        Taking Claude off the route sends every call to the GPU worker, which launches one."""
         rec = self.anthropic_row()
         if rec is None:
             return True
-        if not rec.enabled or not self._allowed(rec) or rec.last_probe_ok is False:
+        if not rec.enabled or not self._allowed(rec):
             return False
+        if rec.last_probe_ok is False:
+            keyed = bool((self.settings.anthropic_key or "").strip() or rec.api_key_encrypted)
+            if not keyed or rec.probe_failures >= ANTHROPIC_PROBE_FAILURES_TO_DISABLE:
+                return False
         others = self.candidates("llm")
         return not others or rec.priority <= min(o.priority for o in others)
 
@@ -130,33 +140,36 @@ class RegistryResolver:
         return [self._endpoint(rec) for rec in self.candidates(kind)]
 
     # -- resolution ----------------------------------------------------------- #
-    async def resolve(self, kind: str) -> ProviderEndpoint | None:
+    async def resolve(self, kind: str, *, launch: bool = True) -> ProviderEndpoint | None:
+        """``launch=False`` falls back only to a GPU worker that is already ready (never boots one)."""
         cands = self.candidates(kind)
         if cands:
             return self._endpoint(cands[0])
         if kind == "llm" and self.worker_manager is not None:
-            return await self._gpu_endpoint()
+            return await self._gpu_endpoint(launch=launch)
         return None
 
-    async def _gpu_endpoint(self) -> ProviderEndpoint | None:
-        return await self.resolve_worker("llm")
+    async def _gpu_endpoint(self, *, launch: bool = True) -> ProviderEndpoint | None:
+        return await self.resolve_worker("llm", launch=launch)
 
-    async def resolve_worker(self, kind: str) -> ProviderEndpoint | None:
+    async def resolve_worker(self, kind: str, *, launch: bool = True) -> ProviderEndpoint | None:
         """The on-demand GPU worker's endpoint for ``kind`` (llm | tts | stt), or None when refused.
 
         ``ensure_worker`` launches or reuses the worker; a :class:`WorkerRefused`
         (air-gapped, not configured, budget, capacity) yields ``None`` with the
         reason logged, so callers answer "unavailable" instead of egressing.
+        ``launch=False`` only reads a worker that is already ready (None otherwise).
         """
         if self.worker_manager is None or kind not in WORKER_PATHS:
             return None
-        try:
-            await self.worker_manager.ensure_worker()
-        except WorkerRefused as exc:
-            log.info("gpu worker unavailable for %s resolution: %s", kind, exc.reason)
-            self.last_worker_refusal = exc.reason
-            return None
-        self.last_worker_refusal = None
+        if launch:
+            try:
+                await self.worker_manager.ensure_worker()
+            except WorkerRefused as exc:
+                log.info("gpu worker unavailable for %s resolution: %s", kind, exc.reason)
+                self.last_worker_refusal = exc.reason
+                return None
+            self.last_worker_refusal = None
         ep = self.worker_manager.llm_endpoint()
         if not ep:
             return None

@@ -607,7 +607,11 @@ async def notify_director(app: Any, thread_id: str) -> int:
 async def prepare(request: Request, body: PrepareBody, user: Principal = Depends(current_user)):
     """At case start: make the patient's pictures (presenting, worse, critical, improved...) from the
     case thread on a worker before any call, so the call opens on the patient as they are now. A call
-    started later on the same worker reuses them."""
+    started later on the same worker reuses them.
+
+    Never launches a worker: every case open calls this, and most cases never start a call. Only an
+    explicit call start (POST /session) or spoken voice brings a GPU up; until a worker is ready this
+    answers ``no_worker`` (or ``worker_starting`` while a boot someone else asked for is in flight)."""
     svc = _svc(request)
     view = await _thread_view(request, body.thread_id, user)
     if view is None:
@@ -619,9 +623,9 @@ async def prepare(request: Request, body: PrepareBody, user: Principal = Depends
     eps = (wm.endpoints() if hasattr(wm, "endpoints") else [wm.llm_endpoint()]) if wm is not None else []
     eps = [e for e in eps if e]
     if not eps:
-        pending = await _start_worker_in_background(svc)
-        return JSONResponse(status_code=202, content={"state": "worker_starting" if pending else "no_worker",
-                                                      "pending_launch": pending})
+        booting = bool(wm is not None and hasattr(wm, "store") and wm.store.active_workers())
+        return JSONResponse(status_code=202, content={"state": "worker_starting" if booting else "no_worker",
+                                                      "pending_launch": False})
     looks = _looks(request)
     key = f"{body.thread_id}:{body.photo_id}"
     a = looks.get(key)
@@ -708,6 +712,9 @@ async def end(request: Request, body: SessionRef, user: Principal = Depends(curr
     s = _session(request, body, user)
     _store(request).pop(s.id)
     await end_remote(svc, s)
+    wm = svc.resolver.worker_manager
+    if s.provider == "musetalk" and s.worker_origin and wm is not None and hasattr(wm, "call_ended"):
+        wm.call_ended(s.worker_origin)   # an ended call must not hold the worker against its idle window
     return {"ok": True, "metrics": s.metrics}
 
 

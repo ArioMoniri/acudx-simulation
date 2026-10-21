@@ -150,10 +150,11 @@ class ModelGateway:
         return st
 
     # -- endpoint resolution (registry first, env as the seed) -------------- #
-    async def resolve_endpoint(self, kind: str) -> ProviderEndpoint:
-        """Best endpoint for ``kind`` (llm | embed | rerank) or :class:`GatewayError`."""
+    async def resolve_endpoint(self, kind: str, *, launch: bool = True) -> ProviderEndpoint:
+        """Best endpoint for ``kind`` (llm | embed | rerank) or :class:`GatewayError`. ``launch=False``
+        accepts a GPU worker only when it is already ready (never boots one)."""
         if self.resolver is not None:
-            ep = await self.resolver.resolve(kind)
+            ep = await (self.resolver.resolve(kind) if launch else self.resolver.resolve(kind, launch=False))
             if ep is None:
                 raise GatewayError(
                     f"no enabled {kind} provider is available (configure one under /admin/providers"
@@ -171,7 +172,8 @@ class ModelGateway:
                                     model=s.rerank_model, api_key=s.llm_api_key, source="env")
         raise GatewayError(f"unknown endpoint kind {kind!r}")
 
-    async def _resolve_for_call(self, kind: str) -> ProviderEndpoint:
+    async def _resolve_for_call(self, kind: str, *,
+                                after_claude: AnthropicUnavailable | None = None) -> ProviderEndpoint:
         """:meth:`resolve_endpoint` for a real call: a refusal is recorded too.
 
         Acceptance test 2026-10-20 (docs/review/05): once the scheduled probe
@@ -180,9 +182,19 @@ class ModelGateway:
         socket, so ``model_calls`` stayed empty and the admin console showed
         0 calls and a 0 % error rate for a session in which every model call
         failed. The failed attempt now leaves one row (provider ``unresolved``).
+
+        ``after_claude``: the Claude route is selected but this call failed on it (429, 5xx,
+        network). The fallback is a configured provider or a GPU worker that is already ready;
+        a Claude hiccup never boots a worker, so with neither the Claude error surfaces.
         """
         try:
-            return await self.resolve_endpoint(kind)
+            if after_claude is None:
+                return await self.resolve_endpoint(kind)
+            try:
+                return await self.resolve_endpoint(kind, launch=False)
+            except GatewayError as exc:
+                raise GatewayError(f"Claude did not answer ({after_claude}) and no fallback model is ready "
+                                   "(a Claude failure never launches a GPU worker)") from exc
         except GatewayError:
             if self.telemetry is not None:
                 try:
@@ -263,15 +275,17 @@ class ModelGateway:
         classifier, ``tutor``, ``grade``); ``temperature`` and ``stop`` apply to the
         OpenAI-compatible route only."""
         tier = self.tiers.get(task) or self.tiers["patient"]
+        claude_down: AnthropicUnavailable | None = None
         if self.anthropic_active():
             try:
                 reply = await self._claude(messages, task=task, max_tokens=max_tokens or tier.max_tokens, schema=None)
                 return self._claude_result(reply, task)
-            except AnthropicUnavailable:
+            except AnthropicUnavailable as exc:
                 self.claude_fallbacks += 1
+                claude_down = exc
             except AnthropicError as exc:
                 raise GatewayError(f"Claude did not answer: {exc}") from exc
-        ep = await self._resolve_for_call("llm")
+        ep = await self._resolve_for_call("llm", after_claude=claude_down)
         # Per-call guard: even if the registry were mis-wired to egress, block it.
         self.settings.guard_egress(ep.base_url)
 
@@ -334,6 +348,7 @@ class ModelGateway:
         """One JSON-object completion: Claude structured outputs on the Claude route,
         ``response_format: json_schema`` on an OpenAI-compatible endpoint. Raises
         :class:`GatewayError` when no model answered with a parseable object."""
+        claude_down: AnthropicUnavailable | None = None
         if self.anthropic_active():
             try:
                 reply = await self._claude(messages, task=task, max_tokens=max_tokens, schema=schema)
@@ -344,12 +359,13 @@ class ModelGateway:
                 if not isinstance(data, dict):
                     raise GatewayError(f"{reply.model} returned {type(data).__name__}, not an object")
                 return restore_optional(data, schema), self._claude_result(reply, task)
-            except AnthropicUnavailable:
+            except AnthropicUnavailable as exc:
                 self.claude_fallbacks += 1
+                claude_down = exc
             except AnthropicError as exc:
                 raise GatewayError(f"Claude did not answer: {exc}") from exc
         tier = self.tiers.get(task) or self.tiers["guard"]
-        ep = await self._resolve_for_call("llm")
+        ep = await self._resolve_for_call("llm", after_claude=claude_down)
         self.settings.guard_egress(ep.base_url)
         payload: dict[str, Any] = {
             "model": ep.model or tier.endpoint.model, "messages": messages, "temperature": 0.0,

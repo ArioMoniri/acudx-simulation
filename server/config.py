@@ -216,6 +216,8 @@ class Settings(BaseSettings):
     gpu_region_preference: CsvList = Field(default_factory=list)
     # Most workers the pool runs at once (launched on demand, each reaped when idle).
     gpu_max_workers: int = 3
+    # Hard cap on one worker's life (hours), enforced by the reaper whatever the load.
+    gpu_max_lifetime_hours: float = 6.0
     admin_token: str | None = None               # guards /admin/*; 503 when unset
     # --- Live patient video (server/voice/avatar, docs/architecture/18 section 6) --- #
     # The gateway's internet-reachable origin; Tavus's custom LLM calls back

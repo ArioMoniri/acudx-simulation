@@ -20,7 +20,7 @@ from server.providers.gpu_worker import (
     render_cloud_init,
     sslip_domain,
 )
-from server.providers.lambda_cloud import LAMBDA_API_BASE
+from server.providers.lambda_cloud import LAMBDA_API_BASE, LambdaCloudError
 from server.tests.conftest import CLOUD_INIT, load_fixture
 
 INSTANCE_ID = "ea19e031f2c7406c821a88f077d96d9b"
@@ -337,6 +337,7 @@ async def test_touch_resets_idle_window(tmp_path):
     assert not term.called
 
 
+@respx.mock   # the loop's orphan sweep lists instances; never against the real API
 async def test_reaper_task_starts_and_stops(tmp_path):
     clock = FakeClock()
     m = _manager(tmp_path, clock)
@@ -1010,3 +1011,69 @@ async def test_max_workers_zero_disables_launch(tmp_path):
         assert not respx.calls  # refused before any Lambda API call
     finally:
         await m.aclose()
+
+
+# --- a failed stop is retried until Lambda confirms it --------------------- #
+
+@respx.mock
+@pytest.mark.parametrize("failure", [httpx.ConnectError("reset"), httpx.Response(500, json={
+    "error": {"code": "global/internal-error", "message": "boom"}})])
+async def test_a_failed_terminate_stays_terminating_and_the_reaper_retries_it(tmp_path, failure):
+    """Audit: a terminate that raised (network error, 5xx) left the row in ``terminating`` and no
+    pass ever looked at it again, so the instance kept billing."""
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    term = respx.post(f"{LAMBDA_API_BASE}/instance-operations/terminate")
+    if isinstance(failure, Exception):
+        term.mock(side_effect=failure)
+    else:
+        term.mock(return_value=failure)
+    respx.get(f"{LAMBDA_API_BASE}/instances/{INSTANCE_ID}").mock(
+        return_value=httpx.Response(200, json={"data": load_fixture("instances")["data"][1]}))
+    try:
+        w = _ready_worker(m, clock)
+        clock.advance(21 * 60)
+        assert await m.reap_once() is False            # idle; the stop fails
+        row = m.store.get_worker(w.id)
+        assert row.status == "terminating" and row.terminated_at is None
+        assert m.store.ledger(limit=1)[0].ended_at is None, "still billing until Lambda confirms"
+        assert m.store.active_worker() is None, "a terminating row takes no traffic"
+        assert await m.reap_once() is False            # still failing: still terminating
+        assert m.store.get_worker(w.id).status == "terminating"
+        term.mock(return_value=httpx.Response(200, json={"data": {"terminated_instances": []}}), side_effect=None)
+        clock.advance(60)
+        assert await m.reap_once() is True
+    finally:
+        await m.aclose()
+    row = m.store.get_worker(w.id)
+    assert row.status == "terminated" and row.terminated_at == clock.t
+    assert m.store.ledger(limit=1)[0].ended_at == clock.t
+
+
+@respx.mock
+async def test_a_terminating_row_the_provider_no_longer_knows_is_marked_terminated(tmp_path):
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    respx.post(f"{LAMBDA_API_BASE}/instance-operations/terminate").mock(return_value=httpx.Response(
+        404, json={"error": {"code": "global/object-does-not-exist", "message": "not found"}}))
+    try:
+        w = _ready_worker(m, clock)
+        m.store.update_worker(w.id, status="terminating")
+        assert await m.reap_once() is True
+    finally:
+        await m.aclose()
+    assert m.store.get_worker(w.id).status == "terminated"
+
+
+@respx.mock
+async def test_admin_stop_that_fails_leaves_the_row_for_the_reaper(tmp_path):
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    respx.post(f"{LAMBDA_API_BASE}/instance-operations/terminate").mock(side_effect=httpx.ReadTimeout("slow"))
+    try:
+        w = _ready_worker(m, clock)
+        with pytest.raises(LambdaCloudError):
+            await m.terminate("admin")
+    finally:
+        await m.aclose()
+    assert m.store.get_worker(w.id).status == "terminating"
