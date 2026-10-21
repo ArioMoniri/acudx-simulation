@@ -40,7 +40,10 @@ async def _sleep(_: float) -> None:
 
 def _manager(tmp_path, clock, **over) -> WorkerManager:
     base = dict(airgapped=False, lambda_key="k", lambda_ssh_key_name="key", acudx_db_path=str(tmp_path / "a.db"),
-                gpu_idle_minutes=20, admin_token="adm", _env_file=None)
+                gpu_idle_minutes=20, admin_token="adm", _env_file=None,
+                # These sweep tests use names without a gateway id (as a pre-id gateway launched them);
+                # the gateway-id rules are in test_gpu_video_capacity.py.
+                gpu_sweep_unowned=True)
     base.update(over)
     s = Settings(**base)
     return WorkerManager(s, store=WorkerStore(s.acudx_db_path), clock=clock, sleep=_sleep, template_path=CLOUD_INIT,

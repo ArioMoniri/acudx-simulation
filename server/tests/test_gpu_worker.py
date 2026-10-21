@@ -44,6 +44,9 @@ def _settings(tmp_path, **over) -> Settings:
         airgapped=False, lambda_key="secret_test_key", lambda_ssh_key_name="acudx-claude-mac",
         acudx_db_path=str(tmp_path / "acudx.db"), gpu_idle_minutes=20, gpu_daily_budget_usd=25.0,
         admin_token="adm", _env_file=None,
+        # Launch mechanics on the fixture's cheapest card (A10); the 40 GB video minimum is covered by
+        # test_gpu_video_capacity.py.
+        gpu_min_gpu_memory_gb=0,
     )
     base.update(over)
     return Settings(**base)
@@ -146,7 +149,8 @@ async def test_ensure_worker_launches_cheapest_and_waits_for_health(tmp_path):
     assert f"WORKER_TOKEN={w.token}" in body["user_data"]
     # The public IP is unknown before launch: the template resolves the domain at boot.
     assert "WORKER_DOMAIN=auto" in body["user_data"]
-    assert body["tags"] == [{"key": "acudx", "value": "gpu-worker"}]
+    assert body["tags"] == [{"key": "acudx", "value": "gpu-worker"},
+                            {"key": "acudx-gateway", "value": m.store.gateway_id()}]
     assert body["image"] == {"family": "lambda-stack-24-04"}   # the template's OS, never the region default
     # Health probe used the bearer token.
     assert health.calls.last.request.headers["authorization"] == f"Bearer {w.token}"
@@ -745,6 +749,16 @@ def test_chatterbox_keeps_pkg_resources_for_the_perth_watermarker():
     pin_at = dockerfile.index('"setuptools==80.9.0"')
     assert pin_at < dockerfile.index("chatterbox-multilingual.git@")
     assert "sys.exit(0 if perth.PerthImplicitWatermarker else 1)" in dockerfile
+
+
+def test_the_turn_bridge_can_carry_a_browsers_tls_session_to_the_public_443_router():
+    """Proof from a network with HTTPS-only egress: the browser's own turns:turn.<domain>:443 session
+    (TLS to coturn, picked by the SNI router) is piped byte for byte, nothing terminated in between."""
+    runner = _written("/acudx_avatar_server.py")
+    assert 'TURN_TLS_EDGE_PORT = int(os.environ.get("AVATAR_TURN_TLS_EDGE_PORT", "443"))' in runner
+    assert 'port = TURN_TLS_EDGE_PORT if request.query.get("via") == "tls" else TURN_TCP_PORT' in runner
+    assert "asyncio.open_connection(TURN_TCP_HOST, port)" in runner
+    compile(runner, "acudx_avatar_server.py", "exec")
 
 
 def test_public_443_is_an_sni_router_for_turn_over_tls_and_caddy():

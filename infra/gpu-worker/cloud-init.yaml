@@ -1188,6 +1188,10 @@ write_files:
       IDLE_FRAMES = int(os.environ.get("AVATAR_IDLE_FRAMES", "75"))
       TURN_TCP_HOST = os.environ.get("AVATAR_TURN_TCP_HOST", "host.docker.internal")
       TURN_TCP_PORT = int(os.environ.get("AVATAR_TURN_TCP_PORT", "3478"))
+      # The public 443 SNI router (edge.conf, host network): /turn?via=tls pipes to it, so a test
+      # harness carries the browser's own TURN-over-TLS session (turn.<domain>, Let's Encrypt
+      # certificate, coturn's TLS listener) end to end through a WebSocket.
+      TURN_TLS_EDGE_PORT = int(os.environ.get("AVATAR_TURN_TLS_EDGE_PORT", "443"))
       TURN_SECRET = os.environ.get("TURN_SECRET", "")
       # The host's own address for the TURN self-check (the public IP is NATed and does not hairpin).
       TURN_HOST_ADDR = os.environ.get("AVATAR_TURN_HOST_ADDR", "")
@@ -2024,11 +2028,14 @@ write_files:
 
 
       async def turn_bridge(request: web.Request) -> web.WebSocketResponse:
-          """Pipe bytes between a WebSocket and the TURN server's TCP listener (TURN over TCP is a byte stream)."""
+          """Pipe bytes between a WebSocket and the TURN server's TCP listener (TURN over TCP is a byte stream).
+          ``?via=tls``: the host's public 443 router instead, so the bytes are the browser's TLS session
+          with coturn's TLS listener (the SNI router picks it by the turn.<domain> server name)."""
           ws = web.WebSocketResponse(max_msg_size=1 << 20, heartbeat=20)
           await ws.prepare(request)
+          port = TURN_TLS_EDGE_PORT if request.query.get("via") == "tls" else TURN_TCP_PORT
           try:
-              reader, writer = await asyncio.open_connection(TURN_TCP_HOST, TURN_TCP_PORT)
+              reader, writer = await asyncio.open_connection(TURN_TCP_HOST, port)
           except OSError as exc:
               await ws.close(code=1011, message=f"turn unreachable: {type(exc).__name__}".encode())
               return ws
