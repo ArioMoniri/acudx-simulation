@@ -187,13 +187,19 @@ const turn2 = await ask(1, "worse");
 
 // A treatment from the case's own table (the first indicated one), then time for it to act.
 const rows = spec.treatments ?? [];
-const tx = rows.find((r) => /indicated|appropriate|correct/.test(String(r.appropriateness))) ?? rows[0];
+// TREATMENTS (comma list of codes) gives several; else the first indicated row.
+const wanted = (process.env.TREATMENTS ?? "").split(",").filter(Boolean);
+const given = wanted.length ? rows.filter((r) => wanted.includes(r.code))
+  : [rows.find((r) => /indicated|appropriate|correct/.test(String(r.appropriateness))) ?? rows[0]].filter(Boolean);
+const tx = given[0];
 let better = null;
 let turn3 = null;
 if (tx) {
-  await api("/v2/director/step", { thread_id: thread, action: { kind: "treatment", ref: tx.code, locale: LANG }, use_model: false });
+  for (const g of given) {
+    await api("/v2/director/step", { thread_id: thread, action: { kind: "treatment", ref: g.code, locale: LANG }, use_model: false });
+  }
   better = await stepAndWaitSwitch({ kind: "elapsed", ref: "", elapsed_ms: Number(process.env.TREAT_MS ?? 180 * 60_000), locale: LANG }, "treated");
-  better.treatment = { code: tx.code, label: tx.label_en };
+  better.treatment = given.map((g) => ({ code: g.code, label: g.label_en }));
   turn3 = await ask(2, "treated");
 } else {
   t("no treatment table in the spec yet; the treatment step is skipped");

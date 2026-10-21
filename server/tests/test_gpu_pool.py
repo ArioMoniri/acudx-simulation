@@ -303,6 +303,11 @@ def test_image_edit_server_is_apache_licensed_and_pinned():
     assert "black-forest-labs/FLUX.2-klein-4B" in ci and "e7b7dc27f91deacad38e78976d1f2b499d76a294" in ci
     assert '"diffusers==0.40.0"' in ci and "--exclude-newer 2026-09-01" in ci
     assert 'mode = "sequential"' in ci and 'mode = "offload"' in ci and 'mode = "gpu"' in ci
+    # The card is shared with live calls: the edit server gives its cache back after every edit and
+    # answers an out-of-memory with 503 (live 2026-10-21: 82 MB left, runner and edits both 500).
+    edit = ci[ci.index("def _edit("):ci.index("def _size(")]
+    assert "torch.cuda.empty_cache()" in edit and "finally:" in edit
+    assert "torch.cuda.OutOfMemoryError" in ci and "expandable_segments:True" in ci
 
 
 def test_runner_switches_a_live_call_with_a_crossfade():

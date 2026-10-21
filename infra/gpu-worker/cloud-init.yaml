@@ -814,6 +814,8 @@ write_files:
           environment:
             - HF_HOME=/hf
             - IMAGEGEN_PORT=8020
+            # Fewer stranded blocks between edits of different sizes (the cache is emptied after each).
+            - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
             - NVIDIA_VISIBLE_DEVICES=${IMAGEGEN_GPU:-0}
             - NVIDIA_DRIVER_CAPABILITIES=compute,utility
           volumes: [ "/opt/acudx/hf:/hf" ]
@@ -2269,10 +2271,17 @@ write_files:
           gen = torch.Generator(device="cuda").manual_seed(seed)
           with LOCK, torch.inference_mode():
               try:
-                  out = PIPE(image=image, prompt=prompt, width=width, height=height, num_inference_steps=steps,
-                             guidance_scale=1.0, generator=gen)
-              except TypeError:
-                  out = PIPE(image=image, prompt=prompt, num_inference_steps=steps, generator=gen)
+                  try:
+                      out = PIPE(image=image, prompt=prompt, width=width, height=height, num_inference_steps=steps,
+                                 guidance_scale=1.0, generator=gen)
+                  except TypeError:
+                      out = PIPE(image=image, prompt=prompt, num_inference_steps=steps, generator=gen)
+              finally:
+                  # Give the card back after every edit. Live 2026-10-21 on an A100 40 GB: after eight
+                  # edits this process held 8.8 GB in torch's cache with 82 MB left on the card, so the
+                  # call's runner could not prepare the next face and both answered 500.
+                  if torch.cuda.is_available():
+                      torch.cuda.empty_cache()
           return out.images[0]
 
 
@@ -2307,8 +2316,18 @@ write_files:
           steps = max(1, min(8, int(body.get("steps") or 4)))
           w, h = _size(int(body.get("width") or src.width), int(body.get("height") or src.height))
           t = time.monotonic()
-          out = await asyncio.get_running_loop().run_in_executor(None, _edit, src.resize((w, h), Image.LANCZOS),
-                                                                 prompt, seed, steps, w, h)
+          try:
+              out = await asyncio.get_running_loop().run_in_executor(None, _edit, src.resize((w, h), Image.LANCZOS),
+                                                                     prompt, seed, steps, w, h)
+          except torch.cuda.OutOfMemoryError:
+              # The card is shared with live calls (a runner preparing a picture takes a few GB for a
+              # while); give the memory back and let the gateway retry.
+              torch.cuda.empty_cache()
+              STATE["oom"] = STATE.get("oom", 0) + 1
+              return web.json_response({"error": "oom", "free_mb": _free_mb()}, status=503)
+          except Exception as exc:  # noqa: BLE001 - reported to the gateway, which retries 5xx
+              log.exception("edit failed")
+              return web.json_response({"error": "edit_failed", "detail": type(exc).__name__}, status=500)
           ms = round((time.monotonic() - t) * 1000.0, 1)
           out = out.convert("RGB").resize((src.width, src.height), Image.LANCZOS)
           buf = io.BytesIO()

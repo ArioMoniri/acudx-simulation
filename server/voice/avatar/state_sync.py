@@ -48,6 +48,7 @@ class Variant:
     mode: str | None = None
     image: bytes | None = None    # the generated JPEG (served to the call's owner, never persisted)
     prompt: str | None = None
+    retryable: bool = False
 
     def public(self) -> dict[str, Any]:
         return {"name": self.name, "key": self.look.key, "avatar_id": self.avatar_id, "status": self.status,
@@ -71,6 +72,9 @@ class Appearance:
     # pictures are then prepared on the call's own worker).
     gen_worker: Any = None
     gen_mode: str | None = None
+    # The runner session of the connected call (set by /offer): a picture that becomes ready later
+    # (the ladder in the background, a look generated on demand) is switched to at once.
+    worker_session: str | None = None
     tasks: set[asyncio.Task[Any]] = field(default_factory=set)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -136,9 +140,27 @@ def voice_for(app_state: Appearance | None) -> dict[str, Any]:
     return ap.voice_style(app_state.live)
 
 
+GEN_RETRIES = 2
+GEN_RETRY_S = 15.0
+
+
 async def _make_variant(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, v: Variant,
-                        portrait: bytes, *, seed: int) -> bool:
+                        portrait: bytes, *, seed: int, retry_s: float | None = None) -> bool:
+    """Generate and prepare one picture. A 5xx from the image edit server (live 2026-10-21: a 500
+    while the call's runner prepared another picture on the same 40 GB card) is retried after
+    ``retry_s``, twice."""
+    for attempt in range(GEN_RETRIES + 1):
+        ok = await _make_variant_once(client, worker, a, v, portrait, seed=seed)
+        if ok or attempt == GEN_RETRIES or not v.retryable:
+            return ok
+        await asyncio.sleep(GEN_RETRY_S if retry_s is None else retry_s)
+    return False
+
+
+async def _make_variant_once(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, v: Variant,
+                             portrait: bytes, *, seed: int) -> bool:
     v.status = "generating"
+    v.retryable = False
     try:
         v.prompt = ap.edit_prompt(v.look)
         img, meta = await mt.imagegen_edit(client, a.gen_worker or worker, portrait, v.prompt, seed=seed)
@@ -152,7 +174,8 @@ async def _make_variant(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: A
         return True
     except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
         v.status = "failed"
-        v.error = (getattr(exc, "detail", None) or type(exc).__name__)[:200]
+        v.error = str(getattr(exc, "detail", None) or type(exc).__name__)[:200]
+        v.retryable = isinstance(exc, httpx.HTTPError) or int(getattr(exc, "status", 0) or 0) >= 500
         log.info("appearance variant %s for %s failed: %s", v.name, a.thread_id[:8], v.error)
         return False
 
@@ -188,10 +211,9 @@ async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id
     rest = [v for v in a.variants.values() if v.status == "pending" and v is not first]
 
     async def ladder_rest() -> None:
-        for v in rest:
-            await _make_variant(client, worker, a, v, portrait, seed=seed)
-        if first.status in ("pending", "failed"):
-            await _make_variant(client, worker, a, first, portrait, seed=seed)
+        for v in rest + ([first] if first.status in ("pending", "failed") else []):
+            if await _make_variant(client, worker, a, v, portrait, seed=seed) and a.worker_session:
+                await _switch_to_best(client, worker, a, a.worker_session, reason="ladder_ready")
 
     t = asyncio.get_running_loop().create_task(ladder_rest())
     a.tasks.add(t)
@@ -239,7 +261,8 @@ async def sync(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
 
             async def make_then_switch() -> None:
                 if await _make_variant(client, worker, a, v, portrait, seed=seed_for(a.thread_id)):
-                    await _switch_to_best(client, worker, a, worker_session, reason=f"{reason}:generated")
+                    await _switch_to_best(client, worker, a, a.worker_session or worker_session,
+                                          reason=f"{reason}:generated")
 
             t = asyncio.get_running_loop().create_task(make_then_switch())
             a.tasks.add(t)

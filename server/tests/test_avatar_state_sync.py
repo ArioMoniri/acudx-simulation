@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import threading
 import time
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -26,11 +27,16 @@ THREAD = "thr-fever-1"
 class SyncRunner(Runner):
     """The runner stand-in plus the image edit server and the live switch."""
 
-    def __init__(self, *, imagegen: bool = True, **kw):
+    def __init__(self, *, imagegen: bool = True, hold: bool = False, fail_next: int = 0, **kw):
         super().__init__(**kw)
         self.imagegen = imagegen
         self.edits: list[dict] = []
         self.switches: list[dict] = []
+        # After the first (presenting) picture: fail the next ``fail_next`` edits with a 500, and with
+        # ``hold`` keep every later edit waiting until ``gate`` is set.
+        self.hold = hold
+        self.fail_next = fail_next
+        self.gate = threading.Event()
 
     def mount(self, app: FastAPI) -> None:
         def auth(a: str | None) -> None:
@@ -49,6 +55,11 @@ class SyncRunner(Runner):
         async def ig_edit(request: Request, authorization: str | None = Header(default=None)):
             auth(authorization)
             body = await request.json()
+            if self.edits and self.fail_next > 0:
+                self.fail_next -= 1
+                raise HTTPException(status_code=500, detail="cuda out of memory")
+            while self.edits and self.hold and not self.gate.is_set():
+                await asyncio.sleep(0.02)
             self.edits.append({"prompt": body["prompt"], "seed": body["seed"], "image": len(base64.b64decode(body["image_b64"]))})
             return Response(content=b"\xff\xd8edited-" + str(len(self.edits)).encode(), media_type="image/jpeg",
                             headers={"X-Gen-Ms": "812.5", "X-Mode": "offload", "X-Steps": "4", "X-Seed": str(body["seed"])})
@@ -169,6 +180,39 @@ def test_director_step_switches_the_live_face_and_arrest_silences_the_voice(tmp_
     assert spoke.status_code == 200 and spoke.json()["silent"] is True
     st = c.get("/v1/voice/avatar/appearance", params={"session_id": s["session_id"]}, headers=USER).json()
     assert st["appearance"]["switches"][-1]["phase"] == "arrest" and st["appearance"]["switches"][-1]["exact"] is True
+
+
+def test_a_picture_that_becomes_ready_after_the_step_is_switched_to(tmp_path, monkeypatch):
+    """Live 2026-10-21: the Director moved the patient to the 'critical' look 30 s before that picture
+    was prepared, and nothing switched until the next step. The ladder now switches when it lands; a
+    500 from the image edit server (a busy 40 GB card) is retried."""
+    from server.voice.avatar import state_sync
+
+    monkeypatch.setattr(state_sync, "GEN_RETRY_S", 0.0)
+    runner = SyncRunner(hold=True, fail_next=1)
+    app, store = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True))
+    row = {"source": "model", "owner": "learner-1", "spec": _spec(), "director": _director()}
+    app.state.orchestration = _Rt({THREAD: row})
+    with TestClient(app) as c:     # one event loop for the whole call: the ladder runs in the background
+        _ladder_case(c, app, runner, row)
+
+
+def _ladder_case(c, app, runner, row):
+    s = c.post("/v1/voice/avatar/session", json={**SESSION, "thread_id": THREAD}, headers=USER).json()
+    assert c.post("/v1/voice/avatar/offer", json={"session_id": s["session_id"], "sdp": "v=0\r\noffer", "type": "offer"},
+                  headers=USER).status_code == 200
+    worse = _director(phase="deteriorating")
+    for v in (worse["vitals"], worse["snapshot"]["vitals"]):
+        v.update({"rr": 32, "spo2": 86})
+    row["director"] = worse
+    c.portal.call(notify_director, app, THREAD)
+    assert runner.switches == []                    # the picture for this look is not ready yet
+    runner.gate.set()
+    assert _wait(lambda: len(runner.switches) > 0, timeout=8)
+    st = c.get("/v1/voice/avatar/appearance", params={"session_id": s["session_id"]}, headers=USER).json()
+    assert st["appearance"]["switches"][0]["reason"] in ("ladder_ready", "director:generated")
+    assert st["appearance"]["switches"][0]["to"] == ap.look_from_case(_spec(), worse).key or \
+        st["appearance"]["switches"][-1]["to"] == ap.look_from_case(_spec(), worse).key
 
 
 def test_a_thread_the_caller_may_not_read_gives_the_plain_portrait(tmp_path):

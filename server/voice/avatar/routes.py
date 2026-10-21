@@ -344,6 +344,10 @@ async def offer(request: Request, body: OfferBody, user: Principal = Depends(cur
     if s.provider != "musetalk" or not s.avatar_id:
         raise HTTPException(status_code=409, detail={"error": "not_a_webrtc_session"})
     worker = _require_worker(svc, s)
+    # The picture the patient's state calls for now (the ladder may have moved on since the session).
+    a = s.appearance
+    if a is not None and a.current_key in a.variants and a.variants[a.current_key].status == "ready":
+        s.avatar_id = a.variants[a.current_key].avatar_id
     t0 = time.monotonic()
     try:
         ans = await mt.offer(svc.client, worker, sdp=body.sdp, sdp_type=body.type, avatar_id=s.avatar_id,
@@ -356,6 +360,8 @@ async def offer(request: Request, body: OfferBody, user: Principal = Depends(cur
         await s.audio_link.close()
     s.worker_session = str(ans["sessionid"])
     s.metrics["answer_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+    if s.appearance is not None:
+        s.appearance.worker_session = s.worker_session
     # Open the audio WebSocket now, while the browser finishes ICE, so the first line does not pay it.
     s.audio_link = mt.RunnerAudioLink(worker=worker, worker_session=s.worker_session)
     preroll_ms = int(getattr(svc.settings, "avatar_preroll_ms", 0) or 0)
