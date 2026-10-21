@@ -320,3 +320,42 @@ def test_runner_switches_a_live_call_with_a_crossfade():
     ci = _cloud_init()
     assert 'app.router.add_post("/switch", switch)' in ci
     assert "frame_count_mismatch" in ci and "_install_crossfade(sess)" in ci
+
+
+def test_a_stale_live_call_count_never_pins_a_worker(tmp_path):
+    """Audit: the runner's call count arrives only when a call starts and was never reset, so one
+    report kept ``load["calls"]`` non-zero and the reaper skipped the worker for good."""
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    (a,) = _ready(m, clock, 1)
+    m.set_calls(f"https://{a.domain}", 2)
+    assert m.load_of(a)["calls"] == 2
+    clock.advance(m.calls_ttl_s + 1)
+    assert m.load_of(a)["calls"] == 0, "a report older than calls_ttl_s reads as no call"
+    m.set_calls(f"https://{a.domain}", 1)
+    assert m.load_of(a)["calls"] == 1
+    m.call_ended(f"https://{a.domain}")
+    assert m.load_of(a)["calls"] == 0
+    m.call_ended(f"https://{a.domain}")   # never below zero
+    assert m.load_of(a)["calls"] == 0
+
+
+async def test_reaper_stops_a_worker_whose_call_count_went_stale(tmp_path):
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    (a,) = _ready(m, clock, 1)
+    stopped: list[list[str]] = []
+
+    class _Api:
+        async def terminate(self, ids):
+            stopped.append(list(ids))
+            return ids
+
+        async def get_instance(self, _iid):
+            raise httpx.ConnectError("offline")
+
+    m._lambda = lambda: _Api()  # type: ignore[method-assign]
+    m.set_calls(f"https://{a.domain}", 1)
+    clock.advance(21 * 60)
+    assert await m.reap_once() is True
+    assert stopped == [[a.instance_id]]

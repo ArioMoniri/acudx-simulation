@@ -708,6 +708,9 @@ async def end(request: Request, body: SessionRef, user: Principal = Depends(curr
     s = _session(request, body, user)
     _store(request).pop(s.id)
     await end_remote(svc, s)
+    wm = svc.resolver.worker_manager
+    if s.provider == "musetalk" and s.worker_origin and wm is not None and hasattr(wm, "call_ended"):
+        wm.call_ended(s.worker_origin)   # an ended call must not hold the worker against its idle window
     return {"ok": True, "metrics": s.metrics}
 
 

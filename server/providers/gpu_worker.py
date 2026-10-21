@@ -386,7 +386,8 @@ class WorkerManager:
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  poll_interval_s: float = 5.0, boot_timeout_s: float = 900.0,
                  ready_timeout_s: float = 1500.0, boot_log_interval_s: float = 60.0,
-                 health_ttl_s: float = 30.0, call_refusal_window_s: float = 120.0):
+                 health_ttl_s: float = 30.0, call_refusal_window_s: float = 120.0,
+                 calls_ttl_s: float = 120.0):
         self.settings = settings
         self.store = store or WorkerStore(settings.acudx_db_path)
         self._client = client
@@ -414,6 +415,11 @@ class WorkerManager:
         # Load per worker domain: requests in flight, live calls the runner reports.
         self._requests: dict[str, int] = {}
         self._calls: dict[str, int] = {}
+        # When each live-call count was reported. The runner's count arrives only when a call starts
+        # (pick_worker), so a count older than ``calls_ttl_s`` reads as 0: a stale report must never
+        # pin a worker against the idle reaper (a live call keeps touching the idle window anyway).
+        self._calls_at: dict[str, float] = {}
+        self.calls_ttl_s = calls_ttl_s
         self._rr = 0
         self.call_refusal_window_s = call_refusal_window_s
         self._call_refused_at: float | None = None
@@ -520,6 +526,19 @@ class WorkerManager:
         d = self._domain_of(ref)
         if d:
             self._calls[d] = max(0, int(calls))
+            self._calls_at[d] = self._clock()
+
+    def call_ended(self, ref: str | None) -> None:
+        """A live call on the worker at ``ref`` ended (POST /avatar/end): drop it from the count."""
+        d = self._domain_of(ref)
+        if d and self._calls.get(d):
+            self._calls[d] -= 1
+
+    def _live_calls(self, d: str) -> int:
+        at = self._calls_at.get(d)
+        if at is None or self._clock() - at > self.calls_ttl_s:
+            return 0
+        return self._calls.get(d, 0)
 
     def note_call_refused(self) -> None:
         """A live call found no free slot on any ready worker: the pool needs another one."""
@@ -527,7 +546,7 @@ class WorkerManager:
 
     def load_of(self, w: WorkerRecord) -> dict[str, Any]:
         d = w.domain or ""
-        inflight, calls = self._requests.get(d, 0), self._calls.get(d, 0)
+        inflight, calls = self._requests.get(d, 0), self._live_calls(d)
         gpus = gpus_for(w.instance_type)
         # A live call holds a GPU stream for minutes; count it like a few queued requests.
         return {"inflight": inflight, "calls": calls, "gpus": gpus,
@@ -766,6 +785,7 @@ class WorkerManager:
         if w.domain:
             self._requests.pop(w.domain, None)
             self._calls.pop(w.domain, None)
+            self._calls_at.pop(w.domain, None)
         log.info("gpu worker %s terminated (%s) after %.0fs", w.instance_id, reason, now - w.launched_at)
         return self.store.update_worker(w.id, status="terminated", terminated_at=now)
 
