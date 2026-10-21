@@ -92,8 +92,12 @@ TEMPERATURE = {"s1": 0.7, "layer": 0.5, "patch": 0.3}
 LAYER_CONCURRENCY = max(1, int(os.environ.get("CASEGEN_LAYER_CONCURRENCY", "1") or "1"))
 # On the Claude route every call is served on its own (no shared decode budget): the staged
 # layers took about 109 s one at a time there, so independent layers run this many at a time
-# (doc 15 section 12.10). CASEGEN_LAYER_CONCURRENCY, when set, wins on every route.
-CLAUDE_LAYER_CONCURRENCY = max(1, int(os.environ.get("CASEGEN_CLAUDE_LAYER_CONCURRENCY", "3") or "3"))
+# (doc 15 section 12.10). The limit is PER THREAD on Claude (one learner's case never queues
+# behind another learner's layers) and 6 covers the widest wave (the other history clusters
+# plus up to three exam systems), so a wave runs in one round trip (live 2026-10-21: 3 at a
+# time over all threads queued the second history and exam round behind the first).
+# CASEGEN_LAYER_CONCURRENCY, when set, wins on every route (and is then one global limit).
+CLAUDE_LAYER_CONCURRENCY = max(1, int(os.environ.get("CASEGEN_CLAUDE_LAYER_CONCURRENCY", "6") or "6"))
 CONTINUATION_CAP_S = 420.0     # wall-clock cap of the background continuation
 DEFAULT_ETA_MS = {"s1": 15_000, "history": 10_000, "exam": 6_000, "treatments": 15_000, "results": 8_000}
 
@@ -158,9 +162,12 @@ class _Limiter:
         self._cond = asyncio.Condition()
 
     @contextlib.asynccontextmanager
-    async def slot(self, limit: Callable[[], int]) -> AsyncIterator[None]:
+    async def slot(self, limit: Callable[[], int],
+                   bypass: Callable[[], bool] = lambda: False) -> AsyncIterator[None]:
+        """Wait for a free slot; ``bypass`` lets a call the learner is now waiting for go
+        ahead of the queue (it still counts as active while it runs)."""
         async with self._cond:
-            await self._cond.wait_for(lambda: self._active < max(1, limit()))
+            await self._cond.wait_for(lambda: self._active < max(1, limit()) or bypass())
             self._active += 1
         try:
             yield
@@ -168,6 +175,11 @@ class _Limiter:
             async with self._cond:
                 self._active -= 1
                 self._cond.notify_all()
+
+    async def wake(self) -> None:
+        """Re-check every waiter (a queued call was promoted)."""
+        async with self._cond:
+            self._cond.notify_all()
 
 
 def valid_layer(layer: str) -> bool:
@@ -1107,7 +1119,10 @@ class StagedRuntime:
         self._render_tasks: dict[tuple[str, str, str], asyncio.Task[Any]] = {}
         self._notify: dict[str, asyncio.Event] = {}
         self._spawned: set[asyncio.Task[Any]] = set()
-        self._limiter = _Limiter()
+        self._limiter = _Limiter()                       # one global limit (GPU worker, explicit env)
+        self._thread_limiters: dict[str, _Limiter] = {}  # per-thread limits (Claude route)
+        # Queued background layers a learner is now waiting for: they skip the queue.
+        self._urgent: set[tuple[str, str]] = set()
         self._medians: dict[str, deque[float]] = {k: deque(maxlen=50) for k in DEFAULT_ETA_MS}
 
     # ------------------------------------------------------------- events
@@ -1222,6 +1237,7 @@ class StagedRuntime:
                 self.emit(thread_id, "error", {"stage": "continuation", "error": "continuation_timeout",
                                                "status": 504, "retryable": True, "thread_id": thread_id})
             await self._judge_async(thread_id)
+            self._thread_limiters.pop(thread_id, None)
             st = self.store.update(thread_id, lambda s: s.update(status=("complete" if s["status"] != "failed"
                                                                        else "failed")))
             if st is not None:
@@ -1391,6 +1407,15 @@ class StagedRuntime:
                 return LAYER_CONCURRENCY
         return CLAUDE_LAYER_CONCURRENCY if self._claude_route() else LAYER_CONCURRENCY
 
+    def limiter_for(self, thread_id: str) -> _Limiter:
+        """The limit a background layer of ``thread_id`` queues on: per thread on the Claude
+        route (calls are served independently, so learners must not queue behind each other),
+        else the runtime-wide one (the GPU worker's decode budget is shared; an explicit
+        CASEGEN_LAYER_CONCURRENCY is also one global limit)."""
+        if not os.environ.get("CASEGEN_LAYER_CONCURRENCY") and self._claude_route():
+            return self._thread_limiters.setdefault(thread_id, _Limiter())
+        return self._limiter
+
     def core_layers(self, state: dict[str, Any]) -> list[str]:
         systems = [f"exam.{s}" for s in ((state.get("kernel") or {}).get("exam_systems") or [])]
         out = list(CORE_LAYERS_FIXED[:4]) + systems + list(CORE_LAYERS_FIXED[4:])
@@ -1446,6 +1471,14 @@ class StagedRuntime:
             task = asyncio.create_task(self._generate_layer(thread_id, layer, extra=extra, at_ms=at_ms,
                                                             background=(reason == "continuation")))
             self._layer_tasks[key] = task
+        elif reason != "continuation" and key not in self._urgent:
+            # The learner now waits for a layer the continuation has queued: let it go ahead
+            # of the queue instead of waiting for the layers in front of it.
+            self._urgent.add(key)
+            await self._limiter.wake()
+            lim = self._thread_limiters.get(thread_id)
+            if lim is not None:
+                await lim.wake()
         await asyncio.shield(task)
         state = self.store.get(thread_id) or {}
         return (state.get("layers") or {}).get(layer) or {}
@@ -1461,37 +1494,44 @@ class StagedRuntime:
         data: Optional[dict[str, Any]] = None
         notes: list[str] = []
         error: Optional[tuple[str, int, str]] = None
-        async with (self._limiter.slot(self.layer_concurrency) if background else contextlib.nullcontext()):
-            for _attempt in range(self.layer_attempts):
-                state = self.store.get(thread_id) or {}
-                schema, cap = layer_schema(layer)
-                try:
-                    reply = await self._call(thread_id, f"layer:{layer}", layer_messages(state, layer, extra=extra,
-                                                                                         issues=issues),
-                                             schema, max_tokens=cap, temperature=TEMPERATURE["layer"])
-                    data, notes = gate_layer(layer, dict(reply.data), state)
-                    if kind == "treatments":
-                        await self._safety_gate_treatments(thread_id, data, state)
-                    elif kind == "event":
-                        data = await self._safety_gate_event(thread_id, layer, data, state)
-                    error = None
-                    break
-                except SafetyVeto as exc:
-                    issues = exc.issues
-                    data = None
-                    error = ("safety_veto", 502, "; ".join(exc.issues))
-                except LayerRejected as exc:
-                    issues = exc.issues
-                    data = None
-                    error = ("layer_rejected", 502, "; ".join(exc.issues))
-                except ModelOutputInvalid as exc:
-                    issues = ["the reply was not valid JSON"]
-                    data = None
-                    error = ("model_output_invalid", 502, str(exc))
-                except ModelUnreachable as exc:
-                    data = None
-                    error = ("model_unreachable", 503, str(exc))
-                    break
+        key = (thread_id, layer)
+        slot = (self.limiter_for(thread_id).slot(self.layer_concurrency, lambda: key in self._urgent)
+                if background else contextlib.nullcontext())
+        try:
+            async with slot:
+                self._urgent.discard(key)
+                for _attempt in range(self.layer_attempts):
+                    state = self.store.get(thread_id) or {}
+                    schema, cap = layer_schema(layer)
+                    try:
+                        msgs = layer_messages(state, layer, extra=extra, issues=issues)
+                        reply = await self._call(thread_id, f"layer:{layer}", msgs, schema, max_tokens=cap,
+                                                 temperature=TEMPERATURE["layer"])
+                        data, notes = gate_layer(layer, dict(reply.data), state)
+                        if kind == "treatments":
+                            await self._safety_gate_treatments(thread_id, data, state)
+                        elif kind == "event":
+                            data = await self._safety_gate_event(thread_id, layer, data, state)
+                        error = None
+                        break
+                    except SafetyVeto as exc:
+                        issues = exc.issues
+                        data = None
+                        error = ("safety_veto", 502, "; ".join(exc.issues))
+                    except LayerRejected as exc:
+                        issues = exc.issues
+                        data = None
+                        error = ("layer_rejected", 502, "; ".join(exc.issues))
+                    except ModelOutputInvalid as exc:
+                        issues = ["the reply was not valid JSON"]
+                        data = None
+                        error = ("model_output_invalid", 502, str(exc))
+                    except ModelUnreachable as exc:
+                        data = None
+                        error = ("model_unreachable", 503, str(exc))
+                        break
+        finally:
+            self._urgent.discard(key)
         latency = (time.monotonic() - started) * 1000.0
         if kind in self._medians and data is not None:
             self._medians[kind].append(latency)
@@ -1672,24 +1712,30 @@ class StagedRuntime:
         if not issues:
             self.emit(thread_id, "judge", {"layer": "*", "decision": "accept"})
             return
-        for layer, layer_issues in self._issues_by_layer(state, issues).items():
-            entry = (self.store.get(thread_id) or {}).get("layers", {}).get(layer) or {}
-            if layer == "opening" or entry.get("seen"):
-                note = {"layer": layer, "issues": layer_issues, "action": "noted"}
-                self.store.update(thread_id, lambda s, n=note: s.update(
-                    corrections=list(s.get("corrections") or []) + [n]))
-                self.emit(thread_id, "judge", {"layer": layer, "decision": "noted", "issues": layer_issues})
-                continue
-            before = entry.get("data")
-            await self._generate_layer(thread_id, layer, issues=layer_issues)
-            after = ((self.store.get(thread_id) or {}).get("layers", {}).get(layer) or {}).get("data")
-            if after is not None and after != before:
-                st = self.store.get(thread_id) or {}
-                self.emit(thread_id, "judge", {"layer": layer, "decision": "patched", "issues": layer_issues,
-                                               "patch": [{"op": "replace", "path": f"/layers/{layer}", "value": after}],
-                                               "spec": st.get("spec")})
-            else:
-                self.emit(thread_id, "judge", {"layer": layer, "decision": "noted", "issues": layer_issues})
+        # Each patch rewrites a different layer from the same review, so they run together
+        # (live 2026-10-21: three patches one after another added about 20 s before ``done``).
+        await asyncio.gather(*(self._patch(thread_id, layer, layer_issues)
+                               for layer, layer_issues in self._issues_by_layer(state, issues).items()),
+                             return_exceptions=True)
+
+    async def _patch(self, thread_id: str, layer: str, layer_issues: list[str]) -> None:
+        """Rewrite one unseen layer with the judges' issues, or record them on a seen one."""
+        entry = (self.store.get(thread_id) or {}).get("layers", {}).get(layer) or {}
+        if layer == "opening" or entry.get("seen"):
+            note = {"layer": layer, "issues": layer_issues, "action": "noted"}
+            self.store.update(thread_id, lambda s: s.update(corrections=list(s.get("corrections") or []) + [note]))
+            self.emit(thread_id, "judge", {"layer": layer, "decision": "noted", "issues": layer_issues})
+            return
+        before = entry.get("data")
+        await self._generate_layer(thread_id, layer, issues=layer_issues)
+        after = ((self.store.get(thread_id) or {}).get("layers", {}).get(layer) or {}).get("data")
+        if after is not None and after != before:
+            st = self.store.get(thread_id) or {}
+            self.emit(thread_id, "judge", {"layer": layer, "decision": "patched", "issues": layer_issues,
+                                           "patch": [{"op": "replace", "path": f"/layers/{layer}", "value": after}],
+                                           "spec": st.get("spec")})
+        else:
+            self.emit(thread_id, "judge", {"layer": layer, "decision": "noted", "issues": layer_issues})
 
     @staticmethod
     def _issues_by_layer(state: dict[str, Any], issues: list[str]) -> dict[str, list[str]]:

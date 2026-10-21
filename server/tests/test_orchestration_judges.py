@@ -101,3 +101,7 @@ def test_aggregate_counts_only_current_round():
              _vote("clinical_consistency", "pass", 1), _vote("safety_dosing", "pass", 1), _vote("pedagogy", "pass", 1)]
     assert J.aggregate_votes(votes, 1)["decision"] == "accept"
     assert J.aggregate_votes(votes, 0)["decision"] == "repair"
+
+
+def test_judge_reply_has_room_for_a_whole_verdict():
+    assert J.JUDGE_MAX_TOKENS >= 900

@@ -218,11 +218,16 @@ def thinking_for(model: str, effort: str) -> Optional[dict[str, Any]]:
     return None
 
 
-def output_budget(model: str, requested: int, *, streaming: bool) -> int:
-    """``max_tokens`` with room for adaptive thinking on models that always think."""
+def output_budget(model: str, requested: int, *, streaming: bool, structured: bool = False) -> int:
+    """``max_tokens`` with room for adaptive thinking on models that always think.
+
+    A structured (JSON schema) reply on a model with thinking off gets half again as headroom:
+    the caps were sized for a guided-JSON GPU worker, and a Claude reply cut at ``max_tokens``
+    is unparseable (live 2026-10-21: the Sonnet clinical-consistency judge hit 500 on every
+    case). ``max_tokens`` is only a ceiling, so the headroom costs nothing when unused."""
     requested = max(64, int(requested or 0))
     if thinking_for(model, "low") is not None:
-        return requested
+        return requested + requested // 2 if structured else requested
     cap = 32_000 if streaming else 16_000
     return min(cap, max(requested * 3, requested + 2048))
 
@@ -372,7 +377,7 @@ class AnthropicProvider:
                 structured = True
             except SchemaNotExpressible:
                 log.info("schema for %s is not expressible as structured output; prompt contract used", node)
-        budget = output_budget(model, max_tokens, streaming=on_text is not None)
+        budget = output_budget(model, max_tokens, streaming=on_text is not None, structured=structured)
         req = self._request(model=model, system=system, messages=msgs, max_tokens=budget, effort=effort,
                             schema=api_schema, cache_tail=cache_tail)
         t0 = time.monotonic()
