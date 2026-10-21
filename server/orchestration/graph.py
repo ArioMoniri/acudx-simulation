@@ -345,18 +345,18 @@ def build_casegen_graph(deps: CaseGenDeps):
             )],
         }
 
-    async def _author_call(messages: list[dict[str, str]], temperature: float):
+    async def _author_call(messages: list[dict[str, str]], temperature: float, node: str = "author"):
         assert deps.llm is not None
         try:
             return await deps.llm.complete_json(
                 messages, schema=AUTHOR_SCHEMA, schema_name="generated_case_spec",
-                role="casegen", temperature=temperature, max_tokens=AUTHOR_MAX_TOKENS,
+                role="casegen", temperature=temperature, max_tokens=AUTHOR_MAX_TOKENS, node=node,
             )
         except ModelOutputInvalid:
             # One retry for a malformed reply; a second failure propagates (502).
             return await deps.llm.complete_json(
                 messages, schema=AUTHOR_SCHEMA, schema_name="generated_case_spec",
-                role="casegen", temperature=temperature, max_tokens=AUTHOR_MAX_TOKENS,
+                role="casegen", temperature=temperature, max_tokens=AUTHOR_MAX_TOKENS, node=node,
             )
 
     def _stamp_authoritative(draft: dict[str, Any], state: CaseGenState) -> dict[str, Any]:
@@ -459,7 +459,7 @@ def build_casegen_graph(deps: CaseGenDeps):
             state["draft"], state["condition"], council.get("issues") or [], council.get("repair_hints") or [],
             complaint=(state.get("request") or {}).get("complaint"),
         )
-        reply = await _author_call(messages, REPAIR_TEMPERATURE)
+        reply = await _author_call(messages, REPAIR_TEMPERATURE, node="repair")
         draft = _stamp_authoritative(dict(reply.data), state)
         norm = _normalize(draft, state)
         repairs = int(state.get("repairs", 0)) + 1

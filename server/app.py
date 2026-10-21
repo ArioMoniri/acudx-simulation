@@ -119,6 +119,9 @@ async def lifespan(app: FastAPI):
     if not registry.secrets_configured:
         log.warning(secret_key_instructions())
     registry.seed_from_env(settings)
+    # The Claude route is a registry row too (docs/architecture/20 section 2): visible, switchable,
+    # and "Anthropic key not configured" in the console while ANTHROPIC_KEY is unset.
+    registry.ensure_anthropic_row(settings)
     telemetry = TelemetryRecorder(settings.acudx_db_path)
     # On-demand GPU worker manager + idle reaper (never always-on; see providers/gpu_worker.py).
     worker_manager = WorkerManager(settings, boot_timeout_s=settings.gpu_boot_timeout_s,

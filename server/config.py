@@ -124,6 +124,35 @@ class Settings(BaseSettings):
     judge_base_url: str | None = None
     judge_model: str | None = None
     judge_api_key: str | None = None
+    # --- Anthropic (Claude) route, docs/architecture/20 section 2 ---------------- #
+    # ANTHROPIC_KEY (ANTHROPIC_API_KEY accepted as an alias) is read server-side only and
+    # never serialised to a client. With a key, Claude is the default route for the case
+    # author, judges, repair, narrator, debrief, renderings, grounding, the patient persona
+    # and the interview guard; without one every role falls back to the configured next
+    # provider (registry, OPENAI_*, GPU worker). ANTHROPIC_ROUTE=false keeps the key but
+    # takes Claude off the route. AIRGAPPED refuses api.anthropic.com like any hosted host.
+    anthropic_key: str | None = Field(
+        default=None, validation_alias=AliasChoices("anthropic_key", "anthropic_api_key"), repr=False,
+    )
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_route: bool = True
+    anthropic_timeout_s: float = 120.0
+    # Model per role (exact ids from the Anthropic models table, 2026-10-06).
+    anthropic_model_author: str = "claude-opus-5-5"
+    anthropic_model_repair: str = "claude-opus-5-5"
+    # One model per council judge, in server/orchestration/judges.JUDGES order
+    # (clinical_consistency, safety_dosing, pedagogy): three different voices.
+    anthropic_judge_models: CsvList = Field(default_factory=lambda: [
+        "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5",
+    ])
+    anthropic_model_persona: str = "claude-opus-5-5"
+    anthropic_model_classifier: str = "claude-haiku-5-5"
+    anthropic_model_narrator: str = "claude-sonnet-5-5"
+    anthropic_model_debrief: str = "claude-opus-5-5"
+    anthropic_model_render: str = "claude-sonnet-5-5"
+    anthropic_model_grounding: str = "claude-sonnet-5-5"
+    anthropic_model_tutor: str = "claude-sonnet-5-5"
+
     # SQLite file for LangGraph checkpoints + the per-learner memory store.
     acudx_db_path: str = "server/data/acudx.db"
 
@@ -232,7 +261,7 @@ class Settings(BaseSettings):
 
     @field_validator(
         "local_allowlist", "cors_origins", "gpu_instance_allowlist", "gpu_region_preference",
-        "avatar_turn_urls", mode="before",
+        "avatar_turn_urls", "anthropic_judge_models", mode="before",
     )
     @classmethod
     def _split_csv(cls, v: object) -> object:
@@ -285,6 +314,20 @@ class Settings(BaseSettings):
             base_url=url, model=model or default.model,
             api_key=api_key or default.api_key, provider=provider,
         )
+
+    def anthropic_status(self) -> dict[str, object]:
+        """Whether the Claude route can be used, and the operator-facing reason when not.
+
+        Never carries the key: only ``configured`` (a key is present) and ``usable``."""
+        key = (self.anthropic_key or "").strip()
+        if not key:
+            return {"configured": False, "usable": False, "reason": "Anthropic key not configured"}
+        if not self.anthropic_route:
+            return {"configured": True, "usable": False, "reason": "Anthropic route disabled (ANTHROPIC_ROUTE=false)"}
+        if self.airgapped and not is_local_endpoint(self.anthropic_base_url, self.local_allowlist):
+            return {"configured": True, "usable": False,
+                    "reason": f"AIRGAPPED refuses {self.anthropic_base_url}"}
+        return {"configured": True, "usable": True, "reason": None}
 
     def resolve_casegen(self) -> LlmEndpoint:
         """Endpoint for the case *author* and *repair* nodes (CASEGEN_*)."""

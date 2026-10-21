@@ -94,6 +94,7 @@ class CallRow:
     price_version: str
     ok: bool
     error: str | None
+    cache_write_tokens: int = 0
 
 
 class TelemetryRecorder:
@@ -126,6 +127,10 @@ class TelemetryRecorder:
                 CREATE INDEX IF NOT EXISTS model_calls_ts ON model_calls (ts);
                 """
             )
+            cols = {r["name"] for r in c.execute("PRAGMA table_info(model_calls)").fetchall()}
+            if "cache_write_tokens" not in cols:
+                # Prompt-cache writes (Anthropic cache_creation_input_tokens), added 2026-10-21.
+                c.execute("ALTER TABLE model_calls ADD COLUMN cache_write_tokens INTEGER NOT NULL DEFAULT 0")
         self.tracer = self._build_tracer(tracer_provider)
 
     def _conn(self) -> sqlite3.Connection:
@@ -200,7 +205,7 @@ class TelemetryRecorder:
                cached_tokens: int = 0, latency_ms: float, route: str | None = None, tenant: str | None = None,
                user_hash: str | None = None, encounter_id: str | None = None, ok: bool, error: str | None = None,
                requested_model: str | None = None, billing_provider: str | None = None,
-               cost_usd: float | None = None) -> CallRow:
+               cost_usd: float | None = None, cache_write_tokens: int = 0) -> CallRow:
         """Persist one call. Explicit context args win over the ambient :func:`call_context`.
 
         ``provider`` is the registry row name shown in dashboards; ``billing_provider``
@@ -216,15 +221,16 @@ class TelemetryRecorder:
                           encounter_id=encounter_id if encounter_id is not None else ambient.encounter_id)
         ts = self._clock()
         cost = (float(cost_usd) if cost_usd is not None
-                else prices.cost_usd(billing_provider or provider, model, tokens_in, tokens_out, cached_tokens))
+                else prices.cost_usd(billing_provider or provider, model, tokens_in, tokens_out, cached_tokens,
+                                     cache_write_tokens))
         with self._conn() as c:
             cur = c.execute(
                 "INSERT INTO model_calls (ts, kind, provider, model, tokens_in, tokens_out, cached_tokens, latency_ms, "
-                "cost_usd, price_version, route, tenant, user_hash, encounter_id, ok, error) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "cost_usd, price_version, route, tenant, user_hash, encounter_id, ok, error, cache_write_tokens) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (ts, kind, provider, model, int(tokens_in), int(tokens_out), int(cached_tokens), float(latency_ms),
                  cost, prices.PRICE_TABLE_VERSION, ctx.route, ctx.tenant, ctx.user_hash, ctx.encounter_id, int(ok),
-                 error),
+                 error, int(cache_write_tokens)),
             )
             row_id = int(cur.lastrowid)
         self._emit_span(kind=kind, provider=provider, model=model, requested_model=requested_model,
@@ -232,7 +238,8 @@ class TelemetryRecorder:
                         latency_ms=latency_ms, cost=cost, ctx=ctx, ok=ok, error=error, ts=ts)
         return CallRow(id=row_id, ts=ts, kind=kind, provider=provider, model=model, tokens_in=tokens_in,
                        tokens_out=tokens_out, cached_tokens=cached_tokens, latency_ms=latency_ms, cost_usd=cost,
-                       price_version=prices.PRICE_TABLE_VERSION, ok=ok, error=error)
+                       price_version=prices.PRICE_TABLE_VERSION, ok=ok, error=error,
+                       cache_write_tokens=int(cache_write_tokens))
 
     # -- read ------------------------------------------------------------------- #
     def recent(self, limit: int = 100) -> list[dict[str, Any]]:

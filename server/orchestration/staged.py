@@ -1202,7 +1202,7 @@ class StagedRuntime:
         started = time.monotonic()
         reply = await self.llm.complete_json(messages, schema=schema, schema_name=node.replace(".", "_"),
                                              role="casegen", temperature=temperature, max_tokens=max_tokens,
-                                             on_text=on_text)
+                                             on_text=on_text, node=node)
         event = make_event(node, started=started, model=reply.model, model_requested=reply.model_requested,
                            provider=reply.provider, tokens_in=reply.tokens_in, tokens_out=reply.tokens_out,
                            cost_usd=reply.extras.get("cost_usd"), cost_basis=reply.extras.get("cost_basis"),
@@ -1585,7 +1585,7 @@ class StagedRuntime:
                  "dose is clinically wrong for the event."},
                 {"role": "user", "content": f"CONDITION: {state['condition']['label_en']}\nEVENT: {text}"}]
         reply = await self.llm.complete_json(msgs, schema=SAFETY_EVENT_SCHEMA, schema_name="safety_event",
-                                             role="judge", temperature=0.0, max_tokens=150)
+                                             role="judge", temperature=0.0, max_tokens=150, node="safety_event")
         ok = str(reply.data.get("verdict") or "pass") == "pass"
         self.emit(thread_id, "judge", {"layer": layer, "judge": "safety_event", "blocking": True,
                                        "decision": "accept" if ok else "rejected",

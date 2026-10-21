@@ -26,7 +26,7 @@ from typing import Any, Protocol
 
 from server.config import Settings, is_local_endpoint
 from server.providers.gpu_worker import WorkerRefused
-from server.registry.store import ProviderRecord, RegistryStore
+from server.registry.store import ProviderRecord, RegistryStore, is_anthropic
 
 log = logging.getLogger("acudx.registry.resolve")
 
@@ -80,8 +80,30 @@ class RegistryResolver:
         for rec in self.store.list_providers(kind=kind):
             if not rec.enabled or not self._allowed(rec) or rec.last_probe_ok is False:
                 continue
+            if is_anthropic(rec):
+                continue   # served by the Claude provider (anthropic_* below), not /chat/completions
             out.append(rec)
         return out
+
+    # -- Claude route (docs/architecture/20 section 2) ------------------------ #
+    def anthropic_row(self) -> ProviderRecord | None:
+        return self.store.anthropic_row()
+
+    def anthropic_key(self) -> str | None:
+        """A key sealed on the anthropic row (admin panel), else None (ANTHROPIC_KEY applies)."""
+        rec = self.anthropic_row()
+        return self.store.decrypt_key(rec) if rec is not None else None
+
+    def anthropic_enabled(self) -> bool:
+        """The Claude route is selected: its row is enabled, not known dead, and no other
+        enabled LLM row has a lower priority. No row at all (scripts, tests) means enabled."""
+        rec = self.anthropic_row()
+        if rec is None:
+            return True
+        if not rec.enabled or not self._allowed(rec) or rec.last_probe_ok is False:
+            return False
+        others = self.candidates("llm")
+        return not others or rec.priority <= min(o.priority for o in others)
 
     def refused(self, kind: str) -> list[ProviderRecord]:
         """Enabled rows the air-gap guard refuses (for the admin health view)."""

@@ -14,6 +14,16 @@ Two endpoints are resolved from :class:`server.config.Settings`:
 Both inherit the active LLM endpoint when unset, and both pass through the
 ``AIRGAPPED`` egress guard at resolution time and again per call.
 
+Claude route (docs/architecture/20 section 2): when ``ANTHROPIC_KEY`` is set (and the
+route is usable, see :meth:`server.config.Settings.anthropic_status`) every role goes to
+Claude first through :class:`server.providers.anthropic_provider.AnthropicProvider`, with
+a model per node (:func:`~server.providers.anthropic_provider.model_for`: the author, a
+different model per judge, the narrator, renderings, debrief, repair), structured outputs
+for the JSON layers, a cache breakpoint on the byte-stable system prefix and streaming for
+the S1 opening. When the key is absent, or Claude is unreachable before any text arrived,
+the call goes to the configured ``casegen`` / ``judge`` endpoint instead; never to a
+template.
+
 Honesty rule: a model that cannot be reached raises :class:`ModelUnreachable`;
 a reply that is not valid JSON raises :class:`ModelOutputInvalid`. Nothing in
 this module ever substitutes a template for a model answer.
@@ -45,6 +55,10 @@ from langchain_core.utils.json import parse_json_markdown
 
 from server.config import EgressBlocked, LlmEndpoint, Settings
 from server.model_gateway import strip_think, wants_no_thinking
+from server.providers.anthropic_provider import (
+    COST_BASIS_TOKENS, AnthropicError, AnthropicProvider, AnthropicRefusal, AnthropicTruncated, AnthropicUnavailable,
+    model_for, restore_optional,
+)
 from server.telemetry import prices as telemetry_prices
 
 log = logging.getLogger("acudx.orchestration.llm")
@@ -174,9 +188,20 @@ class StructuredLLM:
         retries: int = 1,
         telemetry: Any = None,
         gpu: GpuCostSource | None = None,
+        anthropic_provider: AnthropicProvider | None = None,
+        anthropic_gate: Callable[[], bool] | None = None,
     ) -> None:
         self.settings = settings
         self.telemetry = telemetry
+        # Claude route: an injected provider (tests, the app's shared one) or one built from
+        # settings when a key is configured. ``anthropic_gate`` lets the admin registry turn
+        # the route off at runtime (the anthropic row's enabled switch).
+        self._owns_anthropic = anthropic_provider is None
+        if anthropic_provider is None and settings.anthropic_status().get("configured"):
+            anthropic_provider = AnthropicProvider(settings, telemetry=telemetry)
+        self.anthropic = anthropic_provider
+        self.anthropic_gate = anthropic_gate
+        self.claude_fallbacks = 0
         fallback = getattr(settings, "casegen_gpu_usd_per_hour", None)
         self.gpu: GpuCostSource | None = gpu if gpu is not None else (
             StaticGpuCost(fallback) if fallback is not None else None)
@@ -200,6 +225,17 @@ class StructuredLLM:
 
     def endpoint(self, role: Role) -> LlmEndpoint:
         return self.endpoints[role]
+
+    def claude_active(self) -> bool:
+        """True when this call should go to Claude first."""
+        if self.anthropic is None or not self.anthropic.usable():
+            return False
+        if self.anthropic_gate is not None:
+            try:
+                return bool(self.anthropic_gate())
+            except Exception:  # noqa: BLE001 - a broken gate must not take the route down
+                log.debug("anthropic gate failed", exc_info=True)
+        return True
 
     def self_hosted(self, ep: LlmEndpoint) -> bool:
         """True when ``ep`` is the GPU worker (served alias or the worker's own URL)."""
@@ -251,6 +287,8 @@ class StructuredLLM:
         if self._client is not None:
             await self._client.aclose()
             self._client = None
+        if self.anthropic is not None and self._owns_anthropic:
+            await self.anthropic.aclose()
 
     async def complete_json(
         self,
@@ -262,11 +300,34 @@ class StructuredLLM:
         temperature: float,
         max_tokens: int,
         on_text: Optional[Callable[[str], Any]] = None,
+        node: Optional[str] = None,
     ) -> LLMReply:
         """One structured completion. With ``on_text`` the call streams (``stream: true``,
         review 06a 4.4 item 6) and ``on_text(accumulated_text)`` runs after every
         content delta, so a caller can parse partial JSON and show fields as they
-        arrive. The final reply is parsed exactly like a non-streamed one."""
+        arrive. The final reply is parsed exactly like a non-streamed one.
+
+        ``node`` names the call site (``s1``, ``layer:history.presenting``, ``judge:pedagogy``,
+        ``narrator``...) and picks the Claude model on the Claude route; ``temperature``
+        applies to the OpenAI-compatible route only (current Claude models take none)."""
+        if self.claude_active():
+            streamed = {"any": False}
+            wrapped: Optional[Callable[[str], Any]] = None
+            if on_text is not None:
+                def wrapped(text: str) -> Any:  # noqa: E306 - closure over the caller's callback
+                    streamed["any"] = True
+                    return on_text(text)
+            try:
+                return await self._complete_claude(messages, schema=schema, schema_name=schema_name, role=role,
+                                                   max_tokens=max_tokens, on_text=wrapped, node=node)
+            except AnthropicUnavailable as exc:
+                if streamed["any"]:
+                    raise ModelUnreachable(f"Claude stream broke: {exc}") from exc
+                self.claude_fallbacks += 1
+                log.warning("Claude route unavailable for %s (%s); using the configured %s endpoint",
+                            node or schema_name, exc, role)
+            except (AnthropicRefusal, AnthropicTruncated, AnthropicError) as exc:
+                raise ModelOutputInvalid(str(exc)) from exc
         ep = self.endpoints[role]
         try:
             self.settings.guard_egress(ep.base_url)
@@ -344,6 +405,32 @@ class StructuredLLM:
             raw=content,
             extras={"finish_reason": (choices[0] or {}).get("finish_reason"), "cost_usd": cost,
                     "cost_basis": basis, "concurrency": concurrency},
+        )
+
+    async def _complete_claude(self, messages: list[dict[str, str]], *, schema: dict[str, Any], schema_name: str,
+                               role: Role, max_tokens: int, on_text: Optional[Callable[[str], Any]],
+                               node: Optional[str]) -> LLMReply:
+        assert self.anthropic is not None
+        model, effort = model_for(self.settings, role, node or schema_name)
+        reply = await self.anthropic.complete(messages, model=model, max_tokens=max_tokens, effort=effort,
+                                              schema=schema, on_text=on_text, node=node or schema_name)
+        try:
+            if reply.structured:
+                obj = json.loads(reply.text)
+                if not isinstance(obj, dict):
+                    raise ModelOutputInvalid(f"reply is {type(obj).__name__}, not an object")
+                obj = restore_optional(obj, schema)
+            else:
+                obj = _parse_object(reply.text)
+        except json.JSONDecodeError as exc:
+            raise ModelOutputInvalid(f"unparseable JSON from {reply.model}: {reply.text[:120]!r}") from exc
+        u = reply.usage
+        return LLMReply(
+            data=obj, model=reply.model, model_requested=model, provider="anthropic",
+            tokens_in=u.prompt_total, tokens_out=u.output, latency_ms=reply.latency_ms, raw=reply.text,
+            extras={"finish_reason": reply.stop_reason, "cost_usd": reply.cost_usd, "cost_basis": COST_BASIS_TOKENS,
+                    "concurrency": 1, "cache_read_tokens": u.cache_read, "cache_write_tokens": u.cache_write,
+                    "effort": effort, "structured": reply.structured},
         )
 
     async def _post_with_retries(self, client: httpx.AsyncClient, url: str, payload: dict[str, Any],
@@ -451,6 +538,10 @@ class StructuredLLM:
 
     async def probe(self, role: Role = "casegen") -> dict[str, Any]:
         """Reachability check used by the routes before starting a graph run."""
+        if self.claude_active():
+            assert self.anthropic is not None
+            model, _ = model_for(self.settings, role, None)
+            return {"reachable": True, "provider": "anthropic", "model": model, "url": self.anthropic.base_url}
         ep = self.endpoints[role]
         try:
             self.settings.guard_egress(ep.base_url)
