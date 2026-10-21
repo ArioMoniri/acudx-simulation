@@ -401,6 +401,11 @@ def evidence_index(cond: dict[str, Any]) -> dict[str, str]:
     return ev
 
 
+# A verdict with issues, notes and hints; with room for Claude's structured reply (a 500 cap cut
+# the Sonnet judge's JSON short on every live case 2026-10-21).
+JUDGE_MAX_TOKENS = 900
+
+
 def _compact(draft: dict[str, Any]) -> str:
     """Draft without free-text bulk the judge does not need."""
     keep = {k: v for k, v in draft.items() if k not in ("meta", "guideline_anchor_ids", "guideline_anchors")}
@@ -501,7 +506,7 @@ async def run_judge(
 
     reply = await llm.complete_json(
         judge_messages(name, draft, cond), schema=JUDGE_SCHEMA, schema_name="judge_verdict",
-        role="judge", temperature=0.0, max_tokens=500, node=f"judge:{name}",
+        role="judge", temperature=0.0, max_tokens=JUDGE_MAX_TOKENS, node=f"judge:{name}",
     )
     raw_verdict = str(reply.data.get("verdict") or "pass").lower()
     bound, notes = bind_issues(list(reply.data.get("issues") or []), draft, cond)

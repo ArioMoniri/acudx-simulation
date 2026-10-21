@@ -94,6 +94,9 @@ def test_thinking_and_budget_per_family():
     assert thinking_for("claude-sonnet-5-5", "xhigh") is None
     assert output_budget("claude-haiku-5-5", 200, streaming=False) == 200
     assert output_budget("claude-opus-5-5", 200, streaming=False) == 2248   # room for adaptive thinking
+    # A structured reply with thinking off gets headroom (a JSON cut at max_tokens is unusable).
+    assert output_budget("claude-sonnet-5-5", 500, streaming=False, structured=True) == 750
+    assert output_budget("claude-opus-5-5", 200, streaming=False, structured=True) == 2248
 
 
 def test_model_per_role_gives_three_judge_voices():
