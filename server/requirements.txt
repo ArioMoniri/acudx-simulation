@@ -27,3 +27,5 @@ pypdf>=4.0,<7.0
 PyJWT>=2.8,<3.0
 # Claude route (server/providers/anthropic_provider.py). 1.x is built on httpx2.
 anthropic>=1.17,<2.0
+# Fever flush tint of the generated patient pictures (server/voice/avatar/tint.py)
+pillow>=10.0,<14.0

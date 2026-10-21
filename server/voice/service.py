@@ -325,26 +325,50 @@ class VoiceService:
         return out
 
     async def _avatar_capabilities(self, gpu: dict[str, Any] | None, *, probe_worker: bool) -> dict[str, Any]:
-        """Live patient video, in order: a Tavus row, a LiveKit row, the GPU worker's MuseTalk runner."""
+        """Live patient video. The on-prem GPU worker runner is the default (owner decision 2026-10-21); a
+        hosted row (Tavus, LiveKit) is used first only when the owner marked it ``extra.default: true``,
+        and otherwise when no GPU worker is configured. Hosted rows are listed under ``optional``."""
         from server.voice.avatar import musetalk as mt  # noqa: PLC0415 - avatar imports this module
         from server.voice.avatar import tavus as tv  # noqa: PLC0415
 
         reasons = [f"{r.name}: refused by AIRGAPPED" for r in self.resolver.refused("avatar")]
+        hosted: list[dict[str, Any]] = []
         for av in self.resolver.endpoints("avatar"):
             if tv.is_tavus_endpoint(av):
                 if not av.api_key:
                     reasons.append(f"{av.name}: no Tavus API key stored")
                     continue
-                return {"enabled": True, "provider": av.name, "transport": "tavus", "renderer": "tavus",
-                        "source": av.source, "live_video": True, "reasons": reasons}
-            return {"enabled": True, "provider": av.name, "transport": av.extra.get("transport") or "livekit",
-                    "renderer": av.extra.get("avatar") or "none", "source": av.source, "live_video": True,
-                    "reasons": reasons}
+                block = {"enabled": True, "provider": av.name, "transport": "tavus", "renderer": "tavus",
+                         "source": av.source, "live_video": True}
+            else:
+                block = {"enabled": True, "provider": av.name, "transport": av.extra.get("transport") or "livekit",
+                         "renderer": av.extra.get("avatar") or "none", "source": av.source, "live_video": True}
+            if av.extra.get("default"):
+                return {**block, "reasons": reasons}
+            hosted.append(block)
+        optional = [{"provider": b["provider"], "transport": b["transport"]} for b in hosted]
         wm = self.resolver.worker_manager
         base = {"enabled": False, "provider": None, "transport": None, "renderer": "none", "live_video": False}
         if wm is None:
+            if hosted:
+                return {**hosted[0], "reasons": reasons}
             return {**base, "reasons": reasons}
-        worker = mt.worker_from_endpoint(wm.llm_endpoint())
+        out = await self._worker_avatar(mt, wm, gpu, probe_worker=probe_worker, reasons=reasons, base=base)
+        if optional:
+            out["optional"] = optional
+        return out
+
+    async def _worker_avatar(self, mt: Any, wm: Any, gpu: dict[str, Any] | None, *, probe_worker: bool,
+                             reasons: list[str], base: dict[str, Any]) -> dict[str, Any]:
+        limit = int(getattr(self.settings, "avatar_max_calls_per_worker", 2) or 2)
+        pending = self.avatar_calls if callable(self.avatar_calls) else None
+        eps = wm.endpoints() if hasattr(wm, "endpoints") else [wm.llm_endpoint()]
+        eps = [e for e in eps if e]
+        if len(eps) > 1:
+            picked, _h, _cap = await mt.pick_worker(self.client, wm, gateway_limit=limit, pending=pending)
+            worker = picked or mt.worker_from_endpoint(eps[0])
+        else:
+            worker = mt.worker_from_endpoint(eps[0]) if eps else None
         if worker is None:
             can_launch = bool(gpu and gpu.get("can_launch"))
             if can_launch:
@@ -363,6 +387,9 @@ class VoiceService:
                                    gateway_pending=pending)
             if cap["calls_available"] <= 0:
                 reasons.append(f"gpu-worker avatar: all {cap['max_calls']} live calls on this worker are in use")
+            ig = await mt.imagegen_health(self.client, worker)
+            block["appearance"] = {"enabled": bool(ig.get("ok")), "model": ig.get("model"), "mode": ig.get("mode"),
+                                   "licence": ig.get("licence"), "reason": None if ig.get("ok") else ig.get("reason")}
             return {**block, "enabled": True, "live_video": cap["calls_available"] > 0, "reasons": reasons,
                     "sessions": h.get("sessions"), "max_sessions": h.get("max_sessions"), **cap,
                     "turn": ["udp:3478", "tcp:3478", "tls:443"], "infer_fps": h.get("infer_fps"),

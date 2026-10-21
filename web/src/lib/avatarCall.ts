@@ -115,8 +115,10 @@ export function sessionBody(args: {
   sex?: string;
   age?: number;
   context?: { case_state?: Record<string, unknown>; persona?: Record<string, unknown>; case_context?: Record<string, unknown> };
+  /** The case thread: the server derives the face, the voice and the answers from its live state. */
+  threadId?: string | null;
 }): Record<string, unknown> {
-  return {
+  const body: Record<string, unknown> = {
     encounter_id: args.encounterId,
     photo_id: args.photoId,
     lang: args.lang,
@@ -126,6 +128,8 @@ export function sessionBody(args: {
     persona: args.context?.persona ?? null,
     case_context: args.context?.case_context ?? null,
   };
+  if (args.threadId) body.thread_id = args.threadId;
+  return body;
 }
 
 /**

@@ -37,7 +37,9 @@ from pydantic import BaseModel, Field
 from server.auth.deps import Principal, current_user
 from server.providers.gpu_worker import WorkerRefused
 from server.voice import profiles
+from server.voice.avatar import appearance as ap
 from server.voice.avatar import musetalk as mt
+from server.voice.avatar import state_sync as sync_mod
 from server.voice.avatar import tavus as tv
 from server.voice.avatar.sessions import CallSession, SessionStore, token_digest
 from server.voice.service import NoVoiceProvider, VoiceService
@@ -81,6 +83,9 @@ class SessionBody(BaseModel):
     case_context: dict[str, Any] | None = None
     greeting: str | None = Field(default=None, max_length=400)
     provider: Literal["auto", "musetalk", "tavus"] = "auto"
+    # The case thread the call follows: the face, the voice and the patient's answers are derived
+    # from its server-side state (checked against the caller), never from a browser-sent state.
+    thread_id: str | None = Field(default=None, max_length=120)
 
 
 class SessionRef(BaseModel):
@@ -92,13 +97,34 @@ class OfferBody(SessionRef):
     type: Literal["offer"] = "offer"
 
 
+class PrepareBody(BaseModel):
+    thread_id: str = Field(min_length=1, max_length=120)
+    photo_id: str = Field(min_length=1, max_length=32)
+
+
+MAX_LOOKS = 64
+
+
+def _looks(request: Request) -> dict[str, Any]:
+    looks = getattr(request.app.state, "avatar_looks", None)
+    if looks is None:
+        looks = {}
+        request.app.state.avatar_looks = looks
+    return looks
+
+
 class SpeakBody(SessionRef):
     text: str = Field(min_length=1, max_length=MAX_SPEAK_CHARS)
 
 
-def _tavus_config(request: Request, svc: VoiceService) -> tv.TavusConfig | None:
+def _tavus_config(request: Request, svc: VoiceService, *, default_only: bool = False) -> tv.TavusConfig | None:
+    """The Tavus row's config. ``default_only``: only a row the owner marked ``extra.default: true``
+    (the on-prem runner is the default renderer; Tavus is an optional adapter, owner decision
+    2026-10-21)."""
     public = getattr(svc.settings, "public_base_url", None)
     for ep in svc.resolver.endpoints("avatar"):
+        if default_only and not ep.extra.get("default"):
+            continue
         cfg = tv.config_from_endpoint(ep, public_base_url=public)
         if cfg is not None:
             return cfg
@@ -124,6 +150,35 @@ def runner_tuning(settings: Any) -> dict[str, int]:
 def _worker(svc: VoiceService) -> mt.WorkerAvatar | None:
     wm = svc.resolver.worker_manager
     return mt.worker_from_endpoint(wm.llm_endpoint()) if wm is not None else None
+
+
+def _session_worker(svc: VoiceService, s: CallSession) -> mt.WorkerAvatar | None:
+    """The worker this call runs on (a pool may run several; a call never moves)."""
+    wm = svc.resolver.worker_manager
+    if wm is None:
+        return None
+    if s.worker_origin and hasattr(wm, "endpoint_by_origin"):
+        return mt.worker_from_endpoint(wm.endpoint_by_origin(s.worker_origin))
+    w = _worker(svc)
+    if w is not None and s.worker_origin and w.origin != s.worker_origin:
+        return None
+    return w
+
+
+async def _thread_view(request: Request, thread_id: str | None, user: Principal) -> tuple[dict, dict] | None:
+    """The case thread's (spec, Director state) when the caller may read the thread, else None."""
+    if not thread_id:
+        return None
+    try:
+        from server.orchestration.routes import _thread_for, get_runtime  # noqa: PLC0415
+
+        rt = await get_runtime(request)
+        if _thread_for(rt, thread_id, user) is None:
+            return None
+    except Exception:  # noqa: BLE001 - no orchestration runtime: the call runs on the portrait
+        log.info("avatar session: case thread %s not readable", thread_id[:8])
+        return None
+    return await sync_mod.case_view(request.app, thread_id)
 
 
 async def _start_worker_in_background(svc: VoiceService) -> bool:
@@ -154,7 +209,10 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
     lang = profiles.normalize_lang(body.lang)
     reasons: list[str] = []
 
-    tavus_cfg = _tavus_config(request, svc) if body.provider in ("auto", "tavus") else None
+    # On-prem first (owner decision 2026-10-21): the GPU worker's runner is the default renderer.
+    # Tavus runs when asked for by name, or when the owner marked its row the default.
+    tavus_cfg = (_tavus_config(request, svc) if body.provider == "tavus"
+                 else _tavus_config(request, svc, default_only=True) if body.provider == "auto" else None)
     if tavus_cfg is not None:
         return await _start_tavus(request, svc, store, tavus_cfg, body, user, lang)
     if body.provider == "tavus":
@@ -162,45 +220,79 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
         return _unavailable("not_configured", [f"{n}: refused by AIRGAPPED" for n in refused]
                             or ["no tavus avatar row with a key"])
 
-    worker = _worker(svc)
-    if worker is None:
+    wm = svc.resolver.worker_manager
+    if wm is None or not (wm.endpoints() if hasattr(wm, "endpoints") else wm.llm_endpoint()):
         pending = await _start_worker_in_background(svc)
         refusal = svc.resolver.last_worker_refusal
         reasons.append("gpu-worker: starting" if pending else f"gpu-worker: {refusal or 'not available'}")
         return _unavailable("worker_starting" if pending else "no_worker", reasons, pending_launch=pending)
-    h = await mt.health(svc.client, worker)
-    if not h.get("ok"):
-        reasons.append(f"gpu-worker avatar: {h.get('state')} {h.get('reason') or h.get('detail') or ''}".strip())
-        return _unavailable(str(h.get("state") or "unknown"), reasons, worker=h)
     photo = mt.portrait_path(body.photo_id or "")
     if photo is None:
         raise HTTPException(status_code=400, detail={"error": "unknown_photo_id", "photo_id": body.photo_id})
-    avatar_id = mt.avatar_id_for(body.photo_id or "")
-    # Check the per-worker call limit and take the slot in one step (no await in between), so two
-    # learners starting at once cannot both pass the check during the slow portrait preparation.
-    cap = mt.call_capacity(h, gateway_limit=_max_calls(svc), gateway_pending=store.pending_on(worker.origin))
-    if cap["calls_available"] <= 0:
-        reasons.append(f"gpu-worker avatar: {cap['active_calls']} of {cap['max_calls']} live calls in use on this worker")
-        return _unavailable("worker_full", reasons, **cap)
+    # The ready worker with the most free call slots. Check the limit and take the slot in one step
+    # (no await between the pick and the store), so two learners starting at once cannot both pass the
+    # check during the slow portrait preparation.
+    look_key = f"{body.thread_id}:{body.photo_id}"
+    prepared = _looks(request).get(look_key) if body.thread_id else None
+    worker, h, cap = await mt.pick_worker(svc.client, wm, gateway_limit=_max_calls(svc), pending=store.pending_on,
+                                          prefer=prepared.worker_origin if prepared is not None else None)
+    if worker is None:
+        if cap:
+            launching = await wm.maybe_scale_up() if hasattr(wm, "maybe_scale_up") else None
+            reasons.append(f"gpu-worker avatar: {cap['active_calls']} of {cap['max_calls']} live calls in use on "
+                           "every worker" + ("; another worker is starting" if launching else ""))
+            return _unavailable("worker_full", reasons, pending_launch=bool(launching), **cap)
+        reasons.append(f"gpu-worker avatar: {h.get('state')} {h.get('reason') or h.get('detail') or ''}".strip())
+        return _unavailable(str(h.get("state") or "unknown"), reasons, worker=h)
+    view = await _thread_view(request, body.thread_id, user)
     s = store.create(provider="musetalk", user_hash=user.user_hash, encounter_id=body.encounter_id, lang=lang,
                      sex=body.sex, age=body.age, photo_id=body.photo_id, case_state=body.case_state,
-                     persona=body.persona, case_context=body.case_context, avatar_id=avatar_id,
-                     worker_origin=worker.origin)
+                     persona=body.persona, case_context=body.case_context,
+                     avatar_id=mt.avatar_id_for(body.photo_id or ""), worker_origin=worker.origin,
+                     thread_id=body.thread_id if view is not None else None)
     t0 = time.monotonic()
+    portrait = photo.read_bytes()
+    prep: dict[str, Any] = {}
     try:
-        prep = await mt.ensure_avatar(svc.client, worker, avatar_id, photo.read_bytes())
+        if view is not None:
+            wait_s = float(getattr(svc.settings, "avatar_appearance_wait_s", 45.0) or 0.0)
+            reuse = (prepared if prepared is not None and prepared.worker_origin == worker.origin
+                     and prepared.worker_session is None else None)
+            gen = await sync_mod.pick_gen_worker(svc.client, wm, worker) if reuse is None else None
+            s.appearance, s.avatar_id = await sync_mod.start(
+                svc.client, worker, thread_id=str(body.thread_id), photo_id=str(body.photo_id), portrait=portrait,
+                spec=view[0], director=view[1], wait_s=wait_s, gen_worker=gen, existing=reuse)
+            s.appearance.worker_origin = worker.origin
+            s.metrics["appearance_reused"] = reuse is not None
+            s.metrics["appearance_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+        if s.avatar_id == mt.avatar_id_for(body.photo_id or ""):
+            prep = await mt.ensure_avatar(svc.client, worker, s.avatar_id, portrait)
+        else:
+            prep = await mt.ensure_avatar(svc.client, worker, s.avatar_id, b"")   # prepared: geometry only
+            _spawn(mt.ensure_avatar(svc.client, worker, mt.avatar_id_for(body.photo_id or ""), portrait))
     except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
         store.pop(s.id)
+        await sync_mod.cancel(s.appearance)
         return _unavailable("prepare_failed", [f"gpu-worker avatar: {getattr(exc, 'detail', None) or exc}"])
     s.metrics["prepare_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
-    svc.resolver.worker_manager.touch()  # type: ignore[union-attr]
+    _touch(svc, worker)
     override = list(getattr(svc.settings, "avatar_turn_urls", None) or [])
     return {**s.public(), "transport": "webrtc", "renderer": mt.RENDERER, "model": mt.MODEL,
             "ice_servers": mt.ice_servers(worker, s.id, override_urls=override or None),
             "ice_transport_policy": "relay", "prepare": prep, "prepare_ms": s.metrics["prepare_ms"],
             "worker": {"infer_fps": h.get("infer_fps"), "sessions": h.get("sessions"),
-                       "max_sessions": h.get("max_sessions"), "gpu": h.get("gpu"),
+                       "max_sessions": h.get("max_sessions"), "gpu": h.get("gpu"), "domain": worker.domain,
                        "max_calls": cap["max_calls"], "active_calls": cap["active_calls"] + 1}}
+
+
+def _spawn(coro: Any) -> None:
+    task = asyncio.get_running_loop().create_task(coro)
+
+    def done(t: asyncio.Task[Any]) -> None:
+        if not t.cancelled() and t.exception() is not None:
+            log.info("avatar background task failed: %s", type(t.exception()).__name__)
+
+    task.add_done_callback(done)
 
 
 async def _start_tavus(request: Request, svc: VoiceService, store: SessionStore, cfg: tv.TavusConfig,
@@ -208,10 +300,17 @@ async def _start_tavus(request: Request, svc: VoiceService, store: SessionStore,
     if not cfg.public_base_url:
         return _unavailable("not_configured", ["tavus: PUBLIC_BASE_URL (or extra.public_base_url) is not set, so "
                                                "Tavus cannot reach the gateway's patient LLM endpoint"])
+    if body.age is not None and body.age < 18:
+        # Tavus Acceptable Use Policy (effective 2026-04-14) section 3.2: no face that depicts or appears
+        # to depict anyone under 18. Paediatric cases use the on-prem runner.
+        return _unavailable("not_allowed", ["tavus: its acceptable use policy (3.2) bars faces of patients "
+                                            "under 18; the on-prem renderer serves paediatric cases"])
     token = tv.new_llm_token()
+    view = await _thread_view(request, body.thread_id, user)
     s = store.create(provider="tavus", user_hash=user.user_hash, encounter_id=body.encounter_id, lang=lang,
                      sex=body.sex, age=body.age, photo_id=body.photo_id, case_state=body.case_state,
-                     persona=body.persona, case_context=body.case_context, llm_token_digest=token_digest(token))
+                     persona=body.persona, case_context=body.case_context, llm_token_digest=token_digest(token),
+                     thread_id=body.thread_id if view is not None else None)
     tts_eps = svc.resolver.endpoints("tts")
     tts_ep = tts_eps[0] if tts_eps else None
     voice_id = None
@@ -244,8 +343,18 @@ def _session(request: Request, ref: SessionRef, user: Principal) -> CallSession:
     return s
 
 
-def _require_worker(svc: VoiceService) -> mt.WorkerAvatar:
-    worker = _worker(svc)
+def _touch(svc: VoiceService, worker: mt.WorkerAvatar) -> None:
+    wm = svc.resolver.worker_manager
+    if wm is None:
+        return
+    try:
+        wm.touch(worker.origin)
+    except TypeError:
+        wm.touch()
+
+
+def _require_worker(svc: VoiceService, s: CallSession) -> mt.WorkerAvatar:
+    worker = _session_worker(svc, s)
     if worker is None:
         raise HTTPException(status_code=503, detail={"error": "avatar_unavailable", "state": "no_worker"})
     return worker
@@ -257,7 +366,11 @@ async def offer(request: Request, body: OfferBody, user: Principal = Depends(cur
     s = _session(request, body, user)
     if s.provider != "musetalk" or not s.avatar_id:
         raise HTTPException(status_code=409, detail={"error": "not_a_webrtc_session"})
-    worker = _require_worker(svc)
+    worker = _require_worker(svc, s)
+    # The picture the patient's state calls for now (the ladder may have moved on since the session).
+    a = s.appearance
+    if a is not None and a.current_key in a.variants and a.variants[a.current_key].status == "ready":
+        s.avatar_id = a.variants[a.current_key].avatar_id
     t0 = time.monotonic()
     try:
         ans = await mt.offer(svc.client, worker, sdp=body.sdp, sdp_type=body.type, avatar_id=s.avatar_id,
@@ -270,6 +383,8 @@ async def offer(request: Request, body: OfferBody, user: Principal = Depends(cur
         await s.audio_link.close()
     s.worker_session = str(ans["sessionid"])
     s.metrics["answer_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+    if s.appearance is not None:
+        s.appearance.worker_session = s.worker_session
     # Open the audio WebSocket now, while the browser finishes ICE, so the first line does not pay it.
     s.audio_link = mt.RunnerAudioLink(worker=worker, worker_session=s.worker_session)
     preroll_ms = int(getattr(svc.settings, "avatar_preroll_ms", 0) or 0)
@@ -320,10 +435,18 @@ async def speak(request: Request, body: SpeakBody, user: Principal = Depends(cur
     s = _session(request, body, user)
     if s.provider != "musetalk" or not s.worker_session:
         raise HTTPException(status_code=409, detail={"error": "call_not_connected"})
-    worker = _require_worker(svc)
+    worker = _require_worker(svc, s)
+    # The voice matches the face: the same server-side look sets the pace (breathless, drowsy) and
+    # an unresponsive patient (arrest) says nothing.
+    style = sync_mod.voice_for(s.appearance)
+    if style["silent"]:
+        return {"silent": True, "reason": "patient_unresponsive", "voice": style,
+                "appearance": s.appearance.public() if s.appearance is not None else None}
+    text = ap.speakable(body.text, s.lang) or body.text
     t0 = time.monotonic()
     try:
-        out = await svc.tts(body.text, lang=s.lang, sex=s.sex, age=s.age, output_format="wav", stream=True)
+        out = await svc.tts(text, lang=s.lang, sex=s.sex, age=s.age, output_format="wav", stream=True,
+                            speed=float(style["speed"]))
     except NoVoiceProvider as exc:
         return JSONResponse(status_code=503, content={"error": "tts_unavailable", "airgapped": exc.airgapped,
                                                       "reasons": exc.reasons})
@@ -331,7 +454,8 @@ async def speak(request: Request, body: SpeakBody, user: Principal = Depends(cur
     if ctype != "audio/mpeg":
         streamed = await _speak_streaming(svc, s, worker, out, t0)
         if streamed is not None:
-            return streamed
+            return {**streamed, "voice": {"speed": style["speed"]}, "spoken_text": text,
+                    "look": s.appearance.live.public() if s.appearance is not None and s.appearance.live else None}
         return _unavailable("speak_failed", [f"gpu-worker avatar: {s.metrics.get('last_stream_error')}"])
     buf = io.BytesIO()
     async for chunk in out.stream.chunks:
@@ -348,7 +472,7 @@ async def speak(request: Request, body: SpeakBody, user: Principal = Depends(cur
                        content_type=ctype)
     except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
         return _unavailable("speak_failed", [f"gpu-worker avatar: {getattr(exc, 'detail', None) or exc}"])
-    svc.resolver.worker_manager.touch()  # type: ignore[union-attr]
+    _touch(svc, worker)
     s.metrics["turns"] = int(s.metrics.get("turns", 0)) + 1
     return {"provider": out.endpoint.name, "adapter": out.adapter, "model": out.stream.model,
             "voice_id": out.voice_id, "source": out.endpoint.source, "tts_ms": round(tts_ms, 1),
@@ -422,7 +546,7 @@ async def _speak_streaming(svc: VoiceService, s: CallSession, worker: mt.WorkerA
         s.metrics["last_stream_error"] = f"tts stream: {type(exc).__name__}"
         log.warning("avatar speak stream for %s failed: %s", s.id[:8], type(exc).__name__)
         return None
-    svc.resolver.worker_manager.touch()  # type: ignore[union-attr]
+    _touch(svc, worker)
     s.metrics["turns"] = int(s.metrics.get("turns", 0)) + 1
     duration_ms = round(total / 2 / float(parser.sample_rate or 24000) * 1000.0)
     return {"provider": out.endpoint.name, "adapter": out.adapter, "model": out.stream.model,
@@ -439,17 +563,130 @@ async def _speak_streaming(svc: VoiceService, s: CallSession, worker: mt.WorkerA
 async def interrupt(request: Request, body: SessionRef, user: Principal = Depends(current_user)):
     svc = _svc(request)
     s = _session(request, body, user)
-    worker = _worker(svc)
+    worker = _session_worker(svc, s)
     if s.worker_session and worker is not None:
         await mt.interrupt(svc.client, worker, s.worker_session)
     return {"ok": True}
 
 
+async def _sync_session(app: Any, svc: VoiceService, s: CallSession, *, reason: str) -> dict[str, Any]:
+    """Re-read the call's case thread from the server store and move the face to the live state."""
+    if s.appearance is None or not s.thread_id:
+        return {"switched": False, "why": "no_case_thread"}
+    view = await sync_mod.case_view(app, s.thread_id)
+    worker = _session_worker(svc, s)
+    if view is None or worker is None:
+        return {"switched": False, "why": "case_or_worker_unavailable"}
+    photo = mt.portrait_path(s.photo_id or "")
+    out = await sync_mod.sync(svc.client, worker, s.appearance, worker_session=s.worker_session, spec=view[0],
+                              director=view[1], portrait=photo.read_bytes() if photo else b"", reason=reason)
+    if s.appearance.current_key and s.appearance.current_key in s.appearance.variants:
+        s.avatar_id = s.appearance.variants[s.appearance.current_key].avatar_id
+    return out
+
+
+async def notify_director(app: Any, thread_id: str) -> int:
+    """Called after every Director step on ``thread_id``: every live call on that thread follows the
+    new state (face switched, voice re-styled). Returns how many calls were synced."""
+    store = getattr(app.state, "avatar_sessions", None)
+    svc = getattr(app.state, "voice", None)
+    if store is None or svc is None or not thread_id:
+        return 0
+    calls = [s for s in store.by_thread(thread_id) if s.provider == "musetalk" and s.appearance is not None]
+    for s in calls:
+        try:
+            res = await _sync_session(app, svc, s, reason="director")
+            s.metrics.setdefault("syncs", []).append({"at": time.time(), **{k: res.get(k) for k in (
+                "switched", "why", "to", "live_key", "exact", "phase")}})
+        except Exception:  # noqa: BLE001 - a failed sync never breaks the Director step
+            log.exception("avatar state sync for %s failed", s.id[:8])
+    return len(calls)
+
+
+@router.post("/prepare")
+async def prepare(request: Request, body: PrepareBody, user: Principal = Depends(current_user)):
+    """At case start: make the patient's pictures (presenting, worse, critical, improved...) from the
+    case thread on a worker before any call, so the call opens on the patient as they are now. A call
+    started later on the same worker reuses them."""
+    svc = _svc(request)
+    view = await _thread_view(request, body.thread_id, user)
+    if view is None:
+        raise HTTPException(status_code=404, detail={"error": "thread_not_found"})
+    photo = mt.portrait_path(body.photo_id)
+    if photo is None:
+        raise HTTPException(status_code=400, detail={"error": "unknown_photo_id", "photo_id": body.photo_id})
+    wm = svc.resolver.worker_manager
+    eps = (wm.endpoints() if hasattr(wm, "endpoints") else [wm.llm_endpoint()]) if wm is not None else []
+    eps = [e for e in eps if e]
+    if not eps:
+        pending = await _start_worker_in_background(svc)
+        return JSONResponse(status_code=202, content={"state": "worker_starting" if pending else "no_worker",
+                                                      "pending_launch": pending})
+    looks = _looks(request)
+    key = f"{body.thread_id}:{body.photo_id}"
+    a = looks.get(key)
+    origins = {mt.worker_from_endpoint(e).origin for e in eps}  # type: ignore[union-attr]
+    if a is not None and a.worker_origin in origins:
+        return {"state": "prepared" if a.first_done is not None and a.first_done.is_set() else "preparing",
+                "appearance": a.public()}
+    worker, _h, _cap = await mt.pick_worker(svc.client, wm, gateway_limit=_max_calls(svc),
+                                            pending=_store(request).pending_on)
+    worker = worker or mt.worker_from_endpoint(eps[0])
+    assert worker is not None
+    gen = await sync_mod.pick_gen_worker(svc.client, wm, worker)
+    a = sync_mod.new_appearance(thread_id=body.thread_id, photo_id=body.photo_id, spec=view[0], director=view[1],
+                                worker=worker, gen_worker=gen)
+    a.worker_origin = worker.origin
+    ig = await mt.imagegen_health(svc.client, a.gen_worker)
+    a.gen_mode = ig.get("mode")
+    if not ig.get("ok"):
+        return JSONResponse(status_code=503, content={"state": "no_image_edits",
+                                                      "reason": f"image edit server: {ig.get('reason') or 'not ready'}"})
+    a.first_done = sync_mod.run_ladder(svc.client, worker, a, photo.read_bytes())
+    if len(looks) >= MAX_LOOKS:
+        looks.pop(next(iter(looks)))
+    looks[key] = a
+    return JSONResponse(status_code=202, content={"state": "preparing", "appearance": a.public()})
+
+
+@router.get("/appearance")
+async def appearance(request: Request, session_id: str, user: Principal = Depends(current_user)):
+    """The call's look: live signs, prepared variants, the picture on screen, the switches so far."""
+    s = _store(request).get(session_id, user_hash=user.user_hash)
+    if s is None:
+        raise HTTPException(status_code=404, detail={"error": "unknown_session"})
+    return {"session_id": s.id, "thread_id": s.thread_id, "avatar_id": s.avatar_id,
+            "appearance": s.appearance.public() if s.appearance is not None else None,
+            "voice": sync_mod.voice_for(s.appearance)}
+
+
+@router.get("/appearance/image")
+async def appearance_image(request: Request, session_id: str, key: str, user: Principal = Depends(current_user)):
+    """One generated picture of the call's patient (owner only): what the face was edited into."""
+    s = _store(request).get(session_id, user_hash=user.user_hash)
+    v = s.appearance.variants.get(key) if s is not None and s.appearance is not None else None
+    if v is None or v.image is None:
+        raise HTTPException(status_code=404, detail={"error": "unknown_image"})
+    from fastapi.responses import Response  # noqa: PLC0415
+
+    return Response(content=v.image, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+
+
+@router.post("/sync")
+async def sync(request: Request, body: SessionRef, user: Principal = Depends(current_user)):
+    """Re-read the case thread now (the Director hook does this after every step)."""
+    svc = _svc(request)
+    s = _session(request, body, user)
+    out = await _sync_session(request.app, svc, s, reason="sync")
+    return {**out, "appearance": s.appearance.public() if s.appearance is not None else None}
+
+
 async def end_remote(svc: VoiceService, s: CallSession) -> None:
+    await sync_mod.cancel(s.appearance)
     if s.provider == "musetalk" and s.worker_session:
         if s.audio_link is not None:
             await s.audio_link.close()
-        worker = _worker(svc)
+        worker = _session_worker(svc, s)
         if worker is not None:
             await mt.close(svc.client, worker, s.worker_session)
     elif s.provider == "tavus":
@@ -520,11 +757,23 @@ async def patient_chat_completions(request: Request):
     learner_msg, history = split_messages(messages)
     from server.app import PatientTurnRequest, patient_turn  # noqa: PLC0415 - avoids an import cycle
 
+    # A call bound to a case thread answers from the thread's live state (server store): the persona
+    # voices it (breathless, pain, cough) and the Phoenix face gets the matching emotion tag.
+    case_state, emotion = s.case_state, None
+    if s.thread_id:
+        view = await sync_mod.case_view(request.app, s.thread_id)
+        if view is not None:
+            look = sync_mod.live_look(*view)
+            case_state = {**s.case_state, "voice": ap.voice_style(look)["persona_lines"],
+                          "affect": (view[1] or {}).get("affect") or s.case_state.get("affect")}
+            emotion = tv.emotion_for(look)
     if learner_msg:
-        out = await patient_turn(PatientTurnRequest(learner_msg=learner_msg, case_state=s.case_state,
+        out = await patient_turn(PatientTurnRequest(learner_msg=learner_msg, case_state=case_state,
                                                     persona=s.persona, history=history,
                                                     case_context=s.case_context, locale=s.lang))
-        text, routed = out.utterance, out.routed_as
+        text, routed = ap.speakable(out.utterance, s.lang), out.routed_as
+        if emotion and text:
+            text = tv.emotion_tag(emotion) + text
     else:
         text, routed = "", "empty"
     s.metrics["llm_turns"] = int(s.metrics.get("llm_turns", 0)) + 1

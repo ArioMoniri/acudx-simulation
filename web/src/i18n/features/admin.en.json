@@ -163,7 +163,7 @@
     },
     "gpu": {
       "title": "On-demand GPU worker",
-      "description": "Never always-on: a Lambda Cloud instance is launched when the LLM registry has no reachable API provider and terminated after the idle window or when the daily budget would be exceeded.",
+      "description": "Never always-on: Lambda Cloud workers are launched when a request needs a GPU (LLM, voice, live video, appearance generation), more of them when every running worker is busy, up to the pool limit, and each one is terminated after its idle window.",
       "policy": "Policy",
       "idleMinutes": "Idle minutes before termination",
       "dailyBudget": "Daily budget (USD)",
@@ -195,7 +195,18 @@
       "spent7d": "Spent (7 d)",
       "spent30d": "Spent (30 d)",
       "spentToday": "Spent today",
-      "noCap": "No cap"
+      "noCap": "No cap",
+      "maxWorkers": "Most workers at once",
+      "maxWorkersHint": "Another worker starts when every running one is busy (live calls full or requests queued); each stops on its own idle window.",
+      "pool": "Worker pool",
+      "poolSummary": "{{workers}} of {{max}} workers, {{gpus}} GPUs.",
+      "scaleNeeded": "Busy: {{reason}}, another worker is due.",
+      "addWorker": "Add a worker",
+      "gpus": "GPUs",
+      "status": "Status",
+      "inflight": "Requests",
+      "calls": "Live calls",
+      "stopOne": "Stop"
     },
     "telemetry": {
       "title": "Model telemetry",

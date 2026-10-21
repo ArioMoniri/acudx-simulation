@@ -408,6 +408,14 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
       return signedJson("/v1/voice/avatar/speak", { session_id: sessionId, text }, { timeoutMs: 60_000, ...opts });
     },
 
+    /**
+     * At case start: ask the gateway to make this patient's pictures (presenting, worse, critical,
+     * improved) from the case thread before any call, so a later call opens on the patient as they are.
+     */
+    avatarPrepare(threadId: string, photoId: string, opts: RequestOptions = {}): Promise<BackendResult<{ state: string }>> {
+      return signedJson("/v1/voice/avatar/prepare", { thread_id: threadId, photo_id: photoId }, { timeoutMs: 30_000, ...opts });
+    },
+
     avatarEnd(sessionId: string, opts: RequestOptions = {}): Promise<BackendResult<{ ok: boolean }>> {
       return signedJson("/v1/voice/avatar/end", { session_id: sessionId }, opts);
     },

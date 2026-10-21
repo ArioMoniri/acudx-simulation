@@ -58,6 +58,7 @@ import { createAnalyserEnvelope, overlayGeometry, type AnalyserEnvelope } from "
 import { getTtsAudioElement, pauseTts, resumeTts, setTtsMuted, speakAsPatient, stopTts, ttsMaybeAvailable } from "@/lib/tts";
 import { voiceApi, type VoiceCapabilities } from "@/lib/voiceApi";
 import { sessionBody, startAvatarCall, type AvatarCallHandle, type AvatarCallMetrics } from "@/lib/avatarCall";
+import { getEncounterSnapshot } from "@/state/encounterStore";
 
 export type CallState = "connecting" | "live" | "hold" | "ended";
 export type CallMode = "realtime" | "webrtc" | "tavus" | "local";
@@ -220,6 +221,7 @@ export function PatientCallTile({
           sex: visual.sexAtBirth,
           age: visual.age,
           context: contextRef.current?.(),
+          threadId: getEncounterSnapshot().generation?.threadId ?? null,
         }),
       );
       if (isCancelled()) return false;

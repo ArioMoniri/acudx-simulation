@@ -208,7 +208,8 @@ async def test_capabilities_describe_hosted_rows_pending_worker_and_avatar(tmp_p
     store.create_provider(ProviderIn(kind="tts", name="eleven", base_url="https://api.elevenlabs.io", priority=1, api_key="xi",
                                      extra={"model_id": "eleven_v4_turbo", "languages": ["en", "tr", "ar"]}))
     store.create_provider(ProviderIn(kind="avatar", name="lk", base_url="https://lk.example", priority=1, api_key="secret",
-                                     extra={"transport": "livekit", "livekit_api_key": "APIxyz", "avatar": "simli"}))
+                                     extra={"transport": "livekit", "livekit_api_key": "APIxyz", "avatar": "simli",
+                                            "default": True}))
     caps = await svc.capabilities(probe_worker=True)
     assert caps["tts"] == {"enabled": True, "provider": "eleven", "source": "registry", "adapter": "elevenlabs",
                            "model": "eleven_v4_turbo", "languages": ["en", "tr", "ar"], "reasons": []}

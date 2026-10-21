@@ -997,15 +997,13 @@ def test_chatterbox_patch_reports_timings_and_takes_a_bounded_autocast_switch():
 
 
 @respx.mock
-async def test_max_workers_zero_disables_launch_and_one_is_the_ceiling(tmp_path):
+async def test_max_workers_zero_disables_launch(tmp_path):
     from server.providers.gpu_worker import LaunchDisabled  # noqa: PLC0415
 
     clock = FakeClock()
     m = _manager(tmp_path, clock)
     try:
-        assert m.policy.max_workers == 1
-        with pytest.raises(ValueError):
-            WorkerPolicy(max_workers=2)
+        assert m.policy.max_workers == 3
         m.set_policy(m.policy.model_copy(update={"max_workers": 0}))
         with pytest.raises(LaunchDisabled):
             await m.ensure_worker()

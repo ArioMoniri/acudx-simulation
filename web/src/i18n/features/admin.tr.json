@@ -163,7 +163,7 @@
     },
     "gpu": {
       "title": "Talep üzerine GPU çalışanı",
-      "description": "Hiçbir zaman sürekli açık değil: LLM kayıt defterinde erişilebilir API sağlayıcı kalmadığında bir Lambda Cloud örneği başlatılır; boşta kalma süresi dolunca veya günlük bütçe aşılacaksa sonlandırılır.",
+      "description": "Hiçbir zaman sürekli açık değil: Lambda Cloud çalışanları bir istek GPU gerektirdiğinde (LLM, ses, canlı video, görünüm üretimi) başlatılır, çalışanların hepsi meşgulken havuz sınırına kadar yenileri eklenir ve her biri kendi boşta kalma süresinden sonra kapatılır.",
       "policy": "Politika",
       "idleMinutes": "Sonlandırma öncesi boşta kalma (dakika)",
       "dailyBudget": "Günlük bütçe (USD)",
@@ -195,7 +195,18 @@
       "spent7d": "Harcanan (7 g)",
       "spent30d": "Harcanan (30 g)",
       "spentToday": "Bugün harcanan",
-      "noCap": "Sınır yok"
+      "noCap": "Sınır yok",
+      "maxWorkers": "Aynı anda en fazla çalışan",
+      "maxWorkersHint": "Çalışanların hepsi doluyken (canlı görüşmeler dolu ya da istekler kuyrukta) yeni bir çalışan başlar; her biri kendi boşta kalma süresi dolunca durur.",
+      "pool": "Çalışan havuzu",
+      "poolSummary": "{{workers}} / {{max}} çalışan, {{gpus}} GPU.",
+      "scaleNeeded": "Yoğun: {{reason}}, yeni bir çalışan gerekiyor.",
+      "addWorker": "Çalışan ekle",
+      "gpus": "GPU",
+      "status": "Durum",
+      "inflight": "İstekler",
+      "calls": "Canlı görüşmeler",
+      "stopOne": "Durdur"
     },
     "telemetry": {
       "title": "Model telemetrisi",

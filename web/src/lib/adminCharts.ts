@@ -9,6 +9,7 @@
 
 import type {
   Breakdown,
+  GpuStatus,
   LedgerEntry,
   Provider,
   SeriesBucket,
@@ -220,4 +221,39 @@ export function groupByKind(list: Provider[], kinds: readonly string[]): Array<{
   return kinds
     .map((kind) => ({ kind, items: sorted.filter((p) => p.kind === kind) }))
     .filter((g) => g.items.length > 0);
+}
+
+/* -------------------------------------------------------------------------- */
+/* GPU pool                                                                    */
+/* -------------------------------------------------------------------------- */
+export interface PoolRow {
+  id: number;
+  instance_type: string;
+  region: string;
+  status: string;
+  gpus: number;
+  inflight: number;
+  calls: number;
+  price_cents_per_hour: number;
+  launched_at: number;
+  domain: string | null;
+}
+
+/** Every worker of the pool, newest first (older gateways report one `worker`). */
+export function poolRows(status: GpuStatus | null | undefined): PoolRow[] {
+  const list = status?.workers ?? (status?.worker ? [status.worker] : []);
+  return [...list]
+    .sort((a, b) => b.id - a.id)
+    .map((w) => ({
+      id: w.id,
+      instance_type: w.instance_type,
+      region: w.region,
+      status: w.status,
+      gpus: w.gpus ?? w.load?.gpus ?? 1,
+      inflight: w.load?.inflight ?? 0,
+      calls: w.load?.calls ?? 0,
+      price_cents_per_hour: w.price_cents_per_hour,
+      launched_at: w.launched_at,
+      domain: w.domain,
+    }));
 }

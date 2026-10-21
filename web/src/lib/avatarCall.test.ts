@@ -70,6 +70,12 @@ describe("sessionBody and mouthRegion", () => {
     });
   });
 
+  it("binds the call to the case thread so the server drives the face from the live state", () => {
+    const b = sessionBody({ encounterId: "enc-1", photoId: "p04", lang: "en", threadId: "thr-9" });
+    expect(b.thread_id).toBe("thr-9");
+    expect(sessionBody({ encounterId: "e", photoId: "p01", lang: "en" }).thread_id).toBeUndefined();
+  });
+
   it("looks at the lower half of the face", () => {
     const r = mouthRegion();
     expect(r.y).toBeGreaterThan(0.5);
@@ -102,5 +108,18 @@ describe("voiceApi avatar routes", () => {
     const [, init] = fetchFn.mock.calls[1];
     expect((init?.headers as Record<string, string>)["X-User-Id"]).toBe("u1");
     expect(JSON.parse(String(init?.body))).toEqual({ session_id: "sess-123456", sdp: "v=0 offer", type: "offer" });
+  });
+});
+
+describe("avatarPrepare", () => {
+  it("asks the gateway to make the case's pictures before any call, signed in", async () => {
+    const fetchFn = vi.fn(async () => new Response(JSON.stringify({ state: "preparing" }), { status: 202 }));
+    const api = createVoiceApi({ baseUrl: "/api", fetchFn: fetchFn as unknown as typeof fetch, identity: async () => ({ "X-User-Id": "u1" }) });
+    const r = await api.avatarPrepare("thr-1", "p04");
+    expect(r.ok).toBe(true);
+    const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("/api/v1/voice/avatar/prepare");
+    expect(JSON.parse(String(init.body))).toEqual({ thread_id: "thr-1", photo_id: "p04" });
+    expect((init.headers as Record<string, string>)["X-User-Id"]).toBe("u1");
   });
 });

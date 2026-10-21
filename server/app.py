@@ -257,6 +257,9 @@ class PatientTurnRequest(BaseModel):
     locale: str | None = None
     max_tokens: int | None = None
     temperature: float | None = None
+    # The case thread: the server adds how the patient sounds now (breathless, pain, cough, drowsy),
+    # read from the thread's Director state, the same look the live video shows.
+    thread_id: str | None = Field(default=None, max_length=120)
 
 
 class PatientTurnResponse(BaseModel):
@@ -426,7 +429,17 @@ async def patient_turn(req: PatientTurnRequest) -> PatientTurnResponse:
 
     # 3. Soft classes -> persona turn via the gateway, with a class directive.
     directive = _DIRECTIVE_BY_CLASS.get(cls, "normal")
-    messages = build_patient_turn(req.case_state, req.persona, req.history, req.learner_msg, directive)
+    case_state = req.case_state
+    if req.thread_id:
+        from server.voice.avatar.state_sync import voice_lines_for_thread  # noqa: PLC0415
+
+        try:
+            lines = await voice_lines_for_thread(app, req.thread_id)
+        except Exception:  # noqa: BLE001 - the voice lines are a refinement; the turn goes on without
+            lines = []
+        if lines:
+            case_state = {**case_state, "voice": lines}
+    messages = build_patient_turn(case_state, req.persona, req.history, req.learner_msg, directive)
 
     gw = _gateway(app)
     meta: dict[str, Any] = {}

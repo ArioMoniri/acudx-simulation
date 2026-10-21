@@ -796,6 +796,12 @@ async def director_step(req: DirectorStepRequest, request: Request,
     })
     _record_errors(rt, req.learner_id, prev_state or CaseState.from_spec(st["spec"], case_id=req.thread_id),
                    new_state)
+    # Live video calls on this thread follow the new state (face crossfaded, voice re-styled), in the
+    # background so the step answers at once (docs/architecture/18 section 6.6).
+    if getattr(request.app.state, "avatar_sessions", None) is not None:
+        from server.voice.avatar.routes import notify_director  # noqa: PLC0415 - voice is optional here
+
+        rt.staged.spawn(notify_director(request.app, req.thread_id))
     # A branch opened: author its bedside event for THIS thread in the background (S6).
     reasons = {str(getattr(c, "id", "")): str(getattr(c, "reason", "")) for c in
                (getattr(new_state, "pending_complications", None) or [])}
