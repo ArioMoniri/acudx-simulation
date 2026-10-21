@@ -3996,6 +3996,35 @@ AGENT_COVERAGE: dict[str, list[str]] = {
     "2348": ["gram_pos", "gram_neg", "anaerobe", "cns"],
 }
 
+# Spectrum of an antimicrobial named in free text (an API order "co_amoxiclav", a row label)
+# rather than by formulary code. Whole-word phrases after tokenising (underscores and hyphens
+# are spaces). Same sources as AGENT_COVERAGE: BNF treatment summaries
+# https://bnf.nice.org.uk/treatment-summaries/ (penicillins, cephalosporins, macrolides,
+# quinolones, tetracyclines), NICE NG138 pneumonia (amoxicillin, co-amoxiclav, doxycycline,
+# clarithromycin, levofloxacin) https://www.nice.org.uk/guidance/ng138 , NICE NG240.
+AGENT_NAME_COVERAGE: dict[str, list[str]] = {
+    "ceftriaxone": ["gram_pos", "gram_neg", "cns"], "seftriakson": ["gram_pos", "gram_neg", "cns"],
+    "cefotaxime": ["gram_pos", "gram_neg", "cns"],
+    "cefuroxime": ["gram_pos", "gram_neg"],
+    "co amoxiclav": ["gram_pos", "gram_neg", "anaerobe"], "amoxiclav": ["gram_pos", "gram_neg", "anaerobe"],
+    "amoxicillin clavulanate": ["gram_pos", "gram_neg", "anaerobe"],
+    "amoksisilin klavulanat": ["gram_pos", "gram_neg", "anaerobe"],
+    "amoxicillin": ["gram_pos"], "amoksisilin": ["gram_pos"], "ampicillin": ["gram_pos"],
+    "benzylpenicillin": ["gram_pos"], "flucloxacillin": ["gram_pos"],
+    "piperacillin": ["gram_pos", "gram_neg", "anaerobe", "pseudomonas"],
+    "meropenem": ["gram_pos", "gram_neg", "anaerobe", "pseudomonas", "cns"],
+    "ertapenem": ["gram_pos", "gram_neg", "anaerobe"],
+    "vancomycin": ["gram_pos", "mrsa"], "teicoplanin": ["gram_pos", "mrsa"], "linezolid": ["gram_pos", "mrsa"],
+    "gentamicin": ["gram_neg", "pseudomonas"],
+    "levofloxacin": ["gram_pos", "gram_neg", "atypical"], "levofloksasin": ["gram_pos", "gram_neg", "atypical"],
+    "moxifloxacin": ["gram_pos", "gram_neg", "atypical"],
+    "ciprofloxacin": ["gram_neg", "pseudomonas"],
+    "clarithromycin": ["atypical"], "klaritromisin": ["atypical"], "azithromycin": ["atypical"],
+    "doxycycline": ["atypical", "gram_pos"],
+    "clindamycin": ["gram_pos", "anaerobe"], "metronidazole": ["anaerobe"],
+    "chloramphenicol": ["gram_pos", "gram_neg", "anaerobe", "cns"],
+}
+
 # Allergen class by formulary code (06b section 4.3).
 AGENT_ALLERGY_CLASS: dict[str, str] = {
     "pip-tazo": "penicillin", "2193": "cephalosporin", "29561": "carbapenem", "1191": "nsaid", "7052": "opioid",

@@ -505,6 +505,19 @@ async def join_room_thread(thread_id: str, body: RoomRequest, request: Request,
                                  "last_event_id": events[-1][0] if events else 0})
 
 
+def _order_is_treatment(st: dict[str, Any], code: str) -> bool:
+    """director.order_is_treatment against the thread's Director state (or its spec before
+    the first step)."""
+    if not code:
+        return False
+    try:
+        held = st.get("director")
+        probe = CaseState.model_validate(held) if isinstance(held, dict) else CaseState.from_spec(st["spec"])
+    except Exception:  # noqa: BLE001 - an unreadable state keeps the order an order
+        return False
+    return D.order_is_treatment(probe, code)
+
+
 def treatments_locked(st: dict[str, Any]) -> bool:
     """True while the thread has no safe treatment table (being written, or rejected by the
     safety review): nothing is administered until it lands (06b F30)."""
@@ -748,6 +761,10 @@ async def director_step(req: DirectorStepRequest, request: Request,
         return _error(404, "thread_not_found", f"no case thread {req.thread_id!r}")
     if not st.get("spec"):
         return _error(409, "opening_not_ready", "the case opening is not ready yet")
+    # An ordered treatment (oxygen, an antibiotic) is a treatment step: it reads the treatment
+    # layer and is refused while the table is locked, like an administered one.
+    if action.kind == "order" and _order_is_treatment(st, action.ref):
+        action = action.model_copy(update={"kind": "treatment"})
     # The action reads a layer that is not written yet: write it now (lazy), then step.
     needed = layers_for_action(action.kind, action.ref)
     pending_layers: list[str] = []

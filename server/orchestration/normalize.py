@@ -93,8 +93,13 @@ _H = 3_600_000
 # ``caps`` empty means the class moves no tracked vital inside a session.
 TREATMENT_CLASSES: dict[str, dict[str, Any]] = {
     "oxygen": {
-        "keywords": ("oxygen", "o2", "nasal cannula", "non rebreather", "nonrebreather", "venturi", "high flow",
-                     "hfnc", "niv", "cpap", "bipap", "non invasive ventilation", "oksijen"),
+        # Device names count as oxygen too (live run 2026-10-21: "nrb_15l" had no class and
+        # ordered oxygen never reached the course engine).
+        "keywords": ("oxygen", "o2", "nasal cannula", "nasal cannulae", "nasal prongs", "non rebreather",
+                     "nonrebreather", "non rebreathing", "nrb", "nrbm", "reservoir mask", "face mask",
+                     "simple mask", "venturi", "high flow", "hfnc", "hfno", "niv", "cpap", "bipap",
+                     "non invasive ventilation", "oksijen", "nazal kanül", "nazal kanul", "rezervuarlı maske",
+                     "rezervuarli maske", "yüksek akım", "yuksek akim"),
         "onset": (1 * _MIN, 15 * _MIN), "caps": {"spo2": 8, "rr": 4, "hr": 6},
         "source": "BTS 2017 emergency oxygen guideline, recheck SpO2 minutes after a change "
                   "https://doi.org/10.1136/thoraxjnl-2016-209729",
@@ -116,7 +121,9 @@ TREATMENT_CLASSES: dict[str, dict[str, Any]] = {
         "keywords": ("antibiotic", "antibiotics", "antimicrobial", "abx", "vancomycin", "piperacillin", "tazobactam",
                      "ceftriaxone", "cefotaxime", "meropenem", "amoxicillin", "co amoxiclav", "gentamicin",
                      "clarithromycin", "azithromycin", "doxycycline", "ciprofloxacin", "levofloxacin", "metronidazole",
-                     "antibiyotik"),
+                     "moxifloxacin", "benzylpenicillin", "penicillin", "ampicillin", "flucloxacillin", "cefuroxime",
+                     "clindamycin", "chloramphenicol", "ertapenem", "teicoplanin", "linezolid", "amoxiclav",
+                     "antibiyotik", "seftriakson", "amoksisilin", "klaritromisin", "levofloksasin"),
         "onset": (6 * _H, 72 * _H), "caps": {},
         "source": "Halm et al. JAMA 1998: median time to clinical stability in CAP is days "
                   "https://jamanetwork.com/journals/jama/fullarticle/187516",

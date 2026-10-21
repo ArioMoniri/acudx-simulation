@@ -68,6 +68,141 @@ export const COURSE_TABLES: CourseTables = {
    "pseudomonas"
   ]
  },
+ "agentNameCoverage": {
+  "amoksisilin": [
+   "gram_pos"
+  ],
+  "amoksisilin klavulanat": [
+   "gram_pos",
+   "gram_neg",
+   "anaerobe"
+  ],
+  "amoxicillin": [
+   "gram_pos"
+  ],
+  "amoxicillin clavulanate": [
+   "gram_pos",
+   "gram_neg",
+   "anaerobe"
+  ],
+  "amoxiclav": [
+   "gram_pos",
+   "gram_neg",
+   "anaerobe"
+  ],
+  "ampicillin": [
+   "gram_pos"
+  ],
+  "azithromycin": [
+   "atypical"
+  ],
+  "benzylpenicillin": [
+   "gram_pos"
+  ],
+  "cefotaxime": [
+   "gram_pos",
+   "gram_neg",
+   "cns"
+  ],
+  "ceftriaxone": [
+   "gram_pos",
+   "gram_neg",
+   "cns"
+  ],
+  "cefuroxime": [
+   "gram_pos",
+   "gram_neg"
+  ],
+  "chloramphenicol": [
+   "gram_pos",
+   "gram_neg",
+   "anaerobe",
+   "cns"
+  ],
+  "ciprofloxacin": [
+   "gram_neg",
+   "pseudomonas"
+  ],
+  "clarithromycin": [
+   "atypical"
+  ],
+  "clindamycin": [
+   "gram_pos",
+   "anaerobe"
+  ],
+  "co amoxiclav": [
+   "gram_pos",
+   "gram_neg",
+   "anaerobe"
+  ],
+  "doxycycline": [
+   "atypical",
+   "gram_pos"
+  ],
+  "ertapenem": [
+   "gram_pos",
+   "gram_neg",
+   "anaerobe"
+  ],
+  "flucloxacillin": [
+   "gram_pos"
+  ],
+  "gentamicin": [
+   "gram_neg",
+   "pseudomonas"
+  ],
+  "klaritromisin": [
+   "atypical"
+  ],
+  "levofloksasin": [
+   "gram_pos",
+   "gram_neg",
+   "atypical"
+  ],
+  "levofloxacin": [
+   "gram_pos",
+   "gram_neg",
+   "atypical"
+  ],
+  "linezolid": [
+   "gram_pos",
+   "mrsa"
+  ],
+  "meropenem": [
+   "gram_pos",
+   "gram_neg",
+   "anaerobe",
+   "pseudomonas",
+   "cns"
+  ],
+  "metronidazole": [
+   "anaerobe"
+  ],
+  "moxifloxacin": [
+   "gram_pos",
+   "gram_neg",
+   "atypical"
+  ],
+  "piperacillin": [
+   "gram_pos",
+   "gram_neg",
+   "anaerobe",
+   "pseudomonas"
+  ],
+  "seftriakson": [
+   "gram_pos",
+   "gram_neg",
+   "cns"
+  ],
+  "teicoplanin": [
+   "gram_pos",
+   "mrsa"
+  ],
+  "vancomycin": [
+   "gram_pos",
+   "mrsa"
+  ]
+ },
  "bounds": {
   "crt": [
    1,

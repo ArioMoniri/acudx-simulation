@@ -47,6 +47,7 @@ def tables() -> dict:
         "labRates": FX.LAB_RATES,
         "codeClasses": FX.CODE_CLASSES,
         "agentCoverage": FX.AGENT_COVERAGE,
+        "agentNameCoverage": FX.AGENT_NAME_COVERAGE,
         "agentAllergyClass": FX.AGENT_ALLERGY_CLASS,
         "rowClasses": dict(sorted(row_classes.items())),
         "handledClasses": sorted(C.HANDLED_CLASSES),

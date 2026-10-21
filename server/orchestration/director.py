@@ -491,8 +491,16 @@ def match_treatment_row(state: "CaseState", code: str) -> "TreatmentRow | None":
     if exact is not None:
         return exact
     stems = FORMULARY_ROW_STEMS.get(code, ())
+    is_abx = code in ANTIBIOTIC_CODES
     if not stems:
-        return None
+        # An antimicrobial ordered by name or class ("co_amoxiclav", "iv_antibiotics") stands
+        # for the case's antibiotic row; its named spectrum is still checked by the engine (F11).
+        # Oxygen devices are never mapped to a row, so an NRB order in a hypercapnic patient is
+        # not mistaken for the case's controlled-oxygen row.
+        from server.orchestration.normalize import classify_treatment
+        if "antibiotic" not in classify_treatment(code):
+            return None
+        stems, is_abx = _ABX_ROW_STEMS, True
     for row in state.treatments:
         if row.appropriateness == "contraindicated":
             continue
@@ -502,7 +510,7 @@ def match_treatment_row(state: "CaseState", code: str) -> "TreatmentRow | None":
             continue
         # A combined "antibiotics + fluids" row is satisfied by the antibiotic,
         # never by the fluid bolus or oxygen alone.
-        if code not in ANTIBIOTIC_CODES and any(s in hay for s in FORMULARY_ROW_STEMS["2193"]):
+        if not is_abx and any(s in hay for s in FORMULARY_ROW_STEMS["2193"]):
             continue
         if any(s in hay for s in stems):
             return row
@@ -520,6 +528,41 @@ def treatment_classes(code: str, row: Optional[TreatmentRow]) -> list[str]:
         return list(FX.CODE_CLASSES[code])
     text = " ".join(x for x in ((row.label_en if row else ""), (row.code if row else code), FORMULARY_NAMES.get(code, "")) if x)
     return classify_treatment(text)
+
+
+def named_agents(text: str) -> list[str]:
+    """Spectrum of the antimicrobials named in free text (FX.AGENT_NAME_COVERAGE), sorted."""
+    from server.orchestration.normalize import _phrase_in
+    out: set[str] = set()
+    for name, cov in FX.AGENT_NAME_COVERAGE.items():
+        if _phrase_in(name, text):
+            out.update(cov)
+    return sorted(out)
+
+
+def agents_for(code: str, row: Optional[TreatmentRow]) -> list[str]:
+    """Spectrum of an administered item: the formulary code's coverage; for a code that is not
+    the case row itself, the agents it names. An exact case row stays abstract (adequate)."""
+    if code in FX.AGENT_COVERAGE:
+        return list(FX.AGENT_COVERAGE[code])
+    if row is not None and row.code == code:
+        return []
+    return named_agents(code)
+
+
+def order_is_treatment(state: CaseState, code: str) -> bool:
+    """An ``order`` whose code is a treatment (a formulary drug, a case treatment row, or a code
+    naming a treatment class such as ``nrb_15l``) is administered, not resulted. Diagnostic and
+    omission rows, and codes that unlock an authored result, stay orders."""
+    if not code or f"order:{code}" in state.facts_by_trigger:
+        return False
+    if code in FX.CODE_CLASSES:
+        return True
+    row = next((t for t in state.treatments if t.code == code), None)
+    if row is not None:
+        return row.role not in ("diagnostic", "omission")
+    from server.orchestration.normalize import classify_treatment
+    return bool(set(classify_treatment(code)) - {"procedure"})
 
 
 def course_event(state: CaseState, code: str, at_ms: int, kind: str = "treatment") -> dict[str, Any]:
@@ -540,7 +583,7 @@ def course_event(state: CaseState, code: str, at_ms: int, kind: str = "treatment
             vol = v
     return {
         "kind": "treatment", "code": code, "row": row.code if row else "", "at_ms": at_ms, "seq": seq,
-        "classes": treatment_classes(code, row), "agents": list(FX.AGENT_COVERAGE.get(code, [])),
+        "classes": treatment_classes(code, row), "agents": agents_for(code, row),
         "allergy_class": acls, "volume_ml": vol, "appropriateness": row.appropriateness if row else "neutral",
         "effects": _bounded_effects(row.effects) if row else [],
     }
@@ -638,6 +681,10 @@ def node_perceive(run: DirectorRun) -> dict[str, Any]:
     started = time.monotonic()
     state = CaseState.model_validate(run["case"])
     action = Action.model_validate(run["action"])
+    if action.kind == "order" and order_is_treatment(state, action.ref):
+        # Ordered oxygen or an antibiotic acts on the patient (live run 2026-10-21: an ordered
+        # oxygen and antibiotic left o2 false and the course untreated).
+        action = action.model_copy(update={"kind": "treatment"})
     elapsed = action.elapsed_ms if action.elapsed_ms is not None else DEFAULT_ELAPSED_MS.get(action.kind, 0)
     state.t_ms += max(0, int(elapsed))
     notes: list[dict[str, Any]] = []
@@ -681,7 +728,7 @@ def node_perceive(run: DirectorRun) -> dict[str, Any]:
                                      f"{'; spectrum ' + '/'.join(ev['agents']) if ev['agents'] else ''}"})
 
     state.log.append({"at_ms": state.t_ms, "kind": action.kind, "ref": action.ref})
-    return {"case": state.model_dump(), "new_facts": new_facts, "notes": notes,
+    return {"case": state.model_dump(), "new_facts": new_facts, "notes": notes, "action": action.model_dump(),
             "trace": [make_event("director:perceive", started=started, kind=action.kind, ref=action.ref)]}
 
 

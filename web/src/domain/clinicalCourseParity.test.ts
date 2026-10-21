@@ -4,6 +4,7 @@ import {
   courseBindingFromSpec,
   courseEventFor,
   currentVitals,
+  namedAgents,
   simulateCourse,
   type CourseInput,
   type CourseSnapshot,
@@ -84,5 +85,14 @@ describe("06b client binding: spec to course and formulary codes to events", () 
 
   it("ceftriaxone is an antibiotic, never a beta-blocker (06b F08)", () => {
     expect(COURSE_TABLES.codeClasses["2193"]).toEqual(["antibiotic"]);
+  });
+});
+
+describe("named antimicrobial spectrum (mirror of director.named_agents)", () => {
+  it("reads agents from free-text codes the same way the server does", () => {
+    expect(namedAgents("co_amoxiclav")).toEqual(["anaerobe", "gram_neg", "gram_pos"]);
+    expect(namedAgents("ceftriaxone 2 g iv")).toEqual(["cns", "gram_neg", "gram_pos"]);
+    expect(namedAgents("clarithromycin")).toEqual(["atypical"]);
+    expect(namedAgents("iv_antibiotics")).toEqual([]);
   });
 });

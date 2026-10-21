@@ -332,3 +332,16 @@ async def test_sse_stream_is_capped_server_side(monkeypatch):
     assert [e[0] for e in events] == ["start", "error"]
     assert events[-1][1]["error"] == "stream_timeout" and events[-1][1]["status"] == 504
     assert events[-1][1]["after"] == 1      # where the client reconnects
+
+
+async def test_an_ordered_oxygen_is_a_treatment_step_on_the_thread(client: httpx.AsyncClient):
+    """Live run 2026-10-21: oxygen ordered through the API left the case state at o2 false."""
+    gen = await client.post("/v2/case/generate", json={"system": "cardiology", "complaint": "STEMI", "seed": 1,
+                                                       "thread_id": "th-o2", "learner_id": "L-route"}, headers=ME)
+    assert gen.status_code == 200, gen.text
+    r = await client.post("/v2/director/step", json={
+        "thread_id": "th-o2", "action": {"kind": "order", "ref": "o2_nasal_cannula"}, "use_model": False}, headers=ME)
+    assert r.status_code == 200, r.text
+    st = r.json()["case_state"]
+    assert st["snapshot"]["bedside"]["o2"] is True
+    assert any(a["code"] == "o2_nasal_cannula" and "oxygen" in a["classes"] for a in st["administered"])

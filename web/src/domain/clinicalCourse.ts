@@ -611,6 +611,8 @@ export interface CourseTables {
   labRates: Dict<number | string>;
   codeClasses: Dict<string[]>;
   agentCoverage: Dict<string[]>;
+  /** Spectrum of an antimicrobial named in free text (server FX.AGENT_NAME_COVERAGE). */
+  agentNameCoverage: Dict<string[]>;
   agentAllergyClass: Dict<string>;
   rowClasses: Dict<string[]>;
   handledClasses: string[];
@@ -1849,6 +1851,26 @@ export function courseBindingFromSpec(spec: CourseSpecLike): CaseCourseBinding |
 const PENICILLIN_WORDS = ["penicillin", "amoxicillin", "co-amoxiclav", "co amoxiclav", "flucloxacillin", "piperacillin", "benzylpenicillin", "ampicillin"];
 const EFFECT_CAPS: Record<string, number> = { hr: 80, systolic: 50, diastolic: 30, rr: 15, spo2: 15, tempC: 2.5, pain: 10 };
 
+const phraseTokens = (text: string): string => ` ${(text.toLowerCase().replace(/_/g, " ").match(/[a-z0-9çğıöşü]+/g) ?? []).join(" ")} `;
+
+/** Spectrum of the antimicrobials named in free text (mirror of director.named_agents). */
+export function namedAgents(text: string): string[] {
+  const hay = phraseTokens(text);
+  const out = new Set<string>();
+  for (const [name, cov] of Object.entries(COURSE_TABLES.agentNameCoverage)) {
+    if (hay.includes(phraseTokens(name))) for (const a of cov) out.add(a);
+  }
+  return [...out].sort();
+}
+
+/** Mirror of director.agents_for: formulary coverage, else the agents a non-row code names. */
+function agentsFor(code: string, rowCode: string | undefined): string[] {
+  const cov = COURSE_TABLES.agentCoverage[code];
+  if (cov) return [...cov];
+  if (rowCode === code) return [];
+  return namedAgents(code);
+}
+
 /** One course event for an administered code (mirror of director.course_event), or null for an omission row. */
 export function courseEventFor(c: CaseInstance, code: string, at: number, seq: number): CourseEvent | null {
   const row = matchTreatmentResponse(c, code);
@@ -1866,7 +1888,7 @@ export function courseEventFor(c: CaseInstance, code: string, at: number, seq: n
   }
   return {
     kind: "treatment", code, row: row?.treatmentCode ?? "", at_ms: at, seq,
-    classes: [...classes], agents: [...(COURSE_TABLES.agentCoverage[code] ?? [])], allergy_class: acls, volume_ml: vol,
+    classes: [...classes], agents: agentsFor(code, row?.treatmentCode), allergy_class: acls, volume_ml: vol,
     appropriateness: row?.appropriateness ?? "neutral",
     effects: (row?.effects ?? []).filter((e) => e.key in EFFECT_CAPS).map((e) => ({
       key: e.key, delta: Math.max(-EFFECT_CAPS[e.key], Math.min(EFFECT_CAPS[e.key], e.delta)), onsetMs: Math.max(0, Math.trunc(e.onsetMs)),
