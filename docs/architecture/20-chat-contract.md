@@ -39,7 +39,7 @@ The council gets three different models so it is not one voice: current Claude m
 
 ### 2.3 Request shape
 
-* System prompt: one text block with `cache_control: {type: "ephemeral"}`. The staged generator's `case_prefix()` is byte-stable per thread, so every layer call of a thread reads it from cache. The persona's system block (charter, identity, story) is stable per thread too; its volatile parts (live state, what staff said, the guard note, the doctor's line) sit in the last user message. Persona calls also send top-level `cache_control` so the growing transcript is cached.
+* System prompt: one text block with `cache_control: {type: "ephemeral"}`. The staged generator's `case_prefix()` is byte-stable per thread. The structured-output schema is part of the cached prefix, though, so a cache entry is shared only by calls with the same schema: a repair or re-render of the same layer, a judge, repeated `event` layers. Different layer kinds of one thread do not read each other's entry (measured live, review 10 section 5.2). The persona's system block (charter, identity, story) is stable per thread too; its volatile parts (live state, what staff said, the guard note, the doctor's line) sit in the last user message. Persona calls put a second breakpoint on the last stable turn (`messages[-2]`, the patient's previous reply), never on the volatile tail, and `persona_turn` moves its transcript window in steps of 8 entries, so each turn reads the transcript up to the previous turn from cache (review 10 section 5.1).
 * JSON layers use structured outputs (`output_config.format` with `type: json_schema`). `to_anthropic_schema()` drops the keywords structured outputs does not accept (lengths, ranges, patterns, `maxItems`, `minItems` above 1), forces `additionalProperties: false`, and makes optional properties nullable; `restore_optional()` removes those nulls again so callers see the same shape as before. The deterministic gates in `staged.py` still enforce the dropped constraints. A schema that cannot be expressed (free maps) is sent without `format` and parsed from the reply.
 * Thinking: Claude Opus 5.5 always thinks (adaptive); its output budget gets room for it (`output_budget()`). Sonnet 5.5 sends `thinking: {type: "between_tools"}` and Haiku 5.5 `{type: "disabled"}` at effort high or below, so short JSON and persona lines are not starved.
 * S1 streams (`messages.stream`); the accumulated text goes to the existing partial-JSON tracker after every delta.
@@ -136,7 +136,21 @@ Notes exist in EN and TR (`server/interview/guard.py NOTES`); the reply locale f
 * Offline, always: `pytest server/tests/evals` checks the set, scores the rules on both files, and replays every recorded live classifier output in `server/tests/evals/recorded/*.jsonl` through `combine()`.
 * Live: `ACUDX_EVAL_LIVE=1 ANTHROPIC_KEY=... pytest server/tests/evals -m live -s` (or `python -m server.tests.evals.guard_eval live`) classifies both files with the classifier model, writes a recording for replay and asserts macro F1 of at least 0.85.
 
-Rules-only results on 2026-10-21 (no live recording exists yet: the key was not set in the build container):
+Live classifier, claude-haiku-5-5, run on 2026-10-21 (recording `recorded/claude-haiku-5-5-20261021T075036Z.jsonl`, scored through `combine()` with the rules, as the server decides; review 10 section 2):
+
+| label | tuned set P / R | holdout P / R |
+|---|---|---|
+| clinical | 0.944 / 1.000 | 1.000 / 1.000 |
+| off_topic | 1.000 / 0.929 | 1.000 / 1.000 |
+| meta_injection | 1.000 / 1.000 | 1.000 / 1.000 |
+| diagnosis_request | 1.000 / 0.923 | 1.000 / 1.000 |
+| unsafe | 1.000 / 1.000 | 1.000 / 1.000 |
+| other_language | 1.000 / 1.000 | 1.000 / 1.000 |
+| accuracy, macro F1 | 0.979, 0.982 | 1.000, 1.000 |
+
+The two misses are Turkish and not in a safety class: `o14` (holiday plans, off_topic → clinical) and `d10` ("Sizce neyiniz var?", diagnosis_request → clinical). The offline suite replays the recording on every run.
+
+Rules-only results on 2026-10-21 (what serves without a model):
 
 | label | tuned set P / R | holdout P / R |
 |---|---|---|
@@ -148,7 +162,7 @@ Rules-only results on 2026-10-21 (no live recording exists yet: the key was not 
 | other_language | 1.000 / 1.000 | 1.000 / 1.000 |
 | accuracy, macro F1 | 0.990, 0.991 | 0.800, 0.782 |
 
-The tuned-set numbers overstate the rules; the holdout is the honest picture. The rules never raise a false alarm on the hard classes, but they miss most novel injections (1 of 5 on the holdout), which is the classifier model's job. The model numbers will be added from the first live run.
+The tuned-set numbers overstate the rules; the holdout is the honest picture. The rules never raise a false alarm on the hard classes, but they miss most novel injections (1 of 5 on the holdout). The classifier model catches those (5 of 5).
 
 ## 5. Actions (generative chat UI)
 
@@ -177,6 +191,6 @@ The Anthropic API is exercised through `server/tests/anthropic_double.py`, an in
 
 ## 7. Open items
 
-* No live run yet: `ANTHROPIC_KEY` was not set in the build container. First steps once it is: `python -m server.tests.evals.guard_eval live`, then one generated case and one interview turn, checking `cache_read_input_tokens` on the second layer call of a thread.
+* First live run done on 2026-10-21 (docs/review/10-live-claude-acceptance.md): guard eval, one generated case, interview turns with guidance off and on, cost and cache rows.
 * The chat UI rendering of `actions` and guard notes is owned by the frontend work; `InterviewTab` maps the labels onto its existing notices.
 * `/v1/patient/turn` still serves the voice agent and older clients; it now reaches Claude through the gateway too, but its directive still sits in the system prompt, so its cache prefix changes with the guard class.

@@ -1,0 +1,48 @@
+{
+ "thread_id": "f1354402-409a-45bb-84ec-b50a62782282",
+ "layer": "debrief",
+ "committed_diagnosis": {
+  "code": "GA05",
+  "display": "Pelvic inflammatory disease"
+ },
+ "case_condition": "Pelvic inflammatory disease (ICD-11 GA05)",
+ "data": {
+  "teaching_points": [
+   "Diagnosis of PID fits. Sexually active young woman with pelvic pain, cervical motion tenderness, and adnexal tenderness meets minimum CDC criteria. Fever, mucopurulent discharge, and onset after menses add support.",
+   "Always confirm a negative hCG first. Ectopic pregnancy must be excluded in any reproductive-age woman with pelvic pain. Here urine hCG was negative.",
+   "Treat empirically and promptly. Cover gonorrhea, chlamydia, and anaerobes, e.g., ceftriaxone plus doxycycline plus metronidazole. Delay risks tubo-ovarian abscess, infertility, and ectopic pregnancy later.",
+   "Decide on admission and imaging. No peritonism, no adnexal mass, stable vitals, and tolerating oral intake support outpatient care with 72-hour review. Fever, mass, peritonism, vomiting, or SBP <90 call for pelvic ultrasound to look for TOA and IV antibiotics."
+  ],
+  "missed_cues": [
+   "Guarded sexual history: the new partner and inconsistent condom use may only come out with a nonjudgmental, private inquiry. Partner notification, partner treatment, and HIV/syphilis testing follow from it.",
+   "Onset shortly after menses and dyspareunia are classic PID clues. They are easily missed if the menstrual and sexual history are skipped.",
+   "Right-sided predominance can anchor toward appendicitis. Bilateral adnexal tenderness, cervical motion tenderness, and discharge favor PID, but reassess if pain migrates or peritonism develops."
+  ],
+  "anchors": [
+   {
+    "statement_id": "gs_cdc_pid_minimum_criteria",
+    "statement_en": "Presumptive treatment for PID should be initiated for sexually active young women and other women at risk for STIs if they are experiencing pelvic or lower abdominal pain, if no cause for the illness other than PID can be identified, and if one or more of the following three minimum clinical criteria are present on pelvic examination: cervical motion tenderness, uterine tenderness, or adnexal tenderness.",
+    "statement_tr": "Pelvik veya alt karın ağrısı olan, PİH dışında hastalığın başka bir nedeni bulunamayan ve pelvik muayenede şu üç minimum klinik ölçütten bir veya daha fazlası bulunan cinsel olarak aktif genç kadınlarda ve CYBE riski taşıyan diğer kadınlarda PİH için varsayımsal tedavi başlatılmalıdır: servikal hareket hassasiyeti, uterus hassasiyeti veya adneksiyal hassasiyet.",
+    "title": "Sexually Transmitted Infections Treatment Guidelines, 2021: Pelvic Inflammatory Disease",
+    "source": "CDC",
+    "citation": "https://www.cdc.gov/std/treatment-guidelines/pid.htm"
+   },
+   {
+    "statement_id": "gs_cdc_pid_parenteral",
+    "statement_en": "Recommended parenteral regimen for PID: ceftriaxone 1 g IV every 24 hours plus doxycycline 100 mg orally or IV every 12 hours plus metronidazole 500 mg orally or IV every 12 hours; because of the pain associated with IV infusion, doxycycline should be administered orally when possible.",
+    "statement_tr": "PİH için önerilen parenteral rejim: 24 saatte bir 1 g IV seftriakson artı 12 saatte bir ağızdan veya IV 100 mg doksisiklin artı 12 saatte bir ağızdan veya IV 500 mg metronidazol; IV infüzyonun ağrısı nedeniyle doksisiklin mümkün olduğunda ağızdan verilmelidir.",
+    "title": "Sexually Transmitted Infections Treatment Guidelines, 2021: Pelvic Inflammatory Disease",
+    "source": "CDC",
+    "citation": "https://www.cdc.gov/std/treatment-guidelines/pid.htm"
+   },
+   {
+    "statement_id": "gs_cdc_pid_alternative",
+    "statement_en": "Alternative parenteral regimens for PID: ampicillin-sulbactam 3 g IV every 6 hours plus doxycycline 100 mg orally or IV every 12 hours, or clindamycin 900 mg IV every 8 hours plus gentamicin loading dose IV or IM (2 mg/kg body weight) followed by a maintenance dose; single daily dosing (3 to 5 mg/kg body weight) can be substituted.",
+    "statement_tr": "PİH için alternatif parenteral rejimler: 6 saatte bir 3 g IV ampisilin-sulbaktam artı 12 saatte bir ağızdan veya IV 100 mg doksisiklin ya da 8 saatte bir 900 mg IV klindamisin artı IV veya IM gentamisin yükleme dozu (2 mg/kg vücut ağırlığı) ve ardından idame dozu; günde tek doz (3-5 mg/kg vücut ağırlığı) uygulanabilir.",
+    "title": "Sexually Transmitted Infections Treatment Guidelines, 2021: Pelvic Inflammatory Disease",
+    "source": "CDC",
+    "citation": "https://www.cdc.gov/std/treatment-guidelines/pid.htm"
+   }
+  ]
+ }
+}
