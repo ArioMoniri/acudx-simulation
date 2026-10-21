@@ -240,6 +240,46 @@ async def close(client: httpx.AsyncClient, worker: WorkerAvatar, worker_session:
         pass
 
 
+async def switch(client: httpx.AsyncClient, worker: WorkerAvatar, worker_session: str, avatar_id: str, *,
+                 crossfade_ms: int = 900) -> dict[str, Any]:
+    """Swap a live call's face to another prepared avatar of the same patient, crossfaded."""
+    r = await client.post(worker.origin + "/avatar/switch", headers=worker.headers(), timeout=20.0,
+                          json={"sessionid": worker_session, "avatar": avatar_id, "crossfade_ms": int(crossfade_ms)})
+    body = await _json(r)
+    if r.status_code != 200:
+        raise AvatarWorkerError(r.status_code, str(body.get("error") or body)[:200])
+    return body
+
+
+IMAGEGEN_HEALTH = "/imagegen/health"
+
+
+async def imagegen_health(client: httpx.AsyncClient, worker: WorkerAvatar, *, timeout_s: float = 4.0) -> dict[str, Any]:
+    """The worker's image edit server: ``{ok, loaded, mode, reason, ...}``; never raises."""
+    try:
+        r = await client.get(worker.origin + IMAGEGEN_HEALTH, headers=worker.headers(), timeout=timeout_s)
+    except httpx.HTTPError as exc:
+        return {"ok": False, "reason": f"unreachable ({type(exc).__name__})"}
+    body = await _json(r)
+    if r.status_code != 200:
+        return {"ok": False, "reason": f"HTTP {r.status_code}", **body}
+    return body
+
+
+async def imagegen_edit(client: httpx.AsyncClient, worker: WorkerAvatar, image: bytes, prompt: str, *, seed: int,
+                        steps: int = 4) -> tuple[bytes, dict[str, Any]]:
+    """Edit the portrait into the described state; returns the JPEG and the server's timing headers."""
+    r = await client.post(worker.origin + "/imagegen/edit", headers=worker.headers(), timeout=120.0,
+                          json={"image_b64": base64.b64encode(image).decode("ascii"), "prompt": prompt,
+                                "seed": int(seed), "steps": int(steps)})
+    if r.status_code != 200 or not r.headers.get("content-type", "").startswith("image/"):
+        body = await _json(r)
+        raise AvatarWorkerError(r.status_code, str(body.get("error") or body.get("reason") or body)[:200])
+    meta = {"gen_ms": float(r.headers.get("x-gen-ms") or 0.0), "mode": r.headers.get("x-mode"),
+            "steps": int(r.headers.get("x-steps") or steps), "seed": int(r.headers.get("x-seed") or seed)}
+    return r.content, meta
+
+
 async def turn_check(client: httpx.AsyncClient, worker: WorkerAvatar) -> dict[str, Any]:
     """The runner's own TURN Allocate against the worker's public endpoints (TLS 443 included)."""
     r = await client.get(worker.origin + "/avatar/turn_check", headers=worker.headers(), timeout=40.0)
@@ -255,9 +295,48 @@ def call_capacity(h: dict[str, Any], *, gateway_limit: int, gateway_pending: int
     runner_max = h.get("max_sessions")
     limit = int(gateway_limit)
     if isinstance(runner_max, int) and runner_max > 0:
-        limit = min(limit, runner_max)
+        # A runner with a GPU of its own (multi-GPU hosts, cloud-init AVATAR_GPU) sizes its own limit.
+        limit = runner_max if h.get("dedicated_gpu") else min(limit, runner_max)
     active = int(h.get("sessions") or 0) + int(gateway_pending)
     return {"max_calls": limit, "active_calls": active, "calls_available": max(0, limit - active)}
+
+
+async def pick_worker(client: httpx.AsyncClient, wm: Any, *, gateway_limit: int,
+                      pending: Callable[[str], int] | None = None,
+                      prefer: str | None = None) -> tuple[WorkerAvatar | None, dict[str, Any], dict[str, Any]]:
+    """The ready worker of the pool whose runner has the most free call slots (``prefer`` first when it
+    has one). Reports each worker's live calls to the pool (load balancing and scale-up) and tells
+    the pool when every runner is full. Returns ``(worker, health, capacity)``; worker None when no
+    ready worker exists, or every runner is down (health of the last one) or full (capacity 0)."""
+    eps = wm.endpoints() if hasattr(wm, "endpoints") else [wm.llm_endpoint()]
+    eps = [e for e in eps if e]
+    if prefer:
+        eps.sort(key=lambda e: 0 if worker_from_endpoint(e).origin == prefer.rstrip("/") else 1)  # type: ignore[union-attr]
+    best: tuple[WorkerAvatar, dict[str, Any], dict[str, Any]] | None = None
+    last_h: dict[str, Any] = {}
+    last_cap: dict[str, Any] = {}
+    for ep in eps:
+        w = worker_from_endpoint(ep)
+        if w is None:
+            continue
+        h = await health(client, w)
+        last_h = h
+        if not h.get("ok"):
+            continue
+        cap = call_capacity(h, gateway_limit=gateway_limit, gateway_pending=pending(w.origin) if pending else 0)
+        if hasattr(wm, "set_calls"):
+            wm.set_calls(w.origin, cap["active_calls"])
+        last_cap = cap
+        if cap["calls_available"] > 0 and (best is None or cap["calls_available"] > best[2]["calls_available"]
+                                          or (prefer and w.origin == prefer.rstrip("/"))):
+            best = (w, h, cap)
+            if prefer and w.origin == prefer.rstrip("/"):
+                break
+    if best is not None:
+        return best
+    if last_cap and hasattr(wm, "note_call_refused"):
+        wm.note_call_refused()   # every runner is full: the pool launches another worker
+    return None, last_h, last_cap
 
 
 # --------------------------------------------------------------------------- #

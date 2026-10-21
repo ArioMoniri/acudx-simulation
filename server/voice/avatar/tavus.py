@@ -93,6 +93,33 @@ def config_from_endpoint(ep: ProviderEndpoint, *, public_base_url: str | None = 
     )
 
 
+# Phoenix-4 / 4.5 faces take one of these emotions from an ``<emotion value="..."/>`` tag before the
+# text (https://docs.tavus.io/sections/conversational-video-interface/quickstart/emotional-expression,
+# read 2026-10-21). They are moods, not illness signs: Tavus cannot render a flush, sweat, pallor or
+# breathlessness on a face, so on Tavus the illness lives in the voice and the words only.
+PHOENIX_EMOTIONS = ("neutral", "angry", "excited", "elated", "content", "sad", "dejected", "scared", "contempt",
+                    "disgusted", "surprised")
+
+
+def emotion_for(look: Any) -> str | None:
+    """The Phoenix emotion closest to the patient's state (None: let the face decide)."""
+    signs = getattr(look, "signs", {}) or {}
+    phase = getattr(look, "phase", "")
+    if signs.get("unresponsive") or signs.get("drowsy"):
+        return "dejected"
+    if signs.get("resp_distress", 0) >= 2 or signs.get("pain", 0) >= 2 or phase in ("peri_arrest", "deteriorating"):
+        return "scared"
+    if signs.get("pain") or signs.get("resp_distress") or signs.get("fever_flush"):
+        return "sad"
+    if phase == "improving":
+        return "content"
+    return None
+
+
+def emotion_tag(emotion: str) -> str:
+    return f'<emotion value="{emotion}"/>' if emotion in PHOENIX_EMOTIONS else ""
+
+
 def new_llm_token() -> str:
     """The per-call bearer the PAL's custom LLM sends back to the gateway."""
     return "acudx-tavus-" + secrets.token_urlsafe(32)

@@ -107,15 +107,20 @@ class WorkerCostSource:
         return self.fallback
 
     def serves(self, base_url: str) -> bool:
+        """True when ``base_url`` is any ready worker of the pool."""
+        want = (base_url or "").rstrip("/")
         try:
-            ep = self.manager.llm_endpoint()
+            eps = self.manager.endpoints() if hasattr(self.manager, "endpoints") else [self.manager.llm_endpoint()]
         except Exception:  # noqa: BLE001
             return False
-        return bool(ep) and ep["base_url"].rstrip("/") == (base_url or "").rstrip("/")
+        return any(ep and ep["base_url"].rstrip("/") == want for ep in eps)
 
-    def touch(self) -> None:
+    def touch(self, base_url: str | None = None) -> None:
         try:
-            self.manager.touch()
+            if base_url:
+                self.manager.touch(base_url)
+            else:
+                self.manager.touch()
         except Exception:  # noqa: BLE001
             pass
 
@@ -297,7 +302,11 @@ class StructuredLLM:
         client = await self._get_client()
         url = f"{ep.base_url}/chat/completions"
         if self.gpu is not None and self.self_hosted(ep):
-            self.gpu.touch()  # keep the idle reaper off a worker that is generating
+            # Keep the idle reaper off the worker that is generating (only that one in a pool).
+            try:
+                self.gpu.touch(ep.base_url)  # type: ignore[call-arg]
+            except TypeError:
+                self.gpu.touch()
         t0 = time.monotonic()
         cid = self._begin(ep.base_url)
         try:

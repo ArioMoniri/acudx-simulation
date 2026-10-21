@@ -54,10 +54,17 @@ class CallSession:
     pal_id: str | None = None
     llm_token_digest: str | None = None
     metrics: dict[str, Any] = field(default_factory=dict)
+    # The case thread the call follows (validated against the caller at session start); the face and
+    # the voice are re-derived from its server-side Director state (state_sync.Appearance).
+    thread_id: str | None = None
+    appearance: Any = None
 
     def public(self) -> dict[str, Any]:
-        return {"session_id": self.id, "provider": self.provider, "lang": self.lang, "avatar_id": self.avatar_id,
-                "conversation_url": self.conversation_url, "expires_at": self.expires_at}
+        out = {"session_id": self.id, "provider": self.provider, "lang": self.lang, "avatar_id": self.avatar_id,
+               "conversation_url": self.conversation_url, "expires_at": self.expires_at}
+        if self.appearance is not None:
+            out["appearance"] = self.appearance.public()
+        return out
 
 
 class SessionStore:
@@ -132,6 +139,13 @@ class SessionStore:
             return sum(1 for s in self._by_id.values()
                        if s.provider == provider and s.worker_origin == worker_origin and not s.worker_session
                        and now - s.created_at <= max_age_s)
+
+    def by_thread(self, thread_id: str) -> list[CallSession]:
+        """Live calls that follow one case thread (every room member's call on a shared case)."""
+        now = self._clock()
+        with self._lock:
+            self._sweep(now)
+            return [s for s in self._by_id.values() if s.thread_id and s.thread_id == thread_id]
 
     def __len__(self) -> int:
         return len(self._by_id)

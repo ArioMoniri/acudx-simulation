@@ -22,7 +22,7 @@ import {
 } from "@/components/ui";
 import { EvilBarChart, type ChartConfig } from "@/components/charts";
 import type { WorkerPolicy } from "@/lib/adminApi";
-import { formatUsd, ledgerByDay } from "@/lib/adminCharts";
+import { formatUsd, ledgerByDay, poolRows } from "@/lib/adminCharts";
 import { ChartFrame, SERIES_COLORS, themed } from "./ChartFrame";
 import { formatDateTime, useAdminQuery, useAdminSession, useLocaleTag } from "./adminSession";
 
@@ -36,6 +36,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
   const [allow, setAllow] = useState(policy.allowlist.join("\n"));
   const [model, setModel] = useState(policy.llm_model);
   const [regions, setRegions] = useState(policy.region_preference.join("\n"));
+  const [maxWorkers, setMaxWorkers] = useState(String(policy.max_workers ?? 3));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -45,6 +46,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
     setAllow(policy.allowlist.join("\n"));
     setModel(policy.llm_model);
     setRegions(policy.region_preference.join("\n"));
+    setMaxWorkers(String(policy.max_workers ?? 3));
   }, [policy]);
 
   async function submit(e: FormEvent) {
@@ -58,6 +60,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
       allowlist: lines(allow),
       llm_model: model.trim(),
       region_preference: lines(regions),
+      max_workers: Number.parseInt(maxWorkers, 10),
     });
     setBusy(false);
     if (r.ok) {
@@ -71,6 +74,9 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={t("admin.gpu.idleMinutes")}>
           {(aria) => <TextInput {...aria} type="number" inputMode="numeric" min={1} max={1440} value={idle} onChange={(e) => setIdle(e.target.value)} />}
+        </Field>
+        <Field label={t("admin.gpu.maxWorkers")} hint={t("admin.gpu.maxWorkersHint")}>
+          {(aria) => <TextInput {...aria} type="number" inputMode="numeric" min={1} max={64} value={maxWorkers} onChange={(e) => setMaxWorkers(e.target.value)} />}
         </Field>
         <Field label={t("admin.gpu.dailyBudget")}>
           {(aria) => <TextInput {...aria} type="number" inputMode="decimal" min={0} step="0.5" value={budget} placeholder={t("admin.gpu.noCap", { defaultValue: "No cap" })} onChange={(e) => setBudget(e.target.value)} />}
@@ -103,7 +109,7 @@ export function GpuSection() {
   const { api } = useAdminSession();
   const status = useAdminQuery((a) => a.gpuStatus(), [], { pollMs: 20_000 });
   const telemetry = useAdminQuery((a) => a.getGpuTelemetry(200), []);
-  const [acting, setActing] = useState<"start" | "stop" | null>(null);
+  const [acting, setActing] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
   async function start() {
@@ -117,6 +123,25 @@ export function GpuSection() {
     }
     void Promise.all([status.reload(), telemetry.reload()]);
   }
+  async function scaleUp() {
+    setActing("scale");
+    setActionMsg(null);
+    const r = await api.gpuScaleUp();
+    setActing(null);
+    if (!r.ok) {
+      const d = r.detail as { message?: string } | undefined;
+      setActionMsg(t("admin.gpu.refusal", { message: d?.message ?? r.error }));
+    }
+    void status.reload();
+  }
+  async function stopOne(id: number) {
+    setActing(`stop-${id}`);
+    setActionMsg(null);
+    const r = await api.gpuStop(id);
+    setActing(null);
+    if (!r.ok) setActionMsg(t("admin.common.error", { code: r.error }));
+    void Promise.all([status.reload(), telemetry.reload()]);
+  }
   async function stop() {
     setActing("stop");
     setActionMsg(null);
@@ -128,6 +153,8 @@ export function GpuSection() {
 
   const s = status.data;
   const w = s?.worker ?? null;
+  const pool = poolRows(s);
+  const cap = s?.capacity;
   const now = Date.now() / 1000;
   const days = ledgerByDay(telemetry.data?.entries ?? [], now, locale, 14);
   const hasCost = days.some((d) => d.cost_usd > 0);
@@ -192,6 +219,76 @@ export function GpuSection() {
           {s?.policy ? <PolicyForm policy={s.policy} onSaved={() => void status.reload()} /> : <Skeleton className="h-48" />}
         </Card>
       </div>
+
+      <Card padding="none">
+        <CardHeader className="flex-row flex-wrap items-start justify-between gap-3 px-5 pt-5">
+          <div>
+            <CardTitle className="text-sm">{t("admin.gpu.pool")}</CardTitle>
+            <CardDescription className="text-xs">
+              {t("admin.gpu.poolSummary", {
+                workers: cap?.workers ?? pool.length,
+                max: cap?.max_workers ?? s?.policy?.max_workers ?? 3,
+                gpus: cap?.gpus ?? pool.reduce((n, r) => n + r.gpus, 0),
+              })}
+              {cap?.scale_up_needed ? ` ${t("admin.gpu.scaleNeeded", { reason: cap.scale_up_needed })}` : ""}
+            </CardDescription>
+          </div>
+          <Button
+            variant="secondary"
+            loading={acting === "scale"}
+            disabled={!s?.can_launch || (cap ? cap.workers + cap.launching >= cap.max_workers : false)}
+            onClick={scaleUp}
+          >
+            {t("admin.gpu.addWorker")}
+          </Button>
+        </CardHeader>
+        {pool.length === 0 ? (
+          <p className="px-5 pb-5 text-sm text-muted">{t("admin.overview.gpuNone")}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <THead>
+                <tr>
+                  <Th>#</Th>
+                  <Th>{t("admin.gpu.ledgerCol.type")}</Th>
+                  <Th numeric>{t("admin.gpu.gpus")}</Th>
+                  <Th className="hidden sm:table-cell">{t("admin.gpu.ledgerCol.region")}</Th>
+                  <Th>{t("admin.gpu.status")}</Th>
+                  <Th numeric>{t("admin.gpu.inflight")}</Th>
+                  <Th numeric>{t("admin.gpu.calls")}</Th>
+                  <Th numeric className="hidden md:table-cell">{t("admin.gpu.ledgerCol.rate")}</Th>
+                  <Th className="hidden lg:table-cell">{t("admin.gpu.ledgerCol.started")}</Th>
+                  <Th>
+                    <span className="sr-only">{t("admin.gpu.stop")}</span>
+                  </Th>
+                </tr>
+              </THead>
+              <TBody>
+                {pool.map((r) => (
+                  <Tr key={r.id}>
+                    <Td numeric>{r.id}</Td>
+                    <Td className="font-mono text-xs">{r.instance_type}</Td>
+                    <Td numeric>{r.gpus}</Td>
+                    <Td className="hidden sm:table-cell">{r.region}</Td>
+                    <Td>
+                      <Badge tone={r.status === "ready" ? "normal" : "neutral"} dot>{r.status}</Badge>
+                    </Td>
+                    <Td numeric>{r.inflight}</Td>
+                    <Td numeric>{r.calls}</Td>
+                    <Td numeric className="hidden md:table-cell">{formatUsd(r.price_cents_per_hour / 100, locale)}</Td>
+                    <Td className="hidden lg:table-cell whitespace-nowrap text-xs">{formatDateTime(r.launched_at, locale)}</Td>
+                    <Td>
+                      <Button size="sm" variant="ghost" loading={acting === `stop-${r.id}`} onClick={() => void stopOne(r.id)}>
+                        {t("admin.gpu.stopOne")}
+                      </Button>
+                    </Td>
+                  </Tr>
+                ))}
+              </TBody>
+            </Table>
+          </div>
+        )}
+      </Card>
 
       <ChartFrame
         title={t("admin.gpu.costByDay")}

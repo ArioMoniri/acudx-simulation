@@ -185,6 +185,8 @@ class Settings(BaseSettings):
         "gpu_1x_a100_sxm4", "gpu_1x_a10", "gpu_1x_a100", "gpu_1x_h100_pcie",
     ])
     gpu_region_preference: CsvList = Field(default_factory=list)
+    # Most workers the pool runs at once (launched on demand, each reaped when idle).
+    gpu_max_workers: int = 3
     admin_token: str | None = None               # guards /admin/*; 503 when unset
     # --- Live patient video (server/voice/avatar, docs/architecture/18 section 6) --- #
     # The gateway's internet-reachable origin; Tavus's custom LLM calls back
@@ -208,6 +210,9 @@ class Settings(BaseSettings):
     # runner's speech path and the browser's jitter buffer have settled when the first real line
     # plays (the first two lines swung up to 420 ms either way; docs/architecture/18 6.3.8). 0 = off.
     avatar_preroll_ms: int = Field(default=800, ge=0, le=3000)
+    # How long a call start waits for the patient's presenting look (image edit + MuseTalk preparation)
+    # before it opens on the case portrait and crossfades into the look once it is ready.
+    avatar_appearance_wait_s: float = Field(default=45.0, ge=0, le=300)
     acudx_db_path: str = "server/data/acudx.db"  # SQLite: worker state + cost ledger + registry + telemetry
 
     # --- Identity (server/auth, docs/architecture/19) --- #

@@ -39,7 +39,7 @@ WORKER_MODELS: dict[str, str] = {"tts": "chatterbox-multilingual", "stt": "deepd
 class WorkerManagerLike(Protocol):
     async def ensure_worker(self) -> Any: ...
     def llm_endpoint(self) -> dict[str, str] | None: ...
-    def touch(self) -> None: ...
+    def touch(self, ref: str | None = None) -> None: ...
 
 
 @dataclass(frozen=True, repr=False)
@@ -144,7 +144,23 @@ class RegistryResolver:
         return ProviderEndpoint(kind=kind, name="gpu-worker", base_url=origin + WORKER_PATHS[kind], model=model,
                                 api_key=ep["api_key"], source="gpu_worker")
 
+    def _worker_ep(self, endpoint: ProviderEndpoint | None) -> bool:
+        return endpoint is not None and endpoint.source == "gpu_worker" and self.worker_manager is not None
+
     def touch(self, endpoint: ProviderEndpoint | None) -> None:
-        """Reset the GPU worker idle window after a request that used it."""
-        if endpoint is not None and endpoint.source == "gpu_worker" and self.worker_manager is not None:
-            self.worker_manager.touch()
+        """Reset the idle window of the GPU worker that served ``endpoint`` (the pool reaps each
+        worker on its own window, so only that one is touched)."""
+        if self._worker_ep(endpoint):
+            try:
+                self.worker_manager.touch(endpoint.base_url)  # type: ignore[union-attr]
+            except TypeError:   # a manager without per-worker touch
+                self.worker_manager.touch()  # type: ignore[union-attr]
+
+    def begin(self, endpoint: ProviderEndpoint | None) -> None:
+        """A request started on a GPU worker endpoint (pool load balancing and scale-up)."""
+        if self._worker_ep(endpoint) and hasattr(self.worker_manager, "begin"):
+            self.worker_manager.begin(endpoint.base_url)  # type: ignore[union-attr]
+
+    def end(self, endpoint: ProviderEndpoint | None) -> None:
+        if self._worker_ep(endpoint) and hasattr(self.worker_manager, "end"):
+            self.worker_manager.end(endpoint.base_url)  # type: ignore[union-attr]

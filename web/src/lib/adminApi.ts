@@ -191,6 +191,17 @@ export interface WorkerPolicy {
   allowlist: string[];
   llm_model: string;
   region_preference: string[];
+  /** The pool: at most this many workers at once (default 3). */
+  max_workers?: number;
+  /** Requests in flight per GPU before another worker is launched. */
+  llm_queue_per_worker?: number;
+}
+
+export interface WorkerLoad {
+  inflight: number;
+  calls: number;
+  gpus: number;
+  score: number;
 }
 
 export interface WorkerPublic {
@@ -207,6 +218,18 @@ export interface WorkerPublic {
   last_used_at: number;
   terminated_at: number | null;
   endpoints?: Record<string, string>;
+  gpus?: number;
+  load?: WorkerLoad;
+}
+
+export interface GpuCapacity {
+  workers: number;
+  ready: number;
+  launching: number;
+  max_workers: number;
+  gpus: number;
+  scale_up_needed: string | null;
+  last_scale_up: { reason: string; at: number } | null;
 }
 
 export interface GpuStatus {
@@ -216,8 +239,11 @@ export interface GpuStatus {
   refusal?: { reason: string; message: string } | null;
   policy?: WorkerPolicy;
   worker: WorkerPublic | null;
+  /** Every worker of the pool (newer gateways). */
+  workers?: WorkerPublic[];
+  capacity?: GpuCapacity;
   spent_today_usd: number;
-  budget_remaining_usd?: number;
+  budget_remaining_usd?: number | null;
   reaper_running?: boolean;
 }
 
@@ -396,10 +422,14 @@ export function createAdminApi(opts: AdminApiOptions = {}) {
     gpuStatus: () => request<GpuStatus>("/admin/gpu/status"),
     gpuStart: () =>
       request<{ worker: WorkerPublic; spent_today_usd: number }>("/admin/gpu/start", { method: "POST" }),
-    gpuStop: () =>
+    /** Stop one worker (by row id) or, without an id, every worker of the pool. */
+    gpuStop: (workerId?: number) =>
       request<{ terminated: WorkerPublic | null; spent_today_usd: number }>("/admin/gpu/stop", {
         method: "POST",
+        query: { worker_id: workerId },
       }),
+    /** Launch one more worker now (up to the policy's max_workers). */
+    gpuScaleUp: () => request<GpuStatus & { started: string }>("/admin/gpu/scale-up", { method: "POST" }),
     gpuLedger: (limit = 100) => request<GpuLedger>("/admin/gpu/ledger", { query: { limit } }),
     getGpuPolicy: () => request<WorkerPolicy>("/admin/gpu/policy"),
     putGpuPolicy: (policy: WorkerPolicy) =>

@@ -9,6 +9,8 @@
 #   /stt/*       speaches (faster-whisper large-v3-turbo, OpenAI-compatible /v1/audio/transcriptions)
 #   /avatar/*    AcuDx avatar runner: LiveTalking + MuseTalk 1.5 real-time talking head (WebRTC out,
 #                TTS audio in, the case portrait as the reference face); see avatar.sh
+#   /imagegen/*  per-case patient appearance: FLUX.2 [klein] 4B (Apache-2.0) image edits of the case
+#                portrait into the patient's current state; see imagegen.sh
 #   /avatar-status/status.json  the runner's bring-up state (building | waiting | starting | ready |
 #                disabled with a reason such as insufficient_vram), readable while the runner is down
 # Plus coturn on 3478 UDP and TCP and TLS on 443 at turn.<domain> (host network): the WebRTC media
@@ -139,6 +141,9 @@ write_files:
           }
           handle_path /avatar/* {
             reverse_proxy avatar:8010
+          }
+          handle_path /imagegen/* {
+            reverse_proxy imagegen:8020
           }
           handle /avatar-status/* {
             root * /srv
@@ -628,7 +633,7 @@ write_files:
           # worker 9 served fine). Eager mode costs some decode speed but always starts.
           command: >
             --model ${WORKER_LLM_MODEL} --max-model-len 16384
-            --gpu-memory-utilization 0.60 --enable-prefix-caching --enforce-eager
+            --gpu-memory-utilization ${VLLM_GPU_UTIL:-0.60} --enable-prefix-caching --enforce-eager
             --enable-auto-tool-choice --tool-call-parser hermes
             --served-model-name acudx-llm
           healthcheck:
@@ -762,12 +767,13 @@ write_files:
             dockerfile: Dockerfile.acudx
           image: acudx/avatar-runner:c726943-cu128
           runtime: nvidia
+          # One GPU: the card everything shares (0). Multi-GPU hosts: a card of its own (runcmd AVATAR_GPU).
           deploy:
             resources:
               reservations:
                 devices:
                   - driver: nvidia
-                    count: all
+                    device_ids: ["${AVATAR_GPU:-0}"]
                     capabilities: [gpu]
           extra_hosts: [ "host.docker.internal:host-gateway" ]
           environment:
@@ -780,17 +786,37 @@ write_files:
             - AVATAR_IDLE_FRAMES=75
             - AVATAR_AV_SHIFT_MS=160
             - AVATAR_MAX_SESSIONS=${AVATAR_MAX_SESSIONS}
+            - AVATAR_DEDICATED_GPU=${AVATAR_DEDICATED_GPU:-0}
             - AVATAR_TURN_TCP_HOST=host.docker.internal
             - TURN_SECRET=${TURN_SECRET}
             - WORKER_DOMAIN=${WORKER_DOMAIN}
             # /turn_check dials the host's own address (the public IP is NATed and does not hairpin)
             - AVATAR_TURN_HOST_ADDR=${TURN_RELAY_IP}
             - LIVETALKING_REF=${LIVETALKING_REF}
-            - NVIDIA_VISIBLE_DEVICES=all
+            - NVIDIA_VISIBLE_DEVICES=${AVATAR_GPU:-0}
             - NVIDIA_DRIVER_CAPABILITIES=compute,utility
           volumes:
             - /opt/acudx/hf:/hf
             - /opt/acudx/avatars:/app/data/avatars
+        # Per-case appearance edits (FLUX.2 klein 4B, Apache-2.0); imagegen.sh starts it after the runner.
+        imagegen:
+          build:
+            context: /opt/acudx/imagegen
+          image: acudx/imagegen:flux2-klein-4b-cu128
+          runtime: nvidia
+          deploy:
+            resources:
+              reservations:
+                devices:
+                  - driver: nvidia
+                    device_ids: ["${IMAGEGEN_GPU:-0}"]
+                    capabilities: [gpu]
+          environment:
+            - HF_HOME=/hf
+            - IMAGEGEN_PORT=8020
+            - NVIDIA_VISIBLE_DEVICES=${IMAGEGEN_GPU:-0}
+            - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+          volumes: [ "/opt/acudx/hf:/hf" ]
         # TURN for the avatar call (RFC 8656, coturn). Host networking so the relay ports reach
         # the runner's container addresses; 3478 is open publicly (lambda_cloud.py rules) and the
         # TLS listener (5349) is reached only through the edge router on 443 (turn.<domain>), with
@@ -1142,6 +1168,9 @@ write_files:
 
       AVATAR_PORT = int(os.environ.get("AVATAR_PORT", "8010"))
       MAX_SESSIONS = int(os.environ.get("AVATAR_MAX_SESSIONS", "2"))
+      # True on multi-GPU hosts where the runner has a GPU of its own (cloud-init AVATAR_GPU): the
+      # gateway then takes MAX_SESSIONS as this worker's call limit.
+      DEDICATED_GPU = os.environ.get("AVATAR_DEDICATED_GPU", "0") == "1"
       BATCH_SIZE = int(os.environ.get("AVATAR_BATCH_SIZE", "4"))
       # Frames the render loop keeps ahead of the WebRTC sender (queued + in flight). Upstream throttles
       # on the video queue alone (5 frames) while two feature batches and 16 rendered frames pile up
@@ -1673,8 +1702,36 @@ write_files:
           sess._acudx_shift_ms = _bounded(tuning, "av_shift_ms", AV_SHIFT_MS, -1000, 1000)
           sess._acudx_tuning = {"batch_size": o.batch_size, "lookahead_frames": o.r, "ahead_frames": sess._acudx_ahead,
                                 "av_shift_ms": sess._acudx_shift_ms}
+          sess._acudx_avatar = avatar_id
+          _install_crossfade(sess)
           _install_av_shift(sess, sess._acudx_shift_ms)
           return sess
+
+
+      def _install_crossfade(sess) -> None:
+          """Keep the last frame sent; after a /switch the next frames fade from that frame into the new
+          appearance (smoothstep over the switch's crossfade time), so a change of the patient's state
+          never cuts. Frames of a different size are resized for the blend."""
+          out = sess.output
+          orig_v = out.push_video_frame
+          st = {"last": None, "from": None, "t0": 0.0, "dur": 0.0}
+
+          def push_video_frame(frame) -> None:
+              src = st["from"]
+              if src is not None:
+                  u = (time.monotonic() - st["t0"]) / st["dur"] if st["dur"] > 0 else 1.0
+                  if u >= 1.0:
+                      st["from"] = None
+                  else:
+                      if src.shape != frame.shape:
+                          src = cv2.resize(src, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_AREA)
+                      a = u * u * (3.0 - 2.0 * u)
+                      frame = cv2.addWeighted(src, 1.0 - a, frame, a, 0.0)
+              st["last"] = frame
+              orig_v(frame)
+
+          out.push_video_frame = push_video_frame
+          sess._acudx_fade = st
 
 
       class TrackedRTCManager(RTCManager):
@@ -1711,6 +1768,7 @@ write_files:
 
       def _session_stats(sid: str, sess) -> dict:
           out: dict = {"id": sid[:8], "tuning": getattr(sess, "_acudx_tuning", None),
+                       "avatar": getattr(sess, "_acudx_avatar", None),
                        "speaking": bool(getattr(sess, "speaking", False)), "warm_up_ms": getattr(sess, "_acudx_warm_ms", None)}
           inf = getattr(sess, "_acudx_infer", None)
           if inf and inf["seconds"] > 0:
@@ -1736,7 +1794,8 @@ write_files:
           return web.json_response({
               "ok": True, "model": "musetalk-1.5", "runner": "livetalking", "livetalking_ref": LIVETALKING_REF,
               "transport": "webrtc", "fps": opt.fps, "batch_size": BATCH_SIZE, "sessions": len(active),
-              "max_sessions": MAX_SESSIONS, "avatars": prepared, "infer_fps": STATE["infer_fps"],
+              "max_sessions": MAX_SESSIONS, "dedicated_gpu": DEDICATED_GPU, "avatars": prepared,
+              "infer_fps": STATE["infer_fps"], "prepare_ms": STATE["prepare_ms"],
               "defaults": {"batch_size": BATCH_SIZE, "ahead_frames": AHEAD_FRAMES, "lookahead_frames": LOOKAHEAD_FRAMES,
                            "av_shift_ms": AV_SHIFT_MS, "idle_frames": IDLE_FRAMES},
               "calls": [_session_stats(k, v) for k, v in active.items()],
@@ -1801,6 +1860,39 @@ write_files:
               return await RTC.handle_offer(request)
           except MaxSessionError:
               return web.json_response({"error": "max_sessions", "max_sessions": MAX_SESSIONS}, status=503)
+
+
+      async def switch(request: web.Request) -> web.Response:
+          """{sessionid, avatar, crossfade_ms}: swap a live call's face to another prepared avatar (the same
+          patient in another state). The idle loop length must match: the session's inference thread
+          indexes frames by the length it started with."""
+          params = await request.json()
+          sid = str(params.get("sessionid") or "")
+          avatar_id = str(params.get("avatar") or "")
+          ms = _bounded(params, "crossfade_ms", 900, 0, 3000)
+          sess = session_manager.get_session(sid)
+          if sess is None:
+              return web.json_response({"error": "unknown_session"}, status=404)
+          if not AVATAR_ID_RE.match(avatar_id) or not _is_prepared(avatar_id):
+              return web.json_response({"error": "avatar_not_prepared", "avatar": avatar_id}, status=409)
+          t = time.monotonic()
+          try:
+              av = await asyncio.get_running_loop().run_in_executor(None, _load, avatar_id)
+          except Exception as exc:  # noqa: BLE001
+              return web.json_response({"error": "avatar_load_failed", "detail": type(exc).__name__}, status=500)
+          if len(av[0]) != len(sess.frame_list_cycle) or len(av[4]) != len(sess.input_latent_list_cycle):
+              return web.json_response({"error": "frame_count_mismatch", "have": len(sess.frame_list_cycle),
+                                        "got": len(av[0])}, status=409)
+          st = getattr(sess, "_acudx_fade", None)
+          if st is not None and st.get("last") is not None and ms > 0:
+              st["from"], st["t0"], st["dur"] = st["last"].copy(), time.monotonic(), ms / 1000.0
+          (sess.frame_list_cycle, sess.mask_list_cycle, sess.coord_list_cycle, sess.mask_coords_list_cycle,
+           sess.input_latent_list_cycle) = av
+          previous = getattr(sess, "_acudx_avatar", None)
+          sess._acudx_avatar = avatar_id
+          MEDIA["switches"] = MEDIA.get("switches", 0) + 1
+          return web.json_response({"ok": True, "avatar": avatar_id, "previous": previous, "crossfade_ms": ms,
+                                    "switch_ms": round((time.monotonic() - t) * 1000.0, 1)})
 
 
       async def close(request: web.Request) -> web.Response:
@@ -2039,6 +2131,7 @@ write_files:
           app.router.add_post("/interrupt_talk", interrupt_talk)
           app.router.add_post("/is_speaking", is_speaking)
           app.router.add_post("/close", close)
+          app.router.add_post("/switch", switch)
           app.router.add_get("/turn", turn_bridge)
           app.router.add_get("/turn_check", turn_check)
           log.info("acudx avatar runner on :%d (batch %d, ahead %d frames, max sessions %d, model load %.0f ms)",
@@ -2050,6 +2143,198 @@ write_files:
           import torch.multiprocessing as tmp
           tmp.set_start_method("spawn", force=True)
           main()
+  # Per-case patient appearance (docs/architecture/18 section 6.6): FLUX.2 [klein] 4B, Apache-2.0
+  # (https://huggingface.co/black-forest-labs/FLUX.2-klein-4B, revision pinned below), edits the case
+  # portrait into the patient's current state (flushed, sweating, pale, breathless...) while keeping
+  # the person. The gateway prepares each result as a MuseTalk avatar and switches the live call to it.
+  - path: /opt/acudx/imagegen/Dockerfile
+    content: |
+      # AcuDx image edit server: torch 2.9.1 cu128 + diffusers 0.40.0 (2026-08-20, Flux2KleinPipeline).
+      # Every other package is resolved by uv as it stood on 2026-09-01 (--exclude-newer), so the build
+      # is reproducible without hand-pinning the whole transformers / huggingface_hub tree.
+      FROM python:3.12-slim-bookworm
+      ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1
+      RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && rm -rf /var/lib/apt/lists/*
+      COPY --from=ghcr.io/astral-sh/uv:0.8.22 /uv /bin/uv
+      WORKDIR /app
+      RUN pip install "torch==2.9.1+cu128" --index-url https://download.pytorch.org/whl/cu128
+      RUN printf 'torch==2.9.1+cu128\n' > /app/constraints.txt \
+          && uv pip install --system --exclude-newer 2026-09-01T00:00:00Z --constraint /app/constraints.txt \
+             "diffusers==0.40.0" transformers accelerate safetensors sentencepiece huggingface_hub aiohttp pillow
+      RUN python -c "import torch, diffusers, transformers; from diffusers import Flux2KleinPipeline; print('torch', torch.__version__, 'diffusers', diffusers.__version__, 'transformers', transformers.__version__)"
+      COPY acudx_imagegen.py /app/
+      EXPOSE 8020
+      HEALTHCHECK --interval=20s --timeout=10s --start-period=20m --retries=3 CMD curl -sf http://localhost:8020/health || exit 1
+      CMD ["python", "/app/acudx_imagegen.py"]
+  - path: /opt/acudx/imagegen/acudx_imagegen.py
+    content: |
+      """AcuDx image edit server (FLUX.2 [klein] 4B, Apache-2.0), behind Caddy's bearer at /imagegen/*.
+
+        GET  /health   {ok, loaded, model, revision, mode, gpu, stats}; ok only once the weights are loaded
+        POST /edit     {image_b64 (jpeg/png), prompt, seed, steps (1-8, default 4), width?, height?}
+                       -> image/jpeg; headers X-Gen-Ms, X-Mode, X-Steps, X-Seed
+
+      Mode: "gpu" when the card has room for the whole pipeline (IMAGEGEN_FULL_MB free), else "offload"
+      (diffusers model CPU offload: only the module that runs sits on the GPU, about 9 GB peak), else
+      "sequential" (layer by layer, a few GB, slow), else the server reports ok false with reason
+      insufficient_vram. One edit at a time (a lock), run in a thread so /health stays responsive. The
+      gateway is the only client.
+      """
+
+      from __future__ import annotations
+
+      import asyncio
+      import base64
+      import io
+      import logging
+      import os
+      import threading
+      import time
+
+      import torch
+      from aiohttp import web
+      from PIL import Image
+
+      REPO = os.environ.get("IMAGEGEN_REPO", "black-forest-labs/FLUX.2-klein-4B")
+      REVISION = os.environ.get("IMAGEGEN_REVISION", "e7b7dc27f91deacad38e78976d1f2b499d76a294")
+      PORT = int(os.environ.get("IMAGEGEN_PORT", "8020"))
+      FULL_MB = int(os.environ.get("IMAGEGEN_FULL_MB", "20000"))
+      OFFLOAD_MB = int(os.environ.get("IMAGEGEN_OFFLOAD_MB", "9000"))
+      SEQUENTIAL_MB = int(os.environ.get("IMAGEGEN_SEQUENTIAL_MB", "3000"))
+      MAX_SIDE = 1024
+
+      log = logging.getLogger("acudx.imagegen")
+      logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+      STATE: dict = {"loaded": False, "mode": None, "reason": None, "load_ms": None, "edits": 0, "last_ms": None,
+                     "started_at": time.time()}
+      PIPE = None
+      LOCK = threading.Lock()
+
+
+      def _free_mb() -> int:
+          free, _total = torch.cuda.mem_get_info()
+          return free // 2**20
+
+
+      def load() -> None:
+          global PIPE
+          t = time.monotonic()
+          try:
+              from diffusers import Flux2KleinPipeline  # noqa: PLC0415
+
+              free = _free_mb()
+              if free < SEQUENTIAL_MB:
+                  STATE.update(reason=f"insufficient_vram: {free} MB free, {SEQUENTIAL_MB} MB needed")
+                  log.warning(STATE["reason"])
+                  return
+              # Weights only (the repository also carries a single-file checkpoint of the same model).
+              from huggingface_hub import snapshot_download  # noqa: PLC0415
+
+              path = snapshot_download(REPO, revision=REVISION, allow_patterns=[
+                  "model_index.json", "scheduler/*", "text_encoder/*", "tokenizer/*", "transformer/*", "vae/*"])
+              pipe = Flux2KleinPipeline.from_pretrained(path, torch_dtype=torch.bfloat16)
+              if free >= FULL_MB:
+                  pipe.to("cuda")
+                  mode = "gpu"
+              elif free >= OFFLOAD_MB:
+                  pipe.enable_model_cpu_offload()
+                  mode = "offload"
+              else:
+                  # 40 GB cards after vLLM, voice and the runner: layer by layer, slow but a few GB.
+                  pipe.enable_sequential_cpu_offload()
+                  mode = "sequential"
+              pipe.set_progress_bar_config(disable=True)
+              PIPE = pipe
+              STATE.update(loaded=True, mode=mode, reason=None, free_mb_at_load=free,
+                           load_ms=round((time.monotonic() - t) * 1000.0, 1))
+              log.info("FLUX.2 klein 4B loaded (%s, %s MB free) in %.0f ms", mode, free, STATE["load_ms"])
+          except Exception as exc:  # noqa: BLE001 - reported in /health
+              STATE.update(reason=f"load_failed: {type(exc).__name__}: {exc}"[:300])
+              log.exception("imagegen load failed")
+
+
+      def _edit(image: Image.Image, prompt: str, seed: int, steps: int, width: int, height: int) -> Image.Image:
+          gen = torch.Generator(device="cuda").manual_seed(seed)
+          with LOCK, torch.inference_mode():
+              try:
+                  out = PIPE(image=image, prompt=prompt, width=width, height=height, num_inference_steps=steps,
+                             guidance_scale=1.0, generator=gen)
+              except TypeError:
+                  out = PIPE(image=image, prompt=prompt, num_inference_steps=steps, generator=gen)
+          return out.images[0]
+
+
+      def _size(w: int, h: int) -> tuple[int, int]:
+          s = min(1.0, MAX_SIDE / max(w, h))
+          return max(256, int(w * s) // 16 * 16), max(256, int(h * s) // 16 * 16)
+
+
+      async def health(_r: web.Request) -> web.Response:
+          gpu = {}
+          if torch.cuda.is_available():
+              free, total = torch.cuda.mem_get_info()
+              gpu = {"name": torch.cuda.get_device_name(0), "free_mb": free // 2**20, "total_mb": total // 2**20,
+                     "reserved_mb": torch.cuda.memory_reserved() // 2**20}
+          return web.json_response({"ok": bool(STATE["loaded"]), "model": REPO, "revision": REVISION,
+                                    "licence": "Apache-2.0", **STATE, "gpu": gpu})
+
+
+      async def edit(request: web.Request) -> web.Response:
+          if not STATE["loaded"]:
+              return web.json_response({"error": "not_loaded", "reason": STATE["reason"]}, status=503)
+          body = await request.json()
+          try:
+              raw = base64.b64decode(str(body.get("image_b64") or ""), validate=True)
+              src = Image.open(io.BytesIO(raw)).convert("RGB")
+          except Exception:  # noqa: BLE001
+              return web.json_response({"error": "bad_image"}, status=400)
+          prompt = str(body.get("prompt") or "").strip()[:2000]
+          if not prompt:
+              return web.json_response({"error": "prompt required"}, status=400)
+          seed = int(body.get("seed") or 0) & 0x7FFFFFFF
+          steps = max(1, min(8, int(body.get("steps") or 4)))
+          w, h = _size(int(body.get("width") or src.width), int(body.get("height") or src.height))
+          t = time.monotonic()
+          out = await asyncio.get_running_loop().run_in_executor(None, _edit, src.resize((w, h), Image.LANCZOS),
+                                                                 prompt, seed, steps, w, h)
+          ms = round((time.monotonic() - t) * 1000.0, 1)
+          out = out.convert("RGB").resize((src.width, src.height), Image.LANCZOS)
+          buf = io.BytesIO()
+          out.save(buf, format="JPEG", quality=93)
+          STATE["edits"] += 1
+          STATE["last_ms"] = ms
+          return web.Response(body=buf.getvalue(), content_type="image/jpeg", headers={
+              "X-Gen-Ms": str(ms), "X-Mode": str(STATE["mode"]), "X-Steps": str(steps), "X-Seed": str(seed)})
+
+
+      def main() -> None:
+          threading.Thread(target=load, daemon=True).start()
+          app = web.Application(client_max_size=16 * 1024 * 1024)
+          app.router.add_get("/health", health)
+          app.router.add_post("/edit", edit)
+          web.run_app(app, host="0.0.0.0", port=PORT, access_log=None)
+
+
+      if __name__ == "__main__":
+          main()
+  - path: /opt/acudx/imagegen.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      # Image edit server bring-up: build while vLLM loads, start once the avatar runner has taken its
+      # memory (so the server's own free-VRAM check sees the real headroom), on IMAGEGEN_GPU.
+      set -u
+      cd /opt/acudx
+      set -a; . ./.env; set +a
+      compose="docker compose -f /opt/acudx/docker-compose.yml"
+      $compose build imagegen >/var/log/acudx-imagegen-build.log 2>&1 || { echo "acudx imagegen: build failed"; exit 1; }
+      for _ in $(seq 1 360); do
+        s=$(cat /opt/acudx/public/avatar-status/status.json 2>/dev/null)
+        case "$s" in *'"state":"ready"'*|*'"state":"disabled"'*) break ;; esac
+        sleep 10
+      done
+      $compose up -d imagegen
+      echo "acudx imagegen: started on GPU ${IMAGEGEN_GPU:-0} $(date -u)"
   - path: /opt/acudx/avatar.sh
     permissions: "0755"
     content: |
@@ -2075,7 +2360,7 @@ write_files:
         chmod 0644 "$st/status.json"
         echo "acudx avatar: $1 $2 $(date -u)"
       }
-      gpu_mem() { nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader,nounits | head -1 | tr -d ' ' | tr ',' ' '; }
+      gpu_mem() { nvidia-smi -i "${AVATAR_GPU:-0}" --query-gpu=memory.total,memory.used --format=csv,noheader,nounits | head -1 | tr -d ' ' | tr ',' ' '; }
       status building ""
       if [ ! -d /opt/acudx/livetalking/.git ]; then
         git clone --filter=blob:none https://github.com/lipku/LiveTalking /opt/acudx/livetalking || { status disabled clone_failed; exit 1; }
@@ -2186,7 +2471,25 @@ runcmd:
   - (command -v nvidia-ctk >/dev/null && nvidia-ctk runtime configure --runtime=docker && systemctl restart docker) || true
   # The avatar image builds in parallel with the vLLM start; avatar.sh waits for vLLM and Chatterbox
   # health and checks VRAM before starting the runner (it never blocks the steps below).
+  # GPU layout. One GPU: every service shares card 0. Two or more (gpu_2x_*, gpu_8x_*): the avatar runner
+  # gets card 1 to itself (more calls per worker) and the image edit server the next card.
+  - |
+    if ! grep -q '^AVATAR_GPU=' /opt/acudx/.env; then
+      n=$(nvidia-smi -L 2>/dev/null | wc -l)
+      if [ "${n:-1}" -ge 2 ]; then
+        img=$([ "$n" -ge 3 ] && echo 2 || echo 1)
+        printf 'GPU_COUNT=%s\nAVATAR_GPU=1\nAVATAR_DEDICATED_GPU=1\nIMAGEGEN_GPU=%s\n' "$n" "$img" >> /opt/acudx/.env
+        sed -i 's/^AVATAR_MAX_SESSIONS=.*/AVATAR_MAX_SESSIONS=4/' /opt/acudx/.env
+      else
+        printf 'GPU_COUNT=1\nAVATAR_GPU=0\nAVATAR_DEDICATED_GPU=0\nIMAGEGEN_GPU=0\n' >> /opt/acudx/.env
+      fi
+      # A card under 70 GB shares vLLM with voice, the runner and the image edits: vLLM takes 0.55 of
+      # it (Qwen3-14B-AWQ still has about 8 GB of KV cache on 40 GB), larger cards keep 0.60.
+      total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
+      if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then echo 'VLLM_GPU_UTIL=0.55' >> /opt/acudx/.env; fi
+    fi
   - nohup /opt/acudx/avatar.sh >/var/log/acudx-avatar.log 2>&1 &
+  - nohup /opt/acudx/imagegen.sh >/var/log/acudx-imagegen.log 2>&1 &
   # vLLM reserves a fraction of the card at start-up and refuses to start when another
   # process already holds that memory (worker 10, 2026-10-20: once Chatterbox reached the
   # GPU, vLLM died with "Engine core initialization failed"). So vLLM starts alone and the

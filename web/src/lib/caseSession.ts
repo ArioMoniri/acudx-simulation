@@ -49,7 +49,7 @@ import {
 } from "@/lib/caseGenV2";
 import { layerStatuses, type LayerStatus } from "@/lib/caseLayers";
 import type { CaseGenerationMeta } from "@/lib/liveEncounter";
-import type { BackendResult } from "@/lib/backend";
+import { setPatientTurnThread, type BackendResult } from "@/lib/backend";
 import {
   applyThreadDirector,
   getEncounterSnapshot,
@@ -300,6 +300,7 @@ export async function requestCase(
     const adapted = v2SpecToCaseInstance(spec);
     threadId = spec.meta.thread_id ?? tid;
     startGeneratedEncounter(adapted.case, generationFromMeta(spec.meta, threadId), layersOf(spec));
+    setPatientTurnThread(threadId);
     session = openSession(threadId, opts.signal);
     opts.onPlayable?.({ threadId: threadId!, spec });
   };
@@ -375,6 +376,7 @@ export async function followCase(
 /** Stop fetching layers for the previous case (the page unmounted or a new case starts). */
 export function endCaseSession(): void {
   active?.dispose();
+  setPatientTurnThread(null);
   setLayerRequester(null);
   setDebriefRequester(null);
 }

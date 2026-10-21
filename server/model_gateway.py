@@ -247,12 +247,17 @@ class ModelGateway:
             payload["chat_template_kwargs"] = {"enable_thinking": False}
 
         t0 = time.monotonic()
+        if self.resolver is not None:
+            self.resolver.begin(ep)   # the GPU pool balances and scales on requests in flight
         try:
             data = await self._post_json(f"{ep.base_url}/chat/completions", payload, ep.api_key)
         except GatewayError as exc:
             self._record(ep, kind="llm", model=ep.model, usage=None, latency_ms=(time.monotonic() - t0) * 1000.0,
                          ok=False, error=type(exc).__name__)
             raise
+        finally:
+            if self.resolver is not None:
+                self.resolver.end(ep)
         latency_ms = (time.monotonic() - t0) * 1000.0
         result = self._parse_chat(data, tier, latency_ms, ep)
         self._record(ep, kind="llm", model=result.model, usage=result.usage, latency_ms=latency_ms, ok=True)

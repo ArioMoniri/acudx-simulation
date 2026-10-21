@@ -25,6 +25,7 @@ import hmac
 import json
 import logging
 import secrets
+import re
 import sqlite3
 import time
 from datetime import datetime, timezone
@@ -32,7 +33,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from server.config import Settings
 from server.providers.lambda_cloud import (
@@ -97,6 +98,17 @@ class WorkerFailed(WorkerRefused):
 # --------------------------------------------------------------------------- #
 # Models                                                                       #
 # --------------------------------------------------------------------------- #
+# Lambda's Grace Hopper hosts are aarch64; every worker image (vLLM, Chatterbox, the avatar runner) is
+# built for amd64, so such a host would boot and never serve a route.
+ARM_TYPE_MARKERS = ("gh200",)
+
+
+def gpus_for(instance_type: str) -> int:
+    """``gpu_8x_h100_sxm5`` -> 8; anything without a ``<n>x`` part counts as one GPU."""
+    m = re.match(r"^gpu_(\d+)x_", instance_type or "")
+    return max(1, int(m.group(1))) if m else 1
+
+
 class WorkerPolicy(BaseModel):
     idle_minutes: int = Field(default=20, ge=1, le=24 * 60)
     # None = no spend cap (owner decision 2026-10-20). A number re-enables the cap.
@@ -107,6 +119,20 @@ class WorkerPolicy(BaseModel):
     # Optional Lambda filesystem (same region) mounted on the worker; the cloud-init keeps the
     # HF cache there so later boots skip the model download.
     file_system_name: str | None = None
+    # The pool: at most this many workers run at once. Another one is launched when every ready
+    # worker is saturated (a live call was refused for lack of a slot, or LLM and generation
+    # requests in flight reached ``llm_queue_per_worker`` per GPU) and each worker is reaped on its
+    # own idle window, so the pool shrinks back to nothing when the load goes.
+    max_workers: int = Field(default=3, ge=1, le=64)
+    llm_queue_per_worker: int = Field(default=6, ge=1, le=256)
+
+    @field_validator("allowlist")
+    @classmethod
+    def _amd64_only(cls, v: list[str]) -> list[str]:
+        arm = [t for t in v if any(mark in t for mark in ARM_TYPE_MARKERS)]
+        if arm:
+            raise ValueError(f"{arm} are aarch64 hosts; the worker images are amd64 only")
+        return v
 
 
 class WorkerRecord(BaseModel):
@@ -127,6 +153,7 @@ class WorkerRecord(BaseModel):
     def public(self) -> dict[str, Any]:
         """Status view without the bearer token."""
         d = self.model_dump(exclude={"token"})
+        d["gpus"] = gpus_for(self.instance_type)
         if self.domain:
             d["endpoints"] = {
                 "healthz": f"https://{self.domain}/healthz",
@@ -239,6 +266,13 @@ class WorkerStore:
                             ACTIVE_STATUSES).fetchone()
         return WorkerRecord.model_validate(dict(row)) if row else None
 
+    def active_workers(self) -> list[WorkerRecord]:
+        """Every launching, booting or ready worker, oldest first."""
+        q = ",".join("?" for _ in ACTIVE_STATUSES)
+        with self._conn() as c:
+            rows = c.execute(f"SELECT * FROM gpu_workers WHERE status IN ({q}) ORDER BY id", ACTIVE_STATUSES).fetchall()
+        return [WorkerRecord.model_validate(dict(r)) for r in rows]
+
     def insert_worker(self, **fields: Any) -> WorkerRecord:
         cols = ", ".join(fields)
         marks = ", ".join("?" for _ in fields)
@@ -322,6 +356,18 @@ class WorkerStore:
 # Manager                                                                      #
 # --------------------------------------------------------------------------- #
 class WorkerManager:
+    """A pool of on-demand workers (``policy.max_workers``, default 3).
+
+    * ``ensure_worker`` returns the least-loaded healthy ready worker, launching the first one
+      when the pool is empty;
+    * ``llm_endpoint`` balances LLM, TTS and STT traffic across ready workers by load (requests in
+      flight from ``begin``/``end`` plus live calls from ``set_calls``, per GPU);
+    * ``maybe_scale_up`` launches one more worker in the background when every ready worker is
+      saturated (a live call refused for lack of a slot, or requests in flight at
+      ``llm_queue_per_worker`` per GPU) and the pool is below ``max_workers``;
+    * the reaper stops each worker on its own idle window, so the pool falls back to nothing.
+    """
+
     def __init__(self, settings: Settings, *, store: WorkerStore | None = None,
                  client: LambdaCloudClient | None = None, http_client: httpx.AsyncClient | None = None,
                  template_path: Path | str = DEFAULT_TEMPLATE,
@@ -329,7 +375,7 @@ class WorkerManager:
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  poll_interval_s: float = 5.0, boot_timeout_s: float = 900.0,
                  ready_timeout_s: float = 1500.0, boot_log_interval_s: float = 60.0,
-                 health_ttl_s: float = 30.0):
+                 health_ttl_s: float = 30.0, call_refusal_window_s: float = 120.0):
         self.settings = settings
         self.store = store or WorkerStore(settings.acudx_db_path)
         self._client = client
@@ -348,13 +394,24 @@ class WorkerManager:
         self.health_ttl_s = health_ttl_s
         self._healthy_until: dict[int, float] = {}
         self._lock = asyncio.Lock()
+        # Readiness waits and launches, per worker row; ``_inflight`` is the most recent one.
+        self._tasks: dict[int, asyncio.Task[WorkerRecord]] = {}
         self._inflight: asyncio.Task[WorkerRecord] | None = None
+        self._launching = 0                      # launches that have not inserted their row yet
         self._reaper: asyncio.Task[None] | None = None
+        # Load per worker domain: requests in flight, live calls the runner reports.
+        self._requests: dict[str, int] = {}
+        self._calls: dict[str, int] = {}
+        self._rr = 0
+        self.call_refusal_window_s = call_refusal_window_s
+        self._call_refused_at: float | None = None
+        self.last_scale_up: dict[str, Any] | None = None
         self._policy = self.store.get_policy() or WorkerPolicy(
             idle_minutes=settings.gpu_idle_minutes, daily_budget_usd=settings.gpu_daily_budget_usd,
             allowlist=settings.gpu_instance_allowlist or DEFAULT_ALLOWLIST, llm_model=settings.gpu_llm_model,
             region_preference=settings.gpu_region_preference,
             file_system_name=settings.gpu_file_system_name or None,
+            max_workers=int(getattr(settings, "gpu_max_workers", 3) or 3),
         )
 
     # -- policy -------------------------------------------------------------- #
@@ -394,6 +451,10 @@ class WorkerManager:
 
     async def aclose(self) -> None:
         await self.stop_reaper()
+        for t in list(self._tasks.values()):
+            if not t.done():
+                t.cancel()
+        self._tasks.clear()
         if self._client is not None:
             await self._client.aclose()
             self._client = None
@@ -416,73 +477,262 @@ class WorkerManager:
                 f"daily budget {self.policy.daily_budget_usd:.2f} USD would be exceeded: "
                 f"spent {spent:.2f} USD today, next hour costs {price_cents_per_hour / 100:.2f} USD")
 
+    # -- load ------------------------------------------------------------------ #
+    @staticmethod
+    def _domain_of(ref: str | None) -> str:
+        """A domain, an origin or any worker URL -> the worker domain."""
+        ref = (ref or "").strip()
+        if "://" in ref:
+            ref = ref.split("://", 1)[1]
+        return ref.split("/", 1)[0]
+
+    def _by_domain(self, ref: str | None) -> WorkerRecord | None:
+        d = self._domain_of(ref)
+        if not d:
+            return None
+        return next((w for w in self.store.active_workers() if w.domain == d), None)
+
+    def begin(self, ref: str | None) -> None:
+        """A request (LLM, TTS, STT, image generation) started on the worker at ``ref``."""
+        d = self._domain_of(ref)
+        if d:
+            self._requests[d] = self._requests.get(d, 0) + 1
+
+    def end(self, ref: str | None) -> None:
+        d = self._domain_of(ref)
+        if d and self._requests.get(d):
+            self._requests[d] -= 1
+
+    def set_calls(self, ref: str | None, calls: int) -> None:
+        """Live avatar calls on the worker at ``ref`` (from the runner's /health and the gateway)."""
+        d = self._domain_of(ref)
+        if d:
+            self._calls[d] = max(0, int(calls))
+
+    def note_call_refused(self) -> None:
+        """A live call found no free slot on any ready worker: the pool needs another one."""
+        self._call_refused_at = self._clock()
+
+    def load_of(self, w: WorkerRecord) -> dict[str, Any]:
+        d = w.domain or ""
+        inflight, calls = self._requests.get(d, 0), self._calls.get(d, 0)
+        gpus = gpus_for(w.instance_type)
+        # A live call holds a GPU stream for minutes; count it like a few queued requests.
+        return {"inflight": inflight, "calls": calls, "gpus": gpus,
+                "score": round((inflight + 3 * calls) / gpus, 3)}
+
+    def ready_workers(self) -> list[WorkerRecord]:
+        return [w for w in self.store.active_workers() if w.status == "ready" and w.domain]
+
+    def _pick(self, ready: list[WorkerRecord]) -> WorkerRecord | None:
+        if not ready:
+            return None
+        self._rr += 1
+        n = len(ready)
+        # Least load first; ties go round robin so idle workers share new traffic.
+        order = sorted(range(n), key=lambda i: (self.load_of(ready[i])["score"], (i - self._rr) % n))
+        return ready[order[0]]
+
+    def scale_up_needed(self) -> str | None:
+        """Why the pool should grow now (``calls`` | ``llm_queue``), or None."""
+        active = self.store.active_workers()
+        if len(active) + self._launching >= self.policy.max_workers:
+            return None
+        if any(w.status != "ready" for w in active) or self._launching:
+            return None   # one launch at a time; it absorbs the pressure that asked for it
+        ready = [w for w in active if w.status == "ready"]
+        if not ready:
+            return None   # an empty pool launches through ensure_worker
+        now = self._clock()
+        if self._call_refused_at is not None and now - self._call_refused_at <= self.call_refusal_window_s:
+            return "calls"
+        cap = self.policy.llm_queue_per_worker
+        if all(self.load_of(w)["inflight"] >= cap * gpus_for(w.instance_type) for w in ready):
+            return "llm_queue"
+        return None
+
+    async def maybe_scale_up(self, *, force: str | None = None) -> str | None:
+        """Launch one more worker in the background when the pool is saturated (or ``force``).
+        Returns the reason a launch started, else None. Never waits for the boot."""
+        async with self._lock:
+            if self._refusal() is not None:
+                return None
+            reason = force or self.scale_up_needed()
+            if reason is None:
+                return None
+            if len(self.store.active_workers()) + self._launching >= self.policy.max_workers:
+                return None
+            self._launching += 1
+            task = asyncio.create_task(self._launch())
+            self._inflight = task
+            self.last_scale_up = {"reason": reason, "at": self._clock()}
+            if reason == "calls":
+                self._call_refused_at = None
+        log.info("gpu pool: launching another worker (%s)", reason)
+
+        def done(t: asyncio.Task[WorkerRecord]) -> None:
+            if not t.cancelled() and t.exception() is not None:
+                log.warning("gpu pool: scale-up launch failed: %s", t.exception())
+
+        task.add_done_callback(done)
+        return reason
+
     # -- public API ---------------------------------------------------------- #
-    def touch(self) -> None:
-        """Record a request that used the worker (resets the idle window)."""
-        w = self.store.active_worker()
+    def touch(self, ref: str | None = None) -> None:
+        """Record a request that used a worker (resets its idle window). ``ref`` is the worker's
+        domain or any of its URLs; without it the most recently used ready worker is touched."""
+        w = self._by_domain(ref) if ref else None
+        if w is None and not ref:
+            ready = self.ready_workers()
+            w = max(ready, key=lambda r: r.last_used_at) if ready else self.store.active_worker()
         if w is not None:
             now = self._clock()
             self.store.update_worker(w.id, last_used_at=now)
             if w.status == "ready":
                 self._healthy_until[w.id] = now + self.health_ttl_s
 
-    def llm_endpoint(self) -> dict[str, str] | None:
-        """Internal consumers only: carries the bearer token."""
-        w = self.store.active_worker()
-        if w is None or w.status != "ready" or not w.domain:
-            return None
-        return {"base_url": f"https://{w.domain}/v1", "api_key": w.token, "model": SERVED_MODEL_NAME}
+    def endpoint_for(self, w: WorkerRecord) -> dict[str, Any]:
+        return {"base_url": f"https://{w.domain}/v1", "api_key": w.token, "model": SERVED_MODEL_NAME,
+                "worker_id": w.id, "domain": w.domain, "instance_type": w.instance_type,
+                "gpus": gpus_for(w.instance_type)}
+
+    def llm_endpoint(self) -> dict[str, Any] | None:
+        """Internal consumers only: carries the bearer token. The least-loaded ready worker."""
+        w = self._pick(self.ready_workers())
+        return self.endpoint_for(w) if w is not None else None
+
+    def endpoints(self) -> list[dict[str, Any]]:
+        """Every ready worker's endpoint, least loaded first (internal: carries the bearer)."""
+        ready = self.ready_workers()
+        ready.sort(key=lambda w: self.load_of(w)["score"])
+        return [self.endpoint_for(w) for w in ready]
+
+    def endpoint_by_origin(self, origin: str | None) -> dict[str, Any] | None:
+        w = self._by_domain(origin)
+        return self.endpoint_for(w) if w is not None and w.status == "ready" else None
 
     async def status(self) -> dict[str, Any]:
         refusal = self._refusal()
-        w = self.store.active_worker()
+        active = self.store.active_workers()
+        primary = self.store.active_worker()
         spent = self.spent_today_usd()
+        workers = []
+        for w in active:
+            d = w.public()
+            d["load"] = self.load_of(w)
+            workers.append(d)
         return {
             "configured": self.configured,
             "airgapped": self.settings.airgapped,
             "can_launch": refusal is None,
             "refusal": None if refusal is None else {"reason": refusal.reason, "message": str(refusal)},
             "policy": self.policy.model_dump(),
-            "worker": w.public() if w else None,
+            "worker": primary.public() if primary else None,
+            "workers": workers,
+            "capacity": {"workers": len(active), "ready": sum(1 for w in active if w.status == "ready"),
+                         "launching": self._launching, "max_workers": self.policy.max_workers,
+                         "gpus": sum(gpus_for(w.instance_type) for w in active),
+                         "scale_up_needed": self.scale_up_needed(), "last_scale_up": self.last_scale_up},
             "spent_today_usd": spent,
             "budget_remaining_usd": (None if self.policy.daily_budget_usd is None
                                      else round(max(0.0, self.policy.daily_budget_usd - spent), 6)),
             "reaper_running": self.reaper_running,
         }
 
-    async def ensure_worker(self) -> WorkerRecord:
-        """Return a healthy worker, launching one if needed. Raises :class:`WorkerRefused`.
+    def _watch(self, w: WorkerRecord) -> asyncio.Task[WorkerRecord]:
+        t = self._tasks.get(w.id)
+        if t is None or t.done():
+            t = asyncio.create_task(self._wait_ready(w))
+            self._tasks[w.id] = t
+            self._inflight = t
+        return t
 
-        The lock only guards the decision; the launch or readiness wait runs as ONE shared
-        task that every concurrent caller awaits (shielded, so a caller that disconnects
-        never cancels the boot or triggers an early termination).
+    async def ensure_worker(self) -> WorkerRecord:
+        """Return a healthy worker (the least loaded), launching one if the pool is empty. Raises
+        :class:`WorkerRefused`.
+
+        The lock only guards the decision; a launch or readiness wait runs as a shared task that
+        every concurrent caller awaits (shielded, so a caller that disconnects never cancels the boot
+        or triggers an early termination).
         """
         async with self._lock:
             refusal = self._refusal()
             if refusal is not None:
                 raise refusal
             now = self._clock()
-            w = self.store.active_worker()
-            if w is not None and w.status == "ready":
-                if now < self._healthy_until.get(w.id, 0.0):
-                    return self.store.update_worker(w.id, last_used_at=now)
-                if await self._healthy(w):
-                    self._healthy_until[w.id] = now + self.health_ttl_s
-                    return self.store.update_worker(w.id, last_used_at=now)
+            ready = self.ready_workers()
+            while ready:
+                w = self._pick(ready)
+                assert w is not None
+                if now < self._healthy_until.get(w.id, 0.0) or await self._healthy(w):
+                    self._healthy_until[w.id] = max(self._healthy_until.get(w.id, 0.0), now + self.health_ttl_s)
+                    picked = self.store.update_worker(w.id, last_used_at=now)
+                    break
                 self._healthy_until.pop(w.id, None)
-            if self._inflight is None or self._inflight.done():
-                self._inflight = asyncio.create_task(self._wait_ready(w) if w is not None else self._launch())
-            task = self._inflight
+                ready = [r for r in ready if r.id != w.id]
+            else:
+                picked = None
+            if picked is not None:
+                task = None
+            else:
+                pending = [w for w in self.store.active_workers() if w.status != "ready"]
+                stale_ready = [w for w in self.store.active_workers() if w.status == "ready"]
+                waits = [self._watch(w) for w in pending + stale_ready]
+                if not waits:
+                    launching = self._launching > 0 and self._inflight is not None and not self._inflight.done()
+                    if not launching:
+                        self._launching += 1
+                        self._inflight = asyncio.create_task(self._launch())
+                    waits = [self._inflight]
+                task = waits[0] if len(waits) == 1 else asyncio.ensure_future(self._first_ready(waits))
+        if task is None:
+            assert picked is not None
+            asyncio.get_running_loop().create_task(self._scale_quietly())
+            return picked
         return await asyncio.shield(task)
 
-    async def terminate(self, reason: str = "admin") -> WorkerRecord | None:
-        w = self.store.active_worker()
-        inflight = self._inflight
-        if inflight is not None and not inflight.done() and asyncio.current_task() is not inflight:
-            inflight.cancel()
+    async def _first_ready(self, tasks: list[asyncio.Task[WorkerRecord]]) -> WorkerRecord:
+        last: BaseException | None = None
+        pending = set(tasks)
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            for t in done:
+                if t.cancelled():
+                    continue
+                if t.exception() is None:
+                    return t.result()
+                last = t.exception()
+        raise last if last is not None else WorkerFailed("no worker became ready")
+
+    async def _scale_quietly(self) -> None:
+        try:
+            await self.maybe_scale_up()
+        except Exception:  # noqa: BLE001 - scaling is best effort; the request already has a worker
+            log.exception("gpu pool: scale-up check failed")
+
+    async def terminate(self, reason: str = "admin", *, worker_id: int | None = None) -> WorkerRecord | None:
+        """Stop one worker (``worker_id``) or every active worker. Returns the (last) stopped row."""
+        targets = self.store.active_workers()
+        if worker_id is not None:
+            targets = [w for w in targets if w.id == worker_id]
+        current = asyncio.current_task()
+        for w in targets:
+            t = self._tasks.pop(w.id, None)
+            if t is not None and not t.done() and t is not current:
+                t.cancel()
+        if worker_id is None:
+            inflight = self._inflight
+            if inflight is not None and not inflight.done() and inflight is not current:
+                inflight.cancel()
             self._inflight = None
-        if w is None:
-            return None
+        elif self._inflight is not None and self._inflight.done():
+            self._inflight = None
+        last: WorkerRecord | None = None
+        for w in targets:
+            last = await self._terminate_one(w, reason)
+        return last
+
+    async def _terminate_one(self, w: WorkerRecord, reason: str) -> WorkerRecord:
         now = self._clock()
         self.store.update_worker(w.id, status="terminating")
         try:
@@ -493,29 +743,41 @@ class WorkerManager:
                 self.store.update_worker(w.id, status=w.status)
                 raise
         self.store.close_ledger(w.instance_id, now, reason)
+        self._healthy_until.pop(w.id, None)
+        if w.domain:
+            self._requests.pop(w.domain, None)
+            self._calls.pop(w.domain, None)
         log.info("gpu worker %s terminated (%s) after %.0fs", w.instance_id, reason, now - w.launched_at)
         return self.store.update_worker(w.id, status="terminated", terminated_at=now)
 
     # -- idle reaper --------------------------------------------------------- #
     async def reap_once(self) -> bool:
-        """One reaper pass. Terminates the worker when it is idle past the policy window, when
-        today's spend has reached the daily budget (the launch-time check alone lets a worker
-        that is kept busy run past the cap), or when a boot has been orphaned (the gateway
-        restarted mid-boot and no request re-attached) for longer than both boot budgets."""
-        w = self.store.active_worker()
-        if w is None:
-            return False
+        """One reaper pass over every worker. Each one is terminated when it is idle past the policy
+        window, when today's spend has reached the daily budget (the launch-time check alone lets a
+        worker that is kept busy run past the cap), or when a boot has been orphaned (the gateway
+        restarted mid-boot and no request re-attached) for longer than both boot budgets. Returns True
+        when any worker was stopped."""
+        stopped = False
+        for w in self.store.active_workers():
+            try:
+                stopped = await self._reap(w) or stopped
+            except LambdaCloudError as exc:
+                log.warning("gpu worker %s: reaper stop failed: %s", w.instance_id, exc)
+        return stopped
+
+    async def _reap(self, w: WorkerRecord) -> bool:
         now = self._clock()
-        if w.status == "booting":
+        if w.status in ("booting", "launching"):
             # Boot time is never idle time; a boot that an in-flight task is still watching is
             # bounded by ready_timeout_s. Without a watcher (process restart) nothing else would
             # ever terminate it, so the reaper does once both budgets have elapsed.
-            watched = self._inflight is not None and not self._inflight.done()
+            t = self._tasks.get(w.id)
+            watched = (t is not None and not t.done()) or (self._inflight is not None and not self._inflight.done())
             if watched or now - w.launched_at < self.boot_timeout_s + self.ready_timeout_s:
                 return False
             log.warning("gpu worker %s: orphaned boot older than %.0fs; terminating", w.instance_id,
                         self.boot_timeout_s + self.ready_timeout_s)
-            await self.terminate(reason="stale_boot")
+            await self._terminate_one(w, "stale_boot")
             return True
         if w.status == "ready" and await self.reconcile(w):
             return True
@@ -523,14 +785,17 @@ class WorkerManager:
         if self.policy.daily_budget_usd is not None and spent >= self.policy.daily_budget_usd:
             log.warning("gpu worker %s: spent %.2f USD today >= budget %.2f USD; terminating", w.instance_id,
                         spent, self.policy.daily_budget_usd)
-            await self.terminate(reason="budget")
+            await self._terminate_one(w, "budget")
             return True
+        load = self.load_of(w)
+        if load["calls"] or load["inflight"]:
+            return False
         idle_s = now - w.last_used_at
         if idle_s < self.policy.idle_minutes * 60:
             return False
         log.info("gpu worker %s idle for %.0fs > %d min; terminating", w.instance_id, idle_s,
                  self.policy.idle_minutes)
-        await self.terminate(reason="idle")
+        await self._terminate_one(w, "idle")
         return True
 
     async def reconcile(self, w: WorkerRecord) -> bool:
@@ -574,7 +839,8 @@ class WorkerManager:
             while True:
                 try:
                     await self.reap_once()
-                except Exception:  # noqa: BLE001 — the reaper must survive provider hiccups
+                    await self.maybe_scale_up()
+                except Exception:  # noqa: BLE001 - the reaper must survive provider hiccups
                     log.exception("gpu worker reaper iteration failed")
                 await asyncio.sleep(interval_s)
 
@@ -600,6 +866,22 @@ class WorkerManager:
             log.info("firewall: appended %d rule(s), kept %d", len(merged) - len(existing), len(existing))
 
     async def _launch(self) -> WorkerRecord:
+        """Launch one worker and wait for it. The caller counted it in ``_launching``; the count is
+        released once the row exists (it then counts as an active worker) or the launch fails."""
+        released = False
+
+        def release() -> None:
+            nonlocal released
+            if not released:
+                released = True
+                self._launching = max(0, self._launching - 1)
+
+        try:
+            return await self._launch_inner(release)
+        finally:
+            release()
+
+    async def _launch_inner(self, row_created: Callable[[], None]) -> WorkerRecord:
         api = self._lambda()
         offers = await api.list_instance_types()
         region_pref = list(self.policy.region_preference)
@@ -625,7 +907,8 @@ class WorkerManager:
         now = self._clock()
         ids = await api.launch(
             region_name=choice.region_name, instance_type_name=choice.instance_type_name,
-            ssh_key_name=self.settings.lambda_ssh_key_name or "", name=f"acudx-worker-{int(now)}",
+            ssh_key_name=self.settings.lambda_ssh_key_name or "",
+            name=f"acudx-worker-{int(now)}-{secrets.token_hex(2)}",
             user_data=user_data, tags=[{"key": "acudx", "value": "gpu-worker"}],
             file_system_names=fs_names or None, image_family=WORKER_IMAGE_FAMILY,
         )
@@ -637,6 +920,10 @@ class WorkerManager:
             launched_at=now, last_used_at=now,
         )
         self.store.open_ledger(w)
+        row_created()
+        current = asyncio.current_task()
+        if current is not None:
+            self._tasks[w.id] = current  # type: ignore[assignment]
         log.info("launched %s (%s @ %s, %d c/h)", w.instance_id, w.instance_type, w.region,
                  w.price_cents_per_hour)
         return await self._wait_ready(w)
@@ -664,7 +951,7 @@ class WorkerManager:
                     break
                 await self._sleep(self.poll_interval_s)
             else:
-                await self.terminate(reason="boot_timeout")
+                await self._terminate_one(w, "boot_timeout")
                 raise WorkerFailed(f"instance {w.instance_id} did not become active in {self.boot_timeout_s:.0f}s")
         last_capture: float | None = None
         for _ in range(self._attempts(self.ready_timeout_s)):
@@ -688,7 +975,7 @@ class WorkerManager:
         log.warning("gpu worker %s: /healthz never passed; elapsed %.0fs of %.0fs budget (last probe: %s)",
                     w.instance_id, self._clock() - t0, self.ready_timeout_s, self._last_probe.get(w.id, "none"))
         await self.capture_boot_log(w)
-        await self.terminate(reason="ready_timeout")
+        await self._terminate_one(w, "ready_timeout")
         raise WorkerFailed(f"worker {w.domain} did not pass /healthz in {self.ready_timeout_s:.0f}s")
 
     async def capture_boot_log(self, w: WorkerRecord) -> bool:

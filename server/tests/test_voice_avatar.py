@@ -474,7 +474,7 @@ def test_tavus_session_and_patient_llm_endpoint(tmp_path, monkeypatch):
     store.create_provider(ProviderIn(kind="avatar", name="tavus", base_url=TAVUS, api_key="tvs-key", priority=1,
                                      extra={"face_id": "rface1"}))
     c = TestClient(app)
-    r = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER)
+    r = c.post("/v1/voice/avatar/session", json={**SESSION, "provider": "tavus"}, headers=USER)
     assert r.status_code == 200, r.text
     s = r.json()
     assert s["provider"] == "tavus" and s["conversation_url"] == "https://tavus.daily.co/c_1"
@@ -526,7 +526,7 @@ def test_patient_llm_endpoint_runs_the_real_guard(tmp_path):
     store.create_provider(ProviderIn(kind="avatar", name="tavus", base_url=TAVUS, api_key="tvs-key",
                                      extra={"face_id": "rface1"}))
     c = TestClient(app)
-    assert c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).status_code == 200
+    assert c.post("/v1/voice/avatar/session", json={**SESSION, "provider": "tavus"}, headers=USER).status_code == 200
     token = json.loads(respx.calls[0].request.content)["layers"]["llm"]["api_key"]
     from server.app import _INJECTION_REPLY
     r = c.post("/v1/patient/openai/chat/completions", headers={"Authorization": f"Bearer {token}"}, json={
@@ -539,16 +539,37 @@ def test_tavus_without_public_base_url_is_refused_with_a_reason(tmp_path):
     app, store = _app(tmp_path, worker=FakeWorkerManager(ready=True))
     store.create_provider(ProviderIn(kind="avatar", name="tavus", base_url=TAVUS, api_key="tvs-key",
                                      extra={"face_id": "rface1"}))
-    r = TestClient(app).post("/v1/voice/avatar/session", json=SESSION, headers=USER)
+    r = TestClient(app).post("/v1/voice/avatar/session", json={**SESSION, "provider": "tavus"}, headers=USER)
     assert r.status_code == 503 and "PUBLIC_BASE_URL" in r.json()["reasons"][0]
 
 
-async def test_capabilities_prefer_a_tavus_row(tmp_path):
+async def test_capabilities_use_tavus_only_when_its_row_is_marked_default(tmp_path):
+    app, store = _app(tmp_path, worker=FakeWorkerManager(ready=True))
+    store.create_provider(ProviderIn(kind="avatar", name="tavus", base_url=TAVUS, api_key="tvs-key",
+                                     extra={"face_id": "rface1", "default": True}))
+    av = (await app.state.voice.capabilities(probe_worker=True))["avatar"]
+    assert av["enabled"] is True and av["transport"] == "tavus" and av["provider"] == "tavus"
+
+
+async def test_on_prem_runner_is_the_default_even_with_a_tavus_row(tmp_path):
+    """Owner decision 2026-10-21: on-prem patient video by default; Tavus is an optional adapter."""
     app, store = _app(tmp_path, worker=FakeWorkerManager(ready=True))
     store.create_provider(ProviderIn(kind="avatar", name="tavus", base_url=TAVUS, api_key="tvs-key",
                                      extra={"face_id": "rface1"}))
     av = (await app.state.voice.capabilities(probe_worker=True))["avatar"]
-    assert av["enabled"] is True and av["transport"] == "tavus" and av["provider"] == "tavus"
+    assert av["transport"] == "webrtc" and av["provider"] == "gpu-worker"
+    assert av["optional"] == [{"provider": "tavus", "transport": "tavus"}]
+    r = TestClient(app).post("/v1/voice/avatar/session", json=SESSION, headers=USER)
+    assert r.status_code == 200 and r.json()["provider"] == "musetalk"
+
+
+def test_tavus_refuses_paediatric_patients(tmp_path):
+    app, store = _app(tmp_path, worker=FakeWorkerManager(ready=True), public_base_url="https://gw.example")
+    store.create_provider(ProviderIn(kind="avatar", name="tavus", base_url=TAVUS, api_key="tvs-key",
+                                     extra={"face_id": "rface1"}))
+    r = TestClient(app).post("/v1/voice/avatar/session", json={**SESSION, "provider": "tavus", "age": 9},
+                             headers=USER)
+    assert r.status_code == 503 and "under 18" in r.json()["reasons"][0]
 
 
 async def test_tavus_row_is_probed_with_list_pals_and_the_api_key(tmp_path, monkeypatch):

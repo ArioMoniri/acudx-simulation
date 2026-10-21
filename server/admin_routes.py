@@ -57,11 +57,27 @@ async def gpu_start(request: Request) -> dict[str, Any]:
     return {"worker": w.public(), "spent_today_usd": m.spent_today_usd()}
 
 
+@router.post("/gpu/scale-up", dependencies=[Depends(require_admin)])
+async def gpu_scale_up(request: Request) -> dict[str, Any]:
+    """Launch one more worker now (up to ``policy.max_workers``), without waiting for its boot."""
+    m = _manager(request)
+    refusal = m._refusal()
+    if refusal is not None:
+        raise HTTPException(status_code=409, detail={"reason": refusal.reason, "message": str(refusal)})
+    started = await m.maybe_scale_up(force="admin")
+    if started is None:
+        raise HTTPException(status_code=409, detail={"reason": "max_workers",
+                                                     "message": f"the pool already runs {m.policy.max_workers} worker(s) "
+                                                                "or a launch is in flight"})
+    return {"started": started, **(await m.status())}
+
+
 @router.post("/gpu/stop", dependencies=[Depends(require_admin)])
-async def gpu_stop(request: Request) -> dict[str, Any]:
+async def gpu_stop(request: Request, worker_id: int | None = None) -> dict[str, Any]:
+    """Stop one worker (``?worker_id=``) or every worker of the pool."""
     m = _manager(request)
     try:
-        w = await m.terminate(reason="admin")
+        w = await m.terminate(reason="admin", worker_id=worker_id)
     except LambdaCloudError as exc:
         raise HTTPException(status_code=502, detail={"reason": "provider_error", "code": exc.code,
                                                      "message": exc.message}) from exc
@@ -90,13 +106,15 @@ async def gpu_boot_log(request: Request, tail: int = 200, worker_id: int | None 
 
 
 @router.get("/gpu/turn-check", dependencies=[Depends(require_admin)])
-async def gpu_turn_check(request: Request) -> dict[str, Any]:
+async def gpu_turn_check(request: Request, worker_id: int | None = None) -> dict[str, Any]:
     """TURN Allocate from inside the ready worker against its public TURN URLs (UDP and TCP on
     3478, TLS on 443 with the certificate and host name verified): proof that a browser behind an
     HTTPS-only proxy has a relay path. 409 when no worker is ready."""
     from server.voice.avatar import musetalk as mt  # noqa: PLC0415 - voice is optional for the GPU admin
 
-    worker = mt.worker_from_endpoint(_manager(request).llm_endpoint())
+    m = _manager(request)
+    ep = m.endpoint_for(m.store.get_worker(worker_id)) if worker_id is not None and m.store.get_worker(worker_id) else m.llm_endpoint()
+    worker = mt.worker_from_endpoint(ep)
     if worker is None:
         raise HTTPException(status_code=409, detail={"reason": "no_ready_worker"})
     svc = getattr(request.app.state, "voice", None)

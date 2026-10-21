@@ -244,6 +244,11 @@ def live_state_lines(case_state: dict[str, Any]) -> list[str]:
         lines.append("you feel clearly worse than when you arrived")
     for event in _as_list(case_state.get("live_events")):
         lines.append(f"you notice: {event}")
+    # How the voice should sound on a live video call, from the same server-side look as the face
+    # (server/voice/avatar/appearance.py voice_style): breathless phrasing, pain, cough, drowsiness.
+    for line in _as_list(case_state.get("voice")):
+        if line not in lines:
+            lines.append(line)
     return lines
 
 

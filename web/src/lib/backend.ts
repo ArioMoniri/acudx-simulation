@@ -126,6 +126,15 @@ export interface PatientTurnRequest {
   case_context?: Record<string, unknown> | null;
   max_tokens?: number;
   temperature?: number;
+  /** The case thread: the server reads the live look from it (breathless phrasing, pain, cough). */
+  thread_id?: string;
+}
+
+let patientThread: string | null = null;
+
+/** The active case thread for patient turns (set by the case session, cleared when it ends). */
+export function setPatientTurnThread(threadId: string | null): void {
+  patientThread = threadId;
 }
 
 /** POST /v1/patient/turn response. */
@@ -389,9 +398,10 @@ export function patientTurn(
   req: PatientTurnRequest,
   opts: RequestOptions = {},
 ): Promise<BackendResult<PatientTurnResult>> {
+  const body = !req.thread_id && patientThread ? { ...req, thread_id: patientThread } : req;
   return request<PatientTurnResult>(
     "/v1/patient/turn",
-    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(req) },
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body) },
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.patientTurn,
     opts.signal,
   );

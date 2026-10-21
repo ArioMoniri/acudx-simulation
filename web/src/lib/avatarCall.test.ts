@@ -70,6 +70,12 @@ describe("sessionBody and mouthRegion", () => {
     });
   });
 
+  it("binds the call to the case thread so the server drives the face from the live state", () => {
+    const b = sessionBody({ encounterId: "enc-1", photoId: "p04", lang: "en", threadId: "thr-9" });
+    expect(b.thread_id).toBe("thr-9");
+    expect(sessionBody({ encounterId: "e", photoId: "p01", lang: "en" }).thread_id).toBeUndefined();
+  });
+
   it("looks at the lower half of the face", () => {
     const r = mouthRegion();
     expect(r.y).toBeGreaterThan(0.5);
