@@ -121,6 +121,7 @@ class ProviderRecord(BaseModel):
     last_probe_ok: bool | None = None
     last_probe_latency_ms: float | None = None
     last_probe_error: str | None = None
+    probe_failures: int = 0   # consecutive failed probes (0 after a passing one)
 
     def public(self) -> dict[str, Any]:
         """Wire shape for the admin API: never the key, never the ciphertext."""
@@ -188,6 +189,11 @@ class RegistryStore:
                 );
                 """
             )
+            cols = {r["name"] for r in c.execute("PRAGMA table_info(providers)").fetchall()}
+            if "probe_failures" not in cols:
+                # Consecutive failed probes, added 2026-10-21: one failed probe no longer takes a
+                # configured Claude row off the route (server/registry/resolve.py anthropic_enabled).
+                c.execute("ALTER TABLE providers ADD COLUMN probe_failures INTEGER NOT NULL DEFAULT 0")
 
     # -- plumbing ------------------------------------------------------------ #
     def _conn(self) -> sqlite3.Connection:
@@ -267,7 +273,7 @@ class RegistryStore:
             if cur is not None and (p.api_key is not None
                                     or any(n in fields and fields[n] != cur[n] for n in ("base_url", "model"))):
                 fields.update(last_probe_at=None, last_probe_ok=None, last_probe_latency_ms=None,
-                              last_probe_error=None)
+                              last_probe_error=None, probe_failures=0)
             sets = ", ".join(f"{k} = ?" for k in fields)
             c.execute(f"UPDATE providers SET {sets} WHERE id = ?", (*fields.values(), provider_id))
             row = c.execute("SELECT * FROM providers WHERE id = ?", (provider_id,)).fetchone()
@@ -285,8 +291,9 @@ class RegistryStore:
         with self._conn() as c:
             c.execute(
                 "UPDATE providers SET last_probe_at = ?, last_probe_ok = ?, last_probe_latency_ms = ?, "
-                "last_probe_error = ? WHERE id = ?",
-                (at if at is not None else time.time(), int(ok), latency_ms, error, provider_id),
+                "last_probe_error = ?, probe_failures = CASE WHEN ? THEN 0 ELSE probe_failures + 1 END "
+                "WHERE id = ?",
+                (at if at is not None else time.time(), int(ok), latency_ms, error, int(ok), provider_id),
             )
 
     # -- settings ------------------------------------------------------------ #

@@ -157,12 +157,13 @@ def _agent_block(ep, adapters: dict[str, Any]) -> dict[str, Any] | None:
 
 @admin_router.get("/agent-config")
 async def agent_config(request: Request) -> dict[str, Any]:
-    """Everything ``workers/voice_agent`` needs to build its session: keys included, never cached client-side."""
+    """Everything ``workers/voice_agent`` needs to build its session: keys included, never cached client-side.
+    Reads a GPU worker only when one is already ready: fetching config never launches one."""
     svc = _service(request)
     out: dict[str, Any] = {"airgapped": svc.settings.airgapped, "gateway": {"patient_turn_path": "/v1/patient/turn"}}
     for kind, adapters in (("tts", TTS_ADAPTERS), ("stt", STT_ADAPTERS)):
         eps = svc.resolver.endpoints(kind)
-        ep = eps[0] if eps else await svc.resolver.resolve_worker(kind)
+        ep = eps[0] if eps else await svc.resolver.resolve_worker(kind, launch=False)
         out[kind] = _agent_block(ep, adapters)
     avatar: dict[str, Any] | None = None
     livekit: dict[str, Any] | None = None
