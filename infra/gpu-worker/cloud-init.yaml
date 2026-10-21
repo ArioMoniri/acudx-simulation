@@ -877,6 +877,9 @@ write_files:
           echo "--- avatar status"; cat /opt/acudx/public/avatar-status/status.json 2>/dev/null
           echo "--- avatar bring-up (last 20 lines)"; tail -20 /var/log/acudx-avatar.log 2>/dev/null | redact
           echo "--- avatar image build (last 15 lines)"; tail -15 /var/log/acudx-avatar-build.log 2>/dev/null | redact
+          echo "--- imagegen bring-up and build (last 10 + 10 lines)"; tail -10 /var/log/acudx-imagegen.log 2>/dev/null | redact
+          tail -10 /var/log/acudx-imagegen-build.log 2>/dev/null | redact
+          echo "--- imagegen logs (last 20 lines)"; docker compose -f /opt/acudx/docker-compose.yml logs --tail 20 imagegen 2>/dev/null | redact
           echo "--- nvidia-smi"; nvidia-smi --query-gpu=name,memory.total,memory.used --format=csv 2>&1
         } > "$d/docker-status.txt.tmp"
         mv "$d/docker-status.txt.tmp" "$d/docker-status.txt"
@@ -2245,7 +2248,16 @@ write_files:
                   mode = "sequential"
               pipe.set_progress_bar_config(disable=True)
               PIPE = pipe
+              # Warm-up edit: the first real edit on a fresh worker took 147 to 154 s (weights paged in
+              # from the network filesystem, kernels picked), the next ones 14 to 16 s (live 2026-10-21).
+              # Pay that here, before /health reports loaded.
+              w0 = time.monotonic()
+              try:
+                  _edit(Image.new("RGB", (512, 512), (128, 128, 128)), "a grey square", 0, 2, 512, 512)
+              except Exception as exc:  # noqa: BLE001 - reported, the server still serves
+                  log.warning("imagegen warm-up failed: %s", type(exc).__name__)
               STATE.update(loaded=True, mode=mode, reason=None, free_mb_at_load=free,
+                           warm_ms=round((time.monotonic() - w0) * 1000.0, 1),
                            load_ms=round((time.monotonic() - t) * 1000.0, 1))
               log.info("FLUX.2 klein 4B loaded (%s, %s MB free) in %.0f ms", mode, free, STATE["load_ms"])
           except Exception as exc:  # noqa: BLE001 - reported in /health
@@ -2471,6 +2483,19 @@ runcmd:
   - (command -v nvidia-ctk >/dev/null && nvidia-ctk runtime configure --runtime=docker && systemctl restart docker) || true
   # The avatar image builds in parallel with the vLLM start; avatar.sh waits for vLLM and Chatterbox
   # health and checks VRAM before starting the runner (it never blocks the steps below).
+  # NVSwitch hosts (gpu_4x/8x SXM): CUDA answers "Error 802: system not yet initialized" until the
+  # fabric manager has registered the fabric (live 2026-10-21, gpu_4x_h100_sxm5: vLLM, the runner and
+  # the image edit server all failed with 802). Start it and wait for the fabric before anything uses CUDA.
+  - |
+    if [ "$(nvidia-smi -L 2>/dev/null | wc -l)" -ge 2 ]; then
+      systemctl enable --now nvidia-fabricmanager 2>/dev/null || echo "acudx: nvidia-fabricmanager unit not present"
+      for _ in $(seq 1 90); do
+        st=$(nvidia-smi -q 2>/dev/null | awk '/Fabric/{f=1} f && /State/{print $3; exit}')
+        case "$st" in Completed|N/A|"") break ;; esac
+        sleep 5
+      done
+      echo "acudx: GPU fabric state ${st:-none}"
+    fi
   # GPU layout. One GPU: every service shares card 0. Two or more (gpu_2x_*, gpu_8x_*): the avatar runner
   # gets card 1 to itself (more calls per worker) and the image edit server the next card.
   - |
@@ -2483,10 +2508,12 @@ runcmd:
       else
         printf 'GPU_COUNT=1\nAVATAR_GPU=0\nAVATAR_DEDICATED_GPU=0\nIMAGEGEN_GPU=0\n' >> /opt/acudx/.env
       fi
-      # A card under 70 GB shares vLLM with voice, the runner and the image edits: vLLM takes 0.55 of
-      # it (Qwen3-14B-AWQ still has about 8 GB of KV cache on 40 GB), larger cards keep 0.60.
+      # A card under 70 GB shares vLLM with voice, the runner and the image edits: vLLM takes 0.50 of
+      # it (20 GB on 40 GB: Qwen3-14B-AWQ weights about 10 GB plus KV cache), larger cards keep 0.60.
+      # Live 2026-10-21 on an A100 40 GB at 0.55: 7.2 GB stayed free after the runner, below the 9 GB the
+      # image edit server needs for model offload, so it ran layer by layer at 154 s per picture.
       total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
-      if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then echo 'VLLM_GPU_UTIL=0.55' >> /opt/acudx/.env; fi
+      if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then echo 'VLLM_GPU_UTIL=0.50' >> /opt/acudx/.env; fi
     fi
   - nohup /opt/acudx/avatar.sh >/var/log/acudx-avatar.log 2>&1 &
   - nohup /opt/acudx/imagegen.sh >/var/log/acudx-imagegen.log 2>&1 &

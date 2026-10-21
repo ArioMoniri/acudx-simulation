@@ -130,7 +130,7 @@ def test_call_opens_on_the_generated_presenting_look_and_prepares_the_ladder(tmp
     assert s["appearance"]["live"]["key"] == look.key and s["appearance"]["current_key"] == look.key
     assert s["avatar_id"].startswith("acudx-p04-") and s["avatar_id"].endswith(look.key)
     first = runner.edits[0]["prompt"]
-    assert "flushed" in first and "sweat" in first and "same person" in first.lower()
+    assert "feverish" in first and "sweat" in first and "same person" in first.lower()
     assert "yellow" not in first and "blue" not in first
     # The rest of the ladder and the plain portrait follow in the background.
     assert _wait(lambda: len(runner.edits) >= 4)
@@ -140,6 +140,11 @@ def test_call_opens_on_the_generated_presenting_look_and_prepares_the_ladder(tmp
     names = {v["name"] for v in ap_state["appearance"]["variants"]}
     assert {"presenting", "worse", "critical", "improved", "unresponsive"} <= names
     assert ap_state["voice"]["speed"] < 1.0                       # breathless at rr 24
+    img = c.get("/v1/voice/avatar/appearance/image", params={"session_id": s["session_id"], "key": look.key},
+                headers=USER)
+    assert img.status_code == 200 and img.headers["content-type"] == "image/jpeg" and img.content.startswith(b"\xff\xd8")
+    assert c.get("/v1/voice/avatar/appearance/image", params={"session_id": s["session_id"], "key": look.key},
+                 headers={"X-User-Id": "learner-2"}).status_code == 404
 
 
 def test_director_step_switches_the_live_face_and_arrest_silences_the_voice(tmp_path):
@@ -197,3 +202,26 @@ def test_patient_turn_with_a_thread_voices_the_live_look(tmp_path, monkeypatch):
     from server.persona import live_state_lines
     assert any("short of breath" in ln for ln in live_state_lines({"voice": lines}))
     json.dumps(lines)
+
+
+def test_pictures_are_made_on_the_fastest_image_edit_server_of_the_pool(monkeypatch):
+    """A 40 GB card runs the edits layer by layer (154 s per picture, live 2026-10-21); a card with
+    room for the whole model takes them, and the call's own worker only prepares them."""
+    from server.voice.avatar import musetalk as mt
+    from server.voice.avatar import state_sync
+
+    modes = {"https://a.sslip.io": "sequential", "https://b.sslip.io": "gpu", "https://c.sslip.io": None}
+
+    async def health(_client, w, **_k):
+        m = modes[w.origin]
+        return {"ok": m is not None, "mode": m}
+
+    class Pool:
+        def endpoints(self):
+            return [{"base_url": f"{o}/v1", "api_key": "k"} for o in modes]
+
+    monkeypatch.setattr(mt, "imagegen_health", health)
+    call = mt.WorkerAvatar(origin="https://a.sslip.io", token="k")
+    assert asyncio.run(state_sync.pick_gen_worker(None, Pool(), call)).origin == "https://b.sslip.io"
+    modes["https://b.sslip.io"] = "sequential"
+    assert asyncio.run(state_sync.pick_gen_worker(None, Pool(), call)).origin == "https://a.sslip.io"

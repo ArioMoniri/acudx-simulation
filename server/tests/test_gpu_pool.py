@@ -215,6 +215,39 @@ async def test_scale_up_never_exceeds_max_workers(tmp_path):
     await m.aclose()
 
 
+async def test_reaper_reattaches_a_scale_up_boot_after_a_gateway_restart(tmp_path):
+    """Live 2026-10-21: the gateway restarted while a second worker booted; the pool still had a ready
+    worker, so no request waited on the boot and the row would have stayed 'booting' for good."""
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    _ready(m, clock, 1)
+    b = m.store.insert_worker(instance_id="i-boot", instance_type="gpu_4x_h100_sxm5", region="us-south-3", token="tb",
+                              status="booting", price_cents_per_hour=1636, launched_at=clock.t, last_used_at=clock.t)
+    m.store.update_worker(b.id, ip="10.0.0.9", domain="10-0-0-9.sslip.io")
+    seen = []
+
+    async def healthy(w):
+        seen.append(w.id)
+        return True
+
+    async def capture(_w):
+        return True
+
+    m._healthy = healthy  # type: ignore[method-assign]
+    m.capture_boot_log = capture  # type: ignore[method-assign]
+
+    class _Api:
+        async def get_instance(self, _iid):
+            raise httpx.ConnectError("offline")
+
+    m._lambda = lambda: _Api()  # type: ignore[method-assign]
+    assert await m.reap_once() is False
+    for _ in range(10):
+        await asyncio.sleep(0)
+    assert m.store.get_worker(b.id).status == "ready" and b.id in seen
+    await m.aclose()
+
+
 def test_calls_pressure_asks_for_a_worker(tmp_path):
     clock = FakeClock()
     m = _manager(tmp_path, clock)
@@ -242,3 +275,37 @@ async def test_launch_may_pick_an_eight_gpu_host_when_it_is_the_only_capacity(tm
     w = m.store.active_workers()[0]
     assert w.instance_type == "gpu_8x_h100_sxm5"
     await m.aclose()
+
+
+# --- the worker image on multi-GPU hosts --------------------------------------- #
+def _cloud_init() -> str:
+    return open(CLOUD_INIT, encoding="utf-8").read()
+
+
+def test_nvswitch_hosts_start_the_fabric_manager_before_cuda_is_used():
+    """Live 2026-10-21 on gpu_4x_h100_sxm5: CUDA error 802 in vLLM, the runner and the image edits."""
+    ci = _cloud_init()
+    fm = ci.index("systemctl enable --now nvidia-fabricmanager")
+    assert fm < ci.index("nohup /opt/acudx/avatar.sh") < ci.index("docker compose up -d --wait vllm")
+    assert "Completed" in ci[fm:fm + 600]
+
+
+def test_multi_gpu_hosts_give_the_runner_and_the_image_edits_their_own_cards():
+    ci = _cloud_init()
+    assert 'device_ids: ["${AVATAR_GPU:-0}"]' in ci and 'device_ids: ["${IMAGEGEN_GPU:-0}"]' in ci
+    assert "AVATAR_DEDICATED_GPU=1" in ci and "AVATAR_MAX_SESSIONS=4" in ci
+    assert "--gpu-memory-utilization ${VLLM_GPU_UTIL:-0.60}" in ci and "VLLM_GPU_UTIL=0.50" in ci
+    assert "handle_path /imagegen/*" in ci and "reverse_proxy imagegen:8020" in ci
+
+
+def test_image_edit_server_is_apache_licensed_and_pinned():
+    ci = _cloud_init()
+    assert "black-forest-labs/FLUX.2-klein-4B" in ci and "e7b7dc27f91deacad38e78976d1f2b499d76a294" in ci
+    assert '"diffusers==0.40.0"' in ci and "--exclude-newer 2026-09-01" in ci
+    assert 'mode = "sequential"' in ci and 'mode = "offload"' in ci and 'mode = "gpu"' in ci
+
+
+def test_runner_switches_a_live_call_with_a_crossfade():
+    ci = _cloud_init()
+    assert 'app.router.add_post("/switch", switch)' in ci
+    assert "frame_count_mismatch" in ci and "_install_crossfade(sess)" in ci

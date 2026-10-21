@@ -35,21 +35,50 @@ SIGN_ORDER = ("fever_flush", "diaphoresis", "pallor", "mottling", "cyanosis", "j
               "accessory_muscles", "pain", "drowsy", "unresponsive")
 # Signs the live state can change from one Director step to the next (the ladder varies these);
 # the others are findings the case text states and stay until the patient improves.
-LIVE_SIGNS = ("fever_flush", "resp_distress", "pain", "drowsy", "pallor", "mottling", "cyanosis")
+LIVE_SIGNS = ("fever_flush", "resp_distress", "accessory_muscles", "pain", "drowsy", "pallor", "mottling", "cyanosis")
 
 _TEXT_EVIDENCE: dict[str, re.Pattern[str]] = {
     "diaphoresis": re.compile(r"diaphore|sweat|clammy|terl|ter içinde|soğuk ter", re.I),
     "jaundice": re.compile(r"jaundic|icter|yellow(?:ish)?\s+(?:skin|sclera|eyes)|sarılık|ikter", re.I),
-    "cyanosis": re.compile(r"cyano|blue lips|bluish|siyano|morarma", re.I),
+    # Only central cyanosis shows on a face; "cyanosis around the nail beds" is peripheral.
+    "cyanosis": re.compile(r"(?:central|perioral|circumoral)\s+cyano|cyano\w*\s+(?:\w+\s+){0,3}(?:lips?|mouth|face)|"
+                           r"blue lips|bluish lips|dudaklarda morarma|santral siyanoz", re.I),
     "pallor": re.compile(r"\bpale\b|pallor|soluk", re.I),
     "mottling": re.compile(r"mottl|livedo|alacalı", re.I),
     "accessory_muscles": re.compile(r"accessory muscle|intercostal|subcostal|recession|retraction|tripod|"
                                     r"yardımcı solunum kas", re.I),
+    "resp_distress": re.compile(r"respiratory distress|short(?:ness)? of breath|breathless|dyspn|tachypn|"
+                                r"difficulty breathing|laboured breathing|labored breathing|nefes darlığı|takipne", re.I),
 }
 _COUGH = re.compile(r"cough|öksür", re.I)
+# A finding inside a negated clause ("no signs of cyanosis or clubbing", "not jaundiced", "denies
+# cough", "siyanoz yok") is absent. Clauses split on sentence and clause punctuation and on "but".
+_CLAUSE = re.compile(r"[.;:!?\n]+|,\s+(?:but|however|ama|fakat)\s+|\s+but\s+", re.I)
+_NEG_BEFORE = re.compile(r"\b(?:no|not|without|denies|denied|negative\s+for|absent|absence\s+of|free\s+of|"
+                         r"nor|never)\b", re.I)
+_NEG_AFTER = re.compile(r"\b(?:yok|değil|saptanmadı|izlenmedi|absent|not\s+seen|not\s+present)\b", re.I)
+
+
+def _evident(rx: re.Pattern[str], text: str) -> bool:
+    """``rx`` matches in a clause that does not negate it."""
+    for clause in _CLAUSE.split(text):
+        m = rx.search(clause)
+        if m is None:
+            continue
+        if _NEG_BEFORE.search(clause[: m.start()]) or _NEG_AFTER.search(clause[m.end():]):
+            continue
+        return True
+    return False
 
 _PHRASES: dict[str, tuple[str, str]] = {
-    "fever_flush": ("slightly flushed pink cheeks", "clearly flushed red cheeks and a feverish, glassy look in the eyes"),
+    # Live findings 2026-10-21 (FLUX.2 klein 4B on the worker): "flushed red cheeks" gave two painted
+    # blush patches, "feverish redness" a blotchy rash (a finding the case does not have), "an even
+    # pink-red tint" a lobster-red face; "a little pinker and warmer than in the original, subtle and
+    # even" reads as fever (docs/media/live-avatar/state-sync/prompt-tuning/).
+    "fever_flush": ("the complexion very slightly pinker and warmer than in the original, subtle and even "
+                    "(no patches, no rash, no spots)",
+                    "a feverish look, the complexion a little pinker and warmer than in the original, subtle "
+                    "and even over the whole face (no patches, no rash, no spots); tired, glassy eyes"),
     "diaphoresis": ("a light sheen of sweat on the forehead and upper lip",
                     "beads of sweat on the forehead and damp hair at the temples"),
     "pallor": ("pale, washed-out skin", "very pale, greyish skin"),
@@ -125,7 +154,7 @@ def look_from_case(spec: dict[str, Any], director: dict[str, Any] | None) -> Loo
     signs: dict[str, int] = {}
 
     for sign, rx in _TEXT_EVIDENCE.items():
-        if rx.search(text):
+        if _evident(rx, text):
             signs[sign] = 1
 
     temp = _num(vitals.get("tempC"))
@@ -136,6 +165,12 @@ def look_from_case(spec: dict[str, Any], director: dict[str, Any] | None) -> Loo
         signs["resp_distress"] = 2
     elif (rr is not None and rr >= 24) or (spo2 is not None and spo2 < 92):
         signs["resp_distress"] = 1
+    # The case text describes the arrival; once the live vitals have settled, the signs it stated go.
+    if rr is not None and rr <= 20 and (spo2 is None or spo2 >= 95):
+        signs.pop("resp_distress", None)
+        signs.pop("accessory_muscles", None)
+    if temp is not None and temp < 37.8 and str(bed.get("skin") or "") not in ("cool", "mottled"):
+        signs.pop("diaphoresis", None)
     if spo2 is not None and spo2 < 85:
         signs["cyanosis"] = 2 if spo2 < 80 else max(1, signs.get("cyanosis", 0))
     if signs.get("resp_distress") == 2 and "accessory_muscles" in signs:
@@ -167,7 +202,7 @@ def look_from_case(spec: dict[str, Any], director: dict[str, Any] | None) -> Loo
         phase = "arrest"
     demo = spec.get("demographics") or {}
     identity = {"age": demo.get("age"), "sex": demo.get("sex"), "ethnicity": demo.get("ethnicity") or None}
-    return Look(signs=signs, phase=phase, identity=identity, cough=bool(_COUGH.search(text)))
+    return Look(signs=signs, phase=phase, identity=identity, cough=_evident(_COUGH, text))
 
 
 def edit_prompt(look: Look) -> str:

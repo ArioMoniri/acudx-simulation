@@ -56,6 +56,31 @@ def test_no_sign_is_invented_without_case_evidence():
     assert look.cough is False
 
 
+def test_negated_and_peripheral_findings_are_not_drawn():
+    """Live case 2026-10-21 (pneumonia, model-authored): "no signs of cyanosis or clubbing" and
+    "Cyanosis noted around the nail" must not put blue lips on the face; "accessory muscles" must."""
+    spec = _spec(exam=[
+        {"maneuver": "general", "finding_en": "Appears unwell, diaphoretic. Skin warm, no signs of cyanosis or clubbing."},
+        {"maneuver": "resp", "finding_en": "Using accessory muscles of respiration."},
+        {"maneuver": "hands", "finding_en": "Cyanosis noted around the nail beds."},
+        {"maneuver": "abd", "finding_en": "Not jaundiced. No pallor."},
+    ], hpi=[], chief_complaint_en="Cough and fever for three days", triage_note="")
+    look = ap.look_from_case(spec, _director(vitals={"spo2": 93}))
+    assert "cyanosis" not in look.signs and "jaundice" not in look.signs and "pallor" not in look.signs
+    assert look.signs.get("accessory_muscles") == 1 and look.signs.get("diaphoresis") == 1
+    central = ap.look_from_case(_spec(exam=[{"maneuver": "g", "finding_en": "Central cyanosis of the lips."}], hpi=[]),
+                                _director())
+    assert central.signs.get("cyanosis") == 1
+
+
+def test_arrival_text_signs_go_once_the_live_vitals_settle():
+    spec = _spec(exam=[{"maneuver": "g", "finding_en": "Tachypnoeic, using accessory muscles, diaphoretic."}])
+    sick = ap.look_from_case(spec, _director(vitals={"rr": 22, "spo2": 93}))
+    assert sick.signs.get("resp_distress") == 1 and sick.signs.get("accessory_muscles") == 1
+    well = ap.look_from_case(spec, _director(vitals={"rr": 16, "spo2": 97, "tempC": 37.2}, phase="improving"))
+    assert not {"resp_distress", "accessory_muscles", "diaphoresis", "fever_flush"} & set(well.signs)
+
+
 def test_live_shock_and_arrest_states_come_from_the_director_snapshot():
     mottled = ap.look_from_case(_spec(), _director(bedside={"skin": "mottled", "mottling": 3}, vitals={"systolic": 78},
                                                    phase="peri_arrest", severity=0.9))
@@ -75,7 +100,7 @@ def test_edit_prompt_keeps_identity_and_lists_only_the_changes():
     look = ap.look_from_case(_spec(), _director())
     p = ap.edit_prompt(look)
     assert "same person" in p.lower() and "mouth closed" in p.lower()
-    assert "flushed" in p and "sweat" in p and "breath" in p
+    assert "feverish" in p and "no rash" in p and "sweat" in p and "breath" in p
     assert "jaundice" not in p.lower() and "yellow" not in p.lower() and "blue" not in p.lower()
     assert "—" not in p
 

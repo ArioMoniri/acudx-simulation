@@ -46,9 +46,12 @@ class Variant:
     prepare_ms: float | None = None
     error: str | None = None
     mode: str | None = None
+    image: bytes | None = None    # the generated JPEG (served to the call's owner, never persisted)
+    prompt: str | None = None
 
     def public(self) -> dict[str, Any]:
         return {"name": self.name, "key": self.look.key, "avatar_id": self.avatar_id, "status": self.status,
+                "prompt": self.prompt, "has_image": self.image is not None,
                 "signs": self.look.public()["signs"], "gen_ms": self.gen_ms, "prepare_ms": self.prepare_ms,
                 "error": self.error, "mode": self.mode}
 
@@ -64,11 +67,16 @@ class Appearance:
     source: str = "portrait"         # portrait | generated
     reason: str | None = None
     switches: list[dict[str, Any]] = field(default_factory=list)
+    # The worker whose image edit server makes the pictures (in a pool, the fastest one; the
+    # pictures are then prepared on the call's own worker).
+    gen_worker: Any = None
+    gen_mode: str | None = None
     tasks: set[asyncio.Task[Any]] = field(default_factory=set)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     def public(self) -> dict[str, Any]:
-        return {"thread_id": self.thread_id, "source": self.source, "reason": self.reason,
+        return {"thread_id": self.thread_id, "source": self.source, "reason": self.reason, "gen_mode": self.gen_mode,
+                "gen_worker": getattr(self.gen_worker, "domain", None),
                 "live": self.live.public() if self.live else None, "current_key": self.current_key,
                 "variants": [v.public() for v in self.variants.values()], "switches": self.switches[-20:]}
 
@@ -132,8 +140,9 @@ async def _make_variant(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: A
                         portrait: bytes, *, seed: int) -> bool:
     v.status = "generating"
     try:
-        img, meta = await mt.imagegen_edit(client, worker, portrait, ap.edit_prompt(v.look), seed=seed)
-        v.gen_ms, v.mode = meta.get("gen_ms"), meta.get("mode")
+        v.prompt = ap.edit_prompt(v.look)
+        img, meta = await mt.imagegen_edit(client, a.gen_worker or worker, portrait, v.prompt, seed=seed)
+        v.gen_ms, v.mode, v.image = meta.get("gen_ms"), meta.get("mode"), img
         v.status = "preparing"
         t = time.monotonic()
         await mt.ensure_avatar(client, worker, v.avatar_id, img)
@@ -155,14 +164,15 @@ def _prepared(a: Appearance) -> dict[str, ap.Look]:
 
 async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id: str, photo_id: str,
                 portrait: bytes, spec: dict[str, Any], director: dict[str, Any], wait_s: float = 45.0,
-                ) -> tuple[Appearance, str]:
+                gen_worker: mt.WorkerAvatar | None = None) -> tuple[Appearance, str]:
     """Generate and prepare the presenting look (waiting up to ``wait_s``), then the rest of the ladder
     in the background. Returns the appearance state and the avatar id the call should open with."""
     base = mt.avatar_id_for(photo_id)
-    a = Appearance(thread_id=thread_id, photo_id=photo_id, base_avatar_id=base)
+    a = Appearance(thread_id=thread_id, photo_id=photo_id, base_avatar_id=base, gen_worker=gen_worker or worker)
     look = live_look(spec, director)
     a.live = look
-    ig = await mt.imagegen_health(client, worker)
+    ig = await mt.imagegen_health(client, a.gen_worker)
+    a.gen_mode = ig.get("mode")
     if not ig.get("ok"):
         a.reason = f"image edit server: {ig.get('reason') or 'not ready'}"
         return a, base
@@ -191,6 +201,27 @@ async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id
         return a, first.avatar_id
     a.reason = first.error or "presenting look not ready yet"
     return a, base
+
+
+MODE_RANK = {"gpu": 0, "offload": 1, "sequential": 2}
+
+
+async def pick_gen_worker(client: httpx.AsyncClient, wm: Any, call_worker: mt.WorkerAvatar) -> mt.WorkerAvatar:
+    """The ready worker whose image edit server is fastest (the whole model on the GPU beats CPU
+    offload); the call's own worker wins a tie. Falls back to the call's worker."""
+    best: tuple[int, int, mt.WorkerAvatar] = (9, 1, call_worker)
+    eps = wm.endpoints() if wm is not None and hasattr(wm, "endpoints") else []
+    for ep in eps:
+        w = mt.worker_from_endpoint(ep)
+        if w is None:
+            continue
+        h = await mt.imagegen_health(client, w)
+        if not h.get("ok"):
+            continue
+        rank = (MODE_RANK.get(str(h.get("mode")), 5), 0 if w.origin == call_worker.origin else 1, w)
+        if rank[:2] < best[:2]:
+            best = rank
+    return best[2]
 
 
 async def sync(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, *, worker_session: str | None,

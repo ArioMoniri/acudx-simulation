@@ -1,0 +1,115 @@
+{
+    "configured": true,
+    "airgapped": false,
+    "can_launch": true,
+    "refusal": null,
+    "policy": {
+        "idle_minutes": 30,
+        "daily_budget_usd": null,
+        "allowlist": [
+            "gpu_1x_h100_sxm5",
+            "gpu_1x_h100_pcie",
+            "gpu_1x_a100_sxm4"
+        ],
+        "llm_model": "Qwen/Qwen3-14B-AWQ",
+        "region_preference": [],
+        "file_system_name": "acudx-wm",
+        "max_workers": 3,
+        "llm_queue_per_worker": 6
+    },
+    "worker": {
+        "id": 3,
+        "instance_id": "ab710bfd7ff34c64b4b83f34423f9af8",
+        "instance_type": "gpu_1x_a100_sxm4",
+        "region": "us-east-1",
+        "ip": "150.136.146.81",
+        "domain": "150-136-146-81.sslip.io",
+        "status": "ready",
+        "price_cents_per_hour": 199,
+        "launched_at": 1792570461.3908882,
+        "ready_at": 1792570851.4242992,
+        "last_used_at": 1792570851.4242992,
+        "terminated_at": null,
+        "gpus": 1,
+        "endpoints": {
+            "healthz": "https://150-136-146-81.sslip.io/healthz",
+            "llm_base_url": "https://150-136-146-81.sslip.io/v1",
+            "tts_url": "https://150-136-146-81.sslip.io/tts/v1/audio/speech",
+            "stt_url": "https://150-136-146-81.sslip.io/stt/v1/audio/transcriptions",
+            "served_model_name": "acudx-llm"
+        }
+    },
+    "workers": [
+        {
+            "id": 1,
+            "instance_id": "e648dd49b745441eab39d8755001d8d9",
+            "instance_type": "gpu_1x_a100_sxm4",
+            "region": "us-east-1",
+            "ip": "132.145.132.38",
+            "domain": "132-145-132-38.sslip.io",
+            "status": "ready",
+            "price_cents_per_hour": 199,
+            "launched_at": 1792567671.2826226,
+            "ready_at": 1792568068.8276234,
+            "last_used_at": 1792569651.7690673,
+            "terminated_at": null,
+            "gpus": 1,
+            "endpoints": {
+                "healthz": "https://132-145-132-38.sslip.io/healthz",
+                "llm_base_url": "https://132-145-132-38.sslip.io/v1",
+                "tts_url": "https://132-145-132-38.sslip.io/tts/v1/audio/speech",
+                "stt_url": "https://132-145-132-38.sslip.io/stt/v1/audio/transcriptions",
+                "served_model_name": "acudx-llm"
+            },
+            "load": {
+                "inflight": 0,
+                "calls": 0,
+                "gpus": 1,
+                "score": 0.0
+            }
+        },
+        {
+            "id": 3,
+            "instance_id": "ab710bfd7ff34c64b4b83f34423f9af8",
+            "instance_type": "gpu_1x_a100_sxm4",
+            "region": "us-east-1",
+            "ip": "150.136.146.81",
+            "domain": "150-136-146-81.sslip.io",
+            "status": "ready",
+            "price_cents_per_hour": 199,
+            "launched_at": 1792570461.3908882,
+            "ready_at": 1792570851.4242992,
+            "last_used_at": 1792570851.4242992,
+            "terminated_at": null,
+            "gpus": 1,
+            "endpoints": {
+                "healthz": "https://150-136-146-81.sslip.io/healthz",
+                "llm_base_url": "https://150-136-146-81.sslip.io/v1",
+                "tts_url": "https://150-136-146-81.sslip.io/tts/v1/audio/speech",
+                "stt_url": "https://150-136-146-81.sslip.io/stt/v1/audio/transcriptions",
+                "served_model_name": "acudx-llm"
+            },
+            "load": {
+                "inflight": 0,
+                "calls": 0,
+                "gpus": 1,
+                "score": 0.0
+            }
+        }
+    ],
+    "capacity": {
+        "workers": 2,
+        "ready": 2,
+        "launching": 0,
+        "max_workers": 3,
+        "gpus": 2,
+        "scale_up_needed": null,
+        "last_scale_up": {
+            "reason": "admin",
+            "at": 1792570460.001736
+        }
+    },
+    "spent_today_usd": 7.62601,
+    "budget_remaining_usd": null,
+    "reaper_running": true
+}

@@ -237,9 +237,10 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
     try:
         if view is not None:
             wait_s = float(getattr(svc.settings, "avatar_appearance_wait_s", 45.0) or 0.0)
+            gen = await sync_mod.pick_gen_worker(svc.client, wm, worker)
             s.appearance, s.avatar_id = await sync_mod.start(
                 svc.client, worker, thread_id=str(body.thread_id), photo_id=str(body.photo_id), portrait=portrait,
-                spec=view[0], director=view[1], wait_s=wait_s)
+                spec=view[0], director=view[1], wait_s=wait_s, gen_worker=gen)
             s.metrics["appearance_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
         if s.avatar_id == mt.avatar_id_for(body.photo_id or ""):
             prep = await mt.ensure_avatar(svc.client, worker, s.avatar_id, portrait)
@@ -582,6 +583,18 @@ async def appearance(request: Request, session_id: str, user: Principal = Depend
     return {"session_id": s.id, "thread_id": s.thread_id, "avatar_id": s.avatar_id,
             "appearance": s.appearance.public() if s.appearance is not None else None,
             "voice": sync_mod.voice_for(s.appearance)}
+
+
+@router.get("/appearance/image")
+async def appearance_image(request: Request, session_id: str, key: str, user: Principal = Depends(current_user)):
+    """One generated picture of the call's patient (owner only): what the face was edited into."""
+    s = _store(request).get(session_id, user_hash=user.user_hash)
+    v = s.appearance.variants.get(key) if s is not None and s.appearance is not None else None
+    if v is None or v.image is None:
+        raise HTTPException(status_code=404, detail={"error": "unknown_image"})
+    from fastapi.responses import Response  # noqa: PLC0415
+
+    return Response(content=v.image, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
 
 @router.post("/sync")

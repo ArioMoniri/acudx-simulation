@@ -398,6 +398,7 @@ class WorkerManager:
         self._tasks: dict[int, asyncio.Task[WorkerRecord]] = {}
         self._inflight: asyncio.Task[WorkerRecord] | None = None
         self._launching = 0                      # launches that have not inserted their row yet
+        self._reaper_watches: set[int] = set()   # boots the reaper re-attached to (after a restart)
         self._reaper: asyncio.Task[None] | None = None
         # Load per worker domain: requests in flight, live calls the runner reports.
         self._requests: dict[str, int] = {}
@@ -773,8 +774,18 @@ class WorkerManager:
             # ever terminate it, so the reaper does once both budgets have elapsed.
             t = self._tasks.get(w.id)
             watched = (t is not None and not t.done()) or (self._inflight is not None and not self._inflight.done())
-            if watched or now - w.launched_at < self.boot_timeout_s + self.ready_timeout_s:
+            within = now - w.launched_at < self.boot_timeout_s + self.ready_timeout_s
+            if watched and (within or w.id not in self._reaper_watches):
                 return False
+            if within:
+                # A boot nobody waits for (the gateway restarted while a scale-up worker booted, and the
+                # pool already had a ready worker, so no request re-attached): watch it, or it would
+                # never turn ready and never take traffic.
+                self._watch(w)
+                self._reaper_watches.add(w.id)
+                return False
+            if t is not None and not t.done():
+                t.cancel()
             log.warning("gpu worker %s: orphaned boot older than %.0fs; terminating", w.instance_id,
                         self.boot_timeout_s + self.ready_timeout_s)
             await self._terminate_one(w, "stale_boot")
