@@ -260,8 +260,15 @@ class RegistryStore:
             else:
                 fields["api_key_encrypted"], fields["key_last4"] = self._seal(p.api_key)
         fields["updated_at"] = time.time()
-        sets = ", ".join(f"{k} = ?" for k in fields)
         with self._conn() as c:
+            cur = c.execute("SELECT base_url, model FROM providers WHERE id = ?", (provider_id,)).fetchone()
+            # A new key, URL or model makes the last probe result stale (e.g. the boot probe's
+            # "key not configured" would keep the row dead until the next probe run).
+            if cur is not None and (p.api_key is not None
+                                    or any(n in fields and fields[n] != cur[n] for n in ("base_url", "model"))):
+                fields.update(last_probe_at=None, last_probe_ok=None, last_probe_latency_ms=None,
+                              last_probe_error=None)
+            sets = ", ".join(f"{k} = ?" for k in fields)
             c.execute(f"UPDATE providers SET {sets} WHERE id = ?", (*fields.values(), provider_id))
             row = c.execute("SELECT * FROM providers WHERE id = ?", (provider_id,)).fetchone()
         if row is None:

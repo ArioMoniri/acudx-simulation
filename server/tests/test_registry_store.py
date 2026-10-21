@@ -131,3 +131,18 @@ def test_seed_from_env_is_idempotent_and_orders_by_llm_provider(tmp_path):
     assert s.decrypt_key(by_name["env-openai"]) == "di-key-0001"
     assert by_name["env-llm"].extra.get("seeded_from") == "env"
     assert {p.kind for p in s.list_providers()} == {"llm", "embed", "rerank"}
+
+
+def test_new_key_url_or_model_clears_a_stale_probe_result(tmp_path):
+    # Production: the boot probe ran before /bootstrap/provision sent the Anthropic key and
+    # recorded "key not configured"; the stale failure kept Claude off until the next probe run.
+    s = _store(tmp_path)
+    rec = s.create_provider(ProviderIn(kind="llm", name="anthropic", base_url="https://api.anthropic.com",
+                                       model="claude-opus-5-5"))
+    s.set_probe_result(rec.id, ok=False, latency_ms=None, error="Anthropic key not configured")
+    s.update_provider(rec.id, {"enabled": True, "priority": 0, "base_url": "https://api.anthropic.com"})
+    assert s.get_provider(rec.id).last_probe_ok is False  # nothing that changes the probe's answer
+    after = s.update_provider(rec.id, {"api_key": "sk-ant-new-key-1234"})
+    assert after.last_probe_ok is None and after.last_probe_error is None and after.last_probe_at is None
+    s.set_probe_result(rec.id, ok=False, latency_ms=None, error="404")
+    assert s.update_provider(rec.id, {"model": "claude-sonnet-5-5"}).last_probe_ok is None
