@@ -1,0 +1,124 @@
+{
+  "chat": {
+    "questions": {
+      "onset": "Bu ne zaman başladı?",
+      "location": "Tam olarak nerede hissediyorsunuz?",
+      "character": "Nasıl tarif edersiniz?",
+      "radiation": "Başka bir yere yayılıyor mu?",
+      "severity": "0 ile 10 arasında ne kadar şiddetli?",
+      "timing": "Sürekli mi, yoksa gelip gidiyor mu?",
+      "aggravating": "Onu kötüleştiren bir şey var mı?",
+      "relieving": "Onu hafifleten bir şey var mı?",
+      "associatedSymptoms": "Bununla birlikte başka bir şey fark ettiniz mi?",
+      "redFlags": "Bayılma, kanama ya da hayatınızın en kötü ağrısı gibi sizi korkutan bir şey oldu mu?",
+      "pastMedicalHistory": "Bilinen bir hastalığınız var mı, daha önce ameliyat oldunuz mu?",
+      "medications": "Hangi ilaçları kullanıyorsunuz?",
+      "allergies": "Herhangi bir ilaca alerjiniz var mı?",
+      "familyHistory": "Ailenizde sık görülen bir hastalık var mı?",
+      "socialHistory": "Bana işinizden, sigara ve alkol kullanımınızdan ve son seyahatlerinizden bahseder misiniz?",
+      "riskFactors": "Diyabetiniz, yüksek tansiyonunuz ya da yüksek kolesterolünüz var mı?",
+      "ice": "Sizce neler oluyor, en çok neden endişeleniyorsunuz?"
+    },
+    "roles": {
+      "learner": "Siz",
+      "patient": "Hasta",
+      "nurse": "Hemşire",
+      "attending": "Sorumlu hekim"
+    },
+    "time": {
+      "sim": "T+{{clock}}",
+      "simLabel": "Simülasyon saati {{clock}}"
+    },
+    "status": {
+      "sending": "Gönderiliyor"
+    },
+    "empty": {
+      "title": "Görüşmeyi başlatın",
+      "body": "Kendinizi tanıtın ve kendi cümlelerinizle sorun. İstem, muayene ve kart bölümleri için / yazın."
+    },
+    "composer": {
+      "hint": "Göndermek için Enter. Yeni satır için Shift+Enter. Komutlar için /.",
+      "suggestions": "Öneriler",
+      "call": "Sesli görüşme",
+      "callOn": "Ses açık: yanıtlar seslendirilir",
+      "callOff": "Hastayla sesli görüşme başlatın"
+    },
+    "slash": {
+      "menuLabel": "Komutlar",
+      "noMatches": "Eşleşen yok",
+      "order": "Tetkik istemi verin",
+      "exam": "Hastayı muayene edin",
+      "go": "Bir kart bölümünü açın",
+      "ask": "Önerilen sorulara göz atın"
+    },
+    "targets": {
+      "results": "Sonuçlar",
+      "imaging": "Görüntüleme",
+      "orders": "İstemler",
+      "vitals": "Vital bulgular",
+      "notes": "Notlar",
+      "diagnosis": "Tanı",
+      "guide": "Rehber"
+    },
+    "actions": {
+      "groupLabel": "Bu yanıttan eylemler",
+      "orderLabel": "{{label}} iste",
+      "confirmPrompt": "{{label}} istensin mi?",
+      "confirm": "İstemi ver",
+      "cancel": "Vazgeç",
+      "pending": "Bekliyor, {{eta}}",
+      "resulted": "Sonuçlandı",
+      "viewResult": "Sonucu gör",
+      "open": "{{target}} bölümünü aç",
+      "followUps": "Devam soruları",
+      "draft": "İstem taslağı",
+      "removeDraft": "Taslağı kaldır"
+    },
+    "guard": {
+      "offTopic": {
+        "label": "Konu dışı",
+        "note": "Hasta rolünde yanıt verdi ama öykü ilerlemedi. Konuşmayı başvuru yakınmasına geri getirin."
+      },
+      "answerSeeking": {
+        "label": "Rolde kalır",
+        "note": "Hasta size tanıyı ya da cevabı veremez. Bunun yerine belirtileri, öyküyü veya muayeneyi sorun."
+      },
+      "injection": {
+        "label": "Engellendi",
+        "note": "Bu mesaj hastaya iletilmedi: simülasyonun talimatlarını değiştirmeye çalıştı."
+      },
+      "unsafe": {
+        "label": "Destek",
+        "note": "Simülasyon rol oyununu durdurdu. Bu sizinle ilgiliyse lütfen güvendiğiniz birine veya yerel acil servislere ulaşın."
+      }
+    },
+    "nurse": {
+      "resultBack": "{{label}} sonuçlandı.",
+      "resultBackAbnormal": "{{label}} sonuçlandı ve anormal olarak işaretlendi.",
+      "resultBackCritical": "{{label}} kritik bir değerle sonuçlandı."
+    },
+    "exam": {
+      "performed": "Muayene: {{maneuver}}",
+      "noFinding": "Bu muayene için kayıt yok.",
+      "awaiting": "Bu hastanın bulguları hâlâ yazılıyor."
+    },
+    "drawer": {
+      "title": "Öneriler",
+      "history": "Öykü soruları",
+      "exam": "Muayene",
+      "filter": "Önerileri filtrele",
+      "noMatches": "Eşleşen öneri yok"
+    },
+    "quick": {
+      "label": "Önerilen sonraki sorular"
+    },
+    "guardLabels": {
+      "clinical": "Konuya odaklı",
+      "off_topic": "Konu dışı",
+      "meta_injection": "Rolde kalır",
+      "diagnosis_request": "Hasta tanı vermez",
+      "unsafe": "Destek",
+      "other_language": "Dil"
+    }
+  }
+}

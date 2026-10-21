@@ -133,9 +133,16 @@ export interface PatientTurnResult {
   utterance: string;
   routed_as: string;
   state_advance: boolean;
-  guard: GuardVerdict;
+  /**
+   * The scope-guard verdict, or (new contract, docs/design/05-chat.md section 4)
+   * a learner-facing `{ label, note? }`. Read through lib/chatActions
+   * parseChatGuard, which accepts either.
+   */
+  guard: GuardVerdict | { label: string; note?: string };
   flags: Array<Record<string, unknown>>;
   meta: PatientTurnMeta | null;
+  /** Generative actions (order / navigate / ask); validate with parseChatActions. */
+  actions?: unknown;
 }
 
 /**

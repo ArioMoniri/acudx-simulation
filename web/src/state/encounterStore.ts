@@ -61,6 +61,7 @@ import {
 } from "@/lib/caseGenV2";
 import { layerForIntent, layerForManeuver, layerPending, type LayerStatus } from "@/lib/caseLayers";
 import { resolveOrder as engineResolveOrder, type OrderResult } from "@/lib/resultsApi";
+import type { ChatAction, ChatGuard } from "@/lib/chatActions";
 import {
   applyDirectorChanges,
   caseInstanceToSpec,
@@ -125,6 +126,13 @@ export interface DialogueTurn {
    * on doctor turns.
    */
   affect?: string;
+  /**
+   * Generative actions the reply carried (patient turns only): order chips,
+   * navigate buttons and follow-up suggestions, rendered inline in the thread.
+   */
+  actions?: ChatAction[];
+  /** The guard note the reply carried (patient turns only). */
+  guard?: ChatGuard;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -711,6 +719,10 @@ export function recordDialogue(input: {
   /** Provenance of the reply: the live model, or the offline fallback. Kept for
    * metrics only — never surfaced to the learner. */
   source?: "live" | "offline";
+  /** Generative actions from the reply (rendered inline under the patient turn). */
+  actions?: ChatAction[];
+  /** The guard note from the reply (soft-class redirects, server notes). */
+  guard?: ChatGuard;
 }): void {
   if (!state.caseInstance) return;
   const utterance = input.doctorText.trim();
@@ -733,6 +745,8 @@ export function recordDialogue(input: {
     tr: input.patient.tr,
     seq: ev.seq,
     affect: input.affect,
+    ...(input.actions && input.actions.length ? { actions: input.actions } : {}),
+    ...(input.guard ? { guard: input.guard } : {}),
   };
   setState({
     ...state,

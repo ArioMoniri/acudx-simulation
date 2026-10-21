@@ -1,0 +1,124 @@
+{
+  "chat": {
+    "questions": {
+      "onset": "When did this start?",
+      "location": "Where exactly do you feel it?",
+      "character": "How would you describe it?",
+      "radiation": "Does it spread anywhere else?",
+      "severity": "How bad is it, from 0 to 10?",
+      "timing": "Is it constant, or does it come and go?",
+      "aggravating": "Does anything make it worse?",
+      "relieving": "Does anything make it better?",
+      "associatedSymptoms": "Have you noticed anything else along with it?",
+      "redFlags": "Has anything frightened you, like fainting, bleeding or the worst pain of your life?",
+      "pastMedicalHistory": "Do you have any medical conditions, or have you had operations before?",
+      "medications": "Which medicines do you take?",
+      "allergies": "Are you allergic to any medicines?",
+      "familyHistory": "Does anything run in your family?",
+      "socialHistory": "Tell me about your work, smoking, alcohol and recent travel.",
+      "riskFactors": "Do you have diabetes, high blood pressure or high cholesterol?",
+      "ice": "What do you think is going on, and what worries you most?"
+    },
+    "roles": {
+      "learner": "You",
+      "patient": "Patient",
+      "nurse": "Nurse",
+      "attending": "Attending"
+    },
+    "time": {
+      "sim": "T+{{clock}}",
+      "simLabel": "Simulation time {{clock}}"
+    },
+    "status": {
+      "sending": "Sending"
+    },
+    "empty": {
+      "title": "Start the interview",
+      "body": "Introduce yourself and ask in your own words. Type / for orders, examination and chart sections."
+    },
+    "composer": {
+      "hint": "Enter to send. Shift+Enter for a new line. / for commands.",
+      "suggestions": "Suggestions",
+      "call": "Voice call",
+      "callOn": "Voice on: replies are spoken",
+      "callOff": "Start a voice call with the patient"
+    },
+    "slash": {
+      "menuLabel": "Commands",
+      "noMatches": "Nothing matches",
+      "order": "Place a test order",
+      "exam": "Examine the patient",
+      "go": "Open a chart section",
+      "ask": "Browse suggested questions"
+    },
+    "targets": {
+      "results": "Results",
+      "imaging": "Imaging",
+      "orders": "Orders",
+      "vitals": "Vitals",
+      "notes": "Notes",
+      "diagnosis": "Diagnosis",
+      "guide": "Guide"
+    },
+    "actions": {
+      "groupLabel": "Actions from this reply",
+      "orderLabel": "Order {{label}}",
+      "confirmPrompt": "Place {{label}}?",
+      "confirm": "Place order",
+      "cancel": "Cancel",
+      "pending": "Pending, {{eta}}",
+      "resulted": "Resulted",
+      "viewResult": "View result",
+      "open": "Open {{target}}",
+      "followUps": "Follow up",
+      "draft": "Order draft",
+      "removeDraft": "Remove draft"
+    },
+    "guard": {
+      "offTopic": {
+        "label": "Off topic",
+        "note": "The patient answered in character, but the history did not move forward. Bring the conversation back to the presenting problem."
+      },
+      "answerSeeking": {
+        "label": "Stays in role",
+        "note": "The patient cannot give you the diagnosis or the answer. Ask about symptoms, history or examination instead."
+      },
+      "injection": {
+        "label": "Blocked",
+        "note": "This message was not sent to the patient: it tried to change the simulation's instructions."
+      },
+      "unsafe": {
+        "label": "Support",
+        "note": "The simulation paused the role play. If this is about you, please reach out to someone you trust or local emergency services."
+      }
+    },
+    "nurse": {
+      "resultBack": "{{label}} has resulted.",
+      "resultBackAbnormal": "{{label}} has resulted and is flagged abnormal.",
+      "resultBackCritical": "{{label}} has resulted with a critical value."
+    },
+    "exam": {
+      "performed": "Examined: {{maneuver}}",
+      "noFinding": "Nothing recorded for this examination.",
+      "awaiting": "Findings are still being written for this patient."
+    },
+    "drawer": {
+      "title": "Suggestions",
+      "history": "History questions",
+      "exam": "Examination",
+      "filter": "Filter suggestions",
+      "noMatches": "No suggestion matches"
+    },
+    "quick": {
+      "label": "Suggested next questions"
+    },
+    "guardLabels": {
+      "clinical": "On task",
+      "off_topic": "Off topic",
+      "meta_injection": "Stays in role",
+      "diagnosis_request": "No diagnosis from the patient",
+      "unsafe": "Support",
+      "other_language": "Language"
+    }
+  }
+}

@@ -648,7 +648,7 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
               const prelimDue = o.preliminaryAt != null && nowMs >= o.preliminaryAt;
               const failed = o.engineStatus === "error";
               return (
-                <li key={`${o.code}-${i}`} className="flex flex-col gap-0.5 text-sm">
+                <li key={`${o.code}-${i}`} data-chart-ref={o.code} className="flex flex-col gap-0.5 text-sm">
                   <div className="flex items-center justify-between gap-2">
                     <span className="min-w-0 truncate text-fg">
                       {lang === "tr" ? o.labelTr : o.labelEn}
@@ -1102,7 +1102,7 @@ function SummaryStat({
 function PanelTable({ group, lang }: { group: PanelGroup; lang: Lang }) {
   const { t } = useTranslation();
   return (
-    <section>
+    <section data-chart-ref={group.key}>
       <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <h4 className="flex items-baseline gap-2 text-sm font-semibold text-fg">
           {pick(group.title, lang)}

@@ -23,6 +23,8 @@ import { ProblemListTab } from "./tabs/ProblemListTab";
 import { LiveVitalsMonitor, TrendMonitor } from "@/components/monitor";
 import { RealtimeGuidance, AttendingTips } from "@/components/guidance";
 import { setStage, useEncounterState } from "@/state/encounterStore";
+import { tabForTarget, type NavigateTarget } from "@/lib/chatActions";
+import { focusChartItem } from "@/lib/chartFocus";
 import type { EncounterStage } from "@/state/encounterStore";
 import type { Lang } from "@/data/schema";
 import type { CaseInstance } from "@/domain/case";
@@ -254,6 +256,18 @@ export function ActivityTabs({
     }
   }
 
+  // Chat navigate actions and /go: switch the tab like a click, then bring the
+  // named item (an order code) into view and flash it.
+  const navigateFromChat = useCallback(
+    (target: NavigateTarget, ref?: string) => {
+      handleValueChange(tabForTarget(target));
+      focusChartItem(ref);
+    },
+    // handleValueChange only reads stable setters and commitTab.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [commitTab],
+  );
+
   return (
     <Tabs
       value={activeTab}
@@ -337,6 +351,7 @@ export function ActivityTabs({
           affectLabel={affectLabel}
           guidanceOn={guidanceOn}
           onGuidanceChange={onGuidanceChange}
+          onNavigate={navigateFromChat}
         />
       </TabsContent>
       <TabsContent value="flowsheets">
