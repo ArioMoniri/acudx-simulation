@@ -28,7 +28,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from server.admin_routes import require_admin
-from server.auth.deps import Principal, current_user
+from server.auth.deps import Principal, current_user, optional_user
 from server.voice import livekit as lk
 from server.voice.adapters import STT_ADAPTERS, TTS_ADAPTERS, adapter_name_for
 from server.voice.service import NoVoiceProvider, VoiceService
@@ -57,12 +57,21 @@ class TtsBody(BaseModel):
     speed: float = Field(default=1.0, ge=0.5, le=2.0)
 
 
+async def signed_in_when_oidc(request: Request, user: Principal | None = Depends(optional_user)) -> None:
+    """Under AUTH_MODE=oidc speech needs a verified user: an anonymous TTS or STT call could
+    otherwise wake the on-demand GPU worker (billed by the hour) from the open internet."""
+    auth = getattr(request.app.state, "auth", None)
+    if user is None and auth is not None and getattr(auth, "mode", None) == "oidc":
+        raise HTTPException(status_code=401, detail={"reason": "unauthenticated", "message": "sign in to use voice"},
+                            headers={"WWW-Authenticate": "Bearer"})
+
+
 def _unavailable(exc: NoVoiceProvider) -> JSONResponse:
     return JSONResponse(status_code=503, content={"error": f"{exc.kind}_unavailable", "airgapped": exc.airgapped,
                                                   "reasons": exc.reasons, "pending_launch": exc.pending_launch})
 
 
-@router.post("/tts")
+@router.post("/tts", dependencies=[Depends(signed_in_when_oidc)])
 async def tts(request: Request, body: TtsBody):
     svc = _service(request)
     try:
@@ -84,7 +93,7 @@ async def tts(request: Request, body: TtsBody):
     return StreamingResponse(out.stream.chunks, media_type=out.stream.content_type, headers=headers)
 
 
-@router.post("/stt")
+@router.post("/stt", dependencies=[Depends(signed_in_when_oidc)])
 async def stt(request: Request, file: UploadFile = File(...), lang: str | None = Form(default=None)):
     svc = _service(request)
     audio = await file.read()

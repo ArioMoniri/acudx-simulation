@@ -125,3 +125,25 @@ def test_case_start_needs_a_signed_in_user_under_oidc():
     for path in ("/v2/case/generate/stream", "/v2/case/generate"):
         r = c.post(path, json={"complaint": "fever"})
         assert r.status_code == 401 and r.json()["error"] == "unauthenticated"
+
+
+def test_voice_tts_and_stt_need_a_signed_in_user_under_oidc():
+    from fastapi import FastAPI  # noqa: PLC0415
+    from fastapi.testclient import TestClient  # noqa: PLC0415
+
+    from server.voice.routes import router  # noqa: PLC0415
+
+    class Auth:
+        mode = "oidc"
+
+        async def authenticate(self, request):
+            return None
+
+    app = FastAPI()
+    app.state.auth = Auth()
+    app.include_router(router)
+    c = TestClient(app)
+    r = c.post("/v1/voice/tts", json={"text": "hello"})
+    assert r.status_code == 401
+    r = c.post("/v1/voice/stt", files={"file": ("a.webm", b"x", "audio/webm")})
+    assert r.status_code == 401
