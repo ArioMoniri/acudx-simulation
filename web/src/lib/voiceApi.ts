@@ -380,7 +380,7 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
     },
 
     /** Transcribe a recorded clip. `lang` is a hint ("en" | "tr"); omit to auto-detect. */
-    transcribe(
+    async transcribe(
       blob: Blob,
       params: { lang?: string; filename?: string } = {},
       opts: RequestOptions = {},
@@ -389,7 +389,9 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
       const name = params.filename ?? (blob.type.includes("mp4") ? "dictation.mp4" : "dictation.webm");
       fd.append("file", blob, name);
       if (params.lang) fd.append("lang", params.lang.toLowerCase().split("-")[0]);
-      return json<SttResponse>("/v1/voice/stt", { method: "POST", body: fd }, { timeoutMs: 45_000, ...opts });
+      // Signed in: under OIDC the gateway refuses anonymous speech (it can wake the billed GPU worker).
+      const headers = await identityOrNone();
+      return json<SttResponse>("/v1/voice/stt", { method: "POST", body: fd, headers }, { timeoutMs: 45_000, ...opts });
     },
 
     /**
@@ -397,12 +399,13 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
      * caller can begin streaming playback; the body is consumed by `playTtsStream`.
      */
     async synthesize(req: TtsRequest, opts: RequestOptions = {}): Promise<TtsResult> {
+      const identityHeaders = await identityOrNone();
       const { signal, clear } = composeSignal(opts, opts.timeoutMs ?? 30_000);
       let res: Response;
       try {
         res = await fetchFn(`${base}/v1/voice/tts`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...identityHeaders },
           body: JSON.stringify(buildTtsBody(req)),
           signal,
         });
