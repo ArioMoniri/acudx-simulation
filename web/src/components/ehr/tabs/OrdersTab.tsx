@@ -676,7 +676,7 @@ function TrackerRow({
   const etaSec = Math.max(0, Math.ceil((order.resultsReadyAt - nowMs) / 1000));
 
   return (
-    <Tr>
+    <Tr data-chart-ref={order.code}>
       <Td className="max-w-[200px]">
         <span className="block truncate font-medium text-fg">{name}</span>
         <span className="block font-mono text-[0.6875rem] text-subtle">

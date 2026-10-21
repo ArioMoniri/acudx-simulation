@@ -49,8 +49,10 @@ test.describe("encounter", () => {
     await expect(doctorTurns).toHaveCount(3);
     await expect(patientTurns).toHaveCount(3, { timeout: 15_000 });
 
-    // Exam maneuver chip.
-    await page.getByRole("button", { name: "Auscultate heart" }).click();
+    // Exam maneuver suggestions live in the collapsible suggestions drawer.
+    const heart = page.getByRole("button", { name: "Auscultate heart" });
+    if (!(await heart.isVisible())) await page.getByRole("button", { name: "Suggestions" }).click();
+    await heart.click();
     await page.getByRole("button", { name: "Recheck vitals" }).click();
 
     // Orders: one lab (troponin) + one imaging (chest X-ray).
