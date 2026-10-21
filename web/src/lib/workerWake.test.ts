@@ -128,6 +128,25 @@ describe("watchWorker", () => {
   });
 });
 
+describe("keep-alive while the learner waits", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("re-posts warm on every waking read and stops with the watch", async () => {
+    const capabilities = vi.fn(async () => ({ ok: true as const, data: caps({ ready: true, runner: "building" }) }));
+    const warm = vi.fn(async () => ({ ok: true as const, data: { ready: true, pending_launch: false, refusal: null } }));
+    let active = true;
+    watchWorker({ api: { capabilities, warm } as unknown as VoiceApi, isActive: () => active, onStatus: () => {}, intervalMs: 1000 });
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(1000);
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    expect(warm).toHaveBeenCalledTimes(2);
+    active = false;
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(warm).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("the live video stage (avatar.wake)", () => {
   function withVideo(wake: VideoWake, over: Parameters<typeof caps>[0] = {}): VoiceCapabilities {
     const c = caps(over);

@@ -157,7 +157,8 @@ DEFAULT_SERVICES_WAIT_S = 1800.0
 
 
 async def await_services(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, *,
-                         wait_s: float = DEFAULT_SERVICES_WAIT_S, poll_s: float | None = None) -> bool:
+                         wait_s: float = DEFAULT_SERVICES_WAIT_S, poll_s: float | None = None,
+                         keepalive: Any = None) -> bool:
     """Wait until the image edit server (on ``a.gen_worker``) and the call's runner both answer.
     False after ``wait_s``, with the reason on ``a.reason``. Production 2026-10-21: a call that came
     in while the edit server was still loading kept the plain portrait for the whole case."""
@@ -177,6 +178,8 @@ async def await_services(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: 
             a.reason = f"{why}; gave up after {wait_s:.0f} s, the call keeps the case portrait"
             return False
         a.reason = f"{why}; the face switches to the patient's look when the pictures are ready"
+        if keepalive is not None:
+            keepalive()   # pictures on the way are use of the worker: keep it out of the idle reaper
         await asyncio.sleep(poll)
 
 
@@ -262,7 +265,7 @@ def new_appearance(*, thread_id: str, photo_id: str, spec: dict[str, Any], direc
 
 
 def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, portrait: bytes, *,
-               services_wait_s: float = DEFAULT_SERVICES_WAIT_S) -> asyncio.Event:
+               services_wait_s: float = DEFAULT_SERVICES_WAIT_S, keepalive: Any = None) -> asyncio.Event:
     """Make every picture first, then prepare them (presenting first), switching a connected call as each
     one lands. Pictures before preparations: the image edit server and the runner share a 40 GB card,
     and the runner's preparation buffers left the edits no room (live 2026-10-21). A worker whose edit
@@ -275,12 +278,14 @@ def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
 
     async def pipeline() -> None:
         try:
-            if not await await_services(client, worker, a, wait_s=services_wait_s):
+            if not await await_services(client, worker, a, wait_s=services_wait_s, keepalive=keepalive):
                 return
             a.reason = None
             for v in order:
                 if v.image is None and v.status != "ready":
                     await _gen(client, worker, a, v, portrait, seed=seed)
+                    if keepalive is not None:
+                        keepalive()
             for v in order:
                 if v.status == "generated":
                     ok = await _prep(client, worker, a, v)
@@ -300,7 +305,7 @@ def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
 async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id: str, photo_id: str,
                 portrait: bytes, spec: dict[str, Any], director: dict[str, Any], wait_s: float = 45.0,
                 gen_worker: mt.WorkerAvatar | None = None, existing: Appearance | None = None,
-                services_wait_s: float = DEFAULT_SERVICES_WAIT_S) -> tuple[Appearance, str]:
+                services_wait_s: float = DEFAULT_SERVICES_WAIT_S, keepalive: Any = None) -> tuple[Appearance, str]:
     """The call's appearance: the one prepared at case start when there is one (``existing``), else a
     new ladder. Waits up to ``wait_s`` for the presenting look; returns the state and the avatar id the
     call should open with (the case portrait until the look is ready, then a crossfade to it)."""
@@ -316,7 +321,7 @@ async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id
                            gen_worker=gen_worker)
         ig = await mt.imagegen_health(client, a.gen_worker)
         a.gen_mode = ig.get("mode")
-        first_done = run_ladder(client, worker, a, portrait, services_wait_s=services_wait_s)
+        first_done = run_ladder(client, worker, a, portrait, services_wait_s=services_wait_s, keepalive=keepalive)
         a.first_done = first_done
         if not ig.get("ok"):
             # Still loading (or out of room): the call opens on the portrait now, the ladder waits for

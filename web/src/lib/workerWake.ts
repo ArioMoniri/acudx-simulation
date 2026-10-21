@@ -76,7 +76,8 @@ export async function wakeOnCallStart(api: Pick<VoiceApi, "warm">): Promise<Wake
 }
 
 export interface WatchOptions {
-  api: Pick<VoiceApi, "capabilities">;
+  /** `warm` (optional) is re-posted while waiting: the learner waiting counts as use of the worker. */
+  api: Pick<VoiceApi, "capabilities"> & Partial<Pick<VoiceApi, "warm">>;
   /** False once the call ended (or the tile unmounted): the watch stops. */
   isActive: () => boolean;
   /** Every status read, including the final ready / failed one. */
@@ -105,6 +106,9 @@ export function watchWorker({ api, isActive, onStatus, intervalMs = WAKE_POLL_MS
       const status = wakeStatus(res.data);
       onStatus(status, res.data);
       if (status.kind !== "waking") return stop();
+      // Keep-alive: the worker answers minutes before its runner and image edits are up, and the
+      // gateway's idle reaper stopped it while the learner watched the start-up panel (2026-10-21).
+      void api.warm?.({ timeoutMs: 6000 });
     }
     timer = setTimeout(() => void tick(), intervalMs);
   };

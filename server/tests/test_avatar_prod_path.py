@@ -132,11 +132,15 @@ def test_pictures_wait_for_the_image_edit_server_instead_of_giving_up(tmp_path, 
 def test_prepare_on_a_worker_without_an_edit_server_yet_waits_too(tmp_path, monkeypatch):
     monkeypatch.setattr(state_sync, "SERVICES_POLL_S", 0.05)
     runner = SyncRunner(imagegen=False)
-    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True))
+    worker = FakeWorkerManager(ready=True)
+    app, _ = _app(tmp_path, runner=runner, worker=worker)
     _case(app)
     with TestClient(app) as c:
         r = _prepare(c)
         assert r.status_code == 202 and r.json()["state"] == "preparing"
+        # While the pictures wait for the edit server, the worker counts as in use (idle reaper).
+        before = worker.touches
+        assert _wait(lambda: worker.touches >= before + 2)
         runner.imagegen = True
         assert _wait(lambda: _prepare(c).json()["state"] == "prepared", timeout=8)
 

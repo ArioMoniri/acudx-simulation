@@ -263,7 +263,7 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
             s.appearance, s.avatar_id = await sync_mod.start(
                 svc.client, worker, thread_id=str(body.thread_id), photo_id=str(body.photo_id), portrait=portrait,
                 spec=view[0], director=view[1], wait_s=wait_s, gen_worker=gen, existing=reuse,
-                services_wait_s=_services_wait_s(svc))
+                services_wait_s=_services_wait_s(svc), keepalive=lambda: _touch(svc, worker))
             if reuse is None and body.thread_id:
                 _remember_look(request.app, f"{body.thread_id}:{body.photo_id}", s.appearance)
             s.appearance.worker_origin = worker.origin
@@ -646,7 +646,8 @@ async def _begin_ladder(app: Any, svc: VoiceService, *, thread_id: str, photo_id
     a.gen_mode = ig.get("mode")
     if not ig.get("ok"):
         a.reason = (f"image edit server: {ig.get('reason') or 'not ready'}; the pictures are made when it is up")
-    a.first_done = sync_mod.run_ladder(svc.client, worker, a, photo.read_bytes(), services_wait_s=_services_wait_s(svc))
+    a.first_done = sync_mod.run_ladder(svc.client, worker, a, photo.read_bytes(), services_wait_s=_services_wait_s(svc),
+                                       keepalive=lambda: _touch(svc, worker))
     _remember_look(app, f"{thread_id}:{photo_id}", a)
     return a
 
