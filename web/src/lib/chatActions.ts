@@ -15,50 +15,41 @@
  *
  * The parsers are defensive: an unknown kind, a missing field or a wrong type is
  * dropped rather than rendered, so a partial server rollout never breaks the
- * thread. The older guard shape (the scope-guard verdict, `{ cls, score, ... }`)
- * is accepted and mapped to nothing for an in-scope turn.
+ * thread. parseChatGuard reads a display-shaped `{ label, note? }`; the server's
+ * InterviewGuard (`{ label: GuardLabel, reason, note? }`) is mapped to it by the
+ * send path with a localized label (lib/interviewSend.ts).
  *
  * Pure module: no React, no store.
  */
 
 import { ORDERABLES, catalogCodeFor, type Orderable } from "@/domain/orderables";
 import type { ExamManeuver, QuestionIntent } from "@/domain/case";
+import type {
+  InterviewAction as ChatAction,
+  NavigateTarget,
+  OrderAction,
+  OrderCodeSystem,
+} from "@/lib/api/interview";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                       */
 /* -------------------------------------------------------------------------- */
 
-export type OrderCodeSystem = "LOINC" | "RADLEX" | "local";
+// The action types are the server contract's own (lib/api/interview.ts,
+// docs/architecture/20-chat-contract.md section 5); re-exported here for the chat UI.
+export type {
+  OrderCodeSystem,
+  NavigateTarget,
+  OrderAction,
+  NavigateAction,
+  AskAction,
+  InterviewAction as ChatAction,
+} from "@/lib/api/interview";
 
-export type NavigateTarget =
-  | "results"
-  | "imaging"
-  | "orders"
-  | "vitals"
-  | "notes"
-  | "diagnosis"
-  | "guide";
-
-export interface OrderAction {
-  kind: "order";
-  code: string;
-  system: OrderCodeSystem;
-  label: string;
-}
-
-export interface NavigateAction {
-  kind: "navigate";
-  target: NavigateTarget;
-  ref?: string;
-}
-
-export interface AskAction {
-  kind: "ask";
-  text: string;
-}
-
-export type ChatAction = OrderAction | NavigateAction | AskAction;
-
+/**
+ * A guard note as the thread shows it: a display label (localized from the
+ * server's GuardLabel) and the server's note in the reply locale.
+ */
 export interface ChatGuard {
   label: string;
   note?: string;

@@ -46,6 +46,7 @@ from server.guidelines.routes import router as guidelines_router
 from server.learning.routes import router as learning_router
 from server.learning.store import LearningStore
 from server.model_gateway import GatewayError, ModelGateway
+from server.interview.routes import router as interview_router
 from server.orchestration.routes import router as orchestration_v2_router
 from server.persona import build_patient_turn, fact_assertion_gate
 from server.providers.gpu_worker import WorkerManager
@@ -119,6 +120,9 @@ async def lifespan(app: FastAPI):
     if not registry.secrets_configured:
         log.warning(secret_key_instructions())
     registry.seed_from_env(settings)
+    # The Claude route is a registry row too (docs/architecture/20 section 2): visible, switchable,
+    # and "Anthropic key not configured" in the console while ANTHROPIC_KEY is unset.
+    registry.ensure_anthropic_row(settings)
     telemetry = TelemetryRecorder(settings.acudx_db_path)
     # On-demand GPU worker manager + idle reaper (never always-on; see providers/gpu_worker.py).
     worker_manager = WorkerManager(settings, boot_timeout_s=settings.gpu_boot_timeout_s,
@@ -170,6 +174,7 @@ app = FastAPI(
 )
 
 app.include_router(orchestration_v2_router)  # /v2 case generator + Clinical Director
+app.include_router(interview_router)  # /v2/case/{thread_id}/interview (server/interview, docs/architecture/20)
 
 # CORS — localhost/127.0.0.1 on any port for the (tunnelled) web demo, plus any
 # explicitly configured origins. Credentials stay off so a regex origin is safe.

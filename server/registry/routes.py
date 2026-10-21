@@ -34,6 +34,7 @@ from server.registry.store import (
     ProviderPatch,
     RegistryStore,
     SecretKeyMissing,
+    is_anthropic,
     secret_key_instructions,
 )
 from server.telemetry.events import TelemetryRecorder, summarize
@@ -83,8 +84,42 @@ async def list_providers(request: Request, kind: str | None = None) -> dict[str,
     if kind is not None and kind not in PROVIDER_KINDS:
         raise HTTPException(status_code=422, detail=f"unknown kind {kind!r}")
     store = _store(request)
-    return {"providers": [p.public() for p in store.list_providers(kind=kind)], "kinds": list(PROVIDER_KINDS),
-            "secrets_configured": store.secrets_configured}
+    settings = request.app.state.settings
+    return {"providers": [_public(p, store, settings) for p in store.list_providers(kind=kind)],
+            "kinds": list(PROVIDER_KINDS), "secrets_configured": store.secrets_configured,
+            "anthropic": anthropic_health(store, settings)}
+
+
+def anthropic_health(store: RegistryStore, settings: Any) -> dict[str, Any]:
+    """The Claude route for the admin console: configured, usable, selected, and why not.
+
+    Never the key: only whether one exists (env or sealed) and the operator-facing reason
+    ("Anthropic key not configured" when there is none)."""
+    from server.providers.anthropic_provider import AnthropicProvider  # noqa: PLC0415
+
+    rec = store.anthropic_row()
+    sealed = store.decrypt_key(rec) if rec is not None else None
+    st = AnthropicProvider(settings, api_key=sealed).status()
+    return {
+        "configured": bool(st["configured"]), "usable": bool(st["usable"]), "reason": st["reason"],
+        "key_source": ("registry" if sealed else ("env" if (settings.anthropic_key or "").strip() else None)),
+        "provider_id": rec.id if rec is not None else None, "enabled": bool(rec.enabled) if rec is not None else None,
+        "models": {"author": settings.anthropic_model_author, "repair": settings.anthropic_model_repair,
+                   "judges": list(settings.anthropic_judge_models), "persona": settings.anthropic_model_persona,
+                   "classifier": settings.anthropic_model_classifier, "narrator": settings.anthropic_model_narrator,
+                   "debrief": settings.anthropic_model_debrief, "render": settings.anthropic_model_render,
+                   "grounding": settings.anthropic_model_grounding, "tutor": settings.anthropic_model_tutor},
+    }
+
+
+def _public(rec: Any, store: RegistryStore, settings: Any) -> dict[str, Any]:
+    out = rec.public()
+    if is_anthropic(rec):
+        h = anthropic_health(store, settings)
+        out["has_key"] = bool(h["key_source"])
+        out["status_note"] = h["reason"]
+        out["api"] = "anthropic"
+    return out
 
 
 @router.post("/providers", status_code=201)
@@ -98,7 +133,7 @@ async def create_provider(request: Request, body: ProviderIn) -> dict[str, Any]:
 
 @router.get("/providers/{provider_id}")
 async def get_provider(request: Request, provider_id: int) -> dict[str, Any]:
-    return _get_or_404(_store(request), provider_id).public()
+    return _public(_get_or_404(_store(request), provider_id), _store(request), request.app.state.settings)
 
 
 @router.put("/providers/{provider_id}")
@@ -127,6 +162,8 @@ async def probe(request: Request, provider_id: int) -> dict[str, Any]:
     gateway = getattr(request.app.state, "gateway", None)
     client: httpx.AsyncClient | None = getattr(gateway, "_client", None) if gateway else None
     key = store.decrypt_key(rec)
+    if is_anthropic(rec) and not key:
+        key = (settings.anthropic_key or "").strip() or None
     if client is not None:
         return await probe_provider(rec, api_key=key, settings=settings, client=client, store=store)
     async with httpx.AsyncClient() as own:
@@ -192,6 +229,7 @@ async def health(request: Request) -> dict[str, Any]:
         "gpu": gpu,
         "disk": disk,
         "jobs": {name: job.status() for name, job in (getattr(request.app.state, "jobs", None) or {}).items()},
+        "anthropic": anthropic_health(store, settings),
         "ts": time.time(),
     }
 

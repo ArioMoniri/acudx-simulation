@@ -23,7 +23,10 @@ import httpx
 
 from server import net_guard
 from server.config import EgressBlocked, Settings
-from server.registry.store import ProviderRecord, RegistryStore
+from server.registry.store import ProviderRecord, RegistryStore, is_anthropic
+
+# Anthropic Messages API version header (https://platform.claude.com/docs/en/api/versioning).
+ANTHROPIC_VERSION = "2023-06-01"
 
 PROBE_TIMEOUT_S = 5.0
 
@@ -107,6 +110,17 @@ async def probe_provider(rec: ProviderRecord, *, api_key: str | None, settings: 
     headers = _auth_headers(rec.kind, api_key, rec.base_url)
     base = rec.base_url.rstrip("/")
     paths = HEALTH_PATHS.get(rec.kind, ("/",))
+    if is_anthropic(rec):
+        # GET /v1/models with x-api-key checks reachability and the key in one call. The key
+        # is the sealed one, else ANTHROPIC_KEY; without either nothing is dialled.
+        api_key = api_key or (getattr(settings, "anthropic_key", None) or "").strip() or None
+        if not api_key:
+            result.update(error="Anthropic key not configured",
+                          detail="Set ANTHROPIC_KEY in the server environment or store a key on this row.")
+            _persist(store, rec.id, result)
+            return result
+        headers = {"x-api-key": api_key, "anthropic-version": ANTHROPIC_VERSION}
+        paths = ("/v1/models",)
     if _is_tavus(rec):
         # Tavus has no health route; List PALs (GET /v2/pals, x-api-key) checks reachability and
         # the key in one call (https://docs.tavus.io/api-reference/pals/list-pals).

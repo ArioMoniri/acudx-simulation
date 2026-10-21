@@ -5,10 +5,17 @@
  * go through `routeMessage`. A catalogue suggestion carries its intent and skips
  * classification; free text is classified by the client Scope Guard first.
  *
- *  Live (gateway reachable): every soft class (greeting, in-scope, off-topic,
- *  answer-seeking) is sent to /v1/patient/turn; the reply's `actions` and
- *  `guard` ride along on the patient turn. Injection and unsafe never leave the
- *  browser. A failed or degraded reply falls back to the offline route.
+ *  Live, server-held case (docs/architecture/20-chat-contract.md): every message
+ *  goes to POST /v2/case/{thread}/interview. The server guard labels it, the
+ *  persona answers from the server-held case, and the reply's `actions` and
+ *  `guard` ride along on the patient turn. The client heuristic guard does not
+ *  decide which typed questions reach the patient. A 503 or network failure
+ *  falls through to the older route below.
+ *
+ *  Live, no server interview (older clients): every soft class (greeting,
+ *  in-scope, off-topic, answer-seeking) is sent to /v1/patient/turn; injection
+ *  and unsafe never leave the browser. A failed or degraded reply falls back to
+ *  the offline route.
  *
  *  Offline: an in-scope question with an intent is answered by the reveal
  *  graph; one without an intent gets a clarifying reply; a greeting gets a
@@ -22,6 +29,7 @@
 import type { QuestionIntent } from "@/domain/case";
 import type { UtteranceClass } from "@/domain/scopeGuard";
 import { parseChatActions, parseChatGuard, type ChatAction, type ChatGuard } from "@/lib/chatActions";
+import type { GuardLabel, InterviewReply } from "@/lib/api/interview";
 
 export type SoftGuardClass = Extract<UtteranceClass, "off-topic" | "answer-seeking">;
 export type HardGuardClass = Extract<UtteranceClass, "injection" | "unsafe">;
@@ -40,8 +48,27 @@ export interface PatientReply {
   degraded: boolean;
 }
 
+/** The parts of the server interview reply the route reads. */
+export type ServerReply = Pick<InterviewReply, "reply" | "guard" | "actions" | "intent" | "state_advance">;
+
+/** Server guard label -> the client guard-event class it is logged as (process metrics). */
+const GUARD_CLASS_BY_LABEL: Partial<Record<GuardLabel, SoftGuardClass | HardGuardClass>> = {
+  off_topic: "off-topic",
+  diagnosis_request: "answer-seeking",
+  meta_injection: "injection",
+  unsafe: "unsafe",
+};
+
 export interface SendDeps {
   live: boolean;
+  /**
+   * The server-held interview (POST /v2/case/{thread}/interview). Absent when the
+   * case has no server thread; resolves null when no patient model answered
+   * (503 model_unreachable) or the call failed.
+   */
+  serverInterview?: (text: string) => Promise<ServerReply | null>;
+  /** The thread's guard note for a server guard (null for a clinical message). */
+  guardDisplay?: (guard: ServerReply["guard"]) => ChatGuard | null;
   classify: (text: string) => { class: UtteranceClass; score: number; rationale: string };
   inferIntent: (text: string) => QuestionIntent | null;
   /** Reveal-graph question (offline answer, or the live persona's voiced reveal). */
@@ -70,6 +97,7 @@ export type RouteOutcome =
   | "soft-guard"
   | "hard-guard"
   | "live"
+  | "server"
   | "empty";
 
 function isSoft(c: UtteranceClass): c is SoftGuardClass {
@@ -119,6 +147,33 @@ export async function routeMessage(
   const text = raw.trim();
   if (!text) return "empty";
   if (!deps.live) return routeOffline(text, deps, opts.intent);
+
+  if (deps.serverInterview) {
+    let served: ServerReply | null = null;
+    try {
+      served = await deps.serverInterview(text);
+    } catch {
+      served = null;
+    }
+    if (served && served.reply.trim()) {
+      const actions = parseChatActions(served.actions);
+      const guard = deps.guardDisplay?.(served.guard) ?? null;
+      const cls = GUARD_CLASS_BY_LABEL[served.guard.label];
+      if (cls) deps.logGuard(cls, text, 1, `${served.guard.label}:${served.guard.reason}`);
+      deps.recordExchange({
+        doctorText: text,
+        patient: { en: served.reply, tr: served.reply },
+        source: "live",
+        ...(actions.length ? { actions } : {}),
+        ...(guard ? { guard } : {}),
+      });
+      // The served intent reveals the matching history datum and steps the
+      // Director exactly as a list click does (contract section 3).
+      const intent = (served.intent as QuestionIntent | null) ?? opts.intent ?? null;
+      if (intent && served.state_advance) deps.askQuestion(intent, { utterance: text, voiced: true });
+      return "server";
+    }
+  }
 
   let cls: UtteranceClass = "in-scope";
   let softGuard: { patient: Bilingual; guard: ChatGuard } | null = null;

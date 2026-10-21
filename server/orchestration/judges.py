@@ -501,7 +501,7 @@ async def run_judge(
 
     reply = await llm.complete_json(
         judge_messages(name, draft, cond), schema=JUDGE_SCHEMA, schema_name="judge_verdict",
-        role="judge", temperature=0.0, max_tokens=500,
+        role="judge", temperature=0.0, max_tokens=500, node=f"judge:{name}",
     )
     raw_verdict = str(reply.data.get("verdict") or "pass").lower()
     bound, notes = bind_issues(list(reply.data.get("issues") or []), draft, cond)

@@ -12,8 +12,9 @@ import { createProfile, openTab, settle } from "./helpers/session";
  * docs/design/chat-shots/.
  *
  * Offline: /api is aborted (helpers/session offlineGateway) and the client
- * reveal graph answers. Live: /api/health and /api/v1/patient/turn are
- * answered here with the contract shape the server is adding in parallel.
+ * reveal graph answers. Live: /api/health and POST /api/v2/case/{thread}/interview
+ * are answered here in the InterviewReply shape (lib/api/interview.ts,
+ * docs/architecture/20-chat-contract.md).
  *
  * Run: PORT=4207 npx playwright test e2e/chat.spec.ts --project=laptop
  */
@@ -31,19 +32,30 @@ const VIEWPORTS = [
 
 const COMPOSER = "Type a question to the patient, then press Enter";
 
-const LIVE_REPLY = {
-  utterance: "It came on this morning, a heavy pressure in the middle of my chest. It still has not gone.",
-  routed_as: "in-scope",
-  state_advance: true,
-  guard: { label: "On task", note: "Good opener. Characterise the pain next." },
-  flags: [],
-  meta: { model: "e2e", provider: "e2e" },
-  actions: [
-    { kind: "order", code: "10839-9", system: "LOINC", label: "Troponin I" },
-    { kind: "navigate", target: "vitals" },
-    { kind: "ask", text: "Does the pain spread to your arm or jaw?" },
-  ],
-};
+function interviewReply(message: string) {
+  const offTopic = /weather/i.test(message);
+  return {
+    thread_id: "e2e",
+    reply: offTopic
+      ? "I would rather talk about my chest, doctor."
+      : "It came on this morning, a heavy pressure in the middle of my chest. It still has not gone.",
+    guard: offTopic
+      ? { label: "off_topic", reason: "small_talk", note: "Off-topic: the patient answered briefly. Back to the history." }
+      : { label: "clinical", reason: "in_scope" },
+    actions: offTopic
+      ? []
+      : [
+          { kind: "order", code: "10839-9", system: "LOINC", label: "Troponin I" },
+          { kind: "navigate", target: "vitals" },
+          { kind: "ask", text: "Does the pain spread to your arm or jaw?" },
+        ],
+    intent: offTopic ? null : "onset",
+    layer: offTopic ? null : "history.presenting",
+    state_advance: !offTopic,
+    flags: [],
+    meta: { source: "model", guard_source: "rules+model", provider: "e2e" },
+  };
+}
 
 async function openInterview(page: Page) {
   await page.goto("/encounter");
@@ -94,7 +106,6 @@ async function shot(page: Page, name: string) {
 }
 
 test.describe("interview chat", () => {
-  // eslint-disable-next-line no-empty-pattern
   test.beforeEach(({}, info) => {
     test.skip(info.project.name !== "laptop", "viewports are driven inside the spec");
   });
@@ -140,10 +151,11 @@ test.describe("interview chat", () => {
       await createProfile(page, { role: "student" });
       await page.route("**/api/health", (route) => route.fulfill({ json: { status: "ok" } }));
       const turns: string[] = [];
-      await page.route("**/api/v1/patient/turn", async (route) => {
-        const body = route.request().postDataJSON() as { learner_msg: string };
-        turns.push(body.learner_msg);
-        await route.fulfill({ json: LIVE_REPLY });
+      await page.route("**/api/v2/case/*/interview", async (route) => {
+        if (route.request().method() !== "POST") return route.fallback();
+        const body = route.request().postDataJSON() as { message: string };
+        turns.push(body.message);
+        await route.fulfill({ json: interviewReply(body.message) });
       });
       await openInterview(page);
 
@@ -162,7 +174,12 @@ test.describe("interview chat", () => {
       await transcript.getByRole("button", { name: "Does the pain spread to your arm or jaw?" }).click();
       await expect.poll(() => turns.length).toBe(2);
       expect(turns[1]).toBe("Does the pain spread to your arm or jaw?");
-      await expect(transcript.getByTestId("guard-note").first()).toContainText("On task");
+      await expect(transcript.getByTestId("guard-note")).toHaveCount(0);
+
+      // Off topic: the server's guard note renders under the in-character reply.
+      await ask(page, "Nice weather today, isn't it?");
+      await expect.poll(() => turns.length).toBe(3);
+      await expect(transcript.getByTestId("guard-note").last()).toContainText("Back to the history.");
 
       await noHorizontalScroll(page);
       await axeClean(page);

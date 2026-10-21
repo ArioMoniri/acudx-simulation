@@ -50,6 +50,7 @@ import {
   type OrderAction,
 } from "@/lib/chatActions";
 import { routeMessage, type SendDeps } from "@/lib/interviewSend";
+import { interviewTurn, showsGuardNote } from "@/lib/api/interview";
 import {
   sttSupported,
   startRecording,
@@ -557,8 +558,25 @@ export function InterviewTab({
     };
   }
 
+  const threadId = state.generation?.threadId ?? null;
   const sendDeps: SendDeps = {
     live: live.enabled,
+    // A server-held case: the server guard labels every message and the persona
+    // answers from the server-held case (docs/architecture/20-chat-contract.md).
+    ...(threadId
+      ? {
+          serverInterview: async (text: string) => {
+            const res = await interviewTurn(threadId, {
+              message: text,
+              guidance: guidanceOn,
+              locale: lang === "tr" ? "tr" : "en",
+            });
+            return res.ok ? res.data : null;
+          },
+        }
+      : {}),
+    guardDisplay: (g) =>
+      showsGuardNote(g) ? { label: t(`chat.guardLabels.${g.label}`), ...(g.note ? { note: g.note } : {}) } : null,
     classify: (text) => classifyUtterance(text, caseInstance),
     inferIntent: (text) => inferQuestionIntent(text, caseInstance),
     askQuestion: (intent, opts) => askQuestion(intent, opts),

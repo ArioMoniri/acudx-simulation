@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { QuestionIntent } from "@/domain/case";
 import type { UtteranceClass } from "@/domain/scopeGuard";
-import { routeMessage, type PatientReply, type SendDeps } from "./interviewSend";
+import { routeMessage, type PatientReply, type SendDeps, type ServerReply } from "./interviewSend";
 
 /**
  * The interview's single send path. The owner's defect: "the chat only answers
@@ -97,6 +97,66 @@ describe("routeMessage offline", () => {
     const { d, calls } = deps();
     expect(await routeMessage("   ", d)).toBe("empty");
     expect(calls.ask).toHaveLength(0);
+  });
+});
+
+describe("routeMessage with the server interview (contract 20)", () => {
+  const SERVED: ServerReply = {
+    reply: "Since this morning, doctor.",
+    guard: { label: "clinical", reason: "in_scope" },
+    actions: [
+      { kind: "order", code: "2157-6", system: "LOINC", label: "Creatine kinase" },
+      { kind: "navigate", target: "vitals" },
+    ],
+    intent: "onset",
+    state_advance: true,
+  };
+  const display = (g: ServerReply["guard"]) => (g.label === "clinical" || !g.note ? null : { label: `L:${g.label}`, note: g.note });
+
+  it("sends typed text to the server without client classification and keeps actions", async () => {
+    const classify = vi.fn(() => ({ class: "off-topic" as const, score: 1, rationale: "x" }));
+    const sent: string[] = [];
+    const turn = vi.fn();
+    const { d, calls } = deps({
+      live: true,
+      classify,
+      patientTurn: turn,
+      serverInterview: async (text) => (sent.push(text), SERVED),
+      guardDisplay: display,
+    });
+    expect(await routeMessage("When did the pain start?", d)).toBe("server");
+    expect(sent).toEqual(["When did the pain start?"]);
+    expect(classify).not.toHaveBeenCalled();
+    expect(turn).not.toHaveBeenCalled();
+    expect(calls.exchanges[0].actions?.map((a) => a.kind)).toEqual(["order", "navigate"]);
+    expect(calls.exchanges[0].guard).toBeUndefined();
+    expect(calls.ask).toEqual([{ intent: "onset", opts: { utterance: "When did the pain start?", voiced: true } }]);
+  });
+
+  it("shows the server's guard note and logs the label for off-topic", async () => {
+    const offTopic: ServerReply = {
+      ...SERVED,
+      reply: "I'd rather talk about my chest, doctor.",
+      guard: { label: "off_topic", reason: "small_talk", note: "Off-topic: back to the history." },
+      actions: [],
+      intent: null,
+      state_advance: false,
+    };
+    const { d, calls } = deps({ live: true, serverInterview: async () => offTopic, guardDisplay: display });
+    await routeMessage("Nice weather?", d);
+    expect(calls.guards).toEqual(["off-topic"]);
+    expect(calls.exchanges[0].guard).toEqual({ label: "L:off_topic", note: "Off-topic: back to the history." });
+    expect(calls.ask).toHaveLength(0);
+  });
+
+  it("falls through to the older route when no patient model answered", async () => {
+    const { d, calls } = deps({
+      live: true,
+      serverInterview: async () => null,
+      patientTurn: async (text, intent) => (calls.turns.push({ text, intent }), LIVE_REPLY),
+    });
+    expect(await routeMessage("When did the pain start?", d)).toBe("live");
+    expect(calls.turns).toHaveLength(1);
   });
 });
 

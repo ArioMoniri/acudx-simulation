@@ -29,6 +29,16 @@ def make_settings(**overrides) -> Settings:
     return Settings(_env_file=None, **base)
 
 
+@pytest.fixture(autouse=True)
+def _no_ambient_anthropic_key(monkeypatch, request):
+    """Tests never pick up a real ANTHROPIC_KEY from the environment: the Claude route is
+    exercised with explicit settings and the in-process double. Live tests opt out with
+    the ``live`` marker."""
+    if request.node.get_closest_marker("live") is None:
+        monkeypatch.delenv("ANTHROPIC_KEY", raising=False)
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+
 @pytest.fixture
 def scenario() -> Scenario:
     return Scenario()

@@ -111,6 +111,14 @@
     },
     "quick": {
       "label": "Suggested next questions"
+    },
+    "guardLabels": {
+      "clinical": "On task",
+      "off_topic": "Off topic",
+      "meta_injection": "Stays in role",
+      "diagnosis_request": "No diagnosis from the patient",
+      "unsafe": "Support",
+      "other_language": "Language"
     }
   }
 }

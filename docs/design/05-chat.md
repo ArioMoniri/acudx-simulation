@@ -20,7 +20,8 @@ Three paths in the old `InterviewTab` dropped or deflected a typed message while
 Fix: one send path, `web/src/lib/interviewSend.ts` `routeMessage`, used by typed text, drawer suggestions, quick suggestions and follow-up chips alike.
 
 - The learner's line appears at once with "Sending" (optimistic), so nothing typed disappears.
-- Live: every soft class goes to the persona; only injection and unsafe stay deterministic in the browser. The reply's `actions` and `guard` ride along on the patient turn.
+- Live with a server-held case (the normal path, `docs/architecture/20-chat-contract.md`): every message goes to `POST /v2/case/{thread}/interview` (`web/src/lib/api/interview.ts interviewTurn`, with `guidance` and `locale`). The server guard labels it, the persona answers, and the reply's `actions` and `guard` render on the patient turn; the served `intent` reveals the history datum exactly as a list click does. The client heuristic guard does not decide what reaches the patient. A 503 or network failure falls through to the routes below.
+- Live without a server thread (older route): every soft class goes to `/v1/patient/turn`; only injection and unsafe stay deterministic in the browser. The reply's `actions` and `guard` ride along on the patient turn.
 - Offline or degraded: in-scope with an intent is answered by the reveal graph, without an intent by a clarifying line; a greeting by a greeting; off-topic and answer-seeking by an in-character line plus an attending note (persisted in the transcript).
 - A catalogue suggestion now sends a natural question ("Which medicines do you take?", EN and TR in `chat.questions.*`) with its intent, so it skips classification but takes exactly the same route.
 
@@ -85,7 +86,7 @@ The newest patient reply reveals word by word on animation frames (no timers); t
 
 ## 4. Contract (client side)
 
-`web/src/lib/chatActions.ts` owns the types and validators; `PatientTurnResult` in `web/src/lib/backend.ts` gained `actions?: unknown` and a `guard` that is either the scope verdict or `{ label, note? }`.
+The action types are the server contract's own (`web/src/lib/api/interview.ts`: `InterviewAction`, `OrderAction`, `NavigateAction`, `AskAction`, `NavigateTarget`), re-exported by `web/src/lib/chatActions.ts`, which adds the validators. The server guard `{ label: GuardLabel, reason, note? }` becomes a thread note only when `showsGuardNote()` is true: the display label is `chat.guardLabels.<label>` (EN, TR) and the note is the server's, already in the reply locale. `PatientTurnResult` in `web/src/lib/backend.ts` (older route) gained `actions?: unknown` and a guard that is either the scope verdict or `{ label, note? }`.
 
 ```ts
 actions: Array<
@@ -124,6 +125,6 @@ HANDOFF Designer + Frontend engineer (chat) -> Orchestrator
 Goal: an Epic-grade interview pane with free text first, one send path, and inline generative components from the reply's actions.
 Done: web/src/lib/chatActions.ts, chartFocus.ts, interviewSend.ts (+ tests); web/src/components/chat/* (InterviewThread, MessageActions, Composer, SuggestionsDrawer, StreamingText, chatRender.test.ts); web/src/components/ehr/tabs/InterviewTab.tsx rewritten on them; ActivityTabs passes onNavigate; data-chart-ref anchors in ResultsTab and OrdersTab; DialogueTurn actions and guard in encounterStore; PatientTurnResult actions and guard union in backend.ts; i18n chat.en.json and chat.tr.json; e2e/chat.spec.ts; encounter.spec.ts opens the drawer for exam buttons; docs/design/05-chat.md and chat-shots/.
 Verified by: see the session report.
-Open: server must send actions and guard { label, note? } on /v1/patient/turn; offline reveal graph still answers a question with no matching history item (for example allergies in an NKDA case) with a clarify line; client scope guard stems misread "last night" as a red flag.
-Next: when the server contract lands, run e2e/chat.spec.ts against a live gateway and drop the route mocks in its live test.
+Open: the older /v1/patient/turn route sends no actions (the interview endpoint does); offline reveal graph still answers a question with no matching history item (for example allergies in an NKDA case) with a clarify line; client scope guard stems misread "last night" as a red flag.
+Next: run e2e/chat.spec.ts against a gateway with ANTHROPIC_KEY set and compare the mocked InterviewReply with real replies (actions only arrive with guidance on).
 ```

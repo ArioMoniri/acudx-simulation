@@ -25,3 +25,5 @@ lxml>=5.0,<7.0
 pypdf>=4.0,<7.0
 # Bearer JWT verification against the registry identity provider (server/auth/jwks.py).
 PyJWT>=2.8,<3.0
+# Claude route (server/providers/anthropic_provider.py). 1.x is built on httpx2.
+anthropic>=1.17,<2.0

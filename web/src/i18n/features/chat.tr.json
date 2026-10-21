@@ -111,6 +111,14 @@
     },
     "quick": {
       "label": "Önerilen sonraki sorular"
+    },
+    "guardLabels": {
+      "clinical": "Konuya odaklı",
+      "off_topic": "Konu dışı",
+      "meta_injection": "Rolde kalır",
+      "diagnosis_request": "Hasta tanı vermez",
+      "unsafe": "Destek",
+      "other_language": "Dil"
     }
   }
 }

@@ -820,7 +820,7 @@ def make_narrate_model(llm: StructuredLLM):
         try:
             reply = await llm.complete_json(
                 _narrate_messages(state, action, new_facts, fired), schema=NARRATE_SCHEMA,
-                schema_name="director_affect", role="judge", temperature=0.6, max_tokens=240,
+                schema_name="director_affect", role="judge", temperature=0.6, max_tokens=240, node="narrator",
             )
         except (ModelUnreachable, ModelOutputInvalid) as exc:
             return {"utterance_en": en, "utterance_tr": tr,
