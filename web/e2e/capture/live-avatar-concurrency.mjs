@@ -1,3 +1,4 @@
+/* global AudioContext, MediaStream, RTCPeerConnection, console, document, fetch, performance, process, requestAnimationFrame, setTimeout, window */
 // Concurrent live calls on one GPU worker (docs/architecture/18 section 6.3, "Concurrency").
 //
 // Opens CALLS receive-only WebRTC calls through the gateway (/v1/voice/avatar/session, /offer),
@@ -48,7 +49,7 @@ for (let i = 0; i < CALLS; i++) {
   }, ses.body);
   const ans = await api(user, "/v1/voice/avatar/offer", { session_id: ses.body.session_id, sdp, type: "offer" });
   if (ans.status !== 200) throw new Error(`offer ${i}: ${ans.status} ${JSON.stringify(ans.body)}`);
-  await page.evaluate(async (a) => {
+  await page.evaluate(async ({ a, prep }) => {
     await window.pc.setRemoteDescription({ type: "answer", sdp: a.sdp });
     const v = document.createElement("video");
     v.muted = true; v.srcObject = window.stream; document.body.appendChild(v); await v.play().catch(() => {});
@@ -61,8 +62,29 @@ for (let i = 0; i < CALLS; i++) {
       if (window.speakAt != null && window.firstSound == null && Math.sqrt(s / 512) > 0.01) window.firstSound = performance.now();
       requestAnimationFrame(tick); };
     tick();
-    const vt = () => { window.frames++; v.requestVideoFrameCallback(vt); }; v.requestVideoFrameCallback(vt);
-  }, ans.body);
+    // Lip-sync meter, as in web/src/lib/avatarCall.ts: per decoded frame, the remote audio RMS and
+    // the mouth box's darkness (openness), the box placed from the runner's face box.
+    const cv = document.createElement("canvas"); cv.width = 48; cv.height = 32;
+    const g = cv.getContext("2d", { willReadFrequently: true });
+    window.lip = [];
+    const fb = prep && prep.face_box && prep.width ? prep : null;
+    const vt = (now) => {
+      window.frames++;
+      an.getFloatTimeDomainData(buf); let s = 0; for (const x of buf) s += x * x;
+      if (v.videoWidth > 0) {
+        const W = v.videoWidth, H = v.videoHeight;
+        const [x1, y1, x2, y2] = fb ? fb.face_box.map((q, k) => q * (k % 2 ? H / fb.height : W / fb.width)) : [0.3 * W, 0.45 * H, 0.7 * W, 0.9 * H];
+        const fw = x2 - x1, fh = y2 - y1;
+        g.drawImage(v, x1 + 0.3 * fw, y1 + 0.62 * fh, 0.4 * fw, 0.3 * fh, 0, 0, 48, 32);
+        const px = g.getImageData(0, 0, 48, 32).data; let l = 0;
+        for (let i = 0; i < px.length; i += 4) l += px[i + 1];
+        window.lip.push({ t: now, rms: Math.sqrt(s / 512), open: 255 - l / (px.length / 4) });
+        if (window.lip.length > 4000) window.lip.splice(0, 1000);
+      }
+      v.requestVideoFrameCallback(vt);
+    };
+    v.requestVideoFrameCallback(vt);
+  }, { a: ans.body, prep: ses.body.prepare });
   await page.waitForFunction(() => window.frames > 10, null, { timeout: 60_000 });
   calls.push({ user, page, session: ses.body });
   console.log(`call ${i} live (${ses.body.session_id.slice(0, 6)}, prepare ${ses.body.prepare_ms} ms)`);
@@ -72,6 +94,7 @@ for (let i = 0; i < CALLS; i++) {
 const extra = await api("concurrency-extra", "/v1/voice/avatar/session", { encounter_id: "concurrency-extra", photo_id: "p04",
   lang: "en", case_state: {} });
 console.log(`extra session -> ${extra.status} ${extra.body.state ?? ""} ${(extra.body.reasons ?? []).join("; ")}`);
+if (extra.status === 200) await api("concurrency-extra", "/v1/voice/avatar/end", { session_id: extra.body.session_id });
 
 // Everyone speaks at once; sample the runner while they talk.
 const samples = [];
@@ -83,9 +106,36 @@ const sampler = (async () => {
     await new Promise((r) => setTimeout(r, 1000));
   }
 })();
-await Promise.all(calls.map((c) => c.page.evaluate(() => { window.speakAt = performance.now(); })));
-const spoken = await Promise.all(calls.map((c) => api(c.user, "/v1/voice/avatar/speak", { session_id: c.session.session_id, text: LINE })));
-await new Promise((r) => setTimeout(r, 9000));
+// ROUNDS > 1 speaks the line again after it finished (the first line of a call pays one-time costs).
+const ROUNDS = Number(process.env.ROUNDS ?? 1);
+const rounds = [];
+let spoken = [];
+for (let round = 0; round < ROUNDS; round++) {
+  await Promise.all(calls.map((c) => c.page.evaluate(() => { window.speakAt = performance.now(); window.firstSound = null; })));
+  spoken = await Promise.all(calls.map((c) => api(c.user, "/v1/voice/avatar/speak", { session_id: c.session.session_id, text: LINE })));
+  await new Promise((r) => setTimeout(r, 13000));
+  const starts = await Promise.all(calls.map((c) => c.page.evaluate(() =>
+    (window.firstSound != null ? Math.round(window.firstSound - window.speakAt) : null))));
+  const lags = await Promise.all(calls.map((c) => c.page.evaluate(() => {
+    // Cross-correlation of RMS and openness on a 20 ms grid over this round's speech (lag > 0:
+    // mouth after voice), searched over +-600 ms.
+    const w = window.lip.filter((x) => x.t >= window.speakAt);
+    if (w.length < 20) return null;
+    const step = 20, t0 = w[0].t, t1 = w[w.length - 1].t, a = [], b = [];
+    let k = 0;
+    for (let t = t0; t <= t1; t += step) { while (k + 1 < w.length && w[k + 1].t <= t) k++; a.push(w[k].rms); b.push(w[k].open); }
+    const n = a.length, ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n;
+    let best = 0, bs = -Infinity;
+    for (let lag = -30; lag <= 30; lag++) {
+      let sc = 0; for (let i = 0; i < n; i++) { const j = i + lag; if (j >= 0 && j < n) sc += (a[i] - ma) * (b[j] - mb); }
+      if (sc > bs) { bs = sc; best = lag; }
+    }
+    return best * step;
+  })));
+  const trace = (await api(calls[0].user, "/v1/voice/capabilities")).body.avatar?.last_speech_trace ?? null;
+  rounds.push({ round, speechStartMs: starts, lipLagMs: lags, first_chunk_ms: spoken.map((x) => x.body.first_chunk_ms), trace });
+  console.log(`round ${round}: speech start ${starts.join(", ")} ms, mouth-after-voice ${lags.join(", ")} ms`);
+}
 sampling = false;
 await sampler;
 const perCall = [];
@@ -106,7 +156,7 @@ const talking = samples.filter((s) => s.calls.filter((x) => x.speaking).length >
 const peak = (talking.length ? talking : samples).at(-1);
 const out = { captured_at: new Date().toISOString(), gateway: GW, calls: CALLS, line_chars: LINE.length,
   extra_session: { status: extra.status, state: extra.body.state, reasons: extra.body.reasons, max_calls: extra.body.max_calls },
-  per_call: perCall, runner_while_talking: peak, samples_with_all_speaking: talking.length, samples: samples.length };
+  per_call: perCall, rounds, runner_while_talking: peak, samples_with_all_speaking: talking.length, samples: samples.length };
 fs.mkdirSync(OUT, { recursive: true });
 fs.writeFileSync(path.join(OUT, "concurrency.json"), JSON.stringify(out, null, 2) + "\n");
 console.log(JSON.stringify({ per_call: perCall.map((p) => ({ call: p.call, speechStartMs: p.browser.speechStartMs, fps: p.browser.fps,

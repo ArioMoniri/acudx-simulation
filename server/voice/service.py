@@ -340,7 +340,7 @@ class VoiceService:
             return {**block, "enabled": True, "live_video": cap["calls_available"] > 0, "reasons": reasons,
                     "sessions": h.get("sessions"), "max_sessions": h.get("max_sessions"), **cap,
                     "turn": ["udp:3478", "tcp:3478", "tls:443"], "infer_fps": h.get("infer_fps"),
-                    "calls": h.get("calls") or [],
+                    "calls": h.get("calls") or [], "last_speech_trace": h.get("last_speech_trace"),
                     "vram": {k: gpu_info.get(k) for k in ("name", "total_mb", "free_mb", "process_reserved_mb")}}
         detail = h.get("reason") or h.get("detail") or ""
         reasons.append(f"gpu-worker avatar: {h.get('state')}{(' (' + str(detail) + ')') if detail else ''}")

@@ -1,3 +1,4 @@
+/* global Blob, Buffer, MediaRecorder, btoa, console, document, fetch, localStorage, process, window */
 // Live patient video capture (docs/architecture/18 section 6.3, docs/media/live-avatar/).
 //
 // Drives the real app against a real gateway with a running GPU worker: creates a local

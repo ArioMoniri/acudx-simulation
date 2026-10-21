@@ -354,9 +354,10 @@ write_files:
             - AVATAR_PORT=8010
             # Latency defaults (docs/architecture/18 6.3); the gateway can override them per call.
             - AVATAR_BATCH_SIZE=4
-            - AVATAR_AHEAD_FRAMES=10
-            - AVATAR_LOOKAHEAD_FRAMES=6
+            - AVATAR_AHEAD_FRAMES=6
+            - AVATAR_LOOKAHEAD_FRAMES=4
             - AVATAR_IDLE_FRAMES=75
+            - AVATAR_AV_SHIFT_MS=160
             - AVATAR_MAX_SESSIONS=${AVATAR_MAX_SESSIONS}
             - AVATAR_TURN_TCP_HOST=host.docker.internal
             - TURN_SECRET=${TURN_SECRET}
@@ -707,9 +708,9 @@ write_files:
       # Frames the render loop keeps ahead of the WebRTC sender (queued + in flight). Upstream throttles
       # on the video queue alone (5 frames) while two feature batches and 16 rendered frames pile up
       # behind it, about 1.5 s; counting every stage keeps the lead to this many frames.
-      AHEAD_FRAMES = int(os.environ.get("AVATAR_AHEAD_FRAMES", "10"))
+      AHEAD_FRAMES = int(os.environ.get("AVATAR_AHEAD_FRAMES", "6"))
       # Right audio context the whisper features need, in 20 ms audio frames (upstream -r 10).
-      LOOKAHEAD_FRAMES = int(os.environ.get("AVATAR_LOOKAHEAD_FRAMES", "6"))
+      LOOKAHEAD_FRAMES = int(os.environ.get("AVATAR_LOOKAHEAD_FRAMES", "4"))
       # Positive: the video leaves this many ms after its audio (fixes lips leading the voice).
       AV_SHIFT_MS = int(os.environ.get("AVATAR_AV_SHIFT_MS", "0"))
       IDLE_FRAMES = int(os.environ.get("AVATAR_IDLE_FRAMES", "75"))
@@ -1171,6 +1172,45 @@ write_files:
                   "extension": "mirrored+blurred" if padded else "none", "prepare_ms": ms}
 
 
+      class _WarmingFeatQueue(queue.Queue):
+          """The session's feature queue. Its consumer is the session's inference thread, so the first
+          UNet + VAE batch on that thread and its CUDA stream can be paid here, during the idle frames
+          right after the call connects, instead of on the patient's first line (live run 2026-10-20:
+          the first line of every call spent 2.06 s between audio in and audio out, the next ones 56 to
+          86 ms). It runs after a few idle batches so the first frame is not delayed."""
+
+          def __init__(self, sess, maxsize: int = 1, after: int = 3):
+              super().__init__(maxsize=maxsize)
+              self._sess, self._after, self._gets = sess, after, 0
+
+          def get(self, block=True, timeout=None):
+              item = super().get(block, timeout)
+              self._gets += 1
+              if self._gets == self._after:
+                  _warm_session(self._sess)
+              return item
+
+
+      @torch.no_grad()
+      def _warm_session(sess) -> None:
+          t = time.perf_counter()
+          feats = [np.zeros((50, 384), dtype=np.float32) for _ in range(sess.batch_size)]
+          st = sess.__dict__.get("_acudx_stream")
+          if st is None and torch.cuda.is_available():
+              st = sess._acudx_stream = torch.cuda.Stream()
+          try:
+              if st is not None:
+                  with torch.cuda.stream(st):
+                      _orig_infer(sess, 0, feats)
+                  st.synchronize()
+              else:
+                  _orig_infer(sess, 0, feats)
+          except Exception as exc:  # noqa: BLE001 - a failed warm-up only costs the first line its latency
+              log.warning("session warm-up failed: %s", type(exc).__name__)
+          sess._acudx_warm_ms = round((time.perf_counter() - t) * 1000.0, 1)
+          log.info("session %s warm-up %.0f ms", getattr(sess, "sessionid", "?"), sess._acudx_warm_ms)
+
+
       def _bounded(params: dict, key: str, default: int, lo: int, hi: int) -> int:
           try:
               v = int(params.get(key, default))
@@ -1189,7 +1229,7 @@ write_files:
           o.avatar_id = avatar_id
           sess = registry.create("avatar", "musetalk", opt=o, model=MODEL, avatar=_load(avatar_id))
           # Shallow queues: one feature batch and one rendered batch in flight (upstream: two each).
-          sess.asr.feat_queue = queue.Queue(maxsize=1)
+          sess.asr.feat_queue = _WarmingFeatQueue(sess, maxsize=1)
           sess.res_frame_queue = queue.Queue(o.batch_size)
           sess._acudx_ahead = _bounded(tuning, "ahead_frames", AHEAD_FRAMES, o.batch_size + 2, 40)
           sess._acudx_shift_ms = _bounded(tuning, "av_shift_ms", AV_SHIFT_MS, -1000, 1000)
@@ -1233,7 +1273,7 @@ write_files:
 
       def _session_stats(sid: str, sess) -> dict:
           out: dict = {"id": sid[:8], "tuning": getattr(sess, "_acudx_tuning", None),
-                       "speaking": bool(getattr(sess, "speaking", False))}
+                       "speaking": bool(getattr(sess, "speaking", False)), "warm_up_ms": getattr(sess, "_acudx_warm_ms", None)}
           inf = getattr(sess, "_acudx_infer", None)
           if inf and inf["seconds"] > 0:
               out["infer_fps"] = round(inf["frames"] / inf["seconds"], 1)

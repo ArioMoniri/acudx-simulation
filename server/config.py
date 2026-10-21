@@ -198,11 +198,12 @@ class Settings(BaseSettings):
     avatar_max_calls_per_worker: int = Field(default=2, ge=1, le=8)
     # Per-call runner tuning sent with each offer (None = the runner's defaults): MuseTalk batch,
     # frames kept ahead of the sender, whisper right context (20 ms frames), and the video delay
-    # against the voice in ms (positive when the lips lead the voice).
+    # against the voice in ms (positive when the lips lead the voice). 160: the setting with the smallest
+    # steady-state offset in the live runs (docs/architecture/18 section 6.3.3).
     avatar_batch_size: int | None = Field(default=None, ge=2, le=16)
     avatar_ahead_frames: int | None = Field(default=None, ge=4, le=40)
     avatar_lookahead_frames: int | None = Field(default=None, ge=4, le=10)
-    avatar_av_shift_ms: int | None = Field(default=None, ge=-1000, le=1000)
+    avatar_av_shift_ms: int | None = Field(default=160, ge=-1000, le=1000)
     acudx_db_path: str = "server/data/acudx.db"  # SQLite: worker state + cost ledger + registry + telemetry
 
     # --- Identity (server/auth, docs/architecture/19) --- #

@@ -747,9 +747,9 @@ def test_avatar_runner_streams_audio_bounds_latency_and_reports_calls():
     for route in ('add_get("/stream", stream_audio)', 'add_get("/turn_check", turn_check)',
                   'add_post("/humanaudio", humanaudio)'):
         assert route in runner
-    assert "mt.MuseReal.render = _render" in runner and "sess.asr.feat_queue = queue.Queue(maxsize=1)" in runner
+    assert "mt.MuseReal.render = _render" in runner and "sess.asr.feat_queue = _WarmingFeatQueue(sess, maxsize=1)" in runner
     assert "soxr.ResampleStream" in runner and "BORDER_REPLICATE" in runner and "BORDER_REFLECT_101" in runner
     assert "cv2.BORDER_REPLICATE)\n" not in runner.split("def extend_portrait")[0]
     env = _compose()["services"]["avatar"]["environment"]
-    assert "AVATAR_BATCH_SIZE=4" in env and "AVATAR_AHEAD_FRAMES=10" in env and "TURN_SECRET=${TURN_SECRET}" in env
+    assert "AVATAR_BATCH_SIZE=4" in env and "AVATAR_AHEAD_FRAMES=6" in env and "TURN_SECRET=${TURN_SECRET}" in env
     compile(runner, "acudx_avatar_server.py", "exec")
