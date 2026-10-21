@@ -118,3 +118,14 @@ The before set has no storyboard close-up of its own (the capture selector picke
 - `InterviewTab`, `PatientCallTile` (patient chat and interview) and `ResultsTab`, `OrdersTab` internals belong to other agents; they pick up the shared token changes only (`Tabs`, `Stat`, `SectionLabel`, `PatientPhoto`). The call tile is above 160 px, so its overlays are unchanged.
 - Em dashes remain in some existing locale strings (for example the Home streak hint); `locales/*.json` belong to the Orchestrator.
 - The TrendMonitor treatment marker is still violet on the dark monitor; it is a data mark, left for the monitor owner.
+
+## 8. HANDOFF
+
+```
+HANDOFF Designer -> Orchestrator
+Goal: no menu needs a horizontal scroll at any width, patient thumbnails carry the face only, and the UI stops reading as generated, inside the Ward ink identity.
+Done: web/src/components/ehr/ActivityTabs.tsx, ProgressStages.tsx, ui/Tabs.tsx, AdminPage/FacultyPage console tabs, AuthoringPage step table, NewCaseMenu (menus); PatientPhoto.tsx, PatientViewer SymptomSummary, Storyboard, FlowsheetTab, ui/ProfileAvatar.tsx, TopNav, room/RoleAvatar (photos and avatars); ui/Stat, ui/SectionLabel, ChartReviewTab, HomePage, RoomCard + RoomPage, RemediationLoop, CalibrationPlot, LandingPage + PageHeader, icon tiles in 11 files, Sparkle/Robot replacements, --chart-3 (de-AI); i18n/features/renewal2.{en,tr}.json; e2e/menu-overflow.spec.ts, e2e/patient-photo.spec.ts, src/components/PatientPhoto.test.ts, e2e/on-request.spec.ts (vitals reader follows the new dt/dd rows); scripts/design/audit-overflow.mjs, capture-avatars.mjs, contact-sheet-2.py; this doc and renewal-2-shots/.
+Verified by: npm run typecheck clean; vitest 464/464; eslint 0 errors (71 warnings, was 72); audit-overflow at 375/768/1024/1280/1440/1920 in EN and TR prints nothing; full e2e (E2E_PORT=4321, load average up to 24 from other sessions) 247 passed, 31 failed, 118 skipped, then --last-failed with 2 workers 30/31 passed; the one real failure (on-request vitals reader used the old <p> markup) was fixed and passes; axe spec green on the rerun after naming the account link with sr-only text.
+Open: no subagent tool in this session, so the clinician and design critiques were run in-agent (section 5). InterviewTab, PatientCallTile, ResultsTab and OrdersTab internals untouched (other owners). Em dashes in existing locales/*.json strings and the violet TrendMonitor treatment marker are left for their owners.
+Next: merge this branch, then re-run `python3 scripts/design/contact-sheet-2.py` only if the captures are retaken; README hero and docs/media captures still show the pre-renewal-2 tab strip.
+```
