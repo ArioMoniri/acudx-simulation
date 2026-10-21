@@ -111,7 +111,8 @@ WORKER_FIREWALL_RULES: list[FirewallRule] = [
 
 
 class LambdaCloudError(RuntimeError):
-    """A non-2xx response. ``code`` is the stable machine-readable error code."""
+    """A non-2xx response, or no response at all (``status_code`` 0, ``code`` ``network/<exception>``).
+    ``code`` is the stable machine-readable error code."""
 
     def __init__(self, status_code: int, code: str, message: str, suggestion: str | None = None):
         self.status_code = status_code
@@ -122,6 +123,11 @@ class LambdaCloudError(RuntimeError):
         if suggestion:
             text += f" ({suggestion})"
         super().__init__(text)
+
+    @property
+    def not_found(self) -> bool:
+        """The provider no longer knows the object (an instance already gone counts as stopped)."""
+        return self.status_code == 404 or "not-found" in self.code or "does-not-exist" in self.code
 
 
 # --------------------------------------------------------------------------- #
@@ -147,7 +153,12 @@ class LambdaCloudClient:
 
     # -- transport ---------------------------------------------------------- #
     async def _request(self, method: str, path: str, json: dict[str, Any] | None = None) -> Any:
-        resp = await self._client.request(method, f"{self.base_url}{path}", json=json)
+        try:
+            resp = await self._client.request(method, f"{self.base_url}{path}", json=json)
+        except httpx.HTTPError as exc:
+            # A transport failure (timeout, reset, proxy refusal) is a provider error too, so every
+            # caller handles one exception type (a terminate that raised httpx left the row stuck).
+            raise LambdaCloudError(0, f"network/{type(exc).__name__}", str(exc)[:200] or type(exc).__name__) from exc
         if resp.status_code >= 400:
             try:
                 err = resp.json().get("error") or {}

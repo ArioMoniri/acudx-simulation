@@ -278,6 +278,12 @@ class WorkerStore:
             rows = c.execute(f"SELECT * FROM gpu_workers WHERE status IN ({q}) ORDER BY id", ACTIVE_STATUSES).fetchall()
         return [WorkerRecord.model_validate(dict(r)) for r in rows]
 
+    def workers_in(self, *statuses: str) -> list[WorkerRecord]:
+        q = ",".join("?" for _ in statuses)
+        with self._conn() as c:
+            rows = c.execute(f"SELECT * FROM gpu_workers WHERE status IN ({q}) ORDER BY id", statuses).fetchall()
+        return [WorkerRecord.model_validate(dict(r)) for r in rows]
+
     def insert_worker(self, **fields: Any) -> WorkerRecord:
         cols = ", ".join(fields)
         marks = ", ".join("?" for _ in fields)
@@ -747,10 +753,13 @@ class WorkerManager:
         self.store.update_worker(w.id, status="terminating")
         try:
             await self._lambda().terminate([w.instance_id])
-        except LambdaCloudError as exc:
-            # Already gone on the provider side is fine; anything else must surface.
-            if exc.status_code != 404 and "not-found" not in exc.code:
-                self.store.update_worker(w.id, status=w.status)
+        except (LambdaCloudError, httpx.HTTPError) as exc:
+            # Already gone on the provider side is fine; anything else must surface. The row stays
+            # ``terminating`` (it no longer takes traffic, its ledger stays open) and every reaper
+            # pass retries the stop until Lambda confirms it.
+            if not (isinstance(exc, LambdaCloudError) and exc.not_found):
+                log.warning("gpu worker %s: terminate failed (%s); the reaper retries", w.instance_id,
+                            exc if isinstance(exc, LambdaCloudError) else type(exc).__name__)
                 raise
         self.store.close_ledger(w.instance_id, now, reason)
         self._healthy_until.pop(w.id, None)
@@ -768,11 +777,19 @@ class WorkerManager:
         restarted mid-boot and no request re-attached) for longer than both boot budgets. Returns True
         when any worker was stopped."""
         stopped = False
+        for w in self.store.workers_in("terminating"):
+            # A stop that failed earlier (provider or network error): retry until Lambda confirms it.
+            try:
+                await self._terminate_one(w, "terminate_retry")
+                stopped = True
+            except (LambdaCloudError, httpx.HTTPError):
+                pass   # logged by _terminate_one; next pass retries
         for w in self.store.active_workers():
             try:
                 stopped = await self._reap(w) or stopped
-            except LambdaCloudError as exc:
-                log.warning("gpu worker %s: reaper stop failed: %s", w.instance_id, exc)
+            except (LambdaCloudError, httpx.HTTPError) as exc:
+                log.warning("gpu worker %s: reaper stop failed: %s", w.instance_id,
+                            exc if isinstance(exc, LambdaCloudError) else type(exc).__name__)
         return stopped
 
     async def _reap(self, w: WorkerRecord) -> bool:
@@ -832,7 +849,7 @@ class WorkerManager:
             inst = await self._lambda().get_instance(w.instance_id)
             gone = inst.status if inst.status in PROVIDER_GONE_STATUSES else None
         except LambdaCloudError as exc:
-            if exc.status_code != 404 and "not-found" not in exc.code:
+            if not exc.not_found:
                 log.warning("gpu worker %s: provider reconcile failed: %s", w.instance_id, exc)
                 return False
             gone = "missing"
