@@ -106,7 +106,7 @@ follow, and the gateway's identity provider row is re-registered with the new is
 - With no Claude key and no other LLM row, every model call goes to the on-demand Lambda GPU worker. A
   case start answers `503 model_warming` while the worker boots and launches it in the
   background; the idle reaper terminates it after `GPU_IDLE_MINUTES` (20). Policy (idle window,
-  allowlist, regions, `max_workers` 1 or 0 to disable launches, no budget cap by default):
+  allowlist, regions, `max_workers` default 3, 0 disables launches, no budget cap by default):
   Admin console, GPU tab, or `PUT /admin/gpu/policy`.
 - Claude is the default model route (`server/providers/anthropic_provider.py`). Its key comes
   from `ANTHROPIC_KEY` on the host (`/etc/acudx/anthropic.key` or the environment of
