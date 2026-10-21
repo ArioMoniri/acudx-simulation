@@ -387,6 +387,7 @@ async def offer(request: Request, body: OfferBody, user: Principal = Depends(cur
         await s.audio_link.close()
     s.worker_session = str(ans["sessionid"])
     s.metrics["answer_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+    s.metrics["av_shift_ms"] = int(runner_tuning(svc.settings).get("av_shift_ms", 0))
     if s.appearance is not None:
         s.appearance.worker_session = s.worker_session
     # Open the audio WebSocket now, while the browser finishes ICE, so the first line does not pay it.
@@ -561,6 +562,64 @@ async def _speak_streaming(svc: VoiceService, s: CallSession, worker: mt.WorkerA
             "stream_stall_ms": round(stall["max_ms"], 1), "preroll": s.metrics.get("preroll"),
             "link_connect_ms": link.connect_ms, "runner": {k: stats.get(k) for k in
                                                            ("frames", "first_frame_ms", "elapsed_ms")}}
+
+
+class LipLagBody(SessionRef):
+    # The browser's measured audio-to-lip offset of the last line (positive: the mouth moves after the voice).
+    lip_lag_ms: float = Field(ge=-2000, le=2000)
+    score: float | None = Field(default=None, ge=-1, le=1)
+
+
+LIP_TOLERANCE_MS = 40
+LIP_MIN_SCORE = 0.4
+LIP_GAIN = 0.5
+
+
+def next_av_shift(current: int, lip_lag_ms: float, *, tolerance_ms: int = LIP_TOLERANCE_MS,
+                  gain: float = LIP_GAIN) -> int:
+    """The runner's video delay that moves towards cancelling a measured offset: lips late (positive
+    lag) need less delay, lips early (negative) more. Half the offset per line (one noisy line must not
+    swing the call), in whole 40 ms frames, at least one frame, 0 to 1000 ms; inside the tolerance the
+    delay stays (the meter has about 40 ms of noise)."""
+    if abs(lip_lag_ms) <= tolerance_ms:
+        return current
+    step = int(round(gain * lip_lag_ms / 40.0)) or (1 if lip_lag_ms > 0 else -1)
+    return max(0, min(1000, (int(round(current / 40.0)) - step) * 40))
+
+
+@router.post("/lipsync")
+async def lipsync(request: Request, body: LipLagBody, user: Principal = Depends(current_user)):
+    """Closed-loop lip sync: the tile reports each line's measured offset; when it is outside the tolerance
+    (and the correlation is meaningful) the call's runner delay is moved to cancel it for the next line."""
+    svc = _svc(request)
+    s = _session(request, body, user)
+    if s.provider != "musetalk" or not s.worker_session:
+        raise HTTPException(status_code=409, detail={"error": "call_not_connected"})
+    current = int(s.metrics.get("av_shift_ms", runner_tuning(svc.settings).get("av_shift_ms", 0)))
+    lags = s.metrics.setdefault("lip_lags", [])
+    lags.append({"lip_lag_ms": body.lip_lag_ms, "score": body.score, "av_shift_ms": current})
+    del lags[:-40]
+    if body.score is not None and body.score < LIP_MIN_SCORE:
+        return {"av_shift_ms": current, "changed": False, "why": "weak_correlation"}
+    want = next_av_shift(current, body.lip_lag_ms)
+    if want == current:
+        return {"av_shift_ms": current, "changed": False}
+    worker = _require_worker(svc, s)
+    try:
+        await mt.tune(svc.client, worker, s.worker_session, av_shift_ms=want)
+    except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
+        return {"av_shift_ms": current, "changed": False, "why": str(getattr(exc, "detail", None) or exc)[:120]}
+    s.metrics["av_shift_ms"] = want
+    return {"av_shift_ms": want, "changed": True, "previous": current}
+
+
+@router.get("/metrics")
+async def call_metrics(request: Request, session_id: str, user: Principal = Depends(current_user)):
+    """The call's measurements: each voiced turn's hop timings, the lip offsets reported, the pre-roll."""
+    s = _store(request).get(session_id, user_hash=user.user_hash)
+    if s is None:
+        raise HTTPException(status_code=404, detail={"error": "unknown_session"})
+    return {"session_id": s.id, "worker_session": s.worker_session, "avatar_id": s.avatar_id, "metrics": s.metrics}
 
 
 @router.post("/interrupt")

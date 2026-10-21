@@ -136,16 +136,23 @@ class VoiceService:
             yield ep
         worker = await self._worker_for_tts(flags)
         if worker is not None:
-            yield worker
             # The worker's Kokoro (English only, /tts-en): the patient keeps an English voice when the
-            # worker's Chatterbox is down (live 2026-10-21: its image build failed on a PPA outage).
+            # worker's Chatterbox is down (live 2026-10-21: its image build failed on a PPA outage), and
+            # it goes first for a live call's English line when ``prefer_fast`` (first audio 0.15 to 0.6 s
+            # against 2 to 3 s for Chatterbox on a shared A100, docs/architecture/18 6.3.9).
             origin = worker.base_url.rstrip("/")
             origin = origin[: -len(WORKER_PATHS["tts"])] if origin.endswith(WORKER_PATHS["tts"]) else origin
-            yield ProviderEndpoint(kind="tts", name="gpu-worker-kokoro", base_url=origin + WORKER_KOKORO_PATH,
-                                   model="kokoro", api_key=worker.api_key, source="gpu_worker",
-                                   extra={"voice_family": "kokoro", "languages": ["en"],
-                                          # Kokoro streams its plain /speech route (chunked).
-                                          "tts_stream_path": "/speech", "tts_stream_body": {}})
+            kokoro = ProviderEndpoint(kind="tts", name="gpu-worker-kokoro", base_url=origin + WORKER_KOKORO_PATH,
+                                      model="kokoro", api_key=worker.api_key, source="gpu_worker",
+                                      extra={"voice_family": "kokoro", "languages": ["en"],
+                                             # Kokoro streams its plain /speech route (chunked).
+                                             "tts_stream_path": "/speech", "tts_stream_body": {}})
+            if flags.get("prefer_fast"):
+                yield kokoro
+                yield worker
+            else:
+                yield worker
+                yield kokoro
 
     # -- on-demand GPU worker ---------------------------------------------------- #
     def wake_worker(self) -> asyncio.Task[ProviderEndpoint | None] | None:
@@ -238,14 +245,14 @@ class VoiceService:
     # -- TTS --------------------------------------------------------------------- #
     async def tts(self, text: str, *, lang: str, sex: str | None, age: int | float | None,
                   voice_id: str | None = None, output_format: str = "mp3", speed: float = 1.0,
-                  stream: bool = False) -> TtsOutcome:
+                  stream: bool = False, prefer_fast: bool = False) -> TtsOutcome:
         text = text.strip()
         if not text:
             raise ValueError("text is empty")
         lang = profiles.normalize_lang(lang)
         profile = profiles.profile_for(sex, age, lang)
         reasons: list[str] = []
-        flags = {"pending": False, "worker": False}
+        flags = {"pending": False, "worker": False, "prefer_fast": prefer_fast and lang == "en"}
         async for ep in self._tts_candidates(flags):
             name = adapter_name_for(ep)
             adapter = TTS_ADAPTERS[name]
@@ -258,7 +265,8 @@ class VoiceService:
                 # to the next row or the worker's Chatterbox instead of an English voice.
                 reasons.append(f"{ep.name}: row declares languages {declared}, not {lang}")
                 continue
-            family = "chatterbox" if ep.source == "gpu_worker" else None
+            # The worker's own voices: its Kokoro row names its family, everything else is Chatterbox.
+            family = ep.extra.get("voice_family") or ("chatterbox" if ep.source == "gpu_worker" else None)
             vid = voice_id or profiles.resolve_voice(name, profile, ep.extra, family=family)
             req = TtsRequest(text=text, lang=lang, voice_id=vid, output_format=output_format, speed=speed,
                              stream=stream)

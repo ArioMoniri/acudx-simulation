@@ -152,7 +152,8 @@ async def _json(r: httpx.Response) -> dict[str, Any]:
     try:
         body = r.json()
     except ValueError:
-        body = {"raw": r.text[:300]}
+        # Worker replies are UTF-8 (aiohttp, Caddy); never let a charset guess decode them.
+        body = {"raw": r.content[:600].decode("utf-8", "replace")[:300]}
     return body if isinstance(body, dict) else {"data": body}
 
 
@@ -182,8 +183,12 @@ async def health(client: httpx.AsyncClient, worker: WorkerAvatar, *, timeout_s: 
 
 
 async def ensure_avatar(client: httpx.AsyncClient, worker: WorkerAvatar, avatar_id: str,
-                        image: bytes) -> dict[str, Any]:
-    """Prepare the reference face once per worker (the runner keeps it on disk)."""
+                        image: bytes, *, ref: str | None = None) -> dict[str, Any]:
+    """Prepare the reference face once per worker (the runner keeps it on disk).
+
+    ``ref``: the base portrait this picture is an edit of (prepared first). The runner registers the
+    edit onto that portrait's frame and reuses its crop and face box, so a cross-fade between them
+    never shows two faces (docs/architecture/18 6.6.1)."""
     r = await client.get(worker.origin + "/avatar/avatars", headers=worker.headers(), timeout=10.0)
     if r.status_code == 200 and avatar_id in (await _json(r)).get("avatars", []):
         out: dict[str, Any] = {"avatar_id": avatar_id, "prepared": False}
@@ -192,11 +197,13 @@ async def ensure_avatar(client: httpx.AsyncClient, worker: WorkerAvatar, avatar_
             g = await client.get(worker.origin + f"/avatar/avatars/{avatar_id}", headers=worker.headers(), timeout=10.0)
             if g.status_code == 200:
                 info = await _json(g)
-                out.update({k: info[k] for k in ("face_box", "width", "height", "idle_frames") if info.get(k) is not None})
+                out.update({k: info[k] for k in ("face_box", "width", "height", "idle_frames", "ref", "registration")
+                            if info.get(k) is not None})
         except httpx.HTTPError:
             pass
         return out
     r = await client.put(worker.origin + f"/avatar/avatars/{avatar_id}", content=image,
+                         params={"ref": ref} if ref else None,
                          headers={**worker.headers(), "Content-Type": "image/jpeg"}, timeout=120.0)
     body = await _json(r)
     if r.status_code != 200:
@@ -245,6 +252,16 @@ async def switch(client: httpx.AsyncClient, worker: WorkerAvatar, worker_session
     """Swap a live call's face to another prepared avatar of the same patient, crossfaded."""
     r = await client.post(worker.origin + "/avatar/switch", headers=worker.headers(), timeout=20.0,
                           json={"sessionid": worker_session, "avatar": avatar_id, "crossfade_ms": int(crossfade_ms)})
+    body = await _json(r)
+    if r.status_code != 200:
+        raise AvatarWorkerError(r.status_code, str(body.get("error") or body)[:200])
+    return body
+
+
+async def tune(client: httpx.AsyncClient, worker: WorkerAvatar, worker_session: str, *, av_shift_ms: int) -> dict[str, Any]:
+    """Move a live call's video against its audio (the runner changes its delay line one frame per frame)."""
+    r = await client.post(worker.origin + "/avatar/tuning", headers=worker.headers(), timeout=10.0,
+                          json={"sessionid": worker_session, "av_shift_ms": int(av_shift_ms)})
     body = await _json(r)
     if r.status_code != 200:
         raise AvatarWorkerError(r.status_code, str(body.get("error") or body)[:200])

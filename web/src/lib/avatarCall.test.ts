@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { crossCorrelationLag, mouthRegion, resample, selectedIcePath, sessionBody } from "@/lib/avatarCall";
+import { crossCorrelation, crossCorrelationLag, mouthRegion, resample, selectedIcePath, sessionBody, utteranceSpan } from "@/lib/avatarCall";
 import { createVoiceApi } from "@/lib/voiceApi";
 
 describe("selectedIcePath", () => {
@@ -37,6 +37,37 @@ describe("crossCorrelationLag", () => {
   it("returns null for flat or short series", () => {
     expect(crossCorrelationLag([0, 0, 0, 0, 0, 0, 0, 0, 0], [1, 2, 3, 4, 5, 6, 7, 8, 9], 40)).toBeNull();
     expect(crossCorrelationLag([1, 2], [1, 2], 40)).toBeNull();
+  });
+});
+
+describe("crossCorrelation and utteranceSpan (whole-line lip offset, live 2026-10-21)", () => {
+  const env = (n: number, shift = 0) =>
+    Array.from({ length: n }, (_, i) => Math.max(0, Math.sin(((i - shift) / (5 + ((i - shift + 40) % 13) / 3)) * Math.PI)));
+
+  it("scores how much the lag can be trusted", () => {
+    const voice = env(200);
+    const strong = crossCorrelation(voice, env(200, 2), 40);
+    expect(strong?.lagMs).toBe(80);
+    expect(strong!.score).toBeGreaterThan(0.8);
+    // a mouth that does not follow the voice (a picture switch mid-line, a wrong mouth box): low score
+    const unrelated = Array.from({ length: 200 }, (_, i) => ((i * 7919) % 97) / 97);
+    expect(crossCorrelation(voice, unrelated, 40)!.score).toBeLessThan(0.3);
+  });
+
+  it("spans a long reply to the end of its voice, not a guessed duration", () => {
+    const samples = [] as { t: number; rms: number; motion: number; open: number }[];
+    // 3 s of silence (the question being answered), 12.6 s of voice with short pauses, then silence
+    for (let t = 0; t < 18_500; t += 40) {
+      const speaking = t >= 3000 && t < 15_600 && Math.floor(t / 900) % 5 !== 0;
+      samples.push({ t, rms: speaking ? 0.2 : 0, motion: 0, open: 0 });
+    }
+    const during = utteranceSpan(samples, 0, 14_000);
+    expect(during.done).toBe(false);
+    const after = utteranceSpan(samples, 0, 18_500);
+    expect(after.first).toBe(3000);
+    expect(after.last).toBeGreaterThan(15_000);
+    expect(after.done).toBe(true);
+    expect(utteranceSpan(samples, 16_000, 18_500)).toEqual({ first: null, last: null, done: false });
   });
 });
 

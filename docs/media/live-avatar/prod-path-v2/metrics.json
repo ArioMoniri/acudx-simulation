@@ -1,0 +1,901 @@
+{
+ "note": "Speech start = question sent -> first audible patient sample in the page. The sandbox adds about 0.45 s (TLS reconnect through its egress proxy) and the WebSocket-tunnelled TURN. Lines whose speech start reads under 100 ms began while the previous reply was still playing (the TR worker Chatterbox runs slower than real time while a call renders): their speech start is not a measurement; their lip offset still is.",
+ "worker": "gpu_1x_a100_sxm4 (A100 SXM4 40 GB), us-east-1, Lambda filesystem acudx-wm attached; gateway with Claude",
+ "gpu_cost_usd": {
+  "worker_1_cold_build": 1.16,
+  "worker_2_warm_cache": 1.21
+ },
+ "cold_start": {
+  "first_boot_builds_and_fills_cache": {
+   "launch_to_gateway_ready_s": 1019,
+   "timeline": [
+    {
+     "t_s": 206,
+     "event": "cloud-init: runcmd started (filesystem /lambda/nfs/acudx-wm)"
+    },
+    {
+     "t_s": 207,
+     "event": "images: fetching"
+    },
+    {
+     "t_s": 207,
+     "event": "image chatterbox pulling 2d1ad1f79a05c36a"
+    },
+    {
+     "t_s": 207,
+     "event": "image imagegen pulling e46737d70012f434"
+    },
+    {
+     "t_s": 207,
+     "event": "image chatterbox not in registry 2d1ad1f79a05c36a"
+    },
+    {
+     "t_s": 207,
+     "event": "image imagegen not in registry e46737d70012f434"
+    },
+    {
+     "t_s": 207,
+     "event": "image chatterbox building 2d1ad1f79a05c36a"
+    },
+    {
+     "t_s": 207,
+     "event": "image imagegen building e46737d70012f434"
+    },
+    {
+     "t_s": 208,
+     "event": "image avatar pulling 9b05e6479cd7a483"
+    },
+    {
+     "t_s": 208,
+     "event": "image avatar not in registry 9b05e6479cd7a483"
+    },
+    {
+     "t_s": 208,
+     "event": "image avatar building 9b05e6479cd7a483"
+    },
+    {
+     "t_s": 210,
+     "event": "image pulled caddy:2.9.1"
+    },
+    {
+     "t_s": 210,
+     "event": "image pulled nginx:1.30.6-alpine"
+    },
+    {
+     "t_s": 211,
+     "event": "image pulled ghcr.io/coturn/coturn:4.18.0-debian"
+    },
+    {
+     "t_s": 291,
+     "event": "image pulled ghcr.io/speaches-ai/speaches:0.8.3-cuda"
+    },
+    {
+     "t_s": 323,
+     "event": "image pulled ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4"
+    },
+    {
+     "t_s": 325,
+     "event": "speaches and kokoro started"
+    },
+    {
+     "t_s": 373,
+     "event": "image pulled vllm/vllm-openai:v0.11.0"
+    },
+    {
+     "t_s": 648,
+     "event": "image chatterbox built 2d1ad1f79a05c36a"
+    },
+    {
+     "t_s": 652,
+     "event": "chatterbox started"
+    },
+    {
+     "t_s": 680,
+     "event": "image imagegen built e46737d70012f434"
+    },
+    {
+     "t_s": 776,
+     "event": "image chatterbox saved to cache 2d1ad1f79a05c36a"
+    },
+    {
+     "t_s": 781,
+     "event": "image avatar built 9b05e6479cd7a483"
+    },
+    {
+     "t_s": 782,
+     "event": "avatar: voice settled"
+    },
+    {
+     "t_s": 785,
+     "event": "avatar: container started"
+    },
+    {
+     "t_s": 797,
+     "event": "image imagegen saved to cache e46737d70012f434"
+    },
+    {
+     "t_s": 886,
+     "event": "image avatar saved to cache 9b05e6479cd7a483"
+    },
+    {
+     "t_s": 895,
+     "event": "avatar: ready"
+    },
+    {
+     "t_s": 900,
+     "event": "vllm: starting"
+    },
+    {
+     "t_s": 1018,
+     "event": "imagegen: container started"
+    },
+    {
+     "t_s": 1021,
+     "event": "vllm: healthy"
+    }
+   ]
+  },
+  "warm_cache_cold_machine": {
+   "launch_to_gateway_ready_s": 485,
+   "launch_to_avatar_ready_s": 481,
+   "timeline": [
+    {
+     "t_s": 232,
+     "event": "cloud-init: runcmd started (filesystem /lambda/nfs/acudx-wm)"
+    },
+    {
+     "t_s": 233,
+     "event": "images: fetching"
+    },
+    {
+     "t_s": 233,
+     "event": "image chatterbox pulling 2d1ad1f79a05c36a"
+    },
+    {
+     "t_s": 233,
+     "event": "image imagegen pulling e46737d70012f434"
+    },
+    {
+     "t_s": 233,
+     "event": "image imagegen not in registry e46737d70012f434"
+    },
+    {
+     "t_s": 233,
+     "event": "image chatterbox not in registry 2d1ad1f79a05c36a"
+    },
+    {
+     "t_s": 233,
+     "event": "image chatterbox loading 2d1ad1f79a05c36a"
+    },
+    {
+     "t_s": 233,
+     "event": "image imagegen loading e46737d70012f434"
+    },
+    {
+     "t_s": 234,
+     "event": "image avatar pulling 9b05e6479cd7a483"
+    },
+    {
+     "t_s": 234,
+     "event": "image avatar not in registry 9b05e6479cd7a483"
+    },
+    {
+     "t_s": 234,
+     "event": "image avatar loading 9b05e6479cd7a483"
+    },
+    {
+     "t_s": 235,
+     "event": "image pulled caddy:2.9.1"
+    },
+    {
+     "t_s": 235,
+     "event": "image pulled nginx:1.30.6-alpine"
+    },
+    {
+     "t_s": 236,
+     "event": "image pulled ghcr.io/coturn/coturn:4.18.0-debian"
+    },
+    {
+     "t_s": 311,
+     "event": "image pulled ghcr.io/speaches-ai/speaches:0.8.3-cuda"
+    },
+    {
+     "t_s": 349,
+     "event": "image pulled ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4"
+    },
+    {
+     "t_s": 354,
+     "event": "speaches and kokoro started"
+    },
+    {
+     "t_s": 364,
+     "event": "image imagegen loaded e46737d70012f434"
+    },
+    {
+     "t_s": 383,
+     "event": "image avatar loaded 9b05e6479cd7a483"
+    },
+    {
+     "t_s": 383,
+     "event": "avatar: image ready"
+    },
+    {
+     "t_s": 389,
+     "event": "image pulled vllm/vllm-openai:v0.11.0"
+    },
+    {
+     "t_s": 390,
+     "event": "avatar: container started"
+    },
+    {
+     "t_s": 440,
+     "event": "image chatterbox loaded 2d1ad1f79a05c36a"
+    },
+    {
+     "t_s": 447,
+     "event": "chatterbox started"
+    },
+    {
+     "t_s": 481,
+     "event": "avatar: ready"
+    },
+    {
+     "t_s": 483,
+     "event": "vllm: starting"
+    }
+   ]
+  },
+  "production_before": {
+   "launch_to_live_video_s": 1040,
+   "source": "docs/review/09-production-deploy.md"
+  }
+ },
+ "en_kokoro_paced_final": {
+  "live_after_voice_click_ms": 93258,
+  "first_frame_ms": 3742,
+  "lines": [
+   {
+    "line": 1,
+    "speech_start_ms": 2117,
+    "lip_lag_ms": 0,
+    "lip_score": 0.397,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1068,
+    "persona_first_text_ms": 941.4,
+    "first_clause_ms": 1284.4,
+    "tts_first_chunk_ms": 1548.2,
+    "runner_first_chunk_ms": 1548.5,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 25,
+      "first_chunk_ms": 263.8
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 194,
+      "first_chunk_ms": 236.1
+     }
+    ]
+   },
+   {
+    "line": 2,
+    "speech_start_ms": 1818,
+    "lip_lag_ms": 40,
+    "lip_score": 0.479,
+    "av_shift_ms_after": 160,
+    "guard_ms": 897.3,
+    "persona_first_text_ms": 1021.7,
+    "first_clause_ms": 1063.1,
+    "tts_first_chunk_ms": 1228.2,
+    "runner_first_chunk_ms": 1228.5,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 21,
+      "first_chunk_ms": 165.1
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 106,
+      "first_chunk_ms": 225.5
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 67,
+      "first_chunk_ms": 188
+     }
+    ]
+   },
+   {
+    "line": 3,
+    "speech_start_ms": 2261,
+    "lip_lag_ms": 40,
+    "lip_score": 0.478,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1159.4,
+    "persona_first_text_ms": 855.5,
+    "first_clause_ms": 1145.3,
+    "tts_first_chunk_ms": 1675.2,
+    "runner_first_chunk_ms": 1675.5,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 28,
+      "first_chunk_ms": 529.8
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 166,
+      "first_chunk_ms": 266
+     }
+    ]
+   },
+   {
+    "line": 4,
+    "speech_start_ms": 2426,
+    "lip_lag_ms": 40,
+    "lip_score": 0.453,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1116.8,
+    "persona_first_text_ms": 932.9,
+    "first_clause_ms": 1278.4,
+    "tts_first_chunk_ms": 1808.2,
+    "runner_first_chunk_ms": 1808.5,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 22,
+      "first_chunk_ms": 529.9
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 224,
+      "first_chunk_ms": 256.7
+     }
+    ]
+   },
+   {
+    "line": 5,
+    "speech_start_ms": 2451,
+    "lip_lag_ms": 40,
+    "lip_score": 0.389,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1119.2,
+    "persona_first_text_ms": 947.1,
+    "first_clause_ms": 1326.7,
+    "tts_first_chunk_ms": 1842.3,
+    "runner_first_chunk_ms": 1842.6,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 15,
+      "first_chunk_ms": 515.5
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 215,
+      "first_chunk_ms": 256.1
+     }
+    ]
+   },
+   {
+    "line": 6,
+    "speech_start_ms": 1918,
+    "lip_lag_ms": 40,
+    "lip_score": 0.479,
+    "av_shift_ms_after": 160,
+    "guard_ms": 765.2,
+    "persona_first_text_ms": 809.1,
+    "first_clause_ms": 841.8,
+    "tts_first_chunk_ms": 1303.9,
+    "runner_first_chunk_ms": 1304.3,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 23,
+      "first_chunk_ms": 462.1
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 96,
+      "first_chunk_ms": 193.8
+     }
+    ]
+   }
+  ]
+ },
+ "tr_chatterbox_paced_final": {
+  "live_after_voice_click_ms": 93890,
+  "first_frame_ms": 3778,
+  "lines": [
+   {
+    "line": 1,
+    "speech_start_ms": 5467,
+    "lip_lag_ms": 40,
+    "lip_score": 0.493,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1018.1,
+    "persona_first_text_ms": 871.7,
+    "first_clause_ms": 1191.5,
+    "tts_first_chunk_ms": 4816.1,
+    "runner_first_chunk_ms": 4816.3,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 24,
+      "first_chunk_ms": 3624.6
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 115,
+      "first_chunk_ms": 3074.1
+     }
+    ]
+   },
+   {
+    "line": 2,
+    "speech_start_ms": 59,
+    "lip_lag_ms": 280,
+    "lip_score": 0.481,
+    "av_shift_ms_after": 0,
+    "guard_ms": 604.9,
+    "persona_first_text_ms": 539.5,
+    "first_clause_ms": 796.4,
+    "tts_first_chunk_ms": 3451,
+    "runner_first_chunk_ms": 3451.3,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 21,
+      "first_chunk_ms": 2654.6
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 108,
+      "first_chunk_ms": 5129.8
+     }
+    ]
+   },
+   {
+    "line": 3,
+    "speech_start_ms": 35,
+    "lip_lag_ms": 40,
+    "lip_score": 0.272,
+    "av_shift_ms_after": 0,
+    "guard_ms": 1124.8,
+    "persona_first_text_ms": 765,
+    "first_clause_ms": 1003.2,
+    "tts_first_chunk_ms": 4300.1,
+    "runner_first_chunk_ms": 4300.5,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 38,
+      "first_chunk_ms": 3296.9
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 139,
+      "first_chunk_ms": 3986.4
+     }
+    ]
+   },
+   {
+    "line": 4,
+    "speech_start_ms": 19,
+    "lip_lag_ms": 40,
+    "lip_score": 0.715,
+    "av_shift_ms_after": 0,
+    "guard_ms": 909.1,
+    "persona_first_text_ms": 554.1,
+    "first_clause_ms": 790.9,
+    "tts_first_chunk_ms": 5715.4,
+    "runner_first_chunk_ms": 21720.2,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 17,
+      "first_chunk_ms": 4924.5
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 146,
+      "first_chunk_ms": 4375.1
+     }
+    ]
+   },
+   {
+    "line": 5,
+    "speech_start_ms": 10777,
+    "lip_lag_ms": -120,
+    "lip_score": 0.588,
+    "av_shift_ms_after": 0,
+    "guard_ms": 768.1,
+    "persona_first_text_ms": 631.5,
+    "first_clause_ms": 883.8,
+    "tts_first_chunk_ms": 5356.2,
+    "runner_first_chunk_ms": null,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 27,
+      "first_chunk_ms": 4472.4
+     }
+    ]
+   },
+   {
+    "line": 6,
+    "speech_start_ms": 31,
+    "lip_lag_ms": 0,
+    "lip_score": 0.634,
+    "av_shift_ms_after": 80,
+    "guard_ms": 768.1,
+    "persona_first_text_ms": 631.5,
+    "first_clause_ms": 883.8,
+    "tts_first_chunk_ms": 5356.2,
+    "runner_first_chunk_ms": 10153.3,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 16,
+      "first_chunk_ms": 3601.9
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 145,
+      "first_chunk_ms": 2564.1
+     }
+    ]
+   }
+  ]
+ },
+ "en_chatterbox": {
+  "live_after_voice_click_ms": 90276,
+  "first_frame_ms": 3742,
+  "lines": [
+   {
+    "line": 1,
+    "speech_start_ms": 4399,
+    "lip_lag_ms": 80,
+    "lip_score": 0.026,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1117.5,
+    "persona_first_text_ms": 646.6,
+    "first_clause_ms": 881.5,
+    "tts_first_chunk_ms": 3823.8,
+    "runner_first_chunk_ms": 3824.2,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 26,
+      "first_chunk_ms": 2942.3
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 164,
+      "first_chunk_ms": 3560.3
+     }
+    ]
+   },
+   {
+    "line": 2,
+    "speech_start_ms": 4200,
+    "lip_lag_ms": 80,
+    "lip_score": 0.471,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1154,
+    "persona_first_text_ms": 636,
+    "first_clause_ms": 970.8,
+    "tts_first_chunk_ms": 3684.6,
+    "runner_first_chunk_ms": 3684.9,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 24,
+      "first_chunk_ms": 2713.7
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 149,
+      "first_chunk_ms": 2652.9
+     }
+    ]
+   },
+   {
+    "line": 3,
+    "speech_start_ms": 3551,
+    "lip_lag_ms": 40,
+    "lip_score": 0.404,
+    "av_shift_ms_after": 120,
+    "guard_ms": 1054.1,
+    "persona_first_text_ms": 763.8,
+    "first_clause_ms": 1043.2,
+    "tts_first_chunk_ms": 2975.1,
+    "runner_first_chunk_ms": 2975.4,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 25,
+      "first_chunk_ms": 1931.9
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 159,
+      "first_chunk_ms": 2404.7
+     }
+    ]
+   },
+   {
+    "line": 4,
+    "speech_start_ms": 3776,
+    "lip_lag_ms": 80,
+    "lip_score": 0.465,
+    "av_shift_ms_after": 120,
+    "guard_ms": 1101.3,
+    "persona_first_text_ms": 765.9,
+    "first_clause_ms": 1011.9,
+    "tts_first_chunk_ms": 3253.6,
+    "runner_first_chunk_ms": 3254,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 20,
+      "first_chunk_ms": 2241.8
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 143,
+      "first_chunk_ms": 2347.3
+     }
+    ]
+   },
+   {
+    "line": 5,
+    "speech_start_ms": 4021,
+    "lip_lag_ms": -40,
+    "lip_score": 0.356,
+    "av_shift_ms_after": 80,
+    "guard_ms": 1050,
+    "persona_first_text_ms": 676.3,
+    "first_clause_ms": 676.8,
+    "tts_first_chunk_ms": 3365.2,
+    "runner_first_chunk_ms": 3365.5,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 17,
+      "first_chunk_ms": 2688.4
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 156,
+      "first_chunk_ms": 2528.2
+     }
+    ]
+   },
+   {
+    "line": 6,
+    "speech_start_ms": 4182,
+    "lip_lag_ms": 0,
+    "lip_score": 0.49,
+    "av_shift_ms_after": 80,
+    "guard_ms": 1071.1,
+    "persona_first_text_ms": 641.7,
+    "first_clause_ms": 984.6,
+    "tts_first_chunk_ms": 3620.4,
+    "runner_first_chunk_ms": 3620.8,
+    "tts": [
+     {
+      "provider": "gpu-worker",
+      "chars": 13,
+      "first_chunk_ms": 2635.9
+     },
+     {
+      "provider": "gpu-worker",
+      "chars": 149,
+      "first_chunk_ms": 3271.5
+     }
+    ]
+   }
+  ]
+ },
+ "en_kokoro_unpaced_lips_lost": {
+  "live_after_voice_click_ms": 95328,
+  "first_frame_ms": 3894,
+  "lines": [
+   {
+    "line": 1,
+    "speech_start_ms": 2436,
+    "lip_lag_ms": -600,
+    "lip_score": -0.024,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1431.5,
+    "persona_first_text_ms": 935.4,
+    "first_clause_ms": 1394.5,
+    "tts_first_chunk_ms": 1837.1,
+    "runner_first_chunk_ms": 1837.3,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 23,
+      "first_chunk_ms": 442.6
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 157,
+      "first_chunk_ms": 253.7
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 63,
+      "first_chunk_ms": 197.6
+     }
+    ]
+   },
+   {
+    "line": 2,
+    "speech_start_ms": 1806,
+    "lip_lag_ms": -600,
+    "lip_score": 0.263,
+    "av_shift_ms_after": 160,
+    "guard_ms": 751.7,
+    "persona_first_text_ms": 588.8,
+    "first_clause_ms": 589.2,
+    "tts_first_chunk_ms": 1197.3,
+    "runner_first_chunk_ms": 1197.6,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 22,
+      "first_chunk_ms": 608.2
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 164,
+      "first_chunk_ms": 244.4
+     }
+    ]
+   },
+   {
+    "line": 3,
+    "speech_start_ms": 2211,
+    "lip_lag_ms": 40,
+    "lip_score": 0.148,
+    "av_shift_ms_after": 160,
+    "guard_ms": 912.9,
+    "persona_first_text_ms": 575.6,
+    "first_clause_ms": 1043.1,
+    "tts_first_chunk_ms": 1508.5,
+    "runner_first_chunk_ms": 1508.9,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 28,
+      "first_chunk_ms": 465.4
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 150,
+      "first_chunk_ms": 231
+     }
+    ]
+   },
+   {
+    "line": 4,
+    "speech_start_ms": 3451,
+    "lip_lag_ms": 600,
+    "lip_score": 0.045,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1229.4,
+    "persona_first_text_ms": 552.4,
+    "first_clause_ms": 794.6,
+    "tts_first_chunk_ms": 2877.4,
+    "runner_first_chunk_ms": 2877.8,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 24,
+      "first_chunk_ms": 547.2
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 148,
+      "first_chunk_ms": 220.7
+     }
+    ]
+   },
+   {
+    "line": 5,
+    "speech_start_ms": 2134,
+    "lip_lag_ms": -600,
+    "lip_score": 0.093,
+    "av_shift_ms_after": 160,
+    "guard_ms": 1102.9,
+    "persona_first_text_ms": 583.9,
+    "first_clause_ms": 1021.8,
+    "tts_first_chunk_ms": 1500.5,
+    "runner_first_chunk_ms": 1500.7,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 28,
+      "first_chunk_ms": 478.7
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 126,
+      "first_chunk_ms": 226.4
+     }
+    ]
+   },
+   {
+    "line": 6,
+    "speech_start_ms": 1785,
+    "lip_lag_ms": 600,
+    "lip_score": 0.145,
+    "av_shift_ms_after": 160,
+    "guard_ms": 949.4,
+    "persona_first_text_ms": 538.1,
+    "first_clause_ms": 766.1,
+    "tts_first_chunk_ms": 1228.8,
+    "runner_first_chunk_ms": 1229.1,
+    "tts": [
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 13,
+      "first_chunk_ms": 462.6
+     },
+     {
+      "provider": "gpu-worker-kokoro",
+      "chars": 143,
+      "first_chunk_ms": 251.8
+     }
+    ]
+   }
+  ]
+ },
+ "crossfade_ghost": {
+  "tr": {
+   "switch-1": {
+    "frames": 64,
+    "ghost_first_vs_last": 0.0353,
+    "worst_frame_ghost": 0.1743,
+    "fade_frames": [
+     1,
+     63
+    ]
+   },
+   "switch-2": {
+    "frames": 66,
+    "ghost_first_vs_last": 0.4128,
+    "worst_frame_ghost": 0.2673,
+    "fade_frames": [
+     2,
+     65
+    ]
+   }
+  },
+  "tr-run2": {},
+  "en-chatterbox": {
+   "switch-1": {
+    "frames": 66,
+    "ghost_first_vs_last": 0.5407,
+    "worst_frame_ghost": 0.6005,
+    "fade_frames": [
+     9,
+     65
+    ]
+   },
+   "switch-2": {
+    "frames": 66,
+    "ghost_first_vs_last": 0.5927,
+    "worst_frame_ghost": 0.4588,
+    "fade_frames": [
+     4,
+     65
+    ]
+   }
+  }
+ }
+}

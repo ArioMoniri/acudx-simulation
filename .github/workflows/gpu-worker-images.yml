@@ -1,0 +1,95 @@
+# Prebuilt GPU worker images (docs/architecture/18 section 6.8).
+#
+# A worker built Chatterbox, the avatar runner and the image edit server from source on every boot
+# (live 2026-10-21: 17 min 20 s from a cold launch to live video). This builds the three images from
+# exactly the files cloud-init writes and pushes them to ghcr.io/<owner>/acudx-<name>:<key>, where
+# <key> is the hash images.sh on the worker computes (infra/gpu-worker/worker_images.py), so a worker
+# pulls the image that matches its own cloud-init or, when there is none, falls back to the Lambda
+# filesystem cache and then to a local build.
+#
+# The worker pulls without credentials, so after the first run set each package's visibility to
+# public (GitHub: Packages -> acudx-<name> -> Package settings -> Change visibility).
+name: gpu-worker-images
+
+on:
+  push:
+    paths:
+      - infra/gpu-worker/cloud-init.yaml
+      - infra/gpu-worker/worker_images.py
+      - .github/workflows/gpu-worker-images.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  keys:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.keys.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "pyyaml==6.0.2"
+      - id: keys
+        run: |
+          python infra/gpu-worker/worker_images.py keys | tee keys.txt
+          python - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json
+          rows = [l.split() for l in open("keys.txt") if l.strip()]
+          inc = [{"name": n, "key": k, "upstream": u, "ref": r, "dockerfile": d} for n, k, u, r, d in rows]
+          print("matrix=" + json.dumps({"include": inc}))
+          EOF
+
+  build:
+    needs: keys
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.keys.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      # The CUDA torch images are 8 to 12 GB; the hosted runner starts with about 14 GB free.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          sudo docker image prune --all --force
+          df -h /
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "pyyaml==6.0.2"
+      - name: Image name
+        id: img
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "ref=ghcr.io/$owner/acudx-${{ matrix.name }}:${{ matrix.key }}" >> "$GITHUB_OUTPUT"
+      - name: Already published?
+        id: have
+        run: |
+          if docker manifest inspect "${{ steps.img.outputs.ref }}" >/dev/null 2>&1; then echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Build context (upstream at the pinned commit + the cloud-init files)
+        if: steps.have.outputs.skip != 'true'
+        run: |
+          mkdir ctx
+          if [ "${{ matrix.upstream }}" != "-" ]; then
+            git clone --filter=blob:none "${{ matrix.upstream }}" ctx
+            git -C ctx checkout --quiet "${{ matrix.ref }}"
+          fi
+          python infra/gpu-worker/worker_images.py context "${{ matrix.name }}" ctx
+      - uses: docker/login-action@v3
+        if: steps.have.outputs.skip != 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        if: steps.have.outputs.skip != 'true'
+        run: |
+          docker build -f "ctx/${{ matrix.dockerfile }}" -t "${{ steps.img.outputs.ref }}" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            --label "acudx.key=${{ matrix.key }}" ctx
+          docker push "${{ steps.img.outputs.ref }}"

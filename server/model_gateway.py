@@ -31,7 +31,7 @@ import json
 import re
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 from pydantic import BaseModel
@@ -268,17 +268,21 @@ class ModelGateway:
         max_tokens: int | None = None,
         temperature: float | None = None,
         stop: list[str] | None = None,
+        on_text: Callable[[str], Any] | None = None,
     ) -> ChatResult:
         """Call ``/chat/completions`` for a task tier and parse robustly.
 
         On the Claude route the task picks the model (``patient`` persona, ``guard``
         classifier, ``tutor``, ``grade``); ``temperature`` and ``stop`` apply to the
-        OpenAI-compatible route only."""
+        OpenAI-compatible route only. ``on_text(accumulated)`` streams the reply as it is
+        written on the Claude route (the live call speaks it clause by clause); the other
+        route calls it once with the whole reply."""
         tier = self.tiers.get(task) or self.tiers["patient"]
         claude_down: AnthropicUnavailable | None = None
         if self.anthropic_active():
             try:
-                reply = await self._claude(messages, task=task, max_tokens=max_tokens or tier.max_tokens, schema=None)
+                reply = await self._claude(messages, task=task, max_tokens=max_tokens or tier.max_tokens, schema=None,
+                                           on_text=on_text)
                 return self._claude_result(reply, task)
             except AnthropicUnavailable as exc:
                 self.claude_fallbacks += 1
@@ -316,14 +320,19 @@ class ModelGateway:
         latency_ms = (time.monotonic() - t0) * 1000.0
         result = self._parse_chat(data, tier, latency_ms, ep)
         self._record(ep, kind="llm", model=result.model, usage=result.usage, latency_ms=latency_ms, ok=True)
+        if on_text is not None and result.text:
+            res = on_text(result.text)
+            if asyncio.iscoroutine(res):
+                await res
         return result
 
     # -- Claude route -------------------------------------------------------- #
     async def _claude(self, messages: list[dict[str, str]], *, task: str, max_tokens: int,
-                      schema: dict[str, Any] | None) -> AnthropicReply:
+                      schema: dict[str, Any] | None, on_text: Callable[[str], Any] | None = None) -> AnthropicReply:
         model, effort = model_for(self.settings, task)
         return await self.anthropic.complete(messages, model=model, max_tokens=max_tokens, effort=effort,
-                                             schema=schema, cache_tail=(task == "patient"), node=task)
+                                             schema=schema, cache_tail=(task in ("patient", "patient_live")), node=task,
+                                             on_text=on_text)
 
     @staticmethod
     def _claude_result(reply: AnthropicReply, task: str) -> "ChatResult":

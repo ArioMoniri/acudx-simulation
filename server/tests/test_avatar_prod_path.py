@@ -147,6 +147,22 @@ def test_prepare_on_a_worker_without_an_edit_server_yet_waits_too(tmp_path, monk
         assert _wait(lambda: _prepare(c).json()["state"] == "prepared", timeout=8)
 
 
+def test_a_call_after_a_case_start_prepare_does_not_wait_for_an_edit_server_that_is_not_up(tmp_path, monkeypatch):
+    """Cold worker (docs/architecture/18 6.8): the edit server starts after vLLM, minutes after the runner.
+    A call whose pictures were begun at case start used to wait the full appearance budget (45 s in
+    production) before opening on the portrait; it opens at once now and crossfades in later."""
+    monkeypatch.setattr(state_sync, "SERVICES_POLL_S", 0.05)
+    runner = SyncRunner(imagegen=False)
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_appearance_wait_s=30)
+    _case(app)
+    with TestClient(app) as c:
+        assert _prepare(c).status_code == 202
+        t = time.monotonic()
+        s = c.post("/v1/voice/avatar/session", json={**SESSION, "thread_id": THREAD}, headers=USER).json()
+        assert time.monotonic() - t < 5
+        assert s["avatar_id"] == "acudx-p04" and "image edit server" in s["appearance"]["reason"]
+
+
 def test_services_wait_gives_up_after_its_budget_and_says_so():
     class Client:
         pass

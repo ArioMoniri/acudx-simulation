@@ -1,0 +1,547 @@
+{
+  "captured_at": "2026-10-21T22:57:51.587Z",
+  "base_url": "http://127.0.0.1:4187",
+  "lang": "en",
+  "live_after_voice_click_ms": 90276,
+  "first_frame_ms": 3742,
+  "lines": [
+    {
+      "line": 1,
+      "question": "When did this start, and where exactly do you feel it?",
+      "reply": "It started about six weeks ago, slowly, like a cold that just never cleared up. I feel it deep in my chest, mostly on the right side near the top. It doesn't really hurt, it's just the cough.",
+      "via": "server",
+      "speech_start_ms": 4399,
+      "lip_lag_ms": 80,
+      "lip_score": 0.026,
+      "voice_ms": 13516,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4101,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 646.6,
+        "first_clause_ms": 881.5,
+        "guard_ms": 1117.5,
+        "history_ms": 1121.9,
+        "persona_done_ms": 1204.3,
+        "tts_first_chunk_ms": 3823.8,
+        "released_ms": 3823.8,
+        "runner_first_chunk_ms": 3824.2
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 646.6,
+          "first_clause_ms": 881.5,
+          "guard_ms": 1117.5,
+          "history_ms": 1121.9,
+          "persona_done_ms": 1204.3,
+          "tts_first_chunk_ms": 3823.8,
+          "released_ms": 3823.8,
+          "runner_first_chunk_ms": 3824.2,
+          "runner_done_ms": 15915.5
+        },
+        "requests": [
+          {
+            "chars": 26,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2942.3,
+            "bytes": 139200
+          },
+          {
+            "chars": 164,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3560.3,
+            "bytes": 481920
+          }
+        ],
+        "runner": {
+          "frames": 647,
+          "first_frame_ms": 0.4,
+          "elapsed_ms": 12049.8
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 2,
+      "question": "What does it feel like, sharp, dull or pressing?",
+      "reply": "It's not really sharp or pressing, doctor. It's more a deep, heavy feeling in there when I cough, and then the phlegm comes up. Mostly it just doesn't hurt, it's just tiring.",
+      "via": "server",
+      "speech_start_ms": 4200,
+      "lip_lag_ms": 80,
+      "lip_score": 0.471,
+      "voice_ms": 13999,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3458,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 636,
+        "first_clause_ms": 970.8,
+        "guard_ms": 1154,
+        "history_ms": 1156.6,
+        "persona_done_ms": 1157.3
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 636,
+          "first_clause_ms": 970.8,
+          "guard_ms": 1154,
+          "history_ms": 1156.6,
+          "persona_done_ms": 1157.3,
+          "tts_first_chunk_ms": 3684.6,
+          "released_ms": 3684.6,
+          "runner_first_chunk_ms": 3684.9,
+          "runner_done_ms": 15053.7
+        },
+        "requests": [
+          {
+            "chars": 24,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2713.7,
+            "bytes": 104640
+          },
+          {
+            "chars": 149,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2652.9,
+            "bytes": 462720
+          }
+        ],
+        "runner": {
+          "frames": 591,
+          "first_frame_ms": 2.9,
+          "elapsed_ms": 11329.9
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 3,
+      "question": "Does anything make it better or worse?",
+      "reply": "Talking a lot or going up stairs sets off coughing fits, and lying down at night makes it worse. Warm drinks calm it down a little. The cough syrup from the pharmacy didn't really help.",
+      "via": "server",
+      "speech_start_ms": 3551,
+      "lip_lag_ms": 40,
+      "lip_score": 0.404,
+      "voice_ms": 13566,
+      "av_shift_ms_after": 120,
+      "reply_http_ms": 4187,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 763.8,
+        "first_clause_ms": 1043.2,
+        "guard_ms": 1054.1,
+        "history_ms": 1057.9,
+        "persona_done_ms": 1078.3,
+        "tts_first_chunk_ms": 2975.1,
+        "released_ms": 2975.1,
+        "runner_first_chunk_ms": 2975.4
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 763.8,
+          "first_clause_ms": 1043.2,
+          "guard_ms": 1054.1,
+          "history_ms": 1057.9,
+          "persona_done_ms": 1078.3,
+          "tts_first_chunk_ms": 2975.1,
+          "released_ms": 2975.1,
+          "runner_first_chunk_ms": 2975.4,
+          "runner_done_ms": 14584.6
+        },
+        "requests": [
+          {
+            "chars": 25,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1931.9,
+            "bytes": 81600
+          },
+          {
+            "chars": 159,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2404.7,
+            "bytes": 497280
+          }
+        ],
+        "runner": {
+          "frames": 603,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 11564
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 4,
+      "question": "Have you had anything like this before?",
+      "reply": "No, never like this. I've always been pretty healthy, no big illnesses, never been in the hospital. This is the first time I've had a cough that just won't go away.",
+      "via": "server",
+      "speech_start_ms": 3776,
+      "lip_lag_ms": 80,
+      "lip_score": 0.465,
+      "voice_ms": 14283,
+      "av_shift_ms_after": 120,
+      "reply_http_ms": 3075,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 765.9,
+        "first_clause_ms": 1011.9,
+        "guard_ms": 1101.3,
+        "history_ms": 1103.9,
+        "persona_done_ms": 1104.6
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 765.9,
+          "first_clause_ms": 1011.9,
+          "guard_ms": 1101.3,
+          "history_ms": 1103.9,
+          "persona_done_ms": 1104.6,
+          "tts_first_chunk_ms": 3253.6,
+          "released_ms": 3253.6,
+          "runner_first_chunk_ms": 3254,
+          "runner_done_ms": 13814.7
+        },
+        "requests": [
+          {
+            "chars": 20,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2241.8,
+            "bytes": 77760
+          },
+          {
+            "chars": 143,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2347.3,
+            "bytes": 471360
+          }
+        ],
+        "runner": {
+          "frames": 572,
+          "first_frame_ms": 0.8,
+          "elapsed_ms": 10499.6
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 5,
+      "question": "Do you take any medicines regularly, and do you have allergies?",
+      "reply": "No regular pills, nothing like that. Just the cough syrup from the pharmacy, and paracetamol sometimes when I feel feverish. And no allergies to any medicines that I know of.",
+      "via": "server",
+      "speech_start_ms": 4021,
+      "lip_lag_ms": -40,
+      "lip_score": 0.356,
+      "voice_ms": 14199,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 3639,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 676.3,
+        "first_clause_ms": 676.8,
+        "guard_ms": 1050,
+        "history_ms": 1053.8,
+        "persona_done_ms": 1055,
+        "tts_first_chunk_ms": 3365.2,
+        "released_ms": 3365.2,
+        "runner_first_chunk_ms": 3365.5
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 676.3,
+          "first_clause_ms": 676.8,
+          "guard_ms": 1050,
+          "history_ms": 1053.8,
+          "persona_done_ms": 1055,
+          "tts_first_chunk_ms": 3365.2,
+          "released_ms": 3365.2,
+          "runner_first_chunk_ms": 3365.5,
+          "runner_done_ms": 15714.9
+        },
+        "requests": [
+          {
+            "chars": 17,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2688.4,
+            "bytes": 127680
+          },
+          {
+            "chars": 156,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2528.2,
+            "bytes": 518400
+          }
+        ],
+        "runner": {
+          "frames": 673,
+          "first_frame_ms": 1.4,
+          "elapsed_ms": 12309.1
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 6,
+      "question": "How are you feeling right now, compared to when you arrived?",
+      "reply": "A bit better, I think. I'm calmer now, and the discomfort has eased a lot since I came in. I'm still tired and the cough hasn't gone away, but I feel more settled.",
+      "via": "server",
+      "speech_start_ms": 4182,
+      "lip_lag_ms": 0,
+      "lip_score": 0.49,
+      "voice_ms": 15266,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 3340,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 641.7,
+        "first_clause_ms": 984.6,
+        "guard_ms": 1071.1,
+        "history_ms": 1073.5,
+        "persona_done_ms": 1164.3
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 641.7,
+          "first_clause_ms": 984.6,
+          "guard_ms": 1071.1,
+          "history_ms": 1073.5,
+          "persona_done_ms": 1164.3,
+          "tts_first_chunk_ms": 3620.4,
+          "released_ms": 3620.4,
+          "runner_first_chunk_ms": 3620.8,
+          "runner_done_ms": 17152.7
+        },
+        "requests": [
+          {
+            "chars": 13,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2635.9,
+            "bytes": 108480
+          },
+          {
+            "chars": 149,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3271.5,
+            "bytes": 566400
+          }
+        ],
+        "runner": {
+          "frames": 703,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 13485.5
+        },
+        "error": null
+      }
+    }
+  ],
+  "fades": [
+    {
+      "switch": 1,
+      "to": "acudx-p23-0acec229-8bb09cd303",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p23-0acec229-8bb09cd303",
+        "previous": "acudx-p23-0acec229-9cf11931ec",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.2
+      },
+      "frames": 66
+    },
+    {
+      "switch": 2,
+      "to": "acudx-p23-0acec229-9cf11931ec",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p23-0acec229-9cf11931ec",
+        "previous": "acudx-p23-0acec229-8bb09cd303",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.2
+      },
+      "frames": 66
+    },
+    {
+      "switch": "mid-sentence",
+      "to": "acudx-p23-0acec229-8bb09cd303",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p23-0acec229-8bb09cd303",
+        "previous": "acudx-p23-0acec229-9cf11931ec",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.2
+      },
+      "pending_right_after": true
+    },
+    {
+      "switch": "mid-sentence-after",
+      "applied": 3,
+      "pending": true,
+      "avatar": "acudx-p23-0acec229-9cf11931ec"
+    }
+  ],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p23-0acec229-9cf11931ec",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 75,
+        "residual_before": 49.83,
+        "residual_after": 49.83
+      }
+    },
+    {
+      "name": "critical",
+      "avatar_id": "acudx-p23-0acec229-8bb09cd303",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 34,
+        "residual_before": 46.2,
+        "residual_after": 46.2
+      }
+    },
+    {
+      "name": "improved",
+      "avatar_id": "acudx-p23-0acec229-e3b0c44298",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 61,
+        "residual_before": 60.4,
+        "residual_after": 60.4
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 80,
+    "lip_lags": [
+      {
+        "lip_lag_ms": 80,
+        "score": 0.026,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 80,
+        "score": 0.471,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.404,
+        "av_shift_ms": 120
+      },
+      {
+        "lip_lag_ms": 80,
+        "score": 0.465,
+        "av_shift_ms": 120
+      },
+      {
+        "lip_lag_ms": -40,
+        "score": 0.356,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": 0,
+        "score": 0.49,
+        "av_shift_ms": 80
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 40.1
+    },
+    "answer_ms": 196.7,
+    "prepare_ms": 81364.2
+  },
+  "runner_call": [
+    {
+      "id": "361662ce",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 80
+      },
+      "avatar": "acudx-p23-0acec229-8bb09cd303",
+      "speaking": false,
+      "warm_up_ms": 89.8,
+      "switches_applied": 4,
+      "switch_pending": false,
+      "infer_fps": 42.9,
+      "inferred_frames": 2000,
+      "sender_queue": {
+        "audio_frames": 12,
+        "video_frames": 5
+      },
+      "sent_frames": 3718,
+      "underruns": 1,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 7431,
+    "audioEnergy": 3.2326543325480874,
+    "videoFrames": 3714,
+    "videoFps": 25,
+    "rttMs": 40,
+    "audioJitterMs": 66,
+    "videoJitterMs": 70,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3482?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-21T22:53:52.013Z case open",
+    "2026-10-21T22:55:23.333Z live video connected 90276 ms after the voice click",
+    "2026-10-21T22:55:25.517Z line 1 sent",
+    "2026-10-21T22:55:46.146Z line 1: {\"s\":4399,\"lag\":80,\"score\":0.026,\"via\":\"server\"}",
+    "2026-10-21T22:55:47.729Z line 2 sent",
+    "2026-10-21T22:56:08.588Z line 2: {\"s\":4200,\"lag\":80,\"score\":0.471,\"via\":\"server\"}",
+    "2026-10-21T22:56:10.148Z line 3 sent",
+    "2026-10-21T22:56:29.956Z line 3: {\"s\":3551,\"lag\":40,\"score\":0.404,\"via\":\"server\"}",
+    "2026-10-21T22:56:31.532Z line 4 sent",
+    "2026-10-21T22:56:52.320Z line 4: {\"s\":3776,\"lag\":80,\"score\":0.465,\"via\":\"server\"}",
+    "2026-10-21T22:56:53.907Z line 5 sent",
+    "2026-10-21T22:57:14.678Z line 5: {\"s\":4021,\"lag\":-40,\"score\":0.356,\"via\":\"server\"}",
+    "2026-10-21T22:57:16.283Z line 6 sent",
+    "2026-10-21T22:57:38.518Z line 6: {\"s\":4182,\"lag\":0,\"score\":0.49,\"via\":\"server\"}",
+    "2026-10-21T22:57:40.040Z variants ready: 3",
+    "2026-10-21T22:57:44.107Z switch 1 -> acudx-p23-0acec229-8bb09cd303: {\"ok\":true,\"avatar\":\"acudx-p23-0acec229-8bb09cd303\",\"previous\":\"acudx-p23-0acec229-9cf11931ec\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.2} (66 frames)",
+    "2026-10-21T22:57:48.893Z switch 2 -> acudx-p23-0acec229-9cf11931ec: {\"ok\":true,\"avatar\":\"acudx-p23-0acec229-9cf11931ec\",\"previous\":\"acudx-p23-0acec229-8bb09cd303\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.2} (66 frames)",
+    "2026-10-21T22:57:51.486Z mid-sentence switch: {\"ok\":true,\"avatar\":\"acudx-p23-0acec229-8bb09cd303\",\"previous\":\"acudx-p23-0acec229-9cf11931ec\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.2} pending=true"
+  ]
+}

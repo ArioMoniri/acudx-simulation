@@ -1249,7 +1249,8 @@ class WorkerManager:
                     last = f"unreachable: {exc.__class__.__name__}"
                     continue
                 if r.status_code == 200:
-                    out[key] = "\n".join(r.text.splitlines()[-tail_lines:])
+                    # The worker's logs are UTF-8 (cloud-init, docker); never a charset guess.
+                    out[key] = "\n".join(r.content.decode("utf-8", "replace").splitlines()[-tail_lines:])
                     out["available"] = True
                     out.setdefault("source", "tls" if base.startswith("https://") else "port80")
                     break

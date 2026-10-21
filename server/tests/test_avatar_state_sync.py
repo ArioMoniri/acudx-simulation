@@ -158,6 +158,21 @@ def test_call_opens_on_the_generated_presenting_look_and_prepares_the_ladder(tmp
                  headers={"X-User-Id": "learner-2"}).status_code == 404
 
 
+def test_every_variant_is_prepared_on_the_base_portraits_frame(tmp_path):
+    """Live 2026-10-21: the cross-fade between the plain portrait and an edited picture showed two faces
+    (different framing). Every edited picture is prepared with ``ref`` = the base portrait, which the
+    runner registers it onto, and the base is prepared first so the runner has it."""
+    app, runner, _row = _setup(tmp_path)
+    c = TestClient(app)
+    s = c.post("/v1/voice/avatar/session", json={**SESSION, "thread_id": THREAD}, headers=USER).json()
+    assert _wait(lambda: sum(1 for v in c.get("/v1/voice/avatar/appearance", params={"session_id": s["session_id"]},
+                                               headers=USER).json()["appearance"]["variants"]
+                             if v["status"] == "ready") >= 5)
+    variants = [a for a in runner.avatars if a != "acudx-p04"]
+    assert variants and all(runner.refs[a] == "acudx-p04" for a in variants)
+    assert runner.refs["acudx-p04"] is None
+
+
 def test_director_step_switches_the_live_face_and_arrest_silences_the_voice(tmp_path):
     app, runner, row = _setup(tmp_path)
     c = TestClient(app)

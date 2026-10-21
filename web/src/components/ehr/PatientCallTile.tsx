@@ -74,6 +74,7 @@ import {
 import { voiceApi, type VoiceCapabilities } from "@/lib/voiceApi";
 import { etaMinutes, wakeOnCallStart, watchWorker } from "@/lib/workerWake";
 import { sessionBody, startAvatarCall, type AvatarCallHandle, type AvatarCallMetrics } from "@/lib/avatarCall";
+import { consumeServerSpoken, registerLiveCall } from "@/lib/liveCallBus";
 import { getEncounterSnapshot, getGeneration, useEncounterSelector } from "@/state/encounterStore";
 
 export type CallState = "connecting" | "live" | "hold" | "ended";
@@ -215,6 +216,8 @@ export function PatientCallTile({
   const modeRef = useRef<CallMode>("local");
   const prevVoiceRef = useRef(voiceOn);
   const avatarRef = useRef<AvatarCallHandle | null>(null);
+  // Unregisters the live call from the interview composer (liveCallBus) when it ends.
+  const unregisterCallRef = useRef<() => void>(() => {});
   const contextRef = useRef(callContext);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -280,6 +283,8 @@ export function PatientCallTile({
           samples: [],
           lastSpeak: null,
           speak: async () => false,
+          track: () => {},
+          lines: [],
           stats: async () => ({ audioPackets: 0, audioEnergy: 0, videoFrames: 0, videoFps: null, rttMs: null,
             audioJitterMs: null, videoJitterMs: null }),
           end: () => void voiceApi.avatarEnd(ses.data.session_id),
@@ -299,6 +304,7 @@ export function PatientCallTile({
             if (!isCancelled()) setLiveMetrics(m);
           },
           onState: (st) => {
+            if (st === "failed" || st === "ended") unregisterCallRef.current();
             if (isCancelled()) return;
             if (st === "failed" || st === "ended") {
               setHasVideo(false);
@@ -311,6 +317,13 @@ export function PatientCallTile({
           return false;
         }
         avatarRef.current = handle;
+        // The interview composer now sends this call's id with each question, and the server speaks the
+        // reply into the call while it is written (docs/architecture/18 6.3.9).
+        const callThread = getEncounterSnapshot().generation?.threadId ?? null;
+        unregisterCallRef.current();
+        unregisterCallRef.current = callThread
+          ? registerLiveCall({ threadId: callThread, sessionId: ses.data.session_id, voiceOn: () => voiceRef.current })
+          : () => {};
         if (typeof window !== "undefined") (window as unknown as { __acudxAvatarCall?: AvatarCallHandle }).__acudxAvatarCall = handle;
         setLiveMetrics({ ...handle.metrics });
         setHasVideo(true);
@@ -389,6 +402,7 @@ export function PatientCallTile({
       ctl.abort();
       lkRef.current?.disconnect();
       lkRef.current = null;
+      unregisterCallRef.current();
       avatarRef.current?.end();
       avatarRef.current = null;
     };
@@ -522,7 +536,12 @@ export function PatientCallTile({
     if (mode === "webrtc") {
       // Live video: the gateway speaks the line into the runner; voice and lips arrive
       // together on the WebRTC stream. Voice off keeps the face listening, captions on.
-      if (voiceRef.current) void avatarRef.current?.speak(text);
+      // A reply the interview turn already streamed into the call is only measured, not spoken again.
+      if (voiceRef.current) {
+        const spoken = consumeServerSpoken(text);
+        if (spoken) avatarRef.current?.track(text, spoken.sentAt);
+        else void avatarRef.current?.speak(text);
+      }
       return;
     }
     const textTimed = () => speakRef.current(text, { voice: false, lang });

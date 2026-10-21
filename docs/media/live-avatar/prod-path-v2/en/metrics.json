@@ -1,0 +1,547 @@
+{
+  "captured_at": "2026-10-21T23:08:13.092Z",
+  "base_url": "http://127.0.0.1:4187",
+  "lang": "en",
+  "live_after_voice_click_ms": 93258,
+  "first_frame_ms": 3742,
+  "lines": [
+    {
+      "line": 1,
+      "question": "When did this start, and where exactly do you feel it?",
+      "reply": "It crept up on me slowly, doctor, maybe six months back, no one day I can point to. It's only the waterworks, really. I don't have any pain in my belly or my back, just a weak stream and I have to strain to get it going.",
+      "via": "server",
+      "speech_start_ms": 2117,
+      "lip_lag_ms": 0,
+      "lip_score": 0.397,
+      "voice_ms": 12216,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 6404,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 941.4,
+        "guard_ms": 1068,
+        "history_ms": 1074.1,
+        "first_clause_ms": 1284.4,
+        "tts_first_chunk_ms": 1548.2,
+        "released_ms": 1548.2,
+        "runner_first_chunk_ms": 1548.5,
+        "persona_done_ms": 1679.2
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 941.4,
+          "guard_ms": 1068,
+          "history_ms": 1074.1,
+          "first_clause_ms": 1284.4,
+          "tts_first_chunk_ms": 1548.2,
+          "released_ms": 1548.2,
+          "runner_first_chunk_ms": 1548.5,
+          "persona_done_ms": 1679.2,
+          "runner_done_ms": 13190.3
+        },
+        "requests": [
+          {
+            "chars": 25,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 263.8,
+            "bytes": 76352
+          },
+          {
+            "chars": 194,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 236.1,
+            "bytes": 535844
+          }
+        ],
+        "runner": {
+          "frames": 638,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 11604.1
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 2,
+      "question": "What does it feel like, sharp, dull or pressing?",
+      "reply": "It's not really pain, doctor, more of a nuisance. The stream is weak and it stops and starts, so I have to stand there and push. And afterwards I always feel like there's still some left in there.",
+      "via": "server",
+      "speech_start_ms": 1818,
+      "lip_lag_ms": 40,
+      "lip_score": 0.479,
+      "voice_ms": 10566,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4425,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 897.3,
+        "history_ms": 901.3,
+        "persona_first_text_ms": 1021.7,
+        "first_clause_ms": 1063.1,
+        "tts_first_chunk_ms": 1228.2,
+        "released_ms": 1228.2,
+        "runner_first_chunk_ms": 1228.5,
+        "persona_done_ms": 1373.3
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 897.3,
+          "history_ms": 901.3,
+          "persona_first_text_ms": 1021.7,
+          "first_clause_ms": 1063.1,
+          "tts_first_chunk_ms": 1228.2,
+          "released_ms": 1228.2,
+          "runner_first_chunk_ms": 1228.5,
+          "persona_done_ms": 1373.3,
+          "runner_done_ms": 11183.7
+        },
+        "requests": [
+          {
+            "chars": 21,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 165.1,
+            "bytes": 64162
+          },
+          {
+            "chars": 106,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 225.5,
+            "bytes": 291866
+          },
+          {
+            "chars": 67,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 188,
+            "bytes": 177076
+          }
+        ],
+        "runner": {
+          "frames": 556,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 9917.6
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 3,
+      "question": "Does anything make it better or worse?",
+      "reply": "Cutting back on drinks after supper helps a little, and sitting down to go helps a bit too. It's worse if I have tea or a beer in the evening, and the cold weather seems to make it worse as well.",
+      "via": "server",
+      "speech_start_ms": 2261,
+      "lip_lag_ms": 40,
+      "lip_score": 0.478,
+      "voice_ms": 10833,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4053,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 855.5,
+        "first_clause_ms": 1145.3,
+        "guard_ms": 1159.4,
+        "history_ms": 1161.6,
+        "persona_done_ms": 1204.8,
+        "tts_first_chunk_ms": 1675.2,
+        "released_ms": 1675.2,
+        "runner_first_chunk_ms": 1675.5
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 855.5,
+          "first_clause_ms": 1145.3,
+          "guard_ms": 1159.4,
+          "history_ms": 1161.6,
+          "persona_done_ms": 1204.8,
+          "tts_first_chunk_ms": 1675.2,
+          "released_ms": 1675.2,
+          "runner_first_chunk_ms": 1675.5,
+          "runner_done_ms": 12092.1
+        },
+        "requests": [
+          {
+            "chars": 28,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 529.8,
+            "bytes": 87362
+          },
+          {
+            "chars": 166,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 266,
+            "bytes": 460378
+          }
+        ],
+        "runner": {
+          "frames": 571,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 10380.3
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 4,
+      "question": "Have you had anything like this before?",
+      "reply": "Nothing like this slow weakening, no. But two winters ago I took a cold remedy and couldn't pass a single drop. My belly swelled up and hurt, and they had to put a tube in at the hospital. Since then I don't take any cold pills or allergy tablets.",
+      "via": "server",
+      "speech_start_ms": 2426,
+      "lip_lag_ms": 40,
+      "lip_score": 0.453,
+      "voice_ms": 13949,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 5035,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 932.9,
+        "guard_ms": 1116.8,
+        "history_ms": 1120,
+        "first_clause_ms": 1278.4,
+        "persona_done_ms": 1424.2,
+        "tts_first_chunk_ms": 1808.2,
+        "released_ms": 1808.2,
+        "runner_first_chunk_ms": 1808.5
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 932.9,
+          "guard_ms": 1116.8,
+          "history_ms": 1120,
+          "first_clause_ms": 1278.4,
+          "persona_done_ms": 1424.2,
+          "tts_first_chunk_ms": 1808.2,
+          "released_ms": 1808.2,
+          "runner_first_chunk_ms": 1808.5,
+          "runner_done_ms": 15270.2
+        },
+        "requests": [
+          {
+            "chars": 22,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 529.9,
+            "bytes": 69376
+          },
+          {
+            "chars": 224,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 256.7,
+            "bytes": 624740
+          }
+        ],
+        "runner": {
+          "frames": 724,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 13425.7
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 5,
+      "question": "Do you take any medicines regularly, and do you have allergies?",
+      "reply": "Just two pills, doctor. One for my blood pressure in the morning, amlodipine I think it's called, and a baby aspirin. No cold pills, no allergy tablets, no sleeping pills. And I don't have any allergies to medicines that I know of.",
+      "via": "server",
+      "speech_start_ms": 2451,
+      "lip_lag_ms": 40,
+      "lip_score": 0.389,
+      "voice_ms": 13483,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3892,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 947.1,
+        "guard_ms": 1119.2,
+        "history_ms": 1122.4,
+        "first_clause_ms": 1326.7,
+        "persona_done_ms": 1534.4,
+        "tts_first_chunk_ms": 1842.3,
+        "released_ms": 1842.3,
+        "runner_first_chunk_ms": 1842.6
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 947.1,
+          "guard_ms": 1119.2,
+          "history_ms": 1122.4,
+          "first_clause_ms": 1326.7,
+          "persona_done_ms": 1534.4,
+          "tts_first_chunk_ms": 1842.3,
+          "released_ms": 1842.3,
+          "runner_first_chunk_ms": 1842.6,
+          "runner_done_ms": 14793.8
+        },
+        "requests": [
+          {
+            "chars": 15,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 515.5,
+            "bytes": 57362
+          },
+          {
+            "chars": 215,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 256.1,
+            "bytes": 620428
+          }
+        ],
+        "runner": {
+          "frames": 707,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 12912.3
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 6,
+      "question": "How are you feeling right now, compared to when you arrived?",
+      "reply": "I'm feeling quite a bit better, doctor, thank you. That ache has eased off a lot, and I feel calmer than when I came in.",
+      "via": "server",
+      "speech_start_ms": 1918,
+      "lip_lag_ms": 40,
+      "lip_score": 0.479,
+      "voice_ms": 6533,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4563,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 765.2,
+        "history_ms": 769.2,
+        "persona_first_text_ms": 809.1,
+        "first_clause_ms": 841.8,
+        "persona_done_ms": 1120.9,
+        "tts_first_chunk_ms": 1303.9,
+        "released_ms": 1303.9,
+        "runner_first_chunk_ms": 1304.3
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 765.2,
+          "history_ms": 769.2,
+          "persona_first_text_ms": 809.1,
+          "first_clause_ms": 841.8,
+          "persona_done_ms": 1120.9,
+          "tts_first_chunk_ms": 1303.9,
+          "released_ms": 1303.9,
+          "runner_first_chunk_ms": 1304.3,
+          "runner_done_ms": 7313.5
+        },
+        "requests": [
+          {
+            "chars": 23,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 462.1,
+            "bytes": 72340
+          },
+          {
+            "chars": 96,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 193.8,
+            "bytes": 263766
+          }
+        ],
+        "runner": {
+          "frames": 351,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 5972.5
+        },
+        "error": null
+      }
+    }
+  ],
+  "fades": [
+    {
+      "switch": 1,
+      "to": "acudx-p04-2a7dbcb7-be4a95a56a",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p04-2a7dbcb7-be4a95a56a",
+        "previous": "acudx-p04-2a7dbcb7-e3b0c44298",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.2
+      },
+      "frames": 65
+    },
+    {
+      "switch": 2,
+      "to": "acudx-p04-2a7dbcb7-e3b0c44298",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p04-2a7dbcb7-e3b0c44298",
+        "previous": "acudx-p04-2a7dbcb7-be4a95a56a",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.4
+      },
+      "frames": 66
+    },
+    {
+      "switch": "mid-sentence",
+      "to": "acudx-p04-2a7dbcb7-be4a95a56a",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p04-2a7dbcb7-be4a95a56a",
+        "previous": "acudx-p04-2a7dbcb7-e3b0c44298",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.2
+      },
+      "pending_right_after": false
+    },
+    {
+      "switch": "mid-sentence-after",
+      "applied": 4,
+      "pending": false,
+      "avatar": "acudx-p04-2a7dbcb7-be4a95a56a"
+    }
+  ],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p04-2a7dbcb7-e3b0c44298",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 1.1604,
+        "rotation_deg": -0.502,
+        "shift_px": [
+          -46.1,
+          2.4
+        ],
+        "inliers": 377,
+        "residual_before": 36.56,
+        "residual_after": 11.71
+      }
+    },
+    {
+      "name": "critical",
+      "avatar_id": "acudx-p04-2a7dbcb7-be4a95a56a",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 1.0627,
+        "rotation_deg": -0.343,
+        "shift_px": [
+          -16.4,
+          3.5
+        ],
+        "inliers": 277,
+        "residual_before": 29.48,
+        "residual_after": 12.03
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 160,
+    "lip_lags": [
+      {
+        "lip_lag_ms": 0,
+        "score": 0.397,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.479,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.478,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.453,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.389,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.479,
+        "av_shift_ms": 160
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 40.5
+    },
+    "answer_ms": 191.7,
+    "prepare_ms": 84726.8
+  },
+  "runner_call": [
+    {
+      "id": "0a2c84e8",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 160
+      },
+      "avatar": "acudx-p04-2a7dbcb7-be4a95a56a",
+      "speaking": false,
+      "warm_up_ms": 103.6,
+      "switches_applied": 4,
+      "switch_pending": false,
+      "infer_fps": 49.1,
+      "inferred_frames": 1820,
+      "sender_queue": {
+        "audio_frames": 7,
+        "video_frames": 3
+      },
+      "sent_frames": 3076,
+      "underruns": 0,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 6147,
+    "audioEnergy": 4.53827996309601,
+    "videoFrames": 3073,
+    "videoFps": 25,
+    "rttMs": 33,
+    "audioJitterMs": 49,
+    "videoJitterMs": 51,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3482?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-21T23:04:36.755Z case open",
+    "2026-10-21T23:06:10.144Z live video connected 93258 ms after the voice click",
+    "2026-10-21T23:06:12.348Z line 1 sent",
+    "2026-10-21T23:06:29.302Z line 1: {\"s\":2117,\"lag\":0,\"score\":0.397,\"via\":\"server\"}",
+    "2026-10-21T23:06:30.890Z line 2 sent",
+    "2026-10-21T23:06:45.800Z line 2: {\"s\":1818,\"lag\":40,\"score\":0.479,\"via\":\"server\"}",
+    "2026-10-21T23:06:47.371Z line 3 sent",
+    "2026-10-21T23:07:03.136Z line 3: {\"s\":2261,\"lag\":40,\"score\":0.478,\"via\":\"server\"}",
+    "2026-10-21T23:07:04.714Z line 4 sent",
+    "2026-10-21T23:07:23.912Z line 4: {\"s\":2426,\"lag\":40,\"score\":0.453,\"via\":\"server\"}",
+    "2026-10-21T23:07:25.499Z line 5 sent",
+    "2026-10-21T23:07:44.091Z line 5: {\"s\":2451,\"lag\":40,\"score\":0.389,\"via\":\"server\"}",
+    "2026-10-21T23:07:45.716Z line 6 sent",
+    "2026-10-21T23:07:56.838Z line 6: {\"s\":1918,\"lag\":40,\"score\":0.479,\"via\":\"server\"}",
+    "2026-10-21T23:07:58.355Z variants ready: 2",
+    "2026-10-21T23:08:04.090Z switch 1 -> acudx-p04-2a7dbcb7-be4a95a56a: {\"ok\":true,\"avatar\":\"acudx-p04-2a7dbcb7-be4a95a56a\",\"previous\":\"acudx-p04-2a7dbcb7-e3b0c44298\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.2} (65 frames)",
+    "2026-10-21T23:08:10.383Z switch 2 -> acudx-p04-2a7dbcb7-e3b0c44298: {\"ok\":true,\"avatar\":\"acudx-p04-2a7dbcb7-e3b0c44298\",\"previous\":\"acudx-p04-2a7dbcb7-be4a95a56a\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.4} (66 frames)",
+    "2026-10-21T23:08:12.983Z mid-sentence switch: {\"ok\":true,\"avatar\":\"acudx-p04-2a7dbcb7-be4a95a56a\",\"previous\":\"acudx-p04-2a7dbcb7-e3b0c44298\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.2} pending=false"
+  ]
+}

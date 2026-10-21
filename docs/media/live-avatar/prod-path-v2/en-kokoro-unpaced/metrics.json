@@ -1,0 +1,553 @@
+{
+  "captured_at": "2026-10-21T23:03:22.466Z",
+  "base_url": "http://127.0.0.1:4187",
+  "lang": "en",
+  "live_after_voice_click_ms": 95328,
+  "first_frame_ms": 3894,
+  "lines": [
+    {
+      "line": 1,
+      "question": "When did this start, and where exactly do you feel it?",
+      "reply": "It started this morning around seven, when I first went to the bathroom. I saw some pinkish-brown blood, and I've had mild cramping low down in the middle, just above my pubic bone. It's eased off a lot now, but I'm still worried about the baby.",
+      "via": "server",
+      "speech_start_ms": 2436,
+      "lip_lag_ms": -600,
+      "lip_score": -0.024,
+      "voice_ms": 13816,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4637,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 935.4,
+        "first_clause_ms": 1394.5,
+        "guard_ms": 1431.5,
+        "history_ms": 1436.2,
+        "tts_first_chunk_ms": 1837.1,
+        "released_ms": 1837.1,
+        "runner_first_chunk_ms": 1837.3,
+        "persona_done_ms": 1969.9,
+        "runner_done_ms": 2488.2
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 935.4,
+          "first_clause_ms": 1394.5,
+          "guard_ms": 1431.5,
+          "history_ms": 1436.2,
+          "tts_first_chunk_ms": 1837.1,
+          "released_ms": 1837.1,
+          "runner_first_chunk_ms": 1837.3,
+          "persona_done_ms": 1969.9,
+          "runner_done_ms": 2488.2
+        },
+        "requests": [
+          {
+            "chars": 23,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 442.6,
+            "bytes": 74798
+          },
+          {
+            "chars": 157,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 253.7,
+            "bytes": 445474
+          },
+          {
+            "chars": 63,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 197.6,
+            "bytes": 169628
+          }
+        ],
+        "runner": {
+          "frames": 719,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 598.4
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 2,
+      "question": "What does it feel like, sharp, dull or pressing?",
+      "reply": "It's more like a dull, crampy feeling, like period cramps, that comes in waves and then eases off. It's not sharp at all. Right now it's pretty mild, but I'm still worried about the baby.",
+      "via": "server",
+      "speech_start_ms": 1806,
+      "lip_lag_ms": -600,
+      "lip_score": 0.263,
+      "voice_ms": 10716,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3393,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 588.8,
+        "first_clause_ms": 589.2,
+        "guard_ms": 751.7,
+        "history_ms": 755.6,
+        "persona_done_ms": 1147.4,
+        "tts_first_chunk_ms": 1197.3,
+        "released_ms": 1197.4,
+        "runner_first_chunk_ms": 1197.6,
+        "runner_done_ms": 1572.2
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 588.8,
+          "first_clause_ms": 589.2,
+          "guard_ms": 751.7,
+          "history_ms": 755.6,
+          "persona_done_ms": 1147.4,
+          "tts_first_chunk_ms": 1197.3,
+          "released_ms": 1197.4,
+          "runner_first_chunk_ms": 1197.6,
+          "runner_done_ms": 1572.2
+        },
+        "requests": [
+          {
+            "chars": 22,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 608.2,
+            "bytes": 66106
+          },
+          {
+            "chars": 164,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 244.4,
+            "bytes": 475202
+          }
+        ],
+        "runner": {
+          "frames": 564,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 335.2
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 3,
+      "question": "Does anything make it better or worse?",
+      "reply": "Lying down helps the cramps. It seems a little heavier when I've been on my feet walking around a lot. I haven't taken anything for it because I was scared it might hurt the baby.",
+      "via": "server",
+      "speech_start_ms": 2211,
+      "lip_lag_ms": 40,
+      "lip_score": 0.148,
+      "voice_ms": 9833,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 6598,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 575.6,
+        "guard_ms": 912.9,
+        "history_ms": 916.2,
+        "first_clause_ms": 1043.1,
+        "persona_done_ms": 1057.3,
+        "tts_first_chunk_ms": 1508.5,
+        "released_ms": 1508.5,
+        "runner_first_chunk_ms": 1508.9,
+        "runner_done_ms": 2066.2
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 575.6,
+          "guard_ms": 912.9,
+          "history_ms": 916.2,
+          "first_clause_ms": 1043.1,
+          "persona_done_ms": 1057.3,
+          "tts_first_chunk_ms": 1508.5,
+          "released_ms": 1508.5,
+          "runner_first_chunk_ms": 1508.9,
+          "runner_done_ms": 2066.2
+        },
+        "requests": [
+          {
+            "chars": 28,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 465.4,
+            "bytes": 89210
+          },
+          {
+            "chars": 150,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 231,
+            "bytes": 408270
+          }
+        ],
+        "runner": {
+          "frames": 519,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 413.4
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 4,
+      "question": "Have you had anything like this before?",
+      "reply": "Yes, I had a miscarriage last year, really early, around seven weeks. That's why I'm so scared it's happening again. I've never had an ectopic or anything like that, though.",
+      "via": "server",
+      "speech_start_ms": 3451,
+      "lip_lag_ms": 600,
+      "lip_score": 0.045,
+      "voice_ms": 9733,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4099,
+      "speculative": "restarted",
+      "gateway_timings": {
+        "persona_first_text_ms": 552.4,
+        "first_clause_ms": 794.6,
+        "guard_ms": 1229.4,
+        "history_ms": 1232.4,
+        "persona_done_ms": 2341.5,
+        "tts_first_chunk_ms": 2877.4,
+        "released_ms": 2877.4,
+        "runner_first_chunk_ms": 2877.8,
+        "runner_done_ms": 3228.1
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 552.4,
+          "first_clause_ms": 794.6,
+          "guard_ms": 1229.4,
+          "history_ms": 1232.4,
+          "persona_done_ms": 2341.5,
+          "tts_first_chunk_ms": 2877.4,
+          "released_ms": 2877.4,
+          "runner_first_chunk_ms": 2877.8,
+          "runner_done_ms": 3228.1
+        },
+        "requests": [
+          {
+            "chars": 24,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 547.2,
+            "bytes": 81888
+          },
+          {
+            "chars": 148,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 220.7,
+            "bytes": 408014
+          }
+        ],
+        "runner": {
+          "frames": 511,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 311
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 5,
+      "question": "Do you take any medicines regularly, and do you have allergies?",
+      "reply": "Just a prenatal vitamin with folic acid every day, nothing else. I haven't even taken a painkiller today. And no allergies to any medicines that I know of.",
+      "via": "server",
+      "speech_start_ms": 2134,
+      "lip_lag_ms": -600,
+      "lip_score": 0.093,
+      "voice_ms": 9366,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3782,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 583.9,
+        "first_clause_ms": 1021.8,
+        "guard_ms": 1102.9,
+        "history_ms": 1105.7,
+        "persona_done_ms": 1106.5,
+        "tts_first_chunk_ms": 1500.5,
+        "released_ms": 1500.5,
+        "runner_first_chunk_ms": 1500.7,
+        "runner_done_ms": 1839.3
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 583.9,
+          "first_clause_ms": 1021.8,
+          "guard_ms": 1102.9,
+          "history_ms": 1105.7,
+          "persona_done_ms": 1106.5,
+          "tts_first_chunk_ms": 1500.5,
+          "released_ms": 1500.5,
+          "runner_first_chunk_ms": 1500.7,
+          "runner_done_ms": 1839.3
+        },
+        "requests": [
+          {
+            "chars": 28,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 478.7,
+            "bytes": 92752
+          },
+          {
+            "chars": 126,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 226.4,
+            "bytes": 385926
+          }
+        ],
+        "runner": {
+          "frames": 499,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 300.5
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 6,
+      "question": "How are you feeling right now, compared to when you arrived?",
+      "reply": "A bit better, I think. The cramping has eased off a lot, it's just a faint ache now. I'm still nervous about the baby, but I feel calmer than when I came in.",
+      "via": "server",
+      "speech_start_ms": 1785,
+      "lip_lag_ms": 600,
+      "lip_score": 0.145,
+      "voice_ms": 8966,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 5380,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 538.1,
+        "first_clause_ms": 766.1,
+        "guard_ms": 949.4,
+        "history_ms": 952.8,
+        "persona_done_ms": 1120.4,
+        "tts_first_chunk_ms": 1228.8,
+        "released_ms": 1228.8,
+        "runner_first_chunk_ms": 1229.1,
+        "runner_done_ms": 1603.2
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 538.1,
+          "first_clause_ms": 766.1,
+          "guard_ms": 949.4,
+          "history_ms": 952.8,
+          "persona_done_ms": 1120.4,
+          "tts_first_chunk_ms": 1228.8,
+          "released_ms": 1228.8,
+          "runner_first_chunk_ms": 1229.1,
+          "runner_done_ms": 1603.2
+        },
+        "requests": [
+          {
+            "chars": 13,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 462.6,
+            "bytes": 51302
+          },
+          {
+            "chars": 143,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 251.8,
+            "bytes": 400468
+          }
+        ],
+        "runner": {
+          "frames": 471,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 335
+        },
+        "error": null
+      }
+    }
+  ],
+  "fades": [
+    {
+      "switch": 1,
+      "to": "acudx-p25-5c570803-be4a95a56a",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p25-5c570803-be4a95a56a",
+        "previous": "acudx-p25-5c570803-e3b0c44298",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.2
+      },
+      "frames": 66
+    },
+    {
+      "switch": 2,
+      "to": "acudx-p25-5c570803-e3b0c44298",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p25-5c570803-e3b0c44298",
+        "previous": "acudx-p25-5c570803-be4a95a56a",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.2
+      },
+      "frames": 65
+    },
+    {
+      "switch": "mid-sentence",
+      "to": "acudx-p25-5c570803-be4a95a56a",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p25-5c570803-be4a95a56a",
+        "previous": "acudx-p25-5c570803-e3b0c44298",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.8
+      },
+      "pending_right_after": false
+    },
+    {
+      "switch": "mid-sentence-after",
+      "applied": 4,
+      "pending": false,
+      "avatar": "acudx-p25-5c570803-be4a95a56a"
+    }
+  ],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p25-5c570803-e3b0c44298",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 200,
+        "residual_before": 66.24,
+        "residual_after": 66.24
+      }
+    },
+    {
+      "name": "critical",
+      "avatar_id": "acudx-p25-5c570803-be4a95a56a",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 96,
+        "residual_before": 62.33,
+        "residual_after": 62.33
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 160,
+    "lip_lags": [
+      {
+        "lip_lag_ms": -600,
+        "score": -0.024,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": -600,
+        "score": 0.263,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.148,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 600,
+        "score": 0.045,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": -600,
+        "score": 0.093,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 600,
+        "score": 0.145,
+        "av_shift_ms": 160
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 52
+    },
+    "answer_ms": 196.5,
+    "prepare_ms": 86230.4
+  },
+  "runner_call": [
+    {
+      "id": "96fff48d",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 160
+      },
+      "avatar": "acudx-p25-5c570803-be4a95a56a",
+      "speaking": false,
+      "warm_up_ms": 99.3,
+      "switches_applied": 4,
+      "switch_pending": false,
+      "infer_fps": 48.6,
+      "inferred_frames": 1684,
+      "sender_queue": {
+        "audio_frames": 8,
+        "video_frames": 4
+      },
+      "sent_frames": 2915,
+      "underruns": 2,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 5827,
+    "audioEnergy": 1.3945112659557068,
+    "videoFrames": 2912,
+    "videoFps": 25,
+    "rttMs": 43,
+    "audioJitterMs": 60,
+    "videoJitterMs": 53,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3482?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-21T22:59:50.526Z case open",
+    "2026-10-21T23:01:26.001Z live video connected 95328 ms after the voice click",
+    "2026-10-21T23:01:28.176Z line 1 sent",
+    "2026-10-21T23:01:47.222Z line 1: {\"s\":2436,\"lag\":-600,\"score\":-0.024,\"via\":\"server\"}",
+    "2026-10-21T23:01:48.797Z line 2 sent",
+    "2026-10-21T23:02:03.901Z line 2: {\"s\":1806,\"lag\":-600,\"score\":0.263,\"via\":\"server\"}",
+    "2026-10-21T23:02:05.481Z line 3 sent",
+    "2026-10-21T23:02:20.200Z line 3: {\"s\":2211,\"lag\":40,\"score\":0.148,\"via\":\"server\"}",
+    "2026-10-21T23:02:21.810Z line 4 sent",
+    "2026-10-21T23:02:37.607Z line 4: {\"s\":3451,\"lag\":600,\"score\":0.045,\"via\":\"server\"}",
+    "2026-10-21T23:02:39.228Z line 5 sent",
+    "2026-10-21T23:02:53.501Z line 5: {\"s\":2134,\"lag\":-600,\"score\":0.093,\"via\":\"server\"}",
+    "2026-10-21T23:02:55.092Z line 6 sent",
+    "2026-10-21T23:03:08.576Z line 6: {\"s\":1785,\"lag\":600,\"score\":0.145,\"via\":\"server\"}",
+    "2026-10-21T23:03:10.094Z variants ready: 2",
+    "2026-10-21T23:03:13.913Z switch 1 -> acudx-p25-5c570803-be4a95a56a: {\"ok\":true,\"avatar\":\"acudx-p25-5c570803-be4a95a56a\",\"previous\":\"acudx-p25-5c570803-e3b0c44298\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.2} (66 frames)",
+    "2026-10-21T23:03:19.766Z switch 2 -> acudx-p25-5c570803-e3b0c44298: {\"ok\":true,\"avatar\":\"acudx-p25-5c570803-e3b0c44298\",\"previous\":\"acudx-p25-5c570803-be4a95a56a\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.2} (65 frames)",
+    "2026-10-21T23:03:22.364Z mid-sentence switch: {\"ok\":true,\"avatar\":\"acudx-p25-5c570803-be4a95a56a\",\"previous\":\"acudx-p25-5c570803-e3b0c44298\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.8} pending=false"
+  ]
+}

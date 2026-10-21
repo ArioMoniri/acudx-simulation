@@ -1,0 +1,26 @@
+1792622427 cloud-init: runcmd started (filesystem /lambda/nfs/acudx-wm)
+1792622428 images: fetching
+1792622428 image chatterbox pulling 2d1ad1f79a05c36a
+1792622428 image imagegen pulling e46737d70012f434
+1792622428 image imagegen not in registry e46737d70012f434
+1792622428 image chatterbox not in registry 2d1ad1f79a05c36a
+1792622428 image chatterbox loading 2d1ad1f79a05c36a
+1792622428 image imagegen loading e46737d70012f434
+1792622429 image avatar pulling 9b05e6479cd7a483
+1792622429 image avatar not in registry 9b05e6479cd7a483
+1792622429 image avatar loading 9b05e6479cd7a483
+1792622430 image pulled caddy:2.9.1
+1792622430 image pulled nginx:1.30.6-alpine
+1792622431 image pulled ghcr.io/coturn/coturn:4.18.0-debian
+1792622506 image pulled ghcr.io/speaches-ai/speaches:0.8.3-cuda
+1792622544 image pulled ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4
+1792622549 speaches and kokoro started
+1792622559 image imagegen loaded e46737d70012f434
+1792622578 image avatar loaded 9b05e6479cd7a483
+1792622578 avatar: image ready
+1792622584 image pulled vllm/vllm-openai:v0.11.0
+1792622585 avatar: container started
+1792622635 image chatterbox loaded 2d1ad1f79a05c36a
+1792622642 chatterbox started
+1792622676 avatar: ready
+1792622678 vllm: starting

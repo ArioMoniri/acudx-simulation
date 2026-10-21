@@ -271,6 +271,26 @@ async def test_english_falls_back_to_the_workers_kokoro_when_chatterbox_is_down(
     assert [c.get("_route") for c in sc.tts_calls].count("kokoro") == 1
 
 
+async def test_a_live_calls_english_line_takes_the_workers_kokoro_first_with_a_kokoro_voice(tmp_path):
+    """docs/architecture/18 6.3.9: Chatterbox took 2 to 3 s to its first chunk on a shared A100, Kokoro
+    0.15 to 0.6 s. ``prefer_fast`` (live call, English) puts the worker's Kokoro first; Turkish keeps
+    Chatterbox. Kokoro gets one of its own voices, not a Chatterbox voice name."""
+    sc = WorkerScenario()
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=FakeWorkerManager(ready=True), scenario=sc)
+    out = await svc.tts("It hurts when I breathe.", lang="en", sex="female", age=64, output_format="wav",
+                        stream=True, prefer_fast=True)
+    await _collect(out.stream)
+    assert out.endpoint.name == "gpu-worker-kokoro" and sc.tts_calls[-1]["_route"] == "kokoro"
+    assert not str(sc.tts_calls[-1]["voice"]).startswith("acudx_")
+    tr = await svc.tts("Nefes alamıyorum.", lang="tr", sex="female", age=64, output_format="wav", stream=True,
+                       prefer_fast=True)
+    await _collect(tr.stream)
+    assert tr.endpoint.name == "gpu-worker" and sc.tts_calls[-1].get("_route") == "stream"
+    plain = await svc.tts("It hurts.", lang="en", sex="female", age=64, output_format="wav", stream=True)
+    await _collect(plain.stream)
+    assert plain.endpoint.name == "gpu-worker"
+
+
 async def test_a_row_declaring_its_languages_is_skipped_for_others(tmp_path):
     """A Kokoro row (English voices) declares ["en"]: a Turkish line goes on to the worker's Chatterbox."""
     sc = WorkerScenario()

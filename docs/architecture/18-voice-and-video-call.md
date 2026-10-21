@@ -230,6 +230,37 @@ Before and after:
 
 Against the 2.5 s target: Turkish now starts at 2.2 to 2.9 s in this sandbox, of which about 0.45 s is the sandbox's TLS reconnect and 0.6 to 0.7 s the WebSocket-tunnelled TURN and jitter buffer; from a gateway beside the worker and a browser on an ordinary network the same lines add up to about 1.6 to 2.2 s (first clause 1.1 to 1.5 s under call load, runner about 0.1 s, WebRTC 0.2 to 0.4 s). Not yet shown end to end outside the sandbox. The remaining gap in a long Turkish answer is the second chunk: during a call T3 runs at 0.6 to 0.7 x real time, so a long second chunk can still leave a 0.2 to 1.2 s pause (`stream_stall_ms`); `second_max_words` (runtime) splits it once more.
 
+#### 6.3.9 The reply spoken while it is written, and lips on every line (2026-10-21, second production pass)
+
+Live findings on production: 12.6 s from the student's question to the patient's voice, lips 520 ms ahead of the voice on that line, a ghosted double face when the picture changed, mojibake once in the status line, and 17 min 20 s from a cold launch to live video. Reproduced and fixed on a private gateway (Claude as the model) with two Lambda A100 SXM4 40 GB workers in us-east-1, the same card production got; evidence in docs/media/live-avatar/prod-path-v2/ (metrics.json is the summary, each run directory has its per-line metrics.json).
+
+**Where the 12.6 s went.** Every hop ran after the previous one: the guard model (0.7 to 1.2 s), the persona model to its last token (Opus 5.5 always thinks first: 1.1 to 1.7 s to its first word, 2.4 to 2.7 s to the end), the response to the browser, a second request (`/speak`), the TTS to its first chunk (Chatterbox 1.6 to 4.9 s on the shared A100), the runner, WebRTC. On a long reply the voice then waited behind each TTS chunk.
+
+**What changed** (`server/voice/avatar/turn_speech.py`, `server/interview/routes.py`):
+
+* The interview request carries the learner's live call (`call_session_id`, from `web/src/lib/liveCallBus.ts`). The persona call starts next to the guard, from the rules' label; it is kept only when the guard's decision builds exactly the same prompt (`meta.speculative` `kept` or `restarted`), and nothing reaches the call before the guard has labelled the message (TTS may already synthesise; the runner gets audio only after release).
+* The persona streams (`ModelGateway.chat(on_text=...)`). `ClauseStream` cuts the first clause (3 to 6 words, at most 28 characters) and then whole sentences; the first clause is its own TTS request and each later request takes every sentence completed meanwhile. Each piece passes the reply's gates (FactAssertionGate, the diagnosis scrub) before it is spoken.
+* The gateway speaks into the call's runner socket itself, as one utterance, paced to at most 1 s ahead of real time (`PACE_LEAD_S`). Without the pacing the worker's Kokoro wrote 14 s of audio in 0.6 s and the lips lost the voice (lip correlation 0.0 to 0.26, offsets at the ±600 ms search edge; `en-kokoro-unpaced/`).
+* The live-call persona is `ANTHROPIC_MODEL_PERSONA_LIVE` (default `claude-sonnet-5-5`, thinking off): first word 0.55 to 1.0 s against 1.1 to 1.7 s for Opus. The typed chat keeps `ANTHROPIC_MODEL_PERSONA`.
+* English lines of a live call take the worker's Kokoro before Chatterbox (`AVATAR_FAST_EN_TTS`, default on; first chunk 0.2 to 0.6 s against 1.9 to 2.9 s). Kokoro gets its own voices now (the fallback used to send it Chatterbox voice names).
+* The image edits for the patient's pictures wait while a line is spoken on the same GPU (`wait_until_quiet`): with an edit running, Chatterbox's first chunk doubled.
+* The tile does not speak a line the server spoke (`consumeServerSpoken`); it measures it from the moment the question was sent (`AvatarCallHandle.track`). `GET /v1/voice/avatar/metrics` returns each voiced turn's hop timings.
+
+**Lips.** The -520 ms line was not a pipeline offset: it was a long reply during which the Director switched the picture to an edit with other framing (the mouth box then looked at the wrong place), measured over a window cut at a guessed duration. Now: the meter spans the whole voice (`utteranceSpan`, ends after 2.5 s of silence) and reports a correlation score; a switch waits for silence (6.6.1); every picture shares the portrait's frame, so the mouth box stays valid; and each line's offset closes the loop (`POST /v1/voice/avatar/lipsync` -> runner `POST /tuning`, half the offset per line in 40 ms frames, ignored below score 0.4 or inside ±40 ms).
+
+Measured (A100 40 GB, sandbox browser through the WebSocket-tunnelled TURN):
+
+| | before | now |
+|---|---|---|
+| EN speech start, six lines (Kokoro, paced) | 12.6 s on production (one TR line) | 2.12, 1.82, 2.26, 2.43, 2.45, 1.92 s |
+| EN hops, six lines | | guard 0.77 to 1.16 s (in parallel); persona first text 0.81 to 1.02 s; first clause 0.84 to 1.33 s; Kokoro first chunk 0.17 to 0.53 s; first PCM at the runner 1.23 to 1.84 s |
+| EN lips, six lines | -520 ms (production) | 0, +40, +40, +40, +40, +40 ms (scores 0.39 to 0.48) |
+| EN with the worker's Chatterbox | | speech start 3.6 to 4.4 s (Chatterbox first chunk 1.9 to 2.9 s); lips +80, +80, +40, +80, -40, 0 ms |
+| TR speech start (Chatterbox) | | 5.5 s first line; first clause ready at 0.8 to 1.2 s, then Chatterbox 2.6 to 4.9 s to its first chunk |
+| TR lips, paced run | | +40, +280, +40, +40, -120, 0 ms (one line at +280 while the previous reply still played) |
+
+Against the 3 s target: English meets it (1.8 to 2.5 s in the sandbox, which itself adds about 0.45 s TLS reconnect and the tunnelled TURN). Turkish does not on this card: everything up to the TTS is now about 1 s, and the worker's Chatterbox needs 2.6 to 4.9 s for a 16 to 28 character clause on an A100 40 GB that also runs vLLM, the runner and the edits, and runs below real time while a call renders, so long replies overlap the next question. The paths that meet it for Turkish are an ElevenLabs Turkish row (about 75 ms to first audio, section 6.3.7) or an 80 GB / multi-GPU worker. Lips: inside ±80 ms on every English line and on five of six Turkish lines.
+
 ### 6.5 Hosted live video: Tavus CVI (optional adapter; runs only when asked for or marked default)
 
 `server/voice/avatar/tavus.py`, request shapes read from docs.tavus.io on 2026-10-20 (create PAL https://docs.tavus.io/api-reference/pals/create-pal, custom LLM https://docs.tavus.io/sections/conversational-video-interface/pal/llm, TTS layer https://docs.tavus.io/sections/conversational-video-interface/pal/tts, create conversation https://docs.tavus.io/api-reference/conversations/create-conversation, end conversation https://docs.tavus.io/api-reference/conversations/end-conversation, PAL-per-session strategy https://docs.tavus.io/sections/onboarding-guide/pal-strategies). Tavus renamed personas to PALs and replicas to faces; `/v2/personas` remains an alias.
@@ -295,6 +326,31 @@ Also new: the chart's still portraits (banner, viewer, the tile before the call)
 
 Still open: a cold launch to live video takes 20 to 30 minutes because the voice and face images are built on the worker; prebuilt images in a registry (or the HF and image cache on a Lambda file system in the launch region) are the way to bring that under 10 minutes. The panel says so honestly meanwhile.
 
+#### 6.6.1 One frame for every picture of the patient (2026-10-21)
+
+Production showed a double face for one or two frames when the call changed picture: FLUX.2 klein returns the edit a few pixels shifted and scaled (measured on the live workers: 1 to 9 px shift, 0.4 to 0.5 degrees, scale 0.999 to 1.013) and at another size, and the runner prepared it with its own extension and face box, so the cross-fade blended two framings, from a frozen last frame.
+
+* The runner registers every edit onto its base portrait (`PUT /avatars/{id}?ref=<base>`, `acudx_register.align_to`: ORB features with RANSAC, refined by ECC, a similarity transform checked for plausibility, base pixels where the warp leaves none) and then replays the base's own preparation steps (resizes, even crops, extensions) and reuses its face box. The base keeps `source.png` and its `steps` (`PREP_VERSION` 3). The gateway prepares the base first and sends `ref` for every variant (`APPEARANCE_VERSION` 5); each variant's `registration` is in `/appearance`.
+* A switch waits until the patient has been silent for 12 frames (never mid-word) and fades the old picture's idle frame at the same loop index into the new one, so both sides of the blend have the same pose.
+* Evidence: `prod-path-v2/{tr,tr-run2,en-chatterbox}/crossfade/` (frames and a contact sheet per switch, `ghost.json`). On the live switches every frame shows one face; the edge-based ghost score between start and end is 0.04 to 0.41 and comes from the expression and mouth changes, against 0.83 to 0.91 for an unregistered edit in `test_avatar_register.py`.
+
+### 6.8 Cold start (2026-10-21)
+
+Production took 17 min 20 s from a cold launch to live video: Chatterbox, the avatar runner and the image edit server were built from source on every worker, one after another behind vLLM, and the call then waited up to 45 s for a look.
+
+* **Prebuilt images.** `/opt/acudx/images.sh` keys each built image by the sha256 of its inputs (Dockerfile, constraint file, pinned upstream commit) and takes it from the local store, the registry (`ACUDX_IMAGE_REGISTRY`, default `ghcr.io/ariomoniri`, filled by `.github/workflows/gpu-worker-images.yml`), the Lambda filesystem (`$FS/acudx-images/<name>-<key>.tar`, saved after a build), else builds it. The AcuDx Python files are mounted at run time, never part of a key, so a code change needs no rebuild. `infra/gpu-worker/worker_images.py` computes the same keys (on the live worker the shell keys matched it: chatterbox `2d1ad1f79a05c36a`, avatar `9b05e6479cd7a483`, imagegen `e46737d70012f434`).
+* **Weights on the filesystem.** `HF_HOME` was already there; Chatterbox's model cache now is too.
+* **Parallel start-up.** All images at once; the voices and the runner start as soon as their images are there (the runner no longer waits for vLLM or the voice); vLLM starts last, after the runner and Chatterbox have their memory, so its own free-memory check still sees them. `/healthz` answers once vLLM or the runner answers `/health`, so the call does not wait for the LLM the Claude route does not use (LLM requests to the worker answer 502 for the minute or two vLLM still loads). A call after a case-start prepare no longer waits for an edit server that is not up, and `AVATAR_APPEARANCE_WAIT_S` is 10 s.
+* `timeline.txt` next to the avatar status (behind the bearer) logs every step with a timestamp.
+
+| | launch -> gateway ready |
+|---|---|
+| production before (the call then went live at +17 min 20 s) | about 6 min, live video about 17 min 20 s |
+| first boot of a new image key (builds, saves to the filesystem) | 17 min (1019 s) |
+| cold machine with the filesystem cache | 8 min 5 s (485 s; runcmd at +232 s, images loaded by +440 s, runner ready +481 s) |
+
+The registry path is written and tested against the keys but was not exercised: this session cannot push, so the workflow has not run and the packages do not exist yet (a pull of a missing image fails in under a second and the filesystem is used). After the first workflow run, set each `acudx-*` package public. Not yet under 8 min to live video: on the warm worker the call still took 90 to 95 s from the voice click to the first frame (`prepare_ms` 84 to 89 s), most of it the session waiting for the runner while it prepared the case's pictures; the runner prepares one picture at a time.
+
 ## 7. The browser tile
 
 `PatientCallTile` (mounted by `PatientPresence` in `InterviewTab`, right column at 1280 px and up, full width under 1024 px):
@@ -337,6 +393,7 @@ Still open: a cold launch to live video takes 20 to 30 minutes because the voice
 * Turkish speech start is not yet measured from a browser outside this sandbox; the sandbox adds about 0.45 s (TLS reconnect through the egress proxy) and 0.6 to 0.7 s (WebSocket-tunnelled TURN). Inside a call T3 runs at 17 to 20 ms per token, so a long second chunk can still leave a pause of up to 1.2 s; try `second_max_words` 6 to 8 through `/tts/acudx/tuning` and make it the default if listening tests agree. The patient turn's director LLM call shares the GPU with Chatterbox (first chunk 3.5 s on the run where they overlapped); the web could start the director step after the first audio.
 * The lip meter has about 40 to 60 ms of run-to-run noise; the pre-roll results (0 to +60 ms on every line) are inside it.
 * Two Turkish calls at once still share one GPU: with two Chatterbox replicas the gaps are 0 to 0.9 s and one second line started at 5.6 s; a third call or a 40 GB card (no second replica) needs ElevenLabs for Turkish.
+* Second production pass (2026-10-21, sections 6.3.9, 6.6.1, 6.8): closed the serial reply chain, the lip offset (meter, switch timing, closed loop, pacing), the cross-fade ghost and the image builds on every boot. Open: Turkish speech start is 5.5 s on the worker's Chatterbox on a 40 GB card (an ElevenLabs Turkish row or a larger card is needed for 3 s); a call on a fresh worker waits 85 to 90 s for the runner's picture preparation (one at a time behind the ladder); the registry images are not published yet; the status-line mojibake was not reproduced (every byte decode is explicit UTF-8 now and every text reply names its charset).
 * After two failed launches and a stop, the gateway's readiness wait for the third worker never saw `/healthz` 200 (logged PoolTimeout) until the gateway restarted; not reproduced in tests yet.
 * SoulX-FlashHead Lite comparison (head motion and expression, not only lips); the idle loop is a rigid head motion without blinks.
 * Tavus has not been exercised against the live API (no key in this environment); the request shapes are tested with respx against the documented contract.

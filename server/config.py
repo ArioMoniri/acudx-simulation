@@ -146,6 +146,10 @@ class Settings(BaseSettings):
         "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5",
     ])
     anthropic_model_persona: str = "claude-opus-5-5"
+    # The persona for a line spoken into a live video call (docs/architecture/18 6.3.9). Opus 5.5 always
+    # thinks and took 1.1 to 1.7 s to its first word live (2026-10-21), the largest hop before the voice;
+    # Sonnet 5.5 with thinking off answered in 0.8 s. Set it to the typed persona's model to keep one.
+    anthropic_model_persona_live: str = "claude-sonnet-5-5"
     anthropic_model_classifier: str = "claude-haiku-5-5"
     anthropic_model_narrator: str = "claude-sonnet-5-5"
     anthropic_model_debrief: str = "claude-opus-5-5"
@@ -249,9 +253,14 @@ class Settings(BaseSettings):
     # runner's speech path and the browser's jitter buffer have settled when the first real line
     # plays (the first two lines swung up to 420 ms either way; docs/architecture/18 6.3.8). 0 = off.
     avatar_preroll_ms: int = Field(default=800, ge=0, le=3000)
+    # A live call's English lines take the worker's Kokoro before its Chatterbox (first audio 0.15 to
+    # 0.6 s against 2 to 3 s on a shared A100, docs/architecture/18 6.3.9). Turkish always uses Chatterbox.
+    avatar_fast_en_tts: bool = True
     # How long a call start waits for the patient's presenting look (image edit + MuseTalk preparation)
     # before it opens on the case portrait and crossfades into the look once it is ready.
-    avatar_appearance_wait_s: float = Field(default=45.0, ge=0, le=300)
+    # 10 s since the pictures are registered onto the portrait (a later crossfade shows no double image,
+    # docs/architecture/18 6.6.1); live 2026-10-21 the 45 s wait was most of the 98 s to live video.
+    avatar_appearance_wait_s: float = Field(default=10.0, ge=0, le=300)
     # Case start with live video enabled: a case open wakes the on-demand GPU worker in the
     # background and makes the patient's pictures (presenting, worse, critical, improved) as soon
     # as it is up, so a later call opens on the symptoms. The idle reaper still stops the worker

@@ -77,6 +77,8 @@ write_files:
       LIVETALKING_REF=c7269433a2b6ecebcd9342445d2ecc882c98b0da
       AVATAR_REQUIRED_MB=5000
       AVATAR_MAX_SESSIONS=2
+      ACUDX_IMAGE_REGISTRY=ghcr.io/ariomoniri
+      CHATTERBOX_CACHE=/opt/acudx/chatterbox-cache
   - path: /opt/acudx/Caddyfile
     content: |
       # Port 80 belongs to the boot-diagnostics server (python, see diag.sh) until vLLM is
@@ -149,9 +151,17 @@ write_files:
             root * /srv
             file_server
           }
+          # The worker is ready once it can serve a live call: vLLM or the avatar runner answering /health
+          # (docs/architecture/18 6.8). vLLM loads last (it reserves its share of the card after the
+          # side-cars), so the call no longer waits for it; LLM requests answer 502 until it is up.
           handle /healthz {
             rewrite * /health
-            reverse_proxy vllm:8000
+            reverse_proxy vllm:8000 avatar:8010 {
+              lb_policy first
+              lb_try_duration 2s
+              health_uri /health
+              health_interval 5s
+            }
           }
           handle /diag/{$WORKER_DIAG_SECRET}/* {
             root * /srv
@@ -669,8 +679,9 @@ write_files:
             - NVIDIA_VISIBLE_DEVICES=all
             - NVIDIA_DRIVER_CAPABILITIES=compute,utility
           volumes:
-            - /opt/acudx/chatterbox-cache:/cache
+            - ${CHATTERBOX_CACHE:-/opt/acudx/chatterbox-cache}:/cache
             - /opt/acudx/chatterbox-voices:/voices
+            - /opt/acudx/chatterbox-acudx-patch.py:/app/app/acudx_patch.py:ro
           healthcheck:
             test: ["CMD-SHELL", "curl -sf http://localhost:4123/health || exit 1"]
             interval: 20s
@@ -701,8 +712,9 @@ write_files:
             - NVIDIA_VISIBLE_DEVICES=all
             - NVIDIA_DRIVER_CAPABILITIES=compute,utility
           volumes:
-            - /opt/acudx/chatterbox-cache:/cache
+            - ${CHATTERBOX_CACHE:-/opt/acudx/chatterbox-cache}:/cache
             - /opt/acudx/chatterbox-voices:/voices
+            - /opt/acudx/chatterbox-acudx-patch.py:/app/app/acudx_patch.py:ro
           healthcheck:
             test: ["CMD-SHELL", "curl -sf http://localhost:4123/health || exit 1"]
             interval: 20s
@@ -799,6 +811,10 @@ write_files:
           volumes:
             - /opt/acudx/hf:/hf
             - /opt/acudx/avatars:/app/data/avatars
+            # The AcuDx runner code is mounted, not baked in: the image key covers only its dependencies.
+            - /opt/acudx/avatar/acudx_avatar_server.py:/app/acudx_avatar_server.py:ro
+            - /opt/acudx/avatar/acudx_fetch_models.py:/app/acudx_fetch_models.py:ro
+            - /opt/acudx/avatar/acudx_register.py:/app/acudx_register.py:ro
         # Per-case appearance edits (FLUX.2 klein 4B, Apache-2.0); imagegen.sh starts it after the runner.
         imagegen:
           build:
@@ -819,7 +835,7 @@ write_files:
             - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
             - NVIDIA_VISIBLE_DEVICES=${IMAGEGEN_GPU:-0}
             - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-          volumes: [ "/opt/acudx/hf:/hf" ]
+          volumes: [ "/opt/acudx/hf:/hf", "/opt/acudx/imagegen/acudx_imagegen.py:/app/acudx_imagegen.py:ro" ]
         # TURN for the avatar call (RFC 8656, coturn). Host networking so the relay ports reach
         # the runner's container addresses; 3478 is open publicly (lambda_cloud.py rules) and the
         # TLS listener (5349) is reached only through the edge router on 443 (turn.<domain>), with
@@ -1115,6 +1131,168 @@ write_files:
 
       if __name__ == "__main__":
           sys.exit(main())
+  - path: /opt/acudx/avatar/acudx_register.py
+    content: |
+      """Register an edited portrait onto the case portrait it was made from (pure OpenCV + numpy).
+
+      The image edit server (FLUX.2 klein) keeps the person, clothes and background but not the exact
+      framing: its output can be a few pixels off, a little larger or smaller, and of another size. When
+      the live call cross-faded from the plain portrait to such an edit, two faces showed for a moment
+      (live 2026-10-21, "ghosting"). Every edited picture is therefore warped onto the base portrait
+      before it is prepared, with a similarity transform (shift, scale, small rotation) estimated from
+      the unchanged background and hair, so the base and every variant share one frame, one crop and
+      one face box. Where the warp leaves no data the base pixels are used.
+      """
+
+      from __future__ import annotations
+
+      import math
+
+      import cv2
+      import numpy as np
+
+      MAX_SCALE_DEV = 0.18      # accepted scale 0.82 .. 1.18
+      MAX_ROT_DEG = 8.0
+      MAX_SHIFT_FRAC = 0.15
+      MIN_INLIERS = 25
+
+
+      def fit_size(img: np.ndarray, w: int, h: int) -> np.ndarray:
+          """Centre-crop ``img`` to the aspect of w x h, then resize to exactly w x h."""
+          ih, iw = img.shape[:2]
+          target = w / float(h)
+          have = iw / float(ih)
+          if abs(have - target) > 1e-3:
+              if have > target:
+                  nw = int(round(ih * target))
+                  x0 = (iw - nw) // 2
+                  img = img[:, x0:x0 + nw]
+              else:
+                  nh = int(round(iw / target))
+                  y0 = (ih - nh) // 2
+                  img = img[y0:y0 + nh, :]
+          if img.shape[1] != w or img.shape[0] != h:
+              img = cv2.resize(img, (w, h), interpolation=cv2.INTER_AREA if img.shape[1] > w else cv2.INTER_CUBIC)
+          return img
+
+
+      def _params(m: np.ndarray) -> tuple[float, float, float, float]:
+          """(scale, rotation degrees, tx, ty) of a 2x3 similarity matrix."""
+          a, b = float(m[0, 0]), float(m[1, 0])
+          return math.hypot(a, b), math.degrees(math.atan2(b, a)), float(m[0, 2]), float(m[1, 2])
+
+
+      def _plausible(m: np.ndarray | None, w: int, h: int) -> bool:
+          if m is None or not np.all(np.isfinite(m)):
+              return False
+          s, rot, tx, ty = _params(m)
+          return (abs(s - 1.0) <= MAX_SCALE_DEV and abs(rot) <= MAX_ROT_DEG
+                  and abs(tx) <= MAX_SHIFT_FRAC * w + abs(s - 1.0) * w and abs(ty) <= MAX_SHIFT_FRAC * h + abs(s - 1.0) * h)
+
+
+      def _orb(ref_g: np.ndarray, img_g: np.ndarray) -> tuple[np.ndarray | None, int]:
+          orb = cv2.ORB_create(nfeatures=3000, scaleFactor=1.2, nlevels=8, fastThreshold=10)
+          k1, d1 = orb.detectAndCompute(img_g, None)
+          k2, d2 = orb.detectAndCompute(ref_g, None)
+          if d1 is None or d2 is None or len(k1) < MIN_INLIERS or len(k2) < MIN_INLIERS:
+              return None, 0
+          pairs = cv2.BFMatcher(cv2.NORM_HAMMING).knnMatch(d1, d2, k=2)
+          good = [p[0] for p in pairs if len(p) == 2 and p[0].distance < 0.8 * p[1].distance]
+          if len(good) < MIN_INLIERS:
+              return None, len(good)
+          src = np.float32([k1[g.queryIdx].pt for g in good]).reshape(-1, 1, 2)
+          dst = np.float32([k2[g.trainIdx].pt for g in good]).reshape(-1, 1, 2)
+          m, inl = cv2.estimateAffinePartial2D(src, dst, method=cv2.RANSAC, ransacReprojThreshold=3.0,
+                                               maxIters=4000, confidence=0.995)
+          n = int(inl.sum()) if inl is not None else 0
+          return (m if n >= MIN_INLIERS else None), n
+
+
+      def _ecc(ref_g: np.ndarray, img_g: np.ndarray, init: np.ndarray | None) -> np.ndarray | None:
+          """Refine (or find, from identity) a Euclidean-plus-scale warp by ECC on a 320 px pyramid level."""
+          h, w = ref_g.shape[:2]
+          f = 320.0 / max(w, h) if max(w, h) > 320 else 1.0
+          r = cv2.resize(ref_g, (int(w * f), int(h * f)), interpolation=cv2.INTER_AREA).astype(np.float32)
+          i = cv2.resize(img_g, (int(w * f), int(h * f)), interpolation=cv2.INTER_AREA).astype(np.float32)
+          # ECC estimates the map ref -> img (inverse of what warpAffine with WARP_INVERSE_MAP needs).
+          if init is None:
+              warp = np.eye(2, 3, dtype=np.float32)
+          else:
+              inv = cv2.invertAffineTransform(init.astype(np.float32))
+              warp = inv.copy()
+              warp[:, 2] *= f
+          try:
+              _cc, warp = cv2.findTransformECC(r, i, warp, cv2.MOTION_AFFINE,
+                                               (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 200, 1e-6), None, 5)
+          except cv2.error:
+              return None
+          warp = warp.astype(np.float64)
+          warp[:, 2] /= f
+          return cv2.invertAffineTransform(warp)
+
+
+      def align_to(ref: np.ndarray, img: np.ndarray) -> tuple[np.ndarray, dict]:
+          """``img`` (an edit of ``ref``) warped into ``ref``'s frame: same size, same framing.
+
+          Returns the aligned BGR image and what was done: ``method`` (orb+ecc, orb, ecc, identity),
+          ``scale``, ``rotation_deg``, ``shift_px``, ``inliers``, and the mean background difference
+          to the base before and after (``residual_before`` / ``residual_after``, 0..255)."""
+          h, w = ref.shape[:2]
+          img = fit_size(img, w, h)
+          ref_g = cv2.cvtColor(ref, cv2.COLOR_BGR2GRAY)
+          img_g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+          m, inliers = _orb(ref_g, img_g)
+          method = "orb"
+          if m is not None and not _plausible(m, w, h):
+              m = None
+          refined = _ecc(ref_g, img_g, m)
+          if refined is not None and _plausible(refined, w, h):
+              m, method = refined, ("orb+ecc" if m is not None else "ecc")
+          if m is None:
+              m, method = np.eye(2, 3, dtype=np.float64), "identity"
+          out = cv2.warpAffine(img, m, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+          valid = cv2.warpAffine(np.full((h, w), 255, np.uint8), m, (w, h), flags=cv2.INTER_NEAREST,
+                                 borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+          valid = cv2.erode(valid, np.ones((3, 3), np.uint8))
+          keep = (valid.astype(np.float32) / 255.0)[..., None]
+          out = np.clip(keep * out.astype(np.float32) + (1.0 - keep) * ref.astype(np.float32), 0, 255).astype(np.uint8)
+          s, rot, tx, ty = _params(m)
+          ring = border_mask(h, w)
+          return out, {"method": method, "scale": round(s, 4), "rotation_deg": round(rot, 3),
+                       "shift_px": [round(tx, 1), round(ty, 1)], "inliers": inliers,
+                       "residual_before": round(residual(ref, img, ring), 2),
+                       "residual_after": round(residual(ref, out, ring), 2)}
+
+
+      def border_mask(h: int, w: int, frac: float = 0.16) -> np.ndarray:
+          """The frame's outer band (background, shoulders): where an edit should not change anything."""
+          m = np.zeros((h, w), bool)
+          bh, bw = max(2, int(h * frac)), max(2, int(w * frac))
+          m[:bh, :] = m[-bh:, :] = True
+          m[:, :bw] = m[:, -bw:] = True
+          return m
+
+
+      def residual(a: np.ndarray, b: np.ndarray, mask: np.ndarray) -> float:
+          d = np.abs(a.astype(np.int16) - b.astype(np.int16)).mean(axis=2)
+          return float(d[mask].mean()) if mask.any() else float(d.mean())
+
+
+      def ghost_score(a: np.ndarray, b: np.ndarray) -> float:
+          """How far apart two frames' edges are (0 = same framing): 1 - the normalised cross-correlation of
+          their gradient magnitudes. A cross-fade between frames with a high score shows a double image."""
+          ga = _grad(a)
+          gb = _grad(b)
+          ga -= ga.mean()
+          gb -= gb.mean()
+          den = float(np.sqrt((ga * ga).sum() * (gb * gb).sum()))
+          return 1.0 if den < 1e-9 else round(1.0 - float((ga * gb).sum()) / den, 4)
+
+
+      def _grad(img: np.ndarray) -> np.ndarray:
+          g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY).astype(np.float32) if img.ndim == 3 else img.astype(np.float32)
+          g = cv2.GaussianBlur(g, (0, 0), 1.2)
+          return cv2.magnitude(cv2.Sobel(g, cv2.CV_32F, 1, 0), cv2.Sobel(g, cv2.CV_32F, 0, 1))
   - path: /opt/acudx/avatar/acudx_avatar_server.py
     content: |
       """AcuDx avatar runner: LiveTalking (pinned commit) + MuseTalk 1.5, WebRTC out, audio in.
@@ -1130,7 +1308,9 @@ write_files:
         GET  /avatars/{avatar_id}    frame size, face box and idle frames of a prepared avatar
         PUT  /avatars/{avatar_id}    body = portrait image bytes (jpeg/png); prepares the MuseTalk
                                      latents, face boxes and blend masks for that face: a short idle
-                                     loop (subtle head motion) generated from the one portrait
+                                     loop (subtle head motion) generated from the one portrait;
+                                     ?ref=<base id>: the picture is an edit of that base portrait and
+                                     is registered onto its frame (same crop, face box and loop)
         POST /offer                  {sdp, type, avatar, tuning?} -> {sdp, type, sessionid}; tuning =
                                      {batch_size, ahead_frames, lookahead_frames, av_shift_ms}, bounded
         GET  /stream                 WebSocket audio in: {"type":"begin","sessionid","sample_rate"} text,
@@ -1141,6 +1321,9 @@ write_files:
         POST /interrupt_talk         {sessionid}
         POST /is_speaking            {sessionid}
         POST /close                  {sessionid}: stop the render threads and close the peer connection
+        POST /switch                 {sessionid, avatar, crossfade_ms}: another prepared picture of the same
+                                     patient; applied once the patient is silent, faded on matched frames
+        POST /tuning                 {sessionid, av_shift_ms}: move the call's video against its audio
         GET  /turn                   WebSocket <-> TCP byte bridge to the worker's TURN server, for
                                      clients whose network only allows HTTPS (see docs/architecture/18 6.3)
         GET  /turn_check             TURN Allocate against this worker's public TURN endpoints, from
@@ -1201,7 +1384,7 @@ write_files:
       MAX_IMAGE_BYTES = 8 * 1024 * 1024
       AVATAR_ID_RE = re.compile(r"^[a-z0-9_-]{1,64}$")
       MAX_FRAME_H = 720
-      PREP_VERSION = 2  # 2: reflected + blurred extension, idle loop; older avatar dirs are re-prepared
+      PREP_VERSION = 3  # 2: reflected + blurred extension, idle loop; 3: source.png + steps (variant registration)
 
       # LiveTalking parses its own argv; set it before importing anything from the checkout.
       sys.argv = [sys.argv[0], "--config", "", "--model", "musetalk", "--avatar_id", "acudx_none",
@@ -1226,6 +1409,8 @@ write_files:
       from server.rtc_manager import RTCManager  # noqa: E402
       from server.routes import humanaudio, interrupt_talk, is_speaking  # noqa: E402
       from server.session_manager import MaxSessionError, session_manager  # noqa: E402
+
+      import acudx_register  # noqa: E402  (mounted next to this file: edit -> base portrait registration)
 
       log = logging.getLogger("acudx.avatar")
       logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -1414,19 +1599,30 @@ write_files:
       def _install_av_shift(sess, shift_ms: int) -> None:
           """Re-pair audio and video by index: the WebRTC tracks emit frame k at start + k * 40 ms, so a
           delay line only shifts lips against voice if it emits one frame per frame pushed (prefilled
-          with the first frame). Positive ``shift_ms`` shows video frame k - n with audio frame k."""
+          with the first frame). Positive ``shift_ms`` shows video frame k - n with audio frame k.
+
+          A positive shift can be changed during the call (POST /tuning): the line then grows by
+          repeating one frame or shrinks by skipping one, one step per frame, so lips never jump."""
           n = int(round(abs(shift_ms) / 40.0))
-          if n == 0:
-              return
           out = sess.output
-          if shift_ms > 0:
+          if shift_ms >= 0:
               orig_v = out.push_video_frame
               line: collections.deque = collections.deque()
+              st = {"n": n}
+              sess._acudx_shift = st
 
               def push_video_frame(frame) -> None:
+                  want = st["n"]
+                  if want <= 0 and not line:
+                      orig_v(frame)
+                      return
                   if not line:
-                      line.extend(frame for _ in range(n))
+                      line.extend(frame for _ in range(want))
                   line.append(frame)
+                  if len(line) > want + 1:
+                      line.popleft()
+                  elif len(line) < want + 1:
+                      line.appendleft(line[0])
                   orig_v(line.popleft())
 
               out.push_video_frame = push_video_frame
@@ -1550,66 +1746,115 @@ write_files:
           return [nx1, ny1, nx1 + w, ny1 + h]
 
 
+      def replay_steps(img: np.ndarray, steps: list) -> np.ndarray:
+          """Repeat a base portrait's preparation (resizes, even crops, extensions) on another picture of
+          the same size, so a variant gets exactly the base's frame."""
+          for step in steps:
+              kind = step[0]
+              if kind == "resize":
+                  img = cv2.resize(img, (int(step[1]), int(step[2])), interpolation=cv2.INTER_AREA)
+              elif kind == "crop":
+                  img = img[: int(step[2]), : int(step[1])]
+              elif kind == "extend":
+                  img = extend_portrait(img, *(int(v) for v in step[1:5]))
+          return img
+
+
+      def _base_info(ref: str) -> dict:
+          with open(os.path.join(_avatar_dir(ref), "avator_info.json")) as f:
+              return json.load(f)
+
+
       @torch.no_grad()
-      def prepare_avatar(avatar_id: str, image_bytes: bytes, idle_frames: int | None = None) -> dict:
+      def prepare_avatar(avatar_id: str, image_bytes: bytes, idle_frames: int | None = None,
+                         ref: str | None = None) -> dict:
           """Portrait -> MuseTalk avatar: an idle loop of ``idle_frames`` frames (latents, face boxes,
-          blend masks per frame). 1 frame = the still portrait."""
+          blend masks per frame). 1 frame = the still portrait.
+
+          ``ref``: the base avatar this picture is an edit of (the same patient in another state). The
+          picture is registered onto the base's source portrait (acudx_register.align_to), then gets the
+          base's own preparation steps and face box, so base and variant share one frame, crop and
+          landmarks and a cross-fade between them shows one face, never two."""
           started = time.monotonic()
           n = max(1, min(int(idle_frames if idle_frames is not None else IDLE_FRAMES), 150))
           img = cv2.imdecode(np.frombuffer(image_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
           if img is None:
               raise ValueError("image could not be decoded")
-          h, w = img.shape[:2]
-          if h > MAX_FRAME_H:
-              scale = MAX_FRAME_H / h
-              img = cv2.resize(img, (int(w * scale), MAX_FRAME_H), interpolation=cv2.INTER_AREA)
-              h, w = img.shape[:2]
-          # H.264 and VP8 encoders want even dimensions.
-          img = img[: h - h % 2, : w - w % 2]
+          registration = None
+          base = None
+          coords = None
+          steps: list = []
           padded = 0
           with PREP_LOCK:
               root = _avatar_dir(avatar_id)
               full_dir = os.path.join(root, "full_imgs")
               mask_dir = os.path.join(root, "mask")
+              if ref:
+                  if not _is_prepared(ref) or not os.path.isfile(os.path.join(_avatar_dir(ref), "source.png")):
+                      raise RefNotPrepared(ref)
+                  info = _base_info(ref)
+                  src = cv2.imread(os.path.join(_avatar_dir(ref), "source.png"), cv2.IMREAD_COLOR)
+                  img, registration = acudx_register.align_to(src, img)
+                  steps = [list(s) for s in info.get("steps") or []]
+                  padded = int(info.get("extended_px") or 0)
+                  base = replay_steps(img, steps)
+                  coords = [int(v) for v in info["face_box"]]
+                  if base.shape[1] != int(info["width"]) or base.shape[0] != int(info["height"]):
+                      raise ValueError("registered picture does not match the base frame")
+                  n = int(info.get("idle_frames") or n)
               for d in (full_dir, mask_dir):
                   os.makedirs(d, exist_ok=True)
                   for f in os.listdir(d):
                       os.remove(os.path.join(d, f))
-              frame_path = os.path.join(full_dir, "00000000.png")
-              for _attempt in range(3):
-                  cv2.imwrite(frame_path, img)
-                  coord_list, frame_list = get_landmark_and_bbox([frame_path], 0)
-                  if not coord_list or tuple(coord_list[0]) == tuple(coord_placeholder):
-                      raise NoFace("no face found in the portrait")
-                  x1, y1, x2, y2 = (int(v) for v in coord_list[0])
-                  frame = frame_list[0]
-                  y2 = min(y2 + 10, frame.shape[0])  # v1.5 extra_margin, as in genavatar.py
-                  coords = [x1, y1, x2, y2]
-                  # The blend step pastes into the face box expanded 1.5x (blending.get_crop_box). A
-                  # close-up portrait puts that box outside the frame, every speaking frame then fails
-                  # in paste_back_frame and is dropped together with its audio, so the call is silent.
-                  # Extend the portrait (mirrored, blurred; see extend_portrait) until the expanded box
-                  # fits with room for the idle motion, then detect again.
-                  (cx1, cy1, cx2, cy2), _s = get_crop_box(coords, 1.5)
-                  fh, fw = frame.shape[:2]
-                  margin = 12
-                  need = [max(0, -cy1), max(0, cy2 - fh), max(0, -cx1), max(0, cx2 - fw)]  # top, bottom, left, right
-                  if max(need) == 0:
-                      break
-                  sides = [n + margin if n else 0 for n in need]
-                  # Keep the result within MAX_FRAME_H by shrinking the portrait first (the face box and
-                  # so the needed border shrink with it), instead of padding and then shrinking again.
-                  grown_h = img.shape[0] + sides[0] + sides[1]
-                  if grown_h > MAX_FRAME_H:
-                      s = MAX_FRAME_H / float(grown_h)
-                      img = cv2.resize(img, (int(img.shape[1] * s), int(img.shape[0] * s)), interpolation=cv2.INTER_AREA)
-                      sides = [int(math.ceil(n * s)) if n else 0 for n in sides]
-                  padded = max(padded, max(sides))
-                  img = extend_portrait(img, *sides)
-                  img = img[: img.shape[0] - img.shape[0] % 2, : img.shape[1] - img.shape[1] % 2]
-              else:
-                  raise NoFace("the face fills the portrait; no room for the blend box")
-              base = frame
+              cv2.imwrite(os.path.join(root, "source.png"), img)
+              if base is None:
+                  h, w = img.shape[:2]
+                  if h > MAX_FRAME_H:
+                      scale = MAX_FRAME_H / h
+                      img = cv2.resize(img, (int(w * scale), MAX_FRAME_H), interpolation=cv2.INTER_AREA)
+                      steps.append(["resize", img.shape[1], img.shape[0]])
+                      h, w = img.shape[:2]
+                  # H.264 and VP8 encoders want even dimensions.
+                  img = img[: h - h % 2, : w - w % 2]
+                  steps.append(["crop", img.shape[1], img.shape[0]])
+                  frame_path = os.path.join(full_dir, "00000000.png")
+                  for _attempt in range(3):
+                      cv2.imwrite(frame_path, img)
+                      coord_list, frame_list = get_landmark_and_bbox([frame_path], 0)
+                      if not coord_list or tuple(coord_list[0]) == tuple(coord_placeholder):
+                          raise NoFace("no face found in the portrait")
+                      x1, y1, x2, y2 = (int(v) for v in coord_list[0])
+                      frame = frame_list[0]
+                      y2 = min(y2 + 10, frame.shape[0])  # v1.5 extra_margin, as in genavatar.py
+                      coords = [x1, y1, x2, y2]
+                      # The blend step pastes into the face box expanded 1.5x (blending.get_crop_box). A
+                      # close-up portrait puts that box outside the frame, every speaking frame then fails
+                      # in paste_back_frame and is dropped together with its audio, so the call is silent.
+                      # Extend the portrait (mirrored, blurred; see extend_portrait) until the expanded box
+                      # fits with room for the idle motion, then detect again.
+                      (cx1, cy1, cx2, cy2), _s = get_crop_box(coords, 1.5)
+                      fh, fw = frame.shape[:2]
+                      margin = 12
+                      need = [max(0, -cy1), max(0, cy2 - fh), max(0, -cx1), max(0, cx2 - fw)]  # top, bottom, left, right
+                      if max(need) == 0:
+                          break
+                      sides = [k + margin if k else 0 for k in need]
+                      # Keep the result within MAX_FRAME_H by shrinking the portrait first (the face box and
+                      # so the needed border shrink with it), instead of padding and then shrinking again.
+                      grown_h = img.shape[0] + sides[0] + sides[1]
+                      if grown_h > MAX_FRAME_H:
+                          s = MAX_FRAME_H / float(grown_h)
+                          img = cv2.resize(img, (int(img.shape[1] * s), int(img.shape[0] * s)), interpolation=cv2.INTER_AREA)
+                          steps.append(["resize", img.shape[1], img.shape[0]])
+                          sides = [int(math.ceil(k * s)) if k else 0 for k in sides]
+                      padded = max(padded, max(sides))
+                      img = extend_portrait(img, *sides)
+                      steps.append(["extend", *sides])
+                      img = img[: img.shape[0] - img.shape[0] % 2, : img.shape[1] - img.shape[1] % 2]
+                      steps.append(["crop", img.shape[1], img.shape[0]])
+                  else:
+                      raise NoFace("the face fills the portrait; no room for the blend box")
+                  base = frame
               mask = head_mask(base.shape, coords) if n > 1 else None
               coords_list, mask_coords, latents = [], [], []
               for i, m in enumerate(idle_transforms(n, coords)):
@@ -1639,7 +1884,8 @@ write_files:
                   json.dump({"avatar_id": avatar_id, "video_path": "portrait", "bbox_shift": 0,
                              "acudx_prep": PREP_VERSION, "idle_frames": n, "extended_px": padded,
                              "face_box": [int(v) for v in coords], "width": int(base.shape[1]),
-                             "height": int(base.shape[0])}, f)
+                             "height": int(base.shape[0]), "steps": steps, "ref": ref,
+                             "registration": registration}, f)
               AVATARS.pop(avatar_id, None)
               _load(avatar_id)
           ms = round((time.monotonic() - started) * 1000.0, 1)
@@ -1651,7 +1897,12 @@ write_files:
               torch.cuda.empty_cache()
           return {"avatar_id": avatar_id, "width": int(base.shape[1]), "height": int(base.shape[0]),
                   "face_box": [int(v) for v in coords], "idle_frames": n, "extended_px": padded,
-                  "extension": "mirrored+blurred" if padded else "none", "prepare_ms": ms}
+                  "extension": "mirrored+blurred" if padded else "none", "prepare_ms": ms, "ref": ref,
+                  "registration": registration}
+
+
+      class RefNotPrepared(ValueError):
+          pass
 
 
       class _WarmingFeatQueue(queue.Queue):
@@ -1712,7 +1963,7 @@ write_files:
           sess = registry.create("avatar", "musetalk", opt=o, model=MODEL, avatar=_load(avatar_id))
           # Shallow queues: one feature batch and one rendered batch in flight (upstream: two each).
           sess.asr.feat_queue = _WarmingFeatQueue(sess, maxsize=1)
-          sess.res_frame_queue = queue.Queue(o.batch_size)
+          sess.res_frame_queue = _IdxQueue(sess, o.batch_size)
           sess._acudx_ahead = _bounded(tuning, "ahead_frames", AHEAD_FRAMES, o.batch_size + 2, 40)
           sess._acudx_shift_ms = _bounded(tuning, "av_shift_ms", AV_SHIFT_MS, -1000, 1000)
           sess._acudx_tuning = {"batch_size": o.batch_size, "lookahead_frames": o.r, "ahead_frames": sess._acudx_ahead,
@@ -1723,25 +1974,69 @@ write_files:
           return sess
 
 
+      class _IdxQueue(queue.Queue):
+          """The rendered-frame queue; remembers the idle-loop index of the frame being sent, so a
+          cross-fade can blend the old picture's frame at the same index (same head pose)."""
+
+          def __init__(self, sess, maxsize: int):
+              super().__init__(maxsize=maxsize)
+              self._sess = sess
+
+          def get(self, block=True, timeout=None):
+              item = super().get(block, timeout)
+              try:
+                  self._sess._acudx_idx = int(item[2])
+              except (TypeError, ValueError, IndexError):
+                  pass
+              return item
+
+
+      # A switch waits until the patient has been silent this many frames (0.48 s): never mid-word.
+      QUIET_FRAMES = int(os.environ.get("AVATAR_SWITCH_QUIET_FRAMES", "12"))
+
+
+      def _swap_cycles(sess, av) -> tuple:
+          old = (sess.frame_list_cycle, sess.mask_list_cycle, sess.coord_list_cycle, sess.mask_coords_list_cycle,
+                 sess.input_latent_list_cycle)
+          (sess.frame_list_cycle, sess.mask_list_cycle, sess.coord_list_cycle, sess.mask_coords_list_cycle,
+           sess.input_latent_list_cycle) = av
+          return old
+
+
       def _install_crossfade(sess) -> None:
-          """Keep the last frame sent; after a /switch the next frames fade from that frame into the new
-          appearance (smoothstep over the switch's crossfade time), so a change of the patient's state
-          never cuts. Frames of a different size are resized for the blend."""
+          """Cross-fade a /switch on matched frames: the switch waits until the patient is silent (no
+          speaking frame for QUIET_FRAMES), then each frame of the fade blends the old picture's idle
+          frame at the same loop index with the new one (smoothstep over the crossfade time). The base
+          and its variants are registered to one frame (acudx_register), so the blend shows one face in
+          one pose; a mismatched size is resized only as a last resort."""
           out = sess.output
           orig_v = out.push_video_frame
-          st = {"last": None, "from": None, "t0": 0.0, "dur": 0.0}
+          st = {"last": None, "from": None, "t0": 0.0, "dur": 0.0, "pending": None, "quiet": 0, "applied": 0}
 
           def push_video_frame(frame) -> None:
-              src = st["from"]
-              if src is not None:
+              st["quiet"] = 0 if getattr(sess, "speaking", False) else st["quiet"] + 1
+              pend = st["pending"]
+              if pend is not None and st["quiet"] >= QUIET_FRAMES:
+                  st["pending"] = None
+                  av, ms, avatar_id = pend
+                  old = _swap_cycles(sess, av)
+                  sess._acudx_avatar = avatar_id
+                  st["applied"] += 1
+                  if ms > 0:
+                      st["from"], st["t0"], st["dur"] = old[0], time.monotonic(), ms / 1000.0
+              src_cycle = st["from"]
+              if src_cycle is not None:
                   u = (time.monotonic() - st["t0"]) / st["dur"] if st["dur"] > 0 else 1.0
                   if u >= 1.0:
                       st["from"] = None
                   else:
-                      if src.shape != frame.shape:
-                          src = cv2.resize(src, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_AREA)
-                      a = u * u * (3.0 - 2.0 * u)
-                      frame = cv2.addWeighted(src, 1.0 - a, frame, a, 0.0)
+                      idx = getattr(sess, "_acudx_idx", None)
+                      src = src_cycle[idx % len(src_cycle)] if idx is not None and len(src_cycle) else st["last"]
+                      if src is not None:
+                          if src.shape != frame.shape:
+                              src = cv2.resize(src, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_AREA)
+                          a = u * u * (3.0 - 2.0 * u)
+                          frame = cv2.addWeighted(src, 1.0 - a, frame, a, 0.0)
               st["last"] = frame
               orig_v(frame)
 
@@ -1784,7 +2079,9 @@ write_files:
       def _session_stats(sid: str, sess) -> dict:
           out: dict = {"id": sid[:8], "tuning": getattr(sess, "_acudx_tuning", None),
                        "avatar": getattr(sess, "_acudx_avatar", None),
-                       "speaking": bool(getattr(sess, "speaking", False)), "warm_up_ms": getattr(sess, "_acudx_warm_ms", None)}
+                       "speaking": bool(getattr(sess, "speaking", False)), "warm_up_ms": getattr(sess, "_acudx_warm_ms", None),
+                       "switches_applied": (getattr(sess, "_acudx_fade", None) or {}).get("applied"),
+                       "switch_pending": bool((getattr(sess, "_acudx_fade", None) or {}).get("pending"))}
           inf = getattr(sess, "_acudx_infer", None)
           if inf and inf["seconds"] > 0:
               out["infer_fps"] = round(inf["frames"] / inf["seconds"], 1)
@@ -1832,7 +2129,7 @@ write_files:
           with open(os.path.join(_avatar_dir(avatar_id), "avator_info.json")) as f:
               info = json.load(f)
           return web.json_response({k: info.get(k) for k in ("avatar_id", "face_box", "width", "height", "idle_frames",
-                                                             "extended_px")})
+                                                             "extended_px", "ref", "registration")})
 
 
       async def put_avatar(request: web.Request) -> web.Response:
@@ -1847,8 +2144,13 @@ write_files:
               n = int(frames) if frames else None
           except ValueError:
               return web.json_response({"error": "bad idle_frames"}, status=400)
+          ref = request.query.get("ref") or None
+          if ref is not None and (not AVATAR_ID_RE.match(ref) or ref == avatar_id):
+              return web.json_response({"error": "bad ref"}, status=400)
           try:
-              info = await asyncio.get_running_loop().run_in_executor(None, prepare_avatar, avatar_id, body, n)
+              info = await asyncio.get_running_loop().run_in_executor(None, prepare_avatar, avatar_id, body, n, ref)
+          except RefNotPrepared as exc:
+              return web.json_response({"error": "ref_not_prepared", "ref": str(exc)}, status=409)
           except NoFace as exc:
               return web.json_response({"error": "no_face", "detail": str(exc)}, status=422)
           except ValueError as exc:
@@ -1898,16 +2200,38 @@ write_files:
           if len(av[0]) != len(sess.frame_list_cycle) or len(av[4]) != len(sess.input_latent_list_cycle):
               return web.json_response({"error": "frame_count_mismatch", "have": len(sess.frame_list_cycle),
                                         "got": len(av[0])}, status=409)
-          st = getattr(sess, "_acudx_fade", None)
-          if st is not None and st.get("last") is not None and ms > 0:
-              st["from"], st["t0"], st["dur"] = st["last"].copy(), time.monotonic(), ms / 1000.0
-          (sess.frame_list_cycle, sess.mask_list_cycle, sess.coord_list_cycle, sess.mask_coords_list_cycle,
-           sess.input_latent_list_cycle) = av
           previous = getattr(sess, "_acudx_avatar", None)
-          sess._acudx_avatar = avatar_id
+          st = getattr(sess, "_acudx_fade", None)
+          deferred = False
+          if st is not None:
+              # Applied by the sender loop on the next silent frame, at the frame boundary.
+              deferred = st["quiet"] < QUIET_FRAMES
+              st["pending"] = (av, ms, avatar_id)
+          else:
+              _swap_cycles(sess, av)
+              sess._acudx_avatar = avatar_id
           MEDIA["switches"] = MEDIA.get("switches", 0) + 1
           return web.json_response({"ok": True, "avatar": avatar_id, "previous": previous, "crossfade_ms": ms,
+                                    "deferred_until_silent": deferred,
                                     "switch_ms": round((time.monotonic() - t) * 1000.0, 1)})
+
+
+      async def tuning(request: web.Request) -> web.Response:
+          """{sessionid, av_shift_ms}: move a live call's video against its audio (0 to 1000 ms, video
+          later), one frame per frame; the gateway uses it to correct a lip offset the browser measured."""
+          params = await request.json()
+          sess = session_manager.get_session(str(params.get("sessionid") or ""))
+          if sess is None:
+              return web.json_response({"error": "unknown_session"}, status=404)
+          st = getattr(sess, "_acudx_shift", None)
+          if st is None:
+              return web.json_response({"error": "shift_not_adjustable"}, status=409)
+          ms = _bounded(params, "av_shift_ms", int(st["n"]) * 40, 0, 1000)
+          st["n"] = int(round(ms / 40.0))
+          sess._acudx_shift_ms = st["n"] * 40
+          if isinstance(getattr(sess, "_acudx_tuning", None), dict):
+              sess._acudx_tuning["av_shift_ms"] = sess._acudx_shift_ms
+          return web.json_response({"ok": True, "av_shift_ms": sess._acudx_shift_ms})
 
 
       async def close(request: web.Request) -> web.Response:
@@ -2150,6 +2474,7 @@ write_files:
           app.router.add_post("/is_speaking", is_speaking)
           app.router.add_post("/close", close)
           app.router.add_post("/switch", switch)
+          app.router.add_post("/tuning", tuning)
           app.router.add_get("/turn", turn_bridge)
           app.router.add_get("/turn_check", turn_check)
           log.info("acudx avatar runner on :%d (batch %d, ahead %d frames, max sessions %d, model load %.0f ms)",
@@ -2180,7 +2505,7 @@ write_files:
           && uv pip install --system --exclude-newer 2026-09-01T00:00:00Z --constraint /app/constraints.txt \
              "diffusers==0.40.0" transformers accelerate safetensors sentencepiece huggingface_hub aiohttp pillow
       RUN python -c "import torch, diffusers, transformers; from diffusers import Flux2KleinPipeline; print('torch', torch.__version__, 'diffusers', diffusers.__version__, 'transformers', transformers.__version__)"
-      COPY acudx_imagegen.py /app/
+      # acudx_imagegen.py is mounted at run time (compose), so the image key does not change with it.
       EXPOSE 8020
       HEALTHCHECK --interval=20s --timeout=10s --start-period=20m --retries=3 CMD curl -sf http://localhost:8020/health || exit 1
       CMD ["python", "/app/acudx_imagegen.py"]
@@ -2397,14 +2722,90 @@ write_files:
       cd /opt/acudx
       set -a; . ./.env; set +a
       compose="docker compose -f /opt/acudx/docker-compose.yml"
-      $compose build imagegen >/var/log/acudx-imagegen-build.log 2>&1 || { echo "acudx imagegen: build failed"; exit 1; }
-      for _ in $(seq 1 360); do
+      . /opt/acudx/images.sh
+      ensure_image imagegen acudx/imagegen:flux2-klein-4b-cu128 "$(imagegen_key)" \
+        sh -c "$compose build imagegen >/var/log/acudx-imagegen-build.log 2>&1" || { echo "acudx imagegen: build failed"; exit 1; }
+      for _ in $(seq 1 720); do
         s=$(cat /opt/acudx/public/avatar-status/status.json 2>/dev/null)
         case "$s" in *'"state":"ready"'*|*'"state":"disabled"'*) break ;; esac
-        sleep 10
+        sleep 5
+      done
+      # vLLM starts after the runner and reserves its share of the card; the edit server takes what is left.
+      for _ in $(seq 1 480); do
+        $compose exec -T vllm curl -sf -o /dev/null http://localhost:8000/health >/dev/null 2>&1 && break
+        cid=$($compose ps -aq vllm 2>/dev/null)
+        [ -n "$cid" ] && [ "$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null)" = exited ] && break
+        sleep 5
       done
       $compose up -d imagegen
+      mark "imagegen: container started"
       echo "acudx imagegen: started on GPU ${IMAGEGEN_GPU:-0} $(date -u)"
+  # Prebuilt images (docs/architecture/18 section 6.8). The three images built from source
+  # (Chatterbox, the avatar runner, the image edit server) are keyed by the sha256 of what goes into
+  # them (Dockerfile, constraint file, pinned upstream commit; the AcuDx Python files are mounted at
+  # run time, so a code change never invalidates an image). Each is taken from the first source that
+  # has it: the local Docker store, the registry (ACUDX_IMAGE_REGISTRY, ghcr.io, built by
+  # .github/workflows/gpu-worker-images.yml), the Lambda filesystem cache
+  # ($FS/acudx-images/<name>-<key>.tar, written after a build), else it is built here and saved to the
+  # cache for the next worker. infra/gpu-worker/worker_images.py computes the same keys.
+  - path: /opt/acudx/images.sh
+    permissions: "0755"
+    content: |
+      #!/bin/sh
+      # Source me (POSIX sh: cloud-init runs runcmd with /bin/sh): image_key <pin> <files...>;
+      # ensure_image <name> <local tag> <key> <build command...>; mark <event>
+      ACUDX_FS=${ACUDX_FS:-$(ls -d /lambda/nfs/* 2>/dev/null | head -1)}
+      ACUDX_IMAGE_CACHE=${ACUDX_IMAGE_CACHE:-${ACUDX_FS:+$ACUDX_FS/acudx-images}}
+      TIMELINE=${TIMELINE:-/opt/acudx/public/avatar-status/timeline.txt}
+      mark() {
+        mkdir -p "$(dirname "$TIMELINE")"
+        printf '%s %s\n' "$(date -u +%s)" "$*" >> "$TIMELINE"
+        chmod 0644 "$TIMELINE" 2>/dev/null || true
+      }
+      image_key() {
+        # The files' bytes in order, then the pin string (an upstream commit), sha256, 16 hex characters.
+        pin=$1
+        shift
+        { for f in "$@"; do cat "$f"; done; printf '%s' "$pin"; } | sha256sum | cut -c1-16
+      }
+      ensure_image() {
+        local name=$1 tag=$2 key=$3
+        shift 3
+        local cached="acudx-cache/$name:$key"
+        if docker image inspect "$cached" >/dev/null 2>&1; then
+          docker tag "$cached" "$tag"; mark "image $name local $key"; return 0
+        fi
+        if [ -n "${ACUDX_IMAGE_REGISTRY:-}" ]; then
+          local remote="$ACUDX_IMAGE_REGISTRY/acudx-$name:$key"
+          mark "image $name pulling $key"
+          if timeout 1200 docker pull -q "$remote" >/dev/null 2>&1; then
+            docker tag "$remote" "$tag" && docker tag "$remote" "$cached"; mark "image $name pulled $key"; return 0
+          fi
+          mark "image $name not in registry $key"
+        fi
+        local tar="${ACUDX_IMAGE_CACHE:-/nonexistent}/$name-$key.tar"
+        if [ -n "${ACUDX_IMAGE_CACHE:-}" ] && [ -s "$tar" ]; then
+          mark "image $name loading $key"
+          if docker load -i "$tar" >/dev/null 2>&1 && docker image inspect "$cached" >/dev/null 2>&1; then
+            docker tag "$cached" "$tag"; mark "image $name loaded $key"; return 0
+          fi
+          mark "image $name cache unreadable $key"
+        fi
+        mark "image $name building $key"
+        "$@" || { mark "image $name build failed $key"; return 1; }
+        docker tag "$tag" "$cached"
+        mark "image $name built $key"
+        if [ -n "${ACUDX_IMAGE_CACHE:-}" ]; then
+          mkdir -p "$ACUDX_IMAGE_CACHE"
+          ( docker save -o "$ACUDX_IMAGE_CACHE/.$name-$key.tar.part" "$cached" \
+              && mv -f "$ACUDX_IMAGE_CACHE/.$name-$key.tar.part" "$tar" && mark "image $name saved to cache $key" \
+              || rm -f "$ACUDX_IMAGE_CACHE/.$name-$key.tar.part" ) &
+        fi
+        return 0
+      }
+      chatterbox_key() { image_key "$CHATTERBOX_REF" /opt/acudx/chatterbox.Dockerfile; }
+      avatar_key() { image_key "$LIVETALKING_REF" /opt/acudx/avatar/Dockerfile.acudx /opt/acudx/avatar/acudx-constraints.txt; }
+      imagegen_key() { image_key "" /opt/acudx/imagegen/Dockerfile; }
   - path: /opt/acudx/avatar.sh
     permissions: "0755"
     content: |
@@ -2438,24 +2839,13 @@ write_files:
       git -C /opt/acudx/livetalking checkout --quiet "$LIVETALKING_REF" || { status disabled checkout_failed; exit 1; }
       install -m 0644 /opt/acudx/avatar/Dockerfile.acudx /opt/acudx/avatar/acudx-constraints.txt \
         /opt/acudx/avatar/acudx_avatar_server.py /opt/acudx/avatar/acudx_fetch_models.py /opt/acudx/livetalking/
-      $compose build avatar >/var/log/acudx-avatar-build.log 2>&1 || { status disabled build_failed; exit 1; }
-      status waiting "vllm_health"
-      for _ in $(seq 1 240); do
-        $compose exec -T vllm curl -sf -o /dev/null http://localhost:8000/health >/dev/null 2>&1 && break
-        # A vLLM that exited will not come back by itself; measure VRAM without it rather than wait 40 min.
-        cid=$($compose ps -aq vllm 2>/dev/null)
-        [ -n "$cid" ] && [ "$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null)" = exited ] && break
-        sleep 10
-      done
-      status waiting "chatterbox_health"
-      for _ in $(seq 1 180); do
-        cid=$($compose ps -q chatterbox 2>/dev/null)
-        [ -n "$cid" ] && [ "$(docker inspect -f '{{.State.Health.Status}}' "$cid" 2>/dev/null)" = healthy ] && break
-        # Every build attempt failed (cloud-init is done and there is no container): start the face now;
-        # English then speaks with the worker's Kokoro.
-        [ -z "$cid" ] && [ -f /var/lib/cloud/instance/boot-finished ] && break
-        sleep 10
-      done
+      . /opt/acudx/images.sh
+      ensure_image avatar acudx/avatar-runner:c726943-cu128 "$(avatar_key)" \
+        sh -c "$compose build avatar >/var/log/acudx-avatar-build.log 2>&1" || { status disabled build_failed; exit 1; }
+      # Parallel start-up (docs/architecture/18 6.8): the runner waits for neither vLLM nor the voice; it
+      # loads next to Chatterbox, and vLLM starts after both (runcmd waits for this status), so vLLM's own
+      # free-memory check at start-up sees every side-car already loaded.
+      mark "avatar: image ready"
       read -r total used <<< "$(gpu_mem)"
       free=$((total - used))
       if [ "$free" -lt "$AVATAR_REQUIRED_MB" ]; then
@@ -2480,13 +2870,15 @@ write_files:
         echo "acudx avatar: no certificate for turn.$WORKER_DOMAIN yet; TURN without TLS"
       fi
       $compose up -d turn avatar
-      for _ in $(seq 1 120); do
+      mark "avatar: container started"
+      for _ in $(seq 1 600); do
         if $compose exec -T avatar curl -sf -o /dev/null http://localhost:8010/health >/dev/null 2>&1; then
           read -r total2 used2 <<< "$(gpu_mem)"
           status ready "used_by_avatar_mb=$((used2 - used))" "$total2" "$((total2 - used2))"
+          mark "avatar: ready"
           exit 0
         fi
-        sleep 10
+        sleep 2
       done
       status disabled start_timeout "$total" "$free"
 runcmd:
@@ -2514,6 +2906,9 @@ runcmd:
   - |
     FS=$(ls -d /lambda/nfs/* 2>/dev/null | head -1)
     if [ -n "$FS" ]; then mkdir -p "$FS/hf" && rm -rf /opt/acudx/hf && ln -s "$FS/hf" /opt/acudx/hf; else mkdir -p /opt/acudx/hf; fi
+    # Chatterbox's model files on the filesystem too (about 3 GB, downloaded on every boot before).
+    if [ -n "$FS" ]; then mkdir -p "$FS/chatterbox-cache" && sed -i "s|^CHATTERBOX_CACHE=.*|CHATTERBOX_CACHE=$FS/chatterbox-cache|" /opt/acudx/.env; fi
+    . /opt/acudx/images.sh && mark "cloud-init: runcmd started (filesystem ${FS:-none})"
   # The public IP is not known before launch, so the manager renders
   # WORKER_DOMAIN=auto and the worker derives <ip-with-dashes>.sslip.io itself
   # (the manager derives the identical name from the API-reported IP).
@@ -2577,30 +2972,65 @@ runcmd:
       total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
       if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then echo 'VLLM_GPU_UTIL=0.45' >> /opt/acudx/.env; fi
     fi
+  # Parallel start-up (docs/architecture/18 6.8, live 2026-10-21: 17 min 20 s from a cold launch to live
+  # video, with vLLM, the Chatterbox build, the runner and the edit server one after another). Now every
+  # image is fetched at once (pulls, or the three built images from the registry or the filesystem cache),
+  # the voices and the runner start as soon as their images are there, and vLLM starts last: it reserves
+  # a fraction of the card and refuses to start, or dies during its memory profile, when another process
+  # takes memory meanwhile (worker 10, 2026-10-20), so it goes once the side-cars have loaded.
+  - |
+    cd /opt/acudx && set -a && . ./.env && set +a && . ./images.sh
+    mark "images: fetching"
+    for img in vllm/vllm-openai:v0.11.0 ghcr.io/speaches-ai/speaches:0.8.3-cuda ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4 \
+               caddy:2.9.1 nginx:1.30.6-alpine ghcr.io/coturn/coturn:4.18.0-debian; do
+      ( for i in 1 2 3; do docker pull -q "$img" >/dev/null 2>&1 && break; sleep 10; done; mark "image pulled $img" ) &
+    done
+    # The Chatterbox image: registry, filesystem cache, else built from the pinned checkout (retried, since
+    # one upstream hiccup otherwise leaves the worker without a voice for its whole life).
+    nohup bash -c '. /opt/acudx/images.sh; cd /opt/acudx; set -a; . ./.env; set +a
+      for i in 1 2 3; do
+        ensure_image chatterbox acudx/chatterbox-tts-api:a5f4661-cu124 "$(chatterbox_key)" \
+          sh -c "docker compose build chatterbox >>/var/log/acudx-chatterbox-build.log 2>&1" && exit 0
+        echo "acudx: chatterbox image attempt $i failed" >&2; sleep 30
+      done
+      touch /opt/acudx/public/avatar-status/chatterbox-failed' >/var/log/acudx-chatterbox-image.log 2>&1 &
   - nohup /opt/acudx/avatar.sh >/var/log/acudx-avatar.log 2>&1 &
   - nohup /opt/acudx/imagegen.sh >/var/log/acudx-imagegen.log 2>&1 &
-  # vLLM reserves a fraction of the card at start-up and refuses to start when another
-  # process already holds that memory (worker 10, 2026-10-20: once Chatterbox reached the
-  # GPU, vLLM died with "Engine core initialization failed"). So vLLM starts alone and the
-  # GPU side-cars start only after its health check passes (compose --wait, 40 min cap).
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d edge caddy
+  # The voices first (the runner waits for Chatterbox), then the runner, then vLLM.
   - |
-    cd /opt/acudx && set -a && . ./.env && set +a
+    cd /opt/acudx && set -a && . ./.env && set +a && . ./images.sh
+    docker compose up -d speaches kokoro kokoro2 && mark "speaches and kokoro started"
+    for _ in $(seq 1 720); do
+      docker image inspect acudx/chatterbox-tts-api:a5f4661-cu124 >/dev/null 2>&1 && break
+      [ -f /opt/acudx/public/avatar-status/chatterbox-failed ] && break
+      sleep 5
+    done
+    if docker image inspect acudx/chatterbox-tts-api:a5f4661-cu124 >/dev/null 2>&1; then
+      docker compose up -d --no-build chatterbox && mark "chatterbox started"
+      # A second Chatterbox replica for two concurrent Turkish calls, only where the VRAM allows it (about
+      # 4 GB; a 40 GB card keeps that room for the avatar runner).
+      total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
+      if [ "${total:-0}" -ge 70000 ]; then docker compose up -d --no-build chatterbox2; else echo "acudx: chatterbox2 skipped (${total} MiB)"; fi
+      # Voice library and the warm-up lines (conditionals cache) as soon as the voice is up, not after vLLM.
+      nohup /opt/acudx/seed-voices.sh >/var/log/acudx-seed-voices.log 2>&1 &
+    fi
+  - |
+    cd /opt/acudx && set -a && . ./.env && set +a && . ./images.sh
+    # vLLM after the runner has its memory (avatar.sh status ready or disabled) and Chatterbox has loaded
+    # its model (its /health answers 200 while it loads), 15 min at most.
+    for _ in $(seq 1 180); do
+      av=0; cb=0
+      case "$(cat /opt/acudx/public/avatar-status/status.json 2>/dev/null)" in *'"state":"ready"'*|*'"state":"disabled"'*) av=1 ;; esac
+      docker compose exec -T chatterbox curl -sf http://localhost:4123/health 2>/dev/null | grep -q '"initialization_state":"ready"' && cb=1
+      [ -f /opt/acudx/public/avatar-status/chatterbox-failed ] && cb=1
+      [ "$av" = 1 ] && [ "$cb" = 1 ] && break
+      sleep 5
+    done
+    mark "vllm: starting"
     timeout 2400 docker compose up -d --wait vllm || echo "acudx - vllm did not become healthy within 40 min" >&2
-  - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d speaches kokoro kokoro2
-  # The voice image builds from source (pip, GitHub, the Ubuntu archive): retry a failed build, since one
-  # upstream hiccup otherwise leaves the worker without a voice for its whole life.
-  - |
-    cd /opt/acudx && set -a && . ./.env && set +a
-    for i in 1 2 3; do docker compose up -d --build chatterbox && break; echo "acudx: chatterbox build attempt $i failed" >&2; sleep 30; done
-  # A second Chatterbox replica for two concurrent Turkish calls, only where the VRAM allows it (about
-  # 4 GB; a 40 GB card keeps that room for the avatar runner).
-  - |
-    cd /opt/acudx && set -a && . ./.env && set +a
-    total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
-    if [ "${total:-0}" -ge 70000 ]; then docker compose up -d chatterbox2; else echo "acudx: chatterbox2 skipped (${total} MiB)"; fi
+    mark "vllm: healthy"
   # Task 24 check: a fresh container from the same service definition reports what torch sees.
   - |
     cd /opt/acudx && set -a && . ./.env && set +a
     docker compose run --rm --no-deps --entrypoint /app/.venv/bin/python chatterbox -c "import torch; print('torch', torch.__version__, 'cuda build', torch.version.cuda, 'cuda available', torch.cuda.is_available(), 'devices', torch.cuda.device_count())" >/var/log/acudx-chatterbox-gpu.log 2>&1 || echo "acudx: chatterbox torch check failed" >>/var/log/acudx-chatterbox-gpu.log
-  - nohup /opt/acudx/seed-voices.sh >/var/log/acudx-seed-voices.log 2>&1 &

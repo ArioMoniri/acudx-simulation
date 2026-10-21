@@ -759,9 +759,12 @@ def test_the_voice_image_does_not_depend_on_the_deadsnakes_ppa_and_its_build_is_
     assert "uv python install 3.11 && uv venv --python 3.11" in dockerfile
     assert "Acquire::Retries=8" in dockerfile
     runcmd = "\n".join(_cloud_init()["runcmd"])
-    assert "for i in 1 2 3; do docker compose up -d --build chatterbox && break" in runcmd
+    # The build (now the last resort after the registry and the filesystem cache) is still retried.
+    assert "for i in 1 2 3; do" in runcmd and "ensure_image chatterbox acudx/chatterbox-tts-api:a5f4661-cu124" in runcmd
+    assert "touch /opt/acudx/public/avatar-status/chatterbox-failed" in runcmd
     avatar_sh = _written("/avatar.sh")
-    assert '[ -z "$cid" ] && [ -f /var/lib/cloud/instance/boot-finished ] && break' in avatar_sh
+    # The runner never waits for the voice now (it loads next to Chatterbox, docs/architecture/18 6.8).
+    assert "chatterbox_health" not in avatar_sh and 'mark "avatar: image ready"' in avatar_sh
 
 
 def test_the_turn_bridge_can_carry_a_browsers_tls_session_to_the_public_443_router():
@@ -977,7 +980,9 @@ def test_chatterbox_patch_is_installed_into_the_pinned_checkout_and_primed_at_bo
     runcmd = "\n".join(_cloud_init()["runcmd"])
     assert ("install -m 0644 /opt/acudx/chatterbox-acudx-patch.py /opt/acudx/chatterbox-tts-api/app/acudx_patch.py"
             in runcmd)
-    assert runcmd.index("chatterbox-acudx-patch.py") < runcmd.index("docker compose up -d --build chatterbox")
+    assert runcmd.index("chatterbox-acudx-patch.py") < runcmd.index("ensure_image chatterbox")
+    # and mounted at run time, so a patch change is live without a rebuild (docs/architecture/18 6.8)
+    assert "/opt/acudx/chatterbox-acudx-patch.py:/app/app/acudx_patch.py:ro" in _compose()["services"]["chatterbox"]["volumes"]
     patch = _written("/chatterbox-acudx-patch.py")
     # Eager mode only on these hosts (CUDA graph capture fails on Lambda A100 SXM4).
     assert "torch.compile(" not in patch and "CUDAGraph" not in patch
@@ -1011,8 +1016,8 @@ def test_chatterbox_runs_a_second_replica_on_large_cards_and_only_ready_replicas
     assert "reverse_proxy chatterbox:4123 chatterbox2:4123 {" in block and "lb_policy least_conn" in block
     assert "health_body initialization_state.{1,4}ready" in block
     runcmd = "\n".join(_cloud_init()["runcmd"])
-    assert "-ge 70000 ]; then docker compose up -d chatterbox2" in runcmd
-    assert runcmd.index("up -d --build chatterbox") < runcmd.index("up -d chatterbox2")
+    assert "-ge 70000 ]; then docker compose up -d --no-build chatterbox2" in runcmd
+    assert runcmd.index("up -d --no-build chatterbox &&") < runcmd.index("up -d --no-build chatterbox2")
     seed = _written("/seed-voices.sh")
     assert "seed chatterbox\n" in seed and "&& seed chatterbox2" in seed
 

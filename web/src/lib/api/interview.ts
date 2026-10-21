@@ -85,6 +85,8 @@ export interface InterviewRequest {
   client_id?: string;
   /** The message came from speech-to-text. */
   voiced?: boolean;
+  /** The learner's live patient video call on this thread: the server speaks the reply into it as it is written. */
+  call_session_id?: string;
 }
 
 export interface InterviewMeta {
@@ -99,6 +101,12 @@ export interface InterviewMeta {
   guard_model?: string | null;
   guard_rule?: string | null;
   tutor_source?: "model" | "rules";
+  /** Present when the live call already speaks the reply (the tile must not speak it again). */
+  voice?: { spoken_by: "call"; session_id: string };
+  /** The persona call ran next to the guard: "kept" when its prompt matched, else "restarted". */
+  speculative?: "kept" | "restarted";
+  /** Milliseconds from the message's arrival: guard_ms, persona_first_text_ms, persona_done_ms, ... */
+  timings?: Record<string, number>;
 }
 
 export interface InterviewFlag {

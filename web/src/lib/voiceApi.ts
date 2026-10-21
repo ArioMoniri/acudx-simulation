@@ -503,6 +503,20 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
       }
     },
 
+    /**
+     * Closed-loop lip sync: the measured audio-to-lip offset of the last line (positive = the mouth
+     * moves after the voice). The gateway moves the call's video delay when it is outside the tolerance.
+     */
+    avatarLipsync(
+      sessionId: string,
+      lipLagMs: number,
+      score: number | null,
+      opts: RequestOptions = {},
+    ): Promise<BackendResult<{ av_shift_ms: number; changed: boolean }>> {
+      return signedJson("/v1/voice/avatar/lipsync", { session_id: sessionId, lip_lag_ms: lipLagMs,
+        ...(score != null ? { score } : {}) }, opts);
+    },
+
     avatarEnd(sessionId: string, opts: RequestOptions = {}): Promise<BackendResult<{ ok: boolean }>> {
       return signedJson("/v1/voice/avatar/end", { session_id: sessionId }, opts);
     },

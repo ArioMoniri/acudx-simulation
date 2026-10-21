@@ -50,12 +50,14 @@ class Variant:
     image: bytes | None = None    # the generated JPEG (served to the call's owner, never persisted)
     prompt: str | None = None
     retryable: bool = False
+    # How the runner registered the picture onto the base portrait (method, scale, shift, residuals).
+    registration: dict[str, Any] | None = None
 
     def public(self) -> dict[str, Any]:
         return {"name": self.name, "key": self.look.key, "avatar_id": self.avatar_id, "status": self.status,
                 "prompt": self.prompt, "has_image": self.image is not None,
                 "signs": self.look.public()["signs"], "gen_ms": self.gen_ms, "prepare_ms": self.prepare_ms,
-                "error": self.error, "mode": self.mode}
+                "error": self.error, "mode": self.mode, "registration": self.registration}
 
 
 @dataclass
@@ -90,7 +92,7 @@ class Appearance:
 
 # Bumped whenever the pictures for the same look change (prompts, the fever tint), so a worker never
 # reuses a face it prepared from an older picture under the same id.
-APPEARANCE_VERSION = 4
+APPEARANCE_VERSION = 5  # 5: variants registered onto the base portrait
 
 
 def variant_avatar_id(photo_id: str, thread_id: str, key: str) -> str:
@@ -197,6 +199,10 @@ async def _gen(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
     """Make the picture. A 5xx from the image edit server (live 2026-10-21: out of memory while the
     runner of a call held the rest of a 40 GB card) is retried after ``retry_s``, twice."""
     async def once() -> bool:
+        from server.voice.avatar.turn_speech import wait_until_quiet  # noqa: PLC0415
+
+        # A patient line being spoken on that GPU goes first (the edit would slow its TTS 2x).
+        await wait_until_quiet(getattr(a.gen_worker or worker, "origin", ""))
         v.status, v.retryable = "generating", False
         try:
             v.prompt = ap.edit_prompt(v.look)
@@ -216,13 +222,17 @@ async def _gen(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
 
 
 async def _prep(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, v: Variant, *,
-                retry_s: float | None = None) -> bool:
-    """Prepare the generated picture as a MuseTalk avatar on the call's worker."""
+                retry_s: float | None = None, portrait: bytes | None = None) -> bool:
+    """Prepare the generated picture as a MuseTalk avatar on the call's worker, registered onto the
+    base portrait (prepared first when ``portrait`` is given), so base and variant share one frame."""
     async def once() -> bool:
         v.status, v.retryable = "preparing", False
         t = time.monotonic()
         try:
-            await mt.ensure_avatar(client, worker, v.avatar_id, v.image or b"")
+            if portrait:
+                await mt.ensure_avatar(client, worker, a.base_avatar_id, portrait)
+            v.registration = (await mt.ensure_avatar(client, worker, v.avatar_id, v.image or b"",
+                                                     ref=a.base_avatar_id)).get("registration")
         except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
             _failed(a, v, exc)
             v.status = "generated" if v.image else "failed"
@@ -246,7 +256,7 @@ async def _make_variant(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: A
     """Generate, then prepare, one picture (a look needed now that the ladder did not foresee)."""
     if v.image is None and not await _gen(client, worker, a, v, portrait, seed=seed, retry_s=retry_s):
         return False
-    return await _prep(client, worker, a, v, retry_s=retry_s)
+    return await _prep(client, worker, a, v, retry_s=retry_s, portrait=portrait)
 
 
 def _prepared(a: Appearance) -> dict[str, ap.Look]:
@@ -281,6 +291,12 @@ def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
             if not await await_services(client, worker, a, wait_s=services_wait_s, keepalive=keepalive):
                 return
             a.reason = None
+            # The case portrait first (about 30 s on a fresh worker): a call can then open at once on it and
+            # crossfade into each look as it lands; the looks are registered onto it.
+            try:
+                await mt.ensure_avatar(client, worker, a.base_avatar_id, portrait)
+            except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
+                log.info("base portrait for %s not prepared ahead: %s", a.thread_id[:8], type(exc).__name__)
             for v in order:
                 if v.image is None and v.status != "ready":
                     await _gen(client, worker, a, v, portrait, seed=seed)
@@ -288,7 +304,7 @@ def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
                         keepalive()
             for v in order:
                 if v.status == "generated":
-                    ok = await _prep(client, worker, a, v)
+                    ok = await _prep(client, worker, a, v, portrait=portrait)
                     if ok and a.worker_session:
                         await _switch_to_best(client, worker, a, a.worker_session, reason="ladder_ready")
                 if v is first:
@@ -316,6 +332,15 @@ async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id
         first_done = a.first_done or asyncio.Event()
         if a.first_done is None:
             first_done.set()
+        if not first_done.is_set() and not _prepared(a):
+            ig = await mt.imagegen_health(client, a.gen_worker or worker)
+            if not ig.get("ok"):
+                # The edit server is still loading (a cold worker: it starts after vLLM): do not hold the
+                # call up to ``wait_s`` for pictures that cannot come yet. It opens on the portrait and
+                # crossfades into the look when it lands (registered onto the portrait: no double image).
+                a.reason = (f"image edit server: {ig.get('reason') or 'not ready'}; the face switches to the "
+                            "patient's look when the pictures are ready")
+                return a, base
     else:
         a = new_appearance(thread_id=thread_id, photo_id=photo_id, spec=spec, director=director, worker=worker,
                            gen_worker=gen_worker)

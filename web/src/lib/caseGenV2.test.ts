@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   directorStep,
+  followCaseEvents,
   generateCaseV2,
   parseSseBuffer,
   streamCaseGenV2,
@@ -130,6 +131,44 @@ describe("streamCaseGenV2", () => {
     } finally {
       globalThis.fetch = realFetch;
     }
+  });
+});
+
+describe("Turkish text on the Director's event stream (live 2026-10-21 mojibake)", () => {
+  const mood = "korkmuş, kafası karışık; ı ş ğ ü ö ç İ";
+  const bytesOf = (s: string) => new TextEncoder().encode(s);
+
+  it("decodes UTF-8 split anywhere, even inside a character, and ignores a wrong charset label", async () => {
+    const wire = bytesOf(sse("director", { id: 3, affect: { mood_tr: mood, mood_en: "frightened" } }));
+    // one byte per chunk: every multi-byte letter (ş = C5 9F, ı = C4 B1, İ = C4 B0) is split
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const b of wire) controller.enqueue(new Uint8Array([b]));
+        controller.close();
+      },
+    });
+    const realFetch = globalThis.fetch;
+    let served = false;
+    globalThis.fetch = (async () => {
+      if (served) return new Response(null, { status: 404 });
+      served = true;
+      return new Response(body, { status: 200, headers: { "content-type": "text/event-stream; charset=windows-1251" } });
+    }) as typeof fetch;
+    const ctl = new AbortController();
+    const seen: unknown[] = [];
+    try {
+      const out = await followCaseEvents("thr-tr", {
+        signal: ctl.signal,
+        reconnectDelayMs: 1,
+        onEvent: (e) => seen.push(e),
+      });
+      expect(out).toBe("forbidden");
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+    const ev = seen[0] as { affect?: { mood_tr?: string } };
+    expect(ev.affect?.mood_tr).toBe(mood);
+    expect(JSON.stringify(seen)).not.toMatch(/Е|џ|Д/);
   });
 });
 

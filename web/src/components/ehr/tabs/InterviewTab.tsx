@@ -53,6 +53,7 @@ import {
 } from "@/lib/chatActions";
 import { routeMessage, type SendDeps } from "@/lib/interviewSend";
 import { interviewTurn, showsGuardNote } from "@/lib/api/interview";
+import { liveCallFor, markSent, markServerSpoken } from "@/lib/liveCallBus";
 import {
   sttSupported,
   startRecording,
@@ -574,11 +575,20 @@ export function InterviewTab({
     ...(threadId
       ? {
           serverInterview: async (text: string) => {
+            // A live video call with the voice on: the server speaks the reply into it as it is
+            // written (docs/architecture/18 6.3.9), so the tile only measures it.
+            const callSessionId = liveCallFor(threadId);
+            const sentAt = performance.now();
+            markSent(threadId, sentAt);
             const res = await interviewTurn(threadId, {
               message: text,
               guidance: guidanceOn,
               locale: lang === "tr" ? "tr" : "en",
+              ...(callSessionId ? { call_session_id: callSessionId } : {}),
             });
+            if (res.ok && res.data.meta.voice?.spoken_by === "call") {
+              markServerSpoken(res.data.reply, { sentAt, sessionId: res.data.meta.voice.session_id });
+            }
             return res.ok ? res.data : null;
           },
         }

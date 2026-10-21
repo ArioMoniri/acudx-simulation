@@ -229,7 +229,23 @@ async def _telemetry_context(request: Request, call_next):  # type: ignore[no-un
         response = await call_next(request)
     auth = getattr(request.app.state, "auth", None)
     response.headers["X-Auth-Mode"] = auth.mode if auth is not None else "local"
+    ctype = response.headers.get("content-type")
+    fixed = utf8_content_type(ctype)
+    if fixed and fixed != ctype:
+        response.headers["content-type"] = fixed
     return response
+
+
+def utf8_content_type(ctype: str | None) -> str | None:
+    """Every text-like reply names its charset. JSON is UTF-8 by its RFC, but a client, proxy or tool that
+    falls back to a locale default for a charset-less body can show Turkish as mojibake (live
+    2026-10-21: "korkmuş" shown as Windows-1251 in the patient status line)."""
+    if not ctype or "charset=" in ctype.lower():
+        return ctype
+    base = ctype.split(";", 1)[0].strip().lower()
+    if base.startswith("text/") or base in ("application/json", "application/problem+json", "application/javascript"):
+        return f"{ctype}; charset=utf-8"
+    return ctype
 
 
 # --------------------------------------------------------------------------- #

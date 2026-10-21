@@ -463,6 +463,8 @@ def model_for(settings: Any, role: str, node: Optional[str] = None) -> tuple[str
     n = (node or "").lower()
     if role in ("patient", "persona"):
         return s.anthropic_model_persona, "low"
+    if role == "patient_live":
+        return getattr(s, "anthropic_model_persona_live", None) or s.anthropic_model_persona, "low"
     if role in ("guard", "classifier"):
         return s.anthropic_model_classifier, "low"
     if role == "tutor":

@@ -1,0 +1,31 @@
+1792620286 cloud-init: runcmd started (filesystem /lambda/nfs/acudx-wm)
+1792620287 images: fetching
+1792620287 image chatterbox pulling 2d1ad1f79a05c36a
+1792620287 image imagegen pulling e46737d70012f434
+1792620287 image chatterbox not in registry 2d1ad1f79a05c36a
+1792620287 image imagegen not in registry e46737d70012f434
+1792620287 image chatterbox building 2d1ad1f79a05c36a
+1792620287 image imagegen building e46737d70012f434
+1792620288 image avatar pulling 9b05e6479cd7a483
+1792620288 image avatar not in registry 9b05e6479cd7a483
+1792620288 image avatar building 9b05e6479cd7a483
+1792620290 image pulled caddy:2.9.1
+1792620290 image pulled nginx:1.30.6-alpine
+1792620291 image pulled ghcr.io/coturn/coturn:4.18.0-debian
+1792620371 image pulled ghcr.io/speaches-ai/speaches:0.8.3-cuda
+1792620403 image pulled ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4
+1792620405 speaches and kokoro started
+1792620453 image pulled vllm/vllm-openai:v0.11.0
+1792620728 image chatterbox built 2d1ad1f79a05c36a
+1792620732 chatterbox started
+1792620760 image imagegen built e46737d70012f434
+1792620856 image chatterbox saved to cache 2d1ad1f79a05c36a
+1792620861 image avatar built 9b05e6479cd7a483
+1792620862 avatar: voice settled
+1792620865 avatar: container started
+1792620877 image imagegen saved to cache e46737d70012f434
+1792620966 image avatar saved to cache 9b05e6479cd7a483
+1792620975 avatar: ready
+1792620980 vllm: starting
+1792621098 imagegen: container started
+1792621101 vllm: healthy

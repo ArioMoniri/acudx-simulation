@@ -1,0 +1,524 @@
+{
+  "captured_at": "2026-10-21T22:52:12.247Z",
+  "base_url": "http://127.0.0.1:4187",
+  "lang": "tr",
+  "live_after_voice_click_ms": 50879,
+  "first_frame_ms": 3836,
+  "lines": [
+    {
+      "line": 1,
+      "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
+      "reply": "Yaklaşık bir hafta önce başladı. Önce halsizlik oldu, sonra boğazım ağrımaya başladı. Boğazımın iki yanında hissediyorum, boynumun arkasında da şişlikler var, dokununca acıyor.",
+      "via": "server",
+      "speech_start_ms": 3542,
+      "lip_lag_ms": -400,
+      "lip_score": 0.406,
+      "voice_ms": 1650,
+      "av_shift_ms_after": 360,
+      "reply_http_ms": 5291,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 566.5,
+        "first_clause_ms": 804,
+        "guard_ms": 1144.7,
+        "history_ms": 1148,
+        "persona_done_ms": 1183.1,
+        "tts_first_chunk_ms": 2909,
+        "released_ms": 2909,
+        "runner_first_chunk_ms": 2909.3
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 566.5,
+          "first_clause_ms": 804,
+          "guard_ms": 1144.7,
+          "history_ms": 1148,
+          "persona_done_ms": 1183.1,
+          "tts_first_chunk_ms": 2909,
+          "released_ms": 2909,
+          "runner_first_chunk_ms": 2909.3,
+          "runner_done_ms": 18657.2
+        },
+        "requests": [
+          {
+            "chars": 32,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2104.9,
+            "bytes": 102720
+          },
+          {
+            "chars": 143,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 7273.9,
+            "bytes": 787200
+          }
+        ],
+        "runner": {
+          "frames": 927,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 15703.2
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 2,
+      "question": "Ağrınız nasıl bir ağrı, batıcı mı, sıkıştırıcı mı?",
+      "reply": "Yanma ve batma gibi bir ağrı. Özellikle yutkunurken çok acıyor. Bazen kulaklarıma doğru da vuruyor.",
+      "via": "server",
+      "speech_start_ms": 17,
+      "lip_lag_ms": 280,
+      "lip_score": 0.419,
+      "voice_ms": 18216,
+      "av_shift_ms_after": 360,
+      "reply_http_ms": 6688,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 867.3,
+        "history_ms": 870,
+        "persona_first_text_ms": 2192.4,
+        "first_clause_ms": 2491.1,
+        "persona_done_ms": 2553,
+        "tts_first_chunk_ms": 5128,
+        "released_ms": 5128,
+        "runner_first_chunk_ms": 5128.3
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 867.3,
+          "history_ms": 870,
+          "persona_first_text_ms": 2192.4,
+          "first_clause_ms": 2491.1,
+          "persona_done_ms": 2553,
+          "tts_first_chunk_ms": 5128,
+          "released_ms": 5128,
+          "runner_first_chunk_ms": 5128.3,
+          "runner_done_ms": 13457.7
+        },
+        "requests": [
+          {
+            "chars": 29,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2636.9,
+            "bytes": 110400
+          },
+          {
+            "chars": 69,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3941.2,
+            "bytes": 407040
+          }
+        ],
+        "runner": {
+          "frames": 539,
+          "first_frame_ms": 0.4,
+          "elapsed_ms": 8285.2
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 3,
+      "question": "Ağrınızı artıran ya da azaltan bir şey var mı?",
+      "reply": "Yutkununca ve katı bir şey yiyince daha çok acıyor, sabahları daha zor oluyor. Parasetamol alınca biraz rahatlıyorum, ılık içecekler ve soğuk su da iyi geliyor.",
+      "via": "server",
+      "speech_start_ms": 5281,
+      "lip_lag_ms": 120,
+      "lip_score": 0.475,
+      "voice_ms": 12599,
+      "av_shift_ms_after": 200,
+      "reply_http_ms": 5050,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 935.7,
+        "guard_ms": 1000.3,
+        "history_ms": 1004.6,
+        "first_clause_ms": 1266,
+        "persona_done_ms": 1506,
+        "tts_first_chunk_ms": 4678.8,
+        "released_ms": 4678.8,
+        "runner_first_chunk_ms": 4679.1
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 935.7,
+          "guard_ms": 1000.3,
+          "history_ms": 1004.6,
+          "first_clause_ms": 1266,
+          "persona_done_ms": 1506,
+          "tts_first_chunk_ms": 4678.8,
+          "released_ms": 4678.8,
+          "runner_first_chunk_ms": 4679.1,
+          "runner_done_ms": 15390.1
+        },
+        "requests": [
+          {
+            "chars": 51,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3412.8,
+            "bytes": 181440
+          },
+          {
+            "chars": 108,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3716,
+            "bytes": 492480
+          }
+        ],
+        "runner": {
+          "frames": 702,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 10669.4
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 4,
+      "question": "Daha önce böyle bir şey yaşadınız mı?",
+      "reply": "Çocukken birkaç kere bademcik iltihabı oldu, o kadar. Ama bu seferki çok daha uzun sürdü, bir haftadır geçmedi. Şu an da üşüyorum, ateşim var gibi.",
+      "via": "server",
+      "speech_start_ms": 4648,
+      "lip_lag_ms": 0,
+      "lip_score": 0.344,
+      "voice_ms": 10633,
+      "av_shift_ms_after": 120,
+      "reply_http_ms": 4431,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 949,
+        "history_ms": 953.8,
+        "persona_first_text_ms": 1015.3,
+        "first_clause_ms": 1386.1,
+        "persona_done_ms": 1839.7,
+        "tts_first_chunk_ms": 4053.7,
+        "released_ms": 4053.7,
+        "runner_first_chunk_ms": 4054
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 949,
+          "history_ms": 953.8,
+          "persona_first_text_ms": 1015.3,
+          "first_clause_ms": 1386.1,
+          "persona_done_ms": 1839.7,
+          "tts_first_chunk_ms": 4053.7,
+          "released_ms": 4053.7,
+          "runner_first_chunk_ms": 4054,
+          "runner_done_ms": 11311.9
+        },
+        "requests": [
+          {
+            "chars": 44,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2667.6,
+            "bytes": 137280
+          },
+          {
+            "chars": 102,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3352.1,
+            "bytes": 341760
+          }
+        ],
+        "runner": {
+          "frames": 499,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 7215.9
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 5,
+      "question": "Düzenli kullandığınız ilaç ya da alerjiniz var mı?",
+      "reply": "Düzenli kullandığım bir ilaç yok, sadece ateşim çıkınca parasetamol alıyorum, günde iki üç kere. Bildiğim bir ilaç alerjim de yok, penisilin bile içtim, bir şey olmadı.",
+      "via": "server",
+      "speech_start_ms": 4159,
+      "lip_lag_ms": 0,
+      "lip_score": 0.431,
+      "voice_ms": 8433,
+      "av_shift_ms_after": 120,
+      "reply_http_ms": 4325,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 886.9,
+        "guard_ms": 977.3,
+        "history_ms": 980.2,
+        "first_clause_ms": 1227.3,
+        "persona_done_ms": 1295.1,
+        "tts_first_chunk_ms": 3515.4,
+        "released_ms": 3515.4,
+        "runner_first_chunk_ms": 3515.7
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 886.9,
+          "guard_ms": 977.3,
+          "history_ms": 980.2,
+          "first_clause_ms": 1227.3,
+          "persona_done_ms": 1295.1,
+          "tts_first_chunk_ms": 3515.4,
+          "released_ms": 3515.4,
+          "runner_first_chunk_ms": 3515.7,
+          "runner_done_ms": 17875.6
+        },
+        "requests": [
+          {
+            "chars": 33,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2288,
+            "bytes": 112320
+          },
+          {
+            "chars": 134,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3103.6,
+            "bytes": 687360
+          }
+        ],
+        "runner": {
+          "frames": 833,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 14311.2
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 6,
+      "question": "Şu an kendinizi nasıl hissediyorsunuz, geldiğiniz zamana göre?",
+      "reply": "Ağrı geldiğim zamana göre çok azaldı, şükür. Ama hâlâ üşüyorum, ateşim varmış gibi titriyorum. Yine de sakinim, biraz rahatladım.",
+      "via": "server",
+      "speech_start_ms": 1815,
+      "lip_lag_ms": 40,
+      "lip_score": 0.604,
+      "voice_ms": 5750,
+      "av_shift_ms_after": 120,
+      "reply_http_ms": 5837,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 985.2,
+        "history_ms": 985.2,
+        "persona_first_text_ms": 1967.6,
+        "first_clause_ms": 2336.9,
+        "persona_done_ms": 2649.6,
+        "tts_first_chunk_ms": 4894.5,
+        "released_ms": 4894.5,
+        "runner_first_chunk_ms": 4894.7
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 985.2,
+          "history_ms": 985.2,
+          "persona_first_text_ms": 1967.6,
+          "first_clause_ms": 2336.9,
+          "persona_done_ms": 2649.6,
+          "tts_first_chunk_ms": 4894.5,
+          "released_ms": 4894.5,
+          "runner_first_chunk_ms": 4894.7,
+          "runner_done_ms": 17595.2
+        },
+        "requests": [
+          {
+            "chars": 37,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2557.6,
+            "bytes": 121920
+          },
+          {
+            "chars": 91,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 5278.4,
+            "bytes": 619200
+          }
+        ],
+        "runner": {
+          "frames": 772,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 12656.8
+        },
+        "error": null
+      }
+    }
+  ],
+  "fades": [
+    {
+      "switch": 1,
+      "to": "acudx-p01-04f24f0b-dab7ce5ef3",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p01-04f24f0b-dab7ce5ef3",
+        "previous": "acudx-p01-04f24f0b-dab7ce5ef3",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.4
+      },
+      "frames": 66
+    },
+    {
+      "switch": 2,
+      "to": "acudx-p01-04f24f0b-dab7ce5ef3",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p01-04f24f0b-dab7ce5ef3",
+        "previous": "acudx-p01-04f24f0b-dab7ce5ef3",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.2
+      },
+      "frames": 66
+    },
+    {
+      "switch": "mid-sentence",
+      "to": "acudx-p01-04f24f0b-dab7ce5ef3",
+      "reply": {
+        "ok": true,
+        "avatar": "acudx-p01-04f24f0b-dab7ce5ef3",
+        "previous": "acudx-p01-04f24f0b-dab7ce5ef3",
+        "crossfade_ms": 900,
+        "deferred_until_silent": false,
+        "switch_ms": 0.4
+      },
+      "pending_right_after": false
+    },
+    {
+      "switch": "mid-sentence-after",
+      "applied": 4,
+      "pending": false,
+      "avatar": "acudx-p01-04f24f0b-dab7ce5ef3"
+    }
+  ],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p01-04f24f0b-dab7ce5ef3",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 0.9999,
+        "rotation_deg": 0.271,
+        "shift_px": [
+          0.5,
+          0.1
+        ],
+        "inliers": 892,
+        "residual_before": 16.59,
+        "residual_after": 14.94
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 120,
+    "lip_lags": [
+      {
+        "lip_lag_ms": -400,
+        "score": 0.406,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 280,
+        "score": 0.419,
+        "av_shift_ms": 360
+      },
+      {
+        "lip_lag_ms": 120,
+        "score": 0.475,
+        "av_shift_ms": 200
+      },
+      {
+        "lip_lag_ms": 0,
+        "score": 0.344,
+        "av_shift_ms": 120
+      },
+      {
+        "lip_lag_ms": 0,
+        "score": 0.431,
+        "av_shift_ms": 120
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.604,
+        "av_shift_ms": 120
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 42
+    },
+    "answer_ms": 265.9,
+    "prepare_ms": 42160.8
+  },
+  "runner_call": [
+    {
+      "id": "bb603e17",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 120
+      },
+      "avatar": "acudx-p01-04f24f0b-dab7ce5ef3",
+      "speaking": false,
+      "warm_up_ms": 78.5,
+      "switches_applied": 4,
+      "switch_pending": false,
+      "infer_fps": 44.5,
+      "inferred_frames": 2208,
+      "sender_queue": {
+        "audio_frames": 13,
+        "video_frames": 6
+      },
+      "sent_frames": 9141,
+      "underruns": 0,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 18277,
+    "audioEnergy": 3.5050944880649877,
+    "videoFrames": 9137,
+    "videoFps": 25,
+    "rttMs": 43,
+    "audioJitterMs": 59,
+    "videoJitterMs": 80,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3482?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-21T22:45:14.928Z case open",
+    "2026-10-21T22:46:06.906Z live video connected 50879 ms after the voice click",
+    "2026-10-21T22:46:09.101Z line 1 sent",
+    "2026-10-21T22:46:28.227Z line 1: {\"s\":3542,\"lag\":-400,\"score\":0.406,\"via\":\"server\"}",
+    "2026-10-21T22:46:29.798Z line 2 sent",
+    "2026-10-21T22:46:50.614Z line 2: {\"s\":17,\"lag\":280,\"score\":0.419,\"via\":\"server\"}",
+    "2026-10-21T22:46:52.206Z line 3 sent",
+    "2026-10-21T22:47:12.851Z line 3: {\"s\":5281,\"lag\":120,\"score\":0.475,\"via\":\"server\"}",
+    "2026-10-21T22:47:14.432Z line 4 sent",
+    "2026-10-21T22:47:32.357Z line 4: {\"s\":4648,\"lag\":0,\"score\":0.344,\"via\":\"server\"}",
+    "2026-10-21T22:47:33.929Z line 5 sent",
+    "2026-10-21T22:47:52.103Z line 5: {\"s\":4159,\"lag\":0,\"score\":0.431,\"via\":\"server\"}",
+    "2026-10-21T22:47:53.684Z line 6 sent",
+    "2026-10-21T22:48:12.165Z line 6: {\"s\":1815,\"lag\":40,\"score\":0.604,\"via\":\"server\"}",
+    "2026-10-21T22:51:59.419Z variants ready: 1",
+    "2026-10-21T22:52:03.335Z switch 1 -> acudx-p01-04f24f0b-dab7ce5ef3: {\"ok\":true,\"avatar\":\"acudx-p01-04f24f0b-dab7ce5ef3\",\"previous\":\"acudx-p01-04f24f0b-dab7ce5ef3\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.4} (66 frames)",
+    "2026-10-21T22:52:09.540Z switch 2 -> acudx-p01-04f24f0b-dab7ce5ef3: {\"ok\":true,\"avatar\":\"acudx-p01-04f24f0b-dab7ce5ef3\",\"previous\":\"acudx-p01-04f24f0b-dab7ce5ef3\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.2} (66 frames)",
+    "2026-10-21T22:52:12.129Z mid-sentence switch: {\"ok\":true,\"avatar\":\"acudx-p01-04f24f0b-dab7ce5ef3\",\"previous\":\"acudx-p01-04f24f0b-dab7ce5ef3\",\"crossfade_ms\":900,\"deferred_until_silent\":false,\"switch_ms\":0.4} pending=false"
+  ]
+}

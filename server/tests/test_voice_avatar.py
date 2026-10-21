@@ -15,6 +15,7 @@ import pytest
 import respx
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from server.auth.deps import AuthService
@@ -45,6 +46,8 @@ class Runner:
         self.status = status or {"state": "disabled", "reason": "insufficient_vram", "total_mb": 40960,
                                  "free_mb": 3100, "required_mb": 5000}
         self.avatars: dict[str, bytes] = {}
+        self.refs: dict[str, str | None] = {}
+        self.tunings: list[dict] = []
         self.offers: list[dict] = []
         self.audio: list[dict] = []
         self.closed: list[str] = []
@@ -76,8 +79,12 @@ class Runner:
         @app.put("/avatar/avatars/{avatar_id}")
         async def put(avatar_id: str, request: Request, authorization: str | None = Header(default=None)):
             auth(authorization)
+            ref = request.query_params.get("ref")
+            if ref is not None and ref not in self.avatars:
+                return JSONResponse(status_code=409, content={"error": "ref_not_prepared", "ref": ref})
             self.avatars[avatar_id] = await request.body()
-            return {"avatar_id": avatar_id, "width": 530, "height": 720, "prepare_ms": 812.0}
+            self.refs[avatar_id] = ref
+            return {"avatar_id": avatar_id, "width": 530, "height": 720, "prepare_ms": 812.0, "ref": ref}
 
         @app.post("/avatar/offer")
         async def offer(request: Request, authorization: str | None = Header(default=None)):
@@ -94,6 +101,13 @@ class Runner:
             self.audio.append({"sessionid": sessionid, "filename": file.filename, "content_type": file.content_type,
                                "head": data[:4]})
             return {"code": 0, "msg": "ok"}
+
+        @app.post("/avatar/tuning")
+        async def tuning(request: Request, authorization: str | None = Header(default=None)):
+            auth(authorization)
+            body = await request.json()
+            self.tunings.append(body)
+            return {"ok": True, "av_shift_ms": body["av_shift_ms"]}
 
         @app.post("/avatar/close")
         async def close(request: Request, authorization: str | None = Header(default=None)):
@@ -716,3 +730,39 @@ def test_a_connected_call_is_counted_by_the_runner_not_by_the_gateway_ttl():
     assert st.pending_on("https://w") == 1
     now[0] += 121
     assert st.pending_on("https://w") == 0
+
+
+def test_next_av_shift_cancels_the_measured_offset_in_whole_frames():
+    from server.voice.avatar.routes import next_av_shift
+
+    # half the measured offset per line, in 40 ms video frames (one noisy line must not swing the call)
+    assert next_av_shift(160, -520) == 400      # lips 520 ms early: more video delay
+    assert next_av_shift(160, 200) == 80        # lips late: less delay
+    assert next_av_shift(40, 400) == 0          # never below 0
+    assert next_av_shift(160, 30) == 160 and next_av_shift(160, -40) == 160   # inside the meter's noise
+    assert next_av_shift(900, -400) == 1000     # capped
+    assert next_av_shift(160, -60) == 200       # at least one frame outside the tolerance
+
+
+def test_the_tile_reported_lip_offset_moves_the_runner_delay_for_the_next_line(tmp_path, runner_sockets):
+    runner = Runner()
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+    offer = {"sdp": "v=0\r\noffer"}
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+        assert c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": -300},
+                      headers=USER).status_code == 409      # not connected yet
+        assert c.post("/v1/voice/avatar/offer", json={"session_id": sid, **offer}, headers=USER).status_code == 200
+        r = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": -300, "score": 0.8}, headers=USER)
+        assert r.json() == {"av_shift_ms": 320, "changed": True, "previous": 160}
+        assert runner.tunings == [{"sessionid": "lt-1", "av_shift_ms": 320}]
+        weak = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 400, "score": 0.1},
+                      headers=USER).json()
+        assert weak == {"av_shift_ms": 320, "changed": False, "why": "weak_correlation"}
+        ok = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 20, "score": 0.9},
+                    headers=USER).json()
+        assert ok["changed"] is False and len(runner.tunings) == 1
+        assert c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 20},
+                      headers=OTHER).status_code == 404
+        m = c.get("/v1/voice/avatar/metrics", params={"session_id": sid}, headers=USER).json()["metrics"]
+        assert m["av_shift_ms"] == 320 and [x["lip_lag_ms"] for x in m["lip_lags"]] == [-300, 400, 20]

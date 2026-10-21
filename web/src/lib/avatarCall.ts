@@ -33,6 +33,19 @@ export interface AvatarCallMetrics {
   /** Gateway: speak request -> first PCM chunk forwarded to the runner (streamed TTS). */
   firstAudioMs: number | null;
   provider: string | null;
+  /** Normalised correlation at the lip lag (0..1); under about 0.3 the lag is not meaningful. */
+  lipScore?: number | null;
+}
+
+/** One measured patient line: from the question (or speak request) to the end of the voice. */
+export interface AvatarLineMeasure {
+  text: string;
+  /** "speak": the tile asked the gateway to speak; "server": the interview turn spoke it into the call. */
+  via: "speak" | "server";
+  speechStartMs: number | null;
+  lipLagMs: number | null;
+  lipScore: number | null;
+  voiceMs: number | null;
 }
 
 export interface AvatarSample {
@@ -50,6 +63,13 @@ export interface AvatarCallHandle {
   /** The gateway's reply to the last spoken line (TTS provider, first chunk, runner frame counts). */
   lastSpeak: AvatarSpeakResult | null;
   speak: (text: string) => Promise<boolean>;
+  /**
+   * A line the server already speaks into the call (the interview turn streamed it, 6.3.9): measure it
+   * from `sentAt` (performance.now() when the question was sent) without speaking it again.
+   */
+  track: (text: string, sentAt: number) => void;
+  /** Every measured line of this call, oldest first. */
+  lines: AvatarLineMeasure[];
   /** Receiver-side numbers from getStats (audio energy proves the voice arrived, not just packets). */
   stats: () => Promise<AvatarCallStats>;
   end: () => void;
@@ -184,6 +204,12 @@ export function mouthRegion(prep?: { face_box?: number[]; width?: number; height
  * the motion follows the audio. Null when either series is flat.
  */
 export function crossCorrelationLag(a: number[], b: number[], stepMs: number, maxLagMs = 600): number | null {
+  return crossCorrelation(a, b, stepMs, maxLagMs)?.lagMs ?? null;
+}
+
+/** The lag (ms) and the normalised correlation at it (how much the lag can be trusted). */
+export function crossCorrelation(a: number[], b: number[], stepMs: number, maxLagMs = 600):
+  { lagMs: number; score: number } | null {
   const n = Math.min(a.length, b.length);
   if (n < 8) return null;
   const mean = (x: number[]) => x.slice(0, n).reduce((s, v) => s + v, 0) / n;
@@ -210,7 +236,26 @@ export function crossCorrelationLag(a: number[], b: number[], stepMs: number, ma
       best = lag;
     }
   }
-  return best * stepMs;
+  return { lagMs: best * stepMs, score: Math.round(bestScore * 1000) / 1000 };
+}
+
+/**
+ * The span of one spoken line in the sampler's series: from `startAt` to the end of the voice (the
+ * last loud sample once `quietMs` (2.5 s: a streamed reply can pause between clauses) of silence followed it). `done` is false while the voice may still
+ * go on. A long reply (live 2026-10-21: 12.6 s) is measured whole, not cut at a guessed duration.
+ */
+export function utteranceSpan(samples: AvatarSample[], startAt: number, now: number,
+  opts: { loud?: number; quietMs?: number } = {}): { first: number | null; last: number | null; done: boolean } {
+  const loud = opts.loud ?? 0.01;
+  const quietMs = opts.quietMs ?? 2500;
+  let first: number | null = null;
+  let last: number | null = null;
+  for (const s of samples) {
+    if (s.t < startAt || s.rms <= loud) continue;
+    if (first == null) first = s.t;
+    last = s.t;
+  }
+  return { first, last, done: last != null && now - last >= quietMs };
 }
 
 /** Resample irregular samples onto a fixed grid (nearest previous sample). */
@@ -281,7 +326,7 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
   };
   let ended = false;
   let stopSampler = () => {};
-  let speakAt: number | null = null;
+
   const end = () => {
     if (ended) return;
     ended = true;
@@ -369,10 +414,6 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
       }
       samples.push({ t: now, rms, motion, open });
       if (samples.length > MAX_SAMPLES) samples.splice(0, samples.length - MAX_SAMPLES);
-      if (speakAt != null && rms > 0.01 && metrics.speechStartMs == null) {
-        metrics.speechStartMs = Math.round(now - speakAt);
-        emit();
-      }
       if (typeof v.requestVideoFrameCallback === "function") v.requestVideoFrameCallback(tick);
       else requestAnimationFrame(tick);
     };
@@ -386,11 +427,56 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
     /* metrics are best effort; the call itself does not depend on them */
   }
 
+  const lines: AvatarLineMeasure[] = [];
+  let measureSeq = 0;
+  /**
+   * Speech start and the audio-to-lip offset of the line that began at `startAt`, once its voice has
+   * ended; the offset goes back to the gateway, which moves the call's video delay when it is outside
+   * the tolerance (closed loop, so a host whose encoder or network shifts the lips is corrected).
+   */
+  const measure = (text: string, startAt: number, via: AvatarLineMeasure["via"]) => {
+    const seq = ++measureSeq;
+    const line: AvatarLineMeasure = { text, via, speechStartMs: null, lipLagMs: null, lipScore: null, voiceMs: null };
+    lines.push(line);
+    if (lines.length > 50) lines.splice(0, lines.length - 50);
+    const started = performance.now();
+    const poll = () => {
+      if (ended || seq !== measureSeq) return;
+      const t = performance.now();
+      const span = utteranceSpan(samples, startAt, t);
+      if (span.first != null && line.speechStartMs == null) {
+        line.speechStartMs = Math.round(span.first - startAt);
+        metrics.speechStartMs = line.speechStartMs;
+        emit();
+      }
+      if (!span.done) {
+        if (t - started < 120_000) setTimeout(poll, 300);
+        return;
+      }
+      line.voiceMs = Math.round((span.last ?? span.first ?? t) - (span.first ?? t));
+      // Openness (darkness of the mouth box), not frame-to-frame motion: with the idle head loop the
+      // whole face moves a little all the time, while the mouth box's darkness changes only when the
+      // mouth opens. The window is the whole voice plus 0.8 s either side.
+      const win = samples.filter((s) => s.t >= (span.first ?? startAt) - 800 && s.t <= (span.last ?? t) + 800);
+      const { rms, open } = resample(win, 40);
+      const cc = crossCorrelation(rms, open, 40);
+      if (cc) {
+        line.lipLagMs = cc.lagMs;
+        line.lipScore = cc.score;
+        metrics.lipLagMs = cc.lagMs;
+        metrics.lipScore = cc.score;
+        emit();
+        void api.avatarLipsync(session.session_id, cc.lagMs, cc.score).catch(() => undefined);
+      }
+    };
+    setTimeout(poll, 300);
+  };
+
   const speak = async (text: string): Promise<boolean> => {
     if (ended) return false;
     metrics.speechStartMs = null;
-    const from = samples.length;
-    speakAt = performance.now();
+    const speakAt = performance.now();
+    measure(text, speakAt, "speak");
     const res = await api.avatarSpeak(session.session_id, text);
     if (!res.ok) return false;
     handle.lastSpeak = res.data;
@@ -398,21 +484,14 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
     metrics.firstAudioMs = res.data.first_chunk_ms ?? null;
     metrics.provider = res.data.provider;
     emit();
-    // Audio-to-lip offset over this utterance, once it has played for a while.
-    const durationMs = res.data.audio_duration_ms ?? Math.max(1500, text.length * 60);
-    setTimeout(() => {
-      const win = samples.slice(from);
-      // Openness (darkness of the mouth box), not frame-to-frame motion: with the idle head loop
-      // the whole face moves a little all the time, which frame differences pick up everywhere,
-      // while the mouth box's mean darkness changes only when the mouth opens.
-      const { rms, open } = resample(win, 40);
-      const lag = crossCorrelationLag(rms, open, 40);
-      if (lag != null) {
-        metrics.lipLagMs = lag;
-        emit();
-      }
-    }, durationMs + 2500);
     return true;
+  };
+
+  const track = (text: string, sentAt: number) => {
+    if (ended) return;
+    metrics.speechStartMs = null;
+    metrics.provider = "interview-stream";
+    measure(text, sentAt, "server");
   };
 
   const stats = async (): Promise<AvatarCallStats> => {
@@ -436,6 +515,6 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
     return out;
   };
 
-  const handle: AvatarCallHandle = { session, metrics, samples, lastSpeak: null, speak, stats, end };
+  const handle: AvatarCallHandle = { session, metrics, samples, lastSpeak: null, speak, track, lines, stats, end };
   return handle;
 }

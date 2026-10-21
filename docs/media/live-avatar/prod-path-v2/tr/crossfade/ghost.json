@@ -1,0 +1,20 @@
+{
+  "switch-1": {
+    "frames": 64,
+    "ghost_first_vs_last": 0.0353,
+    "worst_frame_ghost": 0.1743,
+    "fade_frames": [
+      1,
+      63
+    ]
+  },
+  "switch-2": {
+    "frames": 66,
+    "ghost_first_vs_last": 0.4128,
+    "worst_frame_ghost": 0.2673,
+    "fade_frames": [
+      2,
+      65
+    ]
+  }
+}
