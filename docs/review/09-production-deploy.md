@@ -157,3 +157,45 @@ showing it `terminated`, and the final code printed by `verify-roles.mjs` with `
   or instance) and no Lambda worker was launched.
 - Resolution: the AWS path is now SSH-free (section 4); the scripts drop a stray session token
   when the access key is a long-term `AKIA` key. Re-run `deploy/aws/README.md` from step 1.
+
+### Launch 2026-10-21 (cloud session, user-approved commands): live
+
+Host: EC2 `i-0edbc807a19024f48`, t3.large, eu-central-1 (about 0.096 USD per hour on demand,
+plus gp3 and public IPv4), Elastic IP 63.178.127.100 (`eipalloc-0001501d370fdb563`), URL
+`https://63.178.127.100.sslip.io/`, deployed commit `cff3c64`. Security group, key pair and
+Elastic IP reused from the previous session. Operator token: `~/.ssh/acudx-web-prod-operator.token`
+(0600, session container) and SSM SecureString `/acudx/acudx-web-prod/operator_token`.
+
+| README step | Result |
+|---|---|
+| 1 credentials | `user/acudx-deploy`, account 235229001983 |
+| 2 keys | `LAMBDA_KEY` and `ANTHROPIC_KEY` present; both sent at provision (`applied: anthropic, lambda`) |
+| 3 static checks | shellcheck clean; `DRY_RUN=1` exit 0 |
+| 4 permission check | `RunInstances would succeed` |
+| 5 launch | cloud-init, build, `ready` in about 13 min; provision token used, then 410 |
+| 6 verify (`START_CASE=1 FINALIZE=1`) | 8 accounts PASS (76 checks); case start HTTP 200 on Claude; accounts reset; final code minted |
+| 6 GPU worker (operator routes) | launched by `POST /api/admin/gpu/start` (super_admin bearer, Claude configured so a case start launches none), seen by `GET /bootstrap/operator/gpu` (gpu_1x_a10, us-east-1, booting), stopped by `POST /bootstrap/operator/gpu/stop` (terminated) |
+| 7 Lambda API | both `acudx-worker-*` (the one above and the one the defect below launched) terminating, then none listed; other instances untouched |
+| 8 hand over | `/bootstrap/credentials` with the final code (not opened by the session) |
+| 9 teardown | not run (not asked) |
+
+Live-site checks: 8 roles land on their panels; `/idp/admin/` 404; `http://` 308 to `https://`;
+anonymous case start 401; anonymous `mint-code` 401; reused provision token 410; a student
+generated a fever case (opening ready in 7 s) and the typed question "When did your fever start,
+and how high has it been?" got an in-character reply from the patient (provider anthropic).
+
+Defects the run found:
+
+- The boot probe of the anthropic row ran before `/bootstrap/provision` sent the key and stored
+  `last_probe_ok=false` ("key not configured"). Sealing the key left that result in place, so
+  `anthropic_enabled()` stayed false: case starts answered `model_warming` and launched a GPU
+  worker although Claude was configured (stopped at once). Fix: `RegistryStore.update_provider`
+  clears the probe result when the key, base URL or model changes
+  (`test_new_key_url_or_model_clears_a_stale_probe_result`). This host runs the earlier commit;
+  it was put right by re-running the provider probe from the admin API (ok, 200). A new launch
+  carries the fix.
+- `verify-roles.mjs` counted the anthropic edit button while the providers table still showed
+  its skeleton (one false FAIL); it now waits for the row.
+
+Evidence: `docs/review/evidence/09-production-live/` (the anthropic drawer shot is not committed:
+it shows the key's last four characters).

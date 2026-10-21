@@ -168,7 +168,8 @@ for (const u of creds.users) {
           await page.getByRole("tab", { name: /providers/i }).first().click();
           await page.screenshot({ path: join(SHOTS, "super_admin-providers.png") });
           const editRow = page.getByRole("button", { name: /^edit anthropic$/i });
-          const hasRow = (await editRow.count()) > 0;
+          // The table renders a skeleton first: wait for the row instead of counting at once.
+          const hasRow = await editRow.first().waitFor({ timeout: 15_000 }).then(() => true).catch(() => false);
           lines.push(check(hasRow, "anthropic row present; its drawer takes the Claude key"));
           if (hasRow) {
             await editRow.first().click();
