@@ -21,6 +21,7 @@
     "tabs": {
       "workspace": "Çalışma alanı",
       "interview": "Görüşme",
+      "diagnosis": "Tanı",
       "prehospital": "Hastane öncesi",
       "orders": "İstemler ve görevler",
       "floor": "Ekip zemini",
@@ -55,6 +56,7 @@
       "collectAria": "{{name}} örneğini al ve gönder",
       "doneBy": "Uygulayan: {{role}}",
       "resultPending": "Laboratuvarda — sonuç işleniyor",
+      "withheld": "Yatak başı kontrolde verilmedi (ilaç uygulama kaydı)",
       "resultReady": "Sonuç hazır",
       "notYours": "Bu görevi yürütmek için {{role}} koltuğuna geç.",
       "status": {

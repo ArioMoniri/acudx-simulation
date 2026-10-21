@@ -27,6 +27,8 @@ import {
 } from "@/components/ui";
 import { PatientBanner, SimBadge } from "@/components/ehr";
 import { InterviewTab } from "@/components/ehr/tabs/InterviewTab";
+import { ProblemListTab } from "@/components/ehr/tabs/ProblemListTab";
+import { CaseDebriefLayer } from "@/components/ehr/CaseDebriefLayer";
 import { LayerStrip } from "@/components/ehr/LayerStrip";
 import {
   RoomCard,
@@ -46,8 +48,11 @@ import {
   setRoomAiBackfill,
   handoff,
   taskTally,
+  medsGiven,
+  applyThreadTask,
+  setRoomThread,
+  setRoomAiRoles,
   useRoomCaseState,
-  useRoomVitals,
 } from "@/components/room";
 import {
   useRoomList,
@@ -78,13 +83,17 @@ import {
 import { useEntry, useLang } from "@/lib/useLang";
 import { roomCase, effectiveHolder, type ClinicalRole, type Room } from "@/data/rooms";
 import {
+  getCourseStatus,
+  getCurrentVitals,
   getEncounterSnapshot,
   resetEncounter,
   setDirectorClockEnabled,
+  setLiveEnabled,
   startGeneratedEncounter,
   useEncounterState,
 } from "@/state/encounterStore";
-import { endCaseSession, followCase, requestCase } from "@/lib/caseSession";
+import { endCaseSession, followCase, requestCase, setRoomTaskListener } from "@/lib/caseSession";
+import { useLiveBackend } from "@/lib/liveBackend";
 import type { ChiefComplaintFamily } from "@/domain/caseGen";
 
 /* -------------------------------------------------------------------------- */
@@ -278,6 +287,12 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
   // two never fight over the single-encounter singleton.
   const state = useEncounterState();
   const threadId = runtime.threadId ?? room.threadId ?? null;
+  // Live mode follows gateway reachability, as in the solo encounter: the Director steps the
+  // room's thread on the server (questions, exams, orders, treatments) only while it is on.
+  const { available: backendAvailable } = useLiveBackend();
+  useEffect(() => {
+    setLiveEnabled(backendAvailable);
+  }, [backendAvailable]);
   useEffect(() => {
     const live = getEncounterSnapshot();
     if (caseInstance && threadId) {
@@ -314,15 +329,22 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
     if (!following || !threadId || !joinCode) return;
     const controller = new AbortController();
     setDirectorClockEnabled(false);
+    // The room's order and task loop travels on the same thread (doc 15 12.8).
+    setRoomThread(id, threadId);
+    setRoomTaskListener((tid, ev) => {
+      if (tid === threadId) applyThreadTask(id, ev);
+    });
     void followCase(threadId, joinCode, {
       signal: controller.signal,
       onAccess: ({ owner }) => setDirectorClockEnabled(owner),
     });
     return () => {
       controller.abort();
+      setRoomTaskListener(null);
+      setRoomThread(id, null);
       setDirectorClockEnabled(true);
     };
-  }, [following, threadId, joinCode]);
+  }, [id, following, threadId, joinCode]);
   useEffect(() => () => {
     endCaseSession();
     resetEncounter();
@@ -348,8 +370,15 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
     setRoomAiBackfill(id, room.aiBackfill);
   }, [id, room.aiBackfill]);
 
-  // Live shared vitals — respond when the nurse administers a medication task.
-  const { vitals: liveVitals, status: courseStatus } = useRoomVitals(id);
+  // The shared monitor reads the room's thread (the encounter store): the Director's
+  // server vitals, which every member's treatment and question steps move.
+  const [, setSecond] = useState(0);
+  useEffect(() => {
+    const iv = window.setInterval(() => setSecond((n) => (n + 1) % 1_000_000), 1000);
+    return () => window.clearInterval(iv);
+  }, []);
+  const liveVitals = state.caseInstance ? getCurrentVitals(state) : null;
+  const courseStatus = state.caseInstance ? getCourseStatus(state) : null;
 
   // Roles currently driven by scripted AI (for the role-switcher hint).
   const aiRoles = useMemo(
@@ -361,6 +390,10 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
         .map((x) => x.role),
     [room.seats, room.aiBackfill, actingRole],
   );
+  // AI backfill drives only a seat no person holds (on any device).
+  useEffect(() => {
+    setRoomAiRoles(id, aiRoles);
+  }, [id, aiRoles]);
 
   // Ambient "who is speaking" rotation — paused while a seat explicitly holds
   // the floor, so the granted floor is authoritative. Reduced-motion users still
@@ -384,7 +417,8 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
     actingRole === "doctor" ? "interview" : actingRole === "paramedic" ? "prehospital" : "orders";
   const availableTabs = useMemo(() => {
     const tabs: string[] = [];
-    if (actingRole === "doctor") tabs.push("interview");
+    // The doctor commits the team's working diagnosis; the debrief layer is written for it.
+    if (actingRole === "doctor") tabs.push("interview", "diagnosis");
     if (actingRole === "paramedic") tabs.push("prehospital");
     tabs.push("orders", "floor", "debrief");
     return tabs;
@@ -470,7 +504,7 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
     ordersPlaced: roomCaseState.tasks.length,
     tasksDone: tally.done,
     tasksTotal: tally.total,
-    medsGiven: roomCaseState.treatments.length,
+    medsGiven: medsGiven(roomCaseState),
     handoffs: roomCaseState.handoffs.length,
   };
 
@@ -547,7 +581,7 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
           />
 
           {/* Shared live monitor — one patient, responds to the nurse's meds */}
-          <CompactVitals caseInstance={caseInstance} live={liveVitals} status={courseStatus} />
+          <CompactVitals caseInstance={shownCase} live={liveVitals} status={courseStatus} />
 
           <RoleScopeBar
             role={effectiveRole}
@@ -615,7 +649,14 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
               />
             </TabsContent>
 
+            {actingRole === "doctor" ? (
+              <TabsContent value="diagnosis">
+                <ProblemListTab caseInstance={shownCase} lang={lang} />
+              </TabsContent>
+            ) : null}
+
             <TabsContent value="debrief">
+              <CaseDebriefLayer className="mb-4" headingLevel={2} />
               <DebriefPanel
                 lang={lang}
                 woreHat={iAmLead}

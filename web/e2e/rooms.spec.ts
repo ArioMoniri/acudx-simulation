@@ -75,6 +75,108 @@ async function roomThreadServer(
   return { calls };
 }
 
+/**
+ * One room thread shared by two browser contexts, as the gateway serves it (doc 15 12.8):
+ * the thread log (`task`, `director`, `layer.ready` events) that every member follows, the
+ * task route with the treatment-table gate, and the Director step that lands on the log.
+ */
+function sharedRoomThread() {
+  const threadId = "e2e-room-thread";
+  const rec = LIVE_CASES[0];
+  const log: { id: number; event: string; data: unknown }[] = [];
+  const tasks: Record<string, Record<string, unknown>> = {};
+  const directorSteps: Record<string, unknown>[] = [];
+  let layers: Record<string, string> = { "history.presenting": "ready", treatments: "pending" };
+  const spec = () => ({ ...rec.spec, meta: { ...rec.spec.meta, thread_id: threadId, source: "model", layers: { ...layers } } });
+  const emit = (event: string, data: unknown) => log.push({ id: log.length + 1, event, data });
+  const after = async (n: number) => {
+    // A follow stream: what landed after `n`, or (idle) an empty answer after a short wait.
+    for (let i = 0; i < 15 && !log.some((e) => e.id > n); i += 1) await new Promise((r) => setTimeout(r, 100));
+    return log.filter((e) => e.id > n).map((e) => sse(e.event, e.data, e.id)).join("");
+  };
+  emit("opening.ready", { thread_id: threadId, opening: {}, spec: spec() });
+  const TREATED = { hr: 97, systolic: 112, diastolic: 70, rr: 19, spo2: 97, tempC: 38.2 };
+
+  async function install(ctx: BrowserContext, role: "host" | "member") {
+    await ctx.route("**/api/health", (route) => route.fulfill({ json: { status: "ok" } }));
+    await ctx.route(
+      (url) => url.pathname === "/api/v2/case/generate/stream" || url.pathname === "/api/v2/director/step"
+        || /^\/api\/v2\/case\/[^/]+\/(room|join|events|task|layer\/[^/]+)$/.test(url.pathname),
+      async (route) => {
+        const req = route.request();
+        const url = new URL(req.url());
+        const body = (req.postDataJSON?.() ?? {}) as Record<string, unknown>;
+        if (url.pathname.endsWith("/generate/stream")) {
+          return route.fulfill({
+            status: 200, headers: { "content-type": "text/event-stream" },
+            body: sse("start", { thread_id: threadId, stages: ["s1"] }, 0) + sse("opening.ready", { thread_id: threadId, opening: {}, spec: spec() }, 1),
+          });
+        }
+        if (url.pathname.endsWith("/director/step")) {
+          const action = body.action as { kind: string; ref: string };
+          if (action.kind === "treatment" && layers.treatments !== "ready") {
+            return route.fulfill({ status: 409, json: { error: "treatments_locked" } });
+          }
+          directorSteps.push(body);
+          const vitals = action.kind === "treatment" ? TREATED : rec.spec.triage_vitals;
+          const t = 60_000 * (directorSteps.length);
+          const out = {
+            thread_id: threadId, case_state: { t_ms: t },
+            patient_visible_changes: { t_ms: t, vitals, new_facts: [], complications_fired: [], trace: [] },
+            director_notes: [], layers_pending: [],
+          };
+          emit("director", { ...out, client_id: body.client_id, action });
+          return route.fulfill({ json: out });
+        }
+        const what = url.pathname.split("/").slice(5).join("/");
+        if (what === "room") {
+          return role === "host"
+            ? route.fulfill({ json: { thread_id: threadId, room: true } })
+            : route.fulfill({ status: 404, json: { error: "thread_not_found" } });
+        }
+        if (what === "join") return route.fulfill({ json: { thread_id: threadId, member: true, last_event_id: log.length } });
+        if (what === "events") {
+          const n = Number(url.searchParams.get("after") ?? 0);
+          return route.fulfill({ status: 200, headers: { "content-type": "text/event-stream" }, body: await after(n) });
+        }
+        if (what === "task") {
+          const task = body.task as Record<string, unknown>;
+          const id = String(task.id);
+          const cur = tasks[id] ?? { ...task, status: "pending" };
+          const mar = body.mar as { outcome?: string } | undefined;
+          if (body.op === "complete" && cur.kind === "medication" && mar?.outcome !== "blocked" && layers.treatments !== "ready") {
+            return route.fulfill({ status: 409, json: { error: "treatments_locked" } });
+          }
+          if (body.op === "claim" && cur.status === "pending") Object.assign(cur, { status: "claimed", claimed_by: body.role });
+          if (body.op === "complete") Object.assign(cur, { status: "done", completed_by: body.role, ...(mar ? { mar } : {}) });
+          tasks[id] = cur;
+          emit("task", { thread_id: threadId, op: body.op, task: { ...cur }, client_id: body.client_id });
+          return route.fulfill({ json: { thread_id: threadId, task: cur } });
+        }
+        // A lazy layer read: the layer is in.
+        return route.fulfill({ json: { thread_id: threadId, layer: what.slice(6), status: "ready", data: {}, spec: spec() } });
+      },
+    );
+  }
+
+  return {
+    threadId,
+    tasks,
+    directorSteps,
+    install,
+    /** The treatment table passed the safety review and lands on the thread. */
+    landTreatments() {
+      layers = { ...layers, treatments: "ready" };
+      emit("layer.ready", { layer: "treatments", data: {}, spec: spec() });
+    },
+    treated: TREATED,
+  };
+}
+
+async function monitorHr(page: Page): Promise<string> {
+  return (await page.getByTestId("room-monitor").locator("tbody tr").first().locator("td").innerText()).trim();
+}
+
 async function openRoomAsHost(page: Page): Promise<{ roomUrl: string; code: string }> {
   await page.goto("/rooms");
   await settle(page);
@@ -216,6 +318,66 @@ test.describe("rooms", () => {
     // The regenerated table lands; nothing is left being written.
     releaseLayer();
     await expect(strip).toHaveCount(0, { timeout: 15_000 });
+
+    expect(await boundaryTripped(page)).toBe(false);
+    expect(await boundaryTripped(p2)).toBe(false);
+    expect(report.pageErrors).toEqual([]);
+    expect(report2.pageErrors).toEqual([]);
+    expect(report.errors).toEqual([]);
+    expect(report2.errors).toEqual([]);
+    await ctx2.close();
+  });
+
+  test("the doctor orders, the nurse administers on the thread, both monitors move together", async ({ browser, page }) => {
+    const report = watchConsole(page);
+    const thread = sharedRoomThread();
+    await createProfile(page, { role: "resident", fullName: "Host Resident" });
+    await thread.install(page.context(), "host");
+    const { roomUrl, code } = await openRoomAsHost(page);
+
+    const ctx2 = await browser.newContext({ viewport: page.viewportSize() ?? undefined });
+    const p2 = await ctx2.newPage();
+    const report2 = watchConsole(p2);
+    await createProfile(p2, { role: "student", fullName: "Joining Nurse" });
+    await thread.install(ctx2, "member");
+    await p2.goto("/rooms");
+    await settle(p2);
+    await p2.getByLabel("Room code").fill(code);
+    await p2.getByRole("button", { name: "Join", exact: true }).click();
+    await expect(p2).toHaveURL(new URL(roomUrl).pathname);
+    await settle(p2);
+    await expect(p2.getByRole("heading", { name: "Acting as Nurse" })).toBeVisible({ timeout: 15_000 });
+
+    // The doctor orders paracetamol; the order lands in the nurse's queue on the other device.
+    await page.getByRole("tab", { name: "Orders & tasks" }).click();
+    await page.getByRole("button", { name: "Order Paracetamol" }).click();
+    await expect.poll(() => Object.values(thread.tasks).map((t) => t.code)).toEqual(["161"]);
+    const administer = p2.getByRole("button", { name: "Administer Paracetamol" });
+    await expect(administer).toBeVisible({ timeout: 15_000 });
+    // No safe treatment table on the thread yet: Administer is disabled, the notice says why.
+    await expect(administer).toBeDisabled();
+    await expect(p2.getByTestId("treatment-table-notice")).toContainText("Treatment options are being written for this patient");
+
+    // The table lands for every member; the nurse gives the dose through the shared thread.
+    thread.landTreatments();
+    await expect(administer).toBeEnabled({ timeout: 15_000 });
+    await expect(p2.getByTestId("treatment-table-notice")).toHaveCount(0);
+    await administer.click();
+
+    // The Director stepped the thread once (server-held state, never a client course) ...
+    await expect.poll(() => thread.directorSteps.filter((b) => (b.action as { kind: string }).kind === "treatment").length, { timeout: 15_000 }).toBe(1);
+    const step = thread.directorSteps.find((b) => (b.action as { kind: string }).kind === "treatment")!;
+    expect(step).toMatchObject({ thread_id: thread.threadId, action: { kind: "treatment", ref: "161" } });
+    expect(step).not.toHaveProperty("case_state");
+    // ... the MAR line and the done task travel on the thread ...
+    await expect.poll(() => thread.tasks[Object.keys(thread.tasks)[0]].status).toBe("done");
+    expect(thread.tasks[Object.keys(thread.tasks)[0]]).toMatchObject({ completed_by: "nurse", mar: { outcome: expect.stringMatching(/given|flagged/) } });
+    // ... and both monitors show the same Director vitals.
+    const hr = `${thread.treated.hr} bpm`;
+    await expect.poll(() => monitorHr(p2), { timeout: 15_000 }).toBe(hr);
+    await expect.poll(() => monitorHr(page), { timeout: 15_000 }).toBe(hr);
+    // The doctor sees the task done by the nurse.
+    await expect(page.getByText("Executed by Nurse").first()).toBeVisible({ timeout: 15_000 });
 
     expect(await boundaryTripped(page)).toBe(false);
     expect(await boundaryTripped(p2)).toBe(false);

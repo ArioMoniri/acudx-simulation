@@ -1,31 +1,29 @@
 /**
- * AcuDx — shared room-encounter state (Journey 6, collaborative core).
+ * AcuDx: shared room-encounter state (Journey 6, collaborative core).
  *
- * A dependency-free, event-sourced external store (the same
- * `useSyncExternalStore` pattern as `src/state/encounterStore.ts`) that models
- * ONE shared patient encounter worked by a MULTI-ROLE team. Where the solo
- * encounter store is a single-player projection, this store binds a room to a
- * single `CaseInstance` and coordinates the collaborative loop the spec calls
- * for: a doctor places an order, it lands as a TASK in the executing role's
- * queue, the nurse claims and completes it, and a completed medication task
- * feeds the clinical-course engine so the shared patient's vitals actually
- * respond.
+ * A dependency-free external store (the `useSyncExternalStore` pattern of
+ * `src/state/encounterStore.ts`) for the room's collaborative loop: a doctor places an
+ * order, it lands as a TASK in the executing role's queue, the nurse claims and completes it.
  *
- * It is deliberately kept SEPARATE from `state/encounterStore.ts` so the two
- * never fight over the single-encounter singleton: the doctor's history-taking
- * interview can keep running on the solo store while the shared vitals + task
- * queue live here.
+ * The patient is the room's THREAD (doc 15 section 12.8), never a client course:
+ *  - every order, claim and completion is posted to the thread (`POST /v2/case/{t}/task`)
+ *    and reaches every member as a `task` event (`applyThreadTask`), so all devices show
+ *    the same queue;
+ *  - a medication task is administered through the solo encounter's own path
+ *    (`administerTreatment`: five rights, allergy band, MAR, then a Director step on the
+ *    server), and is refused while the thread's treatment table is pending or rejected
+ *    (`treatmentsLocked`, 06b F30); the Director's step fans out to every member, whose
+ *    monitor follows the same server vitals;
+ *  - nothing here computes vitals: the room's monitor reads the encounter store.
  *
- * Simulated locally: a single browser can switch its acting role and, with AI
- * backfill on, empty roles are driven by scripted, clearly-labelled actions
- * (Art. 50 transparency). There is NO real transport — production rides a
- * self-hosted LiveKit WebRTC room; this is the believable local projection.
+ * Scripted AI backfill (clearly labelled, Art. 50 transparency) only drives a role that no
+ * person holds, and only from the device that placed the order, through the same path.
  *
- * Every function that reads time takes it from an injectable clock; nothing
- * reads Date.now at module top level. Education only. No real patient data path.
+ * Every function that reads time takes it from an injectable clock; nothing reads Date.now
+ * at module top level. Education only. No real patient data path.
  */
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import {
   primaryCode,
   resolveReveal,
@@ -33,17 +31,16 @@ import {
   type RevealDatumKind,
 } from "@/domain/case";
 import { TREATMENT_CATALOG } from "@/domain/treatments";
-import { allergyCrossCheck } from "@/domain/medicationSafety";
 import { orderTiming, type OrderCategory } from "@/domain/orderCatalog";
-import {
-  courseStatus,
-  currentVitals,
-  type AdministeredTreatment,
-  type CourseStatus,
-  type CurrentVitals,
-} from "@/domain/clinicalCourse";
 import type { ClinicalRole } from "@/data/rooms";
 import type { Bilingual } from "@/data/schema";
+import { postRoomTask, type RoomTaskEvent, type RoomTaskRequest, type RoomThreadTask } from "@/lib/caseGenV2";
+import {
+  DIRECTOR_CLIENT_ID,
+  administerTreatment,
+  getEncounterSnapshot,
+  treatmentsLocked,
+} from "@/state/encounterStore";
 
 /* -------------------------------------------------------------------------- */
 /* Shapes                                                                      */
@@ -83,6 +80,12 @@ export interface RoomTask {
   /** Compressed real ms before a diagnostic result resolves after completion. */
   playbackMs: number;
   category: OrderCategory;
+  /** A medication task: the bedside check the executing member ran (five rights, allergy). */
+  mar?: RoomThreadTask["mar"];
+  /** Done but withheld: the bedside check blocked the dose, nothing entered the course. */
+  withheld?: boolean;
+  /** Placed on this device (only that device runs AI backfill for it). */
+  local?: boolean;
 }
 
 /** A resolved diagnostic result revealed into the shared state after a task. */
@@ -138,8 +141,6 @@ export interface RoomCaseState {
   floorRole: ClinicalRole;
   tasks: RoomTask[];
   results: RoomResult[];
-  /** Completed medication tasks, as administered treatments driving the course. */
-  treatments: AdministeredTreatment[];
   /** Revealed datum ids in the shared encounter (labs/imaging). */
   discovered: ReadonlySet<string>;
   handoffs: RoomHandoff[];
@@ -175,9 +176,47 @@ let seqCounter = 0;
 const listeners = new Set<() => void>();
 const timers = new Set<ReturnType<typeof setTimeout>>();
 
-/** AI backfill pacing (compressed for a watchable demo). */
+/** AI backfill pacing (compressed so a learner can follow it). */
 const AI_CLAIM_DELAY = 2200;
 const AI_MED_COMPLETE_DELAY = 2600;
+
+/** The thread each room plays (set by the room page once the room follows it). */
+const roomThreads: Record<string, string> = {};
+/** Roles currently held by scripted AI per room (seats nobody holds, backfill on). */
+const roomAiRoles: Record<string, ReadonlySet<ClinicalRole>> = {};
+/** Per-device task id prefix (task ids must be unique across the room's devices). */
+const TASK_PREFIX = DIRECTOR_CLIENT_ID;
+
+/** Bind a room to its thread (null to unbind): every task transition is posted to it. */
+export function setRoomThread(roomId: string, threadId: string | null): void {
+  if (threadId) roomThreads[roomId] = threadId;
+  else delete roomThreads[roomId];
+}
+
+/** The roles scripted AI holds in this room right now (empty seats with backfill on). */
+export function setRoomAiRoles(roomId: string, roles: readonly ClinicalRole[]): void {
+  roomAiRoles[roomId] = new Set(roles);
+}
+
+function publish(roomId: string, req: RoomTaskRequest): Promise<boolean> {
+  const threadId = roomThreads[roomId];
+  if (!threadId) return Promise.resolve(false);
+  return postRoomTask(threadId, { ...req, client_id: DIRECTOR_CLIENT_ID }).then((res) => res.ok);
+}
+
+function wireTask(t: RoomTask): RoomThreadTask {
+  return {
+    id: t.id,
+    code: t.code,
+    kind: t.kind,
+    label_en: t.label.en,
+    label_tr: t.label.tr,
+    ...(t.detail ? { detail_en: t.detail.en, detail_tr: t.detail.tr } : {}),
+    ordered_by: t.orderedBy,
+    assigned_role: t.assignedRole,
+    ai: t.orderedByAi,
+  };
+}
 
 function emit(): void {
   for (const l of listeners) l();
@@ -240,6 +279,19 @@ export function treatmentFor(code: string) {
 /** Default executing role for an order (the nurse runs meds, labs, and bedside tasks). */
 function defaultExecutor(): ClinicalRole {
   return "nurse";
+}
+
+/** Turnaround of an order: diagnostics carry a realistic one; meds act on administration. */
+function timingFor(
+  s: RoomCaseState,
+  code: string,
+  med: boolean,
+  label: Bilingual,
+): { etaLabel: Bilingual; playbackMs: number; category: OrderCategory } {
+  if (med) return { etaLabel: { en: "on administration", tr: "uygulamada" }, playbackMs: 0, category: "other" };
+  const expectation = s.caseInstance.expectedWorkup.find((w) => primaryCode(w.code) === code);
+  const timing = orderTiming(code, expectation?.kind ?? "laboratory", label);
+  return { etaLabel: timing.clinicalLabel, playbackMs: timing.playbackMs, category: timing.category };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -318,7 +370,6 @@ export function bindRoomCase(
     floorRole: "doctor",
     tasks: [],
     results: [],
-    treatments: [],
     discovered: new Set(),
     handoffs: [],
     events: [],
@@ -429,22 +480,9 @@ export function placeOrderAs(
     treatment?.label ??
     expectation?.label ?? { en: code, tr: code };
 
-  // Timing: diagnostics carry a realistic turnaround; meds take effect on
-  // administration (the effect itself ramps over its onset in the course engine).
-  let etaLabel: Bilingual;
-  let playbackMs: number;
-  let category: OrderCategory;
-  if (med) {
-    etaLabel = { en: "on administration", tr: "uygulamada" };
-    playbackMs = 0;
-    category = "other";
-  } else {
-    const kindFhir = expectation?.kind ?? "laboratory";
-    const timing = orderTiming(code, kindFhir, label);
-    etaLabel = timing.clinicalLabel;
-    playbackMs = timing.playbackMs;
-    category = timing.category;
-  }
+  // Timing: diagnostics carry a realistic turnaround; meds take effect on administration
+  // (the effect is the Director's, on the server).
+  const { etaLabel, playbackMs, category } = timingFor(s, code, med, label);
 
   // Review 02 finding 9: a medication task always carries dose + route (the
   // formulary adult default) so the executing role can verify the five rights.
@@ -461,7 +499,7 @@ export function placeOrderAs(
       : (opts?.detail ?? doseRoute);
 
   const task: RoomTask = {
-    id: `${roomId}-t${s.tasks.length + 1}-${seqCounter}`,
+    id: `${TASK_PREFIX}-${roomId}-t${s.tasks.length + 1}-${seqCounter}`,
     code,
     kind,
     label,
@@ -474,15 +512,16 @@ export function placeOrderAs(
     etaLabel,
     playbackMs,
     category,
+    local: true,
   };
   const ev = appendEvent(s, "order", role, task.orderedByAi, task.id, {
     label,
     meta: { assignedRole, kind },
   });
   setRoom(roomId, { ...s, tasks: [...s.tasks, task], events: [...s.events, ev] });
+  void publish(roomId, { op: "order", task: wireTask(task), role });
 
-  // AI backfill: if the executing role is not the human's current seat and
-  // backfill is on, schedule a scripted claim (and, for meds, a completion).
+  // AI backfill: only a role scripted AI holds (no person in that seat, backfill on).
   maybeScheduleAi(roomId, task.id);
   return task.id;
 }
@@ -529,35 +568,67 @@ export function claimTask(
     }),
     (t, st) => appendEvent(st, "claim", role, ai, t.id, { label: t.label }),
   );
+  void publish(roomId, { op: "claim", task: { id: taskId, ai }, role });
+}
+
+/** True while a medication task cannot be given: no safe treatment table on the thread yet. */
+export function administrationLocked(): boolean {
+  return treatmentsLocked(getEncounterSnapshot());
 }
 
 /**
- * Complete a task as `role`. A MEDICATION completion applies the treatment via
- * the clinical-course engine (an administered treatment from now on), so the
- * shared patient's vitals respond. A DIAGNOSTIC completion sends the sample and
- * schedules its result to resolve after a realistic (compressed) turnaround.
+ * Complete a task as `role`. A MEDICATION is administered through the solo encounter's own
+ * path (`administerTreatment`: five rights and the allergy band, a MAR line, then a Director
+ * step on the room's thread, which every member receives); it is refused (returns false,
+ * nothing changes) while the thread's treatment table is pending or rejected. A dose the
+ * bedside check blocks is recorded as done-but-withheld. A DIAGNOSTIC completion sends the
+ * sample and schedules its result after a realistic (compressed) turnaround.
  */
 export function completeTask(
   roomId: string,
   role: ClinicalRole,
   taskId: string,
   ai = false,
+): boolean {
+  const s = state.rooms[roomId];
+  if (!s) return false;
+  const target = s.tasks.find((t) => t.id === taskId);
+  if (!target || target.status === "done") return false;
+
+  let mar: RoomThreadTask["mar"] | undefined;
+  if (target.kind === "medication") {
+    if (administrationLocked()) return false;
+    const rec = administerTreatment(target.code, target.label, { administeredBy: role });
+    if (!rec) return false;
+    mar = {
+      outcome: rec.outcome,
+      failures: rec.checks.failures.map((f) => f.code),
+      allergy_conflict: rec.allergy.conflict,
+    };
+  }
+  const withheld = mar?.outcome === "blocked";
+  markDone(roomId, taskId, role, ai, mar);
+  const prior = target;
+  void publish(roomId, { op: "complete", task: { id: taskId, ai }, role, ...(mar ? { mar } : {}) }).then((ok) => {
+    // The server refused it (the table was vetoed meanwhile): the task is not done.
+    if (!ok && target.kind === "medication" && !withheld) restoreTask(roomId, prior);
+  });
+
+  if (target.kind !== "medication") schedule(() => resolveDiagnostic(roomId, taskId), target.playbackMs);
+  return true;
+}
+
+function markDone(
+  roomId: string,
+  taskId: string,
+  role: ClinicalRole,
+  ai: boolean,
+  mar: RoomThreadTask["mar"] | undefined,
 ): void {
   const s = state.rooms[roomId];
   if (!s) return;
-  const target = s.tasks.find((t) => t.id === taskId);
-  if (!target || target.status === "done") return;
-
   const at = elapsedMsOf(s);
-
-  // Review 02 finding 9: the executing role checks the patient's allergy band
-  // against the drug (and its cross-reacting class) BEFORE the dose is given. A
-  // conflict leaves the task done-but-withheld: the treatment never enters the
-  // course and the event records why, so the nurse's refusal is scorable.
-  const allergy =
-    target.kind === "medication" ? allergyCrossCheck(target.code, s.caseInstance.allergies) : { conflict: false };
-  const withheld = allergy.conflict;
-
+  const withheld = mar?.outcome === "blocked";
   updateTask(
     roomId,
     taskId,
@@ -571,28 +642,90 @@ export function completeTask(
       completedBy: role,
       completedByAi: ai,
       completedAt: at,
+      ...(mar ? { mar } : {}),
+      ...(withheld ? { withheld: true } : {}),
     }),
     (t, st) =>
       appendEvent(st, "complete", role, ai, t.id, {
         label: t.label,
         meta: withheld
-          ? { withheld: "allergy-conflict", allergy: allergy.matched ?? "" }
-          : { mar: true, detail: t.detail?.en ?? "" },
+          ? { withheld: "bedside-check", failures: (mar?.failures ?? []).join(",") }
+          : { mar: Boolean(mar), detail: t.detail?.en ?? "" },
       }),
-    (t) =>
-      t.kind === "medication" && !withheld
-        ? { treatments: [...s.treatments, { code: t.code, at }] }
-        : {},
   );
+}
 
-  if (target.kind === "medication") {
-    // Emit an "administer" note is folded into the complete event above; the
-    // treatment is now part of the course and drives currentVitals over time.
+function restoreTask(roomId: string, prior: RoomTask): void {
+  const s = state.rooms[roomId];
+  if (!s) return;
+  setRoom(roomId, { ...s, tasks: s.tasks.map((t) => (t.id === prior.id ? prior : t)) });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tasks from the thread (other members' orders, claims and completions)       */
+/* -------------------------------------------------------------------------- */
+
+const STATUS_RANK: Record<RoomTaskStatus, number> = { pending: 0, claimed: 1, done: 2 };
+const ROLES: readonly ClinicalRole[] = ["doctor", "nurse", "paramedic"];
+const asRole = (r: unknown, fallback: ClinicalRole): ClinicalRole =>
+  ROLES.includes(r as ClinicalRole) ? (r as ClinicalRole) : fallback;
+
+/**
+ * Apply one `task` event of the room's thread. Idempotent: an order is added once, a
+ * transition only moves forward (pending, claimed, done), and this device's own events
+ * are already applied. Never posts back.
+ */
+export function applyThreadTask(roomId: string, ev: RoomTaskEvent): void {
+  const s = state.rooms[roomId];
+  const wt = ev.task;
+  if (!s || !wt?.id) return;
+  const existing = s.tasks.find((t) => t.id === wt.id);
+  const status: RoomTaskStatus = wt.status ?? (ev.op === "complete" ? "done" : ev.op === "claim" ? "claimed" : "pending");
+  const at = elapsedMsOf(s);
+  if (!existing) {
+    if (!wt.code || !wt.kind) return;
+    const label: Bilingual = { en: wt.label_en ?? wt.code, tr: wt.label_tr ?? wt.label_en ?? wt.code };
+    const timing = timingFor(s, wt.code, wt.kind === "medication", label);
+    const task: RoomTask = {
+      id: wt.id,
+      code: wt.code,
+      kind: wt.kind,
+      label,
+      ...(wt.detail_en ? { detail: { en: wt.detail_en, tr: wt.detail_tr ?? wt.detail_en } } : {}),
+      orderedBy: asRole(wt.ordered_by, "doctor"),
+      orderedByAi: Boolean(wt.ai),
+      assignedRole: asRole(wt.assigned_role, "nurse"),
+      status,
+      createdAt: at,
+      ...timing,
+      ...(status !== "pending"
+        ? { claimedAt: at, claimedBy: asRole(wt.claimed_by, asRole(wt.assigned_role, "nurse")), claimedByAi: Boolean(wt.claimed_ai) }
+        : {}),
+      ...(status === "done"
+        ? { completedAt: at, completedBy: asRole(wt.completed_by, asRole(wt.assigned_role, "nurse")), completedByAi: Boolean(wt.completed_ai) }
+        : {}),
+      ...(wt.mar ? { mar: wt.mar, ...(wt.mar.outcome === "blocked" ? { withheld: true } : {}) } : {}),
+    };
+    const evt = appendEvent(s, "order", task.orderedBy, task.orderedByAi, task.id, {
+      label,
+      meta: { assignedRole: task.assignedRole, kind: task.kind, remote: true },
+    });
+    setRoom(roomId, { ...s, tasks: [...s.tasks, task], events: [...s.events, evt] });
+    if (status === "done" && task.kind !== "medication") schedule(() => resolveDiagnostic(roomId, task.id), task.playbackMs);
     return;
   }
-
-  // Diagnostic: resolve the result after the compressed turnaround.
-  schedule(() => resolveDiagnostic(roomId, taskId), target.playbackMs);
+  if (STATUS_RANK[status] <= STATUS_RANK[existing.status]) return;
+  if (status === "claimed") {
+    updateTask(
+      roomId,
+      wt.id,
+      (t) => ({ ...t, status: "claimed", claimedBy: asRole(wt.claimed_by, t.assignedRole), claimedByAi: Boolean(wt.claimed_ai), claimedAt: at }),
+      (t, st) => appendEvent(st, "claim", t.claimedBy ?? t.assignedRole, Boolean(wt.claimed_ai), t.id, { label: t.label }),
+    );
+    return;
+  }
+  markDone(roomId, wt.id, asRole(wt.completed_by, existing.assignedRole), Boolean(wt.completed_ai), wt.mar);
+  if (existing.kind !== "medication") schedule(() => resolveDiagnostic(roomId, wt.id), existing.playbackMs);
 }
 
 /** Reveal a completed diagnostic's result into the shared state. */
@@ -631,28 +764,31 @@ function resolveDiagnostic(roomId: string, taskId: string): void {
 /* -------------------------------------------------------------------------- */
 
 /**
- * When AI backfill is on and the task's executing role is NOT the human's
- * current seat, drive it with scripted actions: claim shortly after the order,
- * then (for meds) administer, or (for diagnostics) collect + send so the result
- * resolves on its own timer. Each transition re-checks that no human has taken
- * over in the meantime.
+ * When AI backfill is on and scripted AI holds the task's executing role (no person in that
+ * seat on any device), drive it from the device that placed the order: claim shortly after,
+ * then administer through the same shared path as a person (refused while the treatment
+ * table is missing), or collect and send a diagnostic. Each transition re-checks that no
+ * person has taken over in the meantime.
  */
+function aiHolds(s: RoomCaseState, role: ClinicalRole): boolean {
+  return role !== s.actingRole && (roomAiRoles[s.roomId]?.has(role) ?? false);
+}
+
 function maybeScheduleAi(roomId: string, taskId: string): void {
   schedule(() => {
     const s = state.rooms[roomId];
     if (!s || !s.aiBackfill) return;
     const t = s.tasks.find((x) => x.id === taskId);
-    if (!t || t.status !== "pending") return;
-    // Only backfill a role the human is not currently occupying.
-    if (t.assignedRole === s.actingRole) return;
+    if (!t || t.status !== "pending" || !t.local) return;
+    if (!aiHolds(s, t.assignedRole)) return;
     claimTask(roomId, t.assignedRole, taskId, true);
     schedule(() => {
       const s2 = state.rooms[roomId];
       if (!s2 || !s2.aiBackfill) return;
       const t2 = s2.tasks.find((x) => x.id === taskId);
       if (!t2 || t2.status !== "claimed") return;
-      if (t2.claimedByAi !== true) return; // a human took it over
-      if (t2.assignedRole === s2.actingRole) return;
+      if (t2.claimedByAi !== true) return; // a person took it over
+      if (!aiHolds(s2, t2.assignedRole)) return;
       completeTask(roomId, t2.assignedRole, taskId, true);
     }, AI_MED_COMPLETE_DELAY);
   }, AI_CLAIM_DELAY);
@@ -690,14 +826,9 @@ export function taskTally(s: RoomCaseState): {
   return { pending, claimed, done, total: s.tasks.length };
 }
 
-/** The shared patient's effective vitals at `elapsedMs` (baseline + treatments). */
-export function roomVitalsAt(s: RoomCaseState, elapsedMs: number): CurrentVitals {
-  return currentVitals(s.caseInstance, elapsedMs, s.treatments);
-}
-
-/** Coarse trend of the shared course at `elapsedMs`. */
-export function roomCourseStatusAt(s: RoomCaseState, elapsedMs: number): CourseStatus {
-  return courseStatus(s.caseInstance, elapsedMs, s.treatments);
+/** Medication tasks actually given (done and not withheld by the bedside check). */
+export function medsGiven(s: RoomCaseState): number {
+  return s.tasks.filter((t) => t.kind === "medication" && t.status === "done" && !t.withheld).length;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -724,29 +855,4 @@ export function peekRoomCase(roomId: string): RoomCaseState | undefined {
 export function useRoomCaseState(roomId: string | undefined): RoomCaseState | null {
   const store = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return roomId ? store.rooms[roomId] ?? null : null;
-}
-
-/**
- * Live vitals for the shared patient: recomputed from the course on a 1s tick
- * (so treatment ramps animate) AND whenever the store changes. Returns nulls
- * until the room is bound.
- */
-export function useRoomVitals(roomId: string | undefined): {
-  vitals: CurrentVitals | null;
-  status: CourseStatus | null;
-  elapsedMs: number;
-} {
-  const s = useRoomCaseState(roomId);
-  const [, force] = useState(0);
-  useEffect(() => {
-    const iv = window.setInterval(() => force((n) => (n + 1) % 1_000_000), 1000);
-    return () => window.clearInterval(iv);
-  }, []);
-  if (!s) return { vitals: null, status: null, elapsedMs: 0 };
-  const elapsedMs = elapsedMsOf(s);
-  return {
-    vitals: roomVitalsAt(s, elapsedMs),
-    status: roomCourseStatusAt(s, elapsedMs),
-    elapsedMs,
-  };
 }

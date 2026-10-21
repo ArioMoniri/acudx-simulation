@@ -264,3 +264,66 @@ describe("room members follow the thread", () => {
     expect(s.director.caseState?.t_ms).toBe(60000);
   });
 });
+
+describe("the room's debrief reaches every member", () => {
+  it("applies the debrief layer another member's commit requested", async () => {
+    const controller = new AbortController();
+    globalThis.fetch = (async (url: RequestInfo | URL) => {
+      const u = String(url);
+      if (u.endsWith("/room")) return json({ error: "thread_not_found" }, 404);
+      if (u.endsWith("/join")) return json({ thread_id: "th-f", member: true, last_event_id: 1 });
+      if (u.includes("/events?")) {
+        setTimeout(() => controller.abort(), 20);
+        return streamOf([
+          sse("layer.ready", {
+            layer: "debrief", spec: spec(),
+            data: { teaching_points: ["Blood cultures before antibiotics."], missed_cues: [],
+                    anchors: [{ statement_id: "gs_x", statement_en: "Cultures first.", source: "SSC 2021", citation: "https://doi.org/10.1/x" }] },
+          }, 2),
+        ]);
+      }
+      return json({}, 404);
+    }) as typeof fetch;
+    startGeneratedEncounter(v2SpecToCaseInstance(spec()).case, {
+      source: "model", threadId: "th-f", council: null, degraded: false, model: null, note: null,
+    });
+    await followCase("th-f", "QX-77A", { signal: controller.signal });
+    const d = getEncounterSnapshot().debrief;
+    expect(d.status).toBe("ready");
+    expect(d.data?.anchors[0].citation).toContain("doi.org");
+  });
+});
+
+describe("EN renderings of a TR case", () => {
+  it("renders the layers seen into English when a TR case is played with an English UI", async () => {
+    const tr = (s: CaseGenV2Spec): CaseGenV2Spec => ({ ...s, locale: "tr", meta: { ...s.meta, locale: "tr" } } as CaseGenV2Spec);
+    const opening = tr(spec({
+      chief_complaint_en: "Ateş ve titreme",
+      chief_complaint_tr: "Ateş ve titreme",
+      hpi: [{ uid: "op.0", intent: "onset", answer_en: "Dün geceden beri.", answer_tr: "Dün geceden beri.", red_flag: false }],
+    } as Partial<CaseGenV2Spec>));
+    const rendered = tr(spec({
+      chief_complaint_en: "Fever and shaking",
+      chief_complaint_tr: "Ateş ve titreme",
+      hpi: [{ uid: "op.0", intent: "onset", answer_en: "Since last night.", answer_tr: "Dün geceden beri.", red_flag: false }],
+    } as Partial<CaseGenV2Spec>));
+    const renders: { layer: string; locale: unknown }[] = [];
+    globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (u.endsWith("/render")) {
+        renders.push({ layer: u.split("/layer/")[1], locale: JSON.parse(String(init?.body)).locale });
+        return json({ thread_id: "th-f", layer: "opening", locale: "en", status: "ready", data: {}, spec: rendered });
+      }
+      return streamOf([sse("opening.ready", { thread_id: "th-f", opening: {}, spec: opening }, 1)]);
+    }) as typeof fetch;
+    await i18n.changeLanguage("tr");
+    await requestCase({ locale: "tr" });
+    await tick(5);
+    expect(renders).toEqual([]); // TR UI on a TR case: nothing to render
+    await i18n.changeLanguage("en");
+    await tick(10);
+    expect(renders).toEqual([{ layer: "opening/render", locale: "en" }]);
+    const c = getEncounterSnapshot().caseInstance!;
+    expect(c.chiefComplaint).toEqual({ en: "Fever and shaking", tr: "Ateş ve titreme" });
+  });
+});

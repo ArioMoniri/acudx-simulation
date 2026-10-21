@@ -14,9 +14,11 @@
  * Director steps reach this device too (doc 15 section 12.7).
  *
  * Both install the same thread session: lazy layers, the debrief layer when the diagnosis
- * is committed, and TR renderings of the layers already seen when the UI language
- * switches to Turkish mid-encounter (one call per layer, cached on the thread; the source
- * text stays authoritative).
+ * is committed, and renderings of the layers already seen when the UI language switches
+ * away from the case's own language mid-encounter (an EN case to Turkish, a TR case to
+ * English; one call per layer, cached on the thread; the source text stays authoritative).
+ * A team room's order and task loop also travels on the thread (`task` events, doc 15
+ * section 12.8), handed to the room's task listener.
  *
  * There is no fallback case of any kind: when the model cannot be reached the result
  * is an error, and the page says so and offers Retry (owner decision). A layer the
@@ -43,6 +45,7 @@ import {
   type CaseGenV2Request,
   type CaseGenV2Spec,
   type DebriefLayerData,
+  type RoomTaskEvent,
 } from "@/lib/caseGenV2";
 import { layerStatuses, type LayerStatus } from "@/lib/caseLayers";
 import type { CaseGenerationMeta } from "@/lib/liveEncounter";
@@ -108,6 +111,14 @@ function uiLocale(): "en" | "tr" {
   return (i18n.language ?? "").toLowerCase().startsWith("tr") ? "tr" : "en";
 }
 
+/** Who applies the room's `task` events of the running thread (set by the room page). */
+let taskListener: ((threadId: string, ev: RoomTaskEvent) => void) | null = null;
+
+/** Register the team room's task listener (null to clear). */
+export function setRoomTaskListener(fn: ((threadId: string, ev: RoomTaskEvent) => void) | null): void {
+  taskListener = fn;
+}
+
 interface ThreadSession {
   threadId: string;
   handle: (ev: CaseGenV2Event) => void;
@@ -165,27 +176,32 @@ function openSession(threadId: string, signal?: AbortSignal): ThreadSession {
     });
   };
 
-  /** TR UI on an EN case: render every layer seen so far (once per layer; cached server-side). */
+  /**
+   * The UI language differs from the case's (TR UI on an EN case, EN UI on a TR case): render
+   * every layer seen so far into the UI language (once per layer and locale; cached server-side).
+   */
   const syncRenderings = () => {
-    if (disposed || uiLocale() !== "tr") return;
+    if (disposed) return;
+    const target = uiLocale();
     const s = getEncounterSnapshot();
     const c = s.caseInstance;
-    if (!c || s.generation?.threadId !== threadId || c.locale !== "en") return;
+    if (!c || s.generation?.threadId !== threadId || c.locale === target) return;
     const layers = seenLayers(s.discovered, { treatments: s.treatments.length > 0 && s.caseLayers.treatments === "ready" });
-    if (s.debrief.status === "ready" && !s.debrief.rendered.tr) layers.push("debrief");
+    if (s.debrief.status === "ready" && !s.debrief.rendered[target]) layers.push("debrief");
     for (const layer of layers) {
-      if (rendering.has(layer) || renderFailed.has(layer)) continue;
+      const key = `${target}:${layer}`;
+      if (rendering.has(key) || renderFailed.has(key)) continue;
       if (layer !== "opening" && layer !== "debrief" && s.caseLayers[layer] !== "ready") continue;
-      rendering.add(layer);
-      void renderCaseLayer(threadId, layer, "tr", opts).then((res) => {
+      rendering.add(key);
+      void renderCaseLayer(threadId, layer, target, opts).then((res) => {
         if (disposed) return;
         if (!res.ok) {
           // The source text stays on screen; the next language switch asks again.
-          rendering.delete(layer);
-          renderFailed.add(layer);
+          rendering.delete(key);
+          renderFailed.add(key);
           return;
         }
-        if (layer === "debrief") setDebrief(threadId, { rendered: { tr: res.data.data as unknown as DebriefLayerData } });
+        if (layer === "debrief") setDebrief(threadId, { rendered: { [target]: res.data.data as unknown as DebriefLayerData } });
         else merge(res.data.spec);
       });
     }
@@ -194,15 +210,30 @@ function openSession(threadId: string, signal?: AbortSignal): ThreadSession {
   const handle = (ev: CaseGenV2Event) => {
     if (disposed || signal?.aborted) return;
     switch (ev.event) {
+      case "opening.ready":
+        // A room member replaying the thread log learns every layer's status from the opening
+        // (a treatment table not written yet keeps Administer blocked on this device too).
+        merge(ev.spec);
+        break;
       case "layer.pending":
         setCaseLayers(threadId, { [ev.layer]: "pending" });
         break;
       case "layer.ready":
+        // The debrief another member's commit requested reaches every member of the room.
+        if (ev.layer === "debrief" && ev.data) {
+          setDebrief(threadId, { status: "ready", data: ev.data as unknown as DebriefLayerData, error: null });
+          syncRenderings();
+        }
         merge(ev.spec, { [ev.layer]: "ready" });
         break;
       case "layer.rendered":
-        if (ev.layer === "debrief") setDebrief(threadId, { rendered: { tr: ev.data as unknown as DebriefLayerData } });
-        else merge(ev.spec);
+        if (ev.layer === "debrief") {
+          const loc = ev.locale === "en" ? "en" : "tr";
+          setDebrief(threadId, { rendered: { [loc]: ev.data as unknown as DebriefLayerData } });
+        } else merge(ev.spec);
+        break;
+      case "task":
+        taskListener?.(threadId, ev);
         break;
       case "judge":
         if (ev.decision === "patched") merge(ev.spec);
