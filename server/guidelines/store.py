@@ -112,6 +112,9 @@ _SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS guideline_statement (
     {", ".join(f"{c} TEXT" + (" PRIMARY KEY" if c == "id" else " NOT NULL DEFAULT ''") for c in _COLUMNS)}
 );
+"""
+# Indexes are created after the additive migration, so an old table gains the columns first.
+_INDEXES = """
 CREATE INDEX IF NOT EXISTS idx_gs_status ON guideline_statement(status);
 CREATE INDEX IF NOT EXISTS idx_gs_topic ON guideline_statement(topic);
 """
@@ -174,6 +177,7 @@ class GuidelineStore:
             for col in _COLUMNS:
                 if col not in have:
                     self._conn.execute(f"ALTER TABLE guideline_statement ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
+            self._conn.executescript(_INDEXES)
 
     def close(self) -> None:
         self._conn.close()

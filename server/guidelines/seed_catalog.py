@@ -317,6 +317,118 @@ SRC.update({
                        fetch=EPMC.format(pmc="PMC10133903"), published="2023-04-26", license="open"),
 })
 
+# ---- Obstetrics and gynaecology ----------------------------------------------------
+SRC.update({
+    "ng133": _nice("ng133", "Hypertension in pregnancy: diagnosis and management", "NG133, June 2019 (updated April 2023)",
+                   "Recommendations", "2019-06-25"),
+    "ng201": _nice("ng201", "Antenatal care", "NG201, August 2021", "Recommendations", "2021-08-19"),
+    "ng126sx": _nice("ng126", "Ectopic pregnancy and miscarriage: diagnosis and initial management", "NG126, April 2019 (updated 2026)",
+                     "Symptoms-and-signs-of-ectopic-pregnancy-and-initial-assessment", "2019-04-17"),
+    "ng126dx": _nice("ng126", "Ectopic pregnancy and miscarriage: diagnosis and initial management", "NG126, April 2019 (updated 2026)",
+                     "Diagnosis-of-viable-intrauterine-pregnancy-and-of-tubal-ectopic-pregnancy", "2019-04-17"),
+    "ng126mc": _nice("ng126", "Ectopic pregnancy and miscarriage: diagnosis and initial management", "NG126, April 2019 (updated 2026)",
+                     "Management-of-miscarriage", "2019-04-17"),
+    "ng126ad": _nice("ng126", "Ectopic pregnancy and miscarriage: diagnosis and initial management", "NG126, April 2019 (updated 2026)",
+                     "Anti-D-immunoglobulin-prophylaxis", "2019-04-17"),
+    "gtg63": dict(body="RCOG", title="Antepartum Haemorrhage (Green-top Guideline No. 63)", edition="November 2011",
+                  url="https://www.rcog.org.uk/media/pwdi1tef/gtg_63.pdf", published="2011-11-01", countries="UK"),
+    "acog783": dict(body="ACOG", title="Adnexal Torsion in Adolescents (Committee Opinion No. 783)", edition="August 2019, reaffirmed 2021",
+                    url="https://www.acog.org/clinical/guidance/committee-opinion/2019/08/adnexal-torsion-in-adolescents",
+                    published="2019-08-01", countries="US"),
+})
+
+# ---- Psychiatry --------------------------------------------------------------------
+SRC.update({
+    "ng69": _nice("ng69", "Eating disorders: recognition and treatment", "NG69, May 2017 (updated December 2020)",
+                  "Recommendations", "2017-05-23"),
+    "ng222": _nice("ng222", "Depression in adults: treatment and management", "NG222, June 2022 (updated 2024)",
+                   "Recommendations", "2022-06-29"),
+    "ng116": _nice("ng116", "Post-traumatic stress disorder", "NG116, December 2018", "Recommendations", "2018-12-05"),
+    "meed22": dict(body="Royal College of Psychiatrists", title="Medical emergencies in eating disorders (MEED): Guidance on recognition and management (CR233)",
+                   edition="College Report CR233, May 2022",
+                   url="https://www.rcpsych.ac.uk/docs/default-source/improving-care/better-mh-policy/college-reports/college-report-cr233-medical-emergencies-in-eating-disorders-(meed)-guidance.pdf?sfvrsn=2d327483_67",
+                   published="2022-05-01", countries="UK"),
+    "ss25": dict(body="Br J Clin Pharmacol (clinical toxicology review)", title="Management of serotonin syndrome (toxicity)",
+                 edition="British Journal of Clinical Pharmacology 2025", doi="10.1111/bcp.16152",
+                 url="https://doi.org/10.1111/bcp.16152", fetch=EPMC.format(pmc="PMC11862804"),
+                 published="2025-03-01", license="open"),
+})
+
+# ---- Pulmonology -------------------------------------------------------------------
+SRC.update({
+    "ng9": _nice("ng9", "Bronchiolitis in children: diagnosis and management", "NG9, June 2015 (updated August 2021)",
+                 "Recommendations", "2015-06-01"),
+    "ng33": _nice("ng33", "Tuberculosis", "NG33, January 2016 (updated September 2019)", "Recommendations", "2016-01-13"),
+    "ng202": _nice("ng202", "Obstructive sleep apnoea/hypopnoea syndrome and obesity hypoventilation syndrome in over 16s",
+                   "NG202, August 2021", "1-Obstructive-sleep-apnoeahypopnoea-syndrome", "2021-08-20"),
+    "esicm_ards23": dict(body="ESICM", title="ESICM guidelines on acute respiratory distress syndrome: definition, phenotyping and respiratory support strategies",
+                         edition="Intensive Care Medicine 2023;49:727-759", doi="10.1007/s00134-023-07050-7",
+                         url="https://link.springer.com/article/10.1007/s00134-023-07050-7", published="2023-06-16",
+                         license="open"),
+    "atsidsa_cap19": dict(body="ATS / IDSA", title="Diagnosis and Treatment of Adults with Community-acquired Pneumonia. An Official Clinical Practice Guideline of the American Thoracic Society and Infectious Diseases Society of America",
+                          edition="Am J Respir Crit Care Med 2019;200(7):e45-e67", doi="10.1164/rccm.201908-1581ST",
+                          url="https://doi.org/10.1164/rccm.201908-1581ST", fetch=EPMC.format(pmc="PMC6812437"),
+                          published="2019-10-01", license="open", countries="US"),
+    "cdc_co": dict(body="CDC", title="Clinical Guidance for Carbon Monoxide (CO) Poisoning", edition="CDC clinical guidance",
+                   url="https://www.cdc.gov/carbon-monoxide/hcp/clinical-guidance/index.html", published="2024-04-23",
+                   license="open", countries="US"),
+    "ukhsa_co": dict(body="UKHSA", title="Carbon monoxide: toxicological overview", edition="UKHSA compendium of chemical hazards",
+                     url="https://www.gov.uk/government/publications/carbon-monoxide-properties-incident-management-and-toxicology/carbon-monoxide-toxicological-overview",
+                     published="2022-12-01", license="open", countries="UK"),
+    "kcig_hemop18": dict(body="Korean Society of Radiology (K-CIG)", title="2018 Korean Clinical Imaging Guideline for Hemoptysis",
+                         edition="Korean Journal of Radiology 2018;19(5):866-871", doi="10.3348/kjr.2018.19.5.866",
+                         url="https://doi.org/10.3348/kjr.2018.19.5.866", fetch=EPMC.format(pmc="PMC6082761"),
+                         published="2018-08-01", license="open"),
+    "scii_hemop23": dict(body="Society of Chest Imaging and Interventions", title="Society of Chest Imaging and Interventions Consensus Guidelines for the Interventional Radiology Management of Hemoptysis",
+                         edition="Indian Journal of Radiology and Imaging 2023;33(3)", doi="10.1055/s-0043-1762552",
+                         url="https://doi.org/10.1055/s-0043-1762552", fetch=EPMC.format(pmc="PMC10289864"),
+                         published="2023-03-01", license="open"),
+    "bts_pleural23": dict(body="BTS", title="British Thoracic Society Guideline for pleural disease (summary)",
+                          edition="Thorax 2023;78(Suppl 3)", doi="10.1136/thorax-2023-220304",
+                          url="https://www.brit-thoracic.org.uk/document-library/guidelines/pleural-disease/bts-guideline-for-pleural-disease-summary-of-guideline/",
+                          published="2023-07-01", countries="UK"),
+})
+
+# ---- Renal and urology -------------------------------------------------------------
+SRC.update({
+    "cg97": _nice("cg97", "Lower urinary tract symptoms in men: management", "CG97, May 2010 (updated June 2015)",
+                  "Recommendations", "2010-05-23"),
+    "ng118r": _nice("ng118", "Renal and ureteric stones: assessment and management", "NG118, January 2019",
+                    "Recommendations", "2019-01-08"),
+    "kdigo_gd21": dict(body="KDIGO", title="KDIGO 2021 Clinical Practice Guideline for the Management of Glomerular Diseases",
+                       edition="Kidney International 2021;100(4S):S1-S276", doi="10.1016/j.kint.2021.05.021",
+                       url="https://kdigo.org/wp-content/uploads/2017/02/KDIGO-Glomerular-Diseases-Guideline-2021-English.pdf",
+                       published="2021-10-01"),
+    "ipna_ssns23": dict(body="IPNA", title="IPNA clinical practice recommendations for the diagnosis and management of children with steroid-sensitive nephrotic syndrome",
+                        edition="Pediatric Nephrology 2023;38(3):877-919", doi="10.1007/s00467-022-05739-3",
+                        url="https://doi.org/10.1007/s00467-022-05739-3", fetch=EPMC.format(pmc="PMC9589698"),
+                        published="2022-10-21", license="open"),
+    "aua_priapism21": dict(body="AUA / SMSNA", title="Acute Ischemic Priapism: An AUA/SMSNA Guideline",
+                           edition="J Urol 2021;206(5):1114-1121", doi="10.1097/JU.0000000000002236",
+                           url="https://www.auanet.org/guidelines-and-quality/guidelines/acute-ischemic-priapism",
+                           published="2021-09-08", countries="US"),
+    "cdc_sti_epid21": dict(body="CDC", title="Sexually Transmitted Infections Treatment Guidelines, 2021: Epididymitis",
+                           edition="MMWR Recomm Rep 2021;70(4)", url="https://www.cdc.gov/std/treatment-guidelines/epididymitis.htm",
+                           published="2021-07-23", license="open", countries="US"),
+    "burst_baus22": dict(body="BURST / BAUS", title="A BURST-BAUS consensus document for best practice in the conduct of scrotal exploration for suspected testicular torsion: the Finding consensus for orchIdopeXy In Torsion (FIX-IT) study",
+                         edition="BJU International 2022", doi="10.1111/bju.15818", url="https://doi.org/10.1111/bju.15818",
+                         fetch=EPMC.format(pmc="PMC9796508"), published="2022-06-10", license="open", countries="UK"),
+})
+
+# ---- Second tips for conditions previously covered by a single tip ------------------
+SRC.update({
+    "ng115c": _nice("ng115", "Chronic obstructive pulmonary disease in over 16s: diagnosis and management",
+                    "NG115, December 2018 (updated 2026)", "Recommendations", "2018-12-05"),
+    "ng109": _nice("ng109", "Urinary tract infection (lower): antimicrobial prescribing", "NG109, October 2018",
+                   "Recommendations", "2018-10-31"),
+    "ng191c": _nice("ng191", "COVID-19 rapid guideline: managing COVID-19", "NG191, March 2021 (updated)",
+                    "5-Preventing-and-managing-acute-complications", "2021-03-23"),
+    "wses_ssti18": dict(body="WSES / SIS-E", title="2018 WSES/SIS-E consensus conference: recommendations for the management of skin and soft-tissue infections",
+                        edition="World Journal of Emergency Surgery 2018;13:58", doi="10.1186/s13017-018-0219-9",
+                        url="https://doi.org/10.1186/s13017-018-0219-9", fetch=EPMC.format(pmc="PMC6295010"),
+                        published="2018-12-14", license="open"),
+})
+
 
 def _c(sid: str, src: str, section: str, stages: List[str], en: str, tr: str, codes: List[str], *,
        specialties: List[str] | None = None, countries: List[str] | None = None,
@@ -1495,6 +1607,508 @@ def catalog_statements() -> List[GuidelineStatement]:  # noqa: C901 - a flat aut
          "Clinicians should treat, or refer to a clinician who can treat, patients with posterior canal BPPV with a canal repositioning procedure, the most successful being the Epley maneuver; observation with follow-up may be offered as initial management.",
          "Klinisyenler arka kanal BPPV'li hastaları kanal yeniden konumlandırma manevrasıyla (en başarılısı Epley manevrasıdır) tedavi etmeli veya tedavi edebilecek bir klinisyene yönlendirmelidir; ilk yaklaşım olarak izlemli gözlem önerilebilir.",
          BPPV, specialties=["neurology", "ent"]))
+
+    # ======================= OBSTETRICS / GYNAECOLOGY =========================
+    ECL, PET, HG, CYST, TORS, ABR, TMISC = (["O15.9"], ["O14.90"], ["O21.0"], ["N83.8"], ["N83.51"], ["O45.9"],
+                                            ["O20.0"])
+    # ---- Pre-eclampsia and eclampsia (NICE NG133) ----------------------------
+    a(_c("gs_nice_ng133_admit_concerns", "ng133", "1.5.2", ["triage", "disposition"],
+         "Offer admission to hospital for women with pre-eclampsia if there are concerns for the wellbeing of the woman or baby, such as a sustained systolic blood pressure of 160 mmHg or higher, or a new and persistent rise in creatinine (90 micromol/litre or more) or in alanine transaminase (over 70 IU/litre).",
+         "Kadın veya bebeğin iyiliği konusunda endişe varsa, örneğin sürekli 160 mmHg veya üzeri sistolik kan basıncı ya da kreatininde (90 mikromol/litre veya üzeri) veya alanin transaminazda (70 IU/litre üzeri) yeni ve kalıcı artış varsa preeklampsili kadınlara hastaneye yatış önerin.",
+         PET + ECL, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng133_labetalol_target", "ng133", "1.5.6; table 2", ["treatment"],
+         "Offer labetalol to treat hypertension in pregnant women with pre-eclampsia, nifedipine if labetalol is not suitable and methyldopa if neither is suitable, aiming for a blood pressure of 135/85 mmHg or less once on treatment.",
+         "Preeklampsili gebelerde hipertansiyonu tedavi etmek için labetalol, labetalol uygun değilse nifedipin, ikisi de uygun değilse metildopa önerin ve tedavi altında 135/85 mmHg veya altı kan basıncı hedefleyin.",
+         PET, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng133_plgf", "ng133", "1.4.4", ["workup"],
+         "Offer placental growth factor (PLGF)-based testing to help rule out pre-eclampsia in women presenting with suspected pre-eclampsia, for example with gestational hypertension, between 20 weeks and 36 weeks and 6 days of pregnancy.",
+         "Gebeliğin 20. haftası ile 36 hafta 6 gün arasında, örneğin gestasyonel hipertansiyonla, şüpheli preeklampsiyle başvuran kadınlarda preeklampsiyi dışlamaya yardımcı olmak için plasental büyüme faktörü (PLGF) temelli test önerin.",
+         PET, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng133_mgso4_regimen", "ng133", "1.8.1; 1.8.4", ["treatment"],
+         "Give intravenous magnesium sulfate to a woman with severe hypertension or severe pre-eclampsia who has or previously had an eclamptic fit, using the Collaborative Eclampsia Trial regimen: a loading dose of 4 g intravenously over 5 to 15 minutes, then an infusion of 1 g/hour for 24 hours after the last fit, with recurrent fits treated with a further 2 g to 4 g over 5 to 15 minutes.",
+         "Eklamptik nöbet geçiren veya geçirmiş ağır hipertansiyonlu ya da ağır preeklampsili kadına Collaborative Eclampsia Trial rejimiyle intravenöz magnezyum sülfat verin: 5-15 dakikada 4 g intravenöz yükleme dozu, ardından son nöbetten sonra 24 saat boyunca saatte 1 g infüzyon; tekrarlayan nöbetler 5-15 dakikada ek 2-4 g ile tedavi edilir.",
+         ECL + PET, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng133_no_diazepam_phenytoin", "ng133", "1.8.5; 1.8.6", ["treatment"],
+         "Do not use diazepam, phenytoin or other anticonvulsants as an alternative to magnesium sulfate in women with eclampsia, and treat severe hypertension in critical care immediately with labetalol (oral or intravenous), oral nifedipine or intravenous hydralazine.",
+         "Eklampsili kadınlarda magnezyum sülfata alternatif olarak diazepam, fenitoin veya başka antikonvülzan kullanmayın ve yoğun bakımdaki ağır hipertansiyonu hemen labetalol (oral veya intravenöz), oral nifedipin veya intravenöz hidralazinle tedavi edin.",
+         ECL, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng133_mgso4_severe_features", "ng133", "1.8.3", ["workup", "treatment"],
+         "Consider magnesium sulfate if one or more features of severe pre-eclampsia is present: ongoing or recurring severe headaches, visual scotomata, nausea or vomiting, epigastric pain, oliguria and severe hypertension, or progressive deterioration in laboratory blood tests such as rising creatinine or liver transaminases or a falling platelet count.",
+         "Ağır preeklampsinin bir veya daha fazla özelliği varsa magnezyum sülfatı düşünün: süregelen veya tekrarlayan şiddetli baş ağrıları, görsel skotomlar, bulantı veya kusma, epigastrik ağrı, oligüri ve ağır hipertansiyon ya da yükselen kreatinin veya karaciğer transaminazları ya da düşen trombosit sayısı gibi laboratuvar tetkiklerinde ilerleyici kötüleşme.",
+         PET + ECL, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng133_senior_birth", "ng133", "1.5.8; 1.8.9", ["disposition"],
+         "Involve a senior obstetrician in any decisions on timing of birth for women with pre-eclampsia, and if early birth is considered likely within 7 days offer a course of antenatal corticosteroids.",
+         "Preeklampsili kadınlarda doğum zamanlamasıyla ilgili tüm kararlara kıdemli bir kadın doğum uzmanını dahil edin ve 7 gün içinde erken doğum olası görülüyorsa antenatal kortikosteroid kürü önerin.",
+         PET + ECL, specialties=["obstetrics"]))
+
+    # ---- Hyperemesis gravidarum (NICE NG201) --------------------------------------
+    a(_c("gs_nice_ng201_nvp_antiemetic", "ng201", "1.4.4; 1.4.5", ["treatment"],
+         "For pregnant women with nausea and vomiting who choose a pharmacological treatment, offer an antiemetic, discussing the advantages and disadvantages of different antiemetics and taking into account her preferences and experience in previous pregnancies.",
+         "Farmakolojik tedavi seçen bulantı-kusmalı gebelere farklı antiemetiklerin avantaj ve dezavantajlarını tartışıp tercihlerini ve önceki gebeliklerdeki deneyimini göz önünde bulundurarak bir antiemetik önerin.",
+         HG, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng201_iv_fluids_inpatient", "ng201", "1.4.6; 1.4.7", ["treatment", "disposition"],
+         "For pregnant women with moderate-to-severe nausea and vomiting consider intravenous fluids, ideally on an outpatient basis, and consider inpatient care if vomiting is severe and not responding to primary care or outpatient management, which will include women with hyperemesis gravidarum.",
+         "Orta-ağır bulantı ve kusması olan gebelerde ideal olarak ayaktan intravenöz sıvı düşünün; kusma şiddetliyse ve birinci basamak veya ayaktan tedaviye yanıt vermiyorsa yatarak bakımı düşünün; hiperemezis gravidarumlu kadınlar da buna dahildir.",
+         HG, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng201_nvp_reassure", "ng201", "1.4.1; 1.4.2", ["history"],
+         "Reassure women that mild to moderate nausea and vomiting are common in pregnancy and likely to resolve before 16 to 20 weeks, recognising that by the time they seek advice they may have already tried a number of interventions.",
+         "Hafif-orta bulantı ve kusmanın gebelikte sık olduğunu ve muhtemelen 16-20. haftadan önce geçeceğini söyleyerek kadınlara güvence verin; danışmaya geldiklerinde birçok yöntemi zaten denemiş olabileceklerini göz önünde bulundurun.",
+         HG, specialties=["obstetrics"]))
+
+    # ---- Early pregnancy: pregnancy test for pelvic pain (NICE NG126) -------------
+    a(_c("gs_nice_ng126_pregnancy_test_pain", "ng126sx", "1.4.1 to 1.4.5", ["workup"],
+         "Be aware that atypical presentation for ectopic pregnancy is common and that its symptoms and signs can resemble those of other conditions; think about offering a pregnancy test to women of reproductive age even when symptoms are non-specific, and refer women who are haemodynamically unstable directly to A&E.",
+         "Ektopik gebeliğin atipik başvurusunun sık olduğunu ve belirti ve bulgularının başka durumlara benzeyebileceğini unutmayın; belirtiler özgül olmasa bile doğurganlık çağındaki kadınlara gebelik testi önermeyi düşünün ve hemodinamik olarak instabil kadınları doğrudan acil servise yönlendirin.",
+         CYST + TORS + TMISC, specialties=["gynaecology"]))
+
+    # ---- Ovarian torsion (ACOG 783) ---------------------------------------------
+    a(_c("gs_acog783_presentation", "acog783", "Abstract", ["history"],
+         "The most common clinical symptom of adnexal torsion is sudden-onset abdominal pain that is intermittent, nonradiating and associated with nausea and vomiting; in adolescents torsion involves an ovary without an associated mass or cyst in as many as 46% of cases.",
+         "Adneksiyal torsiyonun en sık klinik belirtisi aralıklı, yayılmayan ve bulantı ile kusmanın eşlik ettiği ani başlangıçlı karın ağrısıdır; ergenlerde torsiyon olguların yüzde 46'sına kadarında eşlik eden kitle veya kist olmayan bir overi tutar.",
+         TORS, specialties=["gynaecology"], countries=["US"], population="adolescent"))
+    a(_c("gs_acog783_doppler_laparoscopy", "acog783", "Abstract", ["workup", "disposition"],
+         "There are no clinical or imaging criteria sufficient to confirm the preoperative diagnosis of adnexal torsion and Doppler flow alone should not guide clinical decision making; if ovarian torsion is suspected, timely diagnostic laparoscopy is indicated to preserve ovarian function and future fertility.",
+         "Adneksiyal torsiyonun ameliyat öncesi tanısını doğrulamaya yetecek klinik veya görüntüleme kriteri yoktur ve klinik karar yalnızca Doppler akımına göre verilmemelidir; over torsiyonundan şüpheleniliyorsa over işlevini ve gelecekteki doğurganlığı korumak için zamanında tanısal laparoskopi endikedir.",
+         TORS, specialties=["gynaecology"], countries=["US"], population="adolescent"))
+    a(_c("gs_acog783_detorsion", "acog783", "Abstract", ["treatment"],
+         "A minimally invasive surgical approach is recommended with detorsion and preservation of the adnexal structures regardless of the appearance of the ovary; a torsed ovary should not be removed unless oophorectomy is unavoidable.",
+         "Overin görünümünden bağımsız olarak detorsiyon ve adneksiyal yapıların korunmasıyla minimal invaziv cerrahi yaklaşım önerilir; ooforektomi kaçınılmaz değilse torsiyone over çıkarılmamalıdır.",
+         TORS, specialties=["gynaecology"], countries=["US"], population="adolescent"))
+
+    # ---- Placental abruption (RCOG GTG 63) -----------------------------------
+    a(_c("gs_gtg63_clinical_diagnosis", "gtg63", "Section 8: diagnosis", ["workup"],
+         "Placental abruption is a clinical diagnosis and there are no sensitive or reliable diagnostic tests available: ultrasound can be used to diagnose placenta praevia but does not exclude abruption, and the Kleihauer test is not a sensitive test for diagnosing abruption.",
+         "Plasenta dekolmanı klinik bir tanıdır ve duyarlı veya güvenilir tanı testi yoktur: ultrason plasenta previa tanısında kullanılabilir ancak dekolmanı dışlamaz ve Kleihauer testi dekolman tanısında duyarlı değildir.",
+         ABR, specialties=["obstetrics"]))
+    a(_c("gs_gtg63_bloods_crossmatch", "gtg63", "8.1.1 Blood tests", ["workup"],
+         "In cases of major or massive antepartum haemorrhage, analyse a full blood count and coagulation screen and cross-match 4 units of blood; the initial haemoglobin may not reflect the amount of blood lost.",
+         "Majör veya masif antepartum kanamada tam kan sayımı ve pıhtılaşma taraması yapın ve 4 ünite kan çapraz eşleştirin; ilk hemoglobin kaybedilen kan miktarını yansıtmayabilir.",
+         ABR, specialties=["obstetrics"]))
+    a(_c("gs_gtg63_anti_d_kleihauer", "gtg63", "Anti-D immunoglobulin", ["treatment"],
+         "Anti-D immunoglobulin should be given to all non-sensitised RhD-negative women after any presentation with antepartum haemorrhage, and a Kleihauer test should be performed in RhD-negative women to quantify fetomaternal haemorrhage and gauge the dose.",
+         "Antepartum kanamayla başvuran tüm duyarlanmamış RhD negatif kadınlara anti-D immünoglobulin verilmeli ve RhD negatif kadınlarda fetomaternal kanamayı ölçüp dozu belirlemek için Kleihauer testi yapılmalıdır.",
+         ABR, specialties=["obstetrics"]))
+    a(_c("gs_gtg63_ctg_mdt", "gtg63", "Fetal monitoring; place of care", ["disposition"],
+         "Women in labour with active vaginal bleeding, and those with any clinical suspicion of abruption, should be recommended continuous electronic fetal monitoring, with care in a maternity unit with facilities for resuscitation and emergency operative delivery.",
+         "Aktif vajinal kanamayla doğum eylemindeki kadınlara ve dekolmandan klinik olarak şüphelenilen herkese, resüsitasyon ve acil operatif doğum olanakları olan bir doğum ünitesinde sürekli elektronik fetal izlem önerilmelidir.",
+         ABR, specialties=["obstetrics"]))
+
+    # ---- Threatened miscarriage (NICE NG126) ------------------------------------
+    a(_c("gs_nice_ng126_progesterone", "ng126mc", "1.9.1; 1.9.2", ["treatment"],
+         "Offer vaginal micronised progesterone 400 mg twice daily to women with an intrauterine pregnancy confirmed by a scan who have vaginal bleeding and have previously had a miscarriage; with no previous miscarriage, advise returning if bleeding gets worse or persists beyond 14 days.",
+         "Ultrasonla doğrulanmış intrauterin gebeliği olan, vajinal kanaması bulunan ve daha önce düşük yapmış kadınlara günde iki kez 400 mg vajinal mikronize progesteron önerin; önceki düşük yoksa kanama artarsa veya 14 günden uzun sürerse yeniden başvurmalarını öğütleyin.",
+         TMISC, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng126_epas_refer_expectant", "ng126sx", "1.4.9; 1.4.10", ["disposition"],
+         "Refer women with bleeding who have pain, a pregnancy of 6 weeks' gestation or more, or a pregnancy of uncertain gestation to an early pregnancy assessment service; use expectant management for a pregnancy of less than 6 weeks' gestation with bleeding but no pain or risk factors, with a repeat urine pregnancy test after 7 to 10 days.",
+         "Kanaması olup ağrısı olan, 6 hafta veya üzerinde gebeliği ya da gestasyon yaşı belirsiz gebeliği olan kadınları erken gebelik değerlendirme birimine yönlendirin; ağrısı veya risk faktörü olmadan kanayan 6 haftadan küçük gebelikte 7-10 gün sonra idrar gebelik testi tekrarıyla bekleme yaklaşımını kullanın.",
+         TMISC, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng126_tvus", "ng126dx", "1.5.1; 1.6.3", ["workup"],
+         "Offer a transvaginal ultrasound scan to identify the location of the pregnancy and whether there is a fetal pole and heartbeat; if the crown-rump length is less than 7.0 mm with no visible heartbeat, perform a second scan a minimum of 7 days later before making a diagnosis.",
+         "Gebeliğin yerini ve fetal kutup ile kalp atımı olup olmadığını belirlemek için transvajinal ultrason önerin; baş-popo mesafesi 7,0 mm'den küçük ve kalp atımı görünmüyorsa tanı koymadan önce en az 7 gün sonra ikinci bir tarama yapın.",
+         TMISC, specialties=["obstetrics"]))
+    a(_c("gs_nice_ng126_anti_d_threatened", "ng126ad", "1.18.1; 1.18.3", ["treatment"],
+         "Do not offer anti-D immunoglobulin prophylaxis for threatened miscarriage up to and including 11+6 weeks' gestation; consider anti-D at least 250 IU for RhD-negative women at 12+0 to 12+6 weeks with threatened miscarriage and heavy or recurrent bleeding.",
+         "11+6 haftaya kadar (dahil) düşük tehdidinde anti-D immünoglobulin profilaksisi önermeyin; 12+0 ile 12+6 hafta arasında ağır veya tekrarlayan kanamalı düşük tehdidi olan RhD negatif kadınlarda en az 250 IU anti-D düşünün.",
+         TMISC, specialties=["obstetrics"]))
+
+    # ======================= PSYCHIATRY =======================================
+    AN, BED, MDD, PTSD, SERO = ["F50.00"], ["F50.81"], ["F32.9"], ["F43.10"], ["T43.225"]
+    # ---- Eating disorders (NICE NG69, RCPsych MEED) --------------------------------
+    a(_c("gs_nice_ng69_assess_refer", "ng69", "1.2.9; 1.2.10", ["history", "disposition"],
+         "In people with a suspected eating disorder assess physical health, including any physical effects of malnutrition or compensatory behaviours such as vomiting, and associated mental health problems including depression, anxiety and self-harm; if an eating disorder is suspected, refer immediately to a community-based, age-appropriate eating disorder service.",
+         "Şüpheli yeme bozukluğu olan kişilerde malnütrisyonun veya kusma gibi telafi edici davranışların fiziksel etkileri dahil fiziksel sağlığı ve depresyon, anksiyete ve kendine zarar verme dahil eşlik eden ruh sağlığı sorunlarını değerlendirin; yeme bozukluğundan şüpheleniliyorsa hemen toplum temelli, yaşa uygun bir yeme bozukluğu hizmetine yönlendirin.",
+         AN + BED, specialties=["psychiatry"]))
+    a(_c("gs_nice_ng69_weight_goal_no_drug_only", "ng69", "1.3.2; 1.3.24", ["treatment"],
+         "When treating anorexia nervosa, helping people to reach a healthy body weight or BMI for their age is a key goal, and medication should not be offered as the sole treatment for anorexia nervosa.",
+         "Anoreksiya nervoza tedavisinde kişilerin yaşlarına göre sağlıklı vücut ağırlığına veya BKİ'ye ulaşmasına yardımcı olmak temel hedeftir ve ilaç anoreksiya nervozanın tek tedavisi olarak önerilmemelidir.",
+         AN, specialties=["psychiatry"]))
+    a(_c("gs_meed22_risk_red", "meed22", "Table 1: risk assessment framework", ["triage"],
+         "In the MEED risk assessment framework, red (high impending risk to life) in adults includes a BMI below 13 and an awake heart rate below 40, with BMI 13 to 14.9 and heart rate 40 to 50 rated amber.",
+         "MEED risk değerlendirme çerçevesinde erişkinlerde kırmızı (yaşamı tehdit eden yüksek risk) 13'ün altında BKİ ve uyanıkken 40'ın altında kalp hızını içerir; 13-14,9 BKİ ve 40-50 kalp hızı sarı (amber) kabul edilir.",
+         AN, specialties=["psychiatry"], countries=["UK"]))
+    a(_c("gs_meed22_qtc", "meed22", "Table 1: ECG abnormalities", ["workup"],
+         "ECG abnormalities in the MEED risk framework: for 18+ years a QTc over 450 ms (females) or 430 ms (males), or any other significant ECG abnormality, rates as high concern.",
+         "MEED risk çerçevesinde EKG anormallikleri: 18 yaş ve üzerinde kadında 450 ms'nin, erkekte 430 ms'nin üzerindeki QTc veya başka anlamlı bir EKG anormalliği yüksek endişe düzeyindedir.",
+         AN, specialties=["psychiatry"], countries=["UK"]))
+    a(_c("gs_meed22_refeeding", "meed22", "Table 6: refeeding", ["treatment"],
+         "If at high risk of refeeding syndrome, start at 20 kcal/kg/day of food or supplements, increasing by 5 kcal/kg every 2 days to about 60 kcal/kg/day or more, and monitor electrolytes every 12 to 24 hours for 5 days to detect refeeding syndrome (low phosphate, potassium and magnesium).",
+         "Refeeding sendromu riski yüksekse günde 20 kcal/kg yiyecek veya takviyeyle başlayın, 2 günde bir 5 kcal/kg artırarak günde yaklaşık 60 kcal/kg veya üzerine çıkın ve refeeding sendromunu (düşük fosfat, potasyum ve magnezyum) saptamak için 5 gün boyunca 12-24 saatte bir elektrolitleri izleyin.",
+         AN, specialties=["psychiatry"], countries=["UK"]))
+
+    # ---- Binge eating disorder (NICE NG69) ------------------------------------
+    a(_c("gs_nice_ng69_bed_guided_self_help", "ng69", "1.4.1; 1.4.2; 1.4.4", ["treatment"],
+         "Offer a binge-eating-disorder-focused guided self-help programme to adults with binge eating disorder, explaining that psychological treatments have a limited effect on body weight and that weight loss is not a therapy target in itself; if guided self-help is unacceptable, contraindicated or ineffective after 4 weeks, offer group eating-disorder-focused CBT.",
+         "Tıkınırcasına yeme bozukluğu olan erişkinlere bu bozukluğa odaklı yönlendirilmiş kendi kendine yardım programı önerin; psikolojik tedavilerin vücut ağırlığı üzerinde sınırlı etkisi olduğunu ve kilo kaybının kendi başına tedavi hedefi olmadığını açıklayın; yönlendirilmiş kendi kendine yardım kabul edilemez, kontrendike veya 4 hafta sonra etkisizse grup yeme bozukluğu odaklı BDT önerin.",
+         BED, specialties=["psychiatry"]))
+
+    # ---- Major depressive disorder (NICE NG222) ------------------------------------
+    a(_c("gs_nice_ng222_ask_suicide", "ng222", "1.2.8; 1.2.9", ["history", "triage"],
+         "Always ask people with depression directly about suicidal ideation and intent; if there is a risk of self-harm or suicide assess social support and arrange help appropriate to the level of need, and refer urgently to specialist mental health services if the person presents considerable immediate risk to themselves or others.",
+         "Depresyonu olan kişilere intihar düşüncesini ve niyetini her zaman doğrudan sorun; kendine zarar verme veya intihar riski varsa sosyal desteği değerlendirin ve gereksinim düzeyine uygun yardım düzenleyin; kişi kendisi veya başkaları için ciddi ve acil risk oluşturuyorsa uzman ruh sağlığı hizmetlerine acilen yönlendirin.",
+         MDD, specialties=["psychiatry"]))
+    a(_c("gs_nice_ng222_review_2_4_weeks", "ng222", "1.4.3; 1.2.10", ["disposition"],
+         "For all people with depression having treatment, review how well the treatment is working between 2 and 4 weeks after starting, monitor for side effects and suicidal ideation particularly in the early weeks, and advise them of the potential for increased agitation, anxiety and suicidal ideation in the initial stages.",
+         "Tedavi alan tüm depresyon hastalarında tedaviye başladıktan 2-4 hafta sonra tedavinin ne kadar işe yaradığını gözden geçirin, özellikle ilk haftalarda yan etkileri ve intihar düşüncesini izleyin ve tedavinin başında artmış ajitasyon, anksiyete ve intihar düşüncesi olasılığı konusunda bilgi verin.",
+         MDD, specialties=["psychiatry"]))
+    a(_c("gs_nice_ng222_overdose_toxicity", "ng222", "1.2.12; 1.4.23", ["treatment"],
+         "If a person with depression is at risk of suicide, do not withhold treatment on the basis of their suicide risk, take into account toxicity in overdose, limit the amount of medicine available if necessary, and do not routinely start treatment with TCAs, except lofepramine, as they are associated with the greatest risk in overdose.",
+         "Depresyonlu kişi intihar riski taşıyorsa intihar riski nedeniyle tedaviyi esirgemeyin, aşırı dozdaki toksisiteyi göz önünde bulundurun, gerekirse eldeki ilaç miktarını sınırlayın ve aşırı dozda en yüksek riskle ilişkili olduklarından lofepramin dışındaki TSA'larla rutin olarak tedaviye başlamayın.",
+         MDD, specialties=["psychiatry"]))
+
+    # ---- PTSD (NICE NG116) -----------------------------------------------------------
+    a(_c("gs_nice_ng116_tfcbt", "ng116", "1.6.15; 1.6.16", ["treatment"],
+         "Offer an individual trauma-focused CBT intervention to adults who have acute stress disorder or clinically important symptoms of PTSD within the last month, and to adults with PTSD who have presented more than 1 month after a traumatic event, such as cognitive processing therapy, cognitive therapy for PTSD, narrative exposure therapy or prolonged exposure therapy.",
+         "Son bir ay içinde akut stres bozukluğu veya klinik olarak önemli TSSB belirtileri olan erişkinlere ve travmatik olaydan 1 aydan uzun süre sonra başvuran TSSB'li erişkinlere bilişsel işleme terapisi, TSSB için bilişsel terapi, anlatı maruz bırakma terapisi veya uzun süreli maruz bırakma terapisi gibi bireysel travma odaklı BDT önerin.",
+         PTSD, specialties=["psychiatry"]))
+    a(_c("gs_nice_ng116_no_debrief_no_benzo", "ng116", "1.6.5; 1.6.24", ["treatment"],
+         "Do not offer psychologically-focused debriefing for the prevention or treatment of PTSD, and do not offer drug treatments, including benzodiazepines, to prevent PTSD in adults.",
+         "TSSB'nin önlenmesi veya tedavisi için psikolojik odaklı çözümleme (debriefing) önermeyin ve erişkinlerde TSSB'yi önlemek için benzodiazepinler dahil ilaç tedavisi önermeyin.",
+         PTSD + ["F43.0"], specialties=["psychiatry"]))
+    a(_c("gs_nice_ng116_emdr_ssri", "ng116", "1.6.19; 1.6.25", ["treatment", "disposition"],
+         "Offer EMDR to adults with PTSD who have presented more than 3 months after a non-combat-related trauma, and consider venlafaxine or an SSRI such as sertraline for adults with PTSD if the person has a preference for drug treatment, reviewing it regularly.",
+         "Savaş dışı bir travmadan 3 aydan uzun süre sonra başvuran TSSB'li erişkinlere EMDR önerin ve ilaç tedavisini tercih eden TSSB'li erişkinlerde venlafaksin veya sertralin gibi bir SSRI düşünüp düzenli olarak gözden geçirin.",
+         PTSD, specialties=["psychiatry"]))
+    a(_c("gs_nice_ng116_comprehensive_assessment", "ng116", "1.2.2; 1.6.4", ["history"],
+         "Assessment of people with PTSD should be comprehensive, including physical, psychological and social needs and a risk assessment; consider active monitoring with follow-up within 1 month for people with subthreshold symptoms within 1 month of a traumatic event.",
+         "TSSB'li kişilerin değerlendirmesi fiziksel, psikolojik ve sosyal gereksinimleri ve risk değerlendirmesini içerecek şekilde kapsamlı olmalıdır; travmatik olaydan sonraki 1 ay içinde eşik altı belirtileri olanlarda 1 ay içinde izlemle aktif izlemeyi düşünün.",
+         PTSD, specialties=["psychiatry"]))
+
+    # ---- Serotonin syndrome (BJCP 2025) ------------------------------------------------
+    a(_c("gs_ss25_clonus_features", "ss25", "Clinical features", ["exam"],
+         "Serotonin toxicity is characterised by neuromuscular excitation (clonus, hyperreflexia, myoclonus, rigidity), autonomic excitation (hyperthermia, tachycardia, mydriasis) and altered mental state; the autonomic and mental state changes can be non-specific, whereas clonus (spontaneous, inducible or ocular) is far more indicative.",
+         "Serotonin toksisitesi nöromüsküler uyarılma (klonus, hiperrefleksi, miyoklonus, rijidite), otonom uyarılma (hipertermi, taşikardi, midriyazis) ve mental durum değişikliğiyle karakterizedir; otonom ve mental değişiklikler özgül olmayabilirken klonus (spontan, uyarılabilir veya oküler) çok daha belirleyicidir.",
+         SERO, specialties=["toxicology", "psychiatry"]))
+    a(_c("gs_ss25_severity_management", "ss25", "Management", ["treatment"],
+         "Management of serotonin toxicity is determined by severity: mild toxicity requires reduction or cessation of serotonergic agents and benzodiazepines, while severe toxicity with hyperthermia and rigidity requires aggressive resuscitative care with rapid cooling and decreasing muscle activity with benzodiazepines, paralysis and intubation.",
+         "Serotonin toksisitesinin yönetimi ağırlığa göre belirlenir: hafif toksisite serotonerjik ajanların azaltılmasını veya kesilmesini ve benzodiazepinleri gerektirirken, hipertermi ve rijiditeyle seyreden ağır toksisite hızlı soğutma ve benzodiazepin, paralizi ve entübasyonla kas aktivitesinin azaltılmasını içeren agresif resüsitasyon gerektirir.",
+         SERO, specialties=["toxicology", "psychiatry"]))
+    a(_c("gs_ss25_life_threatening", "ss25", "Clinical features: severity", ["triage"],
+         "Life-threatening serotonin toxicity is distinguished by hyperthermia above 40 °C with a rapidly rising temperature over hours and increasing rigidity, particularly truncal.",
+         "Yaşamı tehdit eden serotonin toksisitesi, saatler içinde hızla yükselen 40 °C üzeri hipertermi ve özellikle gövdede artan rijiditeyle ayırt edilir.",
+         SERO, specialties=["toxicology", "psychiatry"]))
+    a(_c("gs_ss25_antagonists_limited", "ss25", "Serotonin antagonists", ["treatment"],
+         "There is limited human data and no controlled studies on serotonin antagonists such as cyproheptadine in serotonin toxicity; their clinical effect is likely due to sedation and they do not appear to decrease the duration of toxicity.",
+         "Serotonin toksisitesinde siproheptadin gibi serotonin antagonistleri hakkında insan verisi sınırlıdır ve kontrollü çalışma yoktur; klinik etkileri muhtemelen sedasyona bağlıdır ve toksisitenin süresini kısaltmıyor görünürler.",
+         SERO, specialties=["toxicology", "psychiatry"]))
+
+    # ======================= PULMONOLOGY =======================================
+    ARDS, ASP, BRON, CO, HEMOP, OSA, PLEF, TB = (["J80"], ["J69.0"], ["J21.9"], ["T58"], ["R04.2"], ["G47.33"],
+                                                 ["J90"], ["A15.0"])
+    # ---- ARDS (ESICM 2023) ---------------------------------------------------------
+    a(_c("gs_esicm23_low_tidal", "esicm_ards23", "Recommendation: tidal volume", ["treatment"],
+         "Use low tidal volume ventilation strategies (4 to 8 ml/kg predicted body weight), compared to larger tidal volumes, to reduce mortality in patients with ARDS not due to COVID-19.",
+         "COVID-19'a bağlı olmayan ARDS'li hastalarda mortaliteyi azaltmak için daha büyük tidal hacimler yerine düşük tidal hacimli ventilasyon stratejileri (öngörülen vücut ağırlığına göre 4-8 ml/kg) kullanın.",
+         ARDS, specialties=["critical care"]))
+    a(_c("gs_esicm23_prone", "esicm_ards23", "Recommendation: prone position", ["treatment"],
+         "Use prone position as compared to supine position for patients with moderate-severe ARDS (PaO2/FiO2 below 150 mmHg and PEEP of 5 cmH2O or more, despite optimisation of ventilation settings) to reduce mortality.",
+         "Ventilasyon ayarları optimize edilmesine rağmen orta-ağır ARDS'li hastalarda (PaO2/FiO2 150 mmHg altı ve PEEP 5 cmH2O veya üzeri) mortaliteyi azaltmak için sırtüstü yerine yüzüstü pozisyon kullanın.",
+         ARDS, specialties=["critical care"]))
+    a(_c("gs_esicm23_hfno", "esicm_ards23", "Recommendation: HFNO", ["treatment"],
+         "Non-mechanically ventilated patients with acute hypoxaemic respiratory failure not due to cardiogenic pulmonary oedema or acute exacerbation of COPD should receive high-flow nasal oxygen as compared to conventional oxygen therapy to reduce the risk of intubation.",
+         "Kardiyojenik akciğer ödemi veya KOAH alevlenmesine bağlı olmayan akut hipoksemik solunum yetmezliği olan, mekanik ventilasyon uygulanmayan hastalar entübasyon riskini azaltmak için konvansiyonel oksijen yerine yüksek akımlı nazal oksijen almalıdır.",
+         ARDS + ["J96.0"], specialties=["critical care"]))
+    a(_c("gs_esicm23_no_recruitment_ecmo", "esicm_ards23", "Recommendations: recruitment manoeuvres; ECMO", ["treatment", "disposition"],
+         "Do not use prolonged high-pressure recruitment manoeuvres (airway pressure of 35 cmH2O or more for at least one minute) in ARDS, and treat patients with severe ARDS meeting EOLIA trial eligibility criteria with ECMO in an ECMO centre that meets defined organisational standards.",
+         "ARDS'de uzun süreli yüksek basınçlı alveoler açma manevraları (en az bir dakika 35 cmH2O veya üzeri hava yolu basıncı) uygulamayın ve EOLIA çalışması uygunluk kriterlerini karşılayan ağır ARDS'li hastaları tanımlanmış örgütsel standartları karşılayan bir ECMO merkezinde ECMO ile tedavi edin.",
+         ARDS, specialties=["critical care"]))
+
+    # ---- Aspiration pneumonitis (ATS/IDSA 2019) -------------------------------------
+    a(_c("gs_atsidsa19_no_anaerobic", "atsidsa_cap19", "Question 10: anaerobic coverage", ["treatment"],
+         "ATS/IDSA suggest not routinely adding anaerobic coverage for suspected aspiration pneumonia unless lung abscess or empyema is suspected.",
+         "ATS/IDSA, akciğer apsesi veya ampiyemden şüphelenilmedikçe şüpheli aspirasyon pnömonisinde rutin olarak anaerop kapsamı eklenmemesini önerir.",
+         ASP, specialties=["respiratory", "infectious"], countries=["US"]))
+    a(_c("gs_atsidsa19_pneumonitis_supportive", "atsidsa_cap19", "Question 10: summary of the evidence", ["treatment", "disposition"],
+         "Patients who aspirate gastric contents are considered to have aspiration pneumonitis, and many have resolution of symptoms within 24 to 48 hours and require only supportive treatment, without antibiotics.",
+         "Mide içeriğini aspire eden hastalarda aspirasyon pnömoniti olduğu kabul edilir ve birçoğunda belirtiler 24-48 saat içinde düzelir ve antibiyotik olmadan yalnızca destekleyici tedavi gerekir.",
+         ASP, specialties=["respiratory", "infectious"], countries=["US"]))
+
+    # ---- Bronchiolitis (NICE NG9) --------------------------------------------------
+    a(_c("gs_nice_ng9_emergency_referral", "ng9", "1.2.1; 1.1.10", ["triage"],
+         "Immediately refer babies and children with bronchiolitis for emergency hospital care (usually by 999 ambulance) if they have apnoea (observed or reported), look seriously unwell to a healthcare professional, have severe respiratory distress (for example grunting, marked chest recession or a respiratory rate of over 70 breaths/minute) or central cyanosis.",
+         "Bronşiyolitli bebek ve çocukları apne (görülen veya bildirilen), sağlık çalışanına ciddi hasta görünme, ağır solunum sıkıntısı (örneğin inleme, belirgin göğüs çekilmesi veya dakikada 70'in üzerinde solunum) ya da santral siyanoz varsa hemen acil hastane bakımına (genellikle 112 ambulansıyla) yönlendirin.",
+         BRON, specialties=["paediatrics"], population="paediatric"))
+    a(_c("gs_nice_ng9_oxygen_thresholds", "ng9", "1.4.4; 1.3.2", ["treatment", "disposition"],
+         "Give oxygen supplementation to babies and children with bronchiolitis if their oxygen saturation is persistently less than 90% for children aged 6 weeks and over, or less than 92% for babies under 6 weeks or children of any age with underlying health conditions.",
+         "Bronşiyolitli bebek ve çocuklarda oksijen satürasyonu 6 hafta ve üzeri çocuklarda sürekli yüzde 90'ın, 6 haftanın altındaki bebeklerde veya altta yatan sağlık sorunu olan her yaştaki çocukta yüzde 92'nin altındaysa oksijen desteği verin.",
+         BRON, specialties=["paediatrics"], population="paediatric"))
+    a(_c("gs_nice_ng9_do_not_treat", "ng9", "1.4.3; 1.3.7", ["treatment", "workup"],
+         "Do not use antibiotics, hypertonic saline, nebulised adrenaline, salbutamol, montelukast, ipratropium bromide or systemic or inhaled corticosteroids to treat bronchiolitis, and do not routinely perform a chest X-ray, because changes may mimic pneumonia.",
+         "Bronşiyolit tedavisinde antibiyotik, hipertonik salin, nebülize adrenalin, salbutamol, montelukast, ipratropium bromür veya sistemik ya da inhaler kortikosteroid kullanmayın ve değişiklikler pnömoniyi taklit edebileceğinden rutin akciğer grafisi çekmeyin.",
+         BRON, specialties=["paediatrics"], population="paediatric"))
+    a(_c("gs_nice_ng9_course", "ng9", "1.1.2; 1.1.8", ["history", "exam"],
+         "When diagnosing bronchiolitis, take into account that symptoms usually peak between 3 and 5 days and that cough resolves in 90% of infants within 3 weeks, and measure oxygen saturation in every baby and child presenting with suspected bronchiolitis.",
+         "Bronşiyolit tanısında belirtilerin genellikle 3-5. günlerde zirve yaptığını ve öksürüğün bebeklerin yüzde 90'ında 3 hafta içinde geçtiğini göz önünde bulundurun ve şüpheli bronşiyolitle başvuran her bebek ve çocukta oksijen satürasyonunu ölçün.",
+         BRON, specialties=["paediatrics"], population="paediatric"))
+
+    # ---- Carbon monoxide poisoning (CDC, UKHSA) --------------------------------------
+    a(_c("gs_cdc_co_oxygen_hbo", "cdc_co", "Management", ["treatment"],
+         "Administer 100% oxygen until the patient is symptom-free, usually about 4 to 5 hours, and consider hyperbaric oxygen when the carboxyhaemoglobin level is more than 25 to 30%, or there is cardiac involvement, severe acidosis, unconsciousness or neurological impairment; hyperbaric oxygen is the treatment of choice for pregnant women.",
+         "Hasta belirtisiz olana kadar, genellikle yaklaşık 4-5 saat yüzde 100 oksijen verin; karboksihemoglobin yüzde 25-30'un üzerindeyse veya kardiyak tutulum, ağır asidoz, bilinç kaybı ya da nörolojik bozukluk varsa hiperbarik oksijeni düşünün; gebelerde hiperbarik oksijen tercih edilen tedavidir.",
+         CO, specialties=["toxicology", "emergency"], countries=["US"]))
+    a(_c("gs_cdc_co_pulse_ox", "cdc_co", "Diagnosis", ["workup"],
+         "The conventional two-wavelength pulse oximeter is not accurate when carboxyhaemoglobin is present, and carboxyhaemoglobin levels do not correlate well with severity, outcomes or response to therapy, so clinical symptoms and the history of exposure must be assessed; women of childbearing age should have a pregnancy test.",
+         "Karboksihemoglobin varlığında geleneksel iki dalga boylu nabız oksimetresi doğru değildir ve karboksihemoglobin düzeyleri ağırlık, sonuç veya tedaviye yanıtla iyi ilişkili değildir; bu nedenle klinik belirtiler ve maruziyet öyküsü değerlendirilmeli, doğurganlık çağındaki kadınlara gebelik testi yapılmalıdır.",
+         CO, specialties=["toxicology", "emergency"], countries=["US"]))
+    a(_c("gs_ukhsa_co_symptoms", "ukhsa_co", "Health effects of acute exposure", ["history"],
+         "The most common symptoms following acute carbon monoxide exposure are headache, nausea and vomiting, vertigo, alteration in consciousness and subjective weakness, and exposure can result in non-specific symptoms such as lethargy and flu-like symptoms which may be misdiagnosed.",
+         "Akut karbon monoksit maruziyetinden sonra en sık belirtiler baş ağrısı, bulantı ve kusma, vertigo, bilinç değişikliği ve öznel güçsüzlüktür; maruziyet yanlış tanı konabilecek letarji ve grip benzeri belirtiler gibi özgül olmayan belirtilere yol açabilir.",
+         CO, specialties=["toxicology", "emergency"], countries=["UK"]))
+
+    # ---- Haemoptysis (SCII 2023, K-CIG 2018) -------------------------------------------
+    a(_c("gs_scii23_life_threatening", "scii_hemop23", "Statement 1B", ["triage"],
+         "Life-threatening haemoptysis may be defined as more than 150 mL in 24 hours, a rate of 100 mL/h, or haemoptysis that causes airway obstruction, respiratory failure or haemodynamic instability requiring blood transfusion; patients die because of asphyxiation and not exsanguination.",
+         "Yaşamı tehdit eden hemoptizi 24 saatte 150 mL'den fazla, saatte 100 mL hızında ya da hava yolu tıkanıklığı, solunum yetmezliği veya kan transfüzyonu gerektiren hemodinamik instabiliteye yol açan hemoptizi olarak tanımlanabilir; hastalar kan kaybından değil asfiksiden ölür.",
+         HEMOP, specialties=["respiratory", "radiology"]))
+    a(_c("gs_scii23_airway_position", "scii_hemop23", "Initial management", ["treatment"],
+         "For life-threatening haemoptysis management starts with airway management, haemodynamic stabilisation and then control of the source; if the bleeding side is known it is placed in the dependent position to prevent aspiration of blood into the normal lung.",
+         "Yaşamı tehdit eden hemoptizide yönetim hava yolu yönetimi, hemodinamik stabilizasyon ve ardından kaynağın kontrolüyle başlar; kanayan taraf biliniyorsa kanın sağlam akciğere aspire edilmesini önlemek için o taraf aşağıda kalacak şekilde yatırılır.",
+         HEMOP, specialties=["respiratory", "radiology"]))
+    a(_c("gs_scii23_cta_bae", "scii_hemop23", "Statements 4 and 7A", ["workup", "disposition"],
+         "CT angiography is best suited for evaluating the cause and source of bleeding in a vitally stable patient, and bronchial artery embolisation is recommended in life-threatening or massive haemoptysis after initial stabilisation.",
+         "Yaşamsal bulguları stabil hastada kanamanın nedenini ve kaynağını değerlendirmek için en uygun yöntem BT anjiyografidir ve yaşamı tehdit eden veya masif hemoptizide ilk stabilizasyondan sonra bronşiyal arter embolizasyonu önerilir.",
+         HEMOP, specialties=["respiratory", "radiology"]))
+    a(_c("gs_kcig18_cxr_ct", "kcig_hemop18", "Recommendations 1-1 to 1-3", ["workup"],
+         "Chest radiography is suggested for initial evaluation in all adults with haemoptysis, and contrast-enhanced chest CT is recommended for those with two risk factors for lung cancer (over 40 years old and more than 30 pack-years) or with moderate (more than 30 mL/24 hours) or recurrent haemoptysis.",
+         "Hemoptizili tüm erişkinlerde ilk değerlendirmede akciğer grafisi önerilir; akciğer kanseri için iki risk faktörü (40 yaş üzeri ve 30 paket-yıldan fazla) olanlarda veya orta (24 saatte 30 mL'den fazla) ya da tekrarlayan hemoptizide kontrastlı toraks BT önerilir.",
+         HEMOP, specialties=["respiratory", "radiology"], countries=["GLOBAL", "KR"]))
+
+    # ---- Obstructive sleep apnoea (NICE NG202) ------------------------------------------
+    a(_c("gs_nice_ng202_ess_stopbang", "ng202", "1.1.3; 1.1.4", ["history"],
+         "When assessing people with suspected OSAHS use the Epworth Sleepiness Scale and consider the STOP-Bang Questionnaire, but do not use the Epworth Sleepiness Scale alone to determine if referral is needed, because not all people with OSAHS have excessive sleepiness.",
+         "Şüpheli OSAHS'li kişileri değerlendirirken Epworth Uykululuk Ölçeğini kullanın ve STOP-Bang Anketini düşünün; ancak OSAHS'li herkeste aşırı uykululuk olmadığından sevk gereksinimini yalnızca Epworth ölçeğine göre belirlemeyin.",
+         OSA, specialties=["respiratory"]))
+    a(_c("gs_nice_ng202_priority_driving", "ng202", "1.2.2", ["disposition"],
+         "Within the sleep service, prioritise people with suspected OSAHS for rapid assessment if they have a vocational driving job, a job for which vigilance is critical for safety, or unstable cardiovascular disease.",
+         "Uyku servisinde mesleği sürücülük olan, güvenlik için dikkatin kritik olduğu bir işte çalışan veya instabil kardiyovasküler hastalığı olan şüpheli OSAHS'li kişilere hızlı değerlendirme önceliği verin.",
+         OSA, specialties=["respiratory"]))
+    a(_c("gs_nice_ng202_polygraphy_cpap", "ng202", "1.3.1; 1.5.2", ["workup", "treatment"],
+         "Offer home respiratory polygraphy to people with suspected OSAHS, and offer fixed-level CPAP to people with mild OSAHS whose symptoms affect their quality of life and usual daytime activities.",
+         "Şüpheli OSAHS'li kişilere evde solunum poligrafisi önerin ve belirtileri yaşam kalitesini ve olağan gündüz etkinliklerini etkileyen hafif OSAHS'li kişilere sabit düzeyli CPAP önerin.",
+         OSA, specialties=["respiratory"]))
+
+    # ---- Pleural effusion (BTS 2023) --------------------------------------------------
+    a(_c("gs_bts23_image_guided", "bts_pleural23", "Investigation of the undiagnosed unilateral pleural effusion", ["workup"],
+         "Image-guided thoracentesis should always be used to reduce the risk of complications, sending 25 to 50 mL of pleural fluid, and pleural fluid cytology should be an initial diagnostic test in suspected secondary pleural malignancy.",
+         "Komplikasyon riskini azaltmak için torasentez her zaman görüntüleme eşliğinde yapılmalı ve 25-50 mL plevral sıvı gönderilmelidir; şüpheli sekonder plevral malignitede plevral sıvı sitolojisi ilk tanı testlerinden biri olmalıdır.",
+         PLEF, specialties=["respiratory"], countries=["UK"]))
+    a(_c("gs_bts23_ph_drain", "bts_pleural23", "Pleural infection", ["workup", "treatment"],
+         "In parapneumonic effusion or suspected pleural infection where diagnostic aspiration does not yield frank pus, perform immediate pH analysis: a pleural fluid pH of 7.2 or less implies a high risk of complex parapneumonic effusion or pleural infection and an intercostal drain should be inserted if safe.",
+         "Parapnömonik efüzyonda veya şüpheli plevral enfeksiyonda tanısal aspirasyonla açık irin gelmiyorsa hemen pH analizi yapın: 7,2 veya altındaki plevral sıvı pH'ı komplike parapnömonik efüzyon veya plevral enfeksiyon için yüksek risk anlamına gelir ve güvenliyse interkostal dren yerleştirilmelidir.",
+         PLEF, specialties=["respiratory"], countries=["UK"]))
+    a(_c("gs_bts23_lights", "bts_pleural23", "Table 1: Light's criteria", ["workup"],
+         "Pleural fluid is an exudate if one or more of Light's criteria are met: pleural fluid protein divided by serum protein above 0.5, pleural fluid LDH divided by serum LDH above 0.6, or pleural fluid LDH above two thirds of the upper limit of normal for serum LDH.",
+         "Light kriterlerinden biri veya daha fazlası karşılanırsa plevral sıvı eksüdadır: plevral sıvı proteininin serum proteinine oranı 0,5'ten büyük, plevral sıvı LDH'sinin serum LDH'sine oranı 0,6'dan büyük veya plevral sıvı LDH'si serum LDH'si normal üst sınırının üçte ikisinden büyük.",
+         PLEF, specialties=["respiratory"], countries=["UK"]))
+    a(_c("gs_bts23_ntprobnp", "bts_pleural23", "Serum biomarkers", ["workup"],
+         "Serum NT-proBNP should be considered to support a diagnosis of heart failure in patients with a unilateral pleural effusion suspected of having heart failure, but serum biomarkers should not be used in isolation, as multiple conditions may co-exist.",
+         "Kalp yetmezliğinden şüphelenilen tek taraflı plevral efüzyonlu hastalarda kalp yetmezliği tanısını desteklemek için serum NT-proBNP düşünülmelidir, ancak birden fazla durum birlikte bulunabileceğinden serum biyobelirteçleri tek başına kullanılmamalıdır.",
+         PLEF, specialties=["respiratory"], countries=["UK"]))
+
+    # ---- Pulmonary tuberculosis (NICE NG33) -------------------------------------------
+    a(_c("gs_nice_ng33_cxr_sputum", "ng33", "1.3.2.1; 1.3.2.2", ["workup"],
+         "Take a chest X-ray and, if appearances suggest TB, send 3 deep cough sputum samples, preferably including 1 early morning sample, for TB microscopy and culture, before starting treatment if possible.",
+         "Akciğer grafisi çekin ve görünüm tüberkülozu düşündürüyorsa, mümkünse tedaviye başlamadan önce tüberküloz mikroskopisi ve kültürü için tercihen biri sabah erken olmak üzere 3 derin öksürük balgamı gönderin.",
+         TB, specialties=["respiratory", "infectious"]))
+    a(_c("gs_nice_ng33_naat", "ng33", "1.3.3.1", ["workup"],
+         "Request rapid diagnostic nucleic acid amplification tests for the M. tuberculosis complex on primary specimens if there is clinical suspicion of TB disease and the person has HIV, or rapid information would alter care or the need for a large contact-tracing initiative.",
+         "Tüberküloz hastalığından klinik olarak şüpheleniliyor ve kişide HIV varsa ya da hızlı bilgi bakımı veya geniş bir temaslı taraması gereksinimini değiştirecekse, birincil örneklerde M. tuberculosis kompleksi için hızlı tanısal nükleik asit amplifikasyon testleri isteyin.",
+         TB, specialties=["respiratory", "infectious"]))
+    a(_c("gs_nice_ng33_standard_regimen", "ng33", "1.3.7.2", ["treatment"],
+         "For people with active TB without central nervous system involvement, offer isoniazid (with pyridoxine), rifampicin, pyrazinamide and ethambutol for 2 months, then isoniazid (with pyridoxine) and rifampicin for a further 4 months, modified according to drug susceptibility testing.",
+         "Merkezi sinir sistemi tutulumu olmayan aktif tüberkülozda 2 ay izoniazid (piridoksinle), rifampisin, pirazinamid ve etambutol, ardından 4 ay daha izoniazid (piridoksinle) ve rifampisin önerin; ilaç duyarlılık testine göre düzenleyin.",
+         TB, specialties=["respiratory", "infectious"]))
+    a(_c("gs_nice_ng33_single_room", "ng33", "1.5.1.2; 1.5.1.6", ["disposition"],
+         "Put people with suspected infectious or confirmed pulmonary TB who remain in hospital in a single room, and do not admit them to a ward containing immunocompromised people unless they can be cared for in a negative pressure room.",
+         "Hastanede kalan şüpheli bulaştırıcı veya doğrulanmış akciğer tüberkülozlu kişileri tek kişilik odaya alın ve negatif basınçlı odada bakılamayacaklarsa immünosupresif hastaların bulunduğu bir servise yatırmayın.",
+         TB, specialties=["respiratory", "infectious"]))
+
+    # ======================= RENAL AND UROLOGY =================================
+    RET, BPH, NEPH, GN, TORS_T, EPID, PRI, COLIC = (["R33.9"], ["N40.1"], ["N04.9"], ["N05.9"], ["N44.00"],
+                                                   ["N45.3"], ["N48.30"], ["N23", "N20.1"])
+    # ---- Urinary retention / BPH (NICE CG97) ------------------------------------------
+    a(_c("gs_nice_cg97_catheterise_alpha", "cg97", "1.7.1; 1.7.2", ["treatment"],
+         "Immediately catheterise men with acute retention, and offer an alpha blocker to men for managing acute urinary retention before removal of the catheter.",
+         "Akut idrar retansiyonu olan erkekleri hemen kateterize edin ve kateter çıkarılmadan önce akut idrar retansiyonunun yönetimi için alfa bloker önerin.",
+         RET + BPH, specialties=["urology"]))
+    a(_c("gs_nice_cg97_chronic_retention", "cg97", "1.7.4; 1.7.5", ["workup", "disposition"],
+         "Carry out a serum creatinine test and imaging of the upper urinary tract in men with chronic urinary retention (residual volume greater than 1 litre or presence of a palpable or percussable bladder), and catheterise men who have impaired renal function or hydronephrosis secondary to chronic urinary retention.",
+         "Kronik idrar retansiyonu olan erkeklerde (rezidü hacim 1 litreden fazla veya palpe ya da perküte edilebilen mesane) serum kreatinin testi ve üst üriner sistem görüntülemesi yapın ve kronik idrar retansiyonuna bağlı böbrek işlev bozukluğu veya hidronefrozu olan erkekleri kateterize edin.",
+         RET + BPH, specialties=["urology"]))
+    a(_c("gs_nice_cg97_history_meds", "cg97", "1.1.1; 1.1.2", ["history", "exam"],
+         "At initial assessment, offer men with LUTS an assessment of their general medical history, review current medication including herbal and over-the-counter medicines to identify drugs that may be contributing, and offer a physical examination including the abdomen, external genitalia and a digital rectal examination.",
+         "İlk değerlendirmede alt üriner sistem semptomları olan erkeklere genel tıbbi öykü değerlendirmesi önerin, katkıda bulunabilecek ilaçları belirlemek için bitkisel ve reçetesiz ilaçlar dahil mevcut ilaçları gözden geçirin ve karın, dış genital organlar ve parmakla rektal muayeneyi içeren fizik muayene önerin.",
+         RET + BPH, specialties=["urology"]))
+    a(_c("gs_nice_cg97_dipstick_creatinine", "cg97", "1.1.4; 1.1.7", ["workup"],
+         "Offer men with LUTS a urine dipstick test to detect blood, glucose, protein, leucocytes and nitrites, and a serum creatinine test (plus eGFR) only if you suspect renal impairment, for example a palpable bladder, nocturnal enuresis, recurrent urinary tract infections or a history of renal stones.",
+         "Alt üriner sistem semptomları olan erkeklere kan, glukoz, protein, lökosit ve nitrit saptamak için idrar çubuk testi önerin; serum kreatinin testini (eGFR ile birlikte) yalnızca böbrek işlev bozukluğundan şüpheleniyorsanız, örneğin palpe edilen mesane, gece enürezisi, tekrarlayan idrar yolu enfeksiyonları veya böbrek taşı öyküsü varsa önerin.",
+         BPH + RET, specialties=["urology"]))
+    a(_c("gs_nice_cg97_alpha_5ari", "cg97", "1.4.3; 1.4.6", ["treatment"],
+         "Offer an alpha blocker (alfuzosin, doxazosin, tamsulosin or terazosin) to men with moderate to severe LUTS, and a 5-alpha reductase inhibitor to men with LUTS and a prostate estimated to be larger than 30 g or a PSA level greater than 1.4 ng/ml who are at high risk of progression.",
+         "Orta-ağır alt üriner sistem semptomları olan erkeklere alfa bloker (alfuzosin, doksazosin, tamsulosin veya terazosin), prostatı 30 g'dan büyük tahmin edilen veya PSA düzeyi 1,4 ng/ml'den yüksek olan ve ilerleme riski yüksek erkeklere 5-alfa redüktaz inhibitörü önerin.",
+         BPH, specialties=["urology"]))
+
+    # ---- Renal colic (NICE NG118) ------------------------------------------------------
+    a(_c("gs_nice_ng118_alpha_blocker", "ng118r", "Medical expulsive therapy", ["treatment"],
+         "Consider alpha blockers for adults, children and young people with distal ureteric stones less than 10 mm.",
+         "10 mm'den küçük distal üreter taşı olan erişkinler, çocuklar ve gençlerde alfa blokerleri düşünün.",
+         COLIC, specialties=["urology"]))
+    a(_c("gs_nice_ng118_surgery_48h", "ng118r", "Surgical treatment timing", ["treatment", "disposition"],
+         "Offer surgical treatment (including SWL) to adults with ureteric stones and renal colic within 48 hours of diagnosis or readmission, if pain is ongoing and not tolerated or the stone is unlikely to pass.",
+         "Üreter taşı ve renal koliği olan erişkinlere, ağrı devam ediyor ve tolere edilemiyorsa veya taşın düşmesi olası değilse, tanı ya da yeniden yatıştan sonraki 48 saat içinde cerrahi tedavi (ESWL dahil) önerin.",
+         COLIC, specialties=["urology"]))
+
+    # ---- Glomerular disease (KDIGO 2021) -----------------------------------------------
+    a(_c("gs_kdigo21_sediment", "kdigo_gd21", "Practice Point 1.3.1", ["workup"],
+         "Routine evaluation of urine sediment for erythrocyte morphology and the presence of red cell casts and/or acanthocytes is indicated in all forms of glomerular disease.",
+         "Tüm glomerüler hastalık türlerinde idrar sedimentinin eritrosit morfolojisi ve eritrosit silendirleri ve/veya akantositler açısından rutin değerlendirmesi endikedir.",
+         GN + NEPH, specialties=["nephrology"]))
+    a(_c("gs_kdigo21_biopsy", "kdigo_gd21", "Practice Point 1.1.1", ["workup", "disposition"],
+         "The kidney biopsy is the gold standard for the diagnostic evaluation of glomerular diseases; however, under some circumstances, treatment may proceed without a kidney biopsy confirmation of diagnosis.",
+         "Böbrek biyopsisi glomerüler hastalıkların tanısal değerlendirmesinde altın standarttır; ancak bazı durumlarda tedaviye böbrek biyopsisiyle tanı doğrulanmadan başlanabilir.",
+         GN + NEPH, specialties=["nephrology"]))
+    a(_c("gs_kdigo21_anca_no_delay", "kdigo_gd21", "Practice Point 9.1.1; 9.1.2", ["treatment", "disposition"],
+         "With a clinical presentation compatible with small-vessel vasculitis and positive MPO- or PR3-ANCA serology, waiting for a kidney biopsy to be performed or reported should not delay starting immunosuppressive therapy, especially in patients who are rapidly deteriorating, and patients with ANCA-associated vasculitis should be treated at centres with experience in its management.",
+         "Küçük damar vaskülitiyle uyumlu klinik tablo ve pozitif MPO- veya PR3-ANCA serolojisi varlığında, böbrek biyopsisinin yapılmasını veya sonuçlanmasını beklemek, özellikle hızla kötüleşen hastalarda immünosupresif tedavinin başlanmasını geciktirmemelidir ve ANCA ilişkili vaskülitli hastalar bu konuda deneyimli merkezlerde tedavi edilmelidir.",
+         GN, specialties=["nephrology"]))
+    a(_c("gs_kdigo21_anti_gbm", "kdigo_gd21", "Practice Points 11.1.1; 11.2.1", ["workup", "treatment"],
+         "Diagnosis of anti-GBM disease should be made without delay in all patients with suspected RPGN, and treatment for anti-GBM disease should start without delay if this diagnosis is suspected, even before the diagnosis is confirmed.",
+         "Şüpheli hızlı ilerleyen glomerülonefritli tüm hastalarda anti-GBM hastalığı tanısı gecikmeden konmalı ve bu tanıdan şüpheleniliyorsa anti-GBM hastalığının tedavisine tanı doğrulanmadan bile gecikmeden başlanmalıdır.",
+         GN, specialties=["nephrology"]))
+    a(_c("gs_kdigo21_anti_gbm_plex", "kdigo_gd21", "Recommendation 11.2.1", ["treatment"],
+         "KDIGO recommends initiating immunosuppression with cyclophosphamide and glucocorticoids plus plasmapheresis in all patients with anti-GBM glomerulonephritis except those who are treated with dialysis at presentation, have 100% crescents or more than 50% global glomerulosclerosis in an adequate biopsy sample, and do not have pulmonary haemorrhage.",
+         "KDIGO, başvuruda diyalize giren, yeterli biyopsi örneğinde yüzde 100 kresent veya yüzde 50'den fazla global glomerüloskleroz olan ve pulmoner kanaması olmayanlar dışında tüm anti-GBM glomerülonefritli hastalarda siklofosfamid ve glukokortikoid artı plazmaferezle immünosupresyon başlatılmasını önerir.",
+         GN, specialties=["nephrology"]))
+    a(_c("gs_kdigo21_ns_oedema", "kdigo_gd21", "Chapter 1: management of oedema in nephrotic syndrome", ["treatment"],
+         "The mainstays of treatment of nephrotic oedema are diuretics accompanied by moderate dietary sodium restriction (1.5 to 2 g/d or 60 to 90 mmol/d of sodium), and loop diuretics are considered first-line, with twice daily administration usually preferred.",
+         "Nefrotik ödem tedavisinin temelini orta düzeyde diyet sodyum kısıtlamasıyla (günde 1,5-2 g veya 60-90 mmol sodyum) birlikte diüretikler oluşturur; kıvrım diüretikleri birinci basamak kabul edilir ve genellikle günde iki kez uygulama tercih edilir.",
+         NEPH, specialties=["nephrology"]))
+    a(_c("gs_kdigo21_ns_anticoag", "kdigo_gd21", "Practice Point 1.7.1", ["treatment"],
+         "Full anticoagulation is indicated for patients with thromboembolic events occurring in the context of nephrotic syndrome, and prophylactic anticoagulation should be employed when the risk of thromboembolism exceeds the estimated patient-specific risks of an anticoagulation-induced serious bleeding event.",
+         "Nefrotik sendrom bağlamında tromboembolik olay gelişen hastalarda tam antikoagülasyon endikedir ve tromboembolizm riski hastaya özgü tahmini ciddi antikoagülan kaynaklı kanama riskini aştığında profilaktik antikoagülasyon uygulanmalıdır.",
+         NEPH, specialties=["nephrology"]))
+
+    # ---- Childhood nephrotic syndrome (IPNA 2023) -----------------------------------------
+    a(_c("gs_ipna23_workup", "ipna_ssns23", "Diagnosis: recommendations", ["workup"],
+         "IPNA recommends a work-up for nephrotic syndrome in all children with gravity-dependent oedema, confirming nephrotic range proteinuria at least once by quantification before initiating treatment, and does not recommend routine kidney biopsy and genetic testing in children who present with typical features and age over 1 year.",
+         "IPNA, yerçekimine bağlı ödemi olan tüm çocuklarda nefrotik sendrom açısından inceleme yapılmasını, tedaviye başlamadan önce nefrotik düzeyde proteinürinin en az bir kez ölçülerek doğrulanmasını önerir ve tipik özelliklerle başvuran 1 yaş üzeri çocuklarda rutin böbrek biyopsisi ve genetik test önermez.",
+         NEPH, specialties=["nephrology", "paediatrics"], population="paediatric"))
+    a(_c("gs_ipna23_exam_infection", "ipna_ssns23", "Table 2: initial work-up", ["exam"],
+         "In a child with nephrotic syndrome examine blood pressure, volume status and extent of oedema (ascites, pericardial and pleural effusions), lymphadenopathy, and signs of infection (respiratory tract, skin, peritonitis, urinary tract).",
+         "Nefrotik sendromlu çocukta kan basıncını, volüm durumunu ve ödemin yaygınlığını (asit, perikardiyal ve plevral efüzyonlar), lenfadenopatiyi ve enfeksiyon bulgularını (solunum yolu, deri, peritonit, idrar yolu) muayene edin.",
+         NEPH, specialties=["nephrology", "paediatrics"], population="paediatric"))
+    a(_c("gs_ipna23_prednisolone", "ipna_ssns23", "Treatment of the initial episode", ["treatment"],
+         "Children with their first episode of idiopathic nephrotic syndrome should receive daily prednisolone for 4 weeks at 60 mg/m2 or 2 mg/kg (maximum dose 60 mg/day), followed by alternate day prednisolone at 40 mg/m2 or 1.5 mg/kg (maximum dose of 40 mg on alternate days) for 4 weeks.",
+         "İlk idiyopatik nefrotik sendrom atağı olan çocuklar 4 hafta boyunca günlük 60 mg/m2 veya 2 mg/kg (en fazla günde 60 mg) prednizolon, ardından 4 hafta gün aşırı 40 mg/m2 veya 1,5 mg/kg (gün aşırı en fazla 40 mg) prednizolon almalıdır.",
+         NEPH, specialties=["nephrology", "paediatrics"], population="paediatric"))
+    a(_c("gs_ipna23_hypovolaemia", "ipna_ssns23", "Management of oedema and hypovolaemia", ["treatment"],
+         "In children with nephrotic syndrome and signs of hypovolaemia, withhold diuretics because of the risk of thrombosis, hypovolaemic shock and AKI, discontinue ACE inhibitors or ARBs, and use 20% or 25% albumin infusions.",
+         "Nefrotik sendromlu ve hipovolemi bulguları olan çocuklarda tromboz, hipovolemik şok ve ABH riski nedeniyle diüretikleri kesin, ACE inhibitörlerini veya ARB'leri bırakın ve yüzde 20 veya 25 albümin infüzyonu kullanın.",
+         NEPH, specialties=["nephrology", "paediatrics"], population="paediatric"))
+
+    # ---- Priapism (AUA/SMSNA 2021) --------------------------------------------------
+    a(_c("gs_aua21_priapism_emergency", "aua_priapism21", "Background", ["triage"],
+         "Prolonged (more than 4 hours) acute ischaemic priapism represents a medical emergency and may lead to cavernosal fibrosis and subsequent erectile dysfunction, so all patients with priapism should be evaluated emergently.",
+         "Uzamış (4 saatten uzun) akut iskemik priapizm tıbbi bir acil durumdur ve kavernozal fibroza ve ardından erektil disfonksiyona yol açabilir; bu nedenle priapizmli tüm hastalar acilen değerlendirilmelidir.",
+         PRI, specialties=["urology", "emergency"], countries=["US"]))
+    a(_c("gs_aua21_priapism_dx", "aua_priapism21", "Guideline statements: diagnosis", ["history", "workup"],
+         "In patients presenting with priapism, clinicians should complete a medical, sexual, and surgical history, perform a physical examination including the genitalia and perineum, and obtain a corporal blood gas at the initial presentation.",
+         "Priapizmle başvuran hastalarda klinisyenler tıbbi, cinsel ve cerrahi öyküyü tamamlamalı, genital bölge ve perineyi içeren fizik muayene yapmalı ve ilk başvuruda korporal kan gazı almalıdır.",
+         PRI, specialties=["urology", "emergency"], countries=["US"]))
+    a(_c("gs_aua21_priapism_phenylephrine", "aua_priapism21", "Guideline statements: pre-surgical management", ["treatment"],
+         "Clinicians should manage acute ischaemic priapism with intracavernosal phenylephrine and corporal aspiration, with or without irrigation, as first line therapy and prior to operative interventions, and should monitor blood pressure and heart rate during phenylephrine injections.",
+         "Klinisyenler akut iskemik priapizmi birinci basamak tedavi olarak ve cerrahi girişimlerden önce intrakavernozal fenilefrin ve korporal aspirasyonla (irrigasyonlu veya irrigasyonsuz) yönetmeli ve fenilefrin enjeksiyonları sırasında kan basıncını ve kalp hızını izlemelidir.",
+         PRI, specialties=["urology", "emergency"], countries=["US"]))
+    a(_c("gs_aua21_priapism_no_conservative", "aua_priapism21", "Guideline statements: diagnosis", ["treatment"],
+         "In a patient with diagnosed acute ischaemic priapism, conservative therapies (observation, oral medications, cold compresses, exercise) are unlikely to be successful and should not delay definitive therapies.",
+         "Akut iskemik priapizm tanısı konmuş hastada konservatif tedavilerin (gözlem, oral ilaçlar, soğuk kompres, egzersiz) başarılı olma olasılığı düşüktür ve kesin tedavileri geciktirmemelidir.",
+         PRI, specialties=["urology", "emergency"], countries=["US"]))
+    a(_c("gs_aua21_priapism_shunt", "aua_priapism21", "Guideline statements: surgical management", ["disposition"],
+         "Clinicians should perform a distal corporoglandular shunt, with or without tunneling, in patients with acute ischaemic priapism who have failed pharmacologic intracavernosal reversal and corporal aspiration, with or without irrigation.",
+         "Farmakolojik intrakavernozal geri döndürme ve korporal aspirasyonun (irrigasyonlu veya irrigasyonsuz) başarısız olduğu akut iskemik priapizmli hastalarda klinisyenler tünelli veya tünelsiz distal korporoglandüler şant yapmalıdır.",
+         PRI, specialties=["urology"], countries=["US"]))
+
+    # ---- Epididymo-orchitis and torsion (CDC STI 2021) ----------------------------------
+    a(_c("gs_cdc21_epid_torsion", "cdc_sti_epid21", "Diagnostic considerations", ["triage", "exam"],
+         "Spermatic cord (testicular) torsion, a surgical emergency, should be considered in all cases of acute epididymitis; for men with severe unilateral pain with sudden onset, or whose test results do not support urethritis or urinary tract infection, immediate referral to a urologist for evaluation for testicular torsion is vital because testicular viability might be compromised.",
+         "Cerrahi bir acil durum olan spermatik kord (testis) torsiyonu tüm akut epididimit olgularında düşünülmelidir; ani başlayan şiddetli tek taraflı ağrısı olan veya test sonuçları üretrit ya da idrar yolu enfeksiyonunu desteklemeyen erkeklerde testis canlılığı tehlikede olabileceğinden testis torsiyonu değerlendirmesi için hemen ürolojiye sevk hayati önem taşır.",
+         EPID + TORS_T, specialties=["urology", "emergency"], countries=["US"]))
+    a(_c("gs_cdc21_epid_ultrasound", "cdc_sti_epid21", "Diagnostic considerations", ["workup"],
+         "Ultrasound should be used primarily for ruling out torsion of the spermatic cord in acute, unilateral, painful scrotal swelling; however, because partial spermatic cord torsion can mimic epididymitis on scrotal ultrasound, differentiation when torsion is not ruled out by ultrasound should be made on the basis of clinical evaluation.",
+         "Akut, tek taraflı, ağrılı skrotal şişlikte ultrason öncelikle spermatik kord torsiyonunu dışlamak için kullanılmalıdır; ancak kısmi spermatik kord torsiyonu skrotal ultrasonda epididimiti taklit edebileceğinden, ultrasonla torsiyon dışlanamadığında ayrım klinik değerlendirmeye göre yapılmalıdır.",
+         EPID + TORS_T, specialties=["urology", "emergency"], countries=["US"]))
+    a(_c("gs_cdc21_epid_tests", "cdc_sti_epid21", "Diagnostic considerations", ["workup"],
+         "All suspected cases of acute epididymitis should be tested for C. trachomatis and N. gonorrhoeae by NAAT, with urine the preferred specimen for men, and urine bacterial cultures should also be performed for all men.",
+         "Tüm şüpheli akut epididimit olguları C. trachomatis ve N. gonorrhoeae açısından NAAT ile test edilmeli, erkeklerde tercih edilen örnek idrar olmalı ve tüm erkeklerde idrar bakteri kültürü de yapılmalıdır.",
+         EPID, specialties=["urology", "infectious"], countries=["US"]))
+    a(_c("gs_cdc21_epid_regimens", "cdc_sti_epid21", "Treatment", ["treatment"],
+         "For acute epididymitis most likely caused by chlamydia or gonorrhoea give ceftriaxone 500 mg IM in a single dose plus doxycycline 100 mg orally 2 times/day for 10 days; for epididymitis most likely caused by enteric organisms only give levofloxacin 500 mg orally once daily for 10 days.",
+         "Büyük olasılıkla klamidya veya gonoreye bağlı akut epididimitte tek doz kas içi 500 mg seftriakson artı 10 gün günde 2 kez oral 100 mg doksisiklin verin; büyük olasılıkla yalnızca enterik mikroorganizmalara bağlı epididimitte 10 gün günde bir kez oral 500 mg levofloksasin verin.",
+         EPID, specialties=["urology", "infectious"], countries=["US"]))
+    a(_c("gs_cdc21_epid_partners", "cdc_sti_epid21", "Management of sex partners", ["disposition"],
+         "Men who have acute sexually transmitted epididymitis confirmed or suspected to be caused by N. gonorrhoeae or C. trachomatis should be instructed to refer all sex partners during the previous 60 days before symptom onset for evaluation, testing, and presumptive treatment.",
+         "N. gonorrhoeae veya C. trachomatis kaynaklı olduğu doğrulanan ya da şüphelenilen cinsel yolla bulaşan akut epididimiti olan erkeklere, belirtiler başlamadan önceki 60 gün içindeki tüm cinsel partnerlerini değerlendirme, test ve ampirik tedavi için yönlendirmeleri söylenmelidir.",
+         EPID, specialties=["urology", "infectious"], countries=["US"]))
+    a(_c("gs_cdc21_epid_admit", "cdc_sti_epid21", "Treatment", ["disposition"],
+         "Hospitalisation should be considered for epididymitis when severe pain or fever indicates other diagnoses (torsion, testicular infarction, abscess, or necrotising fasciitis) or when men are unable to comply with an antimicrobial regimen.",
+         "Şiddetli ağrı veya ateş başka tanılara (torsiyon, testis enfarktı, apse veya nekrotizan fasiit) işaret ettiğinde ya da erkekler antimikrobiyal tedaviye uyum sağlayamadığında epididimitte hastaneye yatış düşünülmelidir.",
+         EPID, specialties=["urology", "infectious"], countries=["US"]))
+
+    # ---- Testicular torsion (BURST/BAUS 2022) ---------------------------------------------
+    a(_c("gs_burst22_exploration_timing", "burst_baus22", "Introduction", ["treatment", "disposition"],
+         "The current gold standard investigation and treatment for testicular torsion is emergency scrotal exploration, ideally performed within 4 to 6 h of symptom onset, to untwist a torted testicle; if viable after untwisting it is fixed, usually along with the contralateral testicle, and if unviable a simple orchidectomy is performed.",
+         "Testis torsiyonunda güncel altın standart inceleme ve tedavi, dönmüş testisi geri çevirmek için ideal olarak belirtilerin başlangıcından sonraki 4-6 saat içinde yapılan acil skrotal eksplorasyondur; geri çevrildikten sonra canlıysa genellikle karşı testisle birlikte sabitlenir, canlı değilse basit orşiektomi yapılır.",
+         TORS_T, specialties=["urology"], countries=["UK"]))
+    a(_c("gs_burst22_contralateral", "burst_baus22", "Scenario A: torsion found intra-operatively", ["treatment", "disposition"],
+         "Where torsion is found intra-operatively, if viable, the testis should be untwisted and fixed to prevent future torsion, and the contralateral side should be explored and fixed too; if the testis remains of uncertain viability, it should be replaced and orchidectomy avoided.",
+         "Ameliyat sırasında torsiyon bulunursa, canlıysa testis geri çevrilmeli ve gelecekte torsiyonu önlemek için sabitlenmeli, karşı taraf da eksplore edilip sabitlenmelidir; testisin canlılığı belirsiz kalırsa yerine konmalı ve orşiektomiden kaçınılmalıdır.",
+         TORS_T, specialties=["urology"], countries=["UK"]))
+
+    # ======================= SECOND TIPS FOR SINGLE-TIP CONDITIONS =============
+    HEADACHE, COPD_X, UTI_L, NSTI, COVID = ["R51"], ["J44.1"], ["N39.0"], ["M72.6"], ["U07.1"]
+    a(_c("gs_nice_cg150_moh_reassurance", "cg150", "1.2.7; 1.3.3", ["history", "disposition"],
+         "Be alert to medication overuse headache in people whose headache developed or worsened while taking triptans, opioids, ergots or combination analgesics on 10 days per month or more, or paracetamol, aspirin or an NSAID on 15 days per month or more, for 3 months or more, and do not refer people diagnosed with tension-type headache, migraine, cluster headache or medication overuse headache for neuroimaging solely for reassurance.",
+         "Baş ağrısı, 3 ay veya daha uzun süre ayda 10 gün veya daha fazla triptan, opioid, ergot veya kombine analjezik ya da ayda 15 gün veya daha fazla parasetamol, aspirin veya NSAİİ kullanırken başlayan veya kötüleşen kişilerde ilaç aşırı kullanımı baş ağrısına dikkat edin ve gerilim tipi baş ağrısı, migren, küme baş ağrısı veya ilaç aşırı kullanımı baş ağrısı tanısı konan kişileri yalnızca güvence vermek için nörogörüntülemeye yönlendirmeyin.",
+         HEADACHE, specialties=["neurology", "emergency"]))
+    a(_c("gs_nice_ng115_hospital_tests", "ng115c", "1.3.3", ["workup"],
+         "In all people presenting to hospital with an acute exacerbation of COPD obtain a chest X-ray, measure arterial blood gas tensions and record the inspired oxygen concentration, record an ECG, perform a full blood count and urea and electrolytes, send a sputum sample for microscopy and culture if purulent, and take blood cultures if the person has pyrexia.",
+         "Akut KOAH alevlenmesiyle hastaneye başvuran herkeste akciğer grafisi çekin, arter kan gazı ölçün ve solunan oksijen konsantrasyonunu kaydedin, EKG çekin, tam kan sayımı ile üre ve elektrolitlere bakın, balgam pürülansa mikroskopi ve kültür için gönderin ve ateşi varsa kan kültürü alın.",
+         COPD_X, specialties=["respiratory", "emergency"]))
+    a(_c("gs_nice_ng115_where_to_treat", "ng115c", "1.3.1; Table 7", ["disposition"],
+         "Factors favouring hospital rather than home treatment of a COPD exacerbation include inability to cope at home, severe breathlessness, poor or deteriorating general condition, cyanosis, worsening peripheral oedema, impaired level of consciousness, already receiving long-term oxygen therapy, living alone or not coping, acute confusion and rapid rate of onset.",
+         "KOAH alevlenmesinde evde yerine hastanede tedaviyi destekleyen etkenler evde baş edememe, ağır nefes darlığı, kötü veya kötüleşen genel durum, siyanoz, kötüleşen periferik ödem, bozulmuş bilinç düzeyi, zaten uzun süreli oksijen tedavisi alıyor olma, yalnız yaşama veya baş edememe, akut konfüzyon ve hızlı başlangıçtır.",
+         COPD_X, specialties=["respiratory", "emergency"]))
+    a(_c("gs_nice_ng109_women", "ng109", "Table 1: non-pregnant women", ["treatment"],
+         "First-choice antibiotics for lower UTI in non-pregnant women: nitrofurantoin (if eGFR is 45 ml/minute or more) 100 mg modified-release twice a day for 3 days, or trimethoprim (if there is a low risk of resistance) 200 mg twice a day for 3 days.",
+         "Gebe olmayan kadınlarda alt İYE için ilk tercih antibiyotikler: nitrofurantoin (eGFR 45 ml/dakika veya üzerindeyse) 3 gün günde iki kez 100 mg değiştirilmiş salımlı ya da trimetoprim (direnç riski düşükse) 3 gün günde iki kez 200 mg.",
+         UTI_L, specialties=["infectious", "primary care"]))
+    a(_c("gs_nice_ng109_men", "ng109", "Table 3: men", ["treatment"],
+         "For men aged 16 years and over with lower UTI, nitrofurantoin (if eGFR is 45 ml/minute or more) is given as 100 mg modified-release twice a day for 7 days, and nitrofurantoin is not recommended for men with suspected prostate involvement because it is unlikely to reach therapeutic levels in the prostate.",
+         "16 yaş ve üzeri alt İYE'li erkeklerde nitrofurantoin (eGFR 45 ml/dakika veya üzerindeyse) 7 gün günde iki kez 100 mg değiştirilmiş salımlı verilir; prostatta terapötik düzeye ulaşması olası olmadığından prostat tutulumundan şüphelenilen erkeklerde nitrofurantoin önerilmez.",
+         UTI_L, specialties=["infectious", "primary care"]))
+    a(_c("gs_nice_ng109_backup_refer", "ng109", "1.1 Managing lower UTI", ["treatment", "disposition"],
+         "Give self-care advice to all people with lower UTI, consider a back-up antibiotic prescription (to use if symptoms do not start to improve within 48 hours or worsen at any time) or an immediate prescription, and refer people aged 16 years and over to hospital if they have any symptoms or signs suggesting a more serious illness or condition, for example sepsis.",
+         "Alt İYE'li herkese öz bakım önerisi verin, yedek antibiyotik reçetesi (belirtiler 48 saat içinde düzelmeye başlamazsa veya herhangi bir zamanda kötüleşirse kullanılmak üzere) ya da hemen reçete düşünün ve daha ciddi bir hastalık veya durumu, örneğin sepsisi düşündüren belirti veya bulguları olan 16 yaş ve üzeri kişileri hastaneye sevk edin.",
+         UTI_L, specialties=["infectious", "primary care"]))
+    a(_c("gs_nice_ng191_lmwh", "ng191c", "5.3.2; 5.3.3", ["treatment"],
+         "Offer a standard prophylactic dose of a low molecular weight heparin as soon as possible, and within 14 hours of admission, to young people and adults with COVID-19 who need supplemental oxygen, CPAP, NIV or invasive mechanical ventilation and who do not have an increased bleeding risk, and continue it for a minimum of 7 days, including after discharge.",
+         "Ek oksijen, CPAP, NIV veya invaziv mekanik ventilasyon gereken ve kanama riski artmamış COVID-19'lu genç ve erişkinlere olabildiğince erken ve yatıştan sonraki 14 saat içinde standart profilaktik doz düşük molekül ağırlıklı heparin önerin ve taburculuk sonrası dahil en az 7 gün sürdürün.",
+         COVID, specialties=["infectious", "respiratory"]))
+    a(_c("gs_wses18_nsti_signs", "wses_ssti18", "How should necrotizing infections be diagnosed?", ["exam"],
+         "Clinical signs of necrotising soft-tissue infection include pain out of proportion, oedema extending beyond the erythema, and fever, and a rapidly progressive soft-tissue infection should always be suspected as a necrotising infection.",
+         "Nekrotizan yumuşak doku enfeksiyonunun klinik bulguları orantısız ağrı, eritemin ötesine uzanan ödem ve ateştir; hızla ilerleyen bir yumuşak doku enfeksiyonundan her zaman nekrotizan enfeksiyon olarak şüphelenilmelidir.",
+         NSTI, specialties=["surgery", "infectious"]))
+    a(_c("gs_wses18_nsti_imaging", "wses_ssti18", "Imaging", ["workup"],
+         "Imaging studies should not delay surgical consultation and intervention in suspected necrotising soft-tissue infection.",
+         "Şüpheli nekrotizan yumuşak doku enfeksiyonunda görüntüleme çalışmaları cerrahi konsültasyonu ve girişimi geciktirmemelidir.",
+         NSTI, specialties=["surgery", "infectious"]))
+    a(_c("gs_wses18_nsti_clindamycin", "wses_ssti18", "Antimicrobial therapy", ["treatment"],
+         "Either clindamycin or linezolid should be included in the empirical antibiotic regimen of necrotising soft-tissue infection.",
+         "Nekrotizan yumuşak doku enfeksiyonunun ampirik antibiyotik rejimine klindamisin veya linezolid eklenmelidir.",
+         NSTI, specialties=["surgery", "infectious"]))
+    a(_c("gs_wses18_nsti_reexplore", "wses_ssti18", "Source control", ["disposition"],
+         "Consider planning the first re-exploration within 12 to 24 h and repeat re-exploration until the patient is free of necrosis; a multidisciplinary team is mandatory for the management of necrotising soft-tissue infections.",
+         "İlk yeniden eksplorasyonu 12-24 saat içinde planlamayı düşünün ve hastada nekroz kalmayana kadar yeniden eksplorasyonu tekrarlayın; nekrotizan yumuşak doku enfeksiyonlarının yönetiminde multidisipliner ekip zorunludur.",
+         NSTI, specialties=["surgery", "infectious"]))
 
     return S
 
