@@ -13,7 +13,7 @@ import {
 
 import { cn } from "@/lib/cn";
 import { Card, SectionLabel } from "@/components/ui";
-import { acsDebrief, type DebriefData, type DebriefMark } from "@/data/rooms";
+import type { DebriefData, DebriefMark } from "@/data/rooms";
 import type { Lang } from "@/data/schema";
 
 /** The collaborative order→execution loop, earned from the live session. */
@@ -27,7 +27,7 @@ export interface DebriefLoopStats {
 
 export interface DebriefPanelProps {
   lang: Lang;
-  /** Debrief marks to render. Defaults to the ACS drill fixture. */
+  /** Scored debrief marks. Without them the panel says the marks are not scored; it never shows example marks. */
   data?: DebriefData;
   /** Whether this device wore the team-lead hat (overrides `data.woreHat`). */
   woreHat?: boolean;
@@ -50,14 +50,14 @@ export interface DebriefPanelProps {
  */
 export function DebriefPanel({
   lang,
-  data = acsDebrief,
+  data,
   woreHat,
   loopsClosed,
   loop,
   live = false,
 }: DebriefPanelProps) {
   const { t } = useTranslation();
-  const showLeadership = woreHat ?? data.woreHat;
+  const showLeadership = woreHat ?? data?.woreHat ?? false;
 
   return (
     <section
@@ -123,6 +123,11 @@ export function DebriefPanel({
         </p>
       ) : null}
 
+      {!data ? (
+        <p className="rounded-control bg-inset px-3 py-2.5 text-xs text-muted" data-testid="debrief-marks-pending">
+          {t("roomscollab.debrief.marksPending")}
+        </p>
+      ) : (
       <div className="grid gap-4 md:grid-cols-2">
         {/* Individual leadership marks */}
         <Card variant="inset" padding="sm">
@@ -156,6 +161,7 @@ export function DebriefPanel({
           </ul>
         </Card>
       </div>
+      )}
 
       <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted">
         <Info weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />

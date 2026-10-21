@@ -113,7 +113,12 @@
       "handoffs": "Handoffs recorded",
       "byHuman": "by you",
       "byAi": "by AI",
-      "note": "The team loop above is earned from what actually happened this session: doctor orders, nurse executions, and the patient's live response."
+      "note": "The team loop above is earned from what actually happened this session: doctor orders, nurse executions, and the patient's live response.",
+      "marksPending": "Leadership and team clinical marks are not scored for this room yet. The order loop above and the case debrief are what this session earned."
+    },
+    "lobby": {
+      "emptyTitle": "No rooms yet",
+      "emptyBody": "Rooms appear here when you create one on this device or join one with a code a teammate shares. No example rooms are listed."
     }
   }
 }

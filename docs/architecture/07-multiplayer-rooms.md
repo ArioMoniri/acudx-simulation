@@ -469,3 +469,7 @@ sequenceDiagram
 5. **LiveKit voice/presence** layered on the working text room (voice is enhancement, never a gate); barge-in + `text_fallback` on WebRTC failure.
 6. **Team/leadership rubric + debrief** (individual-lead ⟂ team-clinical, on top of dual-axis clinical ⟂ communication) — deterministic team-process numbers first, LLM-judged anchored items second; formative-only until κ measured.
 7. **100-concurrent-room staging gate + churn/chaos + replay oracle** (§9) — the MP-4 sign-off before v1 GA.
+
+## 12. Lobby without seed data (2026-10-21)
+
+The web lobby (`/rooms`) lists only rooms created on this device or received as relay snapshots after a join by code (`web/src/components/room/roomStore.ts`); `web/src/data/rooms.ts` holds types, role scopes and pure helpers only. The former example rooms, named example trainees, the authored ACS floor transcript and the example debrief scores are gone (audit 00 row for `web/src/data/rooms.ts`, protocol non-negotiable 1). A new room starts with an empty floor, and the debrief shows leadership and team clinical marks only when scored data is passed in; otherwise it says they are not scored and shows the live order loop. With no rooms, the lobby shows an empty state with Create room. Tests: `web/src/components/room/roomStore.test.ts`, `web/e2e/rooms.spec.ts` (empty lobby, no example names).

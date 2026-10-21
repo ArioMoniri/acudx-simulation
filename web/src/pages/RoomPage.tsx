@@ -77,7 +77,7 @@ import {
   closedLoopStats,
   openLoopEvent,
   attachRoomCase,
-  familyForSeedCase,
+  familyForRoomCase,
   type RoomRuntime,
 } from "@/components/room/roomStore";
 import { useEntry, useLang } from "@/lib/useLang";
@@ -190,8 +190,19 @@ function Lobby() {
           {t("rooms.lobby.openRooms")}
         </SectionLabel>
         {openRooms.length === 0 ? (
-          <Card variant="inset" padding="lg">
-            <p className="text-sm text-muted">{t("rooms.lobby.empty")}</p>
+          <Card variant="inset" padding="lg" data-testid="rooms-empty">
+            <h3 className="text-sm font-semibold text-fg">{t("roomscollab.lobby.emptyTitle")}</h3>
+            <p className="mt-1 text-sm text-muted">{t("roomscollab.lobby.emptyBody")}</p>
+            <div className="mt-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCreateOpen(true)}
+                leadingIcon={<Plus weight="bold" className="h-4 w-4" />}
+              >
+                {t("rooms.lobby.create")}
+              </Button>
+            </div>
           </Card>
         ) : (
           <ul className="divide-y divide-border border-y border-border">
@@ -309,7 +320,7 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
     if (caseInstance) return;
     // A lobby room opened without a case: request one now, for this room only.
     const controller = new AbortController();
-    const family = familyForSeedCase(room.caseId);
+    const family = familyForRoomCase(room.caseId);
     void requestCase(
       { locale: room.locale, purpose: "room", ...(family ? { complaint: family } : {}) },
       { signal: controller.signal },

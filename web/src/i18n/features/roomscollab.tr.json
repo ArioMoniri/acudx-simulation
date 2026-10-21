@@ -113,7 +113,12 @@
       "handoffs": "Kaydedilen devir",
       "byHuman": "senin",
       "byAi": "yapay zekâ",
-      "note": "Yukarıdaki ekip döngüsü bu oturumda gerçekten olanlardan gelir: doktor istemleri, hemşire uygulamaları ve hastanın canlı yanıtı."
+      "note": "Yukarıdaki ekip döngüsü bu oturumda gerçekten olanlardan gelir: doktor istemleri, hemşire uygulamaları ve hastanın canlı yanıtı.",
+      "marksPending": "Bu oda için liderlik ve ekip klinik puanları henüz hesaplanmadı. Yukarıdaki istem döngüsü ve olgu değerlendirmesi bu oturumda kazanılanlardır."
+    },
+    "lobby": {
+      "emptyTitle": "Henüz oda yok",
+      "emptyBody": "Bu cihazda bir oda oluşturduğunuzda ya da bir ekip arkadaşınızın paylaştığı kodla katıldığınızda odalar burada görünür. Örnek oda listelenmez."
     }
   }
 }

@@ -2,24 +2,21 @@
  * AcuDx — multiplayer room store (Journey 6, the moat).
  *
  * A dependency-free reactive store (React `useSyncExternalStore`, the same
- * pattern as `src/state/encounterStore.ts`) that turns the static room fixtures
- * into a genuinely INTERACTIVE mock: create + join rooms, take / leave seats,
- * toggle AI backfill, raise a hand, grant + pass the floor, post floor turns,
- * close communication loops, and drive the room through its lifecycle phases.
+ * pattern as `src/state/encounterStore.ts`): create and join rooms, take and
+ * leave seats, toggle AI backfill, raise a hand, grant and pass the floor, post
+ * floor turns, close communication loops, and drive the room through its phases.
  *
- * There is still NO real transport here. Production rides a self-hosted LiveKit
- * WebRTC room (docs/research/02, arch/07); this store is the believable local
- * projection every screen reads. All floor content is authored bilingual, the
- * same as the seed transcript in `data/rooms.ts`, so nothing here needs the UI
- * i18n bundle. AI-held seats stay first-class and always labelled (Art. 50).
+ * The lobby starts empty. It lists only rooms created on this device or received
+ * as snapshots from the relay (`lib/roomTransport.ts`, `multiplayer/server.mjs`);
+ * there are no seed rooms, example people or authored floor turns. Floor turns
+ * are the ones members post, bilingual at the source. AI-held seats stay
+ * first-class and always labelled (Art. 50).
  *
  * Education only. No real patient data path.
  */
 
 import { useSyncExternalStore } from "react";
 import {
-  rooms as SEED_ROOMS,
-  acsFloor,
   ME,
   CLINICAL_ROLE_ORDER,
   type Participant,
@@ -32,7 +29,7 @@ import {
   type FloorEventKind,
 } from "@/data/rooms";
 import type { Bilingual } from "@/data/schema";
-import type { ChiefComplaintFamily } from "@/domain/caseGen";
+import { CHIEF_COMPLAINT_FAMILIES, type ChiefComplaintFamily } from "@/domain/caseGen";
 import type { CaseInstance } from "@/domain/case";
 import { registerRoomCase } from "./roomCaseStore";
 import {
@@ -65,8 +62,7 @@ export interface RoomRuntime {
   /**
    * The room's unique, GENERATED case, when it runs one (created / joined
    * multiplayer rooms). Carried in the room snapshot so every member shares the
-   * same patient; undefined for the static seed rooms (which resolve their case
-   * from `caseId`).
+   * same patient; undefined until the room's case is generated.
    */
   caseInstance?: CaseInstance;
   /** Generation thread of that case (server/orchestration CaseStore). */
@@ -99,18 +95,6 @@ function nextOffset(floor: FloorEvent[]): string {
   const last = floor[floor.length - 1];
   const base = last ? parseOffset(last.at) : 0;
   return formatOffset(base + 22);
-}
-
-/* -------------------------------------------------------------------------- */
-/* Seat + room builders (pure)                                                 */
-/* -------------------------------------------------------------------------- */
-
-function cloneSeat(seat: Seat): Seat {
-  return { role: seat.role, holder: seat.holder, ready: seat.ready, teamLead: seat.teamLead };
-}
-
-function cloneRoom(room: Room): Room {
-  return { ...room, seats: room.seats.map(cloneSeat) };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -181,24 +165,17 @@ function self(): Participant {
   };
 }
 
-/**
- * Is this participant THIS device (its own per-tab id), or the legacy `ME`
- * fixture the pre-seated seed rooms use? The UI labels only these seats "You".
- */
+/** Is this participant THIS device (its own per-tab id)? The UI labels only these seats "You". */
 export function isSelfParticipant(p: Participant | null | undefined): boolean {
-  return p != null && (p.id === CLIENT_ID || p.id === ME.id);
+  return p != null && p.id === CLIENT_ID;
 }
 
-/**
- * Which role (if any) THIS device currently sits in. Matches this device's own
- * id, and also the legacy `ME.id` so the pre-seated seed rooms (which use the
- * shared `ME` fixture) still resolve as "mine".
- */
+/** Which role (if any) THIS device currently sits in. */
 function deriveMine(room: Room): ClinicalRole | null {
   return room.seats.find(isMine)?.role ?? null;
 }
 
-/** Is this seat held by THIS device (its own id, or the legacy ME fixture)? */
+/** Is this seat held by THIS device? */
 function isMine(seat: Seat): boolean {
   return isSelfParticipant(seat.holder);
 }
@@ -212,40 +189,6 @@ function makeJoinCode(caseId: string): string {
     tail += alphabet[Math.floor(Math.random() * alphabet.length)];
   }
   return `${stem}-${tail}${(joinCounter += 1) % 10}`;
-}
-
-/**
- * A short, believable opening floor for a freshly created room: a structured
- * prehospital handover keyed to the case, then the lead's first order awaiting a
- * closed-loop read-back. The ACS drill reuses its richer authored transcript.
- */
-function starterFloor(caseId: string, chiefComplaint: Bilingual): FloorEvent[] {
-  if (caseId === "em-acs-001") return acsFloor.map((e) => ({ ...e }));
-  return [
-    {
-      id: `${caseId}-h1`,
-      role: "paramedic",
-      ai: true,
-      kind: "handover",
-      at: "00:18",
-      text: {
-        en: `Structured scene handover: ${chiefComplaint.en}. Vitals and timeline passed to the team, IV access in place.`,
-        tr: `Yapılandırılmış olay yeri devri: ${chiefComplaint.tr}. Vital bulgular ve zaman çizelgesi ekibe aktarıldı, damar yolu açık.`,
-      },
-    },
-    {
-      id: `${caseId}-o1`,
-      role: "doctor",
-      ai: false,
-      kind: "order",
-      at: "00:55",
-      text: {
-        en: "Put the patient on the monitor and start the first-line orders. Please confirm.",
-        tr: "Hastayı monitöre bağlayın ve ilk basamak istemleri başlatın. Lütfen onaylayın.",
-      },
-      loop: "open",
-    },
-  ];
 }
 
 function buildSeats(
@@ -268,25 +211,7 @@ function buildSeats(
 /* Store internals                                                             */
 /* -------------------------------------------------------------------------- */
 
-function seedState(): StoreState {
-  const runtimes: Record<string, RoomRuntime> = {};
-  const order: string[] = [];
-  for (const seed of SEED_ROOMS) {
-    const room = cloneRoom(seed);
-    runtimes[room.id] = {
-      room,
-      floor: starterFloor(room.caseId, room.chiefComplaint),
-      hands: [],
-      floorHolder: null,
-      mine: deriveMine(room),
-      loopsClosedByMe: 0,
-    };
-    order.push(room.id);
-  }
-  return { order, runtimes };
-}
-
-let state: StoreState = seedState();
+let state: StoreState = { order: [], runtimes: {} };
 const listeners = new Set<() => void>();
 
 function emit(): void {
@@ -330,8 +255,7 @@ interface RoomSnapshotWire {
 /**
  * The relay channel for a room is its shared JOIN CODE, so a room created on one
  * device and joined by code on another resolve to the SAME channel and the SAME
- * deterministic room id (`room-<CODE>`). Seed rooms keep their own ids but still
- * channel on their join code.
+ * deterministic room id (`room-<CODE>`).
  */
 function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
@@ -443,20 +367,13 @@ function applyRemoteSnapshot(channel: string, raw: unknown): void {
 }
 
 /**
- * Chief-complaint family for each curated seed case, so a room's freshly
- * generated case matches the presentation the host picked in the dialog.
+ * The chief-complaint family the host picked, read back from the room's case key
+ * (`room-<family>`, set by the lobby's create flow), so a case generated later for
+ * the room matches that presentation. `room-any` and other keys give undefined.
  */
-const SEED_FAMILY: Record<string, ChiefComplaintFamily> = {
-  "em-acs-001": "chest-pain",
-  "em-sah-002": "headache",
-  "em-appy-003": "abdominal-pain",
-  "em-pe-004": "dyspnea",
-  "em-panic-005": "chest-pain",
-};
-
-/** The chief-complaint family a seed case id maps to (for constrained generation). */
-export function familyForSeedCase(caseId: string): ChiefComplaintFamily | undefined {
-  return SEED_FAMILY[caseId];
+export function familyForRoomCase(caseId: string): ChiefComplaintFamily | undefined {
+  const fam = caseId.startsWith("room-") ? caseId.slice(5) : "";
+  return CHIEF_COMPLAINT_FAMILIES.find((f) => f.id === fam)?.id;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -493,8 +410,7 @@ export function createRoom(config: {
       en: `Team drill: ${chiefComplaint.en}`,
       tr: `Ekip provası: ${chiefComplaint.tr}`,
     },
-    // Keep the seed template id so the solo history interview stays coherent;
-    // the collaborative store uses the generated case via the registry.
+    // The presentation key (`room-<family>`); the case itself is the generated one.
     caseId: config.caseId,
     threadId: config.threadId,
     chiefComplaint,
@@ -507,11 +423,9 @@ export function createRoom(config: {
     seats,
   };
   const runtime: RoomRuntime = {
-    // Use the GENERATED case id so the opening floor is the generic, chief-
-    // complaint-driven handover (the authored ACS transcript is specific to the
-    // ACS seed patient and would not match a freshly generated case).
     room,
-    floor: starterFloor(caseInstance.id, chiefComplaint),
+    // The floor holds only what members say; nothing is pre-authored.
+    floor: [],
     hands: [],
     floorHolder: null,
     mine,
@@ -576,7 +490,7 @@ export function joinRoom(id: string): void {
  * take (an open or AI-held seat). Resolves to the room id, or to `null` when no
  * open room matches the code:
  *
- *   - a room present locally (a seed room, or one created on this device) joins
+ *   - a room present locally (created here or already received) joins
  *     synchronously (the promise is already settled);
  *   - otherwise the room lives on ANOTHER device, so this device subscribes to
  *     the code's channel and waits a bounded {@link JOIN_TIMEOUT_MS} for the
@@ -886,6 +800,11 @@ export function useRoomList(): Room[] {
 export function useRoomRuntime(id: string | undefined): RoomRuntime | undefined {
   const s = useRoomsStore();
   return id ? s.runtimes[id] : undefined;
+}
+
+/** Non-reactive read of the whole store (tests, event handlers). */
+export function getRoomsState(): StoreState {
+  return state;
 }
 
 /** Non-reactive lookup (e.g. inside an event handler). */

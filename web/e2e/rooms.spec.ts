@@ -388,6 +388,20 @@ test.describe("rooms", () => {
     await ctx2.close();
   });
 
+  test("the lobby lists no example rooms and shows the empty state", async ({ page }) => {
+    await createProfile(page, { role: "student" });
+    await page.goto("/rooms");
+    await settle(page);
+    const empty = page.getByTestId("rooms-empty");
+    await expect(empty).toBeVisible();
+    await expect(empty.getByText("No rooms yet")).toBeVisible();
+    for (const seeded of ["Morning resus", "Emine Korkmaz", "Thunderclap headache", "Kerem Öztürk", "ACS-7K2"]) {
+      await expect(page.getByText(seeded)).toHaveCount(0);
+    }
+    await empty.getByRole("button", { name: "Create room" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
   test("an unknown code is rejected with a message", async ({ page }) => {
     await createProfile(page, { role: "student" });
     await page.goto("/rooms");
