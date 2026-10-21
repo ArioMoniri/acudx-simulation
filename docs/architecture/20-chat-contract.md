@@ -166,6 +166,8 @@ Rules-only results on 2026-10-21 (what serves without a model):
 
 Reviewer note: "Sizce neyiniz var?" ("what do you think you have?") is also the Ideas question of ICE in the Calgary-Cambridge guide. It is labelled a diagnosis request here, as the eval set specifies; the in-character reply ("I don't know, I hope you can find out") is still a fair patient answer, but the ICE intent is not revealed by it. A softer "what are you worried it might be?" stays clinical.
 
+Decision (product owner, 2026-10-21): it stays a diagnosis request. The patient has no medical training and cannot name a diagnosis, so the persona answers in character that they do not know, never names a medical diagnosis or term, and may voice a plain lay worry only if their history gives them one.
+
 The tuned-set numbers overstate the rules; the holdout is the honest picture. The rules never raise a false alarm on the hard classes, but they miss most novel injections (1 of 5 on the holdout). The classifier model catches those (5 of 5).
 
 ## 5. Actions (generative chat UI)
