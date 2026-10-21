@@ -4,7 +4,7 @@ Copyright 2026 the AcuDx authors (https://github.com/ArioMoniri/acudx-simulation
 The AcuDx source code is licensed under the PolyForm Noncommercial License 1.0.0
 (see LICENSE). Noncommercial use, including teaching, study and research at
 universities and public institutions, is permitted. Commercial use requires a
-separate license from the copyright holders.
+separate license from the copyright holders (contact: ariorad@getvivax.com).
 
 Third-party components keep their own licenses. In particular:
 - npm and PyPI dependencies: see web/package-lock.json, video/package-lock.json,

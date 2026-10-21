@@ -187,7 +187,7 @@ Issues and pull requests are welcome. Start with [docs/process/AGENT-PROTOCOL.md
 
 ## License
 
-AcuDx is **source-available, not open for business use**. It is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE): universities, teaching hospitals, students and researchers may use, modify and share it for noncommercial purposes. Any commercial use (selling it, hosting it as a paid service, or using it inside a business) needs a separate commercial license from the copyright holders. Third-party components and bundled media keep their own licenses; see [NOTICE](NOTICE).
+AcuDx is **source-available, not open for business use**. It is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE): universities, teaching hospitals, students and researchers may use, modify and share it for noncommercial purposes. Any commercial use (selling it, hosting it as a paid service, or using it inside a business) needs a separate commercial license from the copyright holders (contact: ariorad@getvivax.com). Third-party components and bundled media keep their own licenses; see [NOTICE](NOTICE).
 
 ## Disclaimer
 
