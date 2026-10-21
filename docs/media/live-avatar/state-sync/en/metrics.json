@@ -1,0 +1,571 @@
+{
+  "captured_at": "2026-10-21T09:36:42.512Z",
+  "gateway": "http://127.0.0.1:8897",
+  "lang": "en",
+  "condition": "pneumonia_cap",
+  "thread_id": "65f0871d-68ac-4d20-8b62-9719d842b488",
+  "case": {
+    "label": "Community-acquired pneumonia",
+    "age": 45,
+    "sex": "male",
+    "chief_complaint": "Cough and fever for three days",
+    "triage_vitals": {
+      "hr": 110,
+      "systolic": 130,
+      "diastolic": 80,
+      "rr": 22,
+      "spo2": 93,
+      "tempC": 39
+    },
+    "exam": [
+      "The patient appears unwell, diaphoretic, and in mild distress. He is sitting upright and leaning forward slightly to facilitate breathing. His skin is warm and dry, with no signs of cyanosis or clubbing. He is alert and oriented, but appears fatigued. There is",
+      "Vital signs are as follows: temperature 39.0°C (102.2°F), heart rate 110 bpm, blood pressure 130/80 mmHg, respiratory rate 22 breaths per minute, and oxygen saturation 93% on room air. The patient is tachypneic and",
+      "Tachypnea noted with a respiratory rate of 22 breaths per minute. Patient is using accessory muscles of respiration and appears to be in mild respiratory distress.",
+      "Bilateral crackles heard at the lung bases on auscultation. Decreased breath sounds in the lower lobes bilaterally.",
+      "Cyanosis noted around the nail",
+      "Tachycardia noted with a heart rate of 110 beats per minute.",
+      "No jugular venous distension observed.",
+      "No peripheral edema noted."
+    ]
+  },
+  "photo": "p15",
+  "session": {
+    "avatar_id": "acudx-p15-da212bf4-bdc68a5677",
+    "prepare_ms": 59489.4,
+    "worker": {
+      "infer_fps": null,
+      "sessions": 0,
+      "max_sessions": 2,
+      "gpu": {
+        "cuda": true,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "total_mb": 40441,
+        "free_mb": 9066,
+        "process_reserved_mb": 2774,
+        "process_allocated_mb": 2028
+      },
+      "domain": "150-136-92-243.sslip.io",
+      "max_calls": 2,
+      "active_calls": 1
+    },
+    "appearance": {
+      "thread_id": "65f0871d-68ac-4d20-8b62-9719d842b488",
+      "source": "generated",
+      "reason": null,
+      "gen_mode": "offload",
+      "gen_worker": "150-136-92-243.sslip.io",
+      "live": {
+        "key": "bdc68a5677",
+        "phase": "stable",
+        "signs": {
+          "fever_flush": 2,
+          "diaphoresis": 1,
+          "resp_distress": 1,
+          "accessory_muscles": 1
+        },
+        "cough": true
+      },
+      "current_key": "bdc68a5677",
+      "variants": [
+        {
+          "name": "presenting",
+          "key": "bdc68a5677",
+          "avatar_id": "acudx-p15-da212bf4-bdc68a5677",
+          "status": "ready",
+          "prompt": "Edit this photo of a hospital patient (45 years old, male). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; looks short of breath, nostrils slightly flared, neck a little tense; visible neck muscle strain with each breath. Photorealistic, natural skin texture, no text.",
+          "has_image": true,
+          "signs": {
+            "fever_flush": 2,
+            "diaphoresis": 1,
+            "resp_distress": 1,
+            "accessory_muscles": 1
+          },
+          "gen_ms": 15808.8,
+          "prepare_ms": 43175.5,
+          "error": null,
+          "mode": "offload"
+        },
+        {
+          "name": "worse",
+          "key": "5a3a383c8c",
+          "avatar_id": "acudx-p15-da212bf4-5a3a383c8c",
+          "status": "generating",
+          "prompt": "Edit this photo of a hospital patient (45 years old, male). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; struggling to breathe, nostrils flared, neck muscles straining; neck muscles standing out with each breath. Photorealistic, natural skin texture, no text.",
+          "has_image": false,
+          "signs": {
+            "fever_flush": 2,
+            "diaphoresis": 1,
+            "resp_distress": 2,
+            "accessory_muscles": 2
+          },
+          "gen_ms": null,
+          "prepare_ms": null,
+          "error": null,
+          "mode": null
+        },
+        {
+          "name": "critical",
+          "key": "5669f6074a",
+          "avatar_id": "acudx-p15-da212bf4-5669f6074a",
+          "status": "pending",
+          "prompt": null,
+          "has_image": false,
+          "signs": {
+            "fever_flush": 2,
+            "diaphoresis": 1,
+            "resp_distress": 2,
+            "accessory_muscles": 2,
+            "drowsy": 1
+          },
+          "gen_ms": null,
+          "prepare_ms": null,
+          "error": null,
+          "mode": null
+        },
+        {
+          "name": "improved",
+          "key": "ba6a3e82fc",
+          "avatar_id": "acudx-p15-da212bf4-ba6a3e82fc",
+          "status": "pending",
+          "prompt": null,
+          "has_image": false,
+          "signs": {
+            "fever_flush": 1,
+            "diaphoresis": 1
+          },
+          "gen_ms": null,
+          "prepare_ms": null,
+          "error": null,
+          "mode": null
+        }
+      ],
+      "switches": []
+    }
+  },
+  "connect": {
+    "first_frame_ms": 9589,
+    "w": 720,
+    "h": 720,
+    "answer_ms": 654.9
+  },
+  "presenting": {
+    "frame": "01-presenting-idle.png",
+    "appearance": {
+      "session_id": "A-5izXkdllqSEfpzhWaVQMnW",
+      "thread_id": "65f0871d-68ac-4d20-8b62-9719d842b488",
+      "avatar_id": "acudx-p15-da212bf4-bdc68a5677",
+      "appearance": {
+        "thread_id": "65f0871d-68ac-4d20-8b62-9719d842b488",
+        "source": "generated",
+        "reason": null,
+        "gen_mode": "offload",
+        "gen_worker": "150-136-92-243.sslip.io",
+        "live": {
+          "key": "bdc68a5677",
+          "phase": "stable",
+          "signs": {
+            "fever_flush": 2,
+            "diaphoresis": 1,
+            "resp_distress": 1,
+            "accessory_muscles": 1
+          },
+          "cough": true
+        },
+        "current_key": "bdc68a5677",
+        "variants": [
+          {
+            "name": "presenting",
+            "key": "bdc68a5677",
+            "avatar_id": "acudx-p15-da212bf4-bdc68a5677",
+            "status": "ready",
+            "prompt": "Edit this photo of a hospital patient (45 years old, male). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; looks short of breath, nostrils slightly flared, neck a little tense; visible neck muscle strain with each breath. Photorealistic, natural skin texture, no text.",
+            "has_image": true,
+            "signs": {
+              "fever_flush": 2,
+              "diaphoresis": 1,
+              "resp_distress": 1,
+              "accessory_muscles": 1
+            },
+            "gen_ms": 15808.8,
+            "prepare_ms": 43175.5,
+            "error": null,
+            "mode": "offload"
+          },
+          {
+            "name": "worse",
+            "key": "5a3a383c8c",
+            "avatar_id": "acudx-p15-da212bf4-5a3a383c8c",
+            "status": "failed",
+            "prompt": "Edit this photo of a hospital patient (45 years old, male). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; struggling to breathe, nostrils flared, neck muscles straining; neck muscles standing out with each breath. Photorealistic, natural skin texture, no text.",
+            "has_image": false,
+            "signs": {
+              "fever_flush": 2,
+              "diaphoresis": 1,
+              "resp_distress": 2,
+              "accessory_muscles": 2
+            },
+            "gen_ms": null,
+            "prepare_ms": null,
+            "error": "oom",
+            "mode": null
+          },
+          {
+            "name": "critical",
+            "key": "5669f6074a",
+            "avatar_id": "acudx-p15-da212bf4-5669f6074a",
+            "status": "pending",
+            "prompt": null,
+            "has_image": false,
+            "signs": {
+              "fever_flush": 2,
+              "diaphoresis": 1,
+              "resp_distress": 2,
+              "accessory_muscles": 2,
+              "drowsy": 1
+            },
+            "gen_ms": null,
+            "prepare_ms": null,
+            "error": null,
+            "mode": null
+          },
+          {
+            "name": "improved",
+            "key": "ba6a3e82fc",
+            "avatar_id": "acudx-p15-da212bf4-ba6a3e82fc",
+            "status": "pending",
+            "prompt": null,
+            "has_image": false,
+            "signs": {
+              "fever_flush": 1,
+              "diaphoresis": 1
+            },
+            "gen_ms": null,
+            "prepare_ms": null,
+            "error": null,
+            "mode": null
+          }
+        ],
+        "switches": []
+      },
+      "voice": {
+        "speed": 0.92,
+        "silent": false,
+        "persona_lines": [
+          "you are short of breath: speak in short phrases of a few words, with '...' where you stop for breath",
+          "you feel hot, shivery and weak",
+          "you cough now and then: write it as (cough)"
+        ]
+      }
+    },
+    "turn": {
+      "question": "How are you feeling right now?",
+      "utterance": "I feel... hot and shivery... (cough) ...weak... can't catch my breath... (cough) ...fever for three days... getting worse... (cough) ...please help me...",
+      "speak": {
+        "provider": "gpu-worker",
+        "adapter": "openai_compatible",
+        "model": "chatterbox-multilingual",
+        "voice_id": "acudx_en_male",
+        "source": "gpu_worker",
+        "transport": "stream",
+        "tts_ms": 48.4,
+        "first_chunk_ms": 2039,
+        "stream_ms": 9869.9,
+        "queued_ms": 0,
+        "audio_bytes": 426240,
+        "audio_duration_ms": 8880,
+        "sample_rate": 24000,
+        "stream_stall_ms": 741,
+        "preroll": {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 40.5
+        },
+        "link_connect_ms": 700.2,
+        "runner": {
+          "frames": 444,
+          "first_frame_ms": 1981.2,
+          "elapsed_ms": 9776.2
+        },
+        "voice": {
+          "speed": 0.92
+        },
+        "spoken_text": "I feel... hot and shivery... ahem, ...weak... can't catch my breath... ahem, ...fever for three days... getting worse... ahem, ...please help me...",
+        "look": {
+          "key": "bdc68a5677",
+          "phase": "stable",
+          "signs": {
+            "fever_flush": 2,
+            "diaphoresis": 1,
+            "resp_distress": 1,
+            "accessory_muscles": 1
+          },
+          "cough": true
+        }
+      },
+      "frames": [
+        "02-presenting-speaking.png",
+        "03-presenting-speaking.png",
+        "04-presenting-speaking.png"
+      ],
+      "routed_as": "in-scope"
+    }
+  },
+  "worse": {
+    "action": {
+      "kind": "elapsed",
+      "ref": "",
+      "elapsed_ms": 14400000,
+      "locale": "en"
+    },
+    "phase": "deteriorating",
+    "severity": 0.7,
+    "vitals": {
+      "hr": 125,
+      "systolic": 108,
+      "diastolic": 64,
+      "rr": 32,
+      "spo2": 86,
+      "tempC": 39
+    },
+    "bedside": {
+      "map": 79,
+      "gcs": 13,
+      "avpu": "C",
+      "cbg": 6,
+      "k": 4.2,
+      "lactate": 1.4,
+      "crt_s": 2,
+      "mottling": 0,
+      "skin": "warm",
+      "urine_ml_h": 50,
+      "pain": 3,
+      "airway": "patent",
+      "rhythm": "sinus tachycardia",
+      "pulse": true,
+      "fluid_in_ml": 0,
+      "o2": false,
+      "news2": 13
+    },
+    "affect": {
+      "pain": 3,
+      "anxiety": 0.73,
+      "dyspnea": 1,
+      "consciousness": "drowsy",
+      "mood_en": "drowsy and confused, slow to answer",
+      "mood_tr": "uykulu ve konfüze, yavaş yanıt veriyor"
+    },
+    "switch": null,
+    "switch_after_step_ms": 154502,
+    "frames": [
+      "05-worse-crossfade.png",
+      "06-worse-crossfade.png",
+      "07-worse-crossfade.png",
+      "08-worse-crossfade.png",
+      "09-worse-crossfade.png",
+      "10-worse-crossfade.png",
+      "11-worse-crossfade.png",
+      "12-worse-crossfade.png",
+      "13-worse-after.png"
+    ],
+    "turn": {
+      "question": "Tell me how you feel now.",
+      "utterance": "I feel... hot and shivery... (cough)... weak... and tired. My chest hurts a little... and I can't catch my breath... (cough).",
+      "speak": {
+        "provider": "gpu-worker",
+        "adapter": "openai_compatible",
+        "model": "chatterbox-multilingual",
+        "voice_id": "acudx_en_male",
+        "source": "gpu_worker",
+        "transport": "stream",
+        "tts_ms": 496.6,
+        "first_chunk_ms": 2623.8,
+        "stream_ms": 8641.8,
+        "queued_ms": 0,
+        "audio_bytes": 392640,
+        "audio_duration_ms": 8180,
+        "sample_rate": 24000,
+        "stream_stall_ms": 1082.3,
+        "preroll": {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 40.5
+        },
+        "link_connect_ms": 700.2,
+        "runner": {
+          "frames": 409,
+          "first_frame_ms": 2124.6,
+          "elapsed_ms": 8095.5
+        },
+        "voice": {
+          "speed": 0.85
+        },
+        "spoken_text": "I feel... hot and shivery... ahem,... weak... and tired. My chest hurts a little... and I can't catch my breath... ahem,.",
+        "look": {
+          "key": "5669f6074a",
+          "phase": "deteriorating",
+          "signs": {
+            "fever_flush": 2,
+            "diaphoresis": 1,
+            "resp_distress": 2,
+            "accessory_muscles": 2,
+            "drowsy": 1
+          },
+          "cough": true
+        }
+      },
+      "frames": [
+        "14-worse-speaking.png",
+        "15-worse-speaking.png",
+        "16-worse-speaking.png"
+      ],
+      "routed_as": "in-scope"
+    }
+  },
+  "treated": null,
+  "final_appearance": {
+    "session_id": "A-5izXkdllqSEfpzhWaVQMnW",
+    "thread_id": "65f0871d-68ac-4d20-8b62-9719d842b488",
+    "avatar_id": "acudx-p15-da212bf4-bdc68a5677",
+    "appearance": {
+      "thread_id": "65f0871d-68ac-4d20-8b62-9719d842b488",
+      "source": "generated",
+      "reason": null,
+      "gen_mode": "offload",
+      "gen_worker": "150-136-92-243.sslip.io",
+      "live": {
+        "key": "5669f6074a",
+        "phase": "deteriorating",
+        "signs": {
+          "fever_flush": 2,
+          "diaphoresis": 1,
+          "resp_distress": 2,
+          "accessory_muscles": 2,
+          "drowsy": 1
+        },
+        "cough": true
+      },
+      "current_key": "bdc68a5677",
+      "variants": [
+        {
+          "name": "presenting",
+          "key": "bdc68a5677",
+          "avatar_id": "acudx-p15-da212bf4-bdc68a5677",
+          "status": "ready",
+          "prompt": "Edit this photo of a hospital patient (45 years old, male). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; looks short of breath, nostrils slightly flared, neck a little tense; visible neck muscle strain with each breath. Photorealistic, natural skin texture, no text.",
+          "has_image": true,
+          "signs": {
+            "fever_flush": 2,
+            "diaphoresis": 1,
+            "resp_distress": 1,
+            "accessory_muscles": 1
+          },
+          "gen_ms": 15808.8,
+          "prepare_ms": 43175.5,
+          "error": null,
+          "mode": "offload"
+        },
+        {
+          "name": "worse",
+          "key": "5a3a383c8c",
+          "avatar_id": "acudx-p15-da212bf4-5a3a383c8c",
+          "status": "failed",
+          "prompt": "Edit this photo of a hospital patient (45 years old, male). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; struggling to breathe, nostrils flared, neck muscles straining; neck muscles standing out with each breath. Photorealistic, natural skin texture, no text.",
+          "has_image": false,
+          "signs": {
+            "fever_flush": 2,
+            "diaphoresis": 1,
+            "resp_distress": 2,
+            "accessory_muscles": 2
+          },
+          "gen_ms": null,
+          "prepare_ms": null,
+          "error": "oom",
+          "mode": null
+        },
+        {
+          "name": "critical",
+          "key": "5669f6074a",
+          "avatar_id": "acudx-p15-da212bf4-5669f6074a",
+          "status": "failed",
+          "prompt": "Edit this photo of a hospital patient (45 years old, male). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; struggling to breathe, nostrils flared, neck muscles straining; neck muscles standing out with each breath; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
+          "has_image": false,
+          "signs": {
+            "fever_flush": 2,
+            "diaphoresis": 1,
+            "resp_distress": 2,
+            "accessory_muscles": 2,
+            "drowsy": 1
+          },
+          "gen_ms": null,
+          "prepare_ms": null,
+          "error": "oom",
+          "mode": null
+        },
+        {
+          "name": "improved",
+          "key": "ba6a3e82fc",
+          "avatar_id": "acudx-p15-da212bf4-ba6a3e82fc",
+          "status": "failed",
+          "prompt": "Edit this photo of a hospital patient (45 years old, male). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: the complexion very slightly pinker and warmer than in the original, subtle and even (no patches, no rash, no spots); a light sheen of sweat on the forehead and upper lip. Photorealistic, natural skin texture, no text.",
+          "has_image": false,
+          "signs": {
+            "fever_flush": 1,
+            "diaphoresis": 1
+          },
+          "gen_ms": null,
+          "prepare_ms": null,
+          "error": "oom",
+          "mode": null
+        }
+      ],
+      "switches": []
+    },
+    "voice": {
+      "speed": 0.85,
+      "silent": false,
+      "persona_lines": [
+        "you are short of breath: speak in short phrases of a few words, with '...' where you stop for breath",
+        "you are drowsy: speak slowly and quietly, only a few words",
+        "you feel hot, shivery and weak",
+        "you cough now and then: write it as (cough)"
+      ]
+    }
+  },
+  "end": {
+    "ok": true,
+    "metrics": {
+      "appearance_ms": 59410.1,
+      "prepare_ms": 59489.4,
+      "answer_ms": 654.9,
+      "preroll": {
+        "ms": 800,
+        "frames": 40,
+        "sent_ms": 40.5
+      },
+      "turns": 2,
+      "syncs": [
+        {
+          "at": 1792575229.0666583,
+          "switched": false,
+          "why": "unchanged",
+          "to": null,
+          "live_key": null,
+          "exact": null,
+          "phase": null
+        }
+      ]
+    }
+  },
+  "log": [
+    "2026-10-21T09:32:25.320Z case 65f0871d-68ac-4d20-8b62-9719d842b488 Community-acquired pneumonia age 45 male in 72 ms",
+    "2026-10-21T09:33:25.412Z session A-5izXkdllqSEfpzhWaVQMnW avatar acudx-p15-da212bf4-bdc68a5677 in 60092 ms; appearance generated",
+    "2026-10-21T09:33:35.192Z connected {\"first_frame_ms\":9589,\"w\":720,\"h\":720,\"answer_ms\":654.9}",
+    "2026-10-21T09:33:38.619Z patient (presenting): I feel... hot and shivery... (cough) ...weak... can't catch my breath... (cough) ...fever for three days... getting worse... (cough) ...please help me...",
+    "2026-10-21T09:33:48.501Z speak presenting: {\"first_chunk_ms\":2039,\"voice\":{\"speed\":0.92},\"spoken\":\"I feel... hot and shivery... ahem, ...weak... can't catch my breath... ahem, ...fever for three days... getting worse... ahem, ...please help me...\"}",
+    "2026-10-21T09:33:49.076Z director worse: phase deteriorating vitals {\"hr\":125,\"systolic\":108,\"diastolic\":64,\"rr\":32,\"spo2\":86,\"tempC\":39}",
+    "2026-10-21T09:36:26.666Z switch worse after 154502 ms: null",
+    "2026-10-21T09:36:28.969Z patient (worse): I feel... hot and shivery... (cough)... weak... and tired. My chest hurts a little... and I can't catch my breath... (cough).",
+    "2026-10-21T09:36:37.624Z speak worse: {\"first_chunk_ms\":2623.8,\"voice\":{\"speed\":0.85},\"spoken\":\"I feel... hot and shivery... ahem,... weak... and tired. My chest hurts a little... and I can't catch my breath... ahem,.\"}",
+    "2026-10-21T09:36:38.125Z no treatment table in the spec yet; the treatment step is skipped"
+  ]
+}

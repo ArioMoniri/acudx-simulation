@@ -110,3 +110,16 @@ describe("voiceApi avatar routes", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ session_id: "sess-123456", sdp: "v=0 offer", type: "offer" });
   });
 });
+
+describe("avatarPrepare", () => {
+  it("asks the gateway to make the case's pictures before any call, signed in", async () => {
+    const fetchFn = vi.fn(async () => new Response(JSON.stringify({ state: "preparing" }), { status: 202 }));
+    const api = createVoiceApi({ baseUrl: "/api", fetchFn: fetchFn as unknown as typeof fetch, identity: async () => ({ "X-User-Id": "u1" }) });
+    const r = await api.avatarPrepare("thr-1", "p04");
+    expect(r.ok).toBe(true);
+    const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("/api/v1/voice/avatar/prepare");
+    expect(JSON.parse(String(init.body))).toEqual({ thread_id: "thr-1", photo_id: "p04" });
+    expect((init.headers as Record<string, string>)["X-User-Id"]).toBe("u1");
+  });
+});

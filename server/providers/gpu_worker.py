@@ -574,6 +574,8 @@ class WorkerManager:
         def done(t: asyncio.Task[WorkerRecord]) -> None:
             if not t.cancelled() and t.exception() is not None:
                 log.warning("gpu pool: scale-up launch failed: %s", t.exception())
+                if self.last_scale_up is not None:   # shown in /admin/gpu/status capacity.last_scale_up
+                    self.last_scale_up["error"] = str(t.exception())[:300]
 
         task.add_done_callback(done)
         return reason

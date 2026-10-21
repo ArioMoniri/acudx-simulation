@@ -294,7 +294,7 @@ def test_multi_gpu_hosts_give_the_runner_and_the_image_edits_their_own_cards():
     ci = _cloud_init()
     assert 'device_ids: ["${AVATAR_GPU:-0}"]' in ci and 'device_ids: ["${IMAGEGEN_GPU:-0}"]' in ci
     assert "AVATAR_DEDICATED_GPU=1" in ci and "AVATAR_MAX_SESSIONS=4" in ci
-    assert "--gpu-memory-utilization ${VLLM_GPU_UTIL:-0.60}" in ci and "VLLM_GPU_UTIL=0.50" in ci
+    assert "--gpu-memory-utilization ${VLLM_GPU_UTIL:-0.60}" in ci and "VLLM_GPU_UTIL=0.45" in ci
     assert "handle_path /imagegen/*" in ci and "reverse_proxy imagegen:8020" in ci
 
 
@@ -308,6 +308,9 @@ def test_image_edit_server_is_apache_licensed_and_pinned():
     edit = ci[ci.index("def _edit("):ci.index("def _size(")]
     assert "torch.cuda.empty_cache()" in edit and "finally:" in edit
     assert "torch.cuda.OutOfMemoryError" in ci and "expandable_segments:True" in ci
+    assert "def _step_down()" in ci and "enable_sequential_cpu_offload()" in ci
+    prep = ci[ci.index("def prepare_avatar("):ci.index("class _WarmingFeatQueue")]
+    assert "torch.cuda.empty_cache()" in prep
 
 
 def test_runner_switches_a_live_call_with_a_crossfade():

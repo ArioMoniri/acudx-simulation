@@ -115,7 +115,7 @@ class _Rt:
 
 def _setup(tmp_path, *, owner="learner-1", imagegen=True):
     runner = SyncRunner(imagegen=imagegen)
-    app, store = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True))
+    app, store = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_appearance_wait_s=3)
     row = {"source": "model", "owner": owner, "spec": _spec(), "director": _director()}
     app.state.orchestration = _Rt({THREAD: row})
     return app, runner, row
@@ -190,7 +190,7 @@ def test_a_picture_that_becomes_ready_after_the_step_is_switched_to(tmp_path, mo
 
     monkeypatch.setattr(state_sync, "GEN_RETRY_S", 0.0)
     runner = SyncRunner(hold=True, fail_next=1)
-    app, store = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True))
+    app, store = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_appearance_wait_s=3)
     row = {"source": "model", "owner": "learner-1", "spec": _spec(), "director": _director()}
     app.state.orchestration = _Rt({THREAD: row})
     with TestClient(app) as c:     # one event loop for the whole call: the ladder runs in the background
@@ -213,6 +213,25 @@ def _ladder_case(c, app, runner, row):
     assert st["appearance"]["switches"][0]["reason"] in ("ladder_ready", "director:generated")
     assert st["appearance"]["switches"][0]["to"] == ap.look_from_case(_spec(), worse).key or \
         st["appearance"]["switches"][-1]["to"] == ap.look_from_case(_spec(), worse).key
+
+
+def test_pictures_made_at_case_start_are_reused_by_the_call(tmp_path):
+    runner = SyncRunner()
+    app, store = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_appearance_wait_s=3)
+    app.state.orchestration = _Rt({THREAD: {"source": "model", "owner": "learner-1", "spec": _spec(),
+                                            "director": _director()}})
+    with TestClient(app) as c:
+        r = c.post("/v1/voice/avatar/prepare", json={"thread_id": THREAD, "photo_id": "p04"}, headers=USER)
+        assert r.status_code == 202 and r.json()["state"] == "preparing"
+        assert _wait(lambda: c.post("/v1/voice/avatar/prepare", json={"thread_id": THREAD, "photo_id": "p04"},
+                                    headers=USER).json()["state"] == "prepared")
+        edits = len(runner.edits)
+        assert edits >= 4
+        s = c.post("/v1/voice/avatar/session", json={**SESSION, "thread_id": THREAD}, headers=USER).json()
+        look = ap.look_from_case(_spec(), _director())
+        assert s["avatar_id"].endswith(look.key) and len(runner.edits) == edits     # nothing made twice
+        assert c.post("/v1/voice/avatar/prepare", json={"thread_id": THREAD, "photo_id": "p04"},
+                      headers={"X-User-Id": "learner-2"}).status_code == 404
 
 
 def test_a_thread_the_caller_may_not_read_gives_the_plain_portrait(tmp_path):

@@ -50,6 +50,8 @@ import {
 import { layerStatuses, type LayerStatus } from "@/lib/caseLayers";
 import type { CaseGenerationMeta } from "@/lib/liveEncounter";
 import { setPatientTurnThread, type BackendResult } from "@/lib/backend";
+import { voiceApi } from "@/lib/voiceApi";
+import { resolvePatientVisual } from "@/domain/patientIdentity";
 import {
   applyThreadDirector,
   getEncounterSnapshot,
@@ -62,6 +64,21 @@ import {
   startGeneratedEncounter,
   subscribeEncounter,
 } from "@/state/encounterStore";
+
+/**
+ * The live patient video looks like the patient in this case (docs/architecture/18 section 6.6): the
+ * gateway makes the pictures from the server's case thread as soon as the case opens, so the call does
+ * not wait for them. Best effort: without a GPU worker or image edits the call keeps the portrait.
+ */
+function prepareAppearance(threadId: string | null, caseInstance: Parameters<typeof resolvePatientVisual>[0]): void {
+  if (!threadId) return;
+  try {
+    const { photoId } = resolvePatientVisual(caseInstance);
+    void voiceApi.avatarPrepare(threadId, photoId).catch(() => undefined);
+  } catch {
+    /* appearance is a refinement; the encounter never depends on it */
+  }
+}
 
 /** Provenance record of a model case, from its meta block. */
 export function generationFromMeta(meta: CaseGenV2Meta, threadId: string | null): CaseGenerationMeta {
@@ -301,6 +318,7 @@ export async function requestCase(
     threadId = spec.meta.thread_id ?? tid;
     startGeneratedEncounter(adapted.case, generationFromMeta(spec.meta, threadId), layersOf(spec));
     setPatientTurnThread(threadId);
+    prepareAppearance(threadId, adapted.case);
     session = openSession(threadId, opts.signal);
     opts.onPlayable?.({ threadId: threadId!, spec });
   };

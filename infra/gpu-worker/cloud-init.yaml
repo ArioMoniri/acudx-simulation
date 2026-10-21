@@ -1639,6 +1639,11 @@ write_files:
               _load(avatar_id)
           ms = round((time.monotonic() - started) * 1000.0, 1)
           STATE["prepare_ms"][avatar_id] = ms
+          # Hand the preparation's VAE and face-parser buffers back: on a shared 40 GB card the image edit
+          # server needs them for the next picture (live 2026-10-21: every edit after the first ran out
+          # of memory while a call was up).
+          if torch.cuda.is_available():
+              torch.cuda.empty_cache()
           return {"avatar_id": avatar_id, "width": int(base.shape[1]), "height": int(base.shape[0]),
                   "face_box": [int(v) for v in coords], "idle_frames": n, "extended_px": padded,
                   "extension": "mirrored+blurred" if padded else "none", "prepare_ms": ms}
@@ -2285,6 +2290,30 @@ write_files:
           return out.images[0]
 
 
+      def _step_down() -> bool:
+          """Move the pipeline to the next lighter placement after an out-of-memory."""
+          order = ["gpu", "offload", "sequential"]
+          mode = STATE.get("mode")
+          if mode not in order or mode == "sequential":
+              return False
+          with LOCK:
+              try:
+                  PIPE.remove_all_hooks()
+                  PIPE.to("cpu")
+                  torch.cuda.empty_cache()
+                  if mode == "gpu":
+                      PIPE.enable_model_cpu_offload()
+                      STATE["mode"] = "offload"
+                  else:
+                      PIPE.enable_sequential_cpu_offload()
+                      STATE["mode"] = "sequential"
+              except Exception as exc:  # noqa: BLE001 - reported; the old placement stays
+                  log.warning("imagegen step-down failed: %s", type(exc).__name__)
+                  return False
+          log.info("imagegen stepped down from %s to %s", mode, STATE["mode"])
+          return True
+
+
       def _size(w: int, h: int) -> tuple[int, int]:
           s = min(1.0, MAX_SIDE / max(w, h))
           return max(256, int(w * s) // 16 * 16), max(256, int(h * s) // 16 * 16)
@@ -2320,11 +2349,13 @@ write_files:
               out = await asyncio.get_running_loop().run_in_executor(None, _edit, src.resize((w, h), Image.LANCZOS),
                                                                      prompt, seed, steps, w, h)
           except torch.cuda.OutOfMemoryError:
-              # The card is shared with live calls (a runner preparing a picture takes a few GB for a
-              # while); give the memory back and let the gateway retry.
+              # The card is shared with live calls; give the memory back and step down one mode
+              # (gpu -> offload -> sequential) so the next try fits, then let the gateway retry.
               torch.cuda.empty_cache()
               STATE["oom"] = STATE.get("oom", 0) + 1
-              return web.json_response({"error": "oom", "free_mb": _free_mb()}, status=503)
+              stepped = await asyncio.get_running_loop().run_in_executor(None, _step_down)
+              return web.json_response({"error": "oom", "free_mb": _free_mb(), "mode": STATE["mode"],
+                                        "stepped_down": stepped}, status=503)
           except Exception as exc:  # noqa: BLE001 - reported to the gateway, which retries 5xx
               log.exception("edit failed")
               return web.json_response({"error": "edit_failed", "detail": type(exc).__name__}, status=500)
@@ -2527,12 +2558,13 @@ runcmd:
       else
         printf 'GPU_COUNT=1\nAVATAR_GPU=0\nAVATAR_DEDICATED_GPU=0\nIMAGEGEN_GPU=0\n' >> /opt/acudx/.env
       fi
-      # A card under 70 GB shares vLLM with voice, the runner and the image edits: vLLM takes 0.50 of
-      # it (20 GB on 40 GB: Qwen3-14B-AWQ weights about 10 GB plus KV cache), larger cards keep 0.60.
+      # A card under 70 GB shares vLLM with voice, the runner and the image edits: vLLM takes 0.45 of
+      # it (18 GB on 40 GB: Qwen3-14B-AWQ weights about 10 GB, KV cache for about 37k tokens at 16k
+      # max length), larger cards keep 0.60. At 0.50 a live call still left too little for the edits.
       # Live 2026-10-21 on an A100 40 GB at 0.55: 7.2 GB stayed free after the runner, below the 9 GB the
       # image edit server needs for model offload, so it ran layer by layer at 154 s per picture.
       total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
-      if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then echo 'VLLM_GPU_UTIL=0.50' >> /opt/acudx/.env; fi
+      if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then echo 'VLLM_GPU_UTIL=0.45' >> /opt/acudx/.env; fi
     fi
   - nohup /opt/acudx/avatar.sh >/var/log/acudx-avatar.log 2>&1 &
   - nohup /opt/acudx/imagegen.sh >/var/log/acudx-imagegen.log 2>&1 &

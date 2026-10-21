@@ -97,6 +97,22 @@ class OfferBody(SessionRef):
     type: Literal["offer"] = "offer"
 
 
+class PrepareBody(BaseModel):
+    thread_id: str = Field(min_length=1, max_length=120)
+    photo_id: str = Field(min_length=1, max_length=32)
+
+
+MAX_LOOKS = 64
+
+
+def _looks(request: Request) -> dict[str, Any]:
+    looks = getattr(request.app.state, "avatar_looks", None)
+    if looks is None:
+        looks = {}
+        request.app.state.avatar_looks = looks
+    return looks
+
+
 class SpeakBody(SessionRef):
     text: str = Field(min_length=1, max_length=MAX_SPEAK_CHARS)
 
@@ -216,7 +232,10 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
     # The ready worker with the most free call slots. Check the limit and take the slot in one step
     # (no await between the pick and the store), so two learners starting at once cannot both pass the
     # check during the slow portrait preparation.
-    worker, h, cap = await mt.pick_worker(svc.client, wm, gateway_limit=_max_calls(svc), pending=store.pending_on)
+    look_key = f"{body.thread_id}:{body.photo_id}"
+    prepared = _looks(request).get(look_key) if body.thread_id else None
+    worker, h, cap = await mt.pick_worker(svc.client, wm, gateway_limit=_max_calls(svc), pending=store.pending_on,
+                                          prefer=prepared.worker_origin if prepared is not None else None)
     if worker is None:
         if cap:
             launching = await wm.maybe_scale_up() if hasattr(wm, "maybe_scale_up") else None
@@ -237,10 +256,14 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
     try:
         if view is not None:
             wait_s = float(getattr(svc.settings, "avatar_appearance_wait_s", 45.0) or 0.0)
-            gen = await sync_mod.pick_gen_worker(svc.client, wm, worker)
+            reuse = (prepared if prepared is not None and prepared.worker_origin == worker.origin
+                     and prepared.worker_session is None else None)
+            gen = await sync_mod.pick_gen_worker(svc.client, wm, worker) if reuse is None else None
             s.appearance, s.avatar_id = await sync_mod.start(
                 svc.client, worker, thread_id=str(body.thread_id), photo_id=str(body.photo_id), portrait=portrait,
-                spec=view[0], director=view[1], wait_s=wait_s, gen_worker=gen)
+                spec=view[0], director=view[1], wait_s=wait_s, gen_worker=gen, existing=reuse)
+            s.appearance.worker_origin = worker.origin
+            s.metrics["appearance_reused"] = reuse is not None
             s.metrics["appearance_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
         if s.avatar_id == mt.avatar_id_for(body.photo_id or ""):
             prep = await mt.ensure_avatar(svc.client, worker, s.avatar_id, portrait)
@@ -578,6 +601,52 @@ async def notify_director(app: Any, thread_id: str) -> int:
         except Exception:  # noqa: BLE001 - a failed sync never breaks the Director step
             log.exception("avatar state sync for %s failed", s.id[:8])
     return len(calls)
+
+
+@router.post("/prepare")
+async def prepare(request: Request, body: PrepareBody, user: Principal = Depends(current_user)):
+    """At case start: make the patient's pictures (presenting, worse, critical, improved...) from the
+    case thread on a worker before any call, so the call opens on the patient as they are now. A call
+    started later on the same worker reuses them."""
+    svc = _svc(request)
+    view = await _thread_view(request, body.thread_id, user)
+    if view is None:
+        raise HTTPException(status_code=404, detail={"error": "thread_not_found"})
+    photo = mt.portrait_path(body.photo_id)
+    if photo is None:
+        raise HTTPException(status_code=400, detail={"error": "unknown_photo_id", "photo_id": body.photo_id})
+    wm = svc.resolver.worker_manager
+    eps = (wm.endpoints() if hasattr(wm, "endpoints") else [wm.llm_endpoint()]) if wm is not None else []
+    eps = [e for e in eps if e]
+    if not eps:
+        pending = await _start_worker_in_background(svc)
+        return JSONResponse(status_code=202, content={"state": "worker_starting" if pending else "no_worker",
+                                                      "pending_launch": pending})
+    looks = _looks(request)
+    key = f"{body.thread_id}:{body.photo_id}"
+    a = looks.get(key)
+    origins = {mt.worker_from_endpoint(e).origin for e in eps}  # type: ignore[union-attr]
+    if a is not None and a.worker_origin in origins:
+        return {"state": "prepared" if a.first_done is not None and a.first_done.is_set() else "preparing",
+                "appearance": a.public()}
+    worker, _h, _cap = await mt.pick_worker(svc.client, wm, gateway_limit=_max_calls(svc),
+                                            pending=_store(request).pending_on)
+    worker = worker or mt.worker_from_endpoint(eps[0])
+    assert worker is not None
+    gen = await sync_mod.pick_gen_worker(svc.client, wm, worker)
+    a = sync_mod.new_appearance(thread_id=body.thread_id, photo_id=body.photo_id, spec=view[0], director=view[1],
+                                worker=worker, gen_worker=gen)
+    a.worker_origin = worker.origin
+    ig = await mt.imagegen_health(svc.client, a.gen_worker)
+    a.gen_mode = ig.get("mode")
+    if not ig.get("ok"):
+        return JSONResponse(status_code=503, content={"state": "no_image_edits",
+                                                      "reason": f"image edit server: {ig.get('reason') or 'not ready'}"})
+    a.first_done = sync_mod.run_ladder(svc.client, worker, a, photo.read_bytes())
+    if len(looks) >= MAX_LOOKS:
+        looks.pop(next(iter(looks)))
+    looks[key] = a
+    return JSONResponse(status_code=202, content={"state": "preparing", "appearance": a.public()})
 
 
 @router.get("/appearance")
