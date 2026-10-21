@@ -374,6 +374,15 @@ const INTENT_STEMS: Array<[QuestionIntent, string[]]> = [
   ["ice", ["worried", "concern", "afraid", "expect", "idea", "fear", "think", "endişe", "kaygı", "kork", "bekle", "fikir", "düşün"]],
 ];
 
+/** A symptom's temporal pattern: intermittent, on and off, constant, a pattern (EN + TR). */
+const TIMING_PATTERN_RE =
+  /\b(come|comes|coming)\s+and\s+go(es)?\b|\bon\s+and\s+off\b|\boff\s+and\s+on\b|\bpattern\b|\b(intermittent|constant|continuous|episodic)\b|\bgelip\s+(gid|geç)|\bara\s+ara\b|\baral[ıi]kl[ıi]|\bn[öo]bet\s+n[öo]bet\b|\bs[üu]rekli\s+mi\b|\bseyr/i;
+/** Night as a red flag: night sweats, pain that wakes the patient (EN + TR). */
+const NIGHT_RED_FLAG_RE =
+  /\bnight\s+sweat|\bwak(e|es|ing)\s+(you|him|her)\b|\bgece\s+terle|\bgeceleri?\s+.{0,30}uyan/i;
+/** A clock time that contains "night" ("last night", "dün gece") and only dates the story. */
+const CLOCK_NIGHT_RE = /\b(last|since\s+last)\s+night\b|\btonight\b|\bovernight\b|\b(dün|geçen|bu)\s+gece\w*/gi;
+
 /**
  * Fever history topics (acceptance 2026-10-20 D-12). Each topic belongs to one
  * intent; the case's HistoryItem.topic carries the matching answer.
@@ -419,7 +428,12 @@ export function inferQuestionIntent(text: string, caseInstance: CaseInstance): Q
     return "onset";
   }
 
-  const tokens = tokenize(text);
+  // A temporal pattern ("does the fever come and go", "gelip gidiyor mu") is timing, even
+  // though the symptom it names would otherwise score as an associated symptom.
+  if (TIMING_PATTERN_RE.test(text)) return "timing";
+  // Night sweats and pain that wakes the patient are red flags; "last night" is not.
+  if (NIGHT_RED_FLAG_RE.test(text)) return "red-flags";
+  const tokens = tokenize(text.replace(CLOCK_NIGHT_RE, " since "));
   if (tokens.length === 0) return null;
   const expected = new Set(expectedIntents(caseInstance));
   // A named fever topic the case answers decides the intent (D-12).

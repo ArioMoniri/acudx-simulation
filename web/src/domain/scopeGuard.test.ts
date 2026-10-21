@@ -241,6 +241,26 @@ describe("inferQuestionIntent", () => {
     expect(inferQuestionIntent("When did the fever start?", chestCase)).toBe("onset");
   });
 
+  it("does not read 'last night' as a red flag (night stem), but keeps night sweats and night pain", () => {
+    expect(inferQuestionIntent("Did it start last night?", chestCase)).toBe("onset");
+    expect(inferQuestionIntent("Has the pain been there since last night?", chestCase)).not.toBe("red-flags");
+    expect(inferQuestionIntent("Did you sleep at all overnight?", chestCase)).not.toBe("red-flags");
+    expect(inferQuestionIntent("Dün geceden beri mi ağrınız var?", chestCase)).not.toBe("red-flags");
+    expect(inferQuestionIntent("Any night sweats?", chestCase)).toBe("red-flags");
+    expect(inferQuestionIntent("Does the pain wake you up at night?", chestCase)).toBe("red-flags");
+    expect(inferQuestionIntent("Gece terlemeniz oluyor mu?", chestCase)).toBe("red-flags");
+  });
+
+  it("maps a fever pattern question to timing, not associated symptoms", () => {
+    expect(inferQuestionIntent("Does the fever come and go?", chestCase)).toBe("timing");
+    expect(inferQuestionIntent("Is the fever constant or on and off?", chestCase)).toBe("timing");
+    expect(inferQuestionIntent("What pattern does the fever follow?", chestCase)).toBe("timing");
+    expect(inferQuestionIntent("Ateşiniz gelip gidiyor mu?", chestCase)).toBe("timing");
+    expect(inferQuestionIntent("Ateş ara ara mı çıkıyor?", chestCase)).toBe("timing");
+    // A plain fever question is still an associated symptom.
+    expect(inferQuestionIntent("Have you had a fever?", chestCase)).toBe("associated-symptoms");
+  });
+
   it("returns null when nothing scores", () => {
     expect(inferQuestionIntent("xyz qqq zzz", chestCase)).toBeNull();
     expect(inferQuestionIntent("", chestCase)).toBeNull();
