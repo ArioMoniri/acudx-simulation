@@ -787,6 +787,13 @@ def test_first_clause_is_sent_as_its_own_short_chunk():
     out = p.split_with_first_clause(split, tr, chunk_size=60, strategy="sentence")
     assert out == ["Göğsümün tam ortasında başladı,", "sonra sol koluma yayıldı ve terledim."]
     assert calls == [("sonra sol koluma yayıldı ve terledim.", 60, "sentence")]
+    # Optional second short chunk (runtime tuning), and the switch that restores upstream chunking.
+    p.TUNING["second_max_words"] = 4
+    long = "Dün akşam başladı, sonra gece boyunca hiç geçmedi ve sabah daha da kötüleşti."
+    assert p.split_with_first_clause(split, long) == ["Dün akşam başladı,", "sonra gece boyunca hiç",
+                                                       "geçmedi ve sabah daha da kötüleşti."]
+    p.TUNING["first_clause"] = False
+    assert p.split_with_first_clause(split, long) == [long]
 
 
 class _Conds:
@@ -828,7 +835,9 @@ def test_voice_conditionals_are_prepared_once_per_voice_and_clip(tmp_path):
     assert m.generate("b", "tr", audio_prompt_path=str(tr), exaggeration=0.7) == ("b", str(tr), 0.7)
     assert m.generate("c", "en", audio_prompt_path=str(en)) == ("c", str(en), 0.5)
     assert m.generate("d", "tr", audio_prompt_path=str(tr)) == ("d", str(tr), 0.5)
-    assert prepared == [(str(tr), 0.5), (str(en), 0.5)]   # the 1.3 s step ran once per voice
+    assert prepared == [(str(tr), 0.5), (str(en), 0.5)]   # prepared once per voice
+    rows = list(p.TIMINGS)
+    assert len(rows) == 4 and rows[0]["words"] == 1 and "conds_ms" in rows[0] and rows[0]["lock_wait_ms"] >= 0
     assert p.STATS["conds_hits"] == 2 and len(cache) == 2
     # The cached object is never handed to the model itself (generate may rebuild conds.t3).
     assert all(m.conds is not v for v in cache._conds.values())
@@ -927,3 +936,27 @@ def test_kokoro_runs_two_replicas_behind_least_conn():
     assert "flush_interval -1" in block
     runcmd = "\n".join(_cloud_init()["runcmd"])
     assert "docker compose up -d speaches kokoro kokoro2" in runcmd
+
+
+def test_chatterbox_runs_a_second_replica_on_large_cards_and_only_ready_replicas_get_traffic():
+    """Two Turkish calls at once on one Chatterbox process left 10 s gaps in both voices."""
+    services = _compose()["services"]
+    assert services["chatterbox2"]["image"] == services["chatterbox"]["image"] and "build" not in services["chatterbox2"]
+    assert services["chatterbox2"]["volumes"] == services["chatterbox"]["volumes"]
+    caddy = _written("/Caddyfile")
+    block = caddy[caddy.index("handle_path /tts/* {"):]
+    block = block[:block.index("handle_path /tts-en/*")]
+    assert "reverse_proxy chatterbox:4123 chatterbox2:4123 {" in block and "lb_policy least_conn" in block
+    assert "health_body initialization_state.{1,4}ready" in block
+    runcmd = "\n".join(_cloud_init()["runcmd"])
+    assert "-ge 70000 ]; then docker compose up -d chatterbox2" in runcmd
+    assert runcmd.index("up -d --build chatterbox") < runcmd.index("up -d chatterbox2")
+    seed = _written("/seed-voices.sh")
+    assert "seed chatterbox\n" in seed and "&& seed chatterbox2" in seed
+
+
+def test_chatterbox_patch_reports_timings_and_takes_a_bounded_autocast_switch():
+    patch = _written("/chatterbox-acudx-patch.py")
+    assert 'api.add_api_route("/acudx/tuning", tuning, methods=["POST"])' in patch
+    assert 'if v not in (None, "bf16", "fp16"):' in patch
+    assert 'torch.autocast("cuda"' in patch and "torch.compile(" not in patch

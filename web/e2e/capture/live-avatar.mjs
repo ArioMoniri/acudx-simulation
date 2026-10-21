@@ -67,7 +67,8 @@ await page.evaluate((lng) => localStorage.setItem("acudx-lang", lng), LANG);
 await page.goto(`${BASE}/encounter`);
 const strip = page.getByRole("tablist", { name: UI.nav });
 const useTemplate = page.getByRole("button", { name: UI.template });
-await strip.or(useTemplate).first().waitFor({ timeout: 60_000 });
+// The case is model-authored on open (the worker's vLLM in eager mode takes 1 to 4 minutes).
+await strip.or(useTemplate).first().waitFor({ timeout: Number(process.env.CASE_TIMEOUT_MS ?? 300_000) });
 if (await useTemplate.isVisible()) await useTemplate.click();
 await strip.waitFor();
 await page.getByRole("tab", { name: UI.interview }).first().click();

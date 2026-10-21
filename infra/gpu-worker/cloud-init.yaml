@@ -108,8 +108,19 @@ write_files:
         route {
           @unauth not header Authorization "Bearer {$WORKER_TOKEN}"
           respond @unauth 401
+          # Chatterbox runs at about 0.7 x real time per stream on an H100, so two calls speaking
+          # Turkish at once on one process starve each other (10 s gaps, docs/architecture/18 6.3.8).
+          # A second replica (80 GB cards only, see runcmd) takes the second call. /health answers 200
+          # while the model loads, so a replica counts as healthy only once it reports ready.
           handle_path /tts/* {
-            reverse_proxy chatterbox:4123
+            reverse_proxy chatterbox:4123 chatterbox2:4123 {
+              lb_policy least_conn
+              lb_try_duration 2s
+              health_uri /health
+              health_body initialization_state.{1,4}ready
+              health_interval 10s
+              flush_interval -1
+            }
           }
           # Two Kokoro replicas: one Kokoro FastAPI process synthesises one request at a time, so a
           # second live call waited up to 2.7 s for its first chunk (docs/architecture/18 6.3.6).
@@ -207,7 +218,7 @@ write_files:
       import os
       import threading
       import time
-      from collections import OrderedDict
+      from collections import OrderedDict, deque
       from typing import Any, Callable
 
       FIRST_CLAUSE_MIN_WORDS = int(os.getenv("ACUDX_FIRST_CLAUSE_MIN_WORDS", "3"))
@@ -238,11 +249,21 @@ write_files:
 
 
       def split_with_first_clause(split: Callable[..., list], text: str, *args: Any, **kwargs: Any) -> list:
-          head, rest = first_clause(text)
+          """[first clause, optional second clause (TUNING second_max_words), the rest as upstream chunks]."""
+          if not TUNING.get("first_clause", True):
+              return split(text, *args, **kwargs)
+          head, rest = first_clause(text, max_words=int(TUNING.get("first_max_words") or FIRST_CLAUSE_MAX_WORDS))
           if not rest:
               return split(text, *args, **kwargs)
           STATS["first_clause_splits"] += 1
-          return [head] + list(split(rest, *args, **kwargs))
+          out = [head]
+          second = int(TUNING.get("second_max_words") or 0)
+          if second:
+              mid, rest = first_clause(rest, max_words=second, fallback_words=second)
+              out.append(mid)
+              if not rest:
+                  return out
+          return out + list(split(rest, *args, **kwargs))
 
 
       def _sha256(path: str) -> str:
@@ -330,6 +351,57 @@ write_files:
       GENERATE_LOCK = threading.RLock()
 
 
+      # Per-generate timings (the last 40 calls) for GET /acudx/stats: where the first chunk's time goes.
+      TIMINGS: deque = deque(maxlen=40)
+      # Runtime switches (POST /acudx/tuning, behind the worker bearer). t3_autocast runs only the T3 decoder
+      # under torch.autocast (bf16 or fp16); eager mode either way, no compile, no CUDA graphs.
+      TUNING: dict[str, Any] = {"t3_autocast": os.getenv("ACUDX_T3_AUTOCAST") or None,
+                                "first_clause": os.getenv("ACUDX_FIRST_CLAUSE", "1") != "0",
+                                "first_max_words": FIRST_CLAUSE_MAX_WORDS,
+                                "second_max_words": int(os.getenv("ACUDX_SECOND_CLAUSE_WORDS", "0"))}
+      _AUTOCAST = {"bf16": "bfloat16", "fp16": "float16"}
+
+
+      def _timed(store: dict, key: str, fn: Callable[..., Any], *, autocast: bool = False,
+                 sync: bool = False) -> Callable[..., Any]:
+          def run(*args, **kwargs):
+              t0 = time.perf_counter()
+              dtype = _AUTOCAST.get(str(TUNING.get("t3_autocast"))) if autocast else None
+              if dtype:
+                  import torch
+
+                  with torch.autocast("cuda", dtype=getattr(torch, dtype)):
+                      out = fn(*args, **kwargs)
+              else:
+                  out = fn(*args, **kwargs)
+              if sync:
+                  import torch
+
+                  if torch.cuda.is_available():
+                      torch.cuda.synchronize()
+              store[key] = store.get(key, 0.0) + (time.perf_counter() - t0) * 1000.0
+              if key == "t3_ms" and hasattr(out, "shape"):
+                  store["tokens"] = int(out.shape[-1])
+              return out
+
+          return run
+
+
+      def _instrument(model: Any) -> dict:
+          """Wrap the model's T3, S3Gen and watermarker calls once; returns the timing dict they fill."""
+          store = model.__dict__.setdefault("_acudx_timing", {})
+          if model.__dict__.get("_acudx_instrumented"):
+              return store
+          model.__dict__["_acudx_instrumented"] = True
+          try:
+              model.t3.inference = _timed(store, "t3_ms", model.t3.inference, autocast=True)
+              model.s3gen.inference = _timed(store, "s3gen_ms", model.s3gen.inference, sync=True)
+              model.watermarker.apply_watermark = _timed(store, "watermark_ms", model.watermarker.apply_watermark)
+          except AttributeError:
+              pass
+          return store
+
+
       def patch_model_class(cls: Any, cache: ConditionalsCache = CACHE, lock: Any = GENERATE_LOCK) -> None:
           if getattr(cls, "_acudx_patched", False):
               return
@@ -337,11 +409,25 @@ write_files:
           orig_generate = cls.generate
 
           def prepare_conditionals(self, wav_fpath, exaggeration=0.5):
+              t0 = time.perf_counter()
               cache.prepare(self, orig_prepare, wav_fpath, exaggeration=exaggeration)
+              self.__dict__.setdefault("_acudx_timing", {})["conds_ms"] = (time.perf_counter() - t0) * 1000.0
 
           def generate(self, *args, **kwargs):
+              t_wait = time.perf_counter()
               with lock:
-                  return orig_generate(self, *args, **kwargs)
+                  t0 = time.perf_counter()
+                  store = _instrument(self)
+                  store.clear()
+                  out = orig_generate(self, *args, **kwargs)
+                  text = kwargs.get("text", args[0] if args else "")
+                  row = {k: round(v, 1) if isinstance(v, float) else v for k, v in store.items()}
+                  row.update(chars=len(str(text)), words=len(str(text).split()), lock_wait_ms=round((t0 - t_wait) * 1000.0, 1),
+                             total_ms=round((time.perf_counter() - t0) * 1000.0, 1),
+                             audio_ms=round(out.shape[-1] / float(getattr(self, "sr", 24000)) * 1000.0) if hasattr(out, "shape") else None,
+                             t3_autocast=TUNING.get("t3_autocast"), at=round(time.time(), 3))
+                  TIMINGS.append(row)
+                  return out
 
           cls.prepare_conditionals = prepare_conditionals
           cls.generate = generate
@@ -399,7 +485,27 @@ write_files:
           # Counters for the live checks (GET /tts/acudx/stats through Caddy, behind the bearer).
           from app.main import app as api
 
-          api.add_api_route("/acudx/stats", lambda: {**STATS, "conds_cached": len(CACHE)}, methods=["GET"])
+          api.add_api_route("/acudx/stats", lambda: {**STATS, "conds_cached": len(CACHE), "tuning": dict(TUNING),
+                                                     "timings": list(TIMINGS)}, methods=["GET"])
+
+          async def tuning(body: dict) -> dict:
+              if "t3_autocast" in body:
+                  v = body.get("t3_autocast")
+                  if v not in (None, "bf16", "fp16"):
+                      return {"error": "t3_autocast must be null, bf16 or fp16"}
+                  TUNING["t3_autocast"] = v
+              if "first_clause" in body:
+                  TUNING["first_clause"] = bool(body["first_clause"])
+              for key, lo, hi in (("first_max_words", 3, 20), ("second_max_words", 0, 30)):
+                  if key in body:
+                      try:
+                          TUNING[key] = max(lo, min(hi, int(body[key])))
+                      except (TypeError, ValueError):
+                          return {"error": f"{key} must be an integer"}
+              TIMINGS.clear()
+              return dict(TUNING)
+
+          api.add_api_route("/acudx/tuning", tuning, methods=["POST"])
           STATS["installed"] = True
           print("acudx: conditionals cache, generate lock and first-clause streaming installed")
   # Chatterbox build override (task 24, "No CUDA GPUs are available"). Same layers as
@@ -502,6 +608,38 @@ write_files:
           build:
             context: /opt/acudx/chatterbox-tts-api
             dockerfile: docker/Dockerfile.acudx.gpu
+          image: acudx/chatterbox-tts-api:a5f4661-cu124
+          # The NVIDIA runtime is registered by runcmd (nvidia-ctk) before any container starts;
+          # naming it here makes the toolkit inject /dev/nvidia* from NVIDIA_VISIBLE_DEVICES in
+          # addition to the device reservation (task 24: the container saw no GPU).
+          runtime: nvidia
+          deploy:
+            resources:
+              reservations:
+                devices:
+                  - driver: nvidia
+                    count: all
+                    capabilities: [gpu]
+          environment:
+            - PORT=4123
+            - HOST=0.0.0.0
+            - DEVICE=cuda
+            - USE_MULTILINGUAL_MODEL=true
+            - MODEL_CACHE_DIR=/cache
+            - VOICE_LIBRARY_DIR=/voices
+            - VOICE_SAMPLE_PATH=/app/voice-sample.mp3
+            - MAX_CHUNK_LENGTH=280
+            - NVIDIA_VISIBLE_DEVICES=all
+            - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+          volumes:
+            - /opt/acudx/chatterbox-cache:/cache
+            - /opt/acudx/chatterbox-voices:/voices
+          healthcheck:
+            test: ["CMD-SHELL", "curl -sf http://localhost:4123/health || exit 1"]
+            interval: 20s
+            retries: 60
+        chatterbox2:
+          # Second replica from the same image (started by runcmd on 80 GB cards only).
           image: acudx/chatterbox-tts-api:a5f4661-cu124
           # The NVIDIA runtime is registered by runcmd (nvidia-ctk) before any container starts;
           # naming it here makes the toolkit inject /dev/nvidia* from NVIDIA_VISIBLE_DEVICES in
@@ -670,7 +808,7 @@ write_files:
       snapshot() {
         { date -u
           echo "--- docker ps"; docker ps --format '{{.Names}} {{.Status}}' 2>&1
-          for svc in vllm caddy edge avatar turn chatterbox kokoro kokoro2; do
+          for svc in vllm caddy edge avatar turn chatterbox chatterbox2 kokoro kokoro2; do
             echo "--- $svc logs (last 40 lines, redacted)"
             $compose logs --no-color --tail 40 "$svc" 2>&1 | redact
           done
@@ -724,28 +862,35 @@ write_files:
       # Turkish text was synthesised as English (live finding 2026-10-20).
       set -u
       compose="docker compose -f /opt/acudx/docker-compose.yml"
-      for i in $(seq 1 180); do
-        $compose exec -T chatterbox curl -sf http://localhost:4123/health 2>/dev/null | grep -q '"initialization_state":"ready"' && break
-        sleep 10
-      done
-      for spec in acudx_tr_female:tr acudx_tr_male:tr acudx_en_female:en acudx_en_male:en; do
-        name=${spec%%:*}; lang=${spec##*:}
-        $compose exec -T chatterbox curl -sf -X POST http://localhost:4123/voices -F "voice_name=$name" \
-          -F "language=$lang" -F "voice_file=@/app/voice-sample.mp3" >/dev/null \
-          && echo "acudx: voice $name ($lang) seeded" \
-          || echo "acudx: voice $name already present or upload failed" >&2
-      done
-      # Warm-up: the first synthesis on a fresh container took 13.6 s (CUDA kernels, conditionals),
-      # the next ones 1.4 to 2.7 s; pay it here, not on a learner's first patient line. Every seeded
-      # voice goes through the streaming route once, so its conditionals are in the AcuDx cache
-      # (app/acudx_patch.py) before the first call.
-      for v in acudx_tr_female acudx_tr_male acudx_en_female acudx_en_male; do
-        $compose exec -T chatterbox curl -sf -o /dev/null -X POST http://localhost:4123/v1/audio/speech/stream \
-          -H "Content-Type: application/json" \
-          -d "{\"input\": \"Merhaba doktor, hazırım. Buyurun, sizi dinliyorum.\", \"voice\": \"$v\", \"streaming_chunk_size\": 60, \"streaming_strategy\": \"sentence\"}" \
-          && echo "acudx: chatterbox warm-up with $v done"
-      done
-      $compose exec -T chatterbox curl -sf http://localhost:4123/acudx/stats && echo
+      seed() {
+        local svc=$1
+        for i in $(seq 1 180); do
+          $compose exec -T "$svc" curl -sf http://localhost:4123/health 2>/dev/null | grep -q '"initialization_state":"ready"' && break
+          sleep 10
+        done
+        # Each replica keeps the library metadata in memory, so each one gets the uploads (the files
+        # and metadata live on the shared /voices volume).
+        for spec in acudx_tr_female:tr acudx_tr_male:tr acudx_en_female:en acudx_en_male:en; do
+          name=${spec%%:*}; lang=${spec##*:}
+          $compose exec -T "$svc" curl -sf -X POST http://localhost:4123/voices -F "voice_name=$name" \
+            -F "language=$lang" -F "voice_file=@/app/voice-sample.mp3" >/dev/null \
+            && echo "acudx: $svc voice $name ($lang) seeded" \
+            || echo "acudx: $svc voice $name already present or upload failed" >&2
+        done
+        # Warm-up: the first synthesis on a fresh container took 13.6 s (CUDA kernels, conditionals),
+        # the next ones 1.4 to 2.7 s; pay it here, not on a learner's first patient line. Every seeded
+        # voice goes through the streaming route once, so its conditionals are in the AcuDx cache
+        # (app/acudx_patch.py) before the first call.
+        for v in acudx_tr_female acudx_tr_male acudx_en_female acudx_en_male; do
+          $compose exec -T "$svc" curl -sf -o /dev/null -X POST http://localhost:4123/v1/audio/speech/stream \
+            -H "Content-Type: application/json" \
+            -d "{\"input\": \"Merhaba doktor, hazırım. Buyurun, sizi dinliyorum.\", \"voice\": \"$v\", \"streaming_chunk_size\": 60, \"streaming_strategy\": \"sentence\"}" \
+            && echo "acudx: $svc warm-up with $v done"
+        done
+        $compose exec -T "$svc" curl -sf http://localhost:4123/acudx/stats | head -c 400 && echo
+      }
+      seed chatterbox
+      [ -n "$($compose ps -q chatterbox2 2>/dev/null)" ] && seed chatterbox2
       # Kokoro (both replicas) loads its voice pack on the first request.
       for k in kokoro kokoro2; do
         $compose exec -T caddy wget -q -O /dev/null --header "Content-Type: application/json" \
@@ -2021,6 +2166,12 @@ runcmd:
     timeout 2400 docker compose up -d --wait vllm || echo "acudx - vllm did not become healthy within 40 min" >&2
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d speaches kokoro kokoro2
   - cd /opt/acudx && set -a && . ./.env && set +a && docker compose up -d --build chatterbox
+  # A second Chatterbox replica for two concurrent Turkish calls, only where the VRAM allows it (about
+  # 4 GB; a 40 GB card keeps that room for the avatar runner).
+  - |
+    cd /opt/acudx && set -a && . ./.env && set +a
+    total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
+    if [ "${total:-0}" -ge 70000 ]; then docker compose up -d chatterbox2; else echo "acudx: chatterbox2 skipped (${total} MiB)"; fi
   # Task 24 check: a fresh container from the same service definition reports what torch sees.
   - |
     cd /opt/acudx && set -a && . ./.env && set +a
