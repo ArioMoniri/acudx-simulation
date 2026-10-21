@@ -85,7 +85,7 @@ class ElevenLabsTts:
                 await resp.aclose()
 
         return TtsStream(content_type=resp.headers.get("content-type", content_type).split(";")[0], chunks=chunks(),
-                         model=model)
+                         model=model, sample_rate=24000 if fmt == "pcm_24000" else None)
 
 
 class ElevenLabsStt:

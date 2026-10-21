@@ -46,6 +46,8 @@ class CallSession:
     # self-hosted renderer
     avatar_id: str | None = None
     worker_session: str | None = None
+    worker_origin: str | None = None      # the worker this call runs on (per-worker call limit)
+    audio_link: Any = None                # RunnerAudioLink: the call's audio WebSocket to the runner
     # Tavus
     conversation_id: str | None = None
     conversation_url: str | None = None
@@ -117,6 +119,19 @@ class SessionStore:
         """Remove and return expired sessions (the caller ends their remote side)."""
         with self._lock:
             return self._sweep(self._clock())
+
+    def pending_on(self, worker_origin: str, *, max_age_s: float = 120.0, provider: str = "musetalk") -> int:
+        """Calls on one worker that hold a slot the runner cannot see yet: created in the last
+        ``max_age_s`` and not offered (the portrait is being prepared or the browser is still on
+        ICE). Connected calls are counted by the runner itself, which drops a call as soon as its
+        peer connection closes, so a learner who closed the tab does not hold a slot for the
+        session's 45-minute TTL (live finding 2026-10-20)."""
+        now = self._clock()
+        with self._lock:
+            self._sweep(now)
+            return sum(1 for s in self._by_id.values()
+                       if s.provider == provider and s.worker_origin == worker_origin and not s.worker_session
+                       and now - s.created_at <= max_age_s)
 
     def __len__(self) -> int:
         return len(self._by_id)

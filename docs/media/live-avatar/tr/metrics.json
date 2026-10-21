@@ -1,0 +1,121 @@
+{
+  "captured_at": "2026-10-20T23:53:36.513Z",
+  "base_url": "http://127.0.0.1:4195",
+  "lang": "tr",
+  "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
+  "metrics": {
+    "prepareMs": 31897,
+    "answerMs": 241,
+    "firstFrameMs": 1221,
+    "speechStartMs": 5498,
+    "lipLagMs": -400,
+    "ttsMs": 868.4,
+    "firstAudioMs": 2734.9,
+    "provider": "gpu-worker",
+    "samples": 216,
+    "speak": {
+      "provider": "gpu-worker",
+      "adapter": "openai_compatible",
+      "model": "chatterbox-multilingual",
+      "voice_id": "acudx_tr_male",
+      "source": "gpu_worker",
+      "transport": "stream",
+      "tts_ms": 868.4,
+      "first_chunk_ms": 2734.9,
+      "stream_ms": 7559,
+      "queued_ms": 0,
+      "audio_bytes": 605760,
+      "audio_duration_ms": 12620,
+      "sample_rate": 24000,
+      "link_connect_ms": 535.4,
+      "runner": {
+        "frames": 631,
+        "first_frame_ms": 1795.5,
+        "elapsed_ms": 6556.9
+      }
+    }
+  },
+  "rtc": {
+    "audioPackets": 1402,
+    "audioEnergy": 0.5457347848444458,
+    "videoFrames": 580,
+    "videoFps": 23,
+    "rttMs": 102,
+    "audioJitterMs": 1297,
+    "videoJitterMs": 650
+  },
+  "offline": {
+    "audio_peak_rms": 0.14757443282636906,
+    "voiced_ms": 6760,
+    "frames": 680,
+    "audio_to_lip_lag_ms": -160,
+    "note": "positive = mouth motion follows the audio"
+  },
+  "runner": {
+    "calls": [
+      {
+        "id": "674a251a",
+        "tuning": {
+          "batch_size": 4,
+          "lookahead_frames": 4,
+          "ahead_frames": 6,
+          "av_shift_ms": 0
+        },
+        "speaking": false,
+        "warm_up_ms": 2041.9,
+        "infer_fps": 94.9,
+        "inferred_frames": 320,
+        "sender_queue": {
+          "audio_frames": 9,
+          "video_frames": 4
+        },
+        "sent_frames": 719,
+        "underruns": 24,
+        "out_fps": 25
+      }
+    ],
+    "max_calls": 2,
+    "active_calls": 1,
+    "vram": {
+      "name": "NVIDIA H100 80GB HBM3",
+      "total_mb": 81079,
+      "free_mb": 20005,
+      "process_reserved_mb": 3532
+    },
+    "infer_fps": 102.08
+  },
+  "caption": "Siz:Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?\n\nHasta:Yaklaşık bir saat önce aniden başladı, doktor. Ağrı penise benziyor, saatlerce süren bir şekilde ve çok kötü hissediyorum.",
+  "provenance": "Ses: worker-kokoro\nVideo: musetalk\nİlk kare 1221 ms\nKonuşma başlangıcı 5498 ms\nSesten dudağa -400 ms",
+  "reply_wait_ms": 67778,
+  "log": [
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "2026-10-20T23:51:49.298Z tile visible",
+    "2026-10-20T23:52:27.903Z live video connected",
+    "2026-10-20T23:52:28.938Z question sent",
+    "2026-10-20T23:52:53.308Z frames captured",
+    "2026-10-20T23:52:55.290Z rtc {\"audioPackets\":1402,\"audioEnergy\":0.5457347848444458,\"videoFrames\":580,\"videoFps\":23,\"rttMs\":102,\"audioJitterMs\":1297,\"videoJitterMs\":650}",
+    "2026-10-20T23:52:57.399Z metrics {\"prepareMs\":31897,\"answerMs\":241,\"firstFrameMs\":1221,\"speechStartMs\":5498,\"lipLagMs\":-400,\"ttsMs\":868.4,\"firstAudioMs\":2734.9,\"provider\":\"gpu-worker\",\"samples\":216,\"speak\":{\"provider\":\"gpu-worker\",\"adapter\":\"openai_compatible\",\"model\":\"chatterbox-multilingual\",\"voice_id\":\"acudx_tr_male\",\"source\":\"gpu_worker\",\"transport\":\"stream\",\"tts_ms\":868.4,\"first_chunk_ms\":2734.9,\"stream_ms\":7559,\"queued_ms\":0,\"audio_bytes\":605760,\"audio_duration_ms\":12620,\"sample_rate\":24000,\"link_connect_ms\":535.4,\"runner\":{\"frames\":631,\"first_frame_ms\":1795.5,\"elapsed_ms\":6556.9}}}",
+    "2026-10-20T23:52:58.444Z recording saved",
+    "2026-10-20T23:53:36.512Z offline check {\"audio_peak_rms\":0.14757443282636906,\"voiced_ms\":6760,\"frames\":680,\"audio_to_lip_lag_ms\":-160,\"note\":\"positive = mouth motion follows the audio\"}"
+  ]
+}

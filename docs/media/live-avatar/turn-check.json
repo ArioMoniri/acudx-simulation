@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "dialled": "172.26.134.122",
+  "results": {
+    "turns:turn.68-209-75-215.sslip.io:443?transport=tcp": {
+      "ok": true,
+      "relayed": "172.26.134.122:49191",
+      "ms": 26.5,
+      "tls": {
+        "version": "TLSv1.3",
+        "cipher": "TLS_AES_256_GCM_SHA384",
+        "subject": "turn.68-209-75-215.sslip.io",
+        "issuer": "Let's Encrypt"
+      }
+    },
+    "turn:68-209-75-215.sslip.io:3478?transport=tcp": {
+      "ok": true,
+      "relayed": "172.26.134.122:49180",
+      "ms": 12.7
+    },
+    "turn:68-209-75-215.sslip.io:3478?transport=udp": {
+      "ok": true,
+      "relayed": "172.26.134.122:49238",
+      "ms": 1.1
+    }
+  },
+  "http_status": 200
+}

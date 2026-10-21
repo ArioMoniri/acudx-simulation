@@ -78,6 +78,8 @@ class VoiceService:
         self.telemetry = telemetry
         self._client = client
         self._owns_client = client is None
+        # Calls being set up per worker origin (SessionStore.pending_on), wired by the app.
+        self.avatar_calls: Any = None
 
     # -- lifecycle ------------------------------------------------------------ #
     @property
@@ -127,7 +129,8 @@ class VoiceService:
 
     # -- TTS --------------------------------------------------------------------- #
     async def tts(self, text: str, *, lang: str, sex: str | None, age: int | float | None,
-                  voice_id: str | None = None, output_format: str = "mp3", speed: float = 1.0) -> TtsOutcome:
+                  voice_id: str | None = None, output_format: str = "mp3", speed: float = 1.0,
+                  stream: bool = False) -> TtsOutcome:
         text = text.strip()
         if not text:
             raise ValueError("text is empty")
@@ -140,9 +143,16 @@ class VoiceService:
             if adapter.languages is not None and lang not in adapter.languages:
                 reasons.append(f"{ep.name}: {name} does not speak {lang}")
                 continue
+            declared = ep.extra.get("languages")
+            if isinstance(declared, list) and declared and lang not in [str(x) for x in declared]:
+                # e.g. a Kokoro row (English voices only) declared ["en"]: a Turkish line goes on
+                # to the next row or the worker's Chatterbox instead of an English voice.
+                reasons.append(f"{ep.name}: row declares languages {declared}, not {lang}")
+                continue
             family = "chatterbox" if ep.source == "gpu_worker" else None
             vid = voice_id or profiles.resolve_voice(name, profile, ep.extra, family=family)
-            req = TtsRequest(text=text, lang=lang, voice_id=vid, output_format=output_format, speed=speed)
+            req = TtsRequest(text=text, lang=lang, voice_id=vid, output_format=output_format, speed=speed,
+                             stream=stream)
             t0 = time.monotonic()
             try:
                 stream = await adapter.synthesize(self.client, ep, req)
@@ -322,9 +332,15 @@ class VoiceService:
                                  "model": mt.MODEL, "source": "gpu_worker", "state": h.get("state")}
         if h.get("ok"):
             gpu_info = h.get("gpu") or {}
-            return {**block, "enabled": True, "live_video": True, "reasons": reasons,
-                    "sessions": h.get("sessions"), "max_sessions": h.get("max_sessions"),
-                    "infer_fps": h.get("infer_fps"),
+            pending = self.avatar_calls(worker.origin) if callable(self.avatar_calls) else 0
+            cap = mt.call_capacity(h, gateway_limit=int(getattr(self.settings, "avatar_max_calls_per_worker", 2) or 2),
+                                   gateway_pending=pending)
+            if cap["calls_available"] <= 0:
+                reasons.append(f"gpu-worker avatar: all {cap['max_calls']} live calls on this worker are in use")
+            return {**block, "enabled": True, "live_video": cap["calls_available"] > 0, "reasons": reasons,
+                    "sessions": h.get("sessions"), "max_sessions": h.get("max_sessions"), **cap,
+                    "turn": ["udp:3478", "tcp:3478", "tls:443"], "infer_fps": h.get("infer_fps"),
+                    "calls": h.get("calls") or [], "last_speech_trace": h.get("last_speech_trace"),
                     "vram": {k: gpu_info.get(k) for k in ("name", "total_mb", "free_mb", "process_reserved_mb")}}
         detail = h.get("reason") or h.get("detail") or ""
         reasons.append(f"gpu-worker avatar: {h.get('state')}{(' (' + str(detail) + ')') if detail else ''}")

@@ -105,6 +105,22 @@ def _tavus_config(request: Request, svc: VoiceService) -> tv.TavusConfig | None:
     return None
 
 
+def _max_calls(svc: VoiceService) -> int:
+    return int(getattr(svc.settings, "avatar_max_calls_per_worker", 2) or 2)
+
+
+def runner_tuning(settings: Any) -> dict[str, int]:
+    """The per-call runner tuning the gateway's settings pin (unset values keep the runner default)."""
+    names = {"batch_size": "avatar_batch_size", "ahead_frames": "avatar_ahead_frames",
+             "lookahead_frames": "avatar_lookahead_frames", "av_shift_ms": "avatar_av_shift_ms"}
+    out: dict[str, int] = {}
+    for key, attr in names.items():
+        v = getattr(settings, attr, None)
+        if isinstance(v, int) and not isinstance(v, bool):
+            out[key] = v
+    return out
+
+
 def _worker(svc: VoiceService) -> mt.WorkerAvatar | None:
     wm = svc.resolver.worker_manager
     return mt.worker_from_endpoint(wm.llm_endpoint()) if wm is not None else None
@@ -160,14 +176,22 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
     if photo is None:
         raise HTTPException(status_code=400, detail={"error": "unknown_photo_id", "photo_id": body.photo_id})
     avatar_id = mt.avatar_id_for(body.photo_id or "")
+    # Check the per-worker call limit and take the slot in one step (no await in between), so two
+    # learners starting at once cannot both pass the check during the slow portrait preparation.
+    cap = mt.call_capacity(h, gateway_limit=_max_calls(svc), gateway_pending=store.pending_on(worker.origin))
+    if cap["calls_available"] <= 0:
+        reasons.append(f"gpu-worker avatar: {cap['active_calls']} of {cap['max_calls']} live calls in use on this worker")
+        return _unavailable("worker_full", reasons, **cap)
+    s = store.create(provider="musetalk", user_hash=user.user_hash, encounter_id=body.encounter_id, lang=lang,
+                     sex=body.sex, age=body.age, photo_id=body.photo_id, case_state=body.case_state,
+                     persona=body.persona, case_context=body.case_context, avatar_id=avatar_id,
+                     worker_origin=worker.origin)
     t0 = time.monotonic()
     try:
         prep = await mt.ensure_avatar(svc.client, worker, avatar_id, photo.read_bytes())
     except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
+        store.pop(s.id)
         return _unavailable("prepare_failed", [f"gpu-worker avatar: {getattr(exc, 'detail', None) or exc}"])
-    s = store.create(provider="musetalk", user_hash=user.user_hash, encounter_id=body.encounter_id, lang=lang,
-                     sex=body.sex, age=body.age, photo_id=body.photo_id, case_state=body.case_state,
-                     persona=body.persona, case_context=body.case_context, avatar_id=avatar_id)
     s.metrics["prepare_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
     svc.resolver.worker_manager.touch()  # type: ignore[union-attr]
     override = list(getattr(svc.settings, "avatar_turn_urls", None) or [])
@@ -175,7 +199,8 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
             "ice_servers": mt.ice_servers(worker, s.id, override_urls=override or None),
             "ice_transport_policy": "relay", "prepare": prep, "prepare_ms": s.metrics["prepare_ms"],
             "worker": {"infer_fps": h.get("infer_fps"), "sessions": h.get("sessions"),
-                       "max_sessions": h.get("max_sessions"), "gpu": h.get("gpu")}}
+                       "max_sessions": h.get("max_sessions"), "gpu": h.get("gpu"),
+                       "max_calls": cap["max_calls"], "active_calls": cap["active_calls"] + 1}}
 
 
 async def _start_tavus(request: Request, svc: VoiceService, store: SessionStore, cfg: tv.TavusConfig,
@@ -235,14 +260,27 @@ async def offer(request: Request, body: OfferBody, user: Principal = Depends(cur
     worker = _require_worker(svc)
     t0 = time.monotonic()
     try:
-        ans = await mt.offer(svc.client, worker, sdp=body.sdp, sdp_type=body.type, avatar_id=s.avatar_id)
+        ans = await mt.offer(svc.client, worker, sdp=body.sdp, sdp_type=body.type, avatar_id=s.avatar_id,
+                             tuning=runner_tuning(svc.settings) or None)
     except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
         return _unavailable("offer_failed", [f"gpu-worker avatar: {getattr(exc, 'detail', None) or exc}"])
     if s.worker_session:
         await mt.close(svc.client, worker, s.worker_session)
+    if s.audio_link is not None:
+        await s.audio_link.close()
     s.worker_session = str(ans["sessionid"])
     s.metrics["answer_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+    # Open the audio WebSocket now, while the browser finishes ICE, so the first line does not pay it.
+    s.audio_link = mt.RunnerAudioLink(worker=worker, worker_session=s.worker_session)
+    asyncio.get_running_loop().create_task(_warm_link(s.audio_link))
     return {"sdp": ans["sdp"], "type": ans.get("type") or "answer", "answer_ms": s.metrics["answer_ms"]}
+
+
+async def _warm_link(link: mt.RunnerAudioLink) -> None:
+    try:
+        await link.ensure()
+    except Exception as exc:  # noqa: BLE001 - the first speak connects again and reports the error
+        log.info("avatar audio link warm-up failed: %s", type(exc).__name__)
 
 
 def pcm_to_wav(pcm: bytes, *, sample_rate: int = 24000, channels: int = 1, bits: int = 16) -> bytes:
@@ -262,10 +300,16 @@ async def speak(request: Request, body: SpeakBody, user: Principal = Depends(cur
     worker = _require_worker(svc)
     t0 = time.monotonic()
     try:
-        out = await svc.tts(body.text, lang=s.lang, sex=s.sex, age=s.age, output_format="wav")
+        out = await svc.tts(body.text, lang=s.lang, sex=s.sex, age=s.age, output_format="wav", stream=True)
     except NoVoiceProvider as exc:
         return JSONResponse(status_code=503, content={"error": "tts_unavailable", "airgapped": exc.airgapped,
                                                       "reasons": exc.reasons})
+    ctype = out.stream.content_type
+    if ctype != "audio/mpeg":
+        streamed = await _speak_streaming(svc, s, worker, out, t0)
+        if streamed is not None:
+            return streamed
+        return _unavailable("speak_failed", [f"gpu-worker avatar: {s.metrics.get('last_stream_error')}"])
     buf = io.BytesIO()
     async for chunk in out.stream.chunks:
         buf.write(chunk)
@@ -289,6 +333,69 @@ async def speak(request: Request, body: SpeakBody, user: Principal = Depends(cur
             "audio_duration_ms": out.stream.duration_ms}
 
 
+async def _speak_streaming(svc: VoiceService, s: CallSession, worker: mt.WorkerAvatar, out: Any,
+                           t0: float) -> dict[str, Any] | None:
+    """Forward the TTS stream to the runner chunk by chunk (the WAV header is parsed off the front);
+    lip sync starts on the first chunk. None when the stream failed (reason in the metrics)."""
+    parser = mt.PcmStream(out.stream.content_type, sample_rate=out.stream.sample_rate)
+    marks: dict[str, float] = {}
+    total = 0
+    head: list[bytes] = []
+    it = out.stream.chunks.__aiter__()
+    try:
+        # Read until the header gives the sample rate (raw PCM knows it already).
+        while not parser.ready:
+            chunk = await it.__anext__()
+            pcm = parser.feed(chunk)
+            if pcm:
+                head.append(pcm)
+        if not parser.supported:
+            raise ValueError(f"unsupported PCM ({parser.bits} bit, {parser.channels} channels)")
+    except (StopAsyncIteration, ValueError) as exc:
+        s.metrics["last_stream_error"] = f"tts stream: {type(exc).__name__} {exc}"[:200]
+        return None
+
+    async def pcm():
+        nonlocal total
+        odd = b""
+        for piece in head:
+            total += len(piece)
+            yield piece
+        async for chunk in it:
+            data = odd + chunk
+            odd = data[len(data) // 2 * 2:]
+            data = data[:len(data) // 2 * 2]
+            total += len(data)
+            if data:
+                yield data
+
+    def first() -> None:
+        marks["first_chunk_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+
+    link = s.audio_link or mt.RunnerAudioLink(worker=worker, worker_session=str(s.worker_session))
+    s.audio_link = link
+    try:
+        stats = await link.utterance(pcm(), int(parser.sample_rate or 24000), on_first_chunk=first)
+    except mt.AvatarWorkerError as exc:
+        s.metrics["last_stream_error"] = exc.detail
+        return None
+    except Exception as exc:  # noqa: BLE001 - the TTS stream broke mid-line; the socket is mid-utterance
+        await link.close()
+        s.metrics["last_stream_error"] = f"tts stream: {type(exc).__name__}"
+        log.warning("avatar speak stream for %s failed: %s", s.id[:8], type(exc).__name__)
+        return None
+    svc.resolver.worker_manager.touch()  # type: ignore[union-attr]
+    s.metrics["turns"] = int(s.metrics.get("turns", 0)) + 1
+    duration_ms = round(total / 2 / float(parser.sample_rate or 24000) * 1000.0)
+    return {"provider": out.endpoint.name, "adapter": out.adapter, "model": out.stream.model,
+            "voice_id": out.voice_id, "source": out.endpoint.source, "transport": "stream",
+            "tts_ms": round(out.ttfb_ms, 1), "first_chunk_ms": marks.get("first_chunk_ms"),
+            "stream_ms": round((time.monotonic() - t0) * 1000.0, 1), "queued_ms": 0.0,
+            "audio_bytes": total, "audio_duration_ms": duration_ms, "sample_rate": parser.sample_rate,
+            "link_connect_ms": link.connect_ms, "runner": {k: stats.get(k) for k in
+                                                           ("frames", "first_frame_ms", "elapsed_ms")}}
+
+
 @router.post("/interrupt")
 async def interrupt(request: Request, body: SessionRef, user: Principal = Depends(current_user)):
     svc = _svc(request)
@@ -301,6 +408,8 @@ async def interrupt(request: Request, body: SessionRef, user: Principal = Depend
 
 async def end_remote(svc: VoiceService, s: CallSession) -> None:
     if s.provider == "musetalk" and s.worker_session:
+        if s.audio_link is not None:
+            await s.audio_link.close()
         worker = _worker(svc)
         if worker is not None:
             await mt.close(svc.client, worker, s.worker_session)

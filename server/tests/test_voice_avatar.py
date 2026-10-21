@@ -147,7 +147,9 @@ def test_turn_rest_credentials_and_ice_servers():
     assert cred == base64.b64encode(hmac.new(b"s3cret", b"1060:sess", hashlib.sha1).digest()).decode()
     w = mt.WorkerAvatar(origin="https://1-2-3-4.sslip.io", token="tok")
     ice = mt.ice_servers(w, "sess", now=1000)
-    assert ice[0]["urls"] == ["turn:1-2-3-4.sslip.io:3478?transport=udp", "turn:1-2-3-4.sslip.io:3478?transport=tcp"]
+    # UDP, TCP and TLS on 443 (turn.<domain>, the worker's SNI router): the browser falls back by itself.
+    assert ice[0]["urls"] == ["turn:1-2-3-4.sslip.io:3478?transport=udp", "turn:1-2-3-4.sslip.io:3478?transport=tcp",
+                              "turns:turn.1-2-3-4.sslip.io:443?transport=tcp"]
     assert ice[0]["username"].endswith(":sess") and ice[0]["credential"]
     assert mt.ice_servers(w, "s", override_urls=["turn:127.0.0.1:3480?transport=tcp"])[0]["urls"] == [
         "turn:127.0.0.1:3480?transport=tcp"]
@@ -256,11 +258,51 @@ def test_tavus_without_elevenlabs_keeps_tavus_voice():
 # --------------------------------------------------------------------------- #
 # routes: self-hosted MuseTalk path                                            #
 # --------------------------------------------------------------------------- #
-def test_musetalk_call_session_offer_speak_end(tmp_path):
+class FakeRunnerSocket:
+    """The runner's /avatar/stream WebSocket as RunnerAudioLink sees it (send / recv / close)."""
+
+    def __init__(self, url: str, headers: dict[str, str]):
+        self.url, self.headers = url, headers
+        self.sent: list = []
+        self.close_code = None
+        self._replies: list[str] = []
+
+    async def send(self, msg):
+        self.sent.append(msg)
+        if isinstance(msg, str) and json.loads(msg).get("type") == "end":
+            pcm = sum(len(m) for m in self.sent if isinstance(m, bytes))
+            self._replies.append(json.dumps({"type": "done", "frames": pcm // 2 * 16000 // 24000 // 320,
+                                             "first_frame_ms": 0.4, "elapsed_ms": 3.0}))
+
+    async def recv(self):
+        return self._replies.pop(0)
+
+    async def close(self):
+        self.close_code = 1000
+
+
+@pytest.fixture()
+def runner_sockets(monkeypatch):
+    opened: list[FakeRunnerSocket] = []
+
+    async def connect(url, headers, timeout_s):
+        ws = FakeRunnerSocket(url, headers)
+        opened.append(ws)
+        return ws
+
+    monkeypatch.setattr(mt, "ws_connect", connect)
+    return opened
+
+
+def test_musetalk_call_session_offer_speak_end(tmp_path, runner_sockets):
     runner = Runner()
     worker = FakeWorkerManager(ready=True)
     app, _ = _app(tmp_path, runner=runner, worker=worker)
-    c = TestClient(app)
+    with TestClient(app) as c:
+        _call_flow(c, runner, worker, runner_sockets)
+
+
+def _call_flow(c, runner, worker, runner_sockets):
     assert c.post("/v1/voice/avatar/session", json=SESSION).status_code == 401
     r = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER)
     assert r.status_code == 200, r.text
@@ -276,15 +318,31 @@ def test_musetalk_call_session_offer_speak_end(tmp_path):
     assert c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "x"}, headers=USER).status_code == 409
     r = c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"}, headers=USER)
     assert r.status_code == 200 and r.json()["sdp"] == "v=0\r\nanswer"
-    assert runner.offers[0] == {"sdp": "v=0\r\noffer", "type": "offer", "avatar": "acudx-p04"}
+    assert runner.offers[0] == {"sdp": "v=0\r\noffer", "type": "offer", "avatar": "acudx-p04", "tuning": {"av_shift_ms": 160}}
     r = c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "It started two hours ago."}, headers=USER)
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["provider"] == "gpu-worker" and body["source"] == "gpu_worker" and body["audio_bytes"] > 44
-    assert runner.audio[0]["sessionid"] == "lt-1" and runner.audio[0]["head"] == b"RIFF"
+    assert body["provider"] == "gpu-worker" and body["source"] == "gpu_worker" and body["transport"] == "stream"
+    # Streamed, not uploaded: Chatterbox's /speech/stream, the WAV header stripped, PCM forwarded chunk by
+    # chunk over one WebSocket to the runner's /avatar/stream, opened with the worker bearer.
+    assert runner.audio == []
+    assert len(runner_sockets) == 1
+    ws = runner_sockets[0]
+    assert ws.url == "ws://worker.test/avatar/stream" and ws.headers["Authorization"] == f"Bearer {WORKER_TOKEN}"
+    begin = json.loads(ws.sent[0])
+    assert begin == {"type": "begin", "sessionid": "lt-1", "sample_rate": 24000, "interrupt": False}
+    pcm = [m for m in ws.sent if isinstance(m, bytes)]
+    assert pcm and all(len(p) % 2 == 0 for p in pcm)   # httpx's ASGI transport may merge the chunks
+    assert sum(len(p) for p in pcm) == 24000 == body["audio_bytes"]  # 0.5 s of 16-bit 24 kHz, no header bytes
+    assert json.loads(ws.sent[-1]) == {"type": "end"}
+    assert body["audio_duration_ms"] == 500 and body["sample_rate"] == 24000 and body["first_chunk_ms"] is not None
+    # a second line reuses the same socket
+    assert c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "Since this morning."},
+                  headers=USER).status_code == 200
+    assert len(runner_sockets) == 1 and sum(1 for m in ws.sent if isinstance(m, str) and '"begin"' in m) == 2
     assert worker.touches >= 2
     r = c.post("/v1/voice/avatar/end", json={"session_id": sid}, headers=USER)
-    assert r.status_code == 200 and runner.closed == ["lt-1"]
+    assert r.status_code == 200 and runner.closed == ["lt-1"] and ws.close_code == 1000
     assert c.post("/v1/voice/avatar/end", json={"session_id": sid}, headers=USER).status_code == 404
 
 
@@ -448,3 +506,115 @@ def test_session_store_expires_and_binds_users():
     assert st.get(s.id, user_hash="u1") is s and st.get(s.id, user_hash="u2") is None
     now[0] += 11
     assert st.get(s.id) is None and len(st) == 0
+
+
+# --------------------------------------------------------------------------- #
+# streaming audio in, call limit, tuning                                       #
+# --------------------------------------------------------------------------- #
+def _wav_stream_header(rate: int = 24000, channels: int = 1, bits: int = 16) -> bytes:
+    block = channels * bits // 8
+    import struct
+
+    return (b"RIFF" + (0xFFFFFFFF).to_bytes(4, "little") + b"WAVEfmt "
+            + struct.pack("<IHHIIHH", 16, 1, channels, rate, rate * block, block, bits)
+            + b"data" + (0xFFFFFFFF).to_bytes(4, "little"))
+
+
+def test_pcm_stream_strips_a_streamed_wav_header_split_across_chunks():
+    head = _wav_stream_header(22050)
+    p = mt.PcmStream("audio/wav")
+    out = b"".join(p.feed(head[i:i + 7]) for i in range(0, len(head), 7))
+    assert out == b"" and p.ready and p.sample_rate == 22050 and p.supported
+    assert p.feed(b"\x01\x02\x03") == b"\x01\x02\x03"
+    # a LIST chunk before data (some encoders) is skipped
+    p2 = mt.PcmStream("audio/wav")
+    with_list = head[:36] + b"LIST" + (4).to_bytes(4, "little") + b"INFO" + head[36:]
+    assert p2.feed(with_list + b"\x05\x06") == b"\x05\x06" and p2.sample_rate == 22050
+
+
+def test_pcm_stream_raw_pcm_and_unsupported_layouts():
+    raw = mt.PcmStream("audio/pcm", sample_rate=24000)
+    assert raw.ready and raw.sample_rate == 24000 and raw.feed(b"ab") == b"ab"
+    stereo = mt.PcmStream("audio/wav")
+    stereo.feed(_wav_stream_header(48000, channels=2))
+    assert stereo.ready and not stereo.supported
+    with pytest.raises(ValueError):
+        mt.PcmStream("audio/wav").feed(b"ID3\x04" + b"\x00" * 20)
+
+
+def test_call_capacity_takes_the_lower_limit_and_the_higher_count():
+    assert mt.call_capacity({"sessions": 0, "max_sessions": 2}, gateway_limit=2, gateway_pending=0) == {
+        "max_calls": 2, "active_calls": 0, "calls_available": 2}
+    assert mt.call_capacity({"sessions": 1, "max_sessions": 4}, gateway_limit=2, gateway_pending=2)["calls_available"] == 0
+    assert mt.call_capacity({"sessions": 0, "max_sessions": 1}, gateway_limit=3, gateway_pending=0)["max_calls"] == 1
+    assert mt.call_capacity({}, gateway_limit=2, gateway_pending=1)["calls_available"] == 1
+
+
+def test_max_calls_per_worker_is_enforced_before_the_portrait_is_prepared(tmp_path, runner_sockets):
+    runner = Runner()
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_max_calls_per_worker=1)
+    with TestClient(app) as c:
+        first = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER)
+        assert first.status_code == 200 and first.json()["worker"]["max_calls"] == 1
+        second = c.post("/v1/voice/avatar/session", json={**SESSION, "encounter_id": "enc-2"}, headers=OTHER)
+        assert second.status_code == 503
+        body = second.json()
+        assert body["state"] == "worker_full" and body["max_calls"] == 1 and body["calls_available"] == 0
+        assert "1 of 1 live calls" in body["reasons"][-1]
+        # ending the first call frees the slot
+        assert c.post("/v1/voice/avatar/end", json={"session_id": first.json()["session_id"]},
+                      headers=USER).status_code == 200
+        assert c.post("/v1/voice/avatar/session", json=SESSION, headers=OTHER).status_code == 200
+
+
+async def test_capabilities_report_the_call_limit(tmp_path):
+    app, _ = _app(tmp_path, worker=FakeWorkerManager(ready=True), avatar_max_calls_per_worker=1)
+    voice = app.state.voice
+    voice.avatar_calls = app.state.avatar_sessions.pending_on
+    av = (await voice.capabilities())["avatar"]
+    assert av["max_calls"] == 1 and av["active_calls"] == 0 and av["calls_available"] == 1 and av["live_video"]
+    assert av["turn"] == ["udp:3478", "tcp:3478", "tls:443"]
+    app.state.avatar_sessions.create(provider="musetalk", user_hash="u", encounter_id="e",
+                                     worker_origin="http://worker.test")
+    full = (await voice.capabilities())["avatar"]
+    assert full["calls_available"] == 0 and full["live_video"] is False
+    assert any("live calls on this worker are in use" in r for r in full["reasons"])
+
+
+def test_offer_carries_the_gateway_tuning(tmp_path, runner_sockets):
+    runner = Runner()
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_batch_size=4,
+                  avatar_ahead_frames=10, avatar_av_shift_ms=240)
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+        assert c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"},
+                      headers=USER).status_code == 200
+    assert runner.offers[0]["tuning"] == {"batch_size": 4, "ahead_frames": 10, "av_shift_ms": 240}
+
+
+def test_speak_reports_a_broken_runner_stream(tmp_path, monkeypatch):
+    async def refuse(url, headers, timeout_s):
+        raise OSError("connection refused")
+
+    monkeypatch.setattr(mt, "ws_connect", refuse)
+    app, _ = _app(tmp_path, worker=FakeWorkerManager(ready=True))
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+        c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"}, headers=USER)
+        r = c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "Hello."}, headers=USER)
+    assert r.status_code == 503 and r.json()["state"] == "speak_failed"
+    assert "audio stream: OSError" in r.json()["reasons"][0]
+
+
+def test_a_connected_call_is_counted_by_the_runner_not_by_the_gateway_ttl():
+    """A learner who closed the tab leaves a gateway session for 45 minutes; the runner drops the
+    call when its peer connection closes, so only calls still being set up count on the gateway side."""
+    now = [1000.0]
+    st = SessionStore(clock=lambda: now[0])
+    st.create(provider="musetalk", user_hash="u", encounter_id="a", worker_origin="https://w")
+    offered = st.create(provider="musetalk", user_hash="u", encounter_id="b", worker_origin="https://w")
+    offered.worker_session = "lt-1"
+    st.create(provider="musetalk", user_hash="u", encounter_id="c", worker_origin="https://other")
+    assert st.pending_on("https://w") == 1
+    now[0] += 121
+    assert st.pending_on("https://w") == 0

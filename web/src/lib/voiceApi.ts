@@ -81,6 +81,11 @@ export interface AvatarSpeakResult {
   queued_ms: number;
   audio_bytes: number;
   audio_duration_ms: number | null;
+  /** "stream": PCM forwarded to the runner while it is synthesised; absent for the whole-file path. */
+  transport?: "stream" | string;
+  /** Speak request -> first PCM chunk forwarded (streamed path). */
+  first_chunk_ms?: number | null;
+  stream_ms?: number;
 }
 
 export interface AvatarUnavailable {
