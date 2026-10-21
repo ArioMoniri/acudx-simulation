@@ -78,6 +78,7 @@ class GuardDecision:
     source: str = "rules"              # rules | model | rules+model
     rule: Optional[str] = None
     hard: bool = False                 # a fail-closed rule decided it
+    firm: bool = False                 # a specific soft rule: a model "clinical" does not overrule it
     model: Optional[str] = None
     extras: dict[str, Any] = field(default_factory=dict)
 
@@ -210,7 +211,33 @@ _DX_REQUEST: list[tuple[str, re.Pattern[str]]] = [
                                      re.I)),
     ("dx_tr_neyiniz", re.compile(r"\b(sizce\s+)?neyiniz\s+var\b|\bhastal[ıi][ğg][ıi]n[ıi]z\s+ne\b|"
                                  r"\btan[ıi]n[ıi]z\s+ne\b|\bte[şs]hisiniz\s+ne\b|\bsizde\s+ne\s+var\b", re.I)),
+    # "Sizce ne hastalığınız var?", "Neyiniz olduğunu biliyor musunuz?", "Tanınızı söyler misiniz?",
+    # "Sizce bu hastalık ne?" (live run 2026-10-21; doc 20 section 4.3).
+    ("dx_tr_sizce", re.compile(r"\bsizce\s+(ne|hangi)\s+hastal[ıi][ğg][ıi]n[ıi]z\s+var\b"
+                               r"|\bneyiniz\s+oldu[ğg]unu\b"
+                               r"|\btan[ıi]n[ıi]z[ıi]\s+(s[öo]yle|biliyor)"
+                               r"|\bsizce\s+(bu\s+)?(hastal[ıi]k|rahats[ıi]zl[ıi]k)\s+ne\b", re.I)),
 ]
+# Small talk the classifier model read as clinical: plans for a holiday, favourites, sports, films,
+# jokes. Travel HISTORY ("tatile gittiniz mi", "have you travelled") stays clinical: only future
+# plans and favourites are matched.
+_OFF_TOPIC: list[tuple[str, re.Pattern[str]]] = [
+    ("off_tr_tatil", re.compile(r"\btatil\w*\b.{0,40}\b(d[üu][şs][üu]n[üu]yor|plan\w*|gidecek|gitmek\s+ist|"
+                                r"gitmeyi|gider\s+misiniz)"
+                                r"|\bnereye\s+gitmeyi\s+d[üu][şs][üu]n[üu]yor", re.I)),
+    ("off_tr_favori", re.compile(r"\ben\s+sevdi[ğg]iniz\s+(film|dizi|[şs]ark[ıi]|yemek|renk|kitap|tak[ıi]m|"
+                                 r"oyun|[şs]ehir)", re.I)),
+    ("off_tr_spor", re.compile(r"\bhangi\s+tak[ıi]m\w*\s+tutuyor|\bma[çc](a|[ıi])\s+(izled|gitti)", re.I)),
+    ("off_tr_dizi", re.compile(r"\bhangi\s+(diziyi|filmi)\b|\b(dizi|film)\s+izlediniz\s+mi\b", re.I)),
+    ("off_tr_fikra", re.compile(r"\bf[ıi]kra\s+anlat|\b[şs]aka\s+yap", re.I)),
+    ("off_en_holiday", re.compile(r"\bwhere\s+(are\s+you\s+going|will\s+you\s+go|do\s+you\s+want\s+to\s+go)\s+"
+                                  r"(on|for)\s+(holiday|vacation)\b|\b(holiday|vacation)\s+plans\b", re.I)),
+    ("off_en_favorite", re.compile(r"\bwhat'?s\s+your\s+fav(ou?rite)?\s+(movie|film|song|band|team|food|colou?r|"
+                                   r"show|book)\b|\bwhich\s+team\s+do\s+you\s+support\b", re.I)),
+]
+# Recent travel is exposure history, never small talk ("yurt dışına ya da tatile gittiniz mi?").
+_TRAVEL_HISTORY = re.compile(r"\byurt\s*d[ıi][şs][ıi]\w*|\btatile?\s+(gittiniz|[çc][ıi]kt[ıi]n[ıi]z)"
+                             r"|\btravell?ed\b|\babroad\b", re.I)
 _PAST_DX = re.compile(r"\b(ever|before|previously|in\s+the\s+past|history\s+of|been\s+diagnosed|"
                       r"daha\s+önce|önceden|geçmişte)\b", re.I)
 
@@ -258,15 +285,19 @@ def _rule_classify(text: str, case_context: Optional[dict[str, Any]] = None) -> 
         if not _PAST_DX.search(raw):
             reason = "answer_request" if rule in ("meta_give_answer", "meta_skip_to_answer", "meta_just_tell_me") \
                 else "diagnosis_request"
-            return GuardDecision("diagnosis_request", reason, lang, rule=rule)
+            return GuardDecision("diagnosis_request", reason, lang, rule=rule, firm=True)
     if (r := _match(raw, _DX_REQUEST)) and not _PAST_DX.search(raw):
-        return GuardDecision("diagnosis_request", "diagnosis_request", lang, rule=r)
+        return GuardDecision("diagnosis_request", "diagnosis_request", lang, rule=r, firm=True)
     if lang == "other":
         return GuardDecision("other_language", "unsupported_language", lang, rule="language")
     if _TASK_REQUEST.search(raw):
-        return GuardDecision("off_topic", "small_talk", lang, rule="task_request")
+        return GuardDecision("off_topic", "small_talk", lang, rule="task_request", firm=True)
+    if (r := _match(raw, _OFF_TOPIC)):
+        return GuardDecision("off_topic", "small_talk", lang, rule=r, firm=True)
     if base["cls"] == "in-scope" or base["cls"] == "answer-seeking":
         return GuardDecision("clinical", "in_scope", lang, rule=rule)
+    if _TRAVEL_HISTORY.search(raw):
+        return GuardDecision("clinical", "in_scope", lang, intent="social-history", rule="travel_history")
     # scope_guard calls a greeting off-topic; in an encounter an introduction is clinical.
     if scope_guard._GREETING_RE.search(raw) and len(raw.split()) <= 12:
         return GuardDecision("clinical", "greeting", lang, rule="greeting")
@@ -344,11 +375,12 @@ def parse_model(data: dict[str, Any], model: Optional[str] = None) -> Optional[G
 
 
 def combine(rules: GuardDecision, model: Optional[GuardDecision]) -> GuardDecision:
-    """Fail-closed merge: hard rules win; otherwise the model decides (it reads context the
-    regexes cannot); the model may raise a message to unsafe or meta_injection."""
+    """Fail-closed merge: hard rules win; a firm rule (a specific small-talk or diagnosis-request
+    pattern) is not downgraded to ``clinical`` by the model; otherwise the model decides (it reads
+    context the regexes cannot) and may raise a message to unsafe or meta_injection."""
     if model is None:
         return rules
-    if rules.hard:
+    if rules.hard or (rules.firm and model.label == "clinical"):
         out = GuardDecision(**{**rules.dump(), "source": "rules+model", "model": model.model,
                                "intent": None})
         out.extras["model_label"] = model.label

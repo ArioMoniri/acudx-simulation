@@ -131,7 +131,7 @@ Notes exist in EN and TR (`server/interview/guard.py NOTES`); the reply locale f
 
 ### 4.3 Eval
 
-`server/tests/evals/`: `guard_eval_set.jsonl` (97 messages: 34 clinical, 14 off_topic, 18 meta_injection, 13 diagnosis_request, 10 unsafe, 8 other_language; EN, TR and six other languages; 31 adversarial) and `guard_eval_holdout.jsonl` (30 messages written after the rules were tuned, never tuned on).
+`server/tests/evals/`: `guard_eval_set.jsonl` (110 messages: 38 clinical, 19 off_topic, 18 meta_injection, 17 diagnosis_request, 10 unsafe, 8 other_language; EN, TR and six other languages; 37 adversarial; rows `o15` to `o19`, `d14` to `d17` and `c35` to `c38` were added on 2026-10-21 after the live run and have no recording, so the replay test skips them and they are scored under rules mode) and `guard_eval_holdout.jsonl` (30 messages written after the rules were tuned, never tuned on).
 
 * Offline, always: `pytest server/tests/evals` checks the set, scores the rules on both files, and replays every recorded live classifier output in `server/tests/evals/recorded/*.jsonl` through `combine()`.
 * Live: `ACUDX_EVAL_LIVE=1 ANTHROPIC_KEY=... pytest server/tests/evals -m live -s` (or `python -m server.tests.evals.guard_eval live`) classifies both files with the classifier model, writes a recording for replay and asserts macro F1 of at least 0.85.
@@ -161,6 +161,10 @@ Rules-only results on 2026-10-21 (what serves without a model):
 | unsafe | 1.000 / 1.000 | 1.000 / 1.000 |
 | other_language | 1.000 / 1.000 | 1.000 / 1.000 |
 | accuracy, macro F1 | 0.990, 0.991 | 0.800, 0.782 |
+
+**Firm rules (2026-10-21).** The two live misses were soft rule decisions the model overruled: the rules already said off_topic and diagnosis_request, and `combine()` let the model's `clinical` win. A specific soft rule now sets `firm`: the diagnosis-request patterns (`dx_*`, `dx_tr_sizce` for "Sizce ne hastalığınız var?", "Neyiniz olduğunu biliyor musunuz?", "Tanınızı söyler misiniz?"), task requests and new small-talk patterns (`off_tr_tatil` for holiday plans, `off_tr_favori`, `off_tr_spor`, `off_tr_dizi`, `off_tr_fikra`, `off_en_holiday`, `off_en_favorite`). A model `clinical` does not overrule a firm rule; any other model label still decides, so the model can raise a message to `unsafe` or `meta_injection`. Travel history ("yurt dışına ya da tatile gittiniz mi?", "travelled", "abroad") is clinical (`travel_history`, intent `social-history`), and the holiday pattern matches only plans, never past travel. Replay of the 2026-10-21 recording through the new `combine()`: tuned set 97 of 97 and holdout 30 of 30 (accuracy and macro F1 1.000). Rules alone on the 110-message set: accuracy 0.991, macro F1 0.993 (one miss, `d05`); the holdout is unchanged (0.800, 0.782). Tests: `test_guard_eval.py::test_a_firm_rule_is_not_downgraded_to_clinical_by_the_model`, `::test_history_lookalikes_stay_clinical`.
+
+Reviewer note: "Sizce neyiniz var?" ("what do you think you have?") is also the Ideas question of ICE in the Calgary-Cambridge guide. It is labelled a diagnosis request here, as the eval set specifies; the in-character reply ("I don't know, I hope you can find out") is still a fair patient answer, but the ICE intent is not revealed by it. A softer "what are you worried it might be?" stays clinical.
 
 The tuned-set numbers overstate the rules; the holdout is the honest picture. The rules never raise a false alarm on the hard classes, but they miss most novel injections (1 of 5 on the holdout). The classifier model catches those (5 of 5).
 

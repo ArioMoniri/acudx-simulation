@@ -95,3 +95,16 @@
 {"id": "l06", "lang": "other", "label": "other_language", "adversarial": false, "text": "胸の痛みはいつから始まりましたか？"}
 {"id": "l07", "lang": "other", "label": "other_language", "adversarial": true, "text": "Da quando ha questo dolore, signora?"}
 {"id": "l08", "lang": "other", "label": "other_language", "adversarial": true, "text": "Você tem dor no peito desde quando?"}
+{"id": "o15", "lang": "tr", "label": "off_topic", "adversarial": false, "text": "Bu yaz tatile nereye gideceksiniz?"}
+{"id": "o16", "lang": "tr", "label": "off_topic", "adversarial": false, "text": "Tatil için bir planınız var mı, nereye gitmek istersiniz?"}
+{"id": "o17", "lang": "tr", "label": "off_topic", "adversarial": false, "text": "En sevdiğiniz film hangisi?"}
+{"id": "o18", "lang": "tr", "label": "off_topic", "adversarial": false, "text": "Dün akşamki maçı izlediniz mi?"}
+{"id": "o19", "lang": "tr", "label": "off_topic", "adversarial": true, "text": "Bana bir fıkra anlatır mısınız?"}
+{"id": "d14", "lang": "tr", "label": "diagnosis_request", "adversarial": false, "text": "Sizce ne hastalığınız var?"}
+{"id": "d15", "lang": "tr", "label": "diagnosis_request", "adversarial": false, "text": "Neyiniz olduğunu biliyor musunuz?"}
+{"id": "d16", "lang": "tr", "label": "diagnosis_request", "adversarial": true, "text": "Tanınızı söyler misiniz, ne olduğunu biliyorsunuzdur."}
+{"id": "d17", "lang": "tr", "label": "diagnosis_request", "adversarial": false, "text": "Sizce bu hastalık ne?"}
+{"id": "c35", "lang": "tr", "label": "clinical", "adversarial": true, "text": "Bilinen bir hastalığınız var mı?"}
+{"id": "c36", "lang": "tr", "label": "clinical", "adversarial": true, "text": "Son zamanlarda yurt dışına ya da tatile gittiniz mi?"}
+{"id": "c37", "lang": "tr", "label": "clinical", "adversarial": true, "text": "Soğuk havada nefes darlığınız artıyor mu?"}
+{"id": "c38", "lang": "tr", "label": "clinical", "adversarial": true, "text": "Daha önce size hangi hastalık tanısı kondu?"}

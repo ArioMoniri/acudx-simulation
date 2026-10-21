@@ -57,6 +57,41 @@ def test_rules_layer_on_the_holdout_set(capsys):
     assert report["accuracy"] >= 0.75
 
 
+@pytest.mark.parametrize("text,label", [
+    ("Tatilde nereye gitmeyi düşünüyorsunuz?", "off_topic"),
+    ("Bu yaz tatile nereye gideceksiniz?", "off_topic"),
+    ("En sevdiğiniz film hangisi?", "off_topic"),
+    ("Hangi takımı tutuyorsunuz?", "off_topic"),
+    ("Where are you going on holiday this summer?", "off_topic"),
+    ("Sizce neyiniz var?", "diagnosis_request"),
+    ("Sizce ne hastalığınız var?", "diagnosis_request"),
+    ("Neyiniz olduğunu biliyor musunuz?", "diagnosis_request"),
+    ("What do you think you have?", "diagnosis_request"),
+])
+def test_a_firm_rule_is_not_downgraded_to_clinical_by_the_model(text, label):
+    """Live run 2026-10-21 (recording claude-haiku-5-5-20261021T075036Z): the classifier read
+    o14 and d10 as clinical and, the rules being soft, the model won. A specific small-talk or
+    diagnosis-request rule now stands against a model 'clinical'; the model can still raise
+    the message to unsafe or meta_injection."""
+    from server.interview.guard import GuardDecision, combine, rule_classify
+    rules = rule_classify(text)
+    assert rules.label == label and rules.firm, (text, rules)
+    clinical = GuardDecision("clinical", "in_scope", "tr", source="model", model="m")
+    assert combine(rules, clinical).label == label
+    raised = GuardDecision("meta_injection", "role_break", "tr", source="model", model="m")
+    assert combine(rules, raised).label == "meta_injection"
+
+
+@pytest.mark.parametrize("text", [
+    "Bilinen bir hastalığınız var mı?", "Son zamanlarda yurt dışına ya da tatile gittiniz mi?",
+    "Soğuk havada nefes darlığınız artıyor mu?", "Daha önce size hangi hastalık tanısı kondu?",
+    "Have you travelled abroad recently?",
+])
+def test_history_lookalikes_stay_clinical(text):
+    from server.interview.guard import rule_classify
+    assert rule_classify(text).label == "clinical", text
+
+
 def test_replay_scores_the_combined_pipeline(tmp_path):
     """Replay plumbing: a recording file (synthetic here, written in tmp, never shipped) is
     merged with the rules exactly as the server merges a live classifier reply."""
