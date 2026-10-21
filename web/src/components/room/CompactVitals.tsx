@@ -56,6 +56,7 @@ export function CompactVitals({ caseInstance, live, status, className }: Compact
   return (
     <section
       aria-label={t("vitals.title")}
+      data-testid="room-monitor"
       className={cn("rounded-card border p-3.5", className)}
       style={{
         backgroundColor: "var(--monitor-bg)",

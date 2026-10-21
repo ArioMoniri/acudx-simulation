@@ -231,7 +231,7 @@ export interface DebriefSlice {
   status: "idle" | "pending" | "ready" | "failed";
   data: DebriefLayerData | null;
   /** Renderings of the debrief in another UI language (the source stays authoritative). */
-  rendered: Partial<Record<"tr", DebriefLayerData>>;
+  rendered: Partial<Record<"tr" | "en", DebriefLayerData>>;
   error: string | null;
 }
 
@@ -551,7 +551,8 @@ export function setDebriefRequester(fn: ((diagnosis: { code: string; display: st
 /** Update the debrief of the running thread. */
 export function setDebrief(threadId: string, patch: Partial<DebriefSlice>): void {
   if (!state.caseInstance || state.generation?.threadId !== threadId) return;
-  setState({ ...state, debrief: { ...state.debrief, ...patch } });
+  const rendered = patch.rendered ? { ...state.debrief.rendered, ...patch.rendered } : state.debrief.rendered;
+  setState({ ...state, debrief: { ...state.debrief, ...patch, rendered } });
 }
 
 /** Ask for the debrief again (Retry after a failure), for the committed diagnosis. */
@@ -1005,6 +1006,7 @@ export function administerMedication(
 export function administerTreatment(
   code: string,
   label?: { en: string; tr: string },
+  opts: { administeredBy?: string } = {},
 ): MedicationAdministrationRecord | null {
   const c = state.caseInstance;
   if (!c) return null;
@@ -1016,7 +1018,7 @@ export function administerTreatment(
     frequency: "",
     indication: "",
   };
-  return administerMedication(order, { label });
+  return administerMedication(order, { ...(label ? { label } : {}), ...opts });
 }
 
 /** Commit a working diagnosis by code + display. */
@@ -1278,7 +1280,21 @@ export function applyThreadDirector(threadId: string, ev: DirectorThreadEvent): 
   if (!state.caseInstance || state.generation?.threadId !== threadId) return;
   if (ev.client_id && ev.client_id === DIRECTOR_CLIENT_ID) return;
   const prevT = Number(state.director.caseState?.t_ms ?? -1);
-  if (Number(ev.case_state?.t_ms ?? 0) < prevT) return;
+  // Every step advances the Director's sim time: a step at or before the last one applied is
+  // a duplicate (the owner's tab receives the thread log on its generate stream and on its
+  // follow stream; live acceptance 2026-10-21) and is applied once.
+  if (Number(ev.case_state?.t_ms ?? 0) <= prevT) return;
+  // A team member gave a treatment on the shared thread (doc 15 12.8): the shared course
+  // carries it here too, so this monitor ramps the same effect from the same Director vitals.
+  if (ev.action?.kind === "treatment" && ev.action.ref) {
+    const at = nowOffset();
+    const ev2 = appendEvent("treatment", ev.action.ref, { remote: true, by: ev.client_id ?? null });
+    setState({
+      ...state,
+      treatments: [...state.treatments, { code: ev.action.ref, at }],
+      events: [...state.events, ev2],
+    });
+  }
   applyDirectorStep(ev, ev.action);
 }
 

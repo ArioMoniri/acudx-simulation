@@ -371,7 +371,7 @@ def case_prefix(state: dict[str, Any]) -> str:
 
 def _ledger(state: dict[str, Any]) -> str:
     """Short summary of what is already authored, so a layer does not repeat or contradict it."""
-    spec = state.get("spec") or {}
+    spec = source_spec(state) if state.get("opening") else {}
     hpi = "; ".join(str(h.get("answer_en") or "")[:80] for h in spec.get("hpi") or [])[:900]
     exam = "; ".join(f"{e.get('maneuver')}: {str(e.get('finding_en') or '')[:60]}" for e in spec.get("exam") or [])
     return f"ALREADY AUTHORED\n- history: {hpi or '(none)'}\n- exam: {exam[:600] or '(none)'}\n"
@@ -704,9 +704,15 @@ def drug_bearing(text: str) -> bool:
 
 
 # --------------------------------------------------------------------------- #
-# Renderings: a TR rendering of a layer already seen, on demand (doc 15 12.7)   #
+# Renderings: a layer already seen in the other UI language, on demand          #
+# (EN to TR, doc 15 12.7; TR to EN, 12.8)                                      #
 # --------------------------------------------------------------------------- #
-RENDER_LOCALES = ("tr",)
+RENDER_LOCALES = ("tr", "en")
+
+
+def other_locale(case_locale: Any) -> str:
+    """The rendering locale of a case: TR for an EN case, EN for a TR case."""
+    return "en" if str(case_locale or "en") == "tr" else "tr"
 _NUM_RE = re.compile(r"\d+(?:[.,]\d+)?")
 Path = tuple[Any, ...]
 
@@ -845,11 +851,13 @@ def _at(data: Optional[dict[str, Any]], *path: Any) -> Optional[str]:
     return cur if isinstance(cur, str) and cur.strip() else None
 
 
-def _pair(src: Any, tr: Optional[str]) -> tuple[str, str]:
-    """(source slot, TR slot): the source text stays authoritative; a TR rendering fills only
-    the TR slot of an EN case."""
+def _pair_slots(src: Any, rendering: Optional[str], case_locale: str = "en") -> tuple[str, str]:
+    """(EN slot, TR slot): the source text stays authoritative in the slot of the case's own
+    locale; a rendering fills only the other slot (TR for an EN case, EN for a TR case)."""
     a, b = _bi(src)
-    return a, (tr or b)
+    if case_locale == "tr":
+        return (rendering or a), b
+    return a, (rendering or b)
 
 
 # --------------------------------------------------------------------------- #
@@ -882,14 +890,29 @@ def derived_trajectory(triage: dict[str, Any], course: str) -> list[dict[str, An
     return out
 
 
-def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
+def source_spec(state: dict[str, Any]) -> dict[str, Any]:
+    """The assembled case without any rendering: what the Director, the judges and grading read
+    (the source text stays authoritative whatever the learner's UI language)."""
+    return assemble_spec(state, renderings=False)
+
+
+def assemble_spec(state: dict[str, Any], *, renderings: bool = True) -> dict[str, Any]:
     cond = state["condition"]
+    case_locale = str(state.get("locale") or "en")
+    r_loc = other_locale(case_locale)
+
+    def rendered_of(layer: str) -> Optional[dict[str, Any]]:
+        return rendered(state, layer, r_loc) if renderings else None
+
+    def _pair(src: Any, rendering: Optional[str]) -> tuple[str, str]:
+        return _pair_slots(src, rendering, case_locale)
+
     opening = state.get("opening") or {}
     kernel = state.get("kernel") or {}
     layers = state.get("layers") or {}
     order = list(state.get("layer_order") or [])
     demo = opening.get("demographics") or {}
-    r_open = rendered(state, "opening")
+    r_open = rendered_of("opening")
     cc_en, cc_tr = _pair(opening.get("chief_complaint"), _at(r_open, "chief_complaint"))
     hpi: list[dict[str, Any]] = []
     for i, s in enumerate(opening.get("opening_statements") or []):
@@ -911,7 +934,7 @@ def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
         if entry.get("status") != "ready":
             continue
         data = entry.get("data") or {}
-        rd = rendered(state, name)
+        rd = rendered_of(name)
         kind, _, sub = name.partition(".")
         if kind == "history":
             for i, it in enumerate(data.get("items") or []):
@@ -958,7 +981,7 @@ def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
                                       "facts": data.get("facts") or [], "nurse_call": data.get("nurse_call") or "",
                                       "affect": data.get("affect") or ""}
             if rd:
-                ev_row.update(facts_tr=rd.get("facts") or [], nurse_call_tr=rd.get("nurse_call") or "")
+                ev_row.update({f"facts_{r_loc}": rd.get("facts") or [], f"nurse_call_{r_loc}": rd.get("nurse_call") or ""})
             events.append(ev_row)
     pa, pb = _pair(pmh, pmh_r)
     ma, mb = _pair(meds, meds_r)
@@ -997,8 +1020,9 @@ def assemble_spec(state: dict[str, Any]) -> dict[str, Any]:
         "gap_filled": [], "normalization": list(state.get("normalization") or [])[-60:],
         # The staged path never degrades a case: a layer is written by the model or fails (F30).
         "degraded": False, "note": None,
-        "renderings": {loc: names for loc in RENDER_LOCALES
-                       if (names := [n for n in ["opening", *order] if rendered(state, n, loc) is not None])},
+        "renderings": ({loc: names for loc in RENDER_LOCALES
+                        if (names := [n for n in ["opening", *order] if rendered(state, n, loc) is not None])}
+                       if renderings else {}),
         "latency_ms": (state.get("timings") or {}).get("t_opening_ms"),
         "timings": dict(state.get("timings") or {}),
     }
@@ -1451,7 +1475,8 @@ class StagedRuntime:
         """A rendering of a layer the learner has seen, in ``locale``: one model call per layer,
         cached on the thread (``state["renderings"][locale][layer]``) and reused until the source
         layer changes. The source text stays authoritative: the Director, the judges and grading
-        read it, and the rendering fills only the TR slot of the spec. Raises KeyError (no
+        read it, and the rendering fills only the other locale's slot of the spec (TR for an EN
+        case, EN for a TR case). Raises KeyError (no
         thread or unknown layer), ValueError (the case's own locale, or a locale without
         renderings) and LookupError (the layer is not written yet)."""
         if not renderable(layer):
@@ -1537,7 +1562,7 @@ class StagedRuntime:
         model judge on the case with this table. A veto raises :class:`SafetyVeto`; the layer is
         rewritten once with the issues and otherwise fails honestly (06b F30). The fixture is a
         validation oracle only: its appropriateness is never written into the table."""
-        draft = {**(state.get("spec") or {}), "treatments": [
+        draft = {**(source_spec(state) if state.get("opening") else {}), "treatments": [
             {**t, "label_tr": t.get("label_en")} for t in data["treatments"]]}
         vote, event = await J.run_judge("safety_dosing", draft, state["condition"], self.llm, round_no=0)
         self.store.update(thread_id, lambda s: s.update(trace=(list(s.get("trace") or []) + [event])[-80:]))
@@ -1574,7 +1599,7 @@ class StagedRuntime:
         state = self.store.get(thread_id)
         if state is None or state.get("status") == "failed" or self.llm is None:
             return
-        spec = state.get("spec") or {}
+        spec = source_spec(state) if state.get("opening") else {}
         votes = await asyncio.gather(*(J.run_judge(n, spec, state["condition"], self.llm, round_no=0)
                                        for n in ("clinical_consistency", "pedagogy")), return_exceptions=True)
         issues: list[str] = [f"[course] {i}" for i in J.check_course_rules(spec, state["condition"])["issues"]]
@@ -1664,7 +1689,7 @@ def refresh_director(state: dict[str, Any]) -> None:
     if not isinstance(current, dict) or not state.get("spec"):
         return
     try:
-        fresh = director_state_from_spec(state["spec"], state["thread_id"])
+        fresh = director_state_from_spec(source_spec(state), state["thread_id"])
     except Exception:  # noqa: BLE001 - the Director model may change shape; never break a layer
         return
     for key, value in fresh.items():
@@ -1692,7 +1717,7 @@ def layers_for_action(kind: str, ref: str) -> list[str]:
 __all__ = [
     "CORE_LAYERS_FIXED", "DIRECTOR_CONTENT_KEYS", "EXAM_SYSTEMS", "HISTORY_CLUSTERS", "LayerRejected",
     "KERNEL_SCHEMA", "MAX_TOKENS", "S1_MAX_TOKENS", "S1_SCHEMA", "gate_kernel", "kernel_messages", "StagedRuntime", "assemble_spec", "case_prefix",
-    "derived_trajectory", "director_state_from_spec", "drug_bearing", "gate_layer", "gate_s1", "intent_cluster",
+    "derived_trajectory", "director_state_from_spec", "other_locale", "source_spec", "drug_bearing", "gate_layer", "gate_s1", "intent_cluster",
     "layer_messages", "layer_schema", "layers_for_action", "maneuver_system", "refresh_director", "s1_messages",
     "valid_layer", "validate_spec",
 ]

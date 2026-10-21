@@ -58,7 +58,7 @@ export function CaseDebriefLayer({ className, headingLevel = 3 }: { className?: 
     );
   }
 
-  const shown: DebriefLayerData = (lang === "tr" && debrief.rendered.tr) || debrief.data;
+  const shown: DebriefLayerData = debrief.rendered[lang] || debrief.data;
   const anchors = debrief.data.anchors ?? [];
   return (
     <section className={cn("flex flex-col gap-3 rounded-card border border-border px-4 py-3", className)} data-testid="case-debrief">
@@ -66,7 +66,7 @@ export function CaseDebriefLayer({ className, headingLevel = 3 }: { className?: 
         <GraduationCap weight="bold" className="h-4 w-4 text-muted" aria-hidden />
         {t("oncase.debrief.title")}
       </Heading>
-      {lang === "tr" && debrief.rendered.tr ? <p className="text-[11px] text-subtle">{t("oncase.debrief.rendered")}</p> : null}
+      {debrief.rendered[lang] ? <p className="text-[11px] text-subtle">{t("oncase.debrief.rendered")}</p> : null}
       <div>
         <SectionLabel className="mb-1">{t("oncase.debrief.teaching")}</SectionLabel>
         <ul className="list-disc space-y-1 ps-5 text-sm text-fg">

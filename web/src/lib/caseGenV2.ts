@@ -293,7 +293,7 @@ export interface CaseLayerResult {
 
 /** A rendering of a layer in another UI language (the source text stays authoritative). */
 export interface CaseRenderResult extends CaseLayerResult {
-  locale: "tr";
+  locale: "tr" | "en";
 }
 
 /** The debrief layer (server/orchestration/staged.py, gate_layer "debrief"). */
@@ -337,6 +337,43 @@ export interface MyCaseRow {
 /* SSE events                                                                 */
 /* -------------------------------------------------------------------------- */
 
+/** One order of a team room's order and task loop, as the thread stores it (doc 15 12.8). */
+export interface RoomThreadTask {
+  id: string;
+  code?: string;
+  kind?: "medication" | "diagnostic" | "intervention";
+  label_en?: string;
+  label_tr?: string;
+  detail_en?: string;
+  detail_tr?: string;
+  ordered_by?: string;
+  assigned_role?: string;
+  ai?: boolean;
+  status?: "pending" | "claimed" | "done";
+  claimed_by?: string;
+  claimed_ai?: boolean;
+  completed_by?: string;
+  completed_ai?: boolean;
+  /** The bedside check the executing member ran (five rights, allergy band). */
+  mar?: { outcome: "given" | "flagged" | "blocked"; failures?: string[]; allergy_conflict?: boolean };
+}
+
+/** A `task` event of the thread log: an order, claim or completion by a room member. */
+export interface RoomTaskEvent {
+  op: "order" | "claim" | "complete";
+  task: RoomThreadTask;
+  client_id?: string | null;
+  thread_id?: string;
+}
+
+export interface RoomTaskRequest {
+  op: RoomTaskEvent["op"];
+  task: RoomThreadTask;
+  role?: string;
+  client_id?: string;
+  mar?: RoomThreadTask["mar"];
+}
+
 export type CaseGenV2Event = (
   | { event: "start"; thread_id: string; stages?: string[]; eta_ms?: Record<string, number>; pipeline?: string[] }
   | { event: "kernel"; status: string }
@@ -346,6 +383,7 @@ export type CaseGenV2Event = (
   | { event: "layer.ready"; layer: string; data: Record<string, unknown>; spec: CaseGenV2Spec }
   | { event: "layer.rendered"; layer: string; locale: string; data: Record<string, unknown>; spec: CaseGenV2Spec }
   | ({ event: "director" } & DirectorThreadEvent)
+  | ({ event: "task" } & RoomTaskEvent)
   | { event: "judge"; layer: string; decision: "accept" | "patched" | "noted" | "rejected"; issues?: string[]; spec?: CaseGenV2Spec; blocking?: boolean }
   | { event: "node"; node: string; status: string | null; trace: TraceEvent[]; council?: CouncilVerdict }
   | { event: "done"; thread_id: string; spec: CaseGenV2Spec | null; trace_summary?: TraceSummary; timings?: Record<string, number> }
@@ -486,7 +524,7 @@ export function readCaseLayer(
 export function renderCaseLayer(
   threadId: string,
   layer: string,
-  locale: "tr",
+  locale: "tr" | "en",
   opts: RequestOptions = {},
 ): Promise<BackendResult<CaseRenderResult>> {
   return request<CaseRenderResult>(
@@ -506,6 +544,24 @@ export function bindRoomThread(
   return request<{ thread_id: string; room: boolean }>(
     `/v2/case/${encodeURIComponent(threadId)}/room`,
     { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ room_code: roomCode }) },
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.read,
+    opts.signal,
+  );
+}
+
+/**
+ * One transition of the room's order and task loop on the thread (order, claim, complete).
+ * The server refuses a medication completion while the treatment table is missing or
+ * rejected (409 `treatments_locked`); every member receives it as a `task` event.
+ */
+export function postRoomTask(
+  threadId: string,
+  req: RoomTaskRequest,
+  opts: RequestOptions = {},
+): Promise<BackendResult<{ thread_id: string; task: RoomThreadTask }>> {
+  return request<{ thread_id: string; task: RoomThreadTask }>(
+    `/v2/case/${encodeURIComponent(threadId)}/task`,
+    { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(req) },
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.read,
     opts.signal,
   );

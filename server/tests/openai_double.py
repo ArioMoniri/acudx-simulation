@@ -284,7 +284,8 @@ def build_double(sc: Scenario) -> FastAPI:
         elif role == "author.render":
             m = re.search(r"^TEXTS\n(.*)$", user_text, re.MULTILINE)
             texts = json.loads(m.group(1)) if m else []
-            out = ["[TR] " + (re.sub(r"\d", "", t) if sc.render_drops_numbers else t) for t in texts]
+            tag = "[EN] " if re.search(r"^TARGET: English$", user_text, re.MULTILINE) else "[TR] "
+            out = [tag + (re.sub(r"\d", "", t) if sc.render_drops_numbers else t) for t in texts]
             content = json.dumps({"texts": out}, ensure_ascii=False)
         elif role == "author" and sc.live_drafts:
             content = json.dumps(sc.live_drafts.pop(0), ensure_ascii=False)
