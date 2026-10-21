@@ -15,7 +15,7 @@ import re
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
-PRICE_TABLE_VERSION = "2026-10-19"
+PRICE_TABLE_VERSION = "2026-10-21"
 
 _FREE_PROVIDERS = {"local", "gpu_worker", "gpu-worker", "env-llm", "env-embed", "env-rerank"}
 
@@ -29,13 +29,46 @@ class PriceRow:
     cached_input_per_m: float | None
     effective_from: str        # ISO date
     source_url: str
+    # Prompt-cache writes (Anthropic: 1.25x input for the 5-minute TTL). None = billed as input.
+    cache_write_per_m: float | None = None
+    # Long-prompt tier (Claude Haiku 5.5 above 100K prompt tokens): threshold and rates.
+    long_threshold: int | None = None
+    long_input_per_m: float | None = None
+    long_output_per_m: float | None = None
 
     def matches(self, provider: str, model: str) -> bool:
         return provider.lower().startswith(self.provider) and re.search(self.model_pattern, model, re.I) is not None
 
 
+_ANTHROPIC_PRICING = "https://platform.claude.com/docs/en/about-claude/pricing"
+
+
+def _claude(pattern: str, inp: float, out: float, read: float, **long_tier: float | int) -> PriceRow:
+    """One Anthropic first-party row: cache reads at the published read rate, 5-minute cache
+    writes at 1.25x input (the price page's multiplier), effective 2026-10-06 (table cache date)."""
+    return PriceRow("anthropic", pattern, inp, out, read, "2026-10-06", _ANTHROPIC_PRICING,
+                    cache_write_per_m=round(inp * 1.25, 6), **long_tier)  # type: ignore[arg-type]
+
+
+# Anthropic first-party list prices, USD per 1M tokens (input, output, cache read). Specific
+# rows first: ``claude-opus-5`` must not swallow ``claude-opus-5-5``.
+ANTHROPIC_ROWS: tuple[PriceRow, ...] = (
+    _claude(r"claude-fable-5-1", 10.00, 50.00, 0.25),
+    _claude(r"claude-mythos-5-1", 10.00, 50.00, 0.25),
+    _claude(r"claude-fable-5(?!-)", 10.00, 50.00, 1.00),
+    _claude(r"claude-opus-5-5", 4.00, 20.00, 0.20),
+    _claude(r"claude-opus-5(?!-)", 5.00, 25.00, 0.50),
+    _claude(r"claude-opus-4-(6|7|8)", 5.00, 25.00, 0.50),
+    _claude(r"claude-sonnet-5-5", 2.00, 10.00, 0.20),
+    _claude(r"claude-sonnet-5(?!-)", 2.00, 10.00, 0.20),
+    _claude(r"claude-sonnet-4-6", 3.00, 15.00, 0.30),
+    _claude(r"claude-haiku-5-5", 0.10, 0.50, 0.01, long_threshold=100_000, long_input_per_m=0.50,
+            long_output_per_m=2.50),
+    _claude(r"claude-haiku-4-5", 1.00, 5.00, 0.10),
+)
+
 # Values from docs/research/16-agent-orchestration-identity-deploy-oct-2026.md section 2.2 (fetched 2026-10-19).
-PRICE_TABLE: tuple[PriceRow, ...] = (
+PRICE_TABLE: tuple[PriceRow, ...] = ANTHROPIC_ROWS + (
     PriceRow("deepinfra", r"qwen3-32b", 0.08, 0.28, None, "2026-10-19", "https://deepinfra.com/pricing"),
     PriceRow("deepinfra", r"qwen3-235b", 0.09, 0.55, None, "2026-10-19", "https://deepinfra.com/pricing"),
     PriceRow("deepinfra", r"llama-4-scout", 0.10, 0.30, None, "2026-10-19", "https://deepinfra.com/pricing"),
@@ -63,6 +96,7 @@ _HOST_SLUGS: tuple[tuple[str, str], ...] = (
     ("groq.com", "groq"),
     ("fireworks.ai", "fireworks"),
     ("openrouter.ai", "openrouter"),
+    ("anthropic.com", "anthropic"),
     ("huggingface.co", "huggingface"),
     ("openai.com", "openai"),
     ("elevenlabs.io", "elevenlabs"),
@@ -149,15 +183,29 @@ def lookup(provider: str, model: str) -> PriceRow | None:
     return None
 
 
-def cost_usd(provider: str, model: str, tokens_in: int, tokens_out: int, cached_tokens: int = 0) -> float:
-    """USD for one call. Unknown hosted models and self-hosted endpoints cost 0."""
+def cost_usd(provider: str, model: str, tokens_in: int, tokens_out: int, cached_tokens: int = 0,
+             cache_write_tokens: int = 0) -> float:
+    """USD for one call. Unknown hosted models and self-hosted endpoints cost 0.
+
+    ``tokens_in`` is the whole prompt; ``cached_tokens`` of it were cache reads and
+    ``cache_write_tokens`` were cache writes (each billed at its own rate when the row
+    publishes one, else at the input rate)."""
     if provider.lower() in _FREE_PROVIDERS:
         return 0.0
     row = lookup(provider, model or "")
     if row is None:
         return 0.0
+    tokens_in = max(0, tokens_in)
     cached = max(0, min(cached_tokens, tokens_in))
-    uncached = max(0, tokens_in - cached)
-    cached_rate = row.cached_input_per_m if row.cached_input_per_m is not None else row.input_per_m
-    total = (uncached * row.input_per_m + cached * cached_rate + max(0, tokens_out) * row.output_per_m) / 1_000_000.0
+    written = max(0, min(cache_write_tokens, tokens_in - cached))
+    uncached = max(0, tokens_in - cached - written)
+    input_rate, output_rate = row.input_per_m, row.output_per_m
+    if row.long_threshold is not None and tokens_in > row.long_threshold:
+        input_rate = row.long_input_per_m if row.long_input_per_m is not None else input_rate
+        output_rate = row.long_output_per_m if row.long_output_per_m is not None else output_rate
+    scale = input_rate / row.input_per_m if row.input_per_m else 1.0
+    cached_rate = (row.cached_input_per_m * scale) if row.cached_input_per_m is not None else input_rate
+    write_rate = (row.cache_write_per_m * scale) if row.cache_write_per_m is not None else input_rate
+    total = (uncached * input_rate + cached * cached_rate + written * write_rate
+             + max(0, tokens_out) * output_rate) / 1_000_000.0
     return round(total, 8)

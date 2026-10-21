@@ -136,8 +136,18 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
           )}
         </BannerFact>
 
-        <BannerFact label={t("ehr.banner.codeStatus")}>
-          <StatusDot tone="normal" size="sm" label={t("ehr.codeStatus.full")} />
+        {/* Review 2026-10-21: the banner read "Code: Full code", which a learner
+            could not decode. It is the resuscitation status, written out, with
+            the meaning of "full code" in the hint. */}
+        <BannerFact label={t("ehrTerms.codeStatus.label")}>
+          <span title={t("ehrTerms.codeStatus.hint")} className="inline-flex">
+            <StatusDot
+              tone="normal"
+              size="sm"
+              label={t("ehrTerms.codeStatus.full")}
+              aria-label={`${t("ehrTerms.codeStatus.full")}. ${t("ehrTerms.codeStatus.hint")}`}
+            />
+          </span>
         </BannerFact>
 
         <BannerFact label={t("ehrPolish.acuity")}>

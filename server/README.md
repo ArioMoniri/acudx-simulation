@@ -83,7 +83,7 @@ Every field of `Settings` in `config.py`, overridable by the env var of the same
 | `STATUS_DISK_PATH` | `/data` | Falls back to `/` if absent. |
 | `AUTH_MODE` | `local` | `local` (unverified local profiles, `X-Auth-Mode: local`) \| `oidc` (verified bearer JWT required). The registry setting `auth_mode` overrides it. |
 | `ACUDX_SECRET_KEY` | unset | Fernet key sealing provider API keys at rest; unset means keys cannot be stored (never plaintext). |
-| `REGISTRY_SEED_ENV` | `true` | Import `LLM_BASE_URL` / `EMBED_URL` / `RERANK_URL` as provider rows on first boot. Production sets `false`: LLM calls then go to the rows an admin adds (an `api.anthropic.com` row is called through the native Messages API), else to the on-demand GPU worker. |
+| `REGISTRY_SEED_ENV` | `true` | Import `LLM_BASE_URL` / `EMBED_URL` / `RERANK_URL` as provider rows on first boot. Production sets `false`: LLM calls then go to Claude when a key exists (`ANTHROPIC_KEY`, else the key pasted on the `anthropic` row), else to other rows an admin adds, else to the on-demand GPU worker. |
 | `BOOTSTRAP_DIR` | unset | Directory with `credentials.json` + `code.json` for the one-time account handoff at `/bootstrap/credentials` (server/bootstrap). Unset: 404. |
 | `BOOTSTRAP_REQUIRE_HTTPS` | `true` | The handoff page refuses requests that did not arrive over HTTPS (`X-Forwarded-Proto`). |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | When set, every gateway call emits an OpenTelemetry `gen_ai.*` span (deps in `requirements-telemetry.txt`). |

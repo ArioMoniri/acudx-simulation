@@ -11,8 +11,13 @@ import {
   searchDiagnoses,
   systemLabel,
   type DiagnosisEntry,
+  type DiagnosisSearchResult,
   type DiagnosisSystem,
 } from "@/domain/diagnosisCatalog";
+import { searchIcd10cm } from "@/lib/terminologyApi";
+import { useEncounterState } from "@/state/encounterStore";
+
+const EMPTY_CODES: ReadonlySet<string> = new Set();
 
 /** How many results to reveal per page before offering "Load more". */
 const RESULTS_PAGE_SIZE = 40;
@@ -63,17 +68,57 @@ export function DiagnosisPicker({
   // search corpus so any generated diagnosis is findable by name — not merely
   // committable from the "suggested" row below. Catalogue entries win on a code
   // collision inside searchDiagnoses, so in-catalogue cases are never doubled.
+  // Review 2026-10-21: the full ICD-10-CM FY2027 release (every code, with the
+  // official alphabetic-index phrases as synonyms) is searched on the server when
+  // the gateway is reachable; its hits join the corpus below, and a catalogue
+  // entry still wins a code collision.
+  const live = useEncounterState().liveEnabled;
+  const [server, setServer] = useState<{ q: string; hits: DiagnosisEntry[]; codes: ReadonlySet<string> }>({
+    q: "",
+    hits: [],
+    codes: new Set(),
+  });
+  const trimmed = query.trim();
+  useEffect(() => {
+    if (!live || trimmed.length < 2) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      void searchIcd10cm(trimmed, 25, { signal: controller.signal }).then((res) => {
+        if (!res.ok || !res.data.available) return;
+        setServer({
+          q: trimmed,
+          hits: res.data.results.map((h) => caseEntry(h.code, h.title)),
+          codes: new Set(res.data.results.map((h) => h.code)),
+        });
+      });
+    }, 250);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [trimmed, live]);
+  // Only the answer for the current query counts (a stale answer is ignored).
+  const current = live && server.q === trimmed;
+  const serverHits = useMemo(() => (current ? server.hits : []), [current, server.hits]);
+  const serverCodes = current ? server.codes : EMPTY_CODES;
+
   const extraEntries = useMemo<DiagnosisEntry[]>(
-    () => caseOptions.filter((o) => !o.entry).map((o) => caseEntry(o.code, o.display)),
-    [caseOptions],
+    () => [...caseOptions.filter((o) => !o.entry).map((o) => caseEntry(o.code, o.display)), ...serverHits],
+    [caseOptions, serverHits],
   );
 
   // Every match, ranked — never silently truncated. The list is paged for the
   // DOM via `visibleCount` + a "Load more" control below.
-  const results = useMemo(
-    () => searchDiagnoses(query, lang, undefined, extraEntries),
-    [query, lang, extraEntries],
-  );
+  const results = useMemo(() => {
+    const local = searchDiagnoses(query, lang, undefined, extraEntries);
+    // Server hits matched through index synonyms ("heart attack" -> I21.9) that
+    // the local label search cannot see follow the local matches, in server rank.
+    const seen = new Set(local.map((r) => r.icd10));
+    const rest: DiagnosisSearchResult[] = serverHits
+      .filter((h) => !seen.has(h.icd10))
+      .map((h, i) => ({ ...h, display: h.label.en, rank: 1000 + i }));
+    return [...local, ...rest];
+  }, [query, lang, extraEntries, serverHits]);
 
   const [visibleCount, setVisibleCount] = useState(RESULTS_PAGE_SIZE);
   // Reset paging whenever the result set changes (new query / language / case).
@@ -141,7 +186,7 @@ export function DiagnosisPicker({
                   <li key={r.icd10} className="flex items-start justify-between gap-3 py-2">
                     <span className="min-w-0">
                       <span className="block truncate text-sm text-fg">{o.display}</span>
-                      <CodeChips entry={r} lang={lang} system={r.system} />
+                      <CodeChips entry={r} lang={lang} system={r.system} fromRelease={serverCodes.has(r.icd10)} />
                     </span>
                     <AddButton added={added} label={o.display} onClick={() => onAdd(o)} />
                   </li>
@@ -230,10 +275,13 @@ function CodeChips({
   entry,
   lang,
   system,
+  fromRelease = false,
 }: {
   entry: DiagnosisEntry;
   lang: Lang;
   system: DiagnosisSystem;
+  /** True for a hit from the full ICD-10-CM release (no curated system label). */
+  fromRelease?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -251,7 +299,7 @@ function CodeChips({
           <span className="text-fg-subtle">{t("diagnosis2.codeDsm")}</span> {entry.dsm5tr}
         </span>
       ) : null}
-      <span className="text-[10px] text-fg-subtle">{systemLabel(system, lang)}</span>
+      <span className="text-[10px] text-fg-subtle">{fromRelease ? t("results3.icdSource") : systemLabel(system, lang)}</span>
     </span>
   );
 }

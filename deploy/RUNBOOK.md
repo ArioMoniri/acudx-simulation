@@ -9,9 +9,9 @@ Applies to a host deployed with `deploy/one-click.sh` (directly, or through
 |---|---|---|
 | `/opt/acudx` | code (git archive of the deployed branch) | root |
 | `/etc/acudx/compose.env` | `DOMAIN` | 0600 |
-| `/etc/acudx/gateway.env` | `ADMIN_TOKEN`, `ACUDX_SECRET_KEY` (registry sealing key), `LAMBDA_KEY`, `LAMBDA_SSH_KEY_NAME`, `GPU_IDLE_MINUTES` | 0600 |
+| `/etc/acudx/gateway.env` | `ADMIN_TOKEN`, `ACUDX_SECRET_KEY` (registry sealing key), `LAMBDA_KEY`, `ANTHROPIC_KEY` (if given), `LAMBDA_SSH_KEY_NAME`, `GPU_IDLE_MINUTES` | 0600 |
 | `/etc/acudx/keycloak.env`, `keycloak-db.env` | Keycloak admin and database passwords | 0600 |
-| `/etc/acudx/lambda.key` | Lambda API key as delivered by the operator | 0600 |
+| `/etc/acudx/lambda.key`, `anthropic.key` | Lambda and (optional) Anthropic keys as delivered by the operator | 0600 |
 | `/etc/acudx/compose.override.yml` | optional host-local compose overrides (picked up automatically) | 0600 |
 | `/var/lib/acudx/bootstrap/` | `credentials.json` (temporary passwords), `code.json` (salted hash of the retrieval code), `audit.log` | 0700 dir, 0600 files |
 | `/root/acudx-retrieval-code.txt` | the current retrieval code | 0600 |
@@ -88,15 +88,18 @@ follow, and the gateway's identity provider row is re-registered with the new is
 
 ## Model provider and GPU workers
 
-- With no LLM row in the registry, every model call goes to the on-demand Lambda GPU worker. A
+- With no Claude key and no other LLM row, every model call goes to the on-demand Lambda GPU worker. A
   case start answers `503 model_warming` while the worker boots and launches it in the
   background; the idle reaper terminates it after `GPU_IDLE_MINUTES` (20). Policy (idle window,
   allowlist, regions, `max_workers` 1 or 0 to disable launches, no budget cap by default):
   Admin console, GPU tab, or `PUT /admin/gpu/policy`.
-- To use Anthropic: sign in as `acudx-super-admin` (or `acudx-admin`), Admin, Providers, Add,
-  kind LLM, "Use the Anthropic API", paste the key, Save. The key is sealed with
-  `ACUDX_SECRET_KEY` in the registry and never returned to the browser. The gateway calls it
-  through the native Messages API and stops using the GPU worker for model calls.
+- Claude is the default model route (`server/providers/anthropic_provider.py`). Its key comes
+  from `ANTHROPIC_KEY` on the host (`/etc/acudx/anthropic.key` or the environment of
+  `one-click.sh`, written to `gateway.env`), else from the admin panel: sign in as
+  `acudx-super-admin` (or `acudx-admin`), Admin, Providers, edit the `anthropic` row, paste the
+  key, Save. The panel key is sealed with `ACUDX_SECRET_KEY` and never returned to the browser.
+  When both exist the host key wins. With no key from either source, model calls go to the GPU
+  worker as described above.
 - Stop a running worker now: `$C exec -T server sh -c 'curl -fsS -X POST -H "X-Admin-Token: $ADMIN_TOKEN" http://127.0.0.1:8890/admin/gpu/stop'`.
 
 ## Backup

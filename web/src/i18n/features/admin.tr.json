@@ -121,6 +121,8 @@
       "toggleAria": "{{name}} sağlayıcısını etkinleştir",
       "deleteConfirm": "{{name}} sağlayıcısı silinsin mi? Model çağrıları bu türdeki sonraki etkin sağlayıcıya geçer.",
       "secretsBanner": "Ağ geçidinde ACUDX_SECRET_KEY tanımlı değil; API anahtarları kaydedilemez. Anahtarsız sağlayıcılar çalışmaya devam eder.",
+      "anthropicNoKey": "Anthropic anahtarı yapılandırılmadı. Ağ geçidinde ANTHROPIC_KEY tanımlayın (ya da anthropic satırına anahtar kaydedin); o zamana kadar model çağrıları sıradaki sağlayıcıyı kullanır.",
+      "anthropicUnusable": "Claude yolu kullanılamıyor: {{reason}}. Model çağrıları sıradaki sağlayıcıyı kullanır.",
       "drawer": {
         "createTitle": "Yeni sağlayıcı",
         "editTitle": "Sağlayıcıyı düzenle",
@@ -145,9 +147,7 @@
         "create": "Sağlayıcı oluştur",
         "saved": "Kaydedildi",
         "required": "Zorunlu",
-        "invalidUrl": "Bir http(s) URL'si girin.",
-        "presetHint": "Anthropic API bilgilerini doldurur; ardindan anahtari asagiya yapistirin: sunucuda sifrelenir ve bir daha gosterilmez.",
-        "presetAnthropic": "Anthropic API kullan"
+        "invalidUrl": "Bir http(s) URL'si girin."
       }
     },
     "kinds": {

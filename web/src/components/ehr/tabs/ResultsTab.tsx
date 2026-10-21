@@ -12,10 +12,12 @@ import {
   TrendUp,
   TrendDown,
   Minus,
+  FastForward,
 } from "@phosphor-icons/react";
 
 import {
   Badge,
+  Button,
   Card,
   SectionLabel,
   StatusDot,
@@ -41,11 +43,15 @@ import {
   pick,
 } from "../labels";
 import {
+  advanceSimTime,
   getDiscoveredImaging,
   getDiscoveredLabs,
   getEncounterClockMs,
+  nextResultInMs,
+  retryEngineResult,
   useEncounterState,
 } from "@/state/encounterStore";
+import { formatSimMinutes } from "@/domain/serverCatalog";
 import type { PlacedOrder, ResolvedResult } from "@/state/encounterStore";
 import {
   getOrderableByCode,
@@ -155,6 +161,16 @@ interface MicroEntry {
   source: ResultSource;
 }
 
+/** A live order the reachable engine could not answer (shown with a retry, no values). */
+interface UnavailableEntry {
+  id: string;
+  title: Bilingual;
+  orderedAt: number;
+  resultedAt: number;
+  orderId: string;
+  reason: string | null;
+}
+
 /** A unified imaging entry: engine study, ground-truth study, or offline synthetic normal. */
 interface ImagingEntry {
   id: string;
@@ -241,6 +257,7 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
   // answered or the labelled fallback ran). Offline, the playback ETA suffices.
   const isResulted = (o: PlacedOrder) => o.resolved || (!state.liveEnabled && nowMs >= o.resultsReadyAt);
   const pending = state.orders.filter((o) => !isResulted(o));
+  const nextWaitMs = nextResultInMs(state);
   useSecondTick(pending.length > 0);
   const resultByOrderId = useMemo(() => {
     const m = new Map<string, ResolvedResult>();
@@ -279,13 +296,14 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
   // Resulted orders, GROUPED BY CODE so serial re-orders collapse into a trend.
   // Each draw's synthetic/ground-truth value is tied to the clinical course at
   // its placedAt (draw time) + treatments, so re-ordering later trends.
-  const { panelGroups, trendGroups, microEntries, syntheticImaging } = useMemo(() => {
+  const { panelGroups, trendGroups, microEntries, syntheticImaging, unavailableEntries } = useMemo(() => {
     const panels: PanelGroup[] = [];
     const trends: TrendGroup[] = [];
     const micro: MicroEntry[] = [];
     const imaging: ImagingEntry[] = [];
+    const unavailable: UnavailableEntry[] = [];
     if (!caseInstance)
-      return { panelGroups: panels, trendGroups: trends, microEntries: micro, syntheticImaging: imaging };
+      return { panelGroups: panels, trendGroups: trends, microEntries: micro, syntheticImaging: imaging, unavailableEntries: unavailable };
 
     const groups = new Map<string, PlacedOrder[]>();
     for (const o of state.orders) {
@@ -305,6 +323,18 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
       const resultedAtAt = (i: number): number => times[i] ?? draws[i].resultsReadyAt;
       const engineAt = (i: number): OrderResult | undefined => resultByOrderId.get(draws[i].id)?.engine;
       const lastEngine = engineAt(draws.length - 1);
+      // Review 2026-10-21: the reachable engine could not produce this result.
+      // Show that honestly (with a retry), never an offline synthetic value.
+      if (resultByOrderId.get(last.id)?.source === "engine-unavailable") {
+        unavailable.push({ id: `unavail-${code}`, title: orderable.label, orderedAt: last.placedAt, resultedAt: resultedAtAt(draws.length - 1), orderId: last.id, reason: last.engineError ?? null });
+        continue;
+      }
+      // The engine answered that there is nothing to sample (no effusion): say so.
+      if (lastEngine && lastEngine.status === "unavailable" && lastEngine.kind !== "imaging") {
+        micro.push({ id: `micro-${code}`, title: orderable.label, conclusion: lastEngine.message ? { en: lastEngine.message, tr: lastEngine.message } : undefined,
+          orderedAt: last.placedAt, resultedAt: resultedAtAt(draws.length - 1), clinicalEta, synthetic: false, abnormal: false, source: "engine" });
+        continue;
+      }
 
       // Imaging. Live mode: the engine's structured study with its matched image
       // (or "unavailable" with findings only) for every placed study, including
@@ -333,7 +363,7 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
         const resultedAt = resultedAtAt(draws.length - 1);
         if (lastEngine) {
           const lines = (lastEngine.observations ?? []).map((o) => `${o.name}: ${withUnit(o.value, o.unit)}`);
-          const text = lines.join("; ") || lastEngine.reason || "";
+          const text = lines.join("; ") || lastEngine.message || "";
           micro.push({
             id: `micro-${code}`,
             title: orderable.label,
@@ -418,7 +448,7 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
       }
     }
 
-    return { panelGroups: panels, trendGroups: trends, microEntries: micro, syntheticImaging: imaging };
+    return { panelGroups: panels, trendGroups: trends, microEntries: micro, syntheticImaging: imaging, unavailableEntries: unavailable };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseInstance, state.orders, state.results, treatments, groundByCode, resultsByCode, resultByOrderId, nowMs, lang]);
 
@@ -591,37 +621,86 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
         </motion.div>
       ) : null}
 
-      {/* Pending orders — in progress · ETA */}
+      {/* Pending orders: in progress on the sim clock, with preliminary reports */}
       {pending.length > 0 ? (
         <section className="flex flex-col gap-3">
-          <h3 className="flex items-center gap-1.5 border-b border-border pb-1.5 text-[0.8125rem] font-semibold text-fg">
-            <Timer weight="bold" className="h-4 w-4 text-muted" aria-hidden />
-            {t("ehr.results.pendingHeading")}
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-1.5">
+            <h3 className="flex items-center gap-1.5 text-[0.8125rem] font-semibold text-fg">
+              <Timer weight="bold" className="h-4 w-4 text-muted" aria-hidden />
+              {t("ehr.results.pendingHeading")}
+            </h3>
+            {nextWaitMs != null && nextWaitMs > 0 ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => advanceSimTime(nextWaitMs)}
+                title={t("results3.advanceHint")}
+                leadingIcon={<FastForward weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+              >
+                {t("results3.advance", { time: formatSimMinutes(nextWaitMs / 60_000, lang) })}
+              </Button>
+            ) : null}
+          </div>
           <ul className="flex flex-col gap-2">
             {pending.map((o, i) => {
-              const etaSec = Math.max(0, Math.ceil((o.resultsReadyAt - nowMs) / 1000));
+              const leftMin = Math.max(0, (o.resultsReadyAt - nowMs) / 60_000);
               const clinicalEta = lang === "tr" ? o.clinicalLabelTr : o.clinicalLabelEn;
+              const prelimDue = o.preliminaryAt != null && nowMs >= o.preliminaryAt;
+              const failed = o.engineStatus === "error";
               return (
-                <li key={`${o.code}-${i}`} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="min-w-0 truncate text-fg">
-                    {lang === "tr" ? o.labelTr : o.labelEn}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <span className="font-mono text-[11px] tabular-nums text-subtle">
-                      {t("orders2.results.eta", { eta: clinicalEta })}
+                <li key={`${o.code}-${i}`} data-chart-ref={o.code} className="flex flex-col gap-0.5 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-fg">
+                      {lang === "tr" ? o.labelTr : o.labelEn}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 font-mono text-[11px] tabular-nums text-[color:var(--state-caution)]">
-                      <Timer weight="bold" className="h-3.5 w-3.5 motion-safe:animate-pulse" aria-hidden />
-                      {etaSec > 0
-                        ? t("ehr2.results.readyIn", { sec: etaSec })
-                        : t("ehr2.results.readyIn", { sec: 0 })}
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span className="font-mono text-[11px] tabular-nums text-subtle">
+                        {t("orders2.results.eta", { eta: clinicalEta })}
+                      </span>
+                      <Badge tone="caution" icon={<Timer weight="bold" className="h-3 w-3 motion-safe:animate-pulse" aria-hidden />}>
+                        {prelimDue ? t("results3.preliminary") : t("results3.pending")}
+                      </Badge>
+                      <span className="font-mono text-[11px] tabular-nums text-[color:var(--state-caution)]">
+                        {t("results3.readyIn", { time: formatSimMinutes(leftMin, lang) })}
+                      </span>
                     </span>
-                  </span>
+                  </div>
+                  {prelimDue && o.preliminaryText ? (
+                    <p className="text-xs text-muted">
+                      <span className="font-medium text-fg">{t("results3.preliminary")}:</span> {o.preliminaryText}
+                    </p>
+                  ) : null}
+                  {failed ? (
+                    <p className="flex flex-wrap items-center gap-2 text-xs text-[color:var(--state-warning)]">
+                      <WarningCircle weight="fill" className="h-3.5 w-3.5" aria-hidden />
+                      {t("results3.engineFailed")}
+                      <Button size="sm" variant="ghost" onClick={() => retryEngineResult(o.id)}>
+                        {t("results3.retry")}
+                      </Button>
+                    </p>
+                  ) : null}
                 </li>
               );
             })}
           </ul>
+        </section>
+      ) : null}
+
+      {/* Live orders the reachable engine could not answer: no invented values */}
+      {unavailableEntries.length > 0 ? (
+        <section className="flex flex-col gap-2">
+          {unavailableEntries.map((u) => (
+            <Card key={u.id} padding="md">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+                  <WarningCircle weight="fill" className="h-4 w-4 text-[color:var(--state-warning)]" aria-hidden />
+                  {pick(u.title, lang)}
+                </span>
+                <SourceChip source="engine-unavailable" />
+              </div>
+              <p className="mt-1 text-xs text-muted">{t("results3.unavailableBody")}</p>
+            </Card>
+          ))}
         </section>
       ) : null}
 
@@ -957,6 +1036,21 @@ function buildSyntheticImaging(
   };
 }
 
+/**
+ * A small secondary LOINC tag for an orderable that has a verified LOINC order
+ * code. The human label is the heading; the code is reference detail only.
+ */
+function LoincTag({ code }: { code: string }) {
+  const { t } = useTranslation();
+  const loinc = getOrderableByCode(code)?.loinc;
+  if (!loinc) return null;
+  return (
+    <span className="font-mono text-[10px] font-normal tabular-nums text-subtle" title={t("results3.loincTitle")}>
+      LOINC {loinc}
+    </span>
+  );
+}
+
 /** Provenance chip: results engine, authored case record, or the offline synthetic normal. */
 function SourceChip({ source }: { source: ResultSource }) {
   const { t } = useTranslation();
@@ -1008,13 +1102,14 @@ function SummaryStat({
 function PanelTable({ group, lang }: { group: PanelGroup; lang: Lang }) {
   const { t } = useTranslation();
   return (
-    <section>
+    <section data-chart-ref={group.key}>
       <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <h4 className="flex items-baseline gap-2 text-sm font-semibold text-fg">
           {pick(group.title, lang)}
           <span className="font-mono text-[11px] font-normal tabular-nums text-subtle">
             {t("labs2.results.analytes", { count: group.rows.length })}
           </span>
+          <LoincTag code={group.key} />
           <SourceChip source={group.source} />
         </h4>
         <span className="font-mono text-[11px] tabular-nums text-muted">

@@ -1,0 +1,72 @@
+{
+  "files": {
+    "icd10cm_fy2027_descriptions": {
+      "bytes": 2192779,
+      "cache_path": "data/terminology/cache/icd10cm-code-descriptions-2027.zip",
+      "fetched_at": "2026-10-21T06:58:01Z",
+      "licence": "Public domain (US Government work, CDC/NCHS). https://www.cdc.gov/nchs/icd/icd-10-cm/",
+      "redistributed_in_repo": true,
+      "sha256": "93e3ad6004badf470c55bfe679b748ae88fd9b2b421851e409eec382c7713b9a",
+      "url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2027/icd10cm-code-descriptions-2027.zip"
+    },
+    "icd10cm_fy2027_table_index": {
+      "bytes": 20923571,
+      "cache_path": "data/terminology/cache/icd10cm-table-and-index-2027.zip",
+      "fetched_at": "2026-10-21T06:58:02Z",
+      "licence": "Public domain (US Government work, CDC/NCHS). https://www.cdc.gov/nchs/icd/icd-10-cm/",
+      "redistributed_in_repo": true,
+      "sha256": "99b5c2be16ff53eab861cc0be4b1dacba27f687b8ff4bc700679944355037ee0",
+      "url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2027/icd10cm-table-and-index-2027.zip"
+    },
+    "icd11_mms_2026_01_simple_tabulation": {
+      "bytes": 4214980,
+      "cache_path": "data/terminology/cache/SimpleTabulation-ICD-11-MMS-en.zip",
+      "fetched_at": "2026-10-21T06:58:06Z",
+      "licence": "CC BY-ND 3.0 IGO, World Health Organization. https://icd.who.int/en/docs/icd11-license.pdf",
+      "redistributed_in_repo": false,
+      "sha256": "f1356588f40953a83e3af2b662deab47c5e269f944d1ea4ed0cfeb2007c7cd39",
+      "url": "https://icdcdn.who.int/static/releasefiles/2026-01/SimpleTabulation-ICD-11-MMS-en.zip"
+    }
+  },
+  "outputs": {
+    "icd10cm": {
+      "billable": 74879,
+      "built_at": "2026-10-21T08:09:39Z",
+      "bytes": 1216746,
+      "count": 98403,
+      "path": "server/terminology/data/icd10cm-fy2027.json.gz",
+      "sha256": "64f1e0a0630fc13cb980ac1e1a135150c06e53123fc9578a5c196b013a8e9f53"
+    },
+    "icd11": {
+      "built_at": "2026-10-21T06:59:19Z",
+      "bytes": 648254,
+      "count": 35664,
+      "path": "server/terminology/data/icd11-mms-2026-01.json.gz",
+      "sha256": "91e593bc16f065bbb552deef3804886498da81c2ea86e9c442cecdb1f04519d3"
+    },
+    "loinc_verified": {
+      "built_at": "2026-10-21T07:18:52Z",
+      "bytes": 81626,
+      "count": 244,
+      "failures": 0,
+      "loinc_version": "2.82",
+      "path": "server/terminology/data/loinc-verified.json",
+      "sha256": "96824288667ca5215dc55f37363213a503f5a20b6a6447484096fad1f2a32a8e"
+    },
+    "range_verification": {
+      "built_at": "2026-10-21T07:19:54Z",
+      "bytes": 36021,
+      "count": 189,
+      "numbers_found": 108,
+      "path": "data/terminology/range-verification.json",
+      "sha256": "f871cdbb2c25b5d88d6ceaf5c276195f939069ada4c1dfd591ffdbbece1015e6"
+    },
+    "web_order_catalog": {
+      "built_at": "2026-10-21T07:33:41Z",
+      "bytes": 68030,
+      "path": "web/src/domain/generated/orderCatalog.generated.json",
+      "sha256": "95f116a70c42a7edfa2ca4cd108c4647360a087ffce3fb39ae62238e32a6c920"
+    }
+  },
+  "schema_version": 1
+}

@@ -23,6 +23,9 @@
 #   LAMBDA_KEY      Lambda Cloud API key for on-demand GPU workers. Sent over SSH on stdin to
 #                   /etc/acudx/lambda.key (0600); never on a command line, never printed. When
 #                   unset, an existing SSM copy ($SSM_PREFIX/lambda_key) is used.
+#   ANTHROPIC_KEY   optional Claude key, delivered the same way to /etc/acudx/anthropic.key (or an
+#                   existing SSM copy $SSM_PREFIX/anthropic_key). Without it the admin panel takes
+#                   one later; until then model calls go to the on-demand GPU worker.
 #   LAMBDA_SSH_KEY_NAME  Lambda ssh key name the gateway attaches to GPU workers
 #                   (default acudx-web-prod-key, registered in the Lambda account).
 #   STORE_SECRETS_IN_SSM  1 (default): copy the generated secrets and the retrieval code to SSM
@@ -187,6 +190,17 @@ else
     log "no LAMBDA_KEY: the gateway cannot launch GPU workers until /etc/acudx/lambda.key exists"
   fi
   unset KEY_VALUE
+  ANT_VALUE="${ANTHROPIC_KEY:-}"
+  if [ -z "$ANT_VALUE" ]; then
+    ANT_VALUE="$(aws_none "$(aws ssm get-parameter --with-decryption --name "$SSM_PREFIX/anthropic_key" \
+      --query Parameter.Value --output text 2>/dev/null || true)")"
+  fi
+  if [ -n "$ANT_VALUE" ]; then
+    printf '%s' "$ANT_VALUE" | "${SSH[@]}" 'sudo install -d -m 700 /etc/acudx && sudo sh -c "umask 077; cat > /etc/acudx/anthropic.key"'
+    log "ANTHROPIC_KEY delivered to /etc/acudx/anthropic.key (0600)"
+    if [ "$STORE_SECRETS_IN_SSM" = 1 ] && [ -n "${ANTHROPIC_KEY:-}" ]; then put_secure "$SSM_PREFIX/anthropic_key" "$ANT_VALUE"; fi
+  fi
+  unset ANT_VALUE
   "${SSH[@]}" 'sudo /opt/acudx/deploy/aws/instance-bootstrap.sh'
   if [ "$STORE_SECRETS_IN_SSM" = 1 ]; then
     remote_val() { "${SSH[@]}" "sudo sed -n 's/^$2=//p' $1 | head -n1"; }

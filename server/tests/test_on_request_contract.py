@@ -150,8 +150,11 @@ def test_v2_has_no_case_listing_route():
     #   /v2/case/{thread_id}/events  SSE reconnect for the caller's OWN thread (owner check, 404 otherwise)
     #   /v2/cases/mine               the caller's own encounter history: summaries, never a case
     #                                (test_my_cases_lists_only_own_summaries_never_a_case)
+    # Reviewed 2026-10-21 (docs/architecture/20 section 3):
+    #   /v2/case/{thread_id}/interview  the interview transcript of a thread the caller may read
+    #                                   (same _thread_for check, 404 otherwise); no case content
     allowed = {"/v2/case/{thread_id}", "/v2/learner/{learner_id}", "/v2/case/{thread_id}/events",
-               "/v2/cases/mine"}
+               "/v2/cases/mine", "/v2/case/{thread_id}/interview"}
     # The OpenAPI schema, not app.routes: included routers are not flattened into app.routes.
     paths = app_module.app.openapi()["paths"]
     gets = {p for p, ops in paths.items() if p.startswith("/v2") and "get" in ops}

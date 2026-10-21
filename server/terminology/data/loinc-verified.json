@@ -1,0 +1,3652 @@
+{
+ "system": "http://loinc.org",
+ "loinc_version": "2.82",
+ "resolved_via": "https://tx.fhir.org/r4 CodeSystem/$lookup",
+ "verified_at": "2026-10-21",
+ "licence": "LOINC licence, https://loinc.org/license/ (notice in NOTICE)",
+ "codes": [
+  {
+   "code": "600-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Bacteria identified in Blood by Culture",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "analyte",
+    "orderable:blood-culture"
+   ]
+  },
+  {
+   "code": "606-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Bacteria identified in Cerebral spinal fluid by Culture",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "611-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Bacteria identified in Body fluid by Culture",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "624-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Bacteria identified in Sputum by Respiratory culture",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:sputum-culture"
+   ]
+  },
+  {
+   "code": "625-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Bacteria identified in Stool by Culture",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:stool-culture"
+   ]
+  },
+  {
+   "code": "626-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Bacteria identified in Throat by Culture",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:throat-culture"
+   ]
+  },
+  {
+   "code": "630-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Bacteria identified in Urine by Culture",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "analyte",
+    "orderable:urine-culture"
+   ]
+  },
+  {
+   "code": "664-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Microscopic observation [Identifier] in Specimen by Gram stain",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:gram-stain"
+   ]
+  },
+  {
+   "code": "711-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Eosinophils [#/volume] in Blood by Automated count",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "10*3/uL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "718-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Hemoglobin [Mass/volume] in Blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "g/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "731-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Lymphocytes [#/volume] in Blood by Automated count",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "10*3/uL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "751-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Neutrophils [#/volume] in Blood by Automated count",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "10*3/uL",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "777-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Platelets [#/volume] in Blood by Automated count",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "10*3/uL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "785-6",
+   "found": true,
+   "version": "2.82",
+   "display": "MCH [Entitic mass] by Automated count",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "pg",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "786-4",
+   "found": true,
+   "version": "2.82",
+   "display": "MCHC [Entitic Mass/volume] in Red Blood Cells by Automated count",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "g/dL",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "787-2",
+   "found": true,
+   "version": "2.82",
+   "display": "MCV [Entitic mean volume] in Red Blood Cells by Automated count",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "fL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "789-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Erythrocytes [#/volume] in Blood by Automated count",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "10*6/uL",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "882-1",
+   "found": true,
+   "version": "2.82",
+   "display": "ABO and Rh group [Type] in Blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "890-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Blood group antibody screen [Presence] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1007-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Direct antiglobulin test.polyspecific reagent [Presence] on Red Blood Cells",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:dat"
+   ]
+  },
+  {
+   "code": "1742-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "U/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1749-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Albumin [Mass/volume] in Peritoneal fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "g/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1751-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Albumin [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "g/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1798-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Amylase [Enzymatic activity/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "U/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1834-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Alpha-1-Fetoprotein [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:afp"
+   ]
+  },
+  {
+   "code": "1920-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "U/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1960-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Bicarbonate [Moles/volume] in Arterial blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1963-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Bicarbonate [Moles/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1968-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Bilirubin.direct [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1975-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Bilirubin.total [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "1986-9",
+   "found": true,
+   "version": "2.82",
+   "display": "C peptide [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:c-peptide"
+   ]
+  },
+  {
+   "code": "1988-5",
+   "found": true,
+   "version": "2.82",
+   "display": "C reactive protein [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:1988-5"
+   ]
+  },
+  {
+   "code": "1994-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Calcium.ionized [Moles/volume] in Blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2019-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Carbon dioxide [Partial pressure] in Arterial blood",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mm[Hg]",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2021-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Carbon dioxide [Partial pressure] in Venous blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mm[Hg]",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2039-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Carcinoembryonic Ag [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "used_by": [
+    "analyte",
+    "orderable:cea"
+   ]
+  },
+  {
+   "code": "2075-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Chloride [Moles/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2085-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2093-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Cholesterol [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2106-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Choriogonadotropin [Presence] in Urine",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:urine-hcg"
+   ]
+  },
+  {
+   "code": "2132-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Cobalamin (Vitamin B12) [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "pg/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2141-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Corticotropin [Mass/volume] in Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "pg/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:acth"
+   ]
+  },
+  {
+   "code": "2143-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Cortisol [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:cortisol"
+   ]
+  },
+  {
+   "code": "2157-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Creatine kinase [Enzymatic activity/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "U/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:ck"
+   ]
+  },
+  {
+   "code": "2160-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Creatinine [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2243-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Estradiol (E2) [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "pg/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:estradiol"
+   ]
+  },
+  {
+   "code": "2276-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Ferritin [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:ferritin"
+   ]
+  },
+  {
+   "code": "2284-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Folate [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2324-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Gamma glutamyl transferase [Enzymatic activity/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "U/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:ggt"
+   ]
+  },
+  {
+   "code": "2342-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Glucose [Mass/volume] in Cerebral spinal fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2345-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Glucose [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:poc-glucose"
+   ]
+  },
+  {
+   "code": "2346-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Glucose [Mass/volume] in Pleural fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2356-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Glucose-6-Phosphate dehydrogenase [Presence] in Red Blood Cells",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:g6pd"
+   ]
+  },
+  {
+   "code": "2458-8",
+   "found": true,
+   "version": "2.82",
+   "display": "IgA [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2465-3",
+   "found": true,
+   "version": "2.82",
+   "display": "IgG [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2472-9",
+   "found": true,
+   "version": "2.82",
+   "display": "IgM [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2498-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Iron [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2500-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Iron binding capacity [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2502-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Iron saturation [Mass Fraction] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "%",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2524-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Lactate [Moles/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:2524-7"
+   ]
+  },
+  {
+   "code": "2571-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Triglyceride [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2639-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Myoglobin [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:myoglobin"
+   ]
+  },
+  {
+   "code": "2692-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Osmolality of Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mosm/kg",
+   "used_by": [
+    "analyte",
+    "orderable:osmo"
+   ]
+  },
+  {
+   "code": "2695-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Osmolality of Urine",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mosm/kg",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2703-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Oxygen [Partial pressure] in Arterial blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mm[Hg]",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2705-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Oxygen [Partial pressure] in Venous blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mm[Hg]",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2708-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Oxygen saturation in Arterial blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "%",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2731-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Parathyrin.intact [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "pg/mL",
+   "used_by": [
+    "analyte",
+    "orderable:pth"
+   ]
+  },
+  {
+   "code": "2744-1",
+   "found": true,
+   "version": "2.82",
+   "display": "pH of Arterial blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "[pH]",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2746-6",
+   "found": true,
+   "version": "2.82",
+   "display": "pH of Venous blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "[pH]",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2748-2",
+   "found": true,
+   "version": "2.82",
+   "display": "pH of Body fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "[pH]",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2777-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Phosphate [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:phos"
+   ]
+  },
+  {
+   "code": "2823-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Potassium [Moles/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2828-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Potassium [Moles/volume] in Urine",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2842-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Prolactin [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:prolactin"
+   ]
+  },
+  {
+   "code": "2857-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Prostate specific Ag [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "used_by": [
+    "analyte",
+    "orderable:psa"
+   ]
+  },
+  {
+   "code": "2880-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Protein [Mass/volume] in Cerebral spinal fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2882-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Protein [Mass/volume] in Pleural fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "g/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2883-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Protein [Mass/volume] in Peritoneal fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "g/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2885-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Protein [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "g/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2915-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Renin [Enzymatic activity/volume] in Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL/h",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:renin"
+   ]
+  },
+  {
+   "code": "2951-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Sodium [Moles/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2955-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Sodium [Moles/volume] in Urine",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "2986-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Testosterone [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:testosterone"
+   ]
+  },
+  {
+   "code": "3016-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Thyrotropin [Units/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "m[IU]/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "3024-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Thyroxine (T4) free [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/dL",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "3026-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Thyroxine (T4) [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "3034-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Transferrin [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:transferrin"
+   ]
+  },
+  {
+   "code": "3040-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Lipase [Enzymatic activity/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "U/L",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "3051-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Triiodothyronine (T3) Free [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "pg/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:ft3"
+   ]
+  },
+  {
+   "code": "3084-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Urate [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "used_by": [
+    "analyte",
+    "orderable:uric-acid"
+   ]
+  },
+  {
+   "code": "3094-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Urea nitrogen [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "3173-2",
+   "found": true,
+   "version": "2.82",
+   "display": "aPTT in Blood by Coagulation assay",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "s",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "3255-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Fibrinogen [Mass/volume] in Platelet poor plasma by Coagulation assay",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "used_by": [
+    "analyte",
+    "orderable:fibrinogen"
+   ]
+  },
+  {
+   "code": "3298-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Acetaminophen [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/mL",
+   "used_by": [
+    "analyte",
+    "orderable:acetaminophen"
+   ]
+  },
+  {
+   "code": "3397-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Cocaine [Presence] in Urine",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "3432-2",
+   "found": true,
+   "version": "2.82",
+   "display": "carBAMazepine [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:carbamazepine"
+   ]
+  },
+  {
+   "code": "3968-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Phenytoin [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:phenytoin"
+   ]
+  },
+  {
+   "code": "4024-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Salicylates [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:salicylate"
+   ]
+  },
+  {
+   "code": "4086-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Valproate [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:valproate"
+   ]
+  },
+  {
+   "code": "4485-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Complement C3 [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "4498-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Complement C4 [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "4537-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Erythrocyte [Sedimentation Rate] in Blood by Westergren method",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mm/h",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:esr"
+   ]
+  },
+  {
+   "code": "4542-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Haptoglobin [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:haptoglobin"
+   ]
+  },
+  {
+   "code": "4544-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Hematocrit [Volume Fraction] of Blood by Automated count",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "%",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "4548-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Hemoglobin A1c/Hemoglobin.total in Blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "%",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:hba1c"
+   ]
+  },
+  {
+   "code": "4621-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Hemoglobin S [Presence] in Blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:sickle-screen"
+   ]
+  },
+  {
+   "code": "4679-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Reticulocytes/Erythrocytes in Blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "%",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:retic"
+   ]
+  },
+  {
+   "code": "5048-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Nuclear Ab [Titer] in Serum by Immunofluorescence",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "{titer}",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:ana"
+   ]
+  },
+  {
+   "code": "5196-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Hepatitis B virus surface Ag [Presence] in Serum or Plasma by Immunoassay",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5643-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Ethanol [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:ethanol"
+   ]
+  },
+  {
+   "code": "5646-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Ethylene glycol [Mass/volume] in Serum, Plasma or Blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5693-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Methanol [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5781-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Crystals [type] in Synovial fluid by Light microscopy",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5792-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Glucose [Mass/volume] in Urine by Test strip",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5794-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Hemoglobin [Presence] in Urine by Test strip",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5797-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Ketones [Mass/volume] in Urine by Test strip",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5799-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Leukocyte esterase [Presence] in Urine by Test strip",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5802-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Nitrite [Presence] in Urine by Test strip",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5803-2",
+   "found": true,
+   "version": "2.82",
+   "display": "pH of Urine by Test strip",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "[pH]",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5804-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Protein [Mass/volume] in Urine by Test strip",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5811-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Specific gravity of Urine by Test strip",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "{Spec grav}",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5821-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Leukocytes [#/area] in Urine sediment by Microscopy high power field",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "/[HPF]",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "5902-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Prothrombin time (PT)",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "s",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "6301-6",
+   "found": true,
+   "version": "2.82",
+   "display": "INR in Platelet poor plasma by Coagulation assay",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "{INR}",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "6462-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Bacteria identified in Wound by Culture",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:wound-culture"
+   ]
+  },
+  {
+   "code": "6690-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Leukocytes [#/volume] in Blood by Automated count",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "10*3/uL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "6768-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "U/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "6873-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Beta hydroxybutyrate [Moles/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:bhb"
+   ]
+  },
+  {
+   "code": "9318-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Albumin/Creatinine [Mass Ratio] in Urine",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/mg{creat}",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:uacr"
+   ]
+  },
+  {
+   "code": "10334-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Cancer Ag 125 [Units/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "[arb'U];[arb'U]/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:ca125"
+   ]
+  },
+  {
+   "code": "10535-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Digoxin [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:digoxin"
+   ]
+  },
+  {
+   "code": "10834-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Globulin [Mass/volume] in Serum by calculation",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "g/L",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "11524-6",
+   "found": true,
+   "version": "2.82",
+   "display": "EKG study",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:11524-6"
+   ]
+  },
+  {
+   "code": "11545-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Microscopic observation [Identifier] in Specimen by Acid fast stain",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:afb-smear"
+   ]
+  },
+  {
+   "code": "11572-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Rheumatoid factor [Units/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "[IU]/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:rf"
+   ]
+  },
+  {
+   "code": "13457-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by calculation",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "13945-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Erythrocytes [#/area] in Urine sediment by Microscopy high power field",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "/[HPF]",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "13950-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Hepatitis A virus IgM Ab [Presence] in Serum or Plasma by Immunoassay",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "13955-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Hepatitis C virus Ab [Presence] in Serum or Plasma by Immunoassay",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "14316-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Benzodiazepines [Presence] in Urine by Screen method",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "14334-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Lithium [Moles/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:lithium"
+   ]
+  },
+  {
+   "code": "14627-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Bicarbonate [Moles/volume] in Venous blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "14804-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Lactate dehydrogenase [Enzymatic activity/volume] in Serum or Plasma by Lactate to pyruvate reaction",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "U/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:ldh"
+   ]
+  },
+  {
+   "code": "16933-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Hepatitis B virus core Ab [Presence] in Serum",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "17836-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Neutrophils/Leukocytes in Synovial fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "%",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "17861-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Calcium [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "18282-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Cannabinoids [Presence] in Urine by Screen method",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "19123-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Magnesium [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mg/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:mg"
+   ]
+  },
+  {
+   "code": "19270-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Barbiturates [Presence] in Urine by Screen method",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "19295-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Opiates [Presence] in Urine by Screen method",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "19343-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Amphetamine [Presence] in Urine by Screen method",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "19550-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Methadone [Presence] in Urine by Screen method",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "19659-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Phencyclidine [Presence] in Urine by Screen method",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "20507-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Reagin Ab [Presence] in Serum by RPR",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "21198-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Choriogonadotropin.beta subunit [Units/volume] in Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "m[IU]/mL;[IU]/mL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:bhcg",
+    "orderable:bhcg-quant"
+   ]
+  },
+  {
+   "code": "22322-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Hepatitis B virus surface Ab [Presence] in Serum",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "22763-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Ammonia [Mass/volume] in Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ug/dL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:ammonia"
+   ]
+  },
+  {
+   "code": "24027-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Streptococcus pneumoniae Ag [Presence] in Urine",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:pneumococcal-ag"
+   ]
+  },
+  {
+   "code": "24323-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Comprehensive metabolic 2000 panel - Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:cmp"
+   ]
+  },
+  {
+   "code": "24325-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Hepatic function 2000 panel - Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:lft"
+   ]
+  },
+  {
+   "code": "24326-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Electrolytes 1998 panel - Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:electrolytes"
+   ]
+  },
+  {
+   "code": "24331-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Lipid 1996 panel - Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "used_by": [
+    "orderable:lipid-panel"
+   ]
+  },
+  {
+   "code": "24336-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Gas panel - Arterial blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:abg"
+   ]
+  },
+  {
+   "code": "24339-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Gas panel - Venous blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:vbg"
+   ]
+  },
+  {
+   "code": "24348-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Free T4 and TSH panel - Serum or Plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:tsh"
+   ]
+  },
+  {
+   "code": "24356-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Urinalysis complete panel - Urine",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:ua"
+   ]
+  },
+  {
+   "code": "24363-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Acute hepatitis 2000 panel - Serum",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:hepatitis-panel"
+   ]
+  },
+  {
+   "code": "24532-4",
+   "found": true,
+   "version": "2.82",
+   "display": "US Abdomen RUQ",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:us-ruq"
+   ]
+  },
+  {
+   "code": "24541-5",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Ankle Views",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:xr-ankle"
+   ]
+  },
+  {
+   "code": "24548-0",
+   "found": true,
+   "version": "2.82",
+   "display": "US Appendix",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:us-appendix"
+   ]
+  },
+  {
+   "code": "24558-9",
+   "found": true,
+   "version": "2.82",
+   "display": "US Abdomen",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:us-abdomen"
+   ]
+  },
+  {
+   "code": "24587-8",
+   "found": true,
+   "version": "2.82",
+   "display": "MR Brain WO and W contrast IV",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:mri-brain-contrast"
+   ]
+  },
+  {
+   "code": "24619-9",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Wrist Views",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:xr-wrist"
+   ]
+  },
+  {
+   "code": "24628-0",
+   "found": true,
+   "version": "2.82",
+   "display": "CT Chest W contrast IV",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "imaging:ct-chest"
+   ]
+  },
+  {
+   "code": "24677-7",
+   "found": true,
+   "version": "2.82",
+   "display": "US Pelvis transvaginal",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:us-tvus"
+   ]
+  },
+  {
+   "code": "24696-7",
+   "found": true,
+   "version": "2.82",
+   "display": "CT Facial bones",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "imaging:ct-facial"
+   ]
+  },
+  {
+   "code": "24727-0",
+   "found": true,
+   "version": "2.82",
+   "display": "CT Head W contrast IV",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:ct-head-contrast"
+   ]
+  },
+  {
+   "code": "24799-9",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Abdomen AP",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:axr"
+   ]
+  },
+  {
+   "code": "24869-0",
+   "found": true,
+   "version": "2.82",
+   "display": "US Pelvis",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "imaging:us-pelvis"
+   ]
+  },
+  {
+   "code": "24909-4",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Shoulder Views",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:xr-shoulder"
+   ]
+  },
+  {
+   "code": "24946-6",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Cervical spine Views",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "imaging:xr-cspine"
+   ]
+  },
+  {
+   "code": "24972-2",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Lumbar spine Views",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "imaging:xr-lspine"
+   ]
+  },
+  {
+   "code": "25010-0",
+   "found": true,
+   "version": "2.82",
+   "display": "US Thyroid gland",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:us-thyroid"
+   ]
+  },
+  {
+   "code": "25145-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Bacteria [Presence] in Urine sediment by Light microscopy",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "26454-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Erythrocytes [#/volume] in Cerebral spinal fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "10*3/uL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "26465-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Leukocytes [#/volume] in Cerebral spinal fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "/uL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "26467-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Leukocytes [#/volume] in Pleural fluid",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "10*3/uL",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "26468-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Leukocytes [#/volume] in Peritoneal fluid",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "10*3/uL",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "26469-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Leukocytes [#/volume] in Synovial fluid",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "10*3/uL",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "26514-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Neutrophils/Leukocytes in Peritoneal fluid",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "%",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "30592-0",
+   "found": true,
+   "version": "2.82",
+   "display": "CT Cervical spine WO contrast",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:ct-cspine"
+   ]
+  },
+  {
+   "code": "30657-1",
+   "found": true,
+   "version": "2.82",
+   "display": "MR Brain WO contrast",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:mri-brain"
+   ]
+  },
+  {
+   "code": "30667-0",
+   "found": true,
+   "version": "2.82",
+   "display": "MR Cervical spine WO contrast",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:mri-cspine"
+   ]
+  },
+  {
+   "code": "30679-5",
+   "found": true,
+   "version": "2.82",
+   "display": "MR Lumbar spine WO contrast",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:mri-lspine"
+   ]
+  },
+  {
+   "code": "30799-1",
+   "found": true,
+   "version": "2.82",
+   "display": "CT Head WO contrast",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:ct-head-noncon"
+   ]
+  },
+  {
+   "code": "30934-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Natriuretic peptide B [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "pg/mL",
+   "used_by": [
+    "analyte",
+    "orderable:bnp"
+   ]
+  },
+  {
+   "code": "31204-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Hepatitis B virus core IgM Ab [Presence] in Serum",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "31418-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Heterophile Ab [Presence] in Serum",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "analyte",
+    "orderable:monospot"
+   ]
+  },
+  {
+   "code": "32700-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Microscopic observation [Identifier] in Blood by Malaria smear",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:malaria-film"
+   ]
+  },
+  {
+   "code": "32781-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Legionella sp Ag [Presence] in Urine",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:legionella-ag"
+   ]
+  },
+  {
+   "code": "33037-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Anion gap in Serum or Plasma by calculation",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mmol/L",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "33762-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Natriuretic peptide.B prohormone N-Terminal [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "pg/mL",
+   "used_by": [
+    "analyte",
+    "orderable:33762-6"
+   ]
+  },
+  {
+   "code": "33959-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Procalcitonin [Mass/volume] in Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/mL",
+   "used_by": [
+    "analyte",
+    "orderable:pct"
+   ]
+  },
+  {
+   "code": "34532-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Blood type and Indirect antibody screen panel - Blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:type-screen"
+   ]
+  },
+  {
+   "code": "34713-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Clostridioides difficile toxin A+B [Presence] in Stool",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:cdiff"
+   ]
+  },
+  {
+   "code": "36141-0",
+   "found": true,
+   "version": "2.82",
+   "display": "CTA Thoracic and abdominal aorta W contrast IV",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:ct-aorta"
+   ]
+  },
+  {
+   "code": "36532-0",
+   "found": true,
+   "version": "2.82",
+   "display": "MR Thoracic spine WO contrast",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:mri-tspine"
+   ]
+  },
+  {
+   "code": "36589-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Portable XR Chest AP single view",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "imaging:cxr-portable"
+   ]
+  },
+  {
+   "code": "36643-5",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Chest 2 Views",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:cxr"
+   ]
+  },
+  {
+   "code": "36698-9",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Radius and Ulna AP and Lateral",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:xr-forearm"
+   ]
+  },
+  {
+   "code": "36813-4",
+   "found": true,
+   "version": "2.82",
+   "display": "CT Abdomen and Pelvis W contrast IV",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:ct-abdo-pelvis"
+   ]
+  },
+  {
+   "code": "36952-0",
+   "found": true,
+   "version": "2.82",
+   "display": "CT Abdomen and Pelvis WO contrast",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "imaging:ct-kub"
+   ]
+  },
+  {
+   "code": "37498-3",
+   "found": true,
+   "version": "2.82",
+   "display": "CTA Head vessels and Neck vessels W contrast IV",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:cta-head-neck"
+   ]
+  },
+  {
+   "code": "37622-8",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Pelvis AP",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:xr-pelvis"
+   ]
+  },
+  {
+   "code": "38036-0",
+   "found": true,
+   "version": "2.82",
+   "display": "US Kidney",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "imaging:us-renal"
+   ]
+  },
+  {
+   "code": "42146-1",
+   "found": true,
+   "version": "2.82",
+   "display": "US.doppler Carotid arteries",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:us-carotid"
+   ]
+  },
+  {
+   "code": "42707-0",
+   "found": true,
+   "version": "2.82",
+   "display": "US Heart limited",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:echo-pocus"
+   ]
+  },
+  {
+   "code": "43468-8",
+   "found": true,
+   "version": "2.82",
+   "display": "XR Unspecified body region Views",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:xr-extremity"
+   ]
+  },
+  {
+   "code": "47236-5",
+   "found": true,
+   "version": "2.82",
+   "display": "Treponema pallidum IgG+IgM Ab [Presence] in Serum or Plasma by Immunoassay",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "48065-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Fibrin D-dimer FEU [Mass/volume] in Platelet poor plasma",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng{FEU}/mL;mg{FEU}/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:48065-7"
+   ]
+  },
+  {
+   "code": "50190-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Iron and Iron binding capacity panel - Serum or Plasma",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "used_by": [
+    "orderable:iron-studies"
+   ]
+  },
+  {
+   "code": "51990-0",
+   "found": true,
+   "version": "2.82",
+   "display": "Basic metabolic panel - Blood",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:2160-0"
+   ]
+  },
+  {
+   "code": "54067-4",
+   "found": true,
+   "version": "2.82",
+   "display": "Clostridioides difficile toxin genes [Presence] in Stool by NAA with probe detection",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "56888-1",
+   "found": true,
+   "version": "2.82",
+   "display": "HIV 1+2 Ab+HIV1 p24 Ag [Presence] in Serum or Plasma by Immunoassay",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:hiv"
+   ]
+  },
+  {
+   "code": "57021-8",
+   "found": true,
+   "version": "2.82",
+   "display": "CBC W Auto Differential panel - Blood",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "used_by": [
+    "orderable:6690-2"
+   ]
+  },
+  {
+   "code": "58740-2",
+   "found": true,
+   "version": "2.82",
+   "display": "MRCP Abdomen WO contrast",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "imaging:mri-mrcp"
+   ]
+  },
+  {
+   "code": "59281-6",
+   "found": true,
+   "version": "2.82",
+   "display": "US Heart Transthoracic",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:echo"
+   ]
+  },
+  {
+   "code": "60022-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Lactate dehydrogenase [Enzymatic activity/volume] in Pleural fluid by Lactate to pyruvate reaction",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "U/L",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "67151-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Troponin T.cardiac [Mass/volume] in Serum or Plasma by High sensitivity method",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "ng/L",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:67151-1"
+   ]
+  },
+  {
+   "code": "69276-4",
+   "found": true,
+   "version": "2.82",
+   "display": "US Abdominal Aorta",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:us-aorta"
+   ]
+  },
+  {
+   "code": "69385-3",
+   "found": true,
+   "version": "2.82",
+   "display": "US Lower extremity veins - bilateral",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:us-dvt"
+   ]
+  },
+  {
+   "code": "71773-6",
+   "found": true,
+   "version": "2.82",
+   "display": "Mycobacterium tuberculosis stimulated gamma interferon [Interpretation] in Blood Qualitative",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:igra"
+   ]
+  },
+  {
+   "code": "76772-3",
+   "found": true,
+   "version": "2.82",
+   "display": "Plasmodium falciparum Ag [Presence] in Blood by Rapid immunoassay",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "analyte",
+    "orderable:malaria-rdt"
+   ]
+  },
+  {
+   "code": "78012-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Streptococcus pyogenes Ag [Presence] in Throat by Rapid immunoassay",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:strep-a"
+   ]
+  },
+  {
+   "code": "79077-4",
+   "found": true,
+   "version": "2.82",
+   "display": "CTA Pulmonary arteries for pulmonary embolus W contrast IV",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:cta-chest",
+    "imaging:ctpa"
+   ]
+  },
+  {
+   "code": "80877-4",
+   "found": true,
+   "version": "2.82",
+   "display": "US Scrotum and testicle for torsion",
+   "inactive": false,
+   "CLASSTYPE": "2",
+   "CLASSTYPE_display": "Clinical class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "imaging:us-scrotum"
+   ]
+  },
+  {
+   "code": "89579-7",
+   "found": true,
+   "version": "2.82",
+   "display": "Troponin I.cardiac [Mass/volume] in Serum or Plasma by High sensitivity method",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Observation",
+   "EXAMPLE_UCUM_UNITS": "ng/L",
+   "used_by": [
+    "analyte",
+    "orderable:89579-7"
+   ]
+  },
+  {
+   "code": "92131-2",
+   "found": true,
+   "version": "2.82",
+   "display": "Respiratory syncytial virus RNA [Presence] in Respiratory system specimen by NAA with probe detection",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "92141-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Influenza virus B RNA [Presence] in Respiratory system specimen by NAA with probe detection",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "92142-9",
+   "found": true,
+   "version": "2.82",
+   "display": "Influenza virus A RNA [Presence] in Respiratory system specimen by NAA with probe detection",
+   "inactive": false,
+   "STATUS": "ACTIVE",
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "used_by": [
+    "analyte"
+   ]
+  },
+  {
+   "code": "94500-6",
+   "found": true,
+   "version": "2.82",
+   "display": "SARS-CoV-2 (COVID-19) RNA [Presence] in Respiratory system specimen by NAA with probe detection",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte",
+    "orderable:covid-pcr"
+   ]
+  },
+  {
+   "code": "95941-1",
+   "found": true,
+   "version": "2.82",
+   "display": "Influenza virus A and B and SARS-CoV-2 (COVID-19) and Respiratory syncytial virus RNA panel - Respiratory system specimen by NAA with probe detection",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Order",
+   "PanelType": "Panel",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "orderable:resp-viral-panel"
+   ]
+  },
+  {
+   "code": "98979-8",
+   "found": true,
+   "version": "2.82",
+   "display": "Glomerular filtration rate [Volume Rate/Area] in Serum, Plasma or Blood by Creatinine-based formula (CKD-EPI 2021)/1.73 sq M",
+   "inactive": false,
+   "CLASSTYPE": "1",
+   "CLASSTYPE_display": "Laboratory class",
+   "ORDER_OBS": "Both",
+   "EXAMPLE_UCUM_UNITS": "mL/min/{1.73_m2}",
+   "STATUS": "ACTIVE",
+   "used_by": [
+    "analyte"
+   ]
+  }
+ ]
+}

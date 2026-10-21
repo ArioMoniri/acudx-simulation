@@ -22,7 +22,7 @@ services:
   server:
     build: { context: ., dockerfile: deploy/Dockerfile.server }
     env_file:
-      - /etc/acudx/gateway.env          # ADMIN_TOKEN, ACUDX_SECRET_KEY, LAMBDA_KEY, LAMBDA_SSH_KEY_NAME
+      - /etc/acudx/gateway.env          # ADMIN_TOKEN, ACUDX_SECRET_KEY, LAMBDA_KEY, LAMBDA_SSH_KEY_NAME, ANTHROPIC_KEY (if set on the host)
     environment:
       - AIRGAPPED=false                 # the gateway launches Lambda GPU workers and may call hosted models
       - AUTH_MODE=oidc

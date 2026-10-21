@@ -274,21 +274,54 @@ describe("encounterStore Live mode: results engine", () => {
     expect(cs.treatments_given[0]).toMatchObject({ code: "4917", label: "Nitroglycerin" });
   });
 
-  it("falls back to the labelled offline path when the engine answers 503, without throwing", async () => {
+  it("keeps a live order pending while the gateway is unreachable and labels it offline only once Live is off", async () => {
     engineStatus = 503;
     const c = makeCase(303);
     run(() => setLiveEnabled(true));
     run(() => startEncounter(c));
     run(() => placeOrder("cbc", { en: "CBC", tr: "Hemogram" }));
-    await flush();
-    const order = snapshot.orders[0];
-    run(() => {
-      now = order.resultsReadyAt;
-      vi.advanceTimersByTime(order.resultsReadyAt);
+    // Two retries (1 s, 3 s) before the request gives up.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
     });
-    await flush();
+    expect(engineCalls().length).toBe(3);
+    const order = snapshot.orders[0];
+    expect(order.resolved).toBe(false);
+    // Review 2026-10-21: an unreachable engine never turns a live order into an
+    // offline synthetic normal while Live is on.
+    expect(snapshot.events.some((e) => e.type === "result")).toBe(false);
+    run(() => setLiveEnabled(false));
+    await act(async () => {
+      now = order.resultsReadyAt;
+      await vi.advanceTimersByTimeAsync(order.resultsReadyAt);
+    });
     const ev = snapshot.events.find((e) => e.type === "result" && e.ref === "cbc")!;
     expect(ev.meta?.source).toBe("offline-synthetic-normal");
+    expect(snapshot.results[0].engine).toBeUndefined();
+  });
+
+  it("shows 'result unavailable' (no invented values) when the reachable engine refuses the order", async () => {
+    engineStatus = 422;
+    const c = makeCase(308);
+    run(() => setLiveEnabled(true));
+    run(() => startEncounter(c));
+    run(() => placeOrder("ldh", { en: "Lactate dehydrogenase (LDH)", tr: "Laktat dehidrogenaz (LDH)" }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10);
+    });
+    // A 4xx is a definite answer: one call, no retry.
+    expect(engineCalls().length).toBe(1);
+    const order = snapshot.orders[0];
+    expect(order.engineStatus).toBe("error");
+    expect(order.engineError).toBe("http_422");
+    // Stat chemistry is pending on the sim clock (about 50 min), not resulted at 0 min.
+    expect(order.resultsReadyAt - order.placedAt).toBeGreaterThanOrEqual(45 * 60_000);
+    await act(async () => {
+      now = order.resultsReadyAt;
+      await vi.advanceTimersByTimeAsync(order.resultsReadyAt);
+    });
+    const ev = snapshot.events.find((e) => e.type === "result" && e.ref === "ldh")!;
+    expect(ev.meta?.source).toBe("engine-unavailable");
     expect(snapshot.results[0].engine).toBeUndefined();
   });
 });

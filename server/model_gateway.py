@@ -14,6 +14,11 @@ What it realises from ``02``:
   tier resolves to the one local model, but the structure is the seam where
   future routing (T1 small-open → T2 large-open → T3 frontier) drops in.
 * Per-call egress guard so no request can leave the box under ``AIRGAPPED``.
+* The Claude route (docs/architecture/20 section 2): with ``ANTHROPIC_KEY`` set and the
+  registry's ``anthropic`` row selected, ``chat`` and ``chat_json`` go to Claude first
+  (persona, guard classifier, tutor, grading models from settings), with a cache breakpoint
+  on the system prompt and automatic caching of the transcript for the persona. Without a
+  key, or when Claude is unreachable, the call continues on the registry's next provider.
 
 The exact embed/rerank payload shapes are meant to be *probed at deploy time*;
 the adapters below try the common shapes and expose one obvious place to fix.
@@ -22,6 +27,7 @@ the adapters below try the common shapes and expose one obvious place to fix.
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import time
 from dataclasses import dataclass
@@ -31,7 +37,9 @@ import httpx
 from pydantic import BaseModel
 
 from server.config import LlmEndpoint, Settings
-from server.providers import anthropic_messages
+from server.providers.anthropic_provider import (
+    AnthropicError, AnthropicProvider, AnthropicReply, AnthropicUnavailable, model_for, restore_optional,
+)
 from server.registry.resolve import ProviderEndpoint, RegistryResolver
 from server.telemetry import prices
 from server.telemetry.events import TelemetryRecorder
@@ -108,7 +116,7 @@ class ModelGateway:
     """Async facade over the pod's model endpoints. One instance per process."""
 
     def __init__(self, settings: Settings, *, resolver: RegistryResolver | None = None,
-                 telemetry: TelemetryRecorder | None = None) -> None:
+                 telemetry: TelemetryRecorder | None = None, anthropic: AnthropicProvider | None = None) -> None:
         self.settings = settings
         # Resolve + guard once at construction so a bad/egressing config fails
         # closed at startup, not mid-encounter.
@@ -120,6 +128,26 @@ class ModelGateway:
         # fallback); without it the env-seeded endpoint above is used.
         self.resolver = resolver
         self.telemetry = telemetry
+        # Claude route: ANTHROPIC_KEY, else the key sealed on the registry row (admin panel).
+        self.anthropic = anthropic if anthropic is not None else AnthropicProvider(
+            settings, key_source=(resolver.anthropic_key if resolver is not None else None), telemetry=telemetry)
+        self.claude_fallbacks = 0
+
+    def anthropic_active(self) -> bool:
+        """Claude serves this call: a key exists, egress allows it and the registry selects it."""
+        if not self.anthropic.usable():
+            return False
+        if self.resolver is not None:
+            try:
+                return self.resolver.anthropic_enabled()
+            except Exception:  # noqa: BLE001 - a registry read error must not break the call
+                return True
+        return True
+
+    def anthropic_status(self) -> dict[str, Any]:
+        st = dict(self.anthropic.status())
+        st["selected"] = self.anthropic_active()
+        return st
 
     # -- endpoint resolution (registry first, env as the seed) -------------- #
     async def resolve_endpoint(self, kind: str) -> ProviderEndpoint:
@@ -229,8 +257,20 @@ class ModelGateway:
         temperature: float | None = None,
         stop: list[str] | None = None,
     ) -> ChatResult:
-        """Call ``/chat/completions`` for a task tier and parse robustly."""
+        """Call ``/chat/completions`` for a task tier and parse robustly.
+
+        On the Claude route the task picks the model (``patient`` persona, ``guard``
+        classifier, ``tutor``, ``grade``); ``temperature`` and ``stop`` apply to the
+        OpenAI-compatible route only."""
         tier = self.tiers.get(task) or self.tiers["patient"]
+        if self.anthropic_active():
+            try:
+                reply = await self._claude(messages, task=task, max_tokens=max_tokens or tier.max_tokens, schema=None)
+                return self._claude_result(reply, task)
+            except AnthropicUnavailable:
+                self.claude_fallbacks += 1
+            except AnthropicError as exc:
+                raise GatewayError(f"Claude did not answer: {exc}") from exc
         ep = await self._resolve_for_call("llm")
         # Per-call guard: even if the registry were mis-wired to egress, block it.
         self.settings.guard_egress(ep.base_url)
@@ -249,16 +289,7 @@ class ModelGateway:
 
         t0 = time.monotonic()
         try:
-            if anthropic_messages.is_anthropic(ep.base_url):
-                # Anthropic registry row: native Messages API (server/providers/anthropic_messages.py).
-                try:
-                    data = await anthropic_messages.chat(
-                        base_url=ep.base_url, api_key=ep.api_key, model=ep.model, messages=messages,
-                        max_tokens=payload["max_tokens"], timeout_s=self.settings.request_timeout_s)
-                except anthropic_messages.AnthropicCallError as exc:
-                    raise GatewayError(str(exc)) from exc
-            else:
-                data = await self._post_json(f"{ep.base_url}/chat/completions", payload, ep.api_key)
+            data = await self._post_json(f"{ep.base_url}/chat/completions", payload, ep.api_key)
         except GatewayError as exc:
             self._record(ep, kind="llm", model=ep.model, usage=None, latency_ms=(time.monotonic() - t0) * 1000.0,
                          ok=False, error=type(exc).__name__)
@@ -267,6 +298,77 @@ class ModelGateway:
         result = self._parse_chat(data, tier, latency_ms, ep)
         self._record(ep, kind="llm", model=result.model, usage=result.usage, latency_ms=latency_ms, ok=True)
         return result
+
+    # -- Claude route -------------------------------------------------------- #
+    async def _claude(self, messages: list[dict[str, str]], *, task: str, max_tokens: int,
+                      schema: dict[str, Any] | None) -> AnthropicReply:
+        model, effort = model_for(self.settings, task)
+        return await self.anthropic.complete(messages, model=model, max_tokens=max_tokens, effort=effort,
+                                             schema=schema, cache_tail=(task == "patient"), node=task)
+
+    @staticmethod
+    def _claude_result(reply: AnthropicReply, task: str) -> "ChatResult":
+        u = reply.usage
+        return ChatResult(
+            text=reply.text.strip(), raw=reply.text, finish_reason=reply.stop_reason, model=reply.model,
+            provider="anthropic", task=task, had_reasoning=False,
+            usage={"input_tokens": u.prompt_total, "output_tokens": u.output, "cache_read_input_tokens": u.cache_read,
+                   "cache_creation_input_tokens": u.cache_write, "cost_usd": reply.cost_usd},
+            latency_ms=reply.latency_ms,
+        )
+
+    async def chat_json(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        schema: dict[str, Any],
+        schema_name: str,
+        task: str = "guard",
+        max_tokens: int = 256,
+    ) -> tuple[dict[str, Any], "ChatResult"]:
+        """One JSON-object completion: Claude structured outputs on the Claude route,
+        ``response_format: json_schema`` on an OpenAI-compatible endpoint. Raises
+        :class:`GatewayError` when no model answered with a parseable object."""
+        if self.anthropic_active():
+            try:
+                reply = await self._claude(messages, task=task, max_tokens=max_tokens, schema=schema)
+                try:
+                    data = json.loads(reply.text) if reply.structured else _first_object(reply.text)
+                except ValueError as exc:
+                    raise GatewayError(f"{reply.model} returned no JSON object") from exc
+                if not isinstance(data, dict):
+                    raise GatewayError(f"{reply.model} returned {type(data).__name__}, not an object")
+                return restore_optional(data, schema), self._claude_result(reply, task)
+            except AnthropicUnavailable:
+                self.claude_fallbacks += 1
+            except AnthropicError as exc:
+                raise GatewayError(f"Claude did not answer: {exc}") from exc
+        tier = self.tiers.get(task) or self.tiers["guard"]
+        ep = await self._resolve_for_call("llm")
+        self.settings.guard_egress(ep.base_url)
+        payload: dict[str, Any] = {
+            "model": ep.model or tier.endpoint.model, "messages": messages, "temperature": 0.0,
+            "max_tokens": max_tokens, "stream": False,
+            "response_format": {"type": "json_schema",
+                                "json_schema": {"name": schema_name, "schema": schema, "strict": False}},
+        }
+        if wants_no_thinking(payload["model"], self.settings):
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+        t0 = time.monotonic()
+        try:
+            data = await self._post_json(f"{ep.base_url}/chat/completions", payload, ep.api_key)
+        except GatewayError as exc:
+            self._record(ep, kind="llm", model=ep.model, usage=None, latency_ms=(time.monotonic() - t0) * 1000.0,
+                         ok=False, error=type(exc).__name__)
+            raise
+        latency_ms = (time.monotonic() - t0) * 1000.0
+        result = self._parse_chat(data, tier, latency_ms, ep)
+        self._record(ep, kind="llm", model=result.model, usage=result.usage, latency_ms=latency_ms, ok=True)
+        try:
+            obj = _first_object(result.text)
+        except ValueError as exc:
+            raise GatewayError(f"{result.model} returned no JSON object") from exc
+        return obj, result
 
     @staticmethod
     def _parse_chat(data: dict[str, Any], tier: TierConfig, latency_ms: float,
@@ -430,6 +532,18 @@ class ModelGateway:
         b = np.asarray(scope_vector, dtype=np.float64)
         denom = float(np.linalg.norm(a) * np.linalg.norm(b))
         return float(np.dot(a, b) / denom) if denom else 0.0
+
+
+def _first_object(text: str) -> dict[str, Any]:
+    """The JSON object in a completion (fenced or bare); ``ValueError`` when there is none."""
+    clean, _ = strip_think(text or "")
+    start, end = clean.find("{"), clean.rfind("}")
+    if start == -1 or end <= start:
+        raise ValueError("no JSON object")
+    obj = json.loads(clean[start:end + 1])
+    if not isinstance(obj, dict):
+        raise ValueError("not an object")
+    return obj
 
 
 # --------------------------------------------------------------------------- #

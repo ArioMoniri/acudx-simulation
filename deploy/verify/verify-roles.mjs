@@ -117,15 +117,19 @@ for (const u of creds.users) {
         lines.push(check(!tokenGate, "admin console opens with the verified bearer (no bootstrap token)"));
         await page.screenshot({ path: join(SHOTS, `${u.role}-admin.png`) });
         if (u.role === "super_admin") {
-          // The Anthropic preset in the provider drawer (nothing is saved here).
+          // The seeded anthropic row takes a key in the admin panel (nothing is saved here).
           await page.getByRole("tab", { name: /providers/i }).first().click();
-          await page.getByRole("button", { name: /add provider/i }).first().click();
-          const preset = page.getByRole("button", { name: /use the anthropic api/i });
-          const hasPreset = (await preset.count()) > 0;
-          lines.push(check(hasPreset, "provider drawer offers the Anthropic preset"));
-          if (hasPreset) await preset.click();
-          await page.screenshot({ path: join(SHOTS, "super_admin-anthropic-preset.png") });
-          await page.keyboard.press("Escape");
+          await page.screenshot({ path: join(SHOTS, "super_admin-providers.png") });
+          const editRow = page.getByRole("button", { name: /^edit anthropic$/i });
+          const hasRow = (await editRow.count()) > 0;
+          lines.push(check(hasRow, "anthropic row present; its drawer takes the Claude key"));
+          if (hasRow) {
+            await editRow.first().click();
+            const keyField = page.locator("input[type=password][autocomplete=new-password]");
+            lines.push(check((await keyField.count()) > 0, "write-only API key field in the anthropic drawer"));
+            await page.screenshot({ path: join(SHOTS, "super_admin-anthropic-key.png") });
+            await page.keyboard.press("Escape");
+          }
         }
       }
     }

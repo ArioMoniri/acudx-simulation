@@ -15,10 +15,10 @@ moved hosting to AWS, and the Lambda instance list was empty afterwards.
 | One-click deploy: Docker install, root-only secrets in `/etc/acudx`, realm render, accounts, identity provider, retrieval code; idempotent, follows a `DOMAIN` change | `deploy/one-click.sh`, `deploy/keycloak/render-prod-realm.py` |
 | One account per role, random 24-character temporary passwords (UPDATE_PASSWORD), no password on any command line or in any log | `server/bootstrap/provision.py` |
 | Single-use retrieval code (160 bits, 72 h), salted hash at rest, constant-time compare, per-IP limit, global lockout and burn, HTTPS only, audit log | `server/bootstrap/handoff.py`, `server/bootstrap/routes.py`, `server/bootstrap/mint.py`, `deploy/rotate-bootstrap-code.sh` |
-| Model routing in production: no env seed rows; case generation and judges follow the registry (an Anthropic row is called through the native Messages API), else the on-demand GPU worker, which a case start launches in the background (`503 model_warming`) | `server/orchestration/llm.py`, `server/orchestration/routes.py`, `server/providers/anthropic_messages.py`, `server/model_gateway.py` |
+| Model routing in production: Claude first (`server/providers/anthropic_provider.py`, merged from the Claude route work) with its key from `ANTHROPIC_KEY` or, when that is unset, the key pasted on the admin panel's `anthropic` row; with no key from either source, case generation follows the OpenAI-compatible registry rows, else the on-demand GPU worker, which a case start launches in the background (`503 model_warming`) | `server/orchestration/llm.py`, `server/orchestration/routes.py`, `server/providers/anthropic_provider.py`, `server/registry/routes.py` |
 | Case start needs a signed-in user under OIDC (an anonymous POST could otherwise launch a GPU worker) | `server/orchestration/routes.py` |
 | GPU policy `max_workers` (1, or 0 to disable launches); idle reaper and no budget cap unchanged | `server/providers/gpu_worker.py` |
-| Admin console opens for a verified admin / super_admin bearer (no bootstrap token in the browser); Anthropic preset in the provider drawer | `web/src/lib/adminApi.ts`, `web/src/components/admin/*` |
+| Admin console opens for a verified admin / super_admin bearer (no bootstrap token in the browser), where the Claude key is pasted on the `anthropic` row | `web/src/lib/adminApi.ts`, `web/src/components/admin/*` |
 | Each role lands on its panel after sign-in (admin, super_admin -> /admin, dean -> /dean, faculty -> /faculty, learners -> /) | `web/src/lib/navigation.ts`, `web/src/pages/AuthCallbackPage.tsx` |
 | AWS: provision (SG, key pair, EIP, Ubuntu 24.04 t3.large, 50 GB encrypted gp3, IMDSv2, no instance profile), rotate, teardown, minimal IAM policy, moto test | `deploy/aws/*` |
 | Operations | `deploy/RUNBOOK.md` |
@@ -58,16 +58,16 @@ gates (`/v1/faculty/queue`, `/v1/dean/cohort`, `/admin/providers`):
 | acudx-faculty | /faculty | /faculty | faculty | dean 403, admin 401 |
 | acudx-dean | /dean | /faculty, /dean | faculty, dean | admin 401 |
 | acudx-admin | /admin (console, bearer) | all | all | none |
-| acudx-super-admin | /admin (console, bearer, Anthropic preset) | all | all | none |
+| acudx-super-admin | /admin (console, bearer) | all | all | none |
 
 The student's case start answered `503 model_unreachable` here (no Lambda key in the sandbox);
 with `LAMBDA_KEY` set it answers `503 model_warming` and launches the worker
-(`server/tests/test_anthropic_adapter.py::test_preflight_starts_the_gpu_worker_in_the_background_and_answers_model_warming`).
+(`server/tests/test_prod_model_routing.py::test_preflight_starts_the_gpu_worker_in_the_background_and_answers_model_warming`).
 After the run every account was reset to a fresh temporary password with
 `deploy/rotate-bootstrap-code.sh --reset-passwords`.
 
 Screenshots: `docs/review/evidence/09-production-smoke/` (`<role>-landing.png`,
-`admin-admin.png`, `super_admin-admin.png`, `super_admin-anthropic-preset.png`,
+`admin-admin.png`, `super_admin-admin.png`, `super_admin-providers.png`, `super_admin-anthropic-key.png` (the Claude key field on the seeded anthropic row),
 `handoff-form.png`, `handoff-form-390.png`, `handoff-wrong-code.png`). The revealed table is
 not captured on purpose: it holds passwords.
 
@@ -98,7 +98,9 @@ not captured on purpose: it holds passwords.
 - `server/tests/test_bootstrap_provision.py`: one account per role, exactly one AcuDx role each,
   temporary passwords of 20+ characters, idempotent re-run with new passwords, client sync,
   default roles cleaned, 0600 / 0700 files.
-- `server/tests/test_anthropic_adapter.py`, `test_prod_realm.py`, `test_gpu_worker.py`
+- `server/tests/test_prod_model_routing.py` (env key wins over the panel key, panel key feeds the
+  provider, the anthropic row is never used as an OpenAI endpoint, model_warming, sign-in),
+  `test_prod_realm.py`, `test_gpu_worker.py`
   (`max_workers`).
 - `deploy/aws/test-with-moto.sh`: provision twice (idempotent), IMDSv2, no instance profile,
   50 GB encrypted gp3, 0600 key file, SSH only from `SSH_CIDR`, teardown twice. PASS.

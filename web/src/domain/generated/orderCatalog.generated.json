@@ -1,0 +1,2894 @@
+{
+ "imaging": [
+  {
+   "code": "cxr",
+   "label_en": "Chest X-ray (PA and lateral)",
+   "label_tr": "Akciğer grafisi (PA ve lateral)",
+   "laterality_required": false,
+   "loinc": "36643-5",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Chest",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "chest",
+   "synonyms": [
+    "cxr",
+    "chest film"
+   ],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "cxr-portable",
+   "label_en": "Portable chest X-ray (AP)",
+   "label_tr": "Portatif akciğer grafisi (AP)",
+   "laterality_required": false,
+   "loinc": "36589-0",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Chest",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "chest",
+   "synonyms": [],
+   "turnaround": "xr_portable",
+   "turnaround_minutes": 45
+  },
+  {
+   "code": "axr",
+   "label_en": "Abdominal X-ray (AP, KUB)",
+   "label_tr": "Direkt karın grafisi (AP, KUB)",
+   "laterality_required": false,
+   "loinc": "24799-9",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Abdomen",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "abdomen",
+   "synonyms": [
+    "kub",
+    "axr"
+   ],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "xr-pelvis",
+   "label_en": "Pelvis X-ray (AP)",
+   "label_tr": "Pelvis grafisi (AP)",
+   "laterality_required": false,
+   "loinc": "37622-8",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Pelvis",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "extremity",
+   "synonyms": [],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "xr-cspine",
+   "label_en": "Cervical spine X-ray",
+   "label_tr": "Servikal vertebra grafisi",
+   "laterality_required": false,
+   "loinc": "24946-6",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Cervical spine",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "cspine",
+   "synonyms": [],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "xr-lspine",
+   "label_en": "Lumbar spine X-ray",
+   "label_tr": "Lomber vertebra grafisi",
+   "laterality_required": false,
+   "loinc": "24972-2",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Lumbar spine",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "lspine",
+   "synonyms": [],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "xr-extremity",
+   "label_en": "Extremity X-ray (two views)",
+   "label_tr": "Ekstremite grafisi (iki yön)",
+   "laterality_required": true,
+   "loinc": "43468-8",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Extremity",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "extremity",
+   "synonyms": [],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "xr-wrist",
+   "label_en": "Wrist X-ray",
+   "label_tr": "El bileği grafisi",
+   "laterality_required": true,
+   "loinc": "24619-9",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Wrist",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "extremity",
+   "synonyms": [],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "xr-forearm",
+   "label_en": "Forearm X-ray (AP and lateral)",
+   "label_tr": "Önkol grafisi (AP ve lateral)",
+   "laterality_required": true,
+   "loinc": "36698-9",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Radius and ulna",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "extremity",
+   "synonyms": [],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "xr-shoulder",
+   "label_en": "Shoulder X-ray",
+   "label_tr": "Omuz grafisi",
+   "laterality_required": true,
+   "loinc": "24909-4",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Shoulder",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "extremity",
+   "synonyms": [],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "xr-ankle",
+   "label_en": "Ankle X-ray",
+   "label_tr": "Ayak bileği grafisi",
+   "laterality_required": true,
+   "loinc": "24541-5",
+   "modality": "xr",
+   "playbook": {
+    "body_part": "Ankle",
+    "contrast": "none",
+    "modality": "XR"
+   },
+   "preliminary_minutes": null,
+   "region": "extremity",
+   "synonyms": [],
+   "turnaround": "xr",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "ct-head-noncon",
+   "label_en": "CT head (non-contrast)",
+   "label_tr": "Beyin BT (kontrastsız)",
+   "laterality_required": false,
+   "loinc": "30799-1",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Head",
+    "contrast": "none",
+    "modality": "CT"
+   },
+   "preliminary_minutes": null,
+   "region": "head",
+   "synonyms": [
+    "ct brain"
+   ],
+   "turnaround": "ct_head",
+   "turnaround_minutes": 85
+  },
+  {
+   "code": "ct-head-contrast",
+   "label_en": "CT head with IV contrast",
+   "label_tr": "Kontrastlı beyin BT",
+   "laterality_required": false,
+   "loinc": "24727-0",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Head",
+    "contrast": "iv",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "head",
+   "synonyms": [],
+   "turnaround": "ct",
+   "turnaround_minutes": 250
+  },
+  {
+   "code": "cta-head-neck",
+   "label_en": "CT angiogram head and neck (stroke protocol)",
+   "label_tr": "Baş-boyun BT anjiyografi (inme protokolü)",
+   "laterality_required": false,
+   "loinc": "37498-3",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Head and neck vessels",
+    "contrast": "iv",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "head",
+   "synonyms": [
+    "cta stroke"
+   ],
+   "turnaround": "cta",
+   "turnaround_minutes": 230
+  },
+  {
+   "code": "ct-cspine",
+   "label_en": "CT cervical spine (non-contrast)",
+   "label_tr": "Servikal vertebra BT (kontrastsız)",
+   "laterality_required": false,
+   "loinc": "30592-0",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Cervical spine",
+    "contrast": "none",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "cspine",
+   "synonyms": [],
+   "turnaround": "ct",
+   "turnaround_minutes": 250
+  },
+  {
+   "code": "ct-facial",
+   "label_en": "CT facial bones",
+   "label_tr": "Yüz kemikleri BT",
+   "laterality_required": false,
+   "loinc": "24696-7",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Facial bones",
+    "contrast": "none",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "head",
+   "synonyms": [],
+   "turnaround": "ct",
+   "turnaround_minutes": 250
+  },
+  {
+   "code": "ct-chest",
+   "label_en": "CT chest with IV contrast",
+   "label_tr": "Kontrastlı toraks BT",
+   "laterality_required": false,
+   "loinc": "24628-0",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Chest",
+    "contrast": "iv",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "chest",
+   "synonyms": [],
+   "turnaround": "ct",
+   "turnaround_minutes": 250
+  },
+  {
+   "code": "ctpa",
+   "label_en": "CT pulmonary angiogram (CTPA, PE protocol)",
+   "label_tr": "BT pulmoner anjiyografi (BTPA, PE protokolü)",
+   "laterality_required": false,
+   "loinc": "79077-4",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Pulmonary arteries",
+    "contrast": "iv",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "chest",
+   "synonyms": [
+    "ctpa",
+    "pe study"
+   ],
+   "turnaround": "cta",
+   "turnaround_minutes": 230
+  },
+  {
+   "code": "cta-chest",
+   "label_en": "CT angiogram chest (CTA)",
+   "label_tr": "Toraks BT anjiyografi (CTA)",
+   "laterality_required": false,
+   "loinc": "79077-4",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Pulmonary arteries",
+    "contrast": "iv",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "chest",
+   "synonyms": [],
+   "turnaround": "cta",
+   "turnaround_minutes": 230
+  },
+  {
+   "code": "ct-aorta",
+   "label_en": "CT angiogram aorta (dissection protocol)",
+   "label_tr": "Aort BT anjiyografi (diseksiyon protokolü)",
+   "laterality_required": false,
+   "loinc": "36141-0",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Thoracic and abdominal aorta",
+    "contrast": "iv",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "aorta",
+   "synonyms": [],
+   "turnaround": "cta",
+   "turnaround_minutes": 230
+  },
+  {
+   "code": "ct-abdo-pelvis",
+   "label_en": "CT abdomen and pelvis with IV contrast",
+   "label_tr": "Kontrastlı batın ve pelvis BT",
+   "laterality_required": false,
+   "loinc": "36813-4",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Abdomen and pelvis",
+    "contrast": "iv",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "abdomen",
+   "synonyms": [],
+   "turnaround": "ct",
+   "turnaround_minutes": 250
+  },
+  {
+   "code": "ct-kub",
+   "label_en": "CT KUB (non-contrast, renal stone protocol)",
+   "label_tr": "BT KUB (kontrastsız, taş protokolü)",
+   "laterality_required": false,
+   "loinc": "36952-0",
+   "modality": "ct",
+   "playbook": {
+    "body_part": "Abdomen and pelvis",
+    "contrast": "none",
+    "modality": "CT"
+   },
+   "preliminary_minutes": 125,
+   "region": "abdomen",
+   "synonyms": [],
+   "turnaround": "ct",
+   "turnaround_minutes": 250
+  },
+  {
+   "code": "us-abdomen",
+   "label_en": "Ultrasound abdomen",
+   "label_tr": "Batın ultrasonu",
+   "laterality_required": false,
+   "loinc": "24558-9",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Abdomen",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": 125,
+   "region": "abdomen",
+   "synonyms": [],
+   "turnaround": "us",
+   "turnaround_minutes": 165
+  },
+  {
+   "code": "us-ruq",
+   "label_en": "Ultrasound right upper quadrant (biliary)",
+   "label_tr": "Sağ üst kadran ultrasonu (bilier)",
+   "laterality_required": false,
+   "loinc": "24532-4",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Abdomen RUQ",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": 125,
+   "region": "biliary",
+   "synonyms": [
+    "gallbladder"
+   ],
+   "turnaround": "us",
+   "turnaround_minutes": 165
+  },
+  {
+   "code": "us-pelvis",
+   "label_en": "Ultrasound pelvis (transabdominal)",
+   "label_tr": "Pelvik ultrason (transabdominal)",
+   "laterality_required": false,
+   "loinc": "24869-0",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Pelvis",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": 125,
+   "region": "pelvis",
+   "synonyms": [],
+   "turnaround": "us",
+   "turnaround_minutes": 165
+  },
+  {
+   "code": "us-tvus",
+   "label_en": "Transvaginal ultrasound",
+   "label_tr": "Transvajinal ultrason",
+   "laterality_required": false,
+   "loinc": "24677-7",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Pelvis",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": 125,
+   "region": "pelvis",
+   "synonyms": [
+    "tvus",
+    "transvaginal"
+   ],
+   "turnaround": "us",
+   "turnaround_minutes": 165
+  },
+  {
+   "code": "us-renal",
+   "label_en": "Renal and bladder ultrasound",
+   "label_tr": "Böbrek ve mesane ultrasonu",
+   "laterality_required": false,
+   "loinc": "38036-0",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Kidney",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": 125,
+   "region": "kidney",
+   "synonyms": [],
+   "turnaround": "us",
+   "turnaround_minutes": 165
+  },
+  {
+   "code": "us-dvt",
+   "label_en": "Lower-limb venous duplex (DVT)",
+   "label_tr": "Alt ekstremite venöz Doppler (DVT)",
+   "laterality_required": true,
+   "loinc": "69385-3",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Lower extremity veins",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": 125,
+   "region": "vascular-leg",
+   "synonyms": [],
+   "turnaround": "us",
+   "turnaround_minutes": 165
+  },
+  {
+   "code": "us-aorta",
+   "label_en": "Ultrasound abdominal aorta (AAA)",
+   "label_tr": "Abdominal aort ultrasonu (AAA)",
+   "laterality_required": false,
+   "loinc": "69276-4",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Abdominal aorta",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": null,
+   "region": "aorta",
+   "synonyms": [],
+   "turnaround": "pocus",
+   "turnaround_minutes": 10
+  },
+  {
+   "code": "us-appendix",
+   "label_en": "Ultrasound appendix",
+   "label_tr": "Apendiks ultrasonu",
+   "laterality_required": false,
+   "loinc": "24548-0",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Appendix",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": 125,
+   "region": "abdomen",
+   "synonyms": [],
+   "turnaround": "us",
+   "turnaround_minutes": 165
+  },
+  {
+   "code": "us-scrotum",
+   "label_en": "Scrotal ultrasound with Doppler (torsion)",
+   "label_tr": "Skrotal Doppler ultrason (torsiyon)",
+   "laterality_required": false,
+   "loinc": "80877-4",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Scrotum and testicle",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": 125,
+   "region": "scrotum",
+   "synonyms": [],
+   "turnaround": "us",
+   "turnaround_minutes": 165
+  },
+  {
+   "code": "us-thyroid",
+   "label_en": "Thyroid ultrasound",
+   "label_tr": "Tiroid ultrasonu",
+   "laterality_required": false,
+   "loinc": "25010-0",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Thyroid gland",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": null,
+   "region": "thyroid",
+   "synonyms": [],
+   "turnaround": "us_routine",
+   "turnaround_minutes": 1440
+  },
+  {
+   "code": "us-carotid",
+   "label_en": "Carotid Doppler ultrasound",
+   "label_tr": "Karotis Doppler ultrasonu",
+   "laterality_required": false,
+   "loinc": "42146-1",
+   "modality": "us",
+   "playbook": {
+    "body_part": "Carotid arteries",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": null,
+   "region": "carotid",
+   "synonyms": [],
+   "turnaround": "us_routine",
+   "turnaround_minutes": 1440
+  },
+  {
+   "code": "us-fast",
+   "label_en": "FAST ultrasound (trauma, bedside)",
+   "label_tr": "FAST ultrason (travma, yatak başı)",
+   "laterality_required": false,
+   "loinc": null,
+   "modality": "us",
+   "playbook": {
+    "body_part": "Abdomen and pericardium",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": null,
+   "region": "abdomen",
+   "synonyms": [
+    "efast"
+   ],
+   "turnaround": "pocus",
+   "turnaround_minutes": 10
+  },
+  {
+   "code": "echo",
+   "label_en": "Echocardiogram (transthoracic)",
+   "label_tr": "Ekokardiyografi (transtorasik)",
+   "laterality_required": false,
+   "loinc": "59281-6",
+   "modality": "echo",
+   "playbook": {
+    "body_part": "Heart",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": null,
+   "region": "heart",
+   "synonyms": [
+    "tte"
+   ],
+   "turnaround": "echo",
+   "turnaround_minutes": 240
+  },
+  {
+   "code": "echo-pocus",
+   "label_en": "Focused cardiac ultrasound (bedside)",
+   "label_tr": "Odaklı kardiyak ultrason (yatak başı)",
+   "laterality_required": false,
+   "loinc": "42707-0",
+   "modality": "echo",
+   "playbook": {
+    "body_part": "Heart",
+    "contrast": "none",
+    "modality": "US"
+   },
+   "preliminary_minutes": null,
+   "region": "heart",
+   "synonyms": [
+    "pocus"
+   ],
+   "turnaround": "pocus",
+   "turnaround_minutes": 10
+  },
+  {
+   "code": "mri-brain",
+   "label_en": "MRI brain (non-contrast)",
+   "label_tr": "Beyin MR (kontrastsız)",
+   "laterality_required": false,
+   "loinc": "30657-1",
+   "modality": "mri",
+   "playbook": {
+    "body_part": "Brain",
+    "contrast": "none",
+    "modality": "MR"
+   },
+   "preliminary_minutes": null,
+   "region": "head",
+   "synonyms": [],
+   "turnaround": "mri",
+   "turnaround_minutes": 370
+  },
+  {
+   "code": "mri-brain-contrast",
+   "label_en": "MRI brain with and without contrast",
+   "label_tr": "Kontrastlı ve kontrastsız beyin MR",
+   "laterality_required": false,
+   "loinc": "24587-8",
+   "modality": "mri",
+   "playbook": {
+    "body_part": "Brain",
+    "contrast": "wo_w_iv",
+    "modality": "MR"
+   },
+   "preliminary_minutes": null,
+   "region": "head",
+   "synonyms": [],
+   "turnaround": "mri",
+   "turnaround_minutes": 370
+  },
+  {
+   "code": "mri-cspine",
+   "label_en": "MRI cervical spine",
+   "label_tr": "Servikal vertebra MR",
+   "laterality_required": false,
+   "loinc": "30667-0",
+   "modality": "mri",
+   "playbook": {
+    "body_part": "Cervical spine",
+    "contrast": "none",
+    "modality": "MR"
+   },
+   "preliminary_minutes": null,
+   "region": "cspine",
+   "synonyms": [],
+   "turnaround": "mri",
+   "turnaround_minutes": 370
+  },
+  {
+   "code": "mri-tspine",
+   "label_en": "MRI thoracic spine",
+   "label_tr": "Torakal vertebra MR",
+   "laterality_required": false,
+   "loinc": "36532-0",
+   "modality": "mri",
+   "playbook": {
+    "body_part": "Thoracic spine",
+    "contrast": "none",
+    "modality": "MR"
+   },
+   "preliminary_minutes": null,
+   "region": "tspine",
+   "synonyms": [],
+   "turnaround": "mri",
+   "turnaround_minutes": 370
+  },
+  {
+   "code": "mri-lspine",
+   "label_en": "MRI lumbar spine",
+   "label_tr": "Lomber vertebra MR",
+   "laterality_required": false,
+   "loinc": "30679-5",
+   "modality": "mri",
+   "playbook": {
+    "body_part": "Lumbar spine",
+    "contrast": "none",
+    "modality": "MR"
+   },
+   "preliminary_minutes": null,
+   "region": "lspine",
+   "synonyms": [
+    "cauda equina"
+   ],
+   "turnaround": "mri",
+   "turnaround_minutes": 370
+  },
+  {
+   "code": "mri-mrcp",
+   "label_en": "MRCP (MR cholangiopancreatography)",
+   "label_tr": "MRKP (MR kolanjiyopankreatografi)",
+   "laterality_required": false,
+   "loinc": "58740-2",
+   "modality": "mri",
+   "playbook": {
+    "body_part": "Biliary tree and pancreas",
+    "contrast": "none",
+    "modality": "MR"
+   },
+   "preliminary_minutes": null,
+   "region": "biliary",
+   "synonyms": [],
+   "turnaround": "mri",
+   "turnaround_minutes": 370
+  },
+  {
+   "code": "11524-6",
+   "label_en": "12-lead ECG",
+   "label_tr": "12 derivasyonlu EKG",
+   "laterality_required": false,
+   "loinc": "11524-6",
+   "modality": "ecg",
+   "playbook": {
+    "body_part": "Heart",
+    "contrast": "none",
+    "modality": "EKG"
+   },
+   "preliminary_minutes": null,
+   "region": "chest",
+   "synonyms": [
+    "ekg",
+    "ecg"
+   ],
+   "turnaround": "ecg",
+   "turnaround_minutes": 10
+  }
+ ],
+ "labs": [
+  {
+   "code": "6690-2",
+   "generator": "analyte",
+   "label_en": "Complete blood count (CBC) with differential",
+   "label_tr": "Tam kan sayımı (hemogram) ve formül",
+   "loinc": "57021-8",
+   "members": [
+    "6690-2",
+    "718-7",
+    "4544-3",
+    "777-3",
+    "787-2",
+    "789-8",
+    "785-6",
+    "786-4",
+    "751-8",
+    "731-0",
+    "711-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "blood",
+   "synonyms": [
+    "fbc",
+    "full blood count",
+    "hemogram",
+    "cbc"
+   ],
+   "turnaround": "haematology",
+   "turnaround_minutes": 45
+  },
+  {
+   "code": "retic",
+   "generator": "analyte",
+   "label_en": "Reticulocyte count",
+   "label_tr": "Retikülosit sayımı",
+   "loinc": "4679-7",
+   "members": [
+    "4679-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "haematology",
+   "turnaround_minutes": 45
+  },
+  {
+   "code": "esr",
+   "generator": "analyte",
+   "label_en": "ESR (erythrocyte sedimentation rate)",
+   "label_tr": "Eritrosit sedimentasyon hızı (ESH)",
+   "loinc": "4537-7",
+   "members": [
+    "4537-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "blood",
+   "synonyms": [
+    "sed rate"
+   ],
+   "turnaround": "haematology",
+   "turnaround_minutes": 45
+  },
+  {
+   "code": "iron-studies",
+   "generator": "analyte",
+   "label_en": "Iron studies (iron, TIBC, saturation, ferritin)",
+   "label_tr": "Demir profili (demir, TDBK, satürasyon, ferritin)",
+   "loinc": "50190-8",
+   "members": [
+    "2498-4",
+    "2500-7",
+    "2502-3",
+    "2276-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "ferritin",
+   "generator": "analyte",
+   "label_en": "Ferritin",
+   "label_tr": "Ferritin",
+   "loinc": "2276-4",
+   "members": [
+    "2276-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "transferrin",
+   "generator": "analyte",
+   "label_en": "Transferrin",
+   "label_tr": "Transferrin",
+   "loinc": "3034-6",
+   "members": [
+    "3034-6"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "b12-folate",
+   "generator": "analyte",
+   "label_en": "Vitamin B12 and folate",
+   "label_tr": "B12 vitamini ve folat",
+   "loinc": null,
+   "members": [
+    "2132-9",
+    "2284-8"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "endocrine",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "haemolysis-screen",
+   "generator": "analyte",
+   "label_en": "Haemolysis screen (haptoglobin, LDH, bilirubin, reticulocytes, DAT)",
+   "label_tr": "Hemoliz taraması (haptoglobin, LDH, bilirubin, retikülosit, DAT)",
+   "loinc": null,
+   "members": [
+    "4542-7",
+    "14804-9",
+    "1975-2",
+    "4679-7",
+    "1007-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "blood",
+   "synonyms": [
+    "hemolysis"
+   ],
+   "turnaround": "haematology",
+   "turnaround_minutes": 45
+  },
+  {
+   "code": "haptoglobin",
+   "generator": "analyte",
+   "label_en": "Haptoglobin",
+   "label_tr": "Haptoglobin",
+   "loinc": "4542-7",
+   "members": [
+    "4542-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "sickle-screen",
+   "generator": "analyte",
+   "label_en": "Sickle cell screen (haemoglobin S)",
+   "label_tr": "Orak hücre taraması (hemoglobin S)",
+   "loinc": "4621-9",
+   "members": [
+    "4621-9"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "haematology",
+   "turnaround_minutes": 45
+  },
+  {
+   "code": "g6pd",
+   "generator": "analyte",
+   "label_en": "G6PD screen",
+   "label_tr": "G6PD taraması",
+   "loinc": "2356-4",
+   "members": [
+    "2356-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "haematology",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "2160-0",
+   "generator": "analyte",
+   "label_en": "Basic metabolic panel (BMP)",
+   "label_tr": "Temel metabolik panel (BMP)",
+   "loinc": "51990-0",
+   "members": [
+    "2951-2",
+    "2823-3",
+    "2075-0",
+    "1963-8",
+    "33037-3",
+    "3094-0",
+    "2160-0",
+    "98979-8",
+    "2345-7",
+    "17861-6"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [
+    "u&e",
+    "renal profile",
+    "chem 7",
+    "electrolytes"
+   ],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "cmp",
+   "generator": "analyte",
+   "label_en": "Comprehensive metabolic panel (CMP)",
+   "label_tr": "Geniş metabolik panel (CMP)",
+   "loinc": "24323-8",
+   "members": [
+    "2951-2",
+    "2823-3",
+    "2075-0",
+    "1963-8",
+    "33037-3",
+    "3094-0",
+    "2160-0",
+    "98979-8",
+    "2345-7",
+    "17861-6",
+    "1751-7",
+    "2885-2",
+    "10834-0",
+    "1920-8",
+    "1742-6",
+    "6768-6",
+    "1975-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [
+    "chem 14"
+   ],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "electrolytes",
+   "generator": "analyte",
+   "label_en": "Electrolytes (Na, K, Cl, HCO3, anion gap)",
+   "label_tr": "Elektrolitler (Na, K, Cl, HCO3, anyon açığı)",
+   "loinc": "24326-1",
+   "members": [
+    "2951-2",
+    "2823-3",
+    "2075-0",
+    "1963-8",
+    "33037-3"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "lft",
+   "generator": "analyte",
+   "label_en": "Liver function tests (LFTs)",
+   "label_tr": "Karaciğer fonksiyon testleri",
+   "loinc": "24325-3",
+   "members": [
+    "1920-8",
+    "1742-6",
+    "6768-6",
+    "2324-2",
+    "1975-2",
+    "1968-7",
+    "1751-7",
+    "2885-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [
+    "hepatic function panel"
+   ],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "ggt",
+   "generator": "analyte",
+   "label_en": "Gamma-glutamyl transferase (GGT)",
+   "label_tr": "Gama-glutamil transferaz (GGT)",
+   "loinc": "2324-2",
+   "members": [
+    "2324-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "lipase",
+   "generator": "analyte",
+   "label_en": "Lipase / amylase",
+   "label_tr": "Lipaz / amilaz",
+   "loinc": null,
+   "members": [
+    "3040-3",
+    "1798-8"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "mg",
+   "generator": "analyte",
+   "label_en": "Magnesium",
+   "label_tr": "Magnezyum",
+   "loinc": "19123-9",
+   "members": [
+    "19123-9"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "phos",
+   "generator": "analyte",
+   "label_en": "Phosphate",
+   "label_tr": "Fosfat",
+   "loinc": "2777-1",
+   "members": [
+    "2777-1"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "ca",
+   "generator": "analyte",
+   "label_en": "Calcium (total and ionised)",
+   "label_tr": "Kalsiyum (total ve iyonize)",
+   "loinc": null,
+   "members": [
+    "17861-6",
+    "1994-3"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "ck",
+   "generator": "analyte",
+   "label_en": "Creatine kinase (CK)",
+   "label_tr": "Kreatin kinaz (CK)",
+   "loinc": "2157-6",
+   "members": [
+    "2157-6"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [
+    "cpk"
+   ],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "myoglobin",
+   "generator": "analyte",
+   "label_en": "Myoglobin",
+   "label_tr": "Miyoglobin",
+   "loinc": "2639-3",
+   "members": [
+    "2639-3"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "bhb",
+   "generator": "analyte",
+   "label_en": "Beta-hydroxybutyrate (serum ketones)",
+   "label_tr": "Beta-hidroksibutirat (serum keton)",
+   "loinc": "6873-4",
+   "members": [
+    "6873-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [
+    "ketones"
+   ],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "osmo",
+   "generator": "analyte",
+   "label_en": "Serum osmolality",
+   "label_tr": "Serum ozmolalitesi",
+   "loinc": "2692-2",
+   "members": [
+    "2692-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "ammonia",
+   "generator": "analyte",
+   "label_en": "Ammonia",
+   "label_tr": "Amonyak",
+   "loinc": "22763-7",
+   "members": [
+    "22763-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "plasma",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "ldh",
+   "generator": "analyte",
+   "label_en": "Lactate dehydrogenase (LDH)",
+   "label_tr": "Laktat dehidrogenaz (LDH)",
+   "loinc": "14804-9",
+   "members": [
+    "14804-9"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "uric-acid",
+   "generator": "analyte",
+   "label_en": "Uric acid (urate)",
+   "label_tr": "Ürik asit (ürat)",
+   "loinc": "3084-1",
+   "members": [
+    "3084-1"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "2524-7",
+   "generator": "analyte",
+   "label_en": "Lactate",
+   "label_tr": "Laktat",
+   "loinc": "2524-7",
+   "members": [
+    "2524-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "plasma",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "lipid-panel",
+   "generator": "analyte",
+   "label_en": "Lipid panel",
+   "label_tr": "Lipid paneli",
+   "loinc": "24331-1",
+   "members": [
+    "2093-3",
+    "2085-9",
+    "13457-7",
+    "2571-8"
+   ],
+   "preliminary_minutes": null,
+   "section": "chemistry",
+   "specimen": "serum",
+   "synonyms": [
+    "cholesterol"
+   ],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "hba1c",
+   "generator": "analyte",
+   "label_en": "HbA1c",
+   "label_tr": "HbA1c",
+   "loinc": "4548-4",
+   "members": [
+    "4548-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "endocrine",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "67151-1",
+   "generator": "analyte",
+   "label_en": "High-sensitivity troponin T (serial)",
+   "label_tr": "Yüksek duyarlıklı troponin T (seri)",
+   "loinc": "67151-1",
+   "members": [
+    "67151-1"
+   ],
+   "preliminary_minutes": null,
+   "section": "cardiac",
+   "specimen": "serum",
+   "synonyms": [
+    "troponin",
+    "hs-tnt",
+    "trop"
+   ],
+   "turnaround": "cardiac",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "89579-7",
+   "generator": "analyte",
+   "label_en": "High-sensitivity troponin I (serial)",
+   "label_tr": "Yüksek duyarlıklı troponin I (seri)",
+   "loinc": "89579-7",
+   "members": [
+    "89579-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "cardiac",
+   "specimen": "serum",
+   "synonyms": [
+    "troponin",
+    "hs-tni",
+    "trop"
+   ],
+   "turnaround": "cardiac",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "bnp",
+   "generator": "analyte",
+   "label_en": "BNP",
+   "label_tr": "BNP",
+   "loinc": "30934-4",
+   "members": [
+    "30934-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "cardiac",
+   "specimen": "plasma",
+   "synonyms": [],
+   "turnaround": "cardiac",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "33762-6",
+   "generator": "analyte",
+   "label_en": "NT-proBNP",
+   "label_tr": "NT-proBNP",
+   "loinc": "33762-6",
+   "members": [
+    "33762-6"
+   ],
+   "preliminary_minutes": null,
+   "section": "cardiac",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "cardiac",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "48065-7",
+   "generator": "analyte",
+   "label_en": "D-dimer",
+   "label_tr": "D-dimer",
+   "loinc": "48065-7",
+   "members": [
+    "48065-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "coagulation",
+   "specimen": "plasma",
+   "synonyms": [],
+   "turnaround": "coagulation",
+   "turnaround_minutes": 55
+  },
+  {
+   "code": "coag-inr",
+   "generator": "analyte",
+   "label_en": "Coagulation (PT / INR / aPTT / fibrinogen)",
+   "label_tr": "Koagülasyon (PT / INR / aPTT / fibrinojen)",
+   "loinc": null,
+   "members": [
+    "5902-2",
+    "6301-6",
+    "3173-2",
+    "3255-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "coagulation",
+   "specimen": "plasma",
+   "synonyms": [
+    "clotting",
+    "pt inr"
+   ],
+   "turnaround": "coagulation",
+   "turnaround_minutes": 55
+  },
+  {
+   "code": "fibrinogen",
+   "generator": "analyte",
+   "label_en": "Fibrinogen",
+   "label_tr": "Fibrinojen",
+   "loinc": "3255-7",
+   "members": [
+    "3255-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "coagulation",
+   "specimen": "plasma",
+   "synonyms": [],
+   "turnaround": "coagulation",
+   "turnaround_minutes": 55
+  },
+  {
+   "code": "1988-5",
+   "generator": "analyte",
+   "label_en": "C-reactive protein (CRP)",
+   "label_tr": "C-reaktif protein (CRP)",
+   "loinc": "1988-5",
+   "members": [
+    "1988-5"
+   ],
+   "preliminary_minutes": null,
+   "section": "inflammatory",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "inflammatory",
+   "turnaround_minutes": 55
+  },
+  {
+   "code": "pct",
+   "generator": "analyte",
+   "label_en": "Procalcitonin",
+   "label_tr": "Prokalsitonin",
+   "loinc": "33959-8",
+   "members": [
+    "33959-8"
+   ],
+   "preliminary_minutes": null,
+   "section": "inflammatory",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "inflammatory",
+   "turnaround_minutes": 55
+  },
+  {
+   "code": "tsh",
+   "generator": "analyte",
+   "label_en": "Thyroid (TSH and free T4)",
+   "label_tr": "Tiroid (TSH ve serbest T4)",
+   "loinc": "24348-5",
+   "members": [
+    "3016-3",
+    "3024-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "serum",
+   "synonyms": [
+    "thyroid function"
+   ],
+   "turnaround": "endocrine",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "ft3",
+   "generator": "analyte",
+   "label_en": "Free T3",
+   "label_tr": "Serbest T3",
+   "loinc": "3051-0",
+   "members": [
+    "3051-0"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "endocrine",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "cortisol",
+   "generator": "analyte",
+   "label_en": "Cortisol (morning)",
+   "label_tr": "Kortizol (sabah)",
+   "loinc": "2143-6",
+   "members": [
+    "2143-6"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "endocrine",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "pth",
+   "generator": "analyte",
+   "label_en": "Parathyroid hormone (intact PTH)",
+   "label_tr": "Parathormon (intakt PTH)",
+   "loinc": "2731-8",
+   "members": [
+    "2731-8"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "plasma",
+   "synonyms": [],
+   "turnaround": "endocrine",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "prolactin",
+   "generator": "analyte",
+   "label_en": "Prolactin",
+   "label_tr": "Prolaktin",
+   "loinc": "2842-3",
+   "members": [
+    "2842-3"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "endocrine",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "testosterone",
+   "generator": "analyte",
+   "label_en": "Testosterone (total)",
+   "label_tr": "Testosteron (total)",
+   "loinc": "2986-8",
+   "members": [
+    "2986-8"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "estradiol",
+   "generator": "analyte",
+   "label_en": "Estradiol",
+   "label_tr": "Östradiol",
+   "loinc": "2243-4",
+   "members": [
+    "2243-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "acth",
+   "generator": "analyte",
+   "label_en": "ACTH (morning)",
+   "label_tr": "ACTH (sabah)",
+   "loinc": "2141-0",
+   "members": [
+    "2141-0"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "plasma",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "renin",
+   "generator": "analyte",
+   "label_en": "Plasma renin activity",
+   "label_tr": "Plazma renin aktivitesi",
+   "loinc": "2915-7",
+   "members": [
+    "2915-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "plasma",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "c-peptide",
+   "generator": "analyte",
+   "label_en": "C-peptide",
+   "label_tr": "C-peptid",
+   "loinc": "1986-9",
+   "members": [
+    "1986-9"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "bhcg",
+   "generator": "analyte",
+   "label_en": "Beta-hCG, serum (pregnancy)",
+   "label_tr": "Beta-hCG, serum (gebelik)",
+   "loinc": "21198-7",
+   "members": [
+    "21198-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "endocrine",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "bhcg-quant",
+   "generator": "analyte",
+   "label_en": "Beta-hCG, quantitative (serum)",
+   "label_tr": "Beta-hCG, kantitatif (serum)",
+   "loinc": "21198-7",
+   "members": [
+    "21198-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "endocrine",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "endocrine",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "urine-hcg",
+   "generator": "analyte",
+   "label_en": "Beta-hCG, urine (pregnancy)",
+   "label_tr": "Beta-hCG, idrar (gebelik)",
+   "loinc": "2106-3",
+   "members": [
+    "2106-3"
+   ],
+   "preliminary_minutes": null,
+   "section": "urine",
+   "specimen": "urine",
+   "synonyms": [],
+   "turnaround": "poc",
+   "turnaround_minutes": 5
+  },
+  {
+   "code": "psa",
+   "generator": "analyte",
+   "label_en": "Prostate-specific antigen (PSA)",
+   "label_tr": "Prostat spesifik antijen (PSA)",
+   "loinc": "2857-1",
+   "members": [
+    "2857-1"
+   ],
+   "preliminary_minutes": null,
+   "section": "tumour_marker",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "cea",
+   "generator": "analyte",
+   "label_en": "Carcinoembryonic antigen (CEA)",
+   "label_tr": "Karsinoembriyonik antijen (CEA)",
+   "loinc": "2039-6",
+   "members": [
+    "2039-6"
+   ],
+   "preliminary_minutes": null,
+   "section": "tumour_marker",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "afp",
+   "generator": "analyte",
+   "label_en": "Alpha-fetoprotein (AFP)",
+   "label_tr": "Alfa-fetoprotein (AFP)",
+   "loinc": "1834-1",
+   "members": [
+    "1834-1"
+   ],
+   "preliminary_minutes": null,
+   "section": "tumour_marker",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "ca125",
+   "generator": "analyte",
+   "label_en": "CA-125",
+   "label_tr": "CA-125",
+   "loinc": "10334-1",
+   "members": [
+    "10334-1"
+   ],
+   "preliminary_minutes": null,
+   "section": "tumour_marker",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "rf",
+   "generator": "analyte",
+   "label_en": "Rheumatoid factor",
+   "label_tr": "Romatoid faktör",
+   "loinc": "11572-5",
+   "members": [
+    "11572-5"
+   ],
+   "preliminary_minutes": null,
+   "section": "immunology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "ana",
+   "generator": "analyte",
+   "label_en": "Antinuclear antibody (ANA)",
+   "label_tr": "Antinükleer antikor (ANA)",
+   "loinc": "5048-4",
+   "members": [
+    "5048-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "immunology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "complement",
+   "generator": "analyte",
+   "label_en": "Complement C3 and C4",
+   "label_tr": "Kompleman C3 ve C4",
+   "loinc": null,
+   "members": [
+    "4485-9",
+    "4498-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "immunology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "immunoglobulins",
+   "generator": "analyte",
+   "label_en": "Immunoglobulins (IgG, IgA, IgM)",
+   "label_tr": "İmmünoglobulinler (IgG, IgA, IgM)",
+   "loinc": null,
+   "members": [
+    "2465-3",
+    "2458-8",
+    "2472-9"
+   ],
+   "preliminary_minutes": null,
+   "section": "immunology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "ua",
+   "generator": "analyte",
+   "label_en": "Urinalysis with microscopy",
+   "label_tr": "İdrar tahlili ve mikroskopi",
+   "loinc": "24356-8",
+   "members": [
+    "5811-5",
+    "5803-2",
+    "5804-0",
+    "5792-7",
+    "5797-6",
+    "5794-3",
+    "5802-4",
+    "5799-2",
+    "5821-4",
+    "13945-1",
+    "25145-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "urine",
+   "specimen": "urine",
+   "synonyms": [
+    "urine dip",
+    "dipstick"
+   ],
+   "turnaround": "urine",
+   "turnaround_minutes": 45
+  },
+  {
+   "code": "urine-electrolytes",
+   "generator": "analyte",
+   "label_en": "Urine sodium, potassium and osmolality",
+   "label_tr": "İdrar sodyum, potasyum ve ozmolalite",
+   "loinc": null,
+   "members": [
+    "2955-3",
+    "2828-2",
+    "2695-5"
+   ],
+   "preliminary_minutes": null,
+   "section": "urine",
+   "specimen": "urine",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "uacr",
+   "generator": "analyte",
+   "label_en": "Urine albumin/creatinine ratio",
+   "label_tr": "İdrar albümin/kreatinin oranı",
+   "loinc": "9318-7",
+   "members": [
+    "9318-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "urine",
+   "specimen": "urine",
+   "synonyms": [],
+   "turnaround": "chemistry",
+   "turnaround_minutes": 50
+  },
+  {
+   "code": "utox",
+   "generator": "analyte",
+   "label_en": "Urine drug screen (immunoassay)",
+   "label_tr": "İdrar ilaç taraması (immünoassay)",
+   "loinc": null,
+   "members": [
+    "3397-7",
+    "19343-3",
+    "19295-5",
+    "18282-4",
+    "14316-4",
+    "19270-8",
+    "19659-2",
+    "19550-3"
+   ],
+   "preliminary_minutes": null,
+   "section": "toxicology",
+   "specimen": "urine",
+   "synonyms": [
+    "uds",
+    "tox screen"
+   ],
+   "turnaround": "toxicology",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "acetaminophen",
+   "generator": "analyte",
+   "label_en": "Acetaminophen (paracetamol) level",
+   "label_tr": "Asetaminofen (parasetamol) düzeyi",
+   "loinc": "3298-7",
+   "members": [
+    "3298-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "toxicology",
+   "specimen": "serum",
+   "synonyms": [
+    "paracetamol"
+   ],
+   "turnaround": "toxicology",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "salicylate",
+   "generator": "analyte",
+   "label_en": "Salicylate level",
+   "label_tr": "Salisilat düzeyi",
+   "loinc": "4024-6",
+   "members": [
+    "4024-6"
+   ],
+   "preliminary_minutes": null,
+   "section": "toxicology",
+   "specimen": "serum",
+   "synonyms": [
+    "aspirin"
+   ],
+   "turnaround": "toxicology",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "ethanol",
+   "generator": "analyte",
+   "label_en": "Ethanol level",
+   "label_tr": "Etanol düzeyi",
+   "loinc": "5643-2",
+   "members": [
+    "5643-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "toxicology",
+   "specimen": "serum",
+   "synonyms": [
+    "alcohol"
+   ],
+   "turnaround": "toxicology",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "toxic-alcohols",
+   "generator": "analyte",
+   "label_en": "Toxic alcohols (methanol, ethylene glycol) with osmolality",
+   "label_tr": "Toksik alkoller (metanol, etilen glikol) ve ozmolalite",
+   "loinc": null,
+   "members": [
+    "5693-7",
+    "5646-5",
+    "2692-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "toxicology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "digoxin",
+   "generator": "analyte",
+   "label_en": "Digoxin level",
+   "label_tr": "Digoksin düzeyi",
+   "loinc": "10535-3",
+   "members": [
+    "10535-3"
+   ],
+   "preliminary_minutes": null,
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "toxicology",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "lithium",
+   "generator": "analyte",
+   "label_en": "Lithium level",
+   "label_tr": "Lityum düzeyi",
+   "loinc": "14334-7",
+   "members": [
+    "14334-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "toxicology",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "phenytoin",
+   "generator": "analyte",
+   "label_en": "Phenytoin level",
+   "label_tr": "Fenitoin düzeyi",
+   "loinc": "3968-5",
+   "members": [
+    "3968-5"
+   ],
+   "preliminary_minutes": null,
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "toxicology",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "valproate",
+   "generator": "analyte",
+   "label_en": "Valproate level",
+   "label_tr": "Valproat düzeyi",
+   "loinc": "4086-5",
+   "members": [
+    "4086-5"
+   ],
+   "preliminary_minutes": null,
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "toxicology",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "carbamazepine",
+   "generator": "analyte",
+   "label_en": "Carbamazepine level",
+   "label_tr": "Karbamazepin düzeyi",
+   "loinc": "3432-2",
+   "members": [
+    "3432-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "toxicology",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "vbg",
+   "generator": "analyte",
+   "label_en": "Venous blood gas (VBG)",
+   "label_tr": "Venöz kan gazı (VKG)",
+   "loinc": "24339-4",
+   "members": [
+    "2746-6",
+    "2021-4",
+    "2705-2",
+    "14627-4",
+    "2524-7",
+    "2823-3",
+    "2951-2",
+    "2345-7",
+    "718-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "blood_gas",
+   "specimen": "venous blood",
+   "synonyms": [],
+   "turnaround": "blood_gas",
+   "turnaround_minutes": 10
+  },
+  {
+   "code": "abg",
+   "generator": "analyte",
+   "label_en": "Arterial blood gas (ABG)",
+   "label_tr": "Arteriyel kan gazı (AKG)",
+   "loinc": "24336-0",
+   "members": [
+    "2744-1",
+    "2019-8",
+    "2703-7",
+    "1960-4",
+    "2708-6",
+    "2524-7",
+    "2823-3",
+    "2951-2",
+    "2345-7",
+    "718-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "blood_gas",
+   "specimen": "arterial blood",
+   "synonyms": [],
+   "turnaround": "blood_gas",
+   "turnaround_minutes": 10
+  },
+  {
+   "code": "poc-glucose",
+   "generator": "analyte",
+   "label_en": "Point-of-care glucose",
+   "label_tr": "Yatak başı glukoz",
+   "loinc": "2345-7",
+   "members": [
+    "2345-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "poc",
+   "specimen": "capillary blood",
+   "synonyms": [],
+   "turnaround": "poc",
+   "turnaround_minutes": 5
+  },
+  {
+   "code": "istat",
+   "generator": "analyte",
+   "label_en": "iSTAT bedside panel",
+   "label_tr": "iSTAT yatak başı panel",
+   "loinc": null,
+   "members": [
+    "2951-2",
+    "2823-3",
+    "2075-0",
+    "2345-7",
+    "3094-0",
+    "2160-0",
+    "4544-3",
+    "718-7",
+    "2524-7",
+    "2746-6",
+    "2021-4",
+    "14627-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "poc",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "poc",
+   "turnaround_minutes": 5
+  },
+  {
+   "code": "type-screen",
+   "generator": "analyte",
+   "label_en": "Type and screen (ABO/Rh and antibody screen)",
+   "label_tr": "Kan grubu ve antikor taraması",
+   "loinc": "34532-2",
+   "members": [
+    "882-1",
+    "890-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "blood_bank",
+   "specimen": "blood",
+   "synonyms": [
+    "group and save",
+    "crossmatch"
+   ],
+   "turnaround": "blood_bank",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "dat",
+   "generator": "analyte",
+   "label_en": "Direct antiglobulin test (Coombs)",
+   "label_tr": "Direkt antiglobulin testi (Coombs)",
+   "loinc": "1007-4",
+   "members": [
+    "1007-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "blood_bank",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "blood_bank",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "blood-culture",
+   "generator": "micro",
+   "label_en": "Blood culture (two sets) and Gram stain",
+   "label_tr": "Kan kültürü (iki set) ve Gram boyama",
+   "loinc": "600-7",
+   "members": [
+    "600-7"
+   ],
+   "preliminary_minutes": 1440,
+   "section": "microbiology",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "blood_culture",
+   "turnaround_minutes": 7200
+  },
+  {
+   "code": "urine-culture",
+   "generator": "micro",
+   "label_en": "Urine culture",
+   "label_tr": "İdrar kültürü",
+   "loinc": "630-4",
+   "members": [
+    "630-4"
+   ],
+   "preliminary_minutes": 1440,
+   "section": "microbiology",
+   "specimen": "urine",
+   "synonyms": [],
+   "turnaround": "micro_culture",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "sputum-culture",
+   "generator": "micro",
+   "label_en": "Sputum culture and Gram stain",
+   "label_tr": "Balgam kültürü ve Gram boyama",
+   "loinc": "624-7",
+   "members": [
+    "624-7"
+   ],
+   "preliminary_minutes": 1440,
+   "section": "microbiology",
+   "specimen": "sputum",
+   "synonyms": [],
+   "turnaround": "micro_culture",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "gram-stain",
+   "generator": "micro",
+   "label_en": "Gram stain",
+   "label_tr": "Gram boyama",
+   "loinc": "664-3",
+   "members": [
+    "664-3"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "specimen",
+   "synonyms": [],
+   "turnaround": "gram",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "wound-culture",
+   "generator": "micro",
+   "label_en": "Wound swab culture",
+   "label_tr": "Yara sürüntü kültürü",
+   "loinc": "6462-6",
+   "members": [
+    "6462-6"
+   ],
+   "preliminary_minutes": 1440,
+   "section": "microbiology",
+   "specimen": "wound swab",
+   "synonyms": [],
+   "turnaround": "micro_culture",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "throat-culture",
+   "generator": "micro",
+   "label_en": "Throat swab culture",
+   "label_tr": "Boğaz sürüntü kültürü",
+   "loinc": "626-2",
+   "members": [
+    "626-2"
+   ],
+   "preliminary_minutes": 1440,
+   "section": "microbiology",
+   "specimen": "throat swab",
+   "synonyms": [],
+   "turnaround": "micro_culture",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "stool-culture",
+   "generator": "micro",
+   "label_en": "Stool culture",
+   "label_tr": "Gaita kültürü",
+   "loinc": "625-4",
+   "members": [
+    "625-4"
+   ],
+   "preliminary_minutes": 1440,
+   "section": "microbiology",
+   "specimen": "stool",
+   "synonyms": [],
+   "turnaround": "micro_culture",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "cdiff",
+   "generator": "micro",
+   "label_en": "Clostridioides difficile toxin",
+   "label_tr": "Clostridioides difficile toksini",
+   "loinc": "34713-8",
+   "members": [
+    "34713-8"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "stool",
+   "synonyms": [],
+   "turnaround": "molecular",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "afb-smear",
+   "generator": "micro",
+   "label_en": "Acid-fast bacilli smear (sputum)",
+   "label_tr": "Aside dirençli basil yayması (balgam)",
+   "loinc": "11545-1",
+   "members": [
+    "11545-1"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "sputum",
+   "synonyms": [],
+   "turnaround": "afb",
+   "turnaround_minutes": 1440
+  },
+  {
+   "code": "resp-viral-panel",
+   "generator": "micro",
+   "label_en": "Respiratory viral PCR (influenza A/B, SARS-CoV-2, RSV)",
+   "label_tr": "Solunum viral PCR (influenza A/B, SARS-CoV-2, RSV)",
+   "loinc": "95941-1",
+   "members": [
+    "92142-9",
+    "92141-1",
+    "94500-6",
+    "92131-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "nasopharyngeal swab",
+   "synonyms": [],
+   "turnaround": "molecular",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "covid-pcr",
+   "generator": "micro",
+   "label_en": "SARS-CoV-2 PCR",
+   "label_tr": "SARS-CoV-2 PCR",
+   "loinc": "94500-6",
+   "members": [
+    "94500-6"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "nasopharyngeal swab",
+   "synonyms": [],
+   "turnaround": "molecular",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "strep-a",
+   "generator": "micro",
+   "label_en": "Rapid group A Streptococcus antigen",
+   "label_tr": "Hızlı A grubu streptokok antijeni",
+   "loinc": "78012-2",
+   "members": [
+    "78012-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "throat swab",
+   "synonyms": [],
+   "turnaround": "antigen_rapid",
+   "turnaround_minutes": 20
+  },
+  {
+   "code": "legionella-ag",
+   "generator": "micro",
+   "label_en": "Legionella urinary antigen",
+   "label_tr": "Legionella idrar antijeni",
+   "loinc": "32781-7",
+   "members": [
+    "32781-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "urine",
+   "synonyms": [],
+   "turnaround": "antigen_lab",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "pneumococcal-ag",
+   "generator": "micro",
+   "label_en": "Pneumococcal urinary antigen",
+   "label_tr": "Pnömokok idrar antijeni",
+   "loinc": "24027-5",
+   "members": [
+    "24027-5"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "urine",
+   "synonyms": [],
+   "turnaround": "antigen_lab",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "igra",
+   "generator": "micro",
+   "label_en": "TB interferon-gamma release assay (IGRA)",
+   "label_tr": "TB interferon-gama salınım testi (IGRA)",
+   "loinc": "71773-6",
+   "members": [
+    "71773-6"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "send_out",
+   "turnaround_minutes": 2880
+  },
+  {
+   "code": "malaria-film",
+   "generator": "micro",
+   "label_en": "Malaria thick and thin blood films",
+   "label_tr": "Sıtma kalın ve ince kan yayması",
+   "loinc": "32700-7",
+   "members": [
+    "32700-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "haematology",
+   "turnaround_minutes": 45
+  },
+  {
+   "code": "malaria-rdt",
+   "generator": "micro",
+   "label_en": "Malaria rapid diagnostic test (antigen)",
+   "label_tr": "Sıtma hızlı tanı testi (antijen)",
+   "loinc": "76772-3",
+   "members": [
+    "76772-3"
+   ],
+   "preliminary_minutes": null,
+   "section": "microbiology",
+   "specimen": "blood",
+   "synonyms": [],
+   "turnaround": "antigen_rapid",
+   "turnaround_minutes": 20
+  },
+  {
+   "code": "hiv",
+   "generator": "micro",
+   "label_en": "HIV-1/2 antigen/antibody (4th generation)",
+   "label_tr": "HIV-1/2 antijen/antikor (4. kuşak)",
+   "loinc": "56888-1",
+   "members": [
+    "56888-1"
+   ],
+   "preliminary_minutes": null,
+   "section": "serology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "serology",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "hepatitis-panel",
+   "generator": "micro",
+   "label_en": "Acute hepatitis panel (HBsAg, HBc IgM, HAV IgM, HCV Ab)",
+   "label_tr": "Akut hepatit paneli (HBsAg, HBc IgM, HAV IgM, HCV Ab)",
+   "loinc": "24363-4",
+   "members": [
+    "5196-1",
+    "31204-1",
+    "13950-1",
+    "13955-0"
+   ],
+   "preliminary_minutes": null,
+   "section": "serology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "serology",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "hbv-serology",
+   "generator": "micro",
+   "label_en": "Hepatitis B serology (HBsAg, anti-HBc, anti-HBs)",
+   "label_tr": "Hepatit B serolojisi (HBsAg, anti-HBc, anti-HBs)",
+   "loinc": null,
+   "members": [
+    "5196-1",
+    "16933-4",
+    "22322-2"
+   ],
+   "preliminary_minutes": null,
+   "section": "serology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "serology",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "syphilis",
+   "generator": "micro",
+   "label_en": "Syphilis serology (RPR and treponemal antibody)",
+   "label_tr": "Sifiliz serolojisi (RPR ve treponemal antikor)",
+   "loinc": null,
+   "members": [
+    "20507-0",
+    "47236-5"
+   ],
+   "preliminary_minutes": null,
+   "section": "serology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "serology",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "monospot",
+   "generator": "micro",
+   "label_en": "Monospot (EBV heterophile antibody)",
+   "label_tr": "Monospot (EBV heterofil antikor)",
+   "loinc": "31418-7",
+   "members": [
+    "31418-7"
+   ],
+   "preliminary_minutes": null,
+   "section": "serology",
+   "specimen": "serum",
+   "synonyms": [],
+   "turnaround": "serology",
+   "turnaround_minutes": 120
+  },
+  {
+   "code": "csf-studies",
+   "generator": "csf",
+   "label_en": "CSF studies (cell count, protein, glucose, Gram stain, culture)",
+   "label_tr": "BOS incelemesi (hücre sayımı, protein, glukoz, Gram, kültür)",
+   "loinc": null,
+   "members": [
+    "26465-5",
+    "26454-9",
+    "2880-3",
+    "2342-4",
+    "664-3",
+    "606-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "csf",
+   "specimen": "cerebrospinal fluid",
+   "synonyms": [
+    "lumbar puncture",
+    "lp"
+   ],
+   "turnaround": "csf",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "pleural-fluid",
+   "generator": "body_fluid",
+   "label_en": "Pleural fluid analysis (protein, LDH, glucose, pH, cells, culture)",
+   "label_tr": "Plevra sıvısı analizi (protein, LDH, glukoz, pH, hücre, kültür)",
+   "loinc": null,
+   "members": [
+    "2882-9",
+    "60022-1",
+    "2346-5",
+    "2748-2",
+    "26467-1",
+    "664-3",
+    "611-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "body_fluid",
+   "specimen": "pleural fluid",
+   "synonyms": [
+    "thoracentesis"
+   ],
+   "turnaround": "body_fluid",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "ascitic-fluid",
+   "generator": "body_fluid",
+   "label_en": "Ascitic fluid analysis (albumin, protein, cell count, culture)",
+   "label_tr": "Asit sıvısı analizi (albümin, protein, hücre sayımı, kültür)",
+   "loinc": null,
+   "members": [
+    "2883-7",
+    "1749-1",
+    "26468-9",
+    "26514-0",
+    "664-3",
+    "611-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "body_fluid",
+   "specimen": "ascitic fluid",
+   "synonyms": [
+    "paracentesis"
+   ],
+   "turnaround": "body_fluid",
+   "turnaround_minutes": 60
+  },
+  {
+   "code": "synovial-fluid",
+   "generator": "body_fluid",
+   "label_en": "Synovial fluid analysis (cells, crystals, Gram stain, culture)",
+   "label_tr": "Sinoviyal sıvı analizi (hücre, kristal, Gram, kültür)",
+   "loinc": null,
+   "members": [
+    "26469-7",
+    "17836-8",
+    "5781-0",
+    "664-3",
+    "611-4"
+   ],
+   "preliminary_minutes": null,
+   "section": "body_fluid",
+   "specimen": "synovial fluid",
+   "synonyms": [
+    "arthrocentesis",
+    "joint aspirate"
+   ],
+   "turnaround": "body_fluid",
+   "turnaround_minutes": 60
+  }
+ ],
+ "reviewed_at": "2026-10-21",
+ "schema_version": 1,
+ "sections": [
+  "haematology",
+  "chemistry",
+  "cardiac",
+  "coagulation",
+  "inflammatory",
+  "endocrine",
+  "tumour_marker",
+  "immunology",
+  "urine",
+  "toxicology",
+  "therapeutic_drug",
+  "blood_gas",
+  "poc",
+  "blood_bank",
+  "microbiology",
+  "serology",
+  "csf",
+  "body_fluid"
+ ],
+ "turnaround": {
+  "afb": {
+   "basis": "convention",
+   "minutes": 1440,
+   "source": "Auramine or Ziehl-Neelsen smear batch; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "antigen_lab": {
+   "basis": "convention",
+   "minutes": 120,
+   "source": "AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "antigen_rapid": {
+   "basis": "convention",
+   "minutes": 20,
+   "source": "Lateral-flow antigen test read at 15 min; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "blood_bank": {
+   "basis": "convention",
+   "minutes": 60,
+   "source": "Type and screen with antibody screen; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "blood_culture": {
+   "basis": "measured",
+   "minutes": 7200,
+   "positive_final_minutes": 2880,
+   "preliminary_minutes": 1440,
+   "source": "Lamy B et al., Front Microbiol 2016;7:697 (doi 10.3389/fmicb.2016.00697): most positive cultures flag within 24 h; standard incubation 5 days before a culture is reported negative (Eur J Clin Microbiol Infect Dis 2021, doi 10.1007/s10096-021-04248-9)"
+  },
+  "blood_gas": {
+   "basis": "convention",
+   "minutes": 10,
+   "source": "Hawkins 2007 (PMC2282400): blood gas analysers are near-patient; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "body_fluid": {
+   "basis": "convention",
+   "culture_final_minutes": 2880,
+   "minutes": 60,
+   "source": "Fluid chemistry and cell count; culture final at 48 h; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "cardiac": {
+   "basis": "guideline",
+   "minutes": 60,
+   "source": "Fourth Universal Definition of MI 2018: troponin result within 60 min of blood draw, doi 10.1093/eurheartj/ehy462"
+  },
+  "chemistry": {
+   "basis": "measured",
+   "minutes": 50,
+   "source": "BMC Emerg Med 2022 retrospective cohort of 23,718 ED visits (doi 10.1186/s12873-022-00763-w): median ED laboratory turnaround 51.1 min (IQR 41.1 to 65.0) for a standard panel"
+  },
+  "coagulation": {
+   "basis": "measured",
+   "minutes": 55,
+   "source": "BMC Emerg Med 2022 retrospective cohort of 23,718 ED visits (doi 10.1186/s12873-022-00763-w): median ED laboratory turnaround 51.1 min (IQR 41.1 to 65.0) for a standard panel"
+  },
+  "csf": {
+   "basis": "convention",
+   "culture_final_minutes": 2880,
+   "minutes": 60,
+   "preliminary_minutes": null,
+   "source": "Cell count, protein, glucose and Gram stain on a stat CSF; culture final at 48 h (MedlinePlus CSF culture 003769); AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "ct": {
+   "basis": "measured",
+   "minutes": 250,
+   "preliminary_minutes": 125,
+   "source": "AMIA Annu Symp Proc 2018 (PMC6371246): ED CT order to final report median 4.2 h; CJEM 2015 (doi 10.2310/8000.2013.131235): preliminary report median 2.05 to 2.40 h for CT or ultrasound of the abdomen and pelvis"
+  },
+  "ct_head": {
+   "basis": "measured",
+   "minutes": 85,
+   "source": "Emerg Radiol 2024 (doi 10.1007/s10140-024-02273-7): non-contrast CT head order to final report 1.41 h"
+  },
+  "cta": {
+   "basis": "measured",
+   "minutes": 230,
+   "preliminary_minutes": 125,
+   "source": "Emerg Radiol 2024 (doi 10.1007/s10140-024-02273-7): CTA head and neck order to final report 3.86 h; preliminary per CJEM 2015"
+  },
+  "ecg": {
+   "basis": "guideline",
+   "minutes": 10,
+   "source": "ESC 2023 ACS guideline: 12-lead ECG acquired and interpreted within 10 min of first medical contact, doi 10.1093/eurheartj/ehad191"
+  },
+  "echo": {
+   "basis": "convention",
+   "minutes": 240,
+   "source": "Formal transthoracic echocardiogram, same day; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "endocrine": {
+   "basis": "convention",
+   "minutes": 120,
+   "source": "Same-day immunoassay batch; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "gram": {
+   "basis": "convention",
+   "minutes": 60,
+   "source": "AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "haematology": {
+   "basis": "measured",
+   "minutes": 45,
+   "source": "BMC Emerg Med 2022 retrospective cohort of 23,718 ED visits (doi 10.1186/s12873-022-00763-w): median ED laboratory turnaround 51.1 min (IQR 41.1 to 65.0) for a standard panel"
+  },
+  "inflammatory": {
+   "basis": "measured",
+   "minutes": 55,
+   "source": "BMC Emerg Med 2022 retrospective cohort of 23,718 ED visits (doi 10.1186/s12873-022-00763-w): median ED laboratory turnaround 51.1 min (IQR 41.1 to 65.0) for a standard panel"
+  },
+  "micro_culture": {
+   "basis": "measured",
+   "minutes": 2880,
+   "preliminary_minutes": 1440,
+   "source": "MedlinePlus Urine culture (003751): results in 24 to 48 hours; preliminary growth report at 24 h"
+  },
+  "molecular": {
+   "basis": "convention",
+   "minutes": 120,
+   "source": "Rapid multiplex NAAT run in the core laboratory; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "mri": {
+   "basis": "measured",
+   "minutes": 370,
+   "source": "Emerg Radiol 2024 (doi 10.1007/s10140-024-02273-7): conventional MRI order to final report 6.14 h"
+  },
+  "poc": {
+   "basis": "convention",
+   "minutes": 5,
+   "source": "Hawkins RC. Laboratory turnaround time. Clin Biochem Rev 2007;28:179-194 (PMC2282400): point-of-care testing removes transport and queueing; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "pocus": {
+   "basis": "convention",
+   "minutes": 10,
+   "source": "Bedside point-of-care ultrasound read by the treating clinician on completion; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "send_out": {
+   "basis": "convention",
+   "minutes": 2880,
+   "source": "Reference-laboratory test, reported in 1 to 3 days; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "serology": {
+   "basis": "convention",
+   "minutes": 120,
+   "source": "In-house automated immunoassay; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "toxicology": {
+   "basis": "convention",
+   "minutes": 60,
+   "source": "AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "urine": {
+   "basis": "measured",
+   "minutes": 45,
+   "source": "BMC Emerg Med 2022 retrospective cohort of 23,718 ED visits (doi 10.1186/s12873-022-00763-w): median ED laboratory turnaround 51.1 min (IQR 41.1 to 65.0) for a standard panel"
+  },
+  "us": {
+   "basis": "measured",
+   "minutes": 165,
+   "preliminary_minutes": 125,
+   "source": "CJEM 2015 (doi 10.2310/8000.2013.131235): ED ultrasound or CT preliminary report median 2.05 h, final 2.75 h"
+  },
+  "us_routine": {
+   "basis": "convention",
+   "minutes": 1440,
+   "source": "Non-urgent outpatient-style study booked for the next list; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  },
+  "xr": {
+   "basis": "measured",
+   "minutes": 60,
+   "source": "Emerg Radiol 2021 (doi 10.1007/s10140-020-01803-3): median ED radiology department turnaround 70 min before and 36 min after a Lean intervention"
+  },
+  "xr_portable": {
+   "basis": "convention",
+   "minutes": 45,
+   "source": "Bedside portable film, no transport; AcuDx teaching convention (not a measured figure); laboratory practice varies"
+  }
+ }
+}

@@ -106,6 +106,14 @@ export function ProvidersSection() {
         </Card>
       ) : null}
 
+      {list.data?.anthropic && !list.data.anthropic.usable ? (
+        <Card padding="sm" role="status" className="border-[color:var(--state-caution)] text-sm text-fg">
+          {list.data.anthropic.configured
+            ? t("admin.providers.anthropicUnusable", { reason: list.data.anthropic.reason ?? "" })
+            : t("admin.providers.anthropicNoKey")}
+        </Card>
+      ) : null}
+
       {notice ? (
         <p
           role="status"

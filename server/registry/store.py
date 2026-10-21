@@ -133,6 +133,12 @@ class ProviderRecord(BaseModel):
         return f"ProviderRecord(id={self.id}, kind={self.kind!r}, name={self.name!r}, enabled={self.enabled})"
 
 
+def is_anthropic(rec: ProviderRecord) -> bool:
+    """A Claude (Anthropic Messages API) row: not OpenAI-compatible, served by the Claude provider."""
+    host = (urlparse(rec.base_url).hostname or "").lower()
+    return rec.kind == "llm" and (rec.extra.get("api") == "anthropic" or host == "api.anthropic.com")
+
+
 def _row_to_record(row: sqlite3.Row) -> ProviderRecord:
     d = dict(row)
     d["extra"] = json.loads(d.get("extra") or "{}")
@@ -326,6 +332,28 @@ class RegistryStore:
             self.create_provider(r)
         log.info("registry seeded from env: %d provider row(s)", len(rows))
         return len(rows)
+
+    def anthropic_row(self) -> ProviderRecord | None:
+        """The registry row of the Claude route (``extra.api == "anthropic"``), if any."""
+        for rec in self.list_providers(kind="llm"):
+            if is_anthropic(rec):
+                return rec
+        return None
+
+    def ensure_anthropic_row(self, settings: Settings) -> ProviderRecord:
+        """Make the Claude route visible and switchable in the admin panel (idempotent).
+
+        Created at priority 0 so Claude is the default LLM route; the key stays in
+        ``ANTHROPIC_KEY`` (read at call time) unless an operator seals one on the row.
+        Disabling the row, or raising its priority above another row, takes Claude off
+        the default route; the OpenAI-compatible rows and the GPU worker stay selectable."""
+        existing = self.anthropic_row()
+        if existing is not None:
+            return existing
+        return self.create_provider(ProviderIn(
+            kind="llm", name="anthropic", base_url=settings.anthropic_base_url, model=settings.anthropic_model_persona,
+            priority=0, extra={"api": "anthropic", "seeded_from": "env", "env": "ANTHROPIC_KEY"},
+        ))
 
     def _seedable(self, key: str | None) -> str | None:
         """Only seal a real key, and only when sealing is possible; otherwise leave it to env resolution."""

@@ -1,0 +1,62 @@
+{
+  "results3": {
+    "pending": "Pending",
+    "preliminary": "Preliminary",
+    "readyIn": "due in {{time}}",
+    "advance": "Advance to next result (+{{time}})",
+    "advanceHint": "Moves the simulation clock forward to the next result. The patient's course moves forward too.",
+    "engineFailed": "The results engine could not produce this result.",
+    "retry": "Retry",
+    "unavailableBody": "Result unavailable: the results engine could not produce it. No value is shown rather than an invented one.",
+    "loincTitle": "LOINC order code (LOINC 2.82)",
+    "icdSource": "ICD-10-CM FY2027",
+    "icdServerHeading": "Full ICD-10-CM (FY2027)",
+    "icdSearching": "Searching ICD-10-CM",
+    "icd11Link": "Look up in ICD-11 (WHO)",
+    "codeTagTitle": "{{system}} code",
+    "timeLegend": "ETA and countdowns are simulation time: stat chemistry about 50 min, troponin 60 min, CT about 4 h, cultures 2 to 5 days. Use Advance to move the clock to the next result.",
+    "section": {
+      "haematology": "Haematology",
+      "chemistry": "Chemistry",
+      "cardiac": "Cardiac markers",
+      "coagulation": "Coagulation",
+      "inflammatory": "Inflammatory markers",
+      "endocrine": "Endocrine",
+      "tumour_marker": "Tumour markers",
+      "immunology": "Immunology",
+      "urine": "Urine",
+      "toxicology": "Toxicology",
+      "therapeutic_drug": "Therapeutic drug levels",
+      "blood_gas": "Blood gas",
+      "poc": "Point of care",
+      "blood_bank": "Blood bank",
+      "microbiology": "Microbiology",
+      "serology": "Serology",
+      "csf": "Cerebrospinal fluid",
+      "body_fluid": "Body fluids"
+    }
+  },
+  "ehrTerms": {
+    "codeStatus": {
+      "label": "Resuscitation status",
+      "full": "Full resuscitation",
+      "hint": "Full code: attempt CPR and every resuscitative measure if the heart or breathing stops. No do-not-resuscitate order is documented for this simulated patient."
+    }
+  },
+  "labs2": {
+    "results": {
+      "analytes_one": "{{count}} analyte",
+      "analytes_other": "{{count}} analytes"
+    }
+  },
+  "live2": {
+    "results": {
+      "source": {
+        "engine-unavailable": "Result unavailable"
+      },
+      "sourceHint": {
+        "engine-unavailable": "The gateway answered but the results engine could not produce this result. Nothing is shown in its place."
+      }
+    }
+  }
+}

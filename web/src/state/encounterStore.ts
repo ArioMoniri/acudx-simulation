@@ -30,7 +30,7 @@ import type {
   LabResult,
 } from "@/domain/case";
 import type { ServiceRequestKind } from "@/domain/fhir";
-import { orderTiming, type OrderCategory } from "@/domain/orderCatalog";
+import { orderTiming, simTurnaroundLabel, type OrderCategory } from "@/domain/orderCatalog";
 import {
   courseStatus,
   currentVitals,
@@ -61,6 +61,7 @@ import {
 } from "@/lib/caseGenV2";
 import { layerForIntent, layerForManeuver, layerPending, type LayerStatus } from "@/lib/caseLayers";
 import { resolveOrder as engineResolveOrder, type OrderResult } from "@/lib/resultsApi";
+import type { ChatAction, ChatGuard } from "@/lib/chatActions";
 import {
   applyDirectorChanges,
   caseInstanceToSpec,
@@ -125,6 +126,13 @@ export interface DialogueTurn {
    * on doctor turns.
    */
   affect?: string;
+  /**
+   * Generative actions the reply carried (patient turns only): order chips,
+   * navigate buttons and follow-up suggestions, rendered inline in the thread.
+   */
+  actions?: ChatAction[];
+  /** The guard note the reply carried (patient turns only). */
+  guard?: ChatGuard;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -189,6 +197,18 @@ export interface PlacedOrder {
   source?: ResultSource;
   /** The engine's own turnaround (sim ms) when it answered; drives the ETA label. */
   engineTurnaroundMs?: number;
+  /** Sim ms at which a preliminary report is available (cultures, CT, ultrasound). */
+  preliminaryAt?: number | null;
+  /** The preliminary report text, once the engine answered. */
+  preliminaryText?: string | null;
+  /**
+   * Live mode engine request state. "error" means the gateway answered but the
+   * engine could not produce this result (the order shows "result unavailable"
+   * with a retry, never an offline synthetic value).
+   */
+  engineStatus?: "pending" | "ok" | "error";
+  /** Why the engine request failed (http_500, timeout ...). */
+  engineError?: string | null;
 }
 
 export interface ResolvedResult {
@@ -275,6 +295,11 @@ export interface EncounterState {
   committedDiagnosis: string | null;
   /** Live mode: the gateway is reachable, so results and the Director run server-side. */
   liveEnabled: boolean;
+  /**
+   * Sim time the learner skipped forward ("advance time to the next result").
+   * The encounter clock is wall time since start plus this offset.
+   */
+  simOffsetMs: number;
   /** How the running case was produced (banner SimBadge provenance). */
   generation: CaseGenerationMeta | null;
   director: DirectorSlice;
@@ -324,6 +349,7 @@ function initialState(): EncounterState {
     guardEvents: [],
     committedDiagnosis: null,
     liveEnabled,
+    simOffsetMs: 0,
     generation: null,
     director: initialDirector(),
     caseLayers: {},
@@ -372,7 +398,7 @@ function setState(next: EncounterState): void {
 }
 
 function nowOffset(): number {
-  return state.startTs == null ? 0 : Math.max(0, clock() - state.startTs);
+  return state.startTs == null ? 0 : Math.max(0, clock() - state.startTs) + state.simOffsetMs;
 }
 
 function appendEvent(
@@ -405,6 +431,22 @@ export function setLiveEnabled(enabled: boolean): void {
   setState({ ...state, liveEnabled: enabled });
   if (enabled && state.caseInstance) startDirectorClock();
   if (!enabled) stopDirectorClock();
+  if (enabled) {
+    // Orders placed while the gateway was down are answered by the engine now
+    // that it is reachable, instead of keeping their offline label.
+    for (const o of state.orders) {
+      if (!o.resolved && !engineRequests.has(o.id)) {
+        setState({
+          ...state,
+          orders: state.orders.map((x) => (x.id === o.id ? { ...x, source: "engine", engineStatus: "pending", engineError: null } : x)),
+        });
+        requestEngineResult(o);
+      }
+    }
+  } else {
+    // Gateway lost: requests that failed as unreachable fall back to the labelled offline result.
+    releaseDueOrders();
+  }
 }
 
 export interface StartEncounterOptions {
@@ -572,6 +614,7 @@ export function getDebrief(s: EncounterState): DebriefSlice {
 export function startEncounter(caseInstance: CaseInstance, opts: StartEncounterOptions = {}): void {
   for (const t of pendingTimers) clearTimeout(t);
   pendingTimers.clear();
+  orderTimers.clear();
   engineRequests.clear();
   stopDirectorClock();
   directorTickQueued = false;
@@ -676,6 +719,10 @@ export function recordDialogue(input: {
   /** Provenance of the reply: the live model, or the offline fallback. Kept for
    * metrics only — never surfaced to the learner. */
   source?: "live" | "offline";
+  /** Generative actions from the reply (rendered inline under the patient turn). */
+  actions?: ChatAction[];
+  /** The guard note from the reply (soft-class redirects, server notes). */
+  guard?: ChatGuard;
 }): void {
   if (!state.caseInstance) return;
   const utterance = input.doctorText.trim();
@@ -698,6 +745,8 @@ export function recordDialogue(input: {
     tr: input.patient.tr,
     seq: ev.seq,
     affect: input.affect,
+    ...(input.actions && input.actions.length ? { actions: input.actions } : {}),
+    ...(input.guard ? { guard: input.guard } : {}),
   };
   setState({
     ...state,
@@ -733,15 +782,26 @@ export function requestExam(maneuver: ExamManeuver): void {
 }
 
 /**
- * Place an order by code. Logs immediately and schedules the result after a
- * PER-TEST simulated turnaround (orderCatalog: POC fast, cultures much later).
- * When the timer fires, the result is resolved (data revealed) and a `result`
- * event is appended.
+ * Place an order by code. Logs immediately and schedules the result on the SIM
+ * clock after the test's realistic turnaround (server catalogue: stat chemistry
+ * about 50 min, troponin 60 min, CT about 4 h with a preliminary read at 2 h,
+ * cultures with a 24 h preliminary and a 2 to 5 day final). The order stays
+ * pending until the sim clock reaches it; the learner can advance time
+ * ({@link advanceSimTime}). When it is due, the result is resolved (data
+ * revealed) and a `result` event is appended.
  *
  * Live mode: the server results engine is asked at placement time (sim time =
  * placedAt, with the treatments given so far and the earlier results of the
- * same encounter as `prior`), so its turnaround drives the ETA the learner sees
- * while the local playback timer stays the scheduler that reveals the answer.
+ * same encounter as `prior`); its turnaround replaces the catalogue estimate.
+ *
+ * Review 2026-10-21: a live encounter showed "Lactate dehydrogenase (LDH),
+ * Offline synthetic normal, ordered 0 min, resulted 0 min". Two faults: an
+ * engine request that failed for any reason fell back to the offline synthetic
+ * normal although the gateway was up, and the result was revealed after a
+ * compressed wall-clock delay rather than the test's sim turnaround. Now a
+ * failed live request is retried, a gateway that answers with an error shows
+ * "result unavailable" (never invented values), and the offline label appears
+ * only when the gateway is unreachable.
  */
 export function placeOrder(
   code: string,
@@ -759,7 +819,6 @@ export function placeOrder(
   const labelEn = label?.en ?? expectation?.label.en ?? code;
   const labelTr = label?.tr ?? expectation?.label.tr ?? code;
 
-  // Per-test turnaround: playback drives the timer, clinicalLabel is displayed.
   const timing = orderTiming(code, kind, { en: labelEn, tr: labelTr });
 
   const placedAt = nowOffset();
@@ -771,12 +830,14 @@ export function placeOrder(
     labelEn,
     labelTr,
     placedAt,
-    resultsReadyAt: placedAt + timing.playbackMs,
+    resultsReadyAt: placedAt + timing.turnaroundMs,
+    preliminaryAt: timing.preliminaryMs != null ? placedAt + timing.preliminaryMs : null,
     clinicalLabelEn: timing.clinicalLabel.en,
     clinicalLabelTr: timing.clinicalLabel.tr,
     category: timing.category,
     resolved: false,
     source: liveEnabled ? "engine" : hasGroundTruth ? "case" : "offline-synthetic-normal",
+    ...(liveEnabled ? { engineStatus: "pending" as const } : {}),
   };
   const indicated = c.expectedWorkup.some((w) => w.code.coding[0]?.code === code);
   const lowValue = c.expectedWorkup.some((w) => w.code.coding[0]?.code === code && w.lowValue);
@@ -784,14 +845,77 @@ export function placeOrder(
   setState({ ...state, orders: [...state.orders, order], stage: "orders", events: [...state.events, ev] });
 
   if (liveEnabled) requestEngineResult(order);
-
-  const timer = setTimeout(() => {
-    pendingTimers.delete(timer);
-    resolveOrder(order.id);
-  }, timing.playbackMs);
-  pendingTimers.add(timer);
+  scheduleOrder(order.id);
   queueDirector({ kind: "order", ref: code });
 }
+
+/** One timer per unresolved order, set for the wall time left until its sim due time. */
+const orderTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleOrder(orderId: string): void {
+  const prev = orderTimers.get(orderId);
+  if (prev != null) {
+    clearTimeout(prev);
+    pendingTimers.delete(prev);
+  }
+  const order = state.orders.find((o) => o.id === orderId && !o.resolved);
+  if (!order) return;
+  const wait = Math.max(0, order.resultsReadyAt - nowOffset());
+  const timer = setTimeout(() => {
+    pendingTimers.delete(timer);
+    orderTimers.delete(orderId);
+    const o = state.orders.find((x) => x.id === orderId && !x.resolved);
+    if (!o) return;
+    if (nowOffset() + 1 < o.resultsReadyAt) scheduleOrder(orderId);
+    else resolveOrder(orderId);
+  }, wait);
+  orderTimers.set(orderId, timer);
+  pendingTimers.add(timer);
+}
+
+/** Resolve every order that is due on the sim clock (after a time skip). */
+function releaseDueOrders(): void {
+  const now = nowOffset();
+  for (const o of state.orders) {
+    if (o.resolved) continue;
+    if (now >= o.resultsReadyAt) resolveOrder(o.id);
+    else scheduleOrder(o.id);
+  }
+}
+
+/**
+ * Advance the sim clock by `ms` (for example to the next pending result). The
+ * patient's course advances with it: in Live mode the Clinical Director takes
+ * an "elapsed" step of the same length, so an untreated patient keeps
+ * deteriorating while the learner waits for a result.
+ */
+export function advanceSimTime(ms: number): void {
+  if (!state.caseInstance || !(ms > 0)) return;
+  const skip = Math.round(ms);
+  const ev = appendEvent("stage", state.stage, { advancedMs: skip });
+  setState({ ...state, simOffsetMs: state.simOffsetMs + skip, events: [...state.events, ev] });
+  if (liveEnabled) queueDirector({ kind: "elapsed", elapsed_ms: skip });
+  releaseDueOrders();
+}
+
+/** Retry the engine for an order whose live request failed. */
+export function retryEngineResult(orderId: string): void {
+  const order = state.orders.find((o) => o.id === orderId && !o.resolved);
+  if (!order || !liveEnabled) return;
+  setState({
+    ...state,
+    orders: state.orders.map((o) => (o.id === orderId ? { ...o, engineStatus: "pending", engineError: null } : o)),
+  });
+  requestEngineResult(order);
+  scheduleOrder(orderId);
+}
+
+/** Errors that mean the gateway could not be reached (not an engine refusal). */
+function isUnreachable(error: string, status?: number): boolean {
+  return status == null || status === 502 || status === 503 || status === 504 || /network|timeout|abort|fetch/i.test(error);
+}
+
+const ENGINE_RETRY_DELAYS_MS = [1_000, 3_000];
 
 /** Ask the server results engine for one placed order (Live mode). Never throws. */
 function requestEngineResult(order: PlacedOrder): void {
@@ -804,26 +928,62 @@ function requestEngineResult(order: PlacedOrder): void {
   for (const ev of state.events) {
     if (ev.type === "treatment" && typeof ev.meta?.display === "string") labels[ev.ref] = ev.meta.display;
   }
-  const req = engineResolveOrder({
+  const body = {
     case_state: resultsCaseState(c, state.treatments, labels, state.director.overlay?.results ?? null),
     order_code: order.code,
     sim_time_ms: order.placedAt,
     prior: prior.length ? prior : null,
     seed: c.seed,
-  }).then((res) => {
-    if (!res.ok) return null;
-    const data = res.data;
-    // The engine's turnaround is the clinical ETA the learner sees.
-    const eta = turnaroundLabel(data.turnaround.minutes);
+  };
+  const attempt = async (): Promise<OrderResult | null> => {
+    let last: { error: string; status?: number } = { error: "unknown" };
+    for (let i = 0; i <= ENGINE_RETRY_DELAYS_MS.length; i += 1) {
+      const res = await engineResolveOrder(body);
+      if (res.ok) return res.data;
+      last = { error: res.error, status: res.status };
+      // A 4xx is a definite answer: retrying the same request cannot help.
+      if (res.status != null && res.status >= 400 && res.status < 500) break;
+      if (i < ENGINE_RETRY_DELAYS_MS.length) await new Promise((r) => setTimeout(r, ENGINE_RETRY_DELAYS_MS[i]));
+    }
+    if (state.orders.some((o) => o.id === order.id && !o.resolved)) {
+      const unreachable = isUnreachable(last.error, last.status);
+      setState({
+        ...state,
+        orders: state.orders.map((o) =>
+          o.id === order.id
+            ? { ...o, engineStatus: unreachable ? undefined : "error", engineError: last.error }
+            : o,
+        ),
+      });
+      // The gateway stopped answering: the workspace health probe turns Live off.
+    }
+    return null;
+  };
+  const req = attempt().then((data) => {
+    if (!data) return null;
+    // The engine's turnaround is the clinical ETA the learner sees and the sim due time.
+    const prelimMinutes = data.turnaround.preliminary_minutes ?? null;
+    const eta = prelimMinutes ? simTurnaroundLabel(data.turnaround.minutes, prelimMinutes) : turnaroundLabel(data.turnaround.minutes);
     if (state.orders.some((o) => o.id === order.id && !o.resolved)) {
       setState({
         ...state,
         orders: state.orders.map((o) =>
           o.id === order.id
-            ? { ...o, clinicalLabelEn: eta.en, clinicalLabelTr: eta.tr, engineTurnaroundMs: data.turnaround.ms }
+            ? {
+                ...o,
+                clinicalLabelEn: eta.en,
+                clinicalLabelTr: eta.tr,
+                engineTurnaroundMs: data.turnaround.ms,
+                resultsReadyAt: o.placedAt + data.turnaround.ms,
+                preliminaryAt: data.preliminary?.available_at_ms ?? (data.turnaround.preliminary_ms ? o.placedAt + data.turnaround.preliminary_ms : null),
+                preliminaryText: data.preliminary?.text ?? null,
+                engineStatus: "ok",
+                engineError: null,
+              }
             : o,
         ),
       });
+      scheduleOrder(order.id);
     }
     return data;
   });
@@ -834,7 +994,8 @@ function requestEngineResult(order: PlacedOrder): void {
  * Resolve a placed order: reveal its result datum and append a `result` event.
  * Accepts a PlacedOrder id, or an order code (the earliest unresolved placement
  * of that code). Every resolution appends a result event whose `meta.source`
- * says where the numbers came from (engine, case, offline-synthetic-normal).
+ * says where the numbers came from (engine, case, engine-unavailable or, only
+ * when the gateway is unreachable, offline-synthetic-normal).
  */
 function resolveOrder(idOrCode: string): void {
   const c = state.caseInstance;
@@ -846,13 +1007,40 @@ function resolveOrder(idOrCode: string): void {
 
   const pending = engineRequests.get(order.id);
   if (liveEnabled && pending) {
-    // Live: wait for the engine answer (usually already here), then reveal.
+    // Live: wait for the engine answer, then reveal.
     void pending.then((engine) => {
+      const now = state.orders.find((o) => o.id === order.id && !o.resolved);
+      if (!now) {
+        engineRequests.delete(order.id);
+        return;
+      }
+      if (engine && nowOffset() + 1 < now.resultsReadyAt) {
+        // The engine moved the due time later (a CT reports at about 4 h): wait.
+        scheduleOrder(now.id);
+        return;
+      }
       engineRequests.delete(order.id);
-      if (!state.orders.some((o) => o.id === order.id && !o.resolved)) return;
-      if (engine) finalizeOrder(order, "engine", engine);
-      else finalizeOrder(order, hasCaseTruth(c, order.code) ? "case" : "offline-synthetic-normal");
+      if (engine) {
+        finalizeOrder(now, "engine", engine);
+      } else if (now.engineStatus === "error") {
+        finalizeOrder(now, "engine-unavailable");
+      } else if (!liveEnabled) {
+        finalizeOrder(now, hasCaseTruth(c, now.code) ? "case" : "offline-synthetic-normal");
+      } else {
+        // Unreachable but Live is still on: keep it pending until the probe decides.
+        scheduleOrder(now.id);
+      }
     });
+    return;
+  }
+  if (liveEnabled && order.engineStatus === "error") {
+    finalizeOrder(order, "engine-unavailable");
+    return;
+  }
+  if (liveEnabled && !pending) {
+    // Live with no request on record (placed while offline): ask the engine now.
+    requestEngineResult(order);
+    resolveOrder(order.id);
     return;
   }
   finalizeOrder(order, hasCaseTruth(c, order.code) ? "case" : "offline-synthetic-normal");
@@ -1088,6 +1276,7 @@ export function setStage(stage: EncounterStage): void {
 export function resetEncounter(): void {
   for (const t of pendingTimers) clearTimeout(t);
   pendingTimers.clear();
+  orderTimers.clear();
   engineRequests.clear();
   stopDirectorClock();
   directorTickQueued = false;
@@ -1415,7 +1604,21 @@ export function getDialogue(s: EncounterState): DialogueTurn[] {
 
 /** Current encounter-clock reading in ms (0 before start). */
 export function getEncounterClockMs(s: EncounterState): number {
-  return s.startTs == null ? 0 : Math.max(0, clock() - s.startTs);
+  return s.startTs == null ? 0 : Math.max(0, clock() - s.startTs) + (s.simOffsetMs ?? 0);
+}
+
+/** Sim ms until the next unresolved order reports (preliminary or final), or null. */
+export function nextResultInMs(s: EncounterState): number | null {
+  const now = getEncounterClockMs(s);
+  let best: number | null = null;
+  for (const o of s.orders) {
+    if (o.resolved) continue;
+    const prelim = o.preliminaryAt != null && o.preliminaryAt > now ? o.preliminaryAt : null;
+    const due = prelim ?? o.resultsReadyAt;
+    const wait = Math.max(0, due - now);
+    if (best == null || wait < best) best = wait;
+  }
+  return best;
 }
 
 /* -------------------------------------------------------------------------- */

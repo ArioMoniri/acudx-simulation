@@ -113,6 +113,8 @@ class OrchestrationRuntime:
         worker_manager: Any = None,
         continuation: bool = True,
         max_repairs: int = 2,
+        anthropic_provider: Any = None,
+        anthropic_gate: Any = None,
         time_budget_s: float | None = None,
         **_legacy: Any,
     ) -> "OrchestrationRuntime":
@@ -121,7 +123,8 @@ class OrchestrationRuntime:
         gpu = (WorkerCostSource(worker_manager, getattr(settings, "casegen_gpu_usd_per_hour", None))
                if worker_manager is not None else None)
         try:
-            llm = StructuredLLM(settings, transport=transport, telemetry=telemetry, gpu=gpu)
+            llm = StructuredLLM(settings, transport=transport, telemetry=telemetry, gpu=gpu,
+                                anthropic_provider=anthropic_provider, anthropic_gate=anthropic_gate)
         except EgressBlocked:
             # AIRGAPPED with a non-local endpoint: nothing may be dialled. The
             # routes report 503 for every model-backed call.
@@ -179,10 +182,14 @@ async def get_runtime(request: Request) -> OrchestrationRuntime:
     async with _runtime_lock(state):
         rt = getattr(state, "orchestration", None)
         if rt is None:
+            gateway = getattr(state, "gateway", None)
             rt = await OrchestrationRuntime.create(
                 getattr(state, "settings", None),
                 telemetry=getattr(state, "telemetry", None),
                 worker_manager=getattr(state, "worker_manager", None),
+                # One Claude client and one registry switch for the gateway and the orchestration.
+                anthropic_provider=getattr(gateway, "anthropic", None),
+                anthropic_gate=getattr(gateway, "anthropic_active", None),
             )
             state.orchestration = rt
     return rt

@@ -15,3 +15,29 @@ Third-party components keep their own licenses. In particular:
 - Guideline statements (server/guidelines/statements.verified.json): short quotations
   with source citations; the source documents remain under their publishers' terms.
 - Fonts: Inter, Manrope, Geist Mono under the SIL Open Font License 1.1.
+
+Terminologies (built by scripts/terminology/build_terminology.py; source URLs,
+SHA-256 checksums and licences in data/terminology/MANIFEST.json):
+- LOINC. This material contains content from LOINC (https://loinc.org). LOINC is
+  copyright (c) Regenstrief Institute, Inc. and the Logical Observation Identifiers
+  Names and Codes (LOINC) Committee and is available at no cost under the license at
+  https://loinc.org/license. LOINC(R) is a registered United States trademark of
+  Regenstrief Institute, Inc. Codes used: server/results/reference_ranges.json,
+  lab_catalog.json, imaging_catalog.json; verified against LOINC 2.82 via the HL7
+  terminology server (server/terminology/data/loinc-verified.json).
+- ICD-10-CM FY2027 (server/terminology/data/icd10cm-fy2027.json.gz): code
+  descriptions and alphabetic index from CDC/NCHS, a US Government work in the
+  public domain (https://www.cdc.gov/nchs/icd/icd-10-cm/).
+- ICD-11 MMS 2026-01 (server/terminology/data/icd11-mms-2026-01.json.gz): code,
+  title and URI of each coded entity, unmodified. International Classification of
+  Diseases, Eleventh Revision (ICD-11), World Health Organization (WHO) 2019
+  https://icd.who.int/browse11. Licensed under the Creative Commons
+  Attribution-NoDerivatives 3.0 IGO licence (CC BY-ND 3.0 IGO). No ICD-10 to
+  ICD-11 crosswalk is produced or distributed by AcuDx.
+- LOINC/RSNA Radiology Playbook attribute values (modality, body part, contrast) are
+  recorded per LOINC radiology code; the Playbook itself is linked, not copied
+  (https://playbook.radlex.org/).
+- Reference intervals (server/results/reference_ranges.json) are facts transcribed
+  from the cited public sources (NBME Laboratory Values, MedlinePlus Medical
+  Encyclopedia and Lab Tests, and the cited journal articles); no source text is
+  reproduced.

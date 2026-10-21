@@ -232,7 +232,7 @@ describe("encounterStore — per-test turnaround (sense of time)", () => {
     expect(cbc.category).toBe("lab");
     expect(culture.resultsReadyAt).toBeGreaterThan(cbc.resultsReadyAt);
     // A realistic clinical ETA is captured for the UI (not the compressed time).
-    expect(culture.clinicalLabelEn).toMatch(/h$/);
+    expect(culture.clinicalLabelEn).toMatch(/final 5 d$/);
   });
 });
 

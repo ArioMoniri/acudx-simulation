@@ -1,0 +1,1735 @@
+{
+ "schema_version": 1,
+ "reviewed_at": "2026-10-21",
+ "description": "Curated hospital order catalogue. Each orderable names its LOINC order code where one exists, its member analytes (each with a sourced reference interval in reference_ranges.json), its specimen, its turnaround class (server/results/engine.py TURNAROUND) and the generator that produces its result.",
+ "generators": {
+  "analyte": "per-analyte physiology: case ground truth, then condition kinetics, then a seeded value inside the sourced interval",
+  "micro": "culture, smear, antigen, serology or NAAT result from the condition profile (organism and probability), with preliminary and final reports for cultures",
+  "csf": "cerebrospinal fluid cell count, protein and glucose from the condition (bacterial or viral meningitis, subarachnoid haemorrhage) or normal",
+  "body_fluid": "pleural, ascitic or synovial fluid; only when the case has that effusion, otherwise 'no specimen obtainable'"
+ },
+ "sections": [
+  "haematology",
+  "chemistry",
+  "cardiac",
+  "coagulation",
+  "inflammatory",
+  "endocrine",
+  "tumour_marker",
+  "immunology",
+  "urine",
+  "toxicology",
+  "therapeutic_drug",
+  "blood_gas",
+  "poc",
+  "blood_bank",
+  "microbiology",
+  "serology",
+  "csf",
+  "body_fluid"
+ ],
+ "orderables": [
+  {
+   "code": "6690-2",
+   "loinc": "57021-8",
+   "label_en": "Complete blood count (CBC) with differential",
+   "label_tr": "Tam kan sayımı (hemogram) ve formül",
+   "section": "haematology",
+   "specimen": "blood",
+   "members": [
+    "6690-2",
+    "718-7",
+    "4544-3",
+    "777-3",
+    "787-2",
+    "789-8",
+    "785-6",
+    "786-4",
+    "751-8",
+    "731-0",
+    "711-2"
+   ],
+   "turnaround": "haematology",
+   "generator": "analyte",
+   "synonyms": [
+    "fbc",
+    "full blood count",
+    "hemogram",
+    "cbc"
+   ]
+  },
+  {
+   "code": "retic",
+   "loinc": "4679-7",
+   "label_en": "Reticulocyte count",
+   "label_tr": "Retikülosit sayımı",
+   "section": "haematology",
+   "specimen": "blood",
+   "members": [
+    "4679-7"
+   ],
+   "turnaround": "haematology",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "esr",
+   "loinc": "4537-7",
+   "label_en": "ESR (erythrocyte sedimentation rate)",
+   "label_tr": "Eritrosit sedimentasyon hızı (ESH)",
+   "section": "haematology",
+   "specimen": "blood",
+   "members": [
+    "4537-7"
+   ],
+   "turnaround": "haematology",
+   "generator": "analyte",
+   "synonyms": [
+    "sed rate"
+   ]
+  },
+  {
+   "code": "iron-studies",
+   "loinc": "50190-8",
+   "label_en": "Iron studies (iron, TIBC, saturation, ferritin)",
+   "label_tr": "Demir profili (demir, TDBK, satürasyon, ferritin)",
+   "section": "haematology",
+   "specimen": "serum",
+   "members": [
+    "2498-4",
+    "2500-7",
+    "2502-3",
+    "2276-4"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "ferritin",
+   "loinc": "2276-4",
+   "label_en": "Ferritin",
+   "label_tr": "Ferritin",
+   "section": "haematology",
+   "specimen": "serum",
+   "members": [
+    "2276-4"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "transferrin",
+   "loinc": "3034-6",
+   "label_en": "Transferrin",
+   "label_tr": "Transferrin",
+   "section": "haematology",
+   "specimen": "serum",
+   "members": [
+    "3034-6"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "b12-folate",
+   "loinc": null,
+   "label_en": "Vitamin B12 and folate",
+   "label_tr": "B12 vitamini ve folat",
+   "section": "haematology",
+   "specimen": "serum",
+   "members": [
+    "2132-9",
+    "2284-8"
+   ],
+   "turnaround": "endocrine",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "haemolysis-screen",
+   "loinc": null,
+   "label_en": "Haemolysis screen (haptoglobin, LDH, bilirubin, reticulocytes, DAT)",
+   "label_tr": "Hemoliz taraması (haptoglobin, LDH, bilirubin, retikülosit, DAT)",
+   "section": "haematology",
+   "specimen": "blood",
+   "members": [
+    "4542-7",
+    "14804-9",
+    "1975-2",
+    "4679-7",
+    "1007-4"
+   ],
+   "turnaround": "haematology",
+   "generator": "analyte",
+   "synonyms": [
+    "hemolysis"
+   ]
+  },
+  {
+   "code": "haptoglobin",
+   "loinc": "4542-7",
+   "label_en": "Haptoglobin",
+   "label_tr": "Haptoglobin",
+   "section": "haematology",
+   "specimen": "serum",
+   "members": [
+    "4542-7"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "sickle-screen",
+   "loinc": "4621-9",
+   "label_en": "Sickle cell screen (haemoglobin S)",
+   "label_tr": "Orak hücre taraması (hemoglobin S)",
+   "section": "haematology",
+   "specimen": "blood",
+   "members": [
+    "4621-9"
+   ],
+   "turnaround": "haematology",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "g6pd",
+   "loinc": "2356-4",
+   "label_en": "G6PD screen",
+   "label_tr": "G6PD taraması",
+   "section": "haematology",
+   "specimen": "blood",
+   "members": [
+    "2356-4"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "2160-0",
+   "loinc": "51990-0",
+   "label_en": "Basic metabolic panel (BMP)",
+   "label_tr": "Temel metabolik panel (BMP)",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "2951-2",
+    "2823-3",
+    "2075-0",
+    "1963-8",
+    "33037-3",
+    "3094-0",
+    "2160-0",
+    "98979-8",
+    "2345-7",
+    "17861-6"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": [
+    "u&e",
+    "renal profile",
+    "chem 7",
+    "electrolytes"
+   ]
+  },
+  {
+   "code": "cmp",
+   "loinc": "24323-8",
+   "label_en": "Comprehensive metabolic panel (CMP)",
+   "label_tr": "Geniş metabolik panel (CMP)",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "2951-2",
+    "2823-3",
+    "2075-0",
+    "1963-8",
+    "33037-3",
+    "3094-0",
+    "2160-0",
+    "98979-8",
+    "2345-7",
+    "17861-6",
+    "1751-7",
+    "2885-2",
+    "10834-0",
+    "1920-8",
+    "1742-6",
+    "6768-6",
+    "1975-2"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": [
+    "chem 14"
+   ]
+  },
+  {
+   "code": "electrolytes",
+   "loinc": "24326-1",
+   "label_en": "Electrolytes (Na, K, Cl, HCO3, anion gap)",
+   "label_tr": "Elektrolitler (Na, K, Cl, HCO3, anyon açığı)",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "2951-2",
+    "2823-3",
+    "2075-0",
+    "1963-8",
+    "33037-3"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "lft",
+   "loinc": "24325-3",
+   "label_en": "Liver function tests (LFTs)",
+   "label_tr": "Karaciğer fonksiyon testleri",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "1920-8",
+    "1742-6",
+    "6768-6",
+    "2324-2",
+    "1975-2",
+    "1968-7",
+    "1751-7",
+    "2885-2"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": [
+    "hepatic function panel"
+   ]
+  },
+  {
+   "code": "ggt",
+   "loinc": "2324-2",
+   "label_en": "Gamma-glutamyl transferase (GGT)",
+   "label_tr": "Gama-glutamil transferaz (GGT)",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "2324-2"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "lipase",
+   "loinc": null,
+   "label_en": "Lipase / amylase",
+   "label_tr": "Lipaz / amilaz",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "3040-3",
+    "1798-8"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "mg",
+   "loinc": "19123-9",
+   "label_en": "Magnesium",
+   "label_tr": "Magnezyum",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "19123-9"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "phos",
+   "loinc": "2777-1",
+   "label_en": "Phosphate",
+   "label_tr": "Fosfat",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "2777-1"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "ca",
+   "loinc": null,
+   "label_en": "Calcium (total and ionised)",
+   "label_tr": "Kalsiyum (total ve iyonize)",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "17861-6",
+    "1994-3"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "ck",
+   "loinc": "2157-6",
+   "label_en": "Creatine kinase (CK)",
+   "label_tr": "Kreatin kinaz (CK)",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "2157-6"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": [
+    "cpk"
+   ]
+  },
+  {
+   "code": "myoglobin",
+   "loinc": "2639-3",
+   "label_en": "Myoglobin",
+   "label_tr": "Miyoglobin",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "2639-3"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "bhb",
+   "loinc": "6873-4",
+   "label_en": "Beta-hydroxybutyrate (serum ketones)",
+   "label_tr": "Beta-hidroksibutirat (serum keton)",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "6873-4"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": [
+    "ketones"
+   ]
+  },
+  {
+   "code": "osmo",
+   "loinc": "2692-2",
+   "label_en": "Serum osmolality",
+   "label_tr": "Serum ozmolalitesi",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "2692-2"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "ammonia",
+   "loinc": "22763-7",
+   "label_en": "Ammonia",
+   "label_tr": "Amonyak",
+   "section": "chemistry",
+   "specimen": "plasma",
+   "members": [
+    "22763-7"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "ldh",
+   "loinc": "14804-9",
+   "label_en": "Lactate dehydrogenase (LDH)",
+   "label_tr": "Laktat dehidrogenaz (LDH)",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "14804-9"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "uric-acid",
+   "loinc": "3084-1",
+   "label_en": "Uric acid (urate)",
+   "label_tr": "Ürik asit (ürat)",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "3084-1"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "2524-7",
+   "loinc": "2524-7",
+   "label_en": "Lactate",
+   "label_tr": "Laktat",
+   "section": "chemistry",
+   "specimen": "plasma",
+   "members": [
+    "2524-7"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "lipid-panel",
+   "loinc": "24331-1",
+   "label_en": "Lipid panel",
+   "label_tr": "Lipid paneli",
+   "section": "chemistry",
+   "specimen": "serum",
+   "members": [
+    "2093-3",
+    "2085-9",
+    "13457-7",
+    "2571-8"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": [
+    "cholesterol"
+   ]
+  },
+  {
+   "code": "hba1c",
+   "loinc": "4548-4",
+   "label_en": "HbA1c",
+   "label_tr": "HbA1c",
+   "section": "endocrine",
+   "specimen": "blood",
+   "members": [
+    "4548-4"
+   ],
+   "turnaround": "endocrine",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "67151-1",
+   "loinc": "67151-1",
+   "label_en": "High-sensitivity troponin T (serial)",
+   "label_tr": "Yüksek duyarlıklı troponin T (seri)",
+   "section": "cardiac",
+   "specimen": "serum",
+   "members": [
+    "67151-1"
+   ],
+   "turnaround": "cardiac",
+   "generator": "analyte",
+   "synonyms": [
+    "troponin",
+    "hs-tnt",
+    "trop"
+   ]
+  },
+  {
+   "code": "89579-7",
+   "loinc": "89579-7",
+   "label_en": "High-sensitivity troponin I (serial)",
+   "label_tr": "Yüksek duyarlıklı troponin I (seri)",
+   "section": "cardiac",
+   "specimen": "serum",
+   "members": [
+    "89579-7"
+   ],
+   "turnaround": "cardiac",
+   "generator": "analyte",
+   "synonyms": [
+    "troponin",
+    "hs-tni",
+    "trop"
+   ]
+  },
+  {
+   "code": "bnp",
+   "loinc": "30934-4",
+   "label_en": "BNP",
+   "label_tr": "BNP",
+   "section": "cardiac",
+   "specimen": "plasma",
+   "members": [
+    "30934-4"
+   ],
+   "turnaround": "cardiac",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "33762-6",
+   "loinc": "33762-6",
+   "label_en": "NT-proBNP",
+   "label_tr": "NT-proBNP",
+   "section": "cardiac",
+   "specimen": "serum",
+   "members": [
+    "33762-6"
+   ],
+   "turnaround": "cardiac",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "48065-7",
+   "loinc": "48065-7",
+   "label_en": "D-dimer",
+   "label_tr": "D-dimer",
+   "section": "coagulation",
+   "specimen": "plasma",
+   "members": [
+    "48065-7"
+   ],
+   "turnaround": "coagulation",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "coag-inr",
+   "loinc": null,
+   "label_en": "Coagulation (PT / INR / aPTT / fibrinogen)",
+   "label_tr": "Koagülasyon (PT / INR / aPTT / fibrinojen)",
+   "section": "coagulation",
+   "specimen": "plasma",
+   "members": [
+    "5902-2",
+    "6301-6",
+    "3173-2",
+    "3255-7"
+   ],
+   "turnaround": "coagulation",
+   "generator": "analyte",
+   "synonyms": [
+    "clotting",
+    "pt inr"
+   ]
+  },
+  {
+   "code": "fibrinogen",
+   "loinc": "3255-7",
+   "label_en": "Fibrinogen",
+   "label_tr": "Fibrinojen",
+   "section": "coagulation",
+   "specimen": "plasma",
+   "members": [
+    "3255-7"
+   ],
+   "turnaround": "coagulation",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "1988-5",
+   "loinc": "1988-5",
+   "label_en": "C-reactive protein (CRP)",
+   "label_tr": "C-reaktif protein (CRP)",
+   "section": "inflammatory",
+   "specimen": "serum",
+   "members": [
+    "1988-5"
+   ],
+   "turnaround": "inflammatory",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "pct",
+   "loinc": "33959-8",
+   "label_en": "Procalcitonin",
+   "label_tr": "Prokalsitonin",
+   "section": "inflammatory",
+   "specimen": "serum",
+   "members": [
+    "33959-8"
+   ],
+   "turnaround": "inflammatory",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "tsh",
+   "loinc": "24348-5",
+   "label_en": "Thyroid (TSH and free T4)",
+   "label_tr": "Tiroid (TSH ve serbest T4)",
+   "section": "endocrine",
+   "specimen": "serum",
+   "members": [
+    "3016-3",
+    "3024-7"
+   ],
+   "turnaround": "endocrine",
+   "generator": "analyte",
+   "synonyms": [
+    "thyroid function"
+   ]
+  },
+  {
+   "code": "ft3",
+   "loinc": "3051-0",
+   "label_en": "Free T3",
+   "label_tr": "Serbest T3",
+   "section": "endocrine",
+   "specimen": "serum",
+   "members": [
+    "3051-0"
+   ],
+   "turnaround": "endocrine",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "cortisol",
+   "loinc": "2143-6",
+   "label_en": "Cortisol (morning)",
+   "label_tr": "Kortizol (sabah)",
+   "section": "endocrine",
+   "specimen": "serum",
+   "members": [
+    "2143-6"
+   ],
+   "turnaround": "endocrine",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "pth",
+   "loinc": "2731-8",
+   "label_en": "Parathyroid hormone (intact PTH)",
+   "label_tr": "Parathormon (intakt PTH)",
+   "section": "endocrine",
+   "specimen": "plasma",
+   "members": [
+    "2731-8"
+   ],
+   "turnaround": "endocrine",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "prolactin",
+   "loinc": "2842-3",
+   "label_en": "Prolactin",
+   "label_tr": "Prolaktin",
+   "section": "endocrine",
+   "specimen": "serum",
+   "members": [
+    "2842-3"
+   ],
+   "turnaround": "endocrine",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "testosterone",
+   "loinc": "2986-8",
+   "label_en": "Testosterone (total)",
+   "label_tr": "Testosteron (total)",
+   "section": "endocrine",
+   "specimen": "serum",
+   "members": [
+    "2986-8"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "estradiol",
+   "loinc": "2243-4",
+   "label_en": "Estradiol",
+   "label_tr": "Östradiol",
+   "section": "endocrine",
+   "specimen": "serum",
+   "members": [
+    "2243-4"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "acth",
+   "loinc": "2141-0",
+   "label_en": "ACTH (morning)",
+   "label_tr": "ACTH (sabah)",
+   "section": "endocrine",
+   "specimen": "plasma",
+   "members": [
+    "2141-0"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "renin",
+   "loinc": "2915-7",
+   "label_en": "Plasma renin activity",
+   "label_tr": "Plazma renin aktivitesi",
+   "section": "endocrine",
+   "specimen": "plasma",
+   "members": [
+    "2915-7"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "c-peptide",
+   "loinc": "1986-9",
+   "label_en": "C-peptide",
+   "label_tr": "C-peptid",
+   "section": "endocrine",
+   "specimen": "serum",
+   "members": [
+    "1986-9"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "bhcg",
+   "loinc": "21198-7",
+   "label_en": "Beta-hCG, serum (pregnancy)",
+   "label_tr": "Beta-hCG, serum (gebelik)",
+   "section": "endocrine",
+   "specimen": "serum",
+   "members": [
+    "21198-7"
+   ],
+   "turnaround": "endocrine",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "bhcg-quant",
+   "loinc": "21198-7",
+   "label_en": "Beta-hCG, quantitative (serum)",
+   "label_tr": "Beta-hCG, kantitatif (serum)",
+   "section": "endocrine",
+   "specimen": "serum",
+   "members": [
+    "21198-7"
+   ],
+   "turnaround": "endocrine",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "urine-hcg",
+   "loinc": "2106-3",
+   "label_en": "Beta-hCG, urine (pregnancy)",
+   "label_tr": "Beta-hCG, idrar (gebelik)",
+   "section": "urine",
+   "specimen": "urine",
+   "members": [
+    "2106-3"
+   ],
+   "turnaround": "poc",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "psa",
+   "loinc": "2857-1",
+   "label_en": "Prostate-specific antigen (PSA)",
+   "label_tr": "Prostat spesifik antijen (PSA)",
+   "section": "tumour_marker",
+   "specimen": "serum",
+   "members": [
+    "2857-1"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "cea",
+   "loinc": "2039-6",
+   "label_en": "Carcinoembryonic antigen (CEA)",
+   "label_tr": "Karsinoembriyonik antijen (CEA)",
+   "section": "tumour_marker",
+   "specimen": "serum",
+   "members": [
+    "2039-6"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "afp",
+   "loinc": "1834-1",
+   "label_en": "Alpha-fetoprotein (AFP)",
+   "label_tr": "Alfa-fetoprotein (AFP)",
+   "section": "tumour_marker",
+   "specimen": "serum",
+   "members": [
+    "1834-1"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "ca125",
+   "loinc": "10334-1",
+   "label_en": "CA-125",
+   "label_tr": "CA-125",
+   "section": "tumour_marker",
+   "specimen": "serum",
+   "members": [
+    "10334-1"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "rf",
+   "loinc": "11572-5",
+   "label_en": "Rheumatoid factor",
+   "label_tr": "Romatoid faktör",
+   "section": "immunology",
+   "specimen": "serum",
+   "members": [
+    "11572-5"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "ana",
+   "loinc": "5048-4",
+   "label_en": "Antinuclear antibody (ANA)",
+   "label_tr": "Antinükleer antikor (ANA)",
+   "section": "immunology",
+   "specimen": "serum",
+   "members": [
+    "5048-4"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "complement",
+   "loinc": null,
+   "label_en": "Complement C3 and C4",
+   "label_tr": "Kompleman C3 ve C4",
+   "section": "immunology",
+   "specimen": "serum",
+   "members": [
+    "4485-9",
+    "4498-2"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "immunoglobulins",
+   "loinc": null,
+   "label_en": "Immunoglobulins (IgG, IgA, IgM)",
+   "label_tr": "İmmünoglobulinler (IgG, IgA, IgM)",
+   "section": "immunology",
+   "specimen": "serum",
+   "members": [
+    "2465-3",
+    "2458-8",
+    "2472-9"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "ua",
+   "loinc": "24356-8",
+   "label_en": "Urinalysis with microscopy",
+   "label_tr": "İdrar tahlili ve mikroskopi",
+   "section": "urine",
+   "specimen": "urine",
+   "members": [
+    "5811-5",
+    "5803-2",
+    "5804-0",
+    "5792-7",
+    "5797-6",
+    "5794-3",
+    "5802-4",
+    "5799-2",
+    "5821-4",
+    "13945-1",
+    "25145-4"
+   ],
+   "turnaround": "urine",
+   "generator": "analyte",
+   "synonyms": [
+    "urine dip",
+    "dipstick"
+   ]
+  },
+  {
+   "code": "urine-electrolytes",
+   "loinc": null,
+   "label_en": "Urine sodium, potassium and osmolality",
+   "label_tr": "İdrar sodyum, potasyum ve ozmolalite",
+   "section": "urine",
+   "specimen": "urine",
+   "members": [
+    "2955-3",
+    "2828-2",
+    "2695-5"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "uacr",
+   "loinc": "9318-7",
+   "label_en": "Urine albumin/creatinine ratio",
+   "label_tr": "İdrar albümin/kreatinin oranı",
+   "section": "urine",
+   "specimen": "urine",
+   "members": [
+    "9318-7"
+   ],
+   "turnaround": "chemistry",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "utox",
+   "loinc": null,
+   "label_en": "Urine drug screen (immunoassay)",
+   "label_tr": "İdrar ilaç taraması (immünoassay)",
+   "section": "toxicology",
+   "specimen": "urine",
+   "members": [
+    "3397-7",
+    "19343-3",
+    "19295-5",
+    "18282-4",
+    "14316-4",
+    "19270-8",
+    "19659-2",
+    "19550-3"
+   ],
+   "turnaround": "toxicology",
+   "generator": "analyte",
+   "synonyms": [
+    "uds",
+    "tox screen"
+   ]
+  },
+  {
+   "code": "acetaminophen",
+   "loinc": "3298-7",
+   "label_en": "Acetaminophen (paracetamol) level",
+   "label_tr": "Asetaminofen (parasetamol) düzeyi",
+   "section": "toxicology",
+   "specimen": "serum",
+   "members": [
+    "3298-7"
+   ],
+   "turnaround": "toxicology",
+   "generator": "analyte",
+   "synonyms": [
+    "paracetamol"
+   ]
+  },
+  {
+   "code": "salicylate",
+   "loinc": "4024-6",
+   "label_en": "Salicylate level",
+   "label_tr": "Salisilat düzeyi",
+   "section": "toxicology",
+   "specimen": "serum",
+   "members": [
+    "4024-6"
+   ],
+   "turnaround": "toxicology",
+   "generator": "analyte",
+   "synonyms": [
+    "aspirin"
+   ]
+  },
+  {
+   "code": "ethanol",
+   "loinc": "5643-2",
+   "label_en": "Ethanol level",
+   "label_tr": "Etanol düzeyi",
+   "section": "toxicology",
+   "specimen": "serum",
+   "members": [
+    "5643-2"
+   ],
+   "turnaround": "toxicology",
+   "generator": "analyte",
+   "synonyms": [
+    "alcohol"
+   ]
+  },
+  {
+   "code": "toxic-alcohols",
+   "loinc": null,
+   "label_en": "Toxic alcohols (methanol, ethylene glycol) with osmolality",
+   "label_tr": "Toksik alkoller (metanol, etilen glikol) ve ozmolalite",
+   "section": "toxicology",
+   "specimen": "serum",
+   "members": [
+    "5693-7",
+    "5646-5",
+    "2692-2"
+   ],
+   "turnaround": "send_out",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "digoxin",
+   "loinc": "10535-3",
+   "label_en": "Digoxin level",
+   "label_tr": "Digoksin düzeyi",
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "members": [
+    "10535-3"
+   ],
+   "turnaround": "toxicology",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "lithium",
+   "loinc": "14334-7",
+   "label_en": "Lithium level",
+   "label_tr": "Lityum düzeyi",
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "members": [
+    "14334-7"
+   ],
+   "turnaround": "toxicology",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "phenytoin",
+   "loinc": "3968-5",
+   "label_en": "Phenytoin level",
+   "label_tr": "Fenitoin düzeyi",
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "members": [
+    "3968-5"
+   ],
+   "turnaround": "toxicology",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "valproate",
+   "loinc": "4086-5",
+   "label_en": "Valproate level",
+   "label_tr": "Valproat düzeyi",
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "members": [
+    "4086-5"
+   ],
+   "turnaround": "toxicology",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "carbamazepine",
+   "loinc": "3432-2",
+   "label_en": "Carbamazepine level",
+   "label_tr": "Karbamazepin düzeyi",
+   "section": "therapeutic_drug",
+   "specimen": "serum",
+   "members": [
+    "3432-2"
+   ],
+   "turnaround": "toxicology",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "vbg",
+   "loinc": "24339-4",
+   "label_en": "Venous blood gas (VBG)",
+   "label_tr": "Venöz kan gazı (VKG)",
+   "section": "blood_gas",
+   "specimen": "venous blood",
+   "members": [
+    "2746-6",
+    "2021-4",
+    "2705-2",
+    "14627-4",
+    "2524-7",
+    "2823-3",
+    "2951-2",
+    "2345-7",
+    "718-7"
+   ],
+   "turnaround": "blood_gas",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "abg",
+   "loinc": "24336-0",
+   "label_en": "Arterial blood gas (ABG)",
+   "label_tr": "Arteriyel kan gazı (AKG)",
+   "section": "blood_gas",
+   "specimen": "arterial blood",
+   "members": [
+    "2744-1",
+    "2019-8",
+    "2703-7",
+    "1960-4",
+    "2708-6",
+    "2524-7",
+    "2823-3",
+    "2951-2",
+    "2345-7",
+    "718-7"
+   ],
+   "turnaround": "blood_gas",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "poc-glucose",
+   "loinc": "2345-7",
+   "label_en": "Point-of-care glucose",
+   "label_tr": "Yatak başı glukoz",
+   "section": "poc",
+   "specimen": "capillary blood",
+   "members": [
+    "2345-7"
+   ],
+   "turnaround": "poc",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "istat",
+   "loinc": null,
+   "label_en": "iSTAT bedside panel",
+   "label_tr": "iSTAT yatak başı panel",
+   "section": "poc",
+   "specimen": "blood",
+   "members": [
+    "2951-2",
+    "2823-3",
+    "2075-0",
+    "2345-7",
+    "3094-0",
+    "2160-0",
+    "4544-3",
+    "718-7",
+    "2524-7",
+    "2746-6",
+    "2021-4",
+    "14627-4"
+   ],
+   "turnaround": "poc",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "type-screen",
+   "loinc": "34532-2",
+   "label_en": "Type and screen (ABO/Rh and antibody screen)",
+   "label_tr": "Kan grubu ve antikor taraması",
+   "section": "blood_bank",
+   "specimen": "blood",
+   "members": [
+    "882-1",
+    "890-4"
+   ],
+   "turnaround": "blood_bank",
+   "generator": "analyte",
+   "synonyms": [
+    "group and save",
+    "crossmatch"
+   ]
+  },
+  {
+   "code": "dat",
+   "loinc": "1007-4",
+   "label_en": "Direct antiglobulin test (Coombs)",
+   "label_tr": "Direkt antiglobulin testi (Coombs)",
+   "section": "blood_bank",
+   "specimen": "blood",
+   "members": [
+    "1007-4"
+   ],
+   "turnaround": "blood_bank",
+   "generator": "analyte",
+   "synonyms": []
+  },
+  {
+   "code": "blood-culture",
+   "loinc": "600-7",
+   "label_en": "Blood culture (two sets) and Gram stain",
+   "label_tr": "Kan kültürü (iki set) ve Gram boyama",
+   "section": "microbiology",
+   "specimen": "blood",
+   "members": [
+    "600-7"
+   ],
+   "turnaround": "blood_culture",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "600-7"
+  },
+  {
+   "code": "urine-culture",
+   "loinc": "630-4",
+   "label_en": "Urine culture",
+   "label_tr": "İdrar kültürü",
+   "section": "microbiology",
+   "specimen": "urine",
+   "members": [
+    "630-4"
+   ],
+   "turnaround": "micro_culture",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "630-4"
+  },
+  {
+   "code": "sputum-culture",
+   "loinc": "624-7",
+   "label_en": "Sputum culture and Gram stain",
+   "label_tr": "Balgam kültürü ve Gram boyama",
+   "section": "microbiology",
+   "specimen": "sputum",
+   "members": [
+    "624-7"
+   ],
+   "turnaround": "micro_culture",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "sputum"
+  },
+  {
+   "code": "gram-stain",
+   "loinc": "664-3",
+   "label_en": "Gram stain",
+   "label_tr": "Gram boyama",
+   "section": "microbiology",
+   "specimen": "specimen",
+   "members": [
+    "664-3"
+   ],
+   "turnaround": "gram",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "gram"
+  },
+  {
+   "code": "wound-culture",
+   "loinc": "6462-6",
+   "label_en": "Wound swab culture",
+   "label_tr": "Yara sürüntü kültürü",
+   "section": "microbiology",
+   "specimen": "wound swab",
+   "members": [
+    "6462-6"
+   ],
+   "turnaround": "micro_culture",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "wound"
+  },
+  {
+   "code": "throat-culture",
+   "loinc": "626-2",
+   "label_en": "Throat swab culture",
+   "label_tr": "Boğaz sürüntü kültürü",
+   "section": "microbiology",
+   "specimen": "throat swab",
+   "members": [
+    "626-2"
+   ],
+   "turnaround": "micro_culture",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "throat"
+  },
+  {
+   "code": "stool-culture",
+   "loinc": "625-4",
+   "label_en": "Stool culture",
+   "label_tr": "Gaita kültürü",
+   "section": "microbiology",
+   "specimen": "stool",
+   "members": [
+    "625-4"
+   ],
+   "turnaround": "micro_culture",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "stool"
+  },
+  {
+   "code": "cdiff",
+   "loinc": "34713-8",
+   "label_en": "Clostridioides difficile toxin",
+   "label_tr": "Clostridioides difficile toksini",
+   "section": "microbiology",
+   "specimen": "stool",
+   "members": [
+    "34713-8"
+   ],
+   "turnaround": "molecular",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "cdiff"
+  },
+  {
+   "code": "afb-smear",
+   "loinc": "11545-1",
+   "label_en": "Acid-fast bacilli smear (sputum)",
+   "label_tr": "Aside dirençli basil yayması (balgam)",
+   "section": "microbiology",
+   "specimen": "sputum",
+   "members": [
+    "11545-1"
+   ],
+   "turnaround": "afb",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "afb"
+  },
+  {
+   "code": "resp-viral-panel",
+   "loinc": "95941-1",
+   "label_en": "Respiratory viral PCR (influenza A/B, SARS-CoV-2, RSV)",
+   "label_tr": "Solunum viral PCR (influenza A/B, SARS-CoV-2, RSV)",
+   "section": "microbiology",
+   "specimen": "nasopharyngeal swab",
+   "members": [
+    "92142-9",
+    "92141-1",
+    "94500-6",
+    "92131-2"
+   ],
+   "turnaround": "molecular",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "rvp"
+  },
+  {
+   "code": "covid-pcr",
+   "loinc": "94500-6",
+   "label_en": "SARS-CoV-2 PCR",
+   "label_tr": "SARS-CoV-2 PCR",
+   "section": "microbiology",
+   "specimen": "nasopharyngeal swab",
+   "members": [
+    "94500-6"
+   ],
+   "turnaround": "molecular",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "covid"
+  },
+  {
+   "code": "strep-a",
+   "loinc": "78012-2",
+   "label_en": "Rapid group A Streptococcus antigen",
+   "label_tr": "Hızlı A grubu streptokok antijeni",
+   "section": "microbiology",
+   "specimen": "throat swab",
+   "members": [
+    "78012-2"
+   ],
+   "turnaround": "antigen_rapid",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "strep"
+  },
+  {
+   "code": "legionella-ag",
+   "loinc": "32781-7",
+   "label_en": "Legionella urinary antigen",
+   "label_tr": "Legionella idrar antijeni",
+   "section": "microbiology",
+   "specimen": "urine",
+   "members": [
+    "32781-7"
+   ],
+   "turnaround": "antigen_lab",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "legionella"
+  },
+  {
+   "code": "pneumococcal-ag",
+   "loinc": "24027-5",
+   "label_en": "Pneumococcal urinary antigen",
+   "label_tr": "Pnömokok idrar antijeni",
+   "section": "microbiology",
+   "specimen": "urine",
+   "members": [
+    "24027-5"
+   ],
+   "turnaround": "antigen_lab",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "pneumo_ag"
+  },
+  {
+   "code": "igra",
+   "loinc": "71773-6",
+   "label_en": "TB interferon-gamma release assay (IGRA)",
+   "label_tr": "TB interferon-gama salınım testi (IGRA)",
+   "section": "microbiology",
+   "specimen": "blood",
+   "members": [
+    "71773-6"
+   ],
+   "turnaround": "send_out",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "igra"
+  },
+  {
+   "code": "malaria-film",
+   "loinc": "32700-7",
+   "label_en": "Malaria thick and thin blood films",
+   "label_tr": "Sıtma kalın ve ince kan yayması",
+   "section": "microbiology",
+   "specimen": "blood",
+   "members": [
+    "32700-7"
+   ],
+   "turnaround": "haematology",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "malaria"
+  },
+  {
+   "code": "malaria-rdt",
+   "loinc": "76772-3",
+   "label_en": "Malaria rapid diagnostic test (antigen)",
+   "label_tr": "Sıtma hızlı tanı testi (antijen)",
+   "section": "microbiology",
+   "specimen": "blood",
+   "members": [
+    "76772-3"
+   ],
+   "turnaround": "antigen_rapid",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "malaria_rdt"
+  },
+  {
+   "code": "hiv",
+   "loinc": "56888-1",
+   "label_en": "HIV-1/2 antigen/antibody (4th generation)",
+   "label_tr": "HIV-1/2 antijen/antikor (4. kuşak)",
+   "section": "serology",
+   "specimen": "serum",
+   "members": [
+    "56888-1"
+   ],
+   "turnaround": "serology",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "hiv"
+  },
+  {
+   "code": "hepatitis-panel",
+   "loinc": "24363-4",
+   "label_en": "Acute hepatitis panel (HBsAg, HBc IgM, HAV IgM, HCV Ab)",
+   "label_tr": "Akut hepatit paneli (HBsAg, HBc IgM, HAV IgM, HCV Ab)",
+   "section": "serology",
+   "specimen": "serum",
+   "members": [
+    "5196-1",
+    "31204-1",
+    "13950-1",
+    "13955-0"
+   ],
+   "turnaround": "serology",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "hep"
+  },
+  {
+   "code": "hbv-serology",
+   "loinc": null,
+   "label_en": "Hepatitis B serology (HBsAg, anti-HBc, anti-HBs)",
+   "label_tr": "Hepatit B serolojisi (HBsAg, anti-HBc, anti-HBs)",
+   "section": "serology",
+   "specimen": "serum",
+   "members": [
+    "5196-1",
+    "16933-4",
+    "22322-2"
+   ],
+   "turnaround": "serology",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "hbv"
+  },
+  {
+   "code": "syphilis",
+   "loinc": null,
+   "label_en": "Syphilis serology (RPR and treponemal antibody)",
+   "label_tr": "Sifiliz serolojisi (RPR ve treponemal antikor)",
+   "section": "serology",
+   "specimen": "serum",
+   "members": [
+    "20507-0",
+    "47236-5"
+   ],
+   "turnaround": "serology",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "syphilis"
+  },
+  {
+   "code": "monospot",
+   "loinc": "31418-7",
+   "label_en": "Monospot (EBV heterophile antibody)",
+   "label_tr": "Monospot (EBV heterofil antikor)",
+   "section": "serology",
+   "specimen": "serum",
+   "members": [
+    "31418-7"
+   ],
+   "turnaround": "serology",
+   "generator": "micro",
+   "synonyms": [],
+   "micro_key": "mono"
+  },
+  {
+   "code": "csf-studies",
+   "loinc": null,
+   "label_en": "CSF studies (cell count, protein, glucose, Gram stain, culture)",
+   "label_tr": "BOS incelemesi (hücre sayımı, protein, glukoz, Gram, kültür)",
+   "section": "csf",
+   "specimen": "cerebrospinal fluid",
+   "members": [
+    "26465-5",
+    "26454-9",
+    "2880-3",
+    "2342-4",
+    "664-3",
+    "606-4"
+   ],
+   "turnaround": "csf",
+   "generator": "csf",
+   "synonyms": [
+    "lumbar puncture",
+    "lp"
+   ]
+  },
+  {
+   "code": "pleural-fluid",
+   "loinc": null,
+   "label_en": "Pleural fluid analysis (protein, LDH, glucose, pH, cells, culture)",
+   "label_tr": "Plevra sıvısı analizi (protein, LDH, glukoz, pH, hücre, kültür)",
+   "section": "body_fluid",
+   "specimen": "pleural fluid",
+   "members": [
+    "2882-9",
+    "60022-1",
+    "2346-5",
+    "2748-2",
+    "26467-1",
+    "664-3",
+    "611-4"
+   ],
+   "turnaround": "body_fluid",
+   "generator": "body_fluid",
+   "synonyms": [
+    "thoracentesis"
+   ],
+   "fluid": "pleural"
+  },
+  {
+   "code": "ascitic-fluid",
+   "loinc": null,
+   "label_en": "Ascitic fluid analysis (albumin, protein, cell count, culture)",
+   "label_tr": "Asit sıvısı analizi (albümin, protein, hücre sayımı, kültür)",
+   "section": "body_fluid",
+   "specimen": "ascitic fluid",
+   "members": [
+    "2883-7",
+    "1749-1",
+    "26468-9",
+    "26514-0",
+    "664-3",
+    "611-4"
+   ],
+   "turnaround": "body_fluid",
+   "generator": "body_fluid",
+   "synonyms": [
+    "paracentesis"
+   ],
+   "fluid": "ascites"
+  },
+  {
+   "code": "synovial-fluid",
+   "loinc": null,
+   "label_en": "Synovial fluid analysis (cells, crystals, Gram stain, culture)",
+   "label_tr": "Sinoviyal sıvı analizi (hücre, kristal, Gram, kültür)",
+   "section": "body_fluid",
+   "specimen": "synovial fluid",
+   "members": [
+    "26469-7",
+    "17836-8",
+    "5781-0",
+    "664-3",
+    "611-4"
+   ],
+   "turnaround": "body_fluid",
+   "generator": "body_fluid",
+   "synonyms": [
+    "arthrocentesis",
+    "joint aspirate"
+   ],
+   "fluid": "synovial"
+  }
+ ]
+}

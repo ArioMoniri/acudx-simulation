@@ -51,7 +51,12 @@ export async function createProfile(page: Page, opts: ProfileOptions = {}): Prom
  * helpers/console.ts already allows for the documented fallback.
  */
 export async function offlineGateway(page: Page): Promise<void> {
-  await page.context().route("**/api/**", (route) => route.abort("failed"));
+  // Only the gateway proxy (/api/... at the path root): the "**/api/**" glob also
+  // matched the dev server's own module /src/lib/api/interview.ts and broke every page.
+  await page.context().route(
+    (url) => url.pathname.startsWith("/api/"),
+    (route) => route.abort("failed"),
+  );
   // Every learner case is generated on request by the model (owner decision). With no
   // model in the e2e run, the generate route replays a recorded live case
   // (server/tests/fixtures/live) so an encounter can open; the rest of /api stays off.

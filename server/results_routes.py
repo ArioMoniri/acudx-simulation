@@ -4,6 +4,8 @@ POST /v1/results/resolve        case_state + order_code + sim_time_ms -> OrderRe
 POST /v1/results/ecg            pattern + rate + seed -> 12-lead samples (500 Hz) and/or SVG
 GET  /v1/results/reference-ranges  the sourced LOINC/UCUM table (optionally one analyte)
 GET  /v1/imaging/resolve        structured imaging request -> bank match with provenance
+GET  /v1/results/catalog        lab and imaging order catalogue (LOINC, sections, turnaround)
+GET  /v1/terminology/*          ICD-10-CM FY2027 and ICD-11 MMS search, lookup and relation
 
 No model call happens here: ``narrative`` stays null for the LLM layer. No
 network call happens here either; the imaging bank is a local index.
@@ -18,9 +20,12 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from server.results import ecg as ecg_mod
-from server.results import engine, imaging_bank
+from server.results import catalog, engine, imaging_bank
+from server.terminology.routes import router as terminology_router
 
 router = APIRouter(tags=["results"])
+# ICD-10-CM / ICD-11 search and lookup (server/terminology/routes.py), mounted with the results routes.
+router.include_router(terminology_router)
 
 
 class ResolveRequest(BaseModel):
@@ -33,6 +38,7 @@ class ResolveRequest(BaseModel):
 
 
 class Turnaround(BaseModel):
+    model_config = ConfigDict(extra="allow")  # basis, preliminary_minutes, preliminary_ms
     category: str
     minutes: int
     ms: int
@@ -142,6 +148,13 @@ async def results_reference_ranges(loinc: Optional[str] = Query(default=None), s
             raise HTTPException(status_code=404, detail="unknown LOINC code")
         return {"analyte": analyte, "resolved_range": engine.reference_range(loinc, sex, age), "sources": {analyte.get("source_key"): data["sources"].get(analyte.get("source_key"))}}
     return {key: value for key, value in data.items() if not key.startswith("_")}
+
+
+@router.get("/v1/results/catalog")
+async def results_catalog() -> Any:
+    """The order catalogue (labs with member analytes, imaging procedures) with
+    LOINC codes, labels, sections and turnaround, for the order-entry surface."""
+    return catalog.public_catalog()
 
 
 @router.get("/v1/imaging/resolve", response_model=ImagingResolveResult)

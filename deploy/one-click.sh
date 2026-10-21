@@ -5,6 +5,9 @@
 #
 # DOMAIN      public name whose A record points at this host. Unset: <public-ip>.sslip.io.
 #             Caddy obtains a Let's Encrypt certificate for it on the first request.
+# ANTHROPIC_KEY  optional Claude key (the default model route). Read from /etc/acudx/anthropic.key
+#             (0600) when present, else from the environment. Without it (and without a key pasted
+#             in the admin panel) model calls go to the on-demand GPU worker.
 # LAMBDA_KEY  Lambda Cloud API key for on-demand GPU workers. Read from /etc/acudx/lambda.key
 #             (mode 0600) when present, else from the environment. Never written to git or logs.
 #
@@ -63,6 +66,8 @@ if [ ! -f "$ETC/keycloak.env" ]; then
 fi
 
 if [ -z "${LAMBDA_KEY:-}" ] && [ -f "$ETC/lambda.key" ]; then LAMBDA_KEY="$(cat "$ETC/lambda.key")"; fi
+if [ -z "${ANTHROPIC_KEY:-}" ] && [ -f "$ETC/anthropic.key" ]; then ANTHROPIC_KEY="$(cat "$ETC/anthropic.key")"; fi
+export LAMBDA_KEY ANTHROPIC_KEY
 if [ ! -f "$ETC/gateway.env" ]; then
   {
     printf 'ADMIN_TOKEN=%s\n' "$(rand_hex 32)"
@@ -76,12 +81,15 @@ python3 - "$ETC/gateway.env" <<'PY'
 import os, sys
 path = sys.argv[1]
 keep = [l for l in open(path).read().splitlines()
-        if l.split("=", 1)[0] not in {"LAMBDA_KEY", "LAMBDA_SSH_KEY_NAME", "GPU_IDLE_MINUTES", "GPU_DAILY_BUDGET_USD"}]
+        if l.split("=", 1)[0] not in {"LAMBDA_KEY", "ANTHROPIC_KEY", "LAMBDA_SSH_KEY_NAME", "GPU_IDLE_MINUTES",
+                                       "GPU_DAILY_BUDGET_USD"}]
 old = {l.split("=", 1)[0]: l.split("=", 1)[1] for l in open(path).read().splitlines() if "=" in l}
 key = os.environ.get("LAMBDA_KEY") or old.get("LAMBDA_KEY", "")
 ssh = os.environ.get("LAMBDA_SSH_KEY_NAME") or old.get("LAMBDA_SSH_KEY_NAME", "")
 idle = os.environ.get("GPU_IDLE_MINUTES") or old.get("GPU_IDLE_MINUTES", "20")
+ant = os.environ.get("ANTHROPIC_KEY") or old.get("ANTHROPIC_KEY", "")
 if key: keep.append(f"LAMBDA_KEY={key}")
+if ant: keep.append(f"ANTHROPIC_KEY={ant}")
 if ssh: keep.append(f"LAMBDA_SSH_KEY_NAME={ssh}")
 keep.append(f"GPU_IDLE_MINUTES={idle}")
 fd = os.open(path + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
@@ -89,7 +97,12 @@ with os.fdopen(fd, "w") as fh:
     fh.write("\n".join(keep) + "\n")
 os.replace(path + ".tmp", path)
 PY
-unset LAMBDA_KEY
+unset LAMBDA_KEY ANTHROPIC_KEY
+if grep -q '^ANTHROPIC_KEY=.' "$ETC/gateway.env"; then
+  log "ANTHROPIC_KEY present: Claude is the default model route"
+else
+  log "no ANTHROPIC_KEY on the host: Claude serves once a key is pasted in Admin, Providers, anthropic; until then the GPU worker"
+fi
 if grep -q '^LAMBDA_KEY=.' "$ETC/gateway.env"; then
   log "LAMBDA_KEY present: GPU workers launch on demand"
 else
