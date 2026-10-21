@@ -24,7 +24,7 @@ export type ClinicalRole = "doctor" | "nurse" | "paramedic";
 /** How a seat is held. AI-held seats are first-class but always labeled. */
 export type SeatHolderKind = "human" | "ai" | "empty";
 
-/** Live presence for a human participant (mock projection of the room state). */
+/** Live presence of a human participant, as the room snapshot reports it. */
 export type Presence = "active" | "idle" | "reconnecting";
 
 export interface RoleScope {
@@ -118,7 +118,7 @@ export interface Participant {
   kind: SeatHolderKind;
   /** Presence only meaningful for humans; AI participants are always "active". */
   presence: Presence;
-  /** Program / cohort line for humans (realistic, no institution placeholder). */
+  /** Program or cohort line from the participant's own profile. */
   affiliation?: Bilingual;
   /** Two-letter initials for the avatar chip. */
   initials: string;
