@@ -46,7 +46,7 @@ export function AdminTokenGate() {
   return (
     <Card padding="lg" className="mx-auto mt-6 w-full max-w-md">
       <CardHeader>
-        <span className="grid h-10 w-10 place-items-center rounded-control bg-brand-tint text-brand" aria-hidden>
+        <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-brand" aria-hidden>
           <ShieldCheck weight="bold" className="h-5 w-5" />
         </span>
         <CardTitle>{t("admin.token.title")}</CardTitle>

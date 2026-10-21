@@ -3,7 +3,7 @@ import {
   ArrowRight,
   Clock,
   Stethoscope,
-  Sparkle,
+  FilePlus,
   Gauge,
 } from "@phosphor-icons/react";
 
@@ -94,7 +94,7 @@ export function CaseInstanceCard({ data, lang, onStart }: CaseInstanceCardProps)
             tone="brand"
             variant="outline"
             className="shrink-0"
-            icon={<Sparkle weight="fill" className="h-3 w-3" />}
+            icon={<FilePlus weight="bold" className="h-3 w-3" />}
           >
             {t("cases.card.generated")}
           </Badge>

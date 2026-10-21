@@ -24,7 +24,11 @@ export interface StatProps {
   unit?: ReactNode;
   /** Supporting line below (e.g. status, context). */
   hint?: ReactNode;
-  /** Optional leading icon rendered in a tinted chip. */
+  /**
+   * Accepted for API compatibility and not drawn: renewal 2 (2026-10-21) drops
+   * the decorative glyph beside every metric label, the "icon + caps eyebrow on
+   * every tile" pattern that made the panels read as generated.
+   */
   icon?: ReactNode;
   /** Optional delta chip (unifies the old bespoke trend pills). */
   trend?: StatTrend;
@@ -64,7 +68,6 @@ export function Stat({
   value,
   unit,
   hint,
-  icon,
   trend,
   mono = true,
   size = "md",
@@ -73,17 +76,7 @@ export function Stat({
   const dir = trend?.dir ?? "flat";
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <div className="flex items-center gap-2">
-        {icon ? (
-          <span
-            aria-hidden="true"
-            className="grid h-4 w-4 shrink-0 place-items-center text-subtle"
-          >
-            {icon}
-          </span>
-        ) : null}
-        <span className="eyebrow">{label}</span>
-      </div>
+      <span className="eyebrow">{label}</span>
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span className="flex items-baseline gap-1">
           <span

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import {
   Blueprint,
-  Sparkle,
+  FileText,
   ShieldCheck,
   ChartBar,
   RocketLaunch,
@@ -10,7 +10,7 @@ import {
   DotsThreeCircle,
   Circle,
   ArrowRight,
-  Robot,
+  Cpu,
   User,
   Gear,
   type Icon,
@@ -25,7 +25,7 @@ import {
 
 const stageIcon: Record<PipelineStage, Icon> = {
   blueprint: Blueprint,
-  draft: Sparkle,
+  draft: FileText,
   review: ShieldCheck,
   psychometric: ChartBar,
   publish: RocketLaunch,
@@ -39,7 +39,7 @@ const stateIcon: Record<StageState, Icon> = {
 };
 
 const actorIcon: Record<PipelineStageMeta["actor"], Icon> = {
-  ai: Robot,
+  ai: Cpu,
   human: User,
   auto: Gear,
 };

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { UserSwitch, Robot } from "@phosphor-icons/react";
+import { UserSwitch, Cpu } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/cn";
 import { ROLE_ICON } from "./roleMeta";
@@ -63,7 +63,7 @@ export function RoleSwitcher({ actingRole, aiRoles = [], onSwitch }: RoleSwitche
               <span className="text-fg">{t(`roomscollab.roles.${role}`)}</span>
               {aiHeld ? (
                 <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-brand">
-                  <Robot weight="bold" className="h-3 w-3" aria-hidden />
+                  <Cpu weight="bold" className="h-3 w-3" aria-hidden />
                   {t("rooms.seat.aiHeld")}
                 </span>
               ) : null}

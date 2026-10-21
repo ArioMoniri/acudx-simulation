@@ -77,7 +77,7 @@ function useTick(ms: number): void {
 /* -------------------------------------------------------------------------- */
 
 function Section({
-  icon,
+  icon: _icon,
   title,
   count,
   headerRight,
@@ -92,14 +92,12 @@ function Section({
 }) {
   return (
     <section className="border-t border-border px-4 py-3 first:border-t-0">
+      {/* Section titles are words only; the glyph prop is kept for callers. */}
       <h3 className="mb-2 flex items-center gap-1.5 eyebrow">
-        <span aria-hidden className="text-subtle">
-          {icon}
-        </span>
         {title}
         {headerRight ? <span className="ms-auto">{headerRight}</span> : null}
         {!headerRight && typeof count === "number" && count > 0 ? (
-          <span className="ms-auto rounded-full bg-bg-subtle px-1.5 text-[10px] font-medium text-muted">
+          <span className="ms-auto rounded-chip bg-bg-subtle px-1.5 font-mono text-[10px] font-medium text-muted">
             {count}
           </span>
         ) : null}
@@ -135,12 +133,12 @@ function MiniVital({
   unit?: string;
 }) {
   return (
-    <div className="border-b border-e border-border px-2 py-1.5">
-      <p className="eyebrow text-[0.625rem] leading-none">{label}</p>
-      <p className="mt-1 font-mono text-sm font-semibold leading-none tabular-nums text-fg">
+    <div className="flex items-baseline justify-between gap-2 border-b border-border py-1 last:border-b-0">
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className="font-mono text-sm font-semibold tabular-nums text-fg">
         {value}
-        {unit ? <span className="ms-0.5 text-[10px] font-medium text-muted">{unit}</span> : null}
-      </p>
+        {unit ? <span className="ms-1 text-[10px] font-medium text-muted">{unit}</span> : null}
+      </dd>
     </div>
   );
 }
@@ -262,7 +260,7 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
       {/* Patient identity: the synthetic portrait on paper with the name in
           the display serif, matched to the demographic; physiology tints the
           face. */}
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3.5">
+      <div className="flex items-start gap-3 border-b border-border px-4 py-3.5">
         <PatientPhoto
           sex={visual.sexAtBirth}
           age={visual.age}
@@ -276,13 +274,13 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
           onClick={() => setViewerOpen(true)}
           expandLabel={t("patientviewer.expand")}
         />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="serif truncate text-lg leading-tight text-fg">
             {patient.name}
           </p>
-          <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-muted">
-            <Heartbeat weight="fill" className="h-3 w-3 shrink-0 text-[color:var(--state-normal)]" aria-hidden />
-            <span className="italic">{affectLabel}</span>
+          <p className="mt-0.5 flex items-start gap-1 text-xs text-muted">
+            <Heartbeat weight="fill" className="mt-0.5 h-3 w-3 shrink-0 text-[color:var(--state-normal)]" aria-hidden />
+            <span className="min-w-0 italic">{affectLabel}</span>
           </p>
           {/* Live clinical-sign summary derived from the current vitals course. */}
           <SymptomSummary vitals={vitals} className="mt-1 text-muted" />
@@ -393,7 +391,7 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
         title={t("ehr.storyboard.vitalsSnapshot")}
         headerRight={
           vitalsAreLive ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <span className="inline-flex items-center gap-1 rounded-chip bg-bg-subtle px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
               <span
                 aria-hidden
                 className="h-1.5 w-1.5 rounded-full bg-[color:var(--state-normal)] motion-safe:animate-pulse"
@@ -403,7 +401,9 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
           ) : undefined
         }
       >
-        <div className="grid grid-cols-3 gap-1.5">
+        {/* A flowsheet column (label left, value right) instead of a 3-up
+            grid that left two empty cells under five vitals. */}
+        <dl className="flex flex-col">
           <MiniVital label={t("vitals.hrShort")} value={String(vitals.hr)} unit={t("vitals.units.bpm")} />
           <MiniVital
             label={t("vitals.bpShort")}
@@ -412,7 +412,7 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
           <MiniVital label={t("vitals.rrShort")} value={String(vitals.rr)} unit={t("vitals.units.brpm")} />
           <MiniVital label={t("vitals.spo2Short")} value={String(vitals.spo2)} unit={t("vitals.units.percent")} />
           <MiniVital label={t("vitals.tempShort")} value={vitals.tempC.toFixed(1)} unit={t("vitals.units.celsius")} />
-        </div>
+        </dl>
       </Section>
 
       {/* Meds — earned by asking (medications intent) */}
@@ -494,7 +494,7 @@ export function Storyboard({ caseInstance, lang, affectLabel }: StoryboardProps)
         title={t("ehr.storyboard.careTeam")}
         headerRight={
           inRoom ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <span className="inline-flex items-center gap-1 rounded-chip bg-bg-subtle px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
               <span
                 aria-hidden
                 className="h-1.5 w-1.5 rounded-full bg-[color:var(--state-normal)] motion-safe:animate-pulse"

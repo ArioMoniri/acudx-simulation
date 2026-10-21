@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
-import { ArrowRight, ClockCounterClockwise, Sparkle } from "@phosphor-icons/react";
+import { ArrowRight, ClockCounterClockwise, FilePlus } from "@phosphor-icons/react";
 
 import { PageContainer, PageHeader } from "@/components/shell";
 import { Button, Card, Field, Select, SectionLabel } from "@/components/ui";
@@ -72,7 +72,7 @@ export function CasesPage() {
       <motion.section {...genEntry} aria-labelledby="cases-generate-heading">
         <Card padding="md" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <SectionLabel icon={<Sparkle weight="bold" className="h-3.5 w-3.5" />}>
+            <SectionLabel icon={<FilePlus weight="bold" className="h-3.5 w-3.5" />}>
               {t("select2.cases.generator.eyebrow")}
             </SectionLabel>
             <h2 id="cases-generate-heading" className="text-base font-semibold tracking-tight text-fg">
@@ -117,7 +117,7 @@ export function CasesPage() {
             <Button
               size="md"
               onClick={() => request(complaint, difficulty)}
-              leadingIcon={<Sparkle weight="bold" className="h-4 w-4" />}
+              leadingIcon={<FilePlus weight="bold" className="h-4 w-4" />}
               className="h-9"
             >
               {t("livegen.endless")}

@@ -84,7 +84,7 @@ export function PageHeader({
             className={cn(
               "text-fg",
               marketing
-                ? "display text-4xl sm:text-5xl lg:text-[3.5rem]"
+                ? "display text-[2rem] leading-[1.1] sm:text-[2.5rem] lg:text-[2.75rem]"
                 : "display text-[1.625rem] sm:text-[2rem]",
             )}
           >

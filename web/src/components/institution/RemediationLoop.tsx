@@ -158,13 +158,9 @@ export function RemediationLoop() {
         <LoopStages />
       </Card>
 
+      {/* Empty: a plain line with a rule, not a centred icon panel. */}
       {records.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-control border border-dashed border-border bg-bg-subtle px-4 py-10 text-center">
-          <MagnifyingGlass
-            weight="bold"
-            className="h-6 w-6 text-muted"
-            aria-hidden
-          />
+        <div className="flex flex-col gap-1 border-s-2 border-border-strong py-1 ps-3">
           <p className="text-sm font-semibold text-fg">
             {t("institution.remediation.empty.title", {
               defaultValue: "No recorded encounters yet",

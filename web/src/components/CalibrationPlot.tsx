@@ -87,7 +87,7 @@ export function CalibrationPlot({
     // Honest empty state — a new learner has no earned calibration yet. No
     // fabricated points are ever drawn; the scatter fills in from real records.
     return (
-      <div className="rounded-card border border-dashed border-border bg-bg-subtle p-6 text-center">
+      <div className="border-s-2 border-border-strong py-1 ps-3">
         <p className="text-sm font-medium text-fg">
           {t("calibration.insufficient")}
         </p>

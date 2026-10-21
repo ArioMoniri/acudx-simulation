@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Sparkle, CaretDown, Sliders } from "@phosphor-icons/react";
+import { FilePlus, CaretDown, Sliders, Shuffle } from "@phosphor-icons/react";
 
 import { Button, SectionLabel, Select } from "@/components/ui";
 import type { ChiefComplaintFamily } from "@/domain/caseGen";
@@ -92,10 +92,10 @@ export function NewCaseMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={panelId}
-        leadingIcon={<Sparkle weight="bold" className="h-4 w-4" />}
+        leadingIcon={<FilePlus weight="bold" className="h-4 w-4" />}
+        trailingIcon={<CaretDown weight="bold" className="h-3.5 w-3.5" aria-hidden />}
       >
         {t("ehr.newCase.button")}
-        <CaretDown weight="bold" className="ms-0.5 h-3.5 w-3.5" aria-hidden />
       </Button>
 
       {open ? (
@@ -116,10 +116,10 @@ export function NewCaseMenu({
             }}
             className="flex w-full items-center gap-2.5 rounded-control bg-brand px-3 py-2.5 text-start text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none"
           >
-            <Sparkle weight="fill" className="h-5 w-5 shrink-0" aria-hidden />
+            <Shuffle weight="bold" className="h-5 w-5 shrink-0" aria-hidden />
             <span className="min-w-0">
               <span className="block">{t("livegen.endless")}</span>
-              <span className="block text-xs font-normal text-white/80">
+              <span className="block text-xs font-normal text-on-brand/80">
                 {t("livegen.endlessHint")}
               </span>
             </span>

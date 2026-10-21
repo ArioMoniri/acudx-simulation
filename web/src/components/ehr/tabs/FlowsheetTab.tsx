@@ -301,8 +301,8 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
 
         {/* Realistic, demographic-matched patient photo (click to enlarge). The
             physiology tint + symptom summary track the LIVE vitals course. */}
-        <figure
-          className="mt-3 flex items-center gap-3 rounded-control border p-2.5"
+        <div
+          className="mt-3 flex flex-wrap items-start gap-x-3 gap-y-2 rounded-control border p-2.5"
           style={{
             borderColor: "var(--monitor-border)",
             backgroundColor: "color-mix(in srgb, var(--monitor-fg) 4%, transparent)",
@@ -319,17 +319,20 @@ export function FlowsheetTab({ caseInstance, affectLabel }: FlowsheetTabProps) {
             onClick={() => setViewerOpen(true)}
             expandLabel={t("patientviewer.expand")}
           />
-          <figcaption className="min-w-0">
+          {/* At least 8rem for the text: in a narrow monitor column it drops
+              under the photo instead of breaking words letter by letter. */}
+          <div className="min-w-[8rem] flex-1">
             <p className="truncate text-sm font-medium" style={{ color: "var(--monitor-fg)" }}>
               {patient.name}
             </p>
-            <p className="mt-0.5 truncate text-xs italic" style={{ color: "var(--monitor-dim)" }}>
+            <p className="mt-0.5 text-xs italic" style={{ color: "var(--monitor-dim)" }}>
               {affectLabel}
             </p>
-            {/* Monitor-panel dim ink so the summary reads on the dark card. */}
+            {/* The clinical signs as text beside the photo (never on it); monitor
+                dim ink so the line reads on the dark card. */}
             <SymptomSummary vitals={currentVitals} className="mt-1 text-monitor-dim" />
-          </figcaption>
-        </figure>
+          </div>
+        </div>
       </section>
 
       {/* Flowsheet — latest summary + vitals over time */}

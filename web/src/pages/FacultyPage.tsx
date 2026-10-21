@@ -561,8 +561,8 @@ export function FacultyPage() {
                 </TabsTrigger>
               ))}
             </TabsList>
-            <div className="-mx-4 overflow-x-auto px-4 lg:hidden">
-              <TabsList aria-label={t("panels.faculty.title")} variant="underline" className="w-max min-w-full">
+            <div className="lg:hidden">
+              <TabsList aria-label={t("panels.faculty.title")} variant="underline" className="flex-wrap gap-x-4 gap-y-0">
                 {TABS.map((k) => (
                   <TabsTrigger key={k} value={k}>
                     {t(`panels.faculty.tabs.${k}`)}

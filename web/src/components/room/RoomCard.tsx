@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Users } from "@phosphor-icons/react";
+import { ArrowRight } from "@phosphor-icons/react";
 
-import { Card, Badge, Button, SectionLabel, StatusDot } from "@/components/ui";
+import { Badge, Button, SectionLabel, StatusDot } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { RoleAvatar } from "./RoleAvatar";
 import { ROLE_ICON } from "./roleMeta";
@@ -46,99 +46,89 @@ export function RoomCard({ room, lang }: RoomCardProps) {
   }
 
   return (
-    <Card
-      variant="interactive"
-      padding="lg"
-      className="flex h-full flex-col gap-4"
+    // One room as a ruled row of the lobby list (Linear grouped list, Stripe
+    // table rows) rather than a card in a uniform grid: the case on the left,
+    // the roster in the middle, host and action on the right; stacked on a phone.
+    <article
+      aria-label={room.title[lang]}
+      className="grid gap-x-6 gap-y-3 py-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,12rem)] lg:items-start"
     >
-      {/* Title row + live status */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="truncate text-base font-semibold tracking-tight text-fg">
+      {/* Case, status and meta */}
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h3 className="min-w-0 text-[0.9375rem] font-semibold leading-snug text-fg">
             {room.title[lang]}
           </h3>
-          <p className="mt-1 text-sm text-muted">{room.chiefComplaint[lang]}</p>
-        </div>
-        <StatusDot
-          tone={STATUS_TONE[room.status]}
-          pulse={live}
-          label={t(`rooms.status.${room.status}`)}
-          className="shrink-0"
-        />
-      </div>
-
-      {/* Meta line — acuity, seats, locale, code (hierarchy, not chip soup) */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-border py-2.5 text-xs">
-        <span className="inline-flex items-center gap-1.5">
           <StatusDot
-            tone={`esi-${room.acuityESI}` as const}
+            tone={STATUS_TONE[room.status]}
+            pulse={live}
             size="sm"
-            aria-hidden="true"
+            label={t(`rooms.status.${room.status}`)}
+            className="shrink-0 text-xs"
           />
-          <span className="font-medium text-fg">
-            {t("ehr.banner.esi", { level: room.acuityESI })}
+        </div>
+        <p className="text-sm text-muted">{room.chiefComplaint[lang]}</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <StatusDot tone={`esi-${room.acuityESI}` as const} size="sm" aria-hidden="true" />
+            <span className="font-medium text-fg">
+              {t("ehr.banner.esi", { level: room.acuityESI })}
+            </span>
           </span>
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-muted">
-          <Users weight="bold" className="h-3.5 w-3.5" aria-hidden />
-          <span className="text-muted">{t("rooms3.card.seats")}</span>
-          <span className="tnum font-medium text-fg">
-            {fill.filled}/{fill.total}
+          <span className="inline-flex items-center gap-1">
+            <span>{t("rooms3.card.seats")}</span>
+            <span className="tnum font-medium text-fg">
+              {fill.filled}/{fill.total}
+            </span>
           </span>
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-muted">
           <span>{t(`rooms.locale.${room.locale}`)}</span>
-        </span>
-        <span className="ms-auto inline-flex items-center gap-1.5 text-muted">
-          <span>{t("rooms.card.code")}</span>
-          <span className="font-mono tracking-wide text-fg">{room.joinCode}</span>
-        </span>
+          <span className="inline-flex items-center gap-1">
+            <span>{t("rooms.card.code")}</span>
+            <span className="font-mono tracking-wide text-fg">{room.joinCode}</span>
+          </span>
+        </div>
       </div>
 
-      {/* Role roster (compact hairline rows) */}
-      <div className="flex flex-col gap-2">
-        <SectionLabel>{t("rooms.card.rosterLabel")}</SectionLabel>
-        <ul className="flex flex-col divide-y divide-border">
+      {/* Role roster: avatar, name, role. The avatar leads every line so faces
+          and initials sit on one vertical axis whatever the name length. */}
+      <div className="min-w-0">
+        <SectionLabel className="mb-1 lg:sr-only">{t("rooms.card.rosterLabel")}</SectionLabel>
+        <ul className="flex flex-col gap-1.5">
           {CLINICAL_ROLE_ORDER.map((role) => {
             const seat = room.seats.find((s) => s.role === role);
             if (!seat) return null;
             const holder = effectiveHolder(seat, room.aiBackfill);
             const RoleIcon = ROLE_ICON[role];
             return (
-              <li
-                key={role}
-                className="flex items-center justify-between gap-2 py-1.5"
-              >
-                <span className="inline-flex items-center gap-2 text-sm text-fg">
-                  <RoleIcon weight="bold" className="h-4 w-4 text-muted" aria-hidden />
-                  {t(`rooms.role.${role}`)}
-                  {seat.teamLead ? (
-                    <Badge tone="brand" className="ms-0.5">
-                      {t("rooms.teamLead.hat")}
-                    </Badge>
-                  ) : null}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  {holder ? (
-                    <>
-                      <span
-                        className={cn(
-                          "text-xs",
-                          holder.kind === "ai" ? "text-brand" : "text-muted",
-                        )}
-                      >
-                        {holder.kind === "ai"
-                          ? t("rooms.seat.aiHeld")
-                          : holder.name}
-                      </span>
-                      <RoleAvatar participant={holder} size="sm" />
-                    </>
-                  ) : (
-                    <span className="text-xs font-medium text-muted">
-                      {t("rooms.seat.open")}
-                    </span>
+              <li key={role} className="flex min-w-0 items-center gap-2 text-sm">
+                {holder ? (
+                  <RoleAvatar participant={holder} size="xs" />
+                ) : (
+                  <span
+                    aria-hidden
+                    className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-dashed border-border-strong text-muted"
+                  >
+                    <RoleIcon weight="bold" className="h-3 w-3" />
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "min-w-0 truncate",
+                    holder?.kind === "ai" ? "text-brand" : holder ? "text-fg" : "text-muted",
                   )}
+                >
+                  {holder
+                    ? holder.kind === "ai"
+                      ? t("rooms.seat.aiHeld")
+                      : holder.name
+                    : t("rooms.seat.open")}
                 </span>
+                <span className="shrink-0 text-xs text-muted">{t(`rooms.role.${role}`)}</span>
+                {seat.teamLead ? (
+                  <Badge tone="brand" className="shrink-0">
+                    {t("rooms.teamLead.hat")}
+                  </Badge>
+                ) : null}
               </li>
             );
           })}
@@ -146,12 +136,14 @@ export function RoomCard({ room, lang }: RoomCardProps) {
       </div>
 
       {/* Host + action */}
-      <div className="mt-auto flex items-center justify-between gap-3 border-t border-border pt-3">
-        <span className="inline-flex items-center gap-2 text-xs text-muted">
-          <RoleAvatar participant={room.host} size="sm" />
-          {t("rooms.card.hostedBy", {
-            name: isSelfParticipant(room.host) ? t("rooms.you") : room.host.name,
-          })}
+      <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-end">
+        <span className="inline-flex min-w-0 items-center gap-2 text-xs text-muted">
+          <RoleAvatar participant={room.host} size="xs" />
+          <span className="truncate">
+            {t("rooms.card.hostedBy", {
+              name: isSelfParticipant(room.host) ? t("rooms.you") : room.host.name,
+            })}
+          </span>
         </span>
         <Button
           size="sm"
@@ -162,6 +154,6 @@ export function RoomCard({ room, lang }: RoomCardProps) {
           {live ? t("rooms.card.rejoin") : t("rooms.card.takeSeat")}
         </Button>
       </div>
-    </Card>
+    </article>
   );
 }

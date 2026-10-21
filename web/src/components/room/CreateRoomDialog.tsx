@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { X, Plus, Users, Robot } from "@phosphor-icons/react";
+import { X, Plus, Users, Cpu } from "@phosphor-icons/react";
 
 import { Button, Switch, Field, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
@@ -197,7 +197,7 @@ export function CreateRoomDialog({
                         </>
                       ) : (
                         <>
-                          <Robot weight="bold" className="h-3.5 w-3.5" aria-hidden />
+                          <Cpu weight="bold" className="h-3.5 w-3.5" aria-hidden />
                           {t("rooms.create.aiBacked")}
                         </>
                       )}

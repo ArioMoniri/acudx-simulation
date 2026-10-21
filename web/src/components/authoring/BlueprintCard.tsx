@@ -22,7 +22,7 @@ function MetaItem({
   return (
     <div className="flex items-start gap-2.5">
       <span
-        className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-control bg-bg-subtle text-muted"
+        className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-muted"
         aria-hidden
       >
         <Icon weight="bold" className="h-4 w-4" />

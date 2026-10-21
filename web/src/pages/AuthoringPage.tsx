@@ -4,11 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import {
   PencilRuler,
-  Robot,
+  Cpu,
   User,
   Gear,
   Blueprint,
-  Sparkle,
+  FileText,
   ShieldCheck,
   ChartBar,
   RocketLaunch,
@@ -33,7 +33,7 @@ import {
   Certificate,
   Signature,
   SealCheck,
-  MagicWand,
+  PencilLine,
   Eye,
   Trash,
   X,
@@ -110,7 +110,7 @@ import {
 
 const stageIcon: Record<PipelineStage, Icon> = {
   blueprint: Blueprint,
-  draft: Sparkle,
+  draft: FileText,
   review: ShieldCheck,
   psychometric: ChartBar,
   publish: RocketLaunch,
@@ -124,7 +124,7 @@ const stateTone: Record<StageState, StatusTone> = {
 };
 
 const actorIcon: Record<PipelineStageMeta["actor"], Icon> = {
-  ai: Robot,
+  ai: Cpu,
   human: User,
   auto: Gear,
 };
@@ -158,8 +158,12 @@ function PipelineStepper({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* A ruled step table instead of six look-alike cards: hairline cells that
+          reflow 2, 3 then 6 across (never a horizontal scroll), a 2 px rule on
+          top that turns cobalt once a stage is reached, the number in mono, the
+          title, then who acts and the state as plain text. */}
       <ol
-        className="flex flex-col gap-2 lg:flex-row lg:items-stretch lg:gap-0"
+        className="grid grid-cols-2 gap-px overflow-hidden border border-border bg-border sm:grid-cols-3 xl:grid-cols-6"
         aria-label={t("authoring2.stepper.aria")}
       >
         {pipelineStages.map((stage, i) => {
@@ -173,19 +177,20 @@ function PipelineStepper({
             stage.key === "publish" && !state.published && !!state.draft && !clear;
 
           return (
-            <li key={stage.key} className="flex items-stretch lg:flex-1">
+            <li key={stage.key} className="flex min-w-0">
               <button
                 type="button"
                 onClick={() => dispatch({ type: "setStage", index: i })}
                 aria-current={isActive ? "step" : undefined}
                 className={cn(
-                  "flex flex-1 flex-col gap-2.5 rounded-card border p-3.5 text-start",
-                  "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                  "relative flex min-w-0 flex-1 flex-col gap-1.5 px-3 pb-2.5 pt-3 text-start",
+                  "before:absolute before:inset-x-0 before:top-0 before:h-0.5",
+                  "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand",
                   isActive
-                    ? "border-brand bg-brand-tint"
+                    ? "bg-brand-tint before:bg-brand"
                     : isDone
-                      ? "border-border bg-surface hover:bg-bg-subtle"
-                      : "border-dashed border-border bg-surface hover:bg-bg-subtle",
+                      ? "bg-surface before:bg-brand hover:bg-bg-subtle"
+                      : "bg-surface before:bg-transparent hover:bg-bg-subtle",
                 )}
               >
                 {/* The action + state lead the accessible name ("Go to the X
@@ -194,55 +199,40 @@ function PipelineStepper({
                 <span className="sr-only">
                   {t("authoring2.stepper.goTo", { title })}, {t(`authoring.pipeline.state.${display}`)},{" "}
                 </span>
-                <div className="flex items-center justify-between gap-2">
+                <span className="flex items-baseline gap-2">
                   <span
                     className={cn(
-                      "grid h-8 w-8 shrink-0 place-items-center rounded-control",
-                      isActive
-                        ? "bg-brand text-on-brand"
-                        : isDone
-                          ? "bg-[color-mix(in_srgb,var(--state-normal)_14%,transparent)] text-[color:var(--state-normal)]"
-                          : "bg-bg-subtle text-muted",
-                    )}
-                  >
-                    <StageIcon weight="bold" className="h-4 w-4" aria-hidden />
-                  </span>
-                  <Badge tone="neutral" variant="outline" icon={<ActorIcon weight="bold" className="h-3 w-3" aria-hidden />}>
-                    {t(`authoring.pipeline.actor.${stage.actor}`)}
-                  </Badge>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <p
-                    className={cn(
-                      "tnum text-[11px] font-mono font-semibold",
+                      "tnum font-mono text-[11px] font-semibold",
                       isActive ? "text-brand" : "text-subtle",
                     )}
                   >
                     {String(i + 1).padStart(2, "0")}
-                  </p>
-                  <p className="text-sm font-semibold leading-snug text-fg">{title}</p>
-                </div>
-                {blocked ? (
-                  <Badge tone="warning" className="mt-auto w-fit" icon={<WarningCircle weight="fill" className="h-3 w-3" aria-hidden />}>
-                    {t("authoring2.stepper.blocked")}
-                  </Badge>
-                ) : (
-                  <span className="mt-auto inline-flex items-center gap-1.5">
-                    <StatusDot tone={stateTone[display]} pulse={isActive} size="sm" aria-hidden="true" />
-                    <span className="text-[11px] font-medium text-muted">
+                  </span>
+                  <StageIcon
+                    weight="bold"
+                    className={cn("h-3.5 w-3.5 shrink-0 self-center", isActive ? "text-brand" : "text-subtle")}
+                    aria-hidden
+                  />
+                </span>
+                <span className="text-sm font-semibold leading-snug text-fg">{title}</span>
+                <span className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted">
+                  <span className="inline-flex items-center gap-1">
+                    <ActorIcon weight="bold" className="h-3 w-3" aria-hidden />
+                    {t(`authoring.pipeline.actor.${stage.actor}`)}
+                  </span>
+                  {blocked ? (
+                    <span className="inline-flex items-center gap-1 font-medium text-[color:var(--state-warning)]">
+                      <WarningCircle weight="fill" className="h-3 w-3" aria-hidden />
+                      {t("authoring2.stepper.blocked")}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 font-medium">
+                      <StatusDot tone={stateTone[display]} size="sm" aria-hidden="true" />
                       {t(`authoring.pipeline.state.${display}`)}
                     </span>
-                  </span>
-                )}
-              </button>
-              {i < pipelineStages.length - 1 ? (
-                <span
-                  className="hidden shrink-0 items-center px-1 text-border lg:flex"
-                  aria-hidden
-                >
-                  <ArrowRight weight="bold" className="h-4 w-4" />
+                  )}
                 </span>
-              ) : null}
+              </button>
             </li>
           );
         })}
@@ -309,7 +299,7 @@ function NeedsDraft({ dispatch }: { dispatch: Dispatcher }) {
   const { t } = useTranslation();
   return (
     <Card padding="lg" className="flex flex-col items-start gap-3">
-      <span className="grid h-10 w-10 place-items-center rounded-control bg-bg-subtle text-muted" aria-hidden>
+      <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-muted" aria-hidden>
         <Blueprint weight="bold" className="h-5 w-5" />
       </span>
       <div>
@@ -385,7 +375,7 @@ function BlueprintPanel({
       <Card padding="lg" className="flex flex-col gap-4">
         <div>
           <div className="flex items-center gap-1.5">
-            <MagicWand weight="bold" className="h-4 w-4 text-brand" aria-hidden />
+            <PencilLine weight="bold" className="h-4 w-4 text-brand" aria-hidden />
             <h3 className="text-sm font-semibold tracking-tight text-fg">
               {t("authoringP9.blueprint.heading", { defaultValue: "Generate a case blueprint" })}
             </h3>
@@ -443,7 +433,7 @@ function BlueprintPanel({
             onClick={generate}
             disabled={genBusy}
             aria-busy={genBusy}
-            leadingIcon={<MagicWand weight="bold" className="h-4 w-4" />}
+            leadingIcon={<PencilLine weight="bold" className="h-4 w-4" />}
           >
             {draft
               ? t("authoringP9.blueprint.regenerate", { defaultValue: "Generate another draft" })
@@ -455,7 +445,7 @@ function BlueprintPanel({
             </p>
           ) : null}
           <p className="inline-flex items-center gap-1.5 text-[11px] text-muted">
-            <Robot weight="bold" className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <Cpu weight="bold" className="h-3.5 w-3.5 shrink-0" aria-hidden />
             {t("authoring2.draft.tierNote")}
           </p>
         </div>
@@ -471,7 +461,7 @@ function BlueprintPanel({
               </h3>
               <p className="mt-0.5 text-xs text-muted">{draft.blueprint.chiefComplaint[lang]}</p>
             </div>
-            <Badge tone="brand" variant="outline" icon={<Sparkle weight="fill" className="h-3 w-3" aria-hidden />}>
+            <Badge tone="brand" variant="outline" icon={<FileText weight="fill" className="h-3 w-3" aria-hidden />}>
               {t("authoringP9.blueprint.draftBadge", { defaultValue: "Draft generated" })}
             </Badge>
           </div>
@@ -578,7 +568,7 @@ function DraftPanel({
             label={t("authoring3.draft.factsLabel")}
             value={total}
             size="lg"
-            icon={<Sparkle weight="bold" className="h-3.5 w-3.5" aria-hidden />}
+            icon={<FileText weight="bold" className="h-3.5 w-3.5" aria-hidden />}
             hint={t("authoring2.draft.factsDrafted", { count: total })}
           />
         </Card>
@@ -600,7 +590,7 @@ function DraftPanel({
       </div>
 
       <p className="inline-flex items-start gap-2 text-xs text-muted">
-        <Robot weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        <Cpu weight="bold" className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
         {t("authoring2.draft.tierNote")}
       </p>
 
@@ -683,7 +673,7 @@ function FactCard({
       >
         <div className="flex items-start gap-2.5">
           <span
-            className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-control bg-bg-subtle text-muted"
+            className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-muted"
             aria-hidden
           >
             <FIcon weight="bold" className="h-4 w-4" />
@@ -1088,7 +1078,7 @@ function SignInToCoSign() {
   return (
     <div className="rounded-control border border-dashed border-border bg-bg-subtle p-4">
       <div className="flex items-start gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-bg-subtle text-muted" aria-hidden>
+        <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-muted" aria-hidden>
           <SignIn weight="bold" className="h-5 w-5" />
         </span>
         <div>
@@ -1273,7 +1263,7 @@ function SignOffPanel({
         <div className="rounded-control border border-border bg-surface p-4">
           <div className="flex items-start gap-3">
             <span
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-brand-tint text-brand"
+              className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-brand"
               aria-hidden
             >
               <Certificate weight="bold" className="h-5 w-5" />
@@ -1473,7 +1463,7 @@ function MonitorRow({
       <Td numeric>{encounters}</Td>
       <Td>
         {isNew ? (
-          <Badge tone="brand" icon={<Sparkle weight="fill" className="h-3 w-3" aria-hidden />}>
+          <Badge tone="brand" icon={<FileText weight="fill" className="h-3 w-3" aria-hidden />}>
             {t("authoring2.monitor.newBadge")}
           </Badge>
         ) : (
@@ -1655,7 +1645,7 @@ function MonitorPanel({ state }: { state: AuthoringUIState }) {
   if (cases.length === 0) {
     return (
       <Card padding="lg" className="flex flex-col items-start gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-control bg-bg-subtle text-muted" aria-hidden>
+        <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-muted" aria-hidden>
           <FolderOpen weight="bold" className="h-5 w-5" />
         </span>
         <div>
@@ -1833,7 +1823,7 @@ export function AuthoringPage() {
             <>
               <SimBadge variant="chip" />
               <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-                <Robot weight="bold" className="h-3.5 w-3.5" aria-hidden />
+                <Cpu weight="bold" className="h-3.5 w-3.5" aria-hidden />
                 {t("authoring.aiHumanNote")}
               </span>
             </>

@@ -20,10 +20,10 @@ export const TabsList = forwardRef<
         ref={ref}
         className={cn(
           variant === "segmented"
-            ? "inline-flex items-center gap-0.5 rounded-control border border-border bg-bg-inset p-0.5"
+            ? "inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-control border border-border bg-bg-inset p-0.5"
             : variant === "vertical"
               ? "flex flex-col gap-px"
-              : "flex items-center gap-4 border-b border-border",
+              : "flex flex-wrap items-center gap-x-4 border-b border-border",
           className,
         )}
         {...props}
