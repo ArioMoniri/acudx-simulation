@@ -27,6 +27,7 @@ import websockets
 
 async def pipe(reader: asyncio.StreamReader, writer: asyncio.StreamWriter, url: str, token: str) -> None:
     peer = writer.get_extra_info("peername")
+    print(f"tunnel {peer}: open", file=sys.stderr, flush=True)
     # HTTPS_PROXY for the worker; a NO_PROXY host (a local runner) is dialled directly.
     kw = {"proxy": None} if urllib.request.proxy_bypass(urlparse(url).hostname or "") else {}
     try:

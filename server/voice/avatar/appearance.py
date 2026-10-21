@@ -252,9 +252,20 @@ def look_from_case(spec: dict[str, Any], director: dict[str, Any] | None) -> Loo
     return Look(signs=signs, phase=phase, identity=identity, cough=_evident(_COUGH, text))
 
 
+# Colour-only signs the gateway paints after the edit (tint.warm_flush), never the model: asked for a
+# flush, the model drew two red cheek patches (live 2026-10-21, prod-path capture, non-febrile flushing).
+TINT_SIGNS = ("flushing",)
+
+
+def tint_level(look: Look) -> int:
+    """Level of the even warm tint painted over the face after the edit (fever flush or flushing)."""
+    return max([int(look.signs.get(s, 0)) for s in ("fever_flush", *TINT_SIGNS)])
+
+
 def edit_prompt(look: Look) -> str:
     """Instruction for an identity-preserving image edit of the case portrait."""
-    changes = [_PHRASES[s][min(2, look.signs[s]) - 1] for s in SIGN_ORDER if look.signs.get(s)]
+    changes = [_PHRASES[s][min(2, look.signs[s]) - 1] for s in SIGN_ORDER
+               if look.signs.get(s) and s not in TINT_SIGNS]
     who = []
     if look.identity.get("age"):
         who.append(f"{int(look.identity['age'])} years old")

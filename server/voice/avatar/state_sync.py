@@ -90,7 +90,7 @@ class Appearance:
 
 # Bumped whenever the pictures for the same look change (prompts, the fever tint), so a worker never
 # reuses a face it prepared from an older picture under the same id.
-APPEARANCE_VERSION = 3
+APPEARANCE_VERSION = 4
 
 
 def variant_avatar_id(photo_id: str, thread_id: str, key: str) -> str:
@@ -204,7 +204,7 @@ async def _gen(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
         except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
             _failed(a, v, exc)
             return False
-        flush = int(v.look.signs.get("fever_flush", 0))
+        flush = ap.tint_level(v.look)
         if flush:
             try:
                 img = warm_flush(img, flush)

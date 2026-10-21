@@ -143,8 +143,8 @@ async def main() -> None:
             except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
                 rows.append({"sign": sign, "photo": photo, "error": str(exc)[:200]})
                 continue
-            if sign == "fever_flush":
-                img = warm_flush(img, level)   # the live path adds the fever colour after the edit
+            if ap.tint_level(look):
+                img = warm_flush(img, ap.tint_level(look))   # the live path paints flushes after the edit
             fname = f"{sign}-{photo}.jpg"
             (out / fname).write_bytes(img)
             row = {"sign": sign, "level": level, "photo": photo, "file": fname, "prompt": prompt,

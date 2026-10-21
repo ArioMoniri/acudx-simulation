@@ -194,7 +194,11 @@ def test_visible_findings_the_case_states_are_drawn_in_en_and_tr():
         look = ap.look_from_case(_afebrile(exam=_exam(text)), None)
         assert look.signs.get(sign), (sign, look.signs)
         prompt = ap.edit_prompt(look)
-        assert ap._PHRASES[sign][0] in prompt
+        if sign in ap.TINT_SIGNS:
+            # Painted after the edit as an even tint; the model drew cheek patches when asked.
+            assert ap._PHRASES[sign][0] not in prompt and ap.tint_level(look) == 1
+        else:
+            assert ap._PHRASES[sign][0] in prompt
     tr = {"petechiae": "Yüzde ve göğüste peteşiler.", "urticaria": "Boyunda ürtiker plakları.",
           "facial_droop": "Sağ tarafta yüzde kayma var.", "dehydration": "Ağız kuruluğu ve çökük gözler."}
     for sign, text in tr.items():
