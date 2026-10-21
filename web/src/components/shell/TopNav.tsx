@@ -1,6 +1,8 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { UserCircle } from "@phosphor-icons/react";
+import { ProfileAvatar } from "@/components/ui/ProfileAvatar";
+import { useProfile } from "@/state/profileStore";
 import { prefetchRoute } from "@/App";
 import { cn } from "@/lib/cn";
 import { breadcrumbsFor } from "@/lib/navigation";
@@ -24,6 +26,7 @@ export function TopNav() {
   const { role } = useViewAs();
   const location = useLocation();
   const crumbs = breadcrumbsFor(location.pathname, role);
+  const profile = useProfile();
 
   return (
     <header className="ink-scope-until-lg sticky top-0 z-40 border-b border-border bg-bg">
@@ -66,15 +69,26 @@ export function TopNav() {
           <ThemeToggle />
           <NavLink
             to="/account"
-            aria-label={t("nav.account")}
+            // Named by sr-only text, not aria-label: the visible initials are
+            // decorative, and an aria-label that omits them fails axe
+            // label-content-name-mismatch.
+            title={t("nav.account")}
             onMouseEnter={() => prefetchRoute("/account")}
             onFocus={() => prefetchRoute("/account")}
             className={cn(
-              "grid h-8 w-8 place-items-center rounded-control border border-border",
-              "bg-surface text-fg transition-colors duration-[120ms] ease-out hover:bg-bg-subtle",
+              "grid h-8 w-8 shrink-0 place-items-center rounded-full",
+              profile ? "" : "border border-border bg-surface text-fg hover:bg-bg-subtle",
+              "transition-colors duration-[120ms] ease-out",
             )}
           >
-            <UserCircle weight="regular" className="h-5 w-5" aria-hidden="true" />
+            {/* The signed-in learner's initials (the same avatar as Account and
+                Sign in), or a neutral glyph before a profile exists. */}
+            <span className="sr-only">{t("nav.account")}</span>
+            {profile ? (
+              <ProfileAvatar seed={profile.avatarSeed} name={profile.fullName} size={30} />
+            ) : (
+              <UserCircle weight="regular" className="h-5 w-5" aria-hidden="true" />
+            )}
           </NavLink>
         </div>
       </nav>

@@ -12,10 +12,13 @@ export interface ProgressStagesProps {
 }
 
 /**
- * ProgressStages: a compact clinical stepper. Square numbered chips joined by
- * hairlines; the current stage is filled with the accent and carries
- * aria-current, completed stages carry a check. State is conveyed by icon,
- * text and position, never colour alone.
+ * ProgressStages: a compact clinical stepper that always fits its row (no
+ * horizontal scroll, owner 2026-10-21). Each stage is an equal segment with a
+ * 2 px rule on top (cobalt once reached), its number and its label. On a
+ * narrow row only the current stage keeps its visible label and takes the
+ * spare width; the others show their number and keep the label for assistive
+ * tech and as a tooltip. State is conveyed by the check, the rule, text and
+ * aria-current, never colour alone.
  */
 export function ProgressStages({
   stages,
@@ -24,23 +27,33 @@ export function ProgressStages({
   ariaLabel,
 }: ProgressStagesProps) {
   return (
-    <nav aria-label={ariaLabel}>
-      <ol
-        tabIndex={0}
-        aria-label={ariaLabel}
-        className="flex items-center overflow-x-auto"
-      >
+    <nav aria-label={ariaLabel} className="min-w-0">
+      <ol aria-label={ariaLabel} className="flex w-full min-w-0 items-stretch gap-1">
         {stages.map((stage, i) => {
           const status =
             i < currentIndex ? "done" : i === currentIndex ? "current" : "todo";
+          const label = stage.label[lang];
           return (
-            <li key={stage.key} className="flex shrink-0 items-center">
+            <li
+              key={stage.key}
+              title={label}
+              className={cn(
+                "flex min-w-0 flex-col gap-1",
+                status === "current" ? "flex-[3] md:flex-[1.75]" : "flex-1",
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "h-0.5 w-full",
+                  status === "todo" ? "bg-border-strong" : "bg-brand",
+                )}
+              />
               <span
                 aria-current={status === "current" ? "step" : undefined}
                 className={cn(
-                  "inline-flex h-7 items-center gap-1.5 rounded-chip px-2 text-xs font-medium",
-                  "transition-colors duration-[120ms] ease-out",
-                  status === "current" && "bg-fg text-bg",
+                  "flex min-w-0 items-center gap-1.5 text-xs",
+                  status === "current" && "font-semibold text-fg",
                   status === "done" && "text-fg",
                   status === "todo" && "text-muted",
                 )}
@@ -48,29 +61,23 @@ export function ProgressStages({
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "grid h-4 w-4 place-items-center rounded-chip font-mono text-[0.625rem] font-semibold",
-                    status === "current" && "bg-bg/20 text-bg",
+                    "grid h-4 w-4 shrink-0 place-items-center rounded-chip font-mono text-[0.625rem] font-semibold",
+                    status === "current" && "bg-fg text-bg",
                     status === "done" && "bg-brand text-on-brand",
                     status === "todo" && "border border-border-strong text-muted",
                   )}
                 >
-                  {status === "done" ? (
-                    <Check weight="bold" className="h-2.5 w-2.5" />
-                  ) : (
-                    i + 1
-                  )}
+                  {status === "done" ? <Check weight="bold" className="h-2.5 w-2.5" /> : i + 1}
                 </span>
-                {stage.label[lang]}
-              </span>
-              {i < stages.length - 1 ? (
                 <span
-                  aria-hidden="true"
                   className={cn(
-                    "mx-1 h-px w-5 shrink-0",
-                    i < currentIndex ? "bg-brand" : "bg-border-strong",
+                    "min-w-0 truncate",
+                    status !== "current" && "sr-only md:not-sr-only",
                   )}
-                />
-              ) : null}
+                >
+                  {label}
+                </span>
+              </span>
             </li>
           );
         })}

@@ -69,7 +69,7 @@
   /* ---- Chart series (categorical, no decorative use) ---- */
   --chart-1: #2450c8;
   --chart-2: #1b6079;
-  --chart-3: #6a3fc0;
+  --chart-3: #6f4e37; /* umber (renewal 2: no violet series) */
   --chart-4: #8f3f06;
 
   /* ---- Feedback dual-axis (orthogonal, always paired with a glyph) ---- */
@@ -155,7 +155,7 @@
 
   --chart-1: #9db0ff;
   --chart-2: #5fb8d4;
-  --chart-3: #b39dfa;
+  --chart-3: #c9a27e; /* umber, dark */
   --chart-4: #fbbf24;
 
   --axis-clinical: #5fb8d4;

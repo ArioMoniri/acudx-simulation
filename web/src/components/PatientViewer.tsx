@@ -196,11 +196,13 @@ export function SymptomSummary({
 
   return (
     <p
-      className={cn("flex items-center gap-1 text-[11px] leading-tight", className)}
+      className={cn("flex min-w-0 items-start gap-1 text-[11px] leading-snug", className)}
       aria-label={t("patientviewer.summaryLabel")}
     >
-      <Pulse weight="bold" className="h-3 w-3 shrink-0" aria-hidden />
-      <span className="truncate">{labels.join(" · ")}</span>
+      <Pulse weight="bold" className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
+      {/* Wraps instead of truncating: next to a thumbnail this line is where the
+          signs are read, so no sign may be cut to an ellipsis. */}
+      <span className="min-w-0 break-words">{labels.join(" · ")}</span>
     </p>
   );
 }

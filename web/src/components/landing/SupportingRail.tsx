@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
 import {
-  Sparkle,
+  Files,
   UsersThree,
   ChartLineUp,
   Buildings,
@@ -24,7 +24,7 @@ interface RailItem {
 
 /** The platform story that surrounds the learner loop, each opening a screen. */
 const ITEMS: readonly RailItem[] = [
-  { key: "cases", icon: Sparkle, to: "/cases" },
+  { key: "cases", icon: Files, to: "/cases" },
   { key: "rooms", icon: UsersThree, to: "/rooms" },
   { key: "progress", icon: ChartLineUp, to: "/progress" },
   { key: "institution", icon: Buildings, to: "/institution" },

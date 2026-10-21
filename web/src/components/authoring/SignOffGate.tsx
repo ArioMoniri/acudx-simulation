@@ -266,7 +266,7 @@ export function SignOffGate() {
       <div className="rounded-control border border-border bg-surface p-4">
         <div className="flex items-start gap-3">
           <span
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-brand-tint text-brand"
+            className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-brand"
             aria-hidden
           >
             <Certificate weight="bold" className="h-5 w-5" />

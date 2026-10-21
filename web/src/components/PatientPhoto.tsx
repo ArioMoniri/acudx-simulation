@@ -5,6 +5,7 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { ArrowsOutSimple, Pulse, Waveform } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
@@ -18,6 +19,42 @@ import {
   type PhotoSex,
 } from "@/data/patientPhotos";
 import { hasTalkVideo, talkVideoUrl } from "@/data/talkVideos";
+
+/**
+ * Below this rendered width a photo is a thumbnail (the chart header, the
+ * storyboard, the flowsheet monitor card, a participant row): it draws the face
+ * only. No text overlay (clinical-signs pill, caption, speaking label) and no
+ * corner icon is painted on a thumbnail, because at 40 to 96 px they cover the
+ * face and clip mid-word (owner report 2026-10-21). The surface around every
+ * thumbnail prints the same signs as text next to the photo.
+ */
+export const PHOTO_THUMBNAIL_MAX = 160;
+
+/** Whether a photo of this rendered width may carry text overlays. */
+export function photoAllowsOverlays(width: number): boolean {
+  return width >= PHOTO_THUMBNAIL_MAX;
+}
+
+/**
+ * The rendered width of an element, live. Starts at 0 (a thumbnail) so nothing
+ * is overlaid before the first measurement; where ResizeObserver is missing the
+ * width is read once on mount.
+ */
+function useRenderedWidth<T extends HTMLElement>(): [RefObject<T>, number] {
+  const ref = useRef<T>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const read = () => setWidth(Math.round(el.getBoundingClientRect().width));
+    read();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width];
+}
 
 /** Whether the viewer prefers reduced motion (SSR-safe, live-updating). */
 function usePrefersReducedMotion(): boolean {
@@ -257,6 +294,8 @@ export function PatientPhoto({
   const physio = useMemo(() => physiology(signs), [signs]);
   const { filter, cyanosis, sweat, flush, droop, pallor, distress } = physio;
   const reduced = usePrefersReducedMotion();
+  const [figureRef, renderedWidth] = useRenderedWidth<HTMLElement>();
+  const roomy = photoAllowsOverlays(renderedWidth);
 
   const isSpeaking = speaking || Boolean(utterance && utterance.trim().length > 0);
 
@@ -398,7 +437,7 @@ export function PatientPhoto({
       muted
       playsInline
       preload="auto"
-      className="h-full w-full object-cover"
+      className="h-full w-full object-cover object-[50%_38%]"
       style={filter ? { filter } : undefined}
     />
   ) : useVideo ? (
@@ -413,7 +452,7 @@ export function PatientPhoto({
       muted
       playsInline
       preload="auto"
-      className="h-full w-full object-cover"
+      className="h-full w-full object-cover object-[50%_38%]"
       style={filter ? { filter } : undefined}
     />
   ) : (
@@ -422,7 +461,7 @@ export function PatientPhoto({
       alt={alt ?? "Synthetic patient portrait — not a real individual"}
       loading="lazy"
       decoding="async"
-      className="h-full w-full object-cover"
+      className="h-full w-full object-cover object-[50%_38%]"
       style={filter ? { filter } : undefined}
       draggable={false}
     />
@@ -430,8 +469,10 @@ export function PatientPhoto({
 
   return (
     <figure
+      ref={figureRef}
+      data-patient-photo={roomy ? "full" : "thumbnail"}
       className={cn(
-        "@container relative overflow-hidden rounded-control bg-monitor-border/40",
+        "relative isolate shrink-0 overflow-hidden rounded-control bg-bg-inset",
         className,
       )}
     >
@@ -557,19 +598,19 @@ export function PatientPhoto({
       {/* Top-left status stack (the expand affordance owns the top-right): the
           Speaking pill, and — for reduced-motion viewers, who don't see the
           animated signs — a "clinical signs" caption naming what the tint shows. */}
-      {isSpeaking || reducedSigns.length > 0 ? (
+      {roomy && (isSpeaking || reducedSigns.length > 0) ? (
         <div className="pointer-events-none absolute left-1.5 top-1.5 z-10 flex max-w-[calc(100%-2.75rem)] flex-col items-start gap-1">
           {isSpeaking ? (
-            <span className="inline-flex items-center gap-1 rounded-pill bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-sm backdrop-blur-sm">
+            <span className="inline-flex items-center gap-1 rounded-chip bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
               <Waveform weight="bold" className="h-3 w-3" aria-hidden />
               {t("avatar3d.speaking", { defaultValue: "Speaking" })}
             </span>
           ) : null}
           {reducedSigns.length > 0 ? (
-            // Hidden on thumbnails narrower than 160 px, where it clipped over the face
-            // (redesign review 2026-10-20); the same signs stay in the sign line and
-            // flowsheet next to every thumbnail, so no information is lost.
-            <span className="hidden items-start gap-1 rounded-pill bg-black/55 px-1.5 py-0.5 text-[10px] font-medium leading-tight text-white shadow-sm backdrop-blur-sm @[160px]:inline-flex">
+            // Drawn only when the photo is at least PHOTO_THUMBNAIL_MAX wide (measured,
+            // not a container query, so no engine can let it through onto a
+            // thumbnail); the same signs stay in the sign line next to every thumbnail.
+            <span className="inline-flex items-start gap-1 rounded-chip bg-black/60 px-1.5 py-0.5 text-[10px] font-medium leading-tight text-white">
               <Pulse weight="bold" className="mt-px h-3 w-3 shrink-0" aria-hidden />
               <span>
                 {t("patientviewer.clinicalSigns", { defaultValue: "Clinical signs" })}
@@ -580,8 +621,16 @@ export function PatientPhoto({
         </div>
       ) : null}
 
-      {caption ? (
-        <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-4 text-[11px] leading-tight text-white/90">
+      {/* A thumbnail never shows the speaking label: a 2 px ring says it instead. */}
+      {!roomy && isSpeaking ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-10 rounded-[inherit] ring-2 ring-inset ring-[color:var(--state-normal)]"
+        />
+      ) : null}
+
+      {roomy && caption ? (
+        <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-black/60 px-2 py-1 text-[11px] leading-tight text-white">
           {caption}
         </figcaption>
       ) : null}
@@ -595,9 +644,14 @@ export function PatientPhoto({
           className="group absolute inset-0 z-20 flex cursor-zoom-in items-start justify-end rounded-[inherit] p-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-0"
         >
           {showExpand ? (
+            // On a thumbnail the corner icon only appears on hover or keyboard
+            // focus, so it never sits on the face as a stray glyph at rest.
             <span
               aria-hidden
-              className="pointer-events-none inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-white opacity-80 shadow-sm backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none"
+              className={cn(
+                "pointer-events-none inline-flex h-5 w-5 items-center justify-center rounded-chip bg-black/60 text-white transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none",
+                roomy ? "opacity-80" : "opacity-0",
+              )}
             >
               <ArrowsOutSimple weight="bold" className="h-3 w-3" />
             </span>

@@ -112,9 +112,11 @@ export function ChartReviewTab({ caseInstance, lang }: ChartReviewTabProps) {
         </p>
 
         <p className="mt-3 text-sm leading-relaxed text-fg">
-          {t("ehr.chartReview.triageBody", {
+          {/* The complaint is the patient's own words, so it is quoted, not
+              spliced into a clinician sentence ("presenting with I have had"). */}
+          {t("renewal2.chartReview.triageBody", {
             age: patient.ageYears,
-            complaint: pick(encounter.reason, lang),
+            complaint: pick(encounter.reason, lang).trim().replace(/\.+$/, ""),
           })}
         </p>
 
@@ -147,7 +149,7 @@ export function ChartReviewTab({ caseInstance, lang }: ChartReviewTabProps) {
         >
           {t("ehr2.chartReview.summaryHeading")}
         </SectionLabel>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-px overflow-hidden border border-border bg-border sm:grid-cols-4">
           <ActivityStat
             icon={<ChatCircleText weight="bold" className="h-4 w-4" />}
             value={counts.question}
@@ -204,7 +206,7 @@ export function ChartReviewTab({ caseInstance, lang }: ChartReviewTabProps) {
                     onClick={() => setFilter(f.key)}
                     aria-pressed={active}
                     className={cn(
-                      "rounded-full px-2.5 py-1 text-xs font-medium",
+                      "rounded-chip px-2 py-0.5 text-xs font-medium",
                       "transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                       active
                         ? "bg-brand text-on-brand"
@@ -220,11 +222,11 @@ export function ChartReviewTab({ caseInstance, lang }: ChartReviewTabProps) {
         </div>
 
         {timeline.length === 0 ? (
-          <p className="rounded-control border border-dashed border-border bg-bg-subtle px-3 py-6 text-center text-xs italic text-muted">
+          <p className="border-t border-border pt-3 text-xs text-muted">
             {t("ehr.chartReview.timelineEmpty")}
           </p>
         ) : shown.length === 0 ? (
-          <p className="rounded-control border border-dashed border-border bg-bg-subtle px-3 py-6 text-center text-xs italic text-muted">
+          <p className="border-t border-border pt-3 text-xs text-muted">
             {t("ehr2.chartReview.emptyFiltered")}
           </p>
         ) : (
@@ -262,7 +264,7 @@ function ActivityStat({
   label: string;
 }) {
   return (
-    <div className="rounded-control border border-border bg-bg-subtle px-3 py-2.5">
+    <div className="bg-surface px-3 py-2">
       <Stat size="sm" icon={icon} value={value} label={label} />
     </div>
   );

@@ -42,7 +42,7 @@ function HealthTile({
 }) {
   return (
     <Card padding="sm" className="flex items-start gap-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-brand-tint text-brand" aria-hidden>
+      <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-brand" aria-hidden>
         <Icon weight="bold" className="h-4.5 w-4.5" />
       </span>
       <div className="flex min-w-0 flex-col gap-0.5">

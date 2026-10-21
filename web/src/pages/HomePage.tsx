@@ -270,7 +270,9 @@ export function HomePage() {
 
       <motion.section {...strip} aria-label={t("home.statsHeading")}>
         <SectionLabel className="mb-2">{t("home.statsHeading")}</SectionLabel>
-        <Card padding="none" className="overflow-hidden">
+        {/* Figures on the page ground between two rules (Stripe reporting), not
+            a boxed tile row. */}
+        <div className="border-y border-border">
           <div className="grid grid-cols-1 divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             {dashboardStats.map((s) => {
               const Icon = statIcon[s.key];
@@ -286,7 +288,7 @@ export function HomePage() {
                   }
                 : undefined;
               return (
-                <div key={s.key} className="px-4 py-3">
+                <div key={s.key} className="py-3 sm:px-4 sm:first:ps-0">
                   <Stat
                     size="md"
                     label={t(`stats.${s.key}`)}
@@ -299,7 +301,7 @@ export function HomePage() {
               );
             })}
           </div>
-        </Card>
+        </div>
       </motion.section>
 
       {/* Zone 2 — asymmetric body: recommended work (wide) + snapshot feed. */}
@@ -407,7 +409,7 @@ export function HomePage() {
                   ))}
                 </motion.ul>
               ) : (
-                <div className="px-4 py-6 text-center">
+                <div className="px-4 py-4">
                   <p className="text-[0.8125rem] font-medium text-fg">
                     {t("home.empty.feedbackTitle")}
                   </p>

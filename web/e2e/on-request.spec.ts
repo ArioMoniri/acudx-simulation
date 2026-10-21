@@ -363,9 +363,9 @@ test.describe("cases are generated on request", () => {
     // step names the generation thread of the case the server returned.
     expect(first.thread_id, "the step is bound to the generated case's thread").toBe(gw.served.at(-1)!.thread_id);
     const storyboard = page.getByRole("complementary", { name: "Storyboard" }).filter({ visible: true }).first();
-    // MiniVital: <p>LABEL</p><p>VALUE<span>unit</span></p>
+    // MiniVital (renewal 2): <dt>LABEL</dt><dd>VALUE<span>unit</span></dd>, a flowsheet row.
     const read = async (label: string): Promise<number> => {
-      const value = storyboard.getByText(label, { exact: true }).first().locator("xpath=following-sibling::p[1]");
+      const value = storyboard.getByText(label, { exact: true }).first().locator("xpath=following-sibling::*[1]");
       const m = ((await value.innerText().catch(() => "")) || "").match(/[0-9]+(?:\.[0-9]+)?/);
       return m ? Number(m[0]) : Number.NaN;
     };

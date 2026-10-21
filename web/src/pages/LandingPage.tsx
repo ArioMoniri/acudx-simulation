@@ -53,8 +53,8 @@ export function LandingPage() {
             tone="marketing"
             className="mt-6"
             eyebrow={t("landing2.hero.eyebrow")}
-            title={t("landing.hero.title")}
-            description={t("landing.hero.subtitle")}
+            title={t("renewal2.landing.title")}
+            description={t("renewal2.landing.subtitle")}
           />
 
           <div className="mt-6 flex flex-wrap items-center gap-2">

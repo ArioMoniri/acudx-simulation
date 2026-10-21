@@ -17,7 +17,8 @@ import {
   TrendDown,
   Minus,
   CalendarCheck,
-  Sparkle,
+  Plant,
+  Play,
   Info,
   Heartbeat,
   ChatCentered,
@@ -1407,7 +1408,7 @@ function ReviewTableRow({
           {card.state === "due" ? (
             <Fire weight="fill" className="h-3 w-3" aria-hidden />
           ) : card.state === "learning" ? (
-            <Sparkle weight="fill" className="h-3 w-3" aria-hidden />
+            <Plant weight="fill" className="h-3 w-3" aria-hidden />
           ) : (
             <CalendarCheck weight="bold" className="h-3 w-3" aria-hidden />
           )}
@@ -1532,7 +1533,7 @@ function ReviewSection() {
         {!session && dueCount > 0 ? (
           <Button
             size="sm"
-            leadingIcon={<Sparkle weight="bold" className="h-4 w-4" />}
+            leadingIcon={<Play weight="bold" className="h-4 w-4" />}
             onClick={() => startSession(queue)}
           >
             {t("progress2.review.start")}
@@ -1817,7 +1818,7 @@ function SelfComparisonCard() {
     <Card padding="lg" className="flex flex-col gap-4">
       <div className="flex items-start gap-3">
         <span
-          className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-control bg-bg-subtle text-muted"
+          className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-muted"
           aria-hidden
         >
           <Eye weight="bold" className="h-4.5 w-4.5" />

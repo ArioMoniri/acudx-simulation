@@ -37,7 +37,7 @@ export function PrehospitalPanel({ caseInstance, lang, given, onGiveHandover }: 
       className="flex flex-col gap-3 rounded-card border border-border bg-surface p-4"
     >
       <div className="flex items-start gap-2.5">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-control bg-brand-tint text-brand">
+        <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center text-brand">
           <Ambulance weight="bold" className="h-5 w-5" aria-hidden />
         </span>
         <div className="min-w-0">

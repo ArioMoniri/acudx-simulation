@@ -194,11 +194,13 @@ function Lobby() {
             <p className="text-sm text-muted">{t("rooms.lobby.empty")}</p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="divide-y divide-border border-y border-border">
             {openRooms.map((room) => (
-              <RoomCard key={room.id} room={room} lang={lang} />
+              <li key={room.id}>
+                <RoomCard room={room} lang={lang} />
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </motion.div>
 

@@ -1,0 +1,16 @@
+{
+  "renewal2": {
+    "landing": {
+      "title": "Öyküyü alın, tetkikleri isteyin, sonra neyi kaçırdığınızı görün.",
+      "subtitle": "Tıp öğrencileri ve asistanlar için bir klinik simülatör. Sentetik bir hastayı bir HBS içinde yönetirsiniz; değerlendirme, akıl yürütmenizi kaynaklı kılavuzlara göre puanlar ve güveninizin doğruluğunuzla ne kadar örtüştüğünü gösterir."
+    },
+    "chartReview": {
+      "triageBody": "{{age}} yaşında hasta, gelişte monitöre bağlandı. Hastanın kendi ifadesiyle: “{{complaint}}.”"
+    }
+  },
+  "ehr": {
+    "chartReview": {
+      "triageVitals": "Başvuru yaşamsal bulguları"
+    }
+  }
+}

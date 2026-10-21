@@ -213,33 +213,58 @@ export function ActivityTabs({
     [state.results.length, state.orders.length, state.problemList.length],
   );
 
-  // Scroll shadows: the six-tab strip overflows on narrow viewports, so a soft
-  // fade at each end signals there is more to reach. Opacity only (no layout),
-  // and reduced-motion collapses the fade transition at the CSS level.
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ start: false, end: false });
-  const syncEdges = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
-    const start = el.scrollLeft > 1;
-    const end = el.scrollLeft < max - 1;
-    setEdges((prev) =>
-      prev.start === start && prev.end === end ? prev : { start, end },
-    );
+  // No horizontal scroll (owner, 2026-10-21). Two hidden measuring copies of
+  // the strip give the width one row needs with icons and without; the strip
+  // takes the first that fits (icons, then labels only), and below that becomes
+  // a 4-column grid (two rows of four, icon over label) instead of a rail the
+  // learner has to swipe. Every tab stays a real tab in every layout.
+  const railRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const measureCompactRef = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState<"row" | "compact" | "grid">("row");
+  const fit = useCallback(() => {
+    const rail = railRef.current;
+    const probe = measureRef.current;
+    const compactProbe = measureCompactRef.current;
+    if (!rail || !probe || !compactProbe) return;
+    const style = getComputedStyle(rail);
+    const inner =
+      rail.clientWidth - parseFloat(style.paddingLeft || "0") - parseFloat(style.paddingRight || "0");
+    const next =
+      probe.scrollWidth <= inner ? "row" : compactProbe.scrollWidth <= inner ? "compact" : "grid";
+    setLayout((prev) => (prev === next ? prev : next));
   }, []);
   useEffect(() => {
-    syncEdges();
-    const el = scrollRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(syncEdges);
-    ro.observe(el);
+    fit();
+    const rail = railRef.current;
+    if (!rail || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(rail);
     return () => ro.disconnect();
-  }, [syncEdges]);
-  // Re-measure when tab widths change (a new count badge appears / active tab).
+  }, [fit]);
+  // Re-measure when a label changes width (a count badge appears, language).
   useEffect(() => {
-    syncEdges();
-  }, [syncEdges, activeTab, counts]);
+    fit();
+  }, [fit, activeTab, counts, unseenResults, t]);
+
+  const badgeFor = (key: TabKey) => {
+    const count = (counts as Record<string, number>)[key];
+    if (key === "results" && unseenResults > 0) {
+      return (
+        <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-chip bg-brand px-1 font-mono text-[0.625rem] font-semibold leading-4 text-on-brand">
+          {t("ehr.tabs.unseenBadge", { count: unseenResults })}
+        </span>
+      );
+    }
+    if (typeof count === "number" && count > 0) {
+      return (
+        <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-chip bg-bg-inset px-1 font-mono text-[0.625rem] font-semibold leading-4 text-muted group-data-[state=active]:bg-brand-tint group-data-[state=active]:text-brand">
+          {count}
+        </span>
+      );
+    }
+    return null;
+  };
 
   function handleValueChange(value: string) {
     const tab = TABS.find((x) => x.key === value);
@@ -261,49 +286,77 @@ export function ActivityTabs({
       className="flex flex-col gap-4"
     >
       {/* Chart nav: a flat Epic-like activity strip. Dense icon+label tabs on a
-          hairline baseline, a 2 px accent underline on the active tab, mono
-          counts, and soft scroll fades when the strip overflows. */}
-      <div className="relative -mx-4 border-b border-border bg-surface px-4 md:-mx-6 md:px-6">
+          hairline baseline, a 2 px accent underline on the active tab and mono
+          counts. One row with icons, else one row of labels, else a 4 x 2 grid. */}
+      <div
+        ref={railRef}
+        className="relative -mx-4 border-b border-border bg-surface px-4 md:-mx-6 md:px-6"
+      >
+        {/* Measuring copies: one row at natural width with and without icons,
+            never seen or announced. */}
         <div
-          ref={scrollRef}
-          onScroll={syncEdges}
-          className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-hidden
+          className="pointer-events-none invisible absolute inset-x-0 top-0 h-0 overflow-hidden"
         >
-          <TabsList
-            aria-label={t("ehr.tabs.navLabel")}
-            variant="underline"
-            className="w-max min-w-full gap-0 border-b-0"
-          >
-            {TABS.map(({ key, icon: TabIcon }) => {
-              const count = (counts as Record<string, number>)[key];
-              const isActive = key === activeTab;
-              return (
-                <TabsTrigger
-                  key={key}
-                  value={key}
-                  aria-current={isActive ? "page" : undefined}
-                  className="group relative whitespace-nowrap px-2.5 pb-2 pt-2.5 text-muted data-[state=inactive]:hover:text-fg data-[state=active]:text-fg"
-                >
-                  <TabIcon
-                    weight="bold"
-                    className="h-4 w-4 text-subtle transition-colors duration-[120ms] ease-out group-data-[state=active]:text-brand"
-                    aria-hidden
-                  />
-                  {t(`ehr.tabs.${camel(key)}`)}
-                  {key === "results" && unseenResults > 0 ? (
-                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-chip bg-brand px-1 font-mono text-[0.625rem] font-semibold leading-4 text-on-brand">
-                      {t("ehr.tabs.unseenBadge", { count: unseenResults })}
-                    </span>
-                  ) : typeof count === "number" && count > 0 ? (
-                    <span className="ms-1 inline-flex min-w-4 items-center justify-center rounded-chip bg-bg-inset px-1 font-mono text-[0.625rem] font-semibold leading-4 text-muted group-data-[state=active]:bg-brand-tint group-data-[state=active]:text-brand">
-                      {count}
-                    </span>
-                  ) : null}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
+          <div ref={measureRef} className="flex w-max whitespace-nowrap">
+            {TABS.map(({ key, icon: TabIcon }) => (
+              <span
+                key={key}
+                className="inline-flex items-center gap-1.5 px-2.5 text-[0.8125rem] font-medium"
+              >
+                <TabIcon weight="bold" className="h-4 w-4" />
+                {t(`ehr.tabs.${camel(key)}`)}
+                {badgeFor(key)}
+              </span>
+            ))}
+          </div>
+          <div ref={measureCompactRef} className="flex w-max whitespace-nowrap">
+            {TABS.map(({ key }) => (
+              <span key={key} className="inline-flex items-center px-2 text-[0.8125rem] font-medium">
+                {t(`ehr.tabs.${camel(key)}`)}
+                {badgeFor(key)}
+              </span>
+            ))}
+          </div>
         </div>
+        <TabsList
+          aria-label={t("ehr.tabs.navLabel")}
+          variant="underline"
+          data-layout={layout}
+          className={cn(
+            "gap-0 border-b-0",
+            layout === "grid" ? "grid w-full grid-cols-4" : "flex w-full flex-nowrap",
+          )}
+        >
+          {TABS.map(({ key, icon: TabIcon }) => {
+            const isActive = key === activeTab;
+            return (
+              <TabsTrigger
+                key={key}
+                value={key}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "group relative text-muted data-[state=inactive]:hover:text-fg data-[state=active]:text-fg",
+                  layout === "row"
+                    ? "whitespace-nowrap px-2.5 pb-2 pt-2.5"
+                    : layout === "compact"
+                      ? "whitespace-nowrap px-2 pb-2 pt-2.5"
+                      : "min-h-12 min-w-0 flex-col justify-center gap-0.5 px-1 pb-1.5 pt-2 text-center text-[0.6875rem] leading-tight sm:flex-row sm:gap-1.5 sm:text-[0.8125rem]",
+                )}
+              >
+                <TabIcon
+                  weight="bold"
+                  className={cn("h-4 w-4 shrink-0 text-subtle transition-colors duration-[120ms] ease-out group-data-[state=active]:text-brand", layout === "compact" && "hidden")}
+                  aria-hidden
+                />
+                <span className={cn(layout === "grid" && "line-clamp-2 min-w-0 break-words")}>
+                  {t(`ehr.tabs.${camel(key)}`)}
+                </span>
+                {badgeFor(key)}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
         {/* Non-stealing notification: a landing result is announced here instead
             of moving the tab strip. Always mounted so the change is spoken. A
             plain polite live region, not role=status: RouteFallback's status
@@ -311,20 +364,6 @@ export function ActivityTabs({
         <span aria-live="polite" aria-atomic="true" className="sr-only">
           {unseenResults > 0 ? t("ehr.tabs.newResults", { count: unseenResults }) : ""}
         </span>
-        <span
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute inset-y-px left-0 w-6 bg-surface transition-opacity duration-[120ms] [mask-image:linear-gradient(to_right,black,transparent)]",
-            edges.start ? "opacity-100" : "opacity-0",
-          )}
-        />
-        <span
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute inset-y-px right-0 w-6 bg-surface transition-opacity duration-[120ms] [mask-image:linear-gradient(to_left,black,transparent)]",
-            edges.end ? "opacity-100" : "opacity-0",
-          )}
-        />
       </div>
 
       <TabsContent value="chart-review">

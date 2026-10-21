@@ -1,0 +1,16 @@
+{
+  "renewal2": {
+    "landing": {
+      "title": "Take the history, order the tests, then see what you missed.",
+      "subtitle": "A clinical simulator for medical students and residents. You work a synthetic patient inside an EHR; the debrief scores your reasoning against cited guidance and shows how well your confidence matched your accuracy."
+    },
+    "chartReview": {
+      "triageBody": "{{age}}-year-old, placed on the monitor at arrival. In the patient's words: “{{complaint}}.”"
+    }
+  },
+  "ehr": {
+    "chartReview": {
+      "triageVitals": "Presenting vitals"
+    }
+  }
+}
