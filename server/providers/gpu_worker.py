@@ -329,7 +329,7 @@ class WorkerManager:
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  poll_interval_s: float = 5.0, boot_timeout_s: float = 900.0,
                  ready_timeout_s: float = 1500.0, boot_log_interval_s: float = 60.0,
-                 health_ttl_s: float = 10.0):
+                 health_ttl_s: float = 30.0):
         self.settings = settings
         self.store = store or WorkerStore(settings.acudx_db_path)
         self._client = client

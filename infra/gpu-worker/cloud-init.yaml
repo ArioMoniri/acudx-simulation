@@ -56,7 +56,8 @@
 #                 40 GB card: worker 7 died with "Engine core initialization failed"; use 32B on 80 GB cards)
 #   Chatterbox    about 4 GB (Multilingual 500M, fp16)
 #   speaches      about 3 GB (large-v3-turbo fp16; the turbo decoder is 4 layers)
-#   Kokoro        under 1 GB
+#   Kokoro        under 1 GB per replica (two replicas, kokoro and kokoro2)
+#   chatterbox2   about 4 GB, second Chatterbox replica, started only on cards with 70 GB or more
 #   headroom      about 8 GB for CUDA context, batching and the MuseTalk avatar runner
 #   avatar        MuseTalk 1.5 fp16 UNet + VAE + whisper-tiny + face detector, shared by every call;
 #                 avatar.sh starts it only when nvidia-smi shows AVATAR_REQUIRED_MB free after the

@@ -109,7 +109,8 @@ def _app(tmp_path, *, runner: Runner | None = None, worker: FakeWorkerManager | 
     s = Settings(**base)
     store = RegistryStore(s.acudx_db_path, secret_key=KEY)
     resolver = RegistryResolver(store, s, worker_manager=worker)
-    worker_app = build_worker_double(WorkerScenario())
+    scenario = WorkerScenario()
+    worker_app = build_worker_double(scenario)
     (runner or Runner()).mount(worker_app)
     client = httpx.AsyncClient(transport=HostRouter({"worker.test": worker_app}))
     app = FastAPI()
@@ -117,6 +118,7 @@ def _app(tmp_path, *, runner: Runner | None = None, worker: FakeWorkerManager | 
     app.state.voice = VoiceService(s, resolver, telemetry=TelemetryRecorder(s.acudx_db_path), client=client)
     app.state.auth = AuthService(store, UserRoleStore(s.acudx_db_path), env_mode="local")
     app.state.avatar_sessions = SessionStore()
+    app.state.worker_scenario = scenario
     app.include_router(router)
     app.include_router(openai_router)
     return app, store
@@ -375,6 +377,20 @@ def test_preroll_can_be_turned_off_and_takes_its_length_from_the_settings(tmp_pa
         lines = _utterances(runner_sockets[0].sent)
         assert [u["bytes"] for u in lines[:-1]] == expected and lines[-1]["begin"]["sample_rate"] == 24000
         assert (r.json()["preroll"] or {}).get("ms") == (preroll or None)
+
+
+def test_offer_prewarms_the_tts_connection_the_first_line_will_use(tmp_path, runner_sockets):
+    app, store = _app(tmp_path, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+    # An English-only row is skipped for a Turkish call; the worker's Chatterbox is warmed with its bearer.
+    store.create_provider(ProviderIn(kind="tts", name="kokoro-en", base_url="http://worker.test/tts-en", model="kokoro",
+                            extra={"adapter": "openai_compatible", "languages": ["en"]}))
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json={**SESSION, "lang": "tr"}, headers=USER).json()["session_id"]
+        assert c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"},
+                      headers=USER).status_code == 200
+        assert c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "Merhaba."},
+                      headers=USER).status_code == 200
+    assert app.state.worker_scenario.tts_health_hits == 1
 
 
 def test_stream_stall_measures_how_far_the_tts_fell_behind_real_time(tmp_path, runner_sockets, monkeypatch):

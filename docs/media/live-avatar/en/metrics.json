@@ -1,60 +1,66 @@
 {
-  "captured_at": "2026-10-21T00:03:00.088Z",
-  "base_url": "http://127.0.0.1:4195",
+  "captured_at": "2026-10-21T04:00:33.822Z",
+  "base_url": "http://127.0.0.1:4197",
   "lang": "en",
   "question": "When did the pain start, and where do you feel it?",
   "metrics": {
-    "prepareMs": 31791.9,
-    "answerMs": 429,
-    "firstFrameMs": 1501,
-    "speechStartMs": 3512,
-    "lipLagMs": -320,
-    "ttsMs": 600.9,
-    "firstAudioMs": 602.1,
+    "prepareMs": 38982.4,
+    "answerMs": 242,
+    "firstFrameMs": 3656,
+    "speechStartMs": 1307,
+    "lipLagMs": 0,
+    "ttsMs": 625.1,
+    "firstAudioMs": 626.1,
     "provider": "worker-kokoro",
-    "samples": 156,
+    "samples": 583,
     "speak": {
       "provider": "worker-kokoro",
       "adapter": "openai_compatible",
       "model": "kokoro",
-      "voice_id": "am_michael",
+      "voice_id": "af_heart",
       "source": "registry",
       "transport": "stream",
-      "tts_ms": 600.9,
-      "first_chunk_ms": 602.1,
-      "stream_ms": 798.1,
+      "tts_ms": 625.1,
+      "first_chunk_ms": 626.1,
+      "stream_ms": 932.3,
       "queued_ms": 0,
-      "audio_bytes": 392774,
-      "audio_duration_ms": 8183,
+      "audio_bytes": 514320,
+      "audio_duration_ms": 10715,
       "sample_rate": 24000,
-      "link_connect_ms": 704.9,
+      "stream_stall_ms": 0,
+      "preroll": {
+        "ms": 800,
+        "frames": 40,
+        "sent_ms": 63.9
+      },
+      "link_connect_ms": 449.7,
       "runner": {
-        "frames": 410,
+        "frames": 536,
         "first_frame_ms": 0.2,
-        "elapsed_ms": 109.1
+        "elapsed_ms": 240.7
       }
     }
   },
   "rtc": {
-    "audioPackets": 1487,
-    "audioEnergy": 0.12249045157967525,
-    "videoFrames": 552,
+    "audioPackets": 1218,
+    "audioEnergy": 0.21491933274871874,
+    "videoFrames": 607,
     "videoFps": 25,
-    "rttMs": 259,
-    "audioJitterMs": 1332,
-    "videoJitterMs": 763
+    "rttMs": 70,
+    "audioJitterMs": 72,
+    "videoJitterMs": 37
   },
   "offline": {
-    "audio_peak_rms": 0.10091012832062506,
-    "voiced_ms": 4080,
-    "frames": 782,
-    "audio_to_lip_lag_ms": -600,
+    "audio_peak_rms": 0.09150477652138442,
+    "voiced_ms": 5240,
+    "frames": 635,
+    "audio_to_lip_lag_ms": 0,
     "note": "positive = mouth motion follows the audio"
   },
   "runner": {
     "calls": [
       {
-        "id": "781c889b",
+        "id": "0fe7aac4",
         "tuning": {
           "batch_size": 4,
           "lookahead_frames": 4,
@@ -62,15 +68,15 @@
           "av_shift_ms": 160
         },
         "speaking": false,
-        "warm_up_ms": 2035.7,
-        "infer_fps": 101,
-        "inferred_frames": 208,
+        "warm_up_ms": 51.3,
+        "infer_fps": 48.5,
+        "inferred_frames": 296,
         "sender_queue": {
           "audio_frames": 8,
-          "video_frames": 4
+          "video_frames": 3
         },
-        "sent_frames": 764,
-        "underruns": 24,
+        "sent_frames": 624,
+        "underruns": 0,
         "out_fps": 25
       }
     ],
@@ -79,14 +85,14 @@
     "vram": {
       "name": "NVIDIA H100 80GB HBM3",
       "total_mb": 81079,
-      "free_mb": 19405,
-      "process_reserved_mb": 3836
+      "free_mb": 13976,
+      "process_reserved_mb": 3566
     },
-    "infer_fps": 101.51
+    "infer_fps": 84.1
   },
-  "caption": "You:When did the pain start, and where do you feel it?\n\nPatient:It started about a week ago, and I feel it all over — I'm sweaty, shaky, and confused, like I can't think straight. It doesn't go away.",
-  "provenance": "Voice: worker-kokoro\nVideo: musetalk\nFirst frame 1501 ms\nSpeech start 3512 ms\nVoice to lips -320 ms",
-  "reply_wait_ms": 104144,
+  "caption": "You:When did the pain start, and where do you feel it?\n\nPatient:The pain started in my chest and throat right after I used the pesticide spray—maybe 45 minutes ago. It feels like a tight, burning pressure, and it’s getting worse.",
+  "provenance": "Voice: worker-kokoro\nVideo: musetalk\nFirst frame 3656 ms\nSpeech start 1307 ms\nVoice to lips 0 ms",
+  "reply_wait_ms": 52081,
   "log": [
     "[debug] [vite] connecting...",
     "[debug] [vite] connected.",
@@ -104,14 +110,13 @@
     "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
     "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
     "[error] Failed to load resource: the server responded with a status of 403 (Forbidden)",
-    "[error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
-    "2026-10-21T00:00:36.086Z tile visible",
-    "2026-10-21T00:01:14.798Z live video connected",
-    "2026-10-21T00:01:16.208Z question sent",
-    "2026-10-21T00:01:43.846Z frames captured",
-    "2026-10-21T00:01:43.935Z rtc {\"audioPackets\":1487,\"audioEnergy\":0.12249045157967525,\"videoFrames\":552,\"videoFps\":25,\"rttMs\":259,\"audioJitterMs\":1332,\"videoJitterMs\":763}",
-    "2026-10-21T00:01:46.867Z metrics {\"prepareMs\":31791.9,\"answerMs\":429,\"firstFrameMs\":1501,\"speechStartMs\":3512,\"lipLagMs\":-320,\"ttsMs\":600.9,\"firstAudioMs\":602.1,\"provider\":\"worker-kokoro\",\"samples\":156,\"speak\":{\"provider\":\"worker-kokoro\",\"adapter\":\"openai_compatible\",\"model\":\"kokoro\",\"voice_id\":\"am_michael\",\"source\":\"registry\",\"transport\":\"stream\",\"tts_ms\":600.9,\"first_chunk_ms\":602.1,\"stream_ms\":798.1,\"queued_ms\":0,\"audio_bytes\":392774,\"audio_duration_ms\":8183,\"sample_rate\":24000,\"link_connect_ms\":704.9,\"runner\":{\"frames\":410,\"first_frame_ms\":0.2,\"elapsed_ms\":109.1}}}",
-    "2026-10-21T00:01:48.097Z recording saved",
-    "2026-10-21T00:03:00.088Z offline check {\"audio_peak_rms\":0.10091012832062506,\"voiced_ms\":4080,\"frames\":782,\"audio_to_lip_lag_ms\":-600,\"note\":\"positive = mouth motion follows the audio\"}"
+    "2026-10-21T03:58:53.502Z tile visible",
+    "2026-10-21T03:59:41.205Z live video connected",
+    "2026-10-21T03:59:41.845Z question sent",
+    "2026-10-21T03:59:48.951Z frames captured",
+    "2026-10-21T04:00:05.047Z rtc {\"audioPackets\":1218,\"audioEnergy\":0.21491933274871874,\"videoFrames\":607,\"videoFps\":25,\"rttMs\":70,\"audioJitterMs\":72,\"videoJitterMs\":37}",
+    "2026-10-21T04:00:07.143Z metrics {\"prepareMs\":38982.4,\"answerMs\":242,\"firstFrameMs\":3656,\"speechStartMs\":1307,\"lipLagMs\":0,\"ttsMs\":625.1,\"firstAudioMs\":626.1,\"provider\":\"worker-kokoro\",\"samples\":583,\"speak\":{\"provider\":\"worker-kokoro\",\"adapter\":\"openai_compatible\",\"model\":\"kokoro\",\"voice_id\":\"af_heart\",\"source\":\"registry\",\"transport\":\"stream\",\"tts_ms\":625.1,\"first_chunk_ms\":626.1,\"stream_ms\":932.3,\"queued_ms\":0,\"audio_bytes\":514320,\"audio_duration_ms\":10715,\"sample_rate\":24000,\"stream_stall_ms\":0,\"preroll\":{\"ms\":800,\"frames\":40,\"sent_ms\":63.9},\"link_connect_ms\":449.7,\"runner\":{\"frames\":536,\"first_frame_ms\":0.2,\"elapsed_ms\":240.7}}}",
+    "2026-10-21T04:00:07.859Z recording saved",
+    "2026-10-21T04:00:33.822Z offline check {\"audio_peak_rms\":0.09150477652138442,\"voiced_ms\":5240,\"frames\":635,\"audio_to_lip_lag_ms\":0,\"note\":\"positive = mouth motion follows the audio\"}"
   ]
 }

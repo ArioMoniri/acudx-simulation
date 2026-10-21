@@ -1,0 +1,507 @@
+{
+ "fp32": {
+  "tuning_views": [
+   "{\"first_clause\": true, \"first_max_words\": 10, \"second_max_words\": 0, \"t3_autocast\": null}"
+  ],
+  "first_pcm_ms": [
+   1124.0,
+   1093.9,
+   1143.8,
+   1336.6,
+   1108.7,
+   1187.1
+  ],
+  "first_pcm_median": 1133.9,
+  "stall_ms": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   3115.0
+  ],
+  "audio_ms": [
+   10100,
+   9580,
+   8580,
+   10780,
+   9340,
+   26980
+  ],
+  "total_ms": [
+   4684.2,
+   4540.9,
+   4047.2,
+   4760.9,
+   4693.8,
+   10612.7
+  ],
+  "first_chunk_rows": [
+   {
+    "words": 5,
+    "tokens": 72,
+    "t3_ms": 959.6,
+    "s3gen_ms": 316.5,
+    "watermark_ms": 8.5,
+    "total_ms": 1285.7,
+    "audio_ms": 2820,
+    "t3_autocast": null
+   },
+   {
+    "words": 8,
+    "tokens": 94,
+    "t3_ms": 1262.1,
+    "s3gen_ms": 307.7,
+    "watermark_ms": 9.2,
+    "total_ms": 1579.9,
+    "audio_ms": 3700,
+    "t3_autocast": null
+   },
+   {
+    "words": 4,
+    "tokens": 108,
+    "t3_ms": 1452.5,
+    "s3gen_ms": 318.4,
+    "watermark_ms": 9.5,
+    "total_ms": 1781.5,
+    "audio_ms": 4260,
+    "t3_autocast": null
+   },
+   {
+    "words": 5,
+    "tokens": 59,
+    "t3_ms": 797.7,
+    "s3gen_ms": 325.6,
+    "watermark_ms": 7.7,
+    "total_ms": 1132.1,
+    "audio_ms": 2300,
+    "t3_autocast": null
+   },
+   {
+    "words": 8,
+    "tokens": 99,
+    "t3_ms": 1334.2,
+    "s3gen_ms": 319.4,
+    "watermark_ms": 9.5,
+    "total_ms": 1664.0,
+    "audio_ms": 3900,
+    "t3_autocast": null
+   },
+   {
+    "words": 4,
+    "tokens": 521,
+    "t3_ms": 7190.8,
+    "s3gen_ms": 420.4,
+    "watermark_ms": 28.4,
+    "total_ms": 7640.8,
+    "audio_ms": 20780,
+    "t3_autocast": null
+   }
+  ],
+  "ms_per_token": 13.44
+ },
+ "bf16": {
+  "tuning_views": [
+   "{\"first_clause\": true, \"first_max_words\": 10, \"second_max_words\": 0, \"t3_autocast\": \"bf16\"}"
+  ],
+  "first_pcm_ms": [
+   1947.7,
+   1793.2,
+   1766.5,
+   1656.2,
+   1719.2,
+   1403.5
+  ],
+  "first_pcm_median": 1742.85,
+  "stall_ms": [
+   0.0,
+   838.0,
+   46.2,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "audio_ms": [
+   11180,
+   16540,
+   13980,
+   10780,
+   16260,
+   9860
+  ],
+  "total_ms": [
+   5804.2,
+   8098.7,
+   7066.8,
+   5769.6,
+   8095.4,
+   5503.2
+  ],
+  "first_chunk_rows": [
+   {
+    "words": 5,
+    "tokens": 86,
+    "t3_ms": 1414.9,
+    "s3gen_ms": 316.3,
+    "watermark_ms": 9.1,
+    "total_ms": 1741.2,
+    "audio_ms": 3380,
+    "t3_autocast": "bf16"
+   },
+   {
+    "words": 8,
+    "tokens": 231,
+    "t3_ms": 3865.6,
+    "s3gen_ms": 331.5,
+    "watermark_ms": 17.1,
+    "total_ms": 4215.2,
+    "audio_ms": 9180,
+    "t3_autocast": "bf16"
+   },
+   {
+    "words": 4,
+    "tokens": 101,
+    "t3_ms": 1693.0,
+    "s3gen_ms": 323.8,
+    "watermark_ms": 9.4,
+    "total_ms": 2027.0,
+    "audio_ms": 3980,
+    "t3_autocast": "bf16"
+   },
+   {
+    "words": 5,
+    "tokens": 78,
+    "t3_ms": 1324.2,
+    "s3gen_ms": 271.4,
+    "watermark_ms": 6.9,
+    "total_ms": 1603.7,
+    "audio_ms": 3060,
+    "t3_autocast": "bf16"
+   },
+   {
+    "words": 8,
+    "tokens": 97,
+    "t3_ms": 1604.5,
+    "s3gen_ms": 277.0,
+    "watermark_ms": 7.6,
+    "total_ms": 1890.0,
+    "audio_ms": 3820,
+    "t3_autocast": "bf16"
+   },
+   {
+    "words": 4,
+    "tokens": 99,
+    "t3_ms": 1655.9,
+    "s3gen_ms": 327.8,
+    "watermark_ms": 9.6,
+    "total_ms": 1994.2,
+    "audio_ms": 3900,
+    "t3_autocast": "bf16"
+   }
+  ],
+  "ms_per_token": 16.75
+ },
+ "fp16": {
+  "tuning_views": [
+   "{\"first_clause\": true, \"first_max_words\": 10, \"second_max_words\": 0, \"t3_autocast\": \"fp16\"}"
+  ],
+  "first_pcm_ms": [
+   1926.6,
+   1322.3,
+   2257.9,
+   1573.7,
+   1578.3,
+   1929.4
+  ],
+  "first_pcm_median": 1752.4499999999998,
+  "stall_ms": [
+   0.0,
+   290.3,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "audio_ms": [
+   10140,
+   9060,
+   10780,
+   10900,
+   8860,
+   11980
+  ],
+  "total_ms": [
+   5807.6,
+   5192.6,
+   5930.5,
+   6210.1,
+   5135.9,
+   6802.1
+  ],
+  "first_chunk_rows": [
+   {
+    "words": 5,
+    "tokens": 85,
+    "t3_ms": 1534.5,
+    "s3gen_ms": 330.8,
+    "watermark_ms": 9.1,
+    "total_ms": 1875.3,
+    "audio_ms": 3340,
+    "t3_autocast": "fp16"
+   },
+   {
+    "words": 8,
+    "tokens": 94,
+    "t3_ms": 1703.5,
+    "s3gen_ms": 267.7,
+    "watermark_ms": 8.4,
+    "total_ms": 1980.5,
+    "audio_ms": 3700,
+    "t3_autocast": "fp16"
+   },
+   {
+    "words": 4,
+    "tokens": 125,
+    "t3_ms": 2280.4,
+    "s3gen_ms": 343.2,
+    "watermark_ms": 11.1,
+    "total_ms": 2635.7,
+    "audio_ms": 4940,
+    "t3_autocast": "fp16"
+   },
+   {
+    "words": 5,
+    "tokens": 64,
+    "t3_ms": 1184.6,
+    "s3gen_ms": 323.6,
+    "watermark_ms": 9.2,
+    "total_ms": 1518.5,
+    "audio_ms": 2500,
+    "t3_autocast": "fp16"
+   },
+   {
+    "words": 8,
+    "tokens": 108,
+    "t3_ms": 2060.8,
+    "s3gen_ms": 321.6,
+    "watermark_ms": 9.5,
+    "total_ms": 2392.7,
+    "audio_ms": 4260,
+    "t3_autocast": "fp16"
+   },
+   {
+    "words": 4,
+    "tokens": 105,
+    "t3_ms": 1842.7,
+    "s3gen_ms": 324.4,
+    "watermark_ms": 10.2,
+    "total_ms": 2178.2,
+    "audio_ms": 4140,
+    "t3_autocast": "fp16"
+   }
+  ],
+  "ms_per_token": 17.99
+ },
+ "no_split": {
+  "tuning_views": [
+   "{\"first_clause\": false, \"first_max_words\": 10, \"second_max_words\": 0, \"t3_autocast\": null}"
+  ],
+  "first_pcm_ms": [
+   988.9,
+   1418.2,
+   1181.5,
+   1332.5,
+   1789.4,
+   2321.7
+  ],
+  "first_pcm_median": 1375.35,
+  "stall_ms": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "audio_ms": [
+   8700,
+   9340,
+   9700,
+   9780,
+   10260,
+   11500
+  ],
+  "total_ms": [
+   4289.3,
+   4627.7,
+   4700.8,
+   4792.7,
+   4808.0,
+   5347.6
+  ],
+  "first_chunk_rows": [
+   {
+    "words": 5,
+    "tokens": 56,
+    "t3_ms": 843.0,
+    "s3gen_ms": 280.9,
+    "watermark_ms": 5.9,
+    "total_ms": 1130.5,
+    "audio_ms": 2180,
+    "t3_autocast": null
+   },
+   {
+    "words": 8,
+    "tokens": 94,
+    "t3_ms": 1425.5,
+    "s3gen_ms": 271.7,
+    "watermark_ms": 7.3,
+    "total_ms": 1705.4,
+    "audio_ms": 3700,
+    "t3_autocast": null
+   },
+   {
+    "words": 4,
+    "tokens": 97,
+    "t3_ms": 1460.0,
+    "s3gen_ms": 281.9,
+    "watermark_ms": 8.2,
+    "total_ms": 1750.9,
+    "audio_ms": 3820,
+    "t3_autocast": null
+   },
+   {
+    "words": 5,
+    "tokens": 65,
+    "t3_ms": 991.2,
+    "s3gen_ms": 281.4,
+    "watermark_ms": 6.9,
+    "total_ms": 1280.4,
+    "audio_ms": 2540,
+    "t3_autocast": null
+   },
+   {
+    "words": 8,
+    "tokens": 102,
+    "t3_ms": 1547.9,
+    "s3gen_ms": 270.6,
+    "watermark_ms": 7.6,
+    "total_ms": 1827.2,
+    "audio_ms": 4020,
+    "t3_autocast": null
+   },
+   {
+    "words": 4,
+    "tokens": 82,
+    "t3_ms": 1247.6,
+    "s3gen_ms": 315.4,
+    "watermark_ms": 9.9,
+    "total_ms": 1573.8,
+    "audio_ms": 3220,
+    "t3_autocast": null
+   }
+  ],
+  "ms_per_token": 14.8
+ },
+ "second6": {
+  "tuning_views": [
+   "{\"first_clause\": true, \"first_max_words\": 10, \"second_max_words\": 6, \"t3_autocast\": null}"
+  ],
+  "first_pcm_ms": [
+   1163.1,
+   1462.0,
+   1272.4,
+   1738.6,
+   1318.4,
+   1239.7
+  ],
+  "first_pcm_median": 1295.4,
+  "stall_ms": [
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "audio_ms": [
+   9300,
+   9660,
+   9660,
+   9420,
+   8140,
+   8140
+  ],
+  "total_ms": [
+   4768.8,
+   5021.7,
+   4942.5,
+   4733.1,
+   4649.3,
+   4380.7
+  ],
+  "first_chunk_rows": [
+   {
+    "words": 5,
+    "tokens": 57,
+    "t3_ms": 920.6,
+    "s3gen_ms": 337.5,
+    "watermark_ms": 9.6,
+    "total_ms": 1268.6,
+    "audio_ms": 2220,
+    "t3_autocast": null
+   },
+   {
+    "words": 6,
+    "tokens": 61,
+    "t3_ms": 964.5,
+    "s3gen_ms": 320.8,
+    "watermark_ms": 8.5,
+    "total_ms": 1294.8,
+    "audio_ms": 2380,
+    "t3_autocast": null
+   },
+   {
+    "words": 6,
+    "tokens": 90,
+    "t3_ms": 1438.2,
+    "s3gen_ms": 270.1,
+    "watermark_ms": 7.1,
+    "total_ms": 1716.3,
+    "audio_ms": 3540,
+    "t3_autocast": null
+   },
+   {
+    "words": 5,
+    "tokens": 57,
+    "t3_ms": 904.9,
+    "s3gen_ms": 276.0,
+    "watermark_ms": 6.6,
+    "total_ms": 1188.4,
+    "audio_ms": 2220,
+    "t3_autocast": null
+   },
+   {
+    "words": 6,
+    "tokens": 67,
+    "t3_ms": 1071.5,
+    "s3gen_ms": 322.5,
+    "watermark_ms": 8.5,
+    "total_ms": 1403.4,
+    "audio_ms": 2620,
+    "t3_autocast": null
+   },
+   {
+    "words": 6,
+    "tokens": 84,
+    "t3_ms": 1345.5,
+    "s3gen_ms": 323.9,
+    "watermark_ms": 9.0,
+    "total_ms": 1679.3,
+    "audio_ms": 3300,
+    "t3_autocast": null
+   }
+  ],
+  "ms_per_token": 15.76
+ }
+}

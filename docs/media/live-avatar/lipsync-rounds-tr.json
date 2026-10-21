@@ -1,0 +1,263 @@
+{
+  "captured_at": "2026-10-21T04:04:41.671Z",
+  "gateway": "http://127.0.0.1:8897",
+  "calls": 1,
+  "lang": "tr",
+  "line_chars": 159,
+  "extra_session": {
+    "status": 200
+  },
+  "per_call": [
+    {
+      "call": 0,
+      "speak": {
+        "provider": "gpu-worker",
+        "adapter": "openai_compatible",
+        "model": "chatterbox-multilingual",
+        "voice_id": "acudx_tr_male",
+        "source": "gpu_worker",
+        "transport": "stream",
+        "tts_ms": 65.6,
+        "first_chunk_ms": 1905.8,
+        "stream_ms": 6871.7,
+        "queued_ms": 0,
+        "audio_bytes": 532800,
+        "audio_duration_ms": 11100,
+        "sample_rate": 24000,
+        "stream_stall_ms": 0,
+        "preroll": {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.1
+        },
+        "link_connect_ms": 665.9,
+        "runner": {
+          "frames": 555,
+          "first_frame_ms": 1834.7,
+          "elapsed_ms": 6734.4
+        }
+      },
+      "browser": {
+        "speechStartMs": 2546,
+        "audioEnergy": 0,
+        "framesDecoded": 3177,
+        "fps": 24
+      }
+    }
+  ],
+  "rounds": [
+    {
+      "round": 0,
+      "speechStartMs": [
+        2673
+      ],
+      "lipLagMs": [
+        40
+      ],
+      "first_chunk_ms": [
+        2043
+      ],
+      "stream_stall_ms": [
+        188.8
+      ],
+      "provider": [
+        "gpu-worker"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.1
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 188,
+        "audio_queue_frames": 9,
+        "video_queue_frames": 5
+      }
+    },
+    {
+      "round": 1,
+      "speechStartMs": [
+        2726
+      ],
+      "lipLagMs": [
+        40
+      ],
+      "first_chunk_ms": [
+        2101.1
+      ],
+      "stream_stall_ms": [
+        0
+      ],
+      "provider": [
+        "gpu-worker"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.1
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 162.6,
+        "audio_queue_frames": 12,
+        "video_queue_frames": 6
+      }
+    },
+    {
+      "round": 2,
+      "speechStartMs": [
+        2189
+      ],
+      "lipLagMs": [
+        40
+      ],
+      "first_chunk_ms": [
+        1561.2
+      ],
+      "stream_stall_ms": [
+        1208
+      ],
+      "provider": [
+        "gpu-worker"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.1
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 268.6,
+        "audio_queue_frames": 7,
+        "video_queue_frames": 4
+      }
+    },
+    {
+      "round": 3,
+      "speechStartMs": [
+        2866
+      ],
+      "lipLagMs": [
+        40
+      ],
+      "first_chunk_ms": [
+        2234.7
+      ],
+      "stream_stall_ms": [
+        0
+      ],
+      "provider": [
+        "gpu-worker"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.1
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 101.9,
+        "audio_queue_frames": 14,
+        "video_queue_frames": 7
+      }
+    },
+    {
+      "round": 4,
+      "speechStartMs": [
+        2236
+      ],
+      "lipLagMs": [
+        60
+      ],
+      "first_chunk_ms": [
+        1583.8
+      ],
+      "stream_stall_ms": [
+        625.6
+      ],
+      "provider": [
+        "gpu-worker"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.1
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 131.8,
+        "audio_queue_frames": 11,
+        "video_queue_frames": 6
+      }
+    },
+    {
+      "round": 5,
+      "speechStartMs": [
+        2546
+      ],
+      "lipLagMs": [
+        60
+      ],
+      "first_chunk_ms": [
+        1905.8
+      ],
+      "stream_stall_ms": [
+        0
+      ],
+      "provider": [
+        "gpu-worker"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.1
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 111.8,
+        "audio_queue_frames": 9,
+        "video_queue_frames": 5
+      }
+    }
+  ],
+  "runner_while_talking": {
+    "t": 1792555473131,
+    "calls": [
+      {
+        "id": "db29011d",
+        "tuning": {
+          "batch_size": 4,
+          "lookahead_frames": 4,
+          "ahead_frames": 6,
+          "av_shift_ms": 160
+        },
+        "speaking": true,
+        "warm_up_ms": 51,
+        "infer_fps": 69,
+        "inferred_frames": 1796,
+        "sender_queue": {
+          "audio_frames": 11,
+          "video_frames": 5
+        },
+        "sent_frames": 2966,
+        "underruns": 0,
+        "out_fps": 25
+      }
+    ],
+    "vram": {
+      "name": "NVIDIA H100 80GB HBM3",
+      "total_mb": 81079,
+      "free_mb": 13380,
+      "process_reserved_mb": 3636
+    }
+  },
+  "samples_with_all_speaking": 64,
+  "samples": 115
+}

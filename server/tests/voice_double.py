@@ -39,6 +39,7 @@ class WorkerScenario:
     tts_status: int = 200
     stt_status: int = 200
     tts_health_status: int = 200     # Chatterbox GET /health behind Caddy's /tts prefix
+    tts_health_hits: int = 0
 
 
 def build_worker_double(sc: WorkerScenario) -> FastAPI:
@@ -56,6 +57,7 @@ def build_worker_double(sc: WorkerScenario) -> FastAPI:
     @app.get("/tts/health")
     async def tts_health(authorization: str | None = Header(default=None)) -> Response:
         _auth(authorization)
+        sc.tts_health_hits += 1
         return Response("ok" if sc.tts_health_status == 200 else "building", status_code=sc.tts_health_status)
 
     @app.post("/tts/v1/audio/speech")

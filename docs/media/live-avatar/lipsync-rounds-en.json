@@ -1,0 +1,263 @@
+{
+  "captured_at": "2026-10-21T04:02:16.882Z",
+  "gateway": "http://127.0.0.1:8897",
+  "calls": 1,
+  "lang": "en",
+  "line_chars": 176,
+  "extra_session": {
+    "status": 200
+  },
+  "per_call": [
+    {
+      "call": 0,
+      "speak": {
+        "provider": "worker-kokoro",
+        "adapter": "openai_compatible",
+        "model": "kokoro",
+        "voice_id": "am_fenrir",
+        "source": "registry",
+        "transport": "stream",
+        "tts_ms": 166.5,
+        "first_chunk_ms": 167.6,
+        "stream_ms": 463.9,
+        "queued_ms": 0,
+        "audio_bytes": 481496,
+        "audio_duration_ms": 10031,
+        "sample_rate": 24000,
+        "stream_stall_ms": 0,
+        "preroll": {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.9
+        },
+        "link_connect_ms": 536.3,
+        "runner": {
+          "frames": 502,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 226.6
+        }
+      },
+      "browser": {
+        "speechStartMs": 822,
+        "audioEnergy": 0,
+        "framesDecoded": 2095,
+        "fps": 25
+      }
+    }
+  ],
+  "rounds": [
+    {
+      "round": 0,
+      "speechStartMs": [
+        1355
+      ],
+      "lipLagMs": [
+        0
+      ],
+      "first_chunk_ms": [
+        749.7
+      ],
+      "stream_stall_ms": [
+        0
+      ],
+      "provider": [
+        "worker-kokoro"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.9
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 94.2,
+        "audio_queue_frames": 11,
+        "video_queue_frames": 6
+      }
+    },
+    {
+      "round": 1,
+      "speechStartMs": [
+        853
+      ],
+      "lipLagMs": [
+        0
+      ],
+      "first_chunk_ms": [
+        219.9
+      ],
+      "stream_stall_ms": [
+        0
+      ],
+      "provider": [
+        "worker-kokoro"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.9
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 141.1,
+        "audio_queue_frames": 12,
+        "video_queue_frames": 6
+      }
+    },
+    {
+      "round": 2,
+      "speechStartMs": [
+        873
+      ],
+      "lipLagMs": [
+        0
+      ],
+      "first_chunk_ms": [
+        213
+      ],
+      "stream_stall_ms": [
+        0
+      ],
+      "provider": [
+        "worker-kokoro"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.9
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 195.2,
+        "audio_queue_frames": 8,
+        "video_queue_frames": 4
+      }
+    },
+    {
+      "round": 3,
+      "speechStartMs": [
+        834
+      ],
+      "lipLagMs": [
+        0
+      ],
+      "first_chunk_ms": [
+        162.8
+      ],
+      "stream_stall_ms": [
+        0
+      ],
+      "provider": [
+        "worker-kokoro"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.9
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 126.1,
+        "audio_queue_frames": 10,
+        "video_queue_frames": 5
+      }
+    },
+    {
+      "round": 4,
+      "speechStartMs": [
+        839
+      ],
+      "lipLagMs": [
+        20
+      ],
+      "first_chunk_ms": [
+        175.2
+      ],
+      "stream_stall_ms": [
+        0
+      ],
+      "provider": [
+        "worker-kokoro"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.9
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 123.6,
+        "audio_queue_frames": 13,
+        "video_queue_frames": 6
+      }
+    },
+    {
+      "round": 5,
+      "speechStartMs": [
+        822
+      ],
+      "lipLagMs": [
+        20
+      ],
+      "first_chunk_ms": [
+        167.6
+      ],
+      "stream_stall_ms": [
+        0
+      ],
+      "provider": [
+        "worker-kokoro"
+      ],
+      "preroll": [
+        {
+          "ms": 800,
+          "frames": 40,
+          "sent_ms": 65.9
+        }
+      ],
+      "trace": {
+        "in_to_sender_ms": 91.2,
+        "audio_queue_frames": 11,
+        "video_queue_frames": 6
+      }
+    }
+  ],
+  "runner_while_talking": {
+    "t": 1792555332633,
+    "calls": [
+      {
+        "id": "9bdb029e",
+        "tuning": {
+          "batch_size": 4,
+          "lookahead_frames": 4,
+          "ahead_frames": 6,
+          "av_shift_ms": 160
+        },
+        "speaking": true,
+        "warm_up_ms": 70.9,
+        "infer_fps": 72,
+        "inferred_frames": 1552,
+        "sender_queue": {
+          "audio_frames": 11,
+          "video_frames": 5
+        },
+        "sent_frames": 1990,
+        "underruns": 0,
+        "out_fps": 25
+      }
+    ],
+    "vram": {
+      "name": "NVIDIA H100 80GB HBM3",
+      "total_mb": 81079,
+      "free_mb": 13650,
+      "process_reserved_mb": 3602
+    }
+  },
+  "samples_with_all_speaking": 58,
+  "samples": 75
+}

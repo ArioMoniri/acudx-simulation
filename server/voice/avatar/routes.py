@@ -273,7 +273,9 @@ async def offer(request: Request, body: OfferBody, user: Principal = Depends(cur
     # Open the audio WebSocket now, while the browser finishes ICE, so the first line does not pay it.
     s.audio_link = mt.RunnerAudioLink(worker=worker, worker_session=s.worker_session)
     preroll_ms = int(getattr(svc.settings, "avatar_preroll_ms", 0) or 0)
-    asyncio.get_running_loop().create_task(_warm_link(s.audio_link, preroll_ms=preroll_ms, metrics=s.metrics))
+    loop = asyncio.get_running_loop()
+    loop.create_task(_warm_link(s.audio_link, preroll_ms=preroll_ms, metrics=s.metrics))
+    loop.create_task(svc.prewarm_tts(s.lang))
     return {"sdp": ans["sdp"], "type": ans.get("type") or "answer", "answer_ms": s.metrics["answer_ms"]}
 
 

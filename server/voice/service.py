@@ -170,6 +170,32 @@ class VoiceService:
             return TtsOutcome(stream=stream, endpoint=ep, adapter=name, voice_id=vid, ttfb_ms=ttfb)
         raise NoVoiceProvider("tts", self._refusal_reasons("tts") + reasons, airgapped=self.settings.airgapped)
 
+    async def prewarm_tts(self, lang: str) -> str | None:
+        """Open the connection the next ``tts(lang)`` call will use (TLS through any egress proxy, the
+        worker's health TTL), so a call's first patient line does not pay it. The first row that would
+        serve ``lang`` gets one cheap GET: the worker's ``/tts/health`` with its bearer, a registry row's
+        base URL without credentials (any status is fine; only the connection matters). Never raises."""
+        lang = profiles.normalize_lang(lang)
+        try:
+            async for ep in self._candidates("tts"):
+                adapter = TTS_ADAPTERS[adapter_name_for(ep)]
+                if adapter.languages is not None and lang not in adapter.languages:
+                    continue
+                declared = ep.extra.get("languages")
+                if isinstance(declared, list) and declared and lang not in [str(x) for x in declared]:
+                    continue
+                if ep.source == "gpu_worker":
+                    await self.client.get(f"{ep.base_url.rstrip('/')}/health", timeout=5.0,
+                                          headers={"Authorization": f"Bearer {ep.api_key}"})
+                else:
+                    await self.client.get(ep.base_url, timeout=5.0)
+                return ep.name
+        except (httpx.HTTPError, VoiceError) as exc:
+            log.info("tts prewarm failed: %s", type(exc).__name__)
+        except Exception as exc:  # noqa: BLE001 - a warm-up must never break a call (WorkerRefused, ...)
+            log.info("tts prewarm skipped: %s", type(exc).__name__)
+        return None
+
     async def _metered(self, chunks: AsyncIterator[bytes], ep: ProviderEndpoint, *, model: str, chars: int,
                        t0: float) -> AsyncIterator[bytes]:
         ok = True
