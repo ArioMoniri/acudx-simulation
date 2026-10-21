@@ -90,6 +90,10 @@ TEMPERATURE = {"s1": 0.7, "layer": 0.5, "patch": 0.3}
 # so concurrency only delayed the FIRST layer; sequential continuation gets history.presenting
 # out first. Raise it (CASEGEN_LAYER_CONCURRENCY) on a worker that batches (CUDA graphs, xgrammar).
 LAYER_CONCURRENCY = max(1, int(os.environ.get("CASEGEN_LAYER_CONCURRENCY", "1") or "1"))
+# On the Claude route every call is served on its own (no shared decode budget): the staged
+# layers took about 109 s one at a time there, so independent layers run this many at a time
+# (doc 15 section 12.10). CASEGEN_LAYER_CONCURRENCY, when set, wins on every route.
+CLAUDE_LAYER_CONCURRENCY = max(1, int(os.environ.get("CASEGEN_CLAUDE_LAYER_CONCURRENCY", "3") or "3"))
 CONTINUATION_CAP_S = 420.0     # wall-clock cap of the background continuation
 DEFAULT_ETA_MS = {"s1": 15_000, "history": 10_000, "exam": 6_000, "treatments": 15_000, "results": 8_000}
 
@@ -133,6 +137,37 @@ def maneuver_system(maneuver: str) -> Optional[str]:
 
 def layer_kind(layer: str) -> str:
     return layer.split(".", 1)[0]
+
+
+def continuation_waves(names: list[str]) -> list[list[str]]:
+    """The core layers in dependency order. ``history.presenting`` first (every later layer
+    reads it in the ALREADY AUTHORED ledger), then the other history and exam layers (they only
+    read the opening, the kernel and the presenting story), then the treatment table and the
+    results (they read history and exam). Layers inside a wave are independent."""
+    first = [n for n in names if n == "history.presenting"]
+    clinical = [n for n in names if layer_kind(n) in ("history", "exam") and n not in first]
+    rest = [n for n in names if n not in first and n not in clinical]
+    return [w for w in (first, clinical, rest) if w]
+
+
+class _Limiter:
+    """An async limit whose size is read at every acquire (the route can change at runtime)."""
+
+    def __init__(self) -> None:
+        self._active = 0
+        self._cond = asyncio.Condition()
+
+    @contextlib.asynccontextmanager
+    async def slot(self, limit: Callable[[], int]) -> AsyncIterator[None]:
+        async with self._cond:
+            await self._cond.wait_for(lambda: self._active < max(1, limit()))
+            self._active += 1
+        try:
+            yield
+        finally:
+            async with self._cond:
+                self._active -= 1
+                self._cond.notify_all()
 
 
 def valid_layer(layer: str) -> bool:
@@ -1072,7 +1107,7 @@ class StagedRuntime:
         self._render_tasks: dict[tuple[str, str, str], asyncio.Task[Any]] = {}
         self._notify: dict[str, asyncio.Event] = {}
         self._spawned: set[asyncio.Task[Any]] = set()
-        self._sem = asyncio.Semaphore(LAYER_CONCURRENCY)
+        self._limiter = _Limiter()
         self._medians: dict[str, deque[float]] = {k: deque(maxlen=50) for k in DEFAULT_ETA_MS}
 
     # ------------------------------------------------------------- events
@@ -1332,6 +1367,30 @@ class StagedRuntime:
                                        "fatal": stage == "s1", "detail": detail[:300], "thread_id": thread_id})
 
     # ---------------------------------------------------------- continuation
+    def _claude_route(self) -> bool:
+        """The case generator's calls go to Claude (the Claude route, or an Anthropic registry row)."""
+        llm = self.llm
+        if llm is None:
+            return False
+        try:
+            if llm.claude_active():
+                return True
+            from server.orchestration.llm import anthropic_row_endpoint
+            return anthropic_row_endpoint(llm.endpoint("casegen"))
+        except Exception:  # noqa: BLE001 - an unreadable route keeps the safe default
+            return False
+
+    def layer_concurrency(self) -> int:
+        """Background layer calls in flight: CASEGEN_LAYER_CONCURRENCY when set, else 3 on the
+        Claude route, else 1 (the GPU worker does not batch, doc 15 12.6)."""
+        explicit = os.environ.get("CASEGEN_LAYER_CONCURRENCY")
+        if explicit:
+            try:
+                return max(1, int(explicit))
+            except ValueError:
+                return LAYER_CONCURRENCY
+        return CLAUDE_LAYER_CONCURRENCY if self._claude_route() else LAYER_CONCURRENCY
+
     def core_layers(self, state: dict[str, Any]) -> list[str]:
         systems = [f"exam.{s}" for s in ((state.get("kernel") or {}).get("exam_systems") or [])]
         out = list(CORE_LAYERS_FIXED[:4]) + systems + list(CORE_LAYERS_FIXED[4:])
@@ -1342,15 +1401,14 @@ class StagedRuntime:
         if state is None:
             return
         names = self.core_layers(state)
-        # History and exam first (they are read first), then the drug-bearing table and results.
-        first = [n for n in names if layer_kind(n) in ("history", "exam")]
-        rest = [n for n in names if n not in first]
         for name in names:
             self._mark_pending(thread_id, name, "continuation")
-        await asyncio.gather(*(self.ensure_layer(thread_id, n, reason="continuation") for n in first),
-                             return_exceptions=True)
-        await asyncio.gather(*(self.ensure_layer(thread_id, n, reason="continuation") for n in rest),
-                             return_exceptions=True)
+        # Dependency order (continuation_waves); inside a wave the limiter decides how many run
+        # at once (1 on the GPU worker, 3 on Claude), so the order on one call at a time is the
+        # same as before: presenting, the other history and exam layers, treatments, results.
+        for wave in continuation_waves(names):
+            await asyncio.gather(*(self.ensure_layer(thread_id, n, reason="continuation") for n in wave),
+                                 return_exceptions=True)
 
     def _mark_pending(self, thread_id: str, layer: str, reason: str) -> bool:
         changed = {"v": False}
@@ -1403,7 +1461,7 @@ class StagedRuntime:
         data: Optional[dict[str, Any]] = None
         notes: list[str] = []
         error: Optional[tuple[str, int, str]] = None
-        async with (self._sem if background else contextlib.nullcontext()):
+        async with (self._limiter.slot(self.layer_concurrency) if background else contextlib.nullcontext()):
             for _attempt in range(self.layer_attempts):
                 state = self.store.get(thread_id) or {}
                 schema, cap = layer_schema(layer)

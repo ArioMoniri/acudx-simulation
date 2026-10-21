@@ -205,7 +205,7 @@ Cost: about 1,500 tokens × 1.25 of the input price per layer for an entry that 
 ### 5.3 Other observations
 
 * The tutor sometimes writes coaching text into an `ask` action (section 4).
-* The 30 s to 40 s per three history layers comes from serial layer generation (`CASEGEN_LAYER_CONCURRENCY=1`). On the Claude route the default could be raised; not changed here.
+* The 30 s to 40 s per three history layers comes from serial layer generation (`CASEGEN_LAYER_CONCURRENCY=1`). On the Claude route the default could be raised; not changed here. Follow-up 2026-10-21: the Claude route now runs independent layers 3 at a time in dependency waves (doc 15 section 12.10).
 
 ## 6. Tests
 
