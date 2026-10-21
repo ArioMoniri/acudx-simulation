@@ -19,6 +19,7 @@ import {
   type PhotoSex,
 } from "@/data/patientPhotos";
 import { hasTalkVideo, talkVideoUrl } from "@/data/talkVideos";
+import { useGeneratedLook } from "@/lib/useGeneratedLook";
 
 /**
  * Below this rendered width a photo is a thumbnail (the chart header, the
@@ -129,6 +130,12 @@ export interface PatientPhotoProps {
    * reply does not wait on a 3 to 4 MB download. Other surfaces load it on first speech.
    */
   preloadTalk?: boolean;
+  /**
+   * The case thread whose generated picture of the patient as they are now (lib/generatedLook) this
+   * photo shows once the gateway has made it; until then, and without a thread, the case portrait
+   * with the CSS tint. The generated picture already shows the signs, so no tint is painted over it.
+   */
+  lookThreadId?: string | null;
 }
 
 /**
@@ -303,6 +310,7 @@ export function PatientPhoto({
   expandLabel,
   bare = false,
   preloadTalk = false,
+  lookThreadId = null,
 }: PatientPhotoProps) {
   const { t } = useTranslation();
   const photo = useMemo(() => {
@@ -313,7 +321,9 @@ export function PatientPhoto({
     return pickPatientPhoto(sex, age, seed);
   }, [photoId, sex, age, seed]);
 
-  const physio = useMemo(() => physiology(signs), [signs]);
+  const look = useGeneratedLook(photo.id, lookThreadId);
+  const lookUrl = look.url;
+  const physio = useMemo(() => physiology(lookUrl ? undefined : signs), [signs, lookUrl]);
   const { filter, cyanosis, sweat, flush, droop, pallor, distress } = physio;
   const reduced = usePrefersReducedMotion();
   const [figureRef, renderedWidth] = useRenderedWidth<HTMLElement>();
@@ -325,7 +335,8 @@ export function PatientPhoto({
   // moves as if talking) when one exists for this face and motion is ok — it wins
   // over the idle loop and the still so the patient visibly talks. Reduced-motion
   // viewers keep the still with the speaking pill + shimmer instead of a clip.
-  const canTalk = hasTalkVideo(photo.id) && !reduced;
+  // The talking clip and the idle loop are of the case portrait, not of the generated look.
+  const canTalk = hasTalkVideo(photo.id) && !reduced && !lookUrl;
   const useTalkVideo = isSpeaking && canTalk;
   // Armed by the first line and kept (state adjusted during render, no effect pass).
   const [talkArmed, setTalkArmed] = useState(false);
@@ -334,7 +345,7 @@ export function PatientPhoto({
   // Play the "alive" idle loop when one exists for this face and motion is ok;
   // otherwise the still photo (also the video poster) stands in. It stays mounted
   // under the talk clip and only pauses while the patient talks.
-  const idleVideo = hasPatientVideo(photo.id) && !reduced;
+  const idleVideo = hasPatientVideo(photo.id) && !reduced && !lookUrl;
   const useVideo = !useTalkVideo && idleVideo;
 
   // Breathing — the chest & shoulders visibly rise and fall. It plays on the STILL
@@ -505,7 +516,9 @@ export function PatientPhoto({
     />
   ) : (
     <img
-      src={patientPhotoUrl(photo.id)}
+      src={lookUrl ?? patientPhotoUrl(photo.id)}
+      data-look-key={look.key ?? undefined}
+      data-testid={lookUrl ? "patient-generated-look" : undefined}
       alt={alt ?? "Synthetic patient portrait — not a real individual"}
       loading="lazy"
       decoding="async"

@@ -74,7 +74,7 @@ import {
 import { voiceApi, type VoiceCapabilities } from "@/lib/voiceApi";
 import { etaMinutes, wakeOnCallStart, watchWorker } from "@/lib/workerWake";
 import { sessionBody, startAvatarCall, type AvatarCallHandle, type AvatarCallMetrics } from "@/lib/avatarCall";
-import { getEncounterSnapshot } from "@/state/encounterStore";
+import { getEncounterSnapshot, getGeneration, useEncounterSelector } from "@/state/encounterStore";
 
 export type CallState = "connecting" | "live" | "hold" | "ended";
 export type CallMode = "realtime" | "webrtc" | "tavus" | "local";
@@ -189,6 +189,7 @@ export function PatientCallTile({
   const reduced = usePrefersReducedMotion();
   const visual = resolvePatientVisual(caseInstance);
   const signs = photoSignsFromVitals(vitals);
+  const lookThreadId = useEncounterSelector((s) => getGeneration(s)?.threadId ?? null);
 
   const [caps, setCaps] = useState<VoiceCapabilities | null>(null);
   const [mode, setMode] = useState<CallMode>("local");
@@ -204,6 +205,9 @@ export function PatientCallTile({
   const [tavusUrl, setTavusUrl] = useState<string | null>(null);
   const [engine, setEngine] = useState<SpeechEngine | null>(null);
   const [etaMin, setEtaMin] = useState(() => etaMinutes(null));
+  // The live video's start-up stage and progress (capabilities.avatar.wake), and why it failed.
+  const [wakeStage, setWakeStage] = useState<{ stage: string | null; progress: number | null }>({ stage: null, progress: null });
+  const [failReason, setFailReason] = useState<string | null>(null);
   // Bumped to (re)start watching the woken GPU worker; 0 = no wake this call.
   const [wakeSeq, setWakeSeq] = useState(0);
   const wokenRef = useRef(false);
@@ -261,6 +265,10 @@ export function PatientCallTile({
       if (!ses.ok) {
         const pending = "detail" in ses && !!ses.detail?.pending_launch;
         sessionPendingRef.current = pending;
+        if (!pending) {
+          const reasons = "detail" in ses ? ses.detail?.reasons : undefined;
+          setFailReason(reasons?.[0] ?? ses.error);
+        }
         setLivePhase(pending ? (wokenRef.current ? "waking" : "workerStarting") : "unavailable");
         return false;
       }
@@ -309,8 +317,12 @@ export function PatientCallTile({
         setMode("webrtc");
         setLivePhase(null);
         return true;
-      } catch {
-        if (!isCancelled()) setLivePhase("unavailable");
+      } catch (err) {
+        if (!isCancelled()) {
+          // first_frame_timeout: TURN / WebRTC could not reach the worker from this network.
+          setFailReason(err instanceof Error ? err.message : String(err));
+          setLivePhase("unavailable");
+        }
         return false;
       }
     },
@@ -449,9 +461,11 @@ export function PatientCallTile({
         if (st.kind === "waking") {
           setLivePhase("waking");
           setEtaMin(st.minutes);
+          setWakeStage({ stage: st.stage ?? null, progress: st.progress ?? null });
           return;
         }
         if (st.kind === "failed") {
+          setFailReason(st.detail);
           setLivePhase("failed");
           return;
         }
@@ -642,8 +656,23 @@ export function PatientCallTile({
   const providerLabel = engine === "browser" ? null : caps?.tts.enabled ? caps.tts.provider : null;
   const retryVideo = () => {
     setLivePhase(null);
+    setFailReason(null);
     wakeWorker();
   };
+  // While the live call is not up, the portrait is never presented as the call: a panel over it says
+  // what the start-up is doing (stage, progress, minutes left) or why it failed.
+  const startingPhase = livePhase === "waking" || livePhase === "workerStarting" || livePhase === "preparing" || livePhase === "connecting";
+  const failedPhase = livePhase === "failed" || livePhase === "unavailable";
+  const showStartPanel = !liveVideo && state === "live" && voiceOn && (startingPhase || failedPhase);
+  const stageKey =
+    livePhase === "preparing" || livePhase === "connecting"
+      ? livePhase
+      : wakeStage.stage === "machine" || wakeStage.stage === "video_services"
+        ? wakeStage.stage
+        : "starting";
+  const progressPct = Math.round(
+    100 * (livePhase === "preparing" ? 0.96 : livePhase === "connecting" ? 0.98 : (wakeStage.progress ?? 0.05)),
+  );
 
   return (
     <section
@@ -730,6 +759,7 @@ export function PatientCallTile({
               photoId={visual.photoId}
               signs={signs}
               rr={vitals.rr}
+              lookThreadId={lookThreadId}
               speaking={state === "live" && speaking}
               alt={t("patientviewer.syntheticNote")}
               className="h-full w-full"
@@ -772,6 +802,44 @@ export function PatientCallTile({
               </div>
             ) : null}
           </div>
+
+          {/* Live video start-up or failure, over the portrait (never mistaken for the call) */}
+          {showStartPanel ? (
+            <div
+              className="absolute inset-x-2 bottom-10 rounded-control bg-black/75 px-3 py-2.5 text-white shadow-soft"
+              data-testid="live-start-panel"
+              data-stage={failedPhase ? "failed" : stageKey}
+              role="status"
+              aria-live="polite"
+            >
+              <p className="text-sm font-semibold">
+                {failedPhase ? t("voice2.tile.liveVideo.failedTitle") : t("voice2.tile.liveVideo.title")}
+              </p>
+              {failedPhase ? (
+                <p className="mt-0.5 text-xs text-white/85" data-testid="live-fail-reason">
+                  {failReason ? t("voice2.tile.liveVideo.reason", { reason: failReason }) : t(`voice2.tile.liveVideo.${livePhase}`)}
+                </p>
+              ) : (
+                <>
+                  <p className="mt-0.5 text-xs text-white/85">{t(`voice2.tile.liveVideo.stage.${stageKey}`)}</p>
+                  <div
+                    className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/25"
+                    role="progressbar"
+                    aria-label={t("voice2.tile.liveVideo.progress")}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={progressPct}
+                  >
+                    <div className="h-full rounded-full bg-white motion-safe:transition-[width] motion-safe:duration-700" style={{ width: `${progressPct}%` }} />
+                  </div>
+                  <p className="mt-1 flex flex-wrap justify-between gap-x-2 text-[11px] text-white/80">
+                    {livePhase === "waking" ? <span className="tabular-nums">{t("voice2.tile.liveVideo.eta", { minutes: etaMin })}</span> : <span />}
+                    <span>{t("voice2.tile.liveVideo.meanwhile")}</span>
+                  </p>
+                </>
+              )}
+            </div>
+          ) : null}
 
           {/* Name plate */}
           <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-control bg-black/60 px-2 py-1 text-[11px] font-medium text-white">

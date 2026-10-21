@@ -84,6 +84,7 @@ export function PatientBanner({ caseInstance, lang, toolbar }: PatientBannerProp
           sex={visual.sexAtBirth}
           age={visual.age}
           photoId={visual.photoId}
+          lookThreadId={generation?.threadId ?? null}
           rr={triageVitals.rr}
           alt={t("ehr.storyboard.avatarAlt", {
             defaultValue: "Synthetic patient portrait, not a real individual",

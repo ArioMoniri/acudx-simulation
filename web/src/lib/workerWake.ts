@@ -12,7 +12,7 @@ import type { VoiceApi, VoiceCapabilities, WorkerWake } from "@/lib/voiceApi";
 
 /** What the call tile shows while the worker is not serving live video yet. */
 export type WakeStatus =
-  | { kind: "waking"; minutes: number }
+  | { kind: "waking"; minutes: number; stage?: "machine" | "video_services"; progress?: number }
   | { kind: "ready" }
   | { kind: "failed"; detail: string | null };
 
@@ -37,6 +37,18 @@ export function liveVideoReady(caps: VoiceCapabilities): boolean {
 /** Read one capabilities answer as a wake status. */
 export function wakeStatus(caps: VoiceCapabilities): WakeStatus {
   if (liveVideoReady(caps)) return { kind: "ready" };
+  // The gateway's live-video stage (machine boot, then runner, voices and image edits): one
+  // countdown to live video instead of the machine's estimate starting over once it answers.
+  const video = caps.avatar?.wake;
+  if (video?.stage === "failed") return { kind: "failed", detail: video.detail ?? null };
+  if (video && (video.stage === "machine" || video.stage === "video_services")) {
+    return {
+      kind: "waking",
+      minutes: etaMinutes({ elapsed_s: video.elapsed_s, estimate_s: video.estimate_s }),
+      stage: video.stage,
+      progress: video.progress,
+    };
+  }
   const gpu = caps.gpu_worker;
   if (!gpu) return { kind: "failed", detail: null };
   if (gpu.wake?.state === "failed") return { kind: "failed", detail: gpu.wake.detail ?? null };

@@ -296,6 +296,9 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
     end();
     throw err;
   });
+  // The voice is on the same stream: start the audio element explicitly (autoplay alone can leave it
+  // paused when the call connects minutes after the click that started it).
+  void audio.play().catch(() => {});
   emit();
   opts.onState?.("live");
 
