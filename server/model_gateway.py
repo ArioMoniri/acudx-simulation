@@ -128,7 +128,7 @@ class ModelGateway:
         # fallback); without it the env-seeded endpoint above is used.
         self.resolver = resolver
         self.telemetry = telemetry
-        # Claude route: the key is the registry row's sealed key, else ANTHROPIC_KEY.
+        # Claude route: ANTHROPIC_KEY, else the key sealed on the registry row (admin panel).
         self.anthropic = anthropic if anthropic is not None else AnthropicProvider(
             settings, key_source=(resolver.anthropic_key if resolver is not None else None), telemetry=telemetry)
         self.claude_fallbacks = 0

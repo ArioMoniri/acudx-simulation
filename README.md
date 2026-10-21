@@ -98,13 +98,26 @@ A real screen recording of the running app, driven by [`video/scripts/record-wal
 
 ## Quick start
 
-Production, on a fresh host with Docker and a DNS A record pointing at it:
+Production, on a fresh Ubuntu host (Docker is installed when missing):
 
 ```bash
 git clone https://github.com/ArioMoniri/acudx-simulation.git && cd acudx-simulation
-DOMAIN=sim.example.edu ./deploy/one-click.sh
-# open https://sim.example.edu and paste ADMIN_TOKEN from .env into the Admin console
+sudo DOMAIN=sim.example.edu LAMBDA_SSH_KEY_NAME=<lambda key name> ./deploy/one-click.sh
+# DOMAIN unset: <public-ip>.sslip.io. Caddy gets a Let's Encrypt certificate either way.
 ```
+
+This starts Caddy, the web app, the gateway, the rooms relay, Keycloak and its Postgres
+(`docker-compose.prod.yml`), creates one Keycloak account per role (`acudx-student`,
+`acudx-resident`, `acudx-nurse`, `acudx-paramedic`, `acudx-faculty`, `acudx-dean`,
+`acudx-admin`, `acudx-super-admin`) with random temporary passwords, and mints a single-use
+retrieval code (72 h) for `https://<domain>/bootstrap/credentials`, which shows the accounts
+once. Every secret is generated on the host and stays root-only under `/etc/acudx`. On AWS,
+`deploy/aws/provision.sh` does all of it from your machine ([deploy/aws/README.md](deploy/aws/README.md)).
+Operations (update, logs, backup, rotate the code): [deploy/RUNBOOK.md](deploy/RUNBOOK.md).
+
+To use your own domain later, point its A record at the host and re-run
+`sudo DOMAIN=sim.example.edu ./deploy/one-click.sh` (the realm redirect URIs and the TLS
+certificate follow the new name).
 
 Local development (web on 5173, gateway on 8890, rooms relay on 8899):
 

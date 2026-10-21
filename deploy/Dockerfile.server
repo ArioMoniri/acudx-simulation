@@ -5,6 +5,8 @@ WORKDIR /app
 COPY server/requirements.txt server/requirements.txt
 RUN pip install -r server/requirements.txt
 COPY server server
+# The on-demand GPU worker's cloud-init template (server/providers/gpu_worker.py DEFAULT_TEMPLATE).
+COPY infra/gpu-worker infra/gpu-worker
 RUN mkdir -p /app/server/data
 ENV HOST=0.0.0.0 PORT=8890 ACUDX_DB_PATH=/app/server/data/acudx.db
 EXPOSE 8890

@@ -1,8 +1,23 @@
 # One domain in, TLS out. Set DOMAIN=sim.example.edu (or leave ":80" for local).
+# Production (docker-compose.prod.yml) also runs Keycloak under /idp; without it those
+# routes simply answer 502.
 {$DOMAIN::80} {
 	encode zstd gzip
 	handle_path /api/* {
 		reverse_proxy server:8890
+	}
+	# One-time credential handoff (server/bootstrap). Served by the gateway, HTTPS only.
+	handle /bootstrap/* {
+		reverse_proxy server:8890
+	}
+	# Keycloak (KC_HTTP_RELATIVE_PATH=/idp). The admin console and admin REST API stay off the
+	# internet: operators use them over SSH (deploy/RUNBOOK.md).
+	@kc_admin path /idp/admin /idp/admin/*
+	handle @kc_admin {
+		respond "Not found" 404
+	}
+	handle /idp/* {
+		reverse_proxy keycloak:8080
 	}
 	handle /ws* {
 		reverse_proxy multiplayer:8899

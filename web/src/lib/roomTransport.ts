@@ -60,8 +60,8 @@ const DEFAULT_PORT = 8899;
  * Resolve the relay URL:
  *   1. `VITE_MULTIPLAYER_URL` (build-time env)
  *   2. `localStorage["acudx-mp-url"]` (runtime override, e.g. point at a LAN host)
- *   3. Derived from the page origin: `wss://<host>` when the page is served over
- *      https (same-origin, reverse-proxy friendly, avoids mixed-content), else
+ *   3. Derived from the page origin: `wss://<host>/ws` when the page is served over
+ *      https (same-origin; deploy/Caddyfile routes `/ws*` to the relay), else
  *      `ws://<hostname>:8899` for local / LAN development.
  */
 export function resolveRelayUrl(): string {
@@ -84,7 +84,7 @@ export function resolveRelayUrl(): string {
   // the relay without tripping the browser's mixed-content block. On http/dev,
   // reach the local relay process on its own port.
   if (loc?.protocol === "https:") {
-    return `wss://${loc.host}`;
+    return `wss://${loc.host}/ws`;
   }
 
   const host = loc?.hostname || "localhost";

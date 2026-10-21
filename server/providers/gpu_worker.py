@@ -7,6 +7,7 @@ Policy (docs/process/AGENT-PROTOCOL.md §2.4):
 * optional daily budget cap in USD (None, the default, means no cap; the idle reaper
   still stops every worker that is not in use);
 * cheapest allow-listed instance type that has capacity wins;
+* at most one worker at a time (``max_workers``: 1, or 0 to disable launches);
 * ``AIRGAPPED=true`` refuses to launch — fail closed, with a reason;
 * worker state and a cost ledger persist in SQLite (``ACUDX_DB_PATH``).
 
@@ -90,6 +91,10 @@ class NoCapacity(WorkerRefused):
     reason = "no_capacity"
 
 
+class LaunchDisabled(WorkerRefused):
+    reason = "launch_disabled"
+
+
 class WorkerFailed(WorkerRefused):
     reason = "worker_failed"
 
@@ -107,6 +112,9 @@ class WorkerPolicy(BaseModel):
     # Optional Lambda filesystem (same region) mounted on the worker; the cloud-init keeps the
     # HF cache there so later boots skip the model download.
     file_system_name: str | None = None
+    # Max concurrent workers. The manager runs at most ONE worker (every caller shares it), so
+    # the ceiling is 1; 0 disables launches entirely (a running worker is still reaped).
+    max_workers: int = Field(default=1, ge=0, le=1)
 
 
 class WorkerRecord(BaseModel):
@@ -470,6 +478,8 @@ class WorkerManager:
                     self._healthy_until[w.id] = now + self.health_ttl_s
                     return self.store.update_worker(w.id, last_used_at=now)
                 self._healthy_until.pop(w.id, None)
+            if w is None and self.policy.max_workers < 1:
+                raise LaunchDisabled("GPU worker launches are disabled (policy max_workers=0)")
             if self._inflight is None or self._inflight.done():
                 self._inflight = asyncio.create_task(self._wait_ready(w) if w is not None else self._launch())
             task = self._inflight

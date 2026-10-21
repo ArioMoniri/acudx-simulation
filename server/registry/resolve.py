@@ -90,7 +90,8 @@ class RegistryResolver:
         return self.store.anthropic_row()
 
     def anthropic_key(self) -> str | None:
-        """A key sealed on the anthropic row (admin panel), else None (ANTHROPIC_KEY applies)."""
+        """A key sealed on the anthropic row (admin panel), else None. ANTHROPIC_KEY, when set,
+        wins over it (server/providers/anthropic_provider.py ``_key``)."""
         rec = self.anthropic_row()
         return self.store.decrypt_key(rec) if rec is not None else None
 

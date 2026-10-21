@@ -63,6 +63,15 @@ from server.telemetry import prices as telemetry_prices
 
 log = logging.getLogger("acudx.orchestration.llm")
 
+
+def anthropic_row_endpoint(ep: Any) -> bool:
+    """A registry endpoint for the Anthropic Messages API (the Claude provider serves it)."""
+    from urllib.parse import urlparse  # noqa: PLC0415
+
+    host = (urlparse(getattr(ep, "base_url", "") or "").hostname or "").lower()
+    extra = getattr(ep, "extra", None) or {}
+    return extra.get("api") == "anthropic" or host == "api.anthropic.com"
+
 # The vLLM ``--served-model-name`` of the GPU worker (server/providers/gpu_worker.py).
 SELF_HOSTED_MODEL = "acudx-llm"
 COST_BASIS_GPU = "gpu_hour_amortised"
@@ -535,6 +544,38 @@ class StructuredLLM:
             if attempt < self._retries:
                 await asyncio.sleep(min(0.2 * (2 ** attempt), 1.0))
         raise ModelUnreachable(f"{url} unreachable: {type(last).__name__}: {last}")
+
+    def route_via_registry(self, resolver: Any) -> bool:
+        """Point every role WITHOUT an explicit ``CASEGEN_*`` / ``JUDGE_*`` base URL at the gateway's
+        registry: the first eligible OpenAI-compatible ``llm`` row, else the on-demand GPU worker
+        when it is ready. Claude is not routed here: ``claude_active`` takes every call first. Returns True when an endpoint was found.
+
+        Never launches a worker (that would block the request for the whole cold boot); the
+        route starts one in the background instead (server/orchestration/routes.py ``_preflight``).
+        """
+        if resolver is None:
+            return False
+        ep: LlmEndpoint | None = None
+        # The anthropic row is served by the Claude provider (claude_active), never as an
+        # OpenAI-compatible endpoint.
+        rows = [r for r in resolver.endpoints("llm") if not anthropic_row_endpoint(r)]
+        if rows:
+            r = rows[0]
+            ep = LlmEndpoint(base_url=r.base_url.rstrip("/"), model=r.model or "", api_key=r.api_key,
+                             provider="api")
+        else:
+            wm = getattr(resolver, "worker_manager", None)
+            w = wm.llm_endpoint() if wm is not None else None
+            if w:
+                ep = LlmEndpoint(base_url=w["base_url"].rstrip("/"), model=w["model"], api_key=w["api_key"],
+                                 provider="local")
+        if ep is None:
+            return False
+        explicit = {"casegen": self.settings.casegen_base_url, "judge": self.settings.judge_base_url}
+        for role, pinned in explicit.items():
+            if not pinned:
+                self.endpoints[role] = ep  # type: ignore[index]
+        return True
 
     async def probe(self, role: Role = "casegen") -> dict[str, Any]:
         """Reachability check used by the routes before starting a graph run."""

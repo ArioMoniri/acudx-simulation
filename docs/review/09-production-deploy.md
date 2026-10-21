@@ -1,0 +1,116 @@
+# 09 Production deploy: accounts per role, one-time handoff, AWS web host
+
+Status on 2026-10-21: the production stack, the role accounts and the one-time handoff are
+built and verified end to end on a local run of the real `deploy/one-click.sh` (section 2).
+The AWS launch and the live verification run in a new session with fresh credentials
+(`deploy/aws/README.md`, section 4 below). No Lambda instance was launched for hosting; the
+`acudx-web-prod` poll for `cpu_4x_general` (7 polls, no capacity) was stopped when the owner
+moved hosting to AWS, and the Lambda instance list was empty afterwards.
+
+## 1. What was built
+
+| Area | Files |
+|---|---|
+| Production stack: Caddy (TLS, web), gateway, rooms relay at `/ws`, Keycloak 26 on Postgres at `/idp` (admin console not published), one-time handoff at `/bootstrap/*` | `docker-compose.prod.yml`, `deploy/Caddyfile`, `deploy/Dockerfile.*`, `.dockerignore` |
+| One-click deploy: Docker install, root-only secrets in `/etc/acudx`, realm render, accounts, identity provider, retrieval code; idempotent, follows a `DOMAIN` change | `deploy/one-click.sh`, `deploy/keycloak/render-prod-realm.py` |
+| One account per role, random 24-character temporary passwords (UPDATE_PASSWORD), no password on any command line or in any log | `server/bootstrap/provision.py` |
+| Single-use retrieval code (160 bits, 72 h), salted hash at rest, constant-time compare, per-IP limit, global lockout and burn, HTTPS only, audit log | `server/bootstrap/handoff.py`, `server/bootstrap/routes.py`, `server/bootstrap/mint.py`, `deploy/rotate-bootstrap-code.sh` |
+| Model routing in production: Claude first (`server/providers/anthropic_provider.py`, merged from the Claude route work) with its key from `ANTHROPIC_KEY` or, when that is unset, the key pasted on the admin panel's `anthropic` row; with no key from either source, case generation follows the OpenAI-compatible registry rows, else the on-demand GPU worker, which a case start launches in the background (`503 model_warming`) | `server/orchestration/llm.py`, `server/orchestration/routes.py`, `server/providers/anthropic_provider.py`, `server/registry/routes.py` |
+| Case start needs a signed-in user under OIDC (an anonymous POST could otherwise launch a GPU worker) | `server/orchestration/routes.py` |
+| GPU policy `max_workers` (1, or 0 to disable launches); idle reaper and no budget cap unchanged | `server/providers/gpu_worker.py` |
+| Admin console opens for a verified admin / super_admin bearer (no bootstrap token in the browser), where the Claude key is pasted on the `anthropic` row | `web/src/lib/adminApi.ts`, `web/src/components/admin/*` |
+| Each role lands on its panel after sign-in (admin, super_admin -> /admin, dean -> /dean, faculty -> /faculty, learners -> /) | `web/src/lib/navigation.ts`, `web/src/pages/AuthCallbackPage.tsx` |
+| AWS: provision (SG, key pair, EIP, Ubuntu 24.04 t3.large, 50 GB encrypted gp3, IMDSv2, no instance profile), rotate, teardown, minimal IAM policy, moto test | `deploy/aws/*` |
+| Operations | `deploy/RUNBOOK.md` |
+| Live verification script (Playwright) | `deploy/verify/verify-roles.mjs` |
+
+## 2. Local production-stack run (2026-10-21)
+
+`sudo DOMAIN=acudx.localhost ./deploy/one-click.sh` in the build sandbox, with a host-local
+`/etc/acudx/compose.override.yml` that only adds the sandbox's TLS-intercepting proxy CA to the
+image builds and trusts Caddy's local CA in the gateway (the sandbox cannot get a Let's Encrypt
+certificate). No Lambda key was given, so no GPU worker could launch.
+
+| Check | Result |
+|---|---|
+| First run: build, start, realm import, 8 accounts, identity provider, code | exit 0 |
+| Second run (idempotent): secrets kept, accounts untouched, client and IdP re-synced | exit 0 |
+| `GET /api/health`, `/`, `/idp/realms/acudx/.well-known/openid-configuration` | 200 |
+| `http://` -> `https://` | 308 |
+| `/idp/admin/...` from outside | 404 |
+| `/api/v1/auth/config` | mode `oidc`, issuer `https://acudx.localhost/idp/realms/acudx`, discovery ok |
+| Anonymous `POST /api/v2/case/generate/stream` | 401 `unauthenticated` |
+| Handoff: right code | 200, table with the 8 usernames and roles |
+| Handoff: same code again, then GET | 410, 410 |
+| Handoff: wrong code | 401, counted (audit log has `minted`, `revealed`, `burned`, no secret) |
+| `verify-roles.mjs` over all 8 accounts | PASS (below) |
+
+`verify-roles.mjs` per account: Keycloak asked for a new password (UPDATE_PASSWORD), landing
+page, UI gates on /faculty, /dean, /admin, `/v1/auth/me` primary role and `verified=true`, API
+gates (`/v1/faculty/queue`, `/v1/dean/cohort`, `/admin/providers`):
+
+| Account | Lands on | UI opens | API 200 | API refused |
+|---|---|---|---|---|
+| acudx-student | / | none | none | faculty 403, dean 403, admin 401 |
+| acudx-resident | / | none | none | same |
+| acudx-nurse | / | none | none | same |
+| acudx-paramedic | / | none | none | same |
+| acudx-faculty | /faculty | /faculty | faculty | dean 403, admin 401 |
+| acudx-dean | /dean | /faculty, /dean | faculty, dean | admin 401 |
+| acudx-admin | /admin (console, bearer) | all | all | none |
+| acudx-super-admin | /admin (console, bearer) | all | all | none |
+
+The student's case start answered `503 model_unreachable` here (no Lambda key in the sandbox);
+with `LAMBDA_KEY` set it answers `503 model_warming` and launches the worker
+(`server/tests/test_prod_model_routing.py::test_preflight_starts_the_gpu_worker_in_the_background_and_answers_model_warming`).
+After the run every account was reset to a fresh temporary password with
+`deploy/rotate-bootstrap-code.sh --reset-passwords`.
+
+Screenshots: `docs/review/evidence/09-production-smoke/` (`<role>-landing.png`,
+`admin-admin.png`, `super_admin-admin.png`, `super_admin-providers.png`, `super_admin-anthropic-key.png` (the Claude key field on the seeded anthropic row),
+`handoff-form.png`, `handoff-form-390.png`, `handoff-wrong-code.png`). The revealed table is
+not captured on purpose: it holds passwords.
+
+### Defects the run found and fixed
+
+1. Every sign-in failed with "Invalid scopes: openid profile email": the realm import listed
+   its own `clientScopes`, which replaces Keycloak's built-in scopes. The `org` mapper moved
+   onto the client; the realm lists no client scopes (`test_prod_realm.py`).
+2. Nurse and paramedic signed in as `student`: the realm's default roles included `student`.
+   Removed from the realm, and `provision.py` strips any AcuDx role from
+   `default-roles-acudx` on every run.
+3. The web image did not build: `tsc` checks a test that imports
+   `server/tests/fixtures/course_parity.json`, which the Dockerfile did not copy.
+4. A local `web/node_modules` broke the image build: no `.dockerignore` existed.
+5. The identity provider row showed as failing: the public name resolves to the Docker gateway
+   (private), which the SSRF guard refuses for a host name; the domain is now on
+   `LOCAL_ALLOWLIST` in `docker-compose.prod.yml`.
+6. The admin console asked for the bootstrap token after a reload: it now re-renders when the
+   OIDC session refreshes.
+7. The rooms relay was unreachable over HTTPS: the client dialled `wss://<host>/`, Caddy routes
+   `/ws*`; the client now dials `wss://<host>/ws`.
+
+## 3. Tests
+
+- `server/tests/test_bootstrap_handoff.py`: single use, expiry, global lockout (right code
+  refused while locked), per-IP limit, burn after 20 failures, rotation, HTTPS only, audit
+  without secrets, 404 when not provisioned, mint CLI writes 0600.
+- `server/tests/test_bootstrap_provision.py`: one account per role, exactly one AcuDx role each,
+  temporary passwords of 20+ characters, idempotent re-run with new passwords, client sync,
+  default roles cleaned, 0600 / 0700 files.
+- `server/tests/test_prod_model_routing.py` (env key wins over the panel key, panel key feeds the
+  provider, the anthropic row is never used as an OpenAI endpoint, model_warming, sign-in),
+  `test_prod_realm.py`, `test_gpu_worker.py`
+  (`max_workers`).
+- `deploy/aws/test-with-moto.sh`: provision twice (idempotent), IMDSv2, no instance profile,
+  50 GB encrypted gp3, 0600 key file, SSH only from `SSH_CIDR`, teardown twice. PASS.
+- `shellcheck -x` on every deploy script: clean. `DRY_RUN=1` on provision and teardown: no
+  secret value in the output.
+
+## 4. Live verification checklist (launch session)
+
+Follow `deploy/aws/README.md` steps 1 to 8. Record here: instance id, type, region, Elastic IP,
+URL, `verify-roles.mjs` output with `START_CASE=1`, the Lambda instance id of the GPU worker the
+case start launched, its stop through `/admin/gpu/stop` and the Lambda API answer showing it
+`terminated`, and the final `rotate-code.sh --reset-passwords` run. Screenshots go to
+`docs/review/evidence/09-production-live/`.

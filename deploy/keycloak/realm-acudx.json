@@ -23,7 +23,7 @@
       { "name": "super_admin", "description": "Platform-wide operator", "composite": true, "composites": { "realm": ["admin"] } }
     ]
   },
-  "defaultRoles": ["student", "offline_access", "uma_authorization"],
+  "defaultRoles": ["offline_access", "uma_authorization"],
   "clients": [
     {
       "clientId": "acudx-web",
@@ -54,8 +54,6 @@
         "client.use.lightweight.access.token.enabled": "false"
       },
       "fullScopeAllowed": true,
-      "defaultClientScopes": ["openid", "profile", "email", "roles", "web-origins", "acudx-org"],
-      "optionalClientScopes": ["offline_access"],
       "protocolMappers": [
         {
           "name": "acudx-web audience",
@@ -68,19 +66,9 @@
             "access.token.claim": "true",
             "introspection.token.claim": "true"
           }
-        }
-      ]
-    }
-  ],
-  "clientScopes": [
-    {
-      "name": "acudx-org",
-      "description": "Maps the user attribute `org` onto the `org` claim the AcuDx server reads as the tenant.",
-      "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" },
-      "protocolMappers": [
+        },
         {
-          "name": "org attribute",
+          "name": "acudx org attribute",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-attribute-mapper",
           "consentRequired": false,

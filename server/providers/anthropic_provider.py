@@ -6,7 +6,7 @@ narrator, debrief, renderings, safety events) and by
 docs/architecture/20-chat-contract.md section 2 describes the routing.
 
 * The key comes from ``Settings.anthropic_key`` (env ``ANTHROPIC_KEY``, alias
-  ``ANTHROPIC_API_KEY``) or a sealed admin-registry key, and stays in this process: it is
+  ``ANTHROPIC_API_KEY``), else a sealed admin-registry key (env wins when both exist), and stays in this process: it is
   never part of a reply, a log line or :func:`repr`.
 * Long, stable system prompts carry an explicit ``cache_control`` breakpoint; multi-turn
   calls (the persona) add a second breakpoint on the last stable turn of the transcript.
@@ -259,7 +259,7 @@ class AnthropicProvider:
                  max_retries: int = 2, telemetry: Any = None) -> None:
         self.settings = settings
         self._key_override = api_key
-        # Runtime key lookup (the admin registry's sealed key wins over ANTHROPIC_KEY).
+        # Runtime key lookup: the admin registry's sealed key, used when ANTHROPIC_KEY is unset.
         self._key_source = key_source
         self._http_client = http_client
         self._max_retries = max_retries
@@ -275,13 +275,16 @@ class AnthropicProvider:
         return str(getattr(self.settings, "anthropic_base_url", "https://api.anthropic.com")).rstrip("/")
 
     def _key(self) -> str:
-        key = self._key_override
+        """An explicit key, else ``ANTHROPIC_KEY`` from the environment, else the key sealed on the
+        admin registry's anthropic row (pasted in the admin panel). The environment wins when both
+        exist, so an operator can always override the panel from the host."""
+        key = self._key_override or (getattr(self.settings, "anthropic_key", None) or "").strip()
         if not key and self._key_source is not None:
             try:
                 key = self._key_source()
             except Exception:  # noqa: BLE001 - a broken key source means "no key", never a crash
                 key = None
-        return (key or getattr(self.settings, "anthropic_key", None) or "").strip()
+        return (key or "").strip()
 
     def status(self) -> dict[str, Any]:
         """``{configured, usable, reason}``; ``reason`` is the operator-facing text."""

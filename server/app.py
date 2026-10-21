@@ -40,6 +40,8 @@ from server.auth.deps import AuthService
 from server.auth.routes import admin_router as auth_admin_router
 from server.auth.routes import router as auth_router
 from server.auth.store import UserRoleStore
+from server.bootstrap.handoff import BootstrapHandoff
+from server.bootstrap.routes import router as bootstrap_router
 from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
 from server.guidelines.routes import router as guidelines_router
@@ -119,7 +121,8 @@ async def lifespan(app: FastAPI):
     registry = RegistryStore(settings.acudx_db_path, secret_key=settings.acudx_secret_key)
     if not registry.secrets_configured:
         log.warning(secret_key_instructions())
-    registry.seed_from_env(settings)
+    if settings.registry_seed_env:
+        registry.seed_from_env(settings)
     # The Claude route is a registry row too (docs/architecture/20 section 2): visible, switchable,
     # and "Anthropic key not configured" in the console while ANTHROPIC_KEY is unset.
     registry.ensure_anthropic_row(settings)
@@ -155,6 +158,8 @@ async def lifespan(app: FastAPI):
     voice.avatar_calls = app.state.avatar_sessions.pending_on  # per-worker call limit in capabilities
     app.state.auth = auth
     app.state.learning = learning
+    # One-time credential handoff (deploy/one-click.sh): only when BOOTSTRAP_DIR is set.
+    app.state.bootstrap = BootstrapHandoff(settings.bootstrap_dir) if settings.bootstrap_dir else None
     app.state.jobs = {"provider_probe": probe_job, "telemetry_retention": retention_job}
     try:
         yield
@@ -198,6 +203,7 @@ app.include_router(patient_openai_router)  # /v1/patient/openai/chat/completions
 app.include_router(guidelines_router)  # /v1/guidelines/* + /admin/guidelines/verify
 app.include_router(auth_router)        # /v1/auth/config, /v1/auth/me (server/auth/routes.py)
 app.include_router(auth_admin_router)  # /admin/users, /admin/users/{sub}/roles
+app.include_router(bootstrap_router)   # /bootstrap/credentials one-time handoff (server/bootstrap)
 app.include_router(learning_router)    # /v1/events/encounter, /v1/dean/*, /v1/faculty/*, /v1/me/assignments
 
 

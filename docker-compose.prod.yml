@@ -1,0 +1,101 @@
+# AcuDx production stack: Caddy (TLS + static web) -> gateway, relay, Keycloak (+ Postgres).
+#
+# Started by deploy/one-click.sh, which writes every secret root-only under /etc/acudx and
+# passes the public DOMAIN through /etc/acudx/compose.env:
+#
+#   docker compose --env-file /etc/acudx/compose.env -f docker-compose.prod.yml up -d --build
+#
+# Nothing secret lives in this file or in git: the env_file paths below are created on the host.
+name: acudx
+services:
+  web:
+    build: { context: ., dockerfile: deploy/Dockerfile.web }
+    environment:
+      - DOMAIN=${DOMAIN:?set DOMAIN in /etc/acudx/compose.env}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [server, multiplayer, keycloak]
+    restart: unless-stopped
+
+  server:
+    build: { context: ., dockerfile: deploy/Dockerfile.server }
+    env_file:
+      - /etc/acudx/gateway.env          # ADMIN_TOKEN, ACUDX_SECRET_KEY, LAMBDA_KEY, LAMBDA_SSH_KEY_NAME, ANTHROPIC_KEY (if set on the host)
+    environment:
+      - AIRGAPPED=false                 # the gateway launches Lambda GPU workers and may call hosted models
+      - AUTH_MODE=oidc
+      - REGISTRY_SEED_ENV=false         # no local model stack on this host: registry rows, else the GPU worker
+      - BOOTSTRAP_DIR=/run/acudx-bootstrap
+      - CORS_ORIGINS=https://${DOMAIN}
+      - PUBLIC_BASE_URL=https://${DOMAIN}
+      # The public name resolves to this host's Docker gateway (extra_hosts below), a private
+      # address: allow-list it so the registry probe of the identity provider is not refused
+      # as DNS rebinding (server/net_guard.py).
+      - LOCAL_ALLOWLIST=${DOMAIN}
+    volumes:
+      - server_data:/app/server/data
+      - /var/lib/acudx/bootstrap:/run/acudx-bootstrap   # root-only on the host (0700)
+    # The gateway verifies tokens against https://${DOMAIN}/idp: resolve the public name to this
+    # host so the JWKS fetch does not depend on hairpin NAT.
+    extra_hosts:
+      - "${DOMAIN}:host-gateway"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+
+  multiplayer:
+    build: { context: ., dockerfile: deploy/Dockerfile.multiplayer }
+    restart: unless-stopped
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start", "--import-realm"]
+    env_file:
+      - /etc/acudx/keycloak.env         # KC_BOOTSTRAP_ADMIN_PASSWORD, KC_DB_PASSWORD
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_HOSTNAME=https://${DOMAIN}/idp
+      - KC_HTTP_RELATIVE_PATH=/idp
+      - KC_HTTP_ENABLED=true            # TLS ends at Caddy on the same Docker network
+      - KC_PROXY_HEADERS=xforwarded
+      - KC_HEALTH_ENABLED=true
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+    volumes:
+      - /var/lib/acudx/keycloak-import:/opt/keycloak/data/import:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /idp/health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 60s
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  keycloak-db:
+    image: postgres:16-alpine
+    env_file:
+      - /etc/acudx/keycloak-db.env      # POSTGRES_PASSWORD
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+    volumes:
+      - keycloak_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
+  server_data:
+  keycloak_db:

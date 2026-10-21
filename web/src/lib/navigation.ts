@@ -127,3 +127,22 @@ export function breadcrumbsFor(pathname: string, role: ViewAsRole): Crumb[] {
   }
   return [home];
 }
+
+
+/**
+ * Where a verified sign-in lands when it did not start from a specific page: each staff role
+ * opens on its own panel, learners (student, resident, nurse, paramedic) on their home.
+ */
+export function homePathForRole(role: string | null | undefined): string {
+  switch (role) {
+    case "super_admin":
+    case "admin":
+      return "/admin";
+    case "dean":
+      return "/dean";
+    case "faculty":
+      return "/faculty";
+    default:
+      return "/";
+  }
+}

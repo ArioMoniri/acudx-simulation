@@ -80,3 +80,15 @@ describe("breadcrumbsFor", () => {
     expect(breadcrumbsFor("/this-route-does-not-exist", "learner")).toEqual([{ to: "/", key: "nav.home" }]);
   });
 });
+
+
+describe("homePathForRole", () => {
+  it("sends each staff role to its panel and learners home", async () => {
+    const { homePathForRole } = await import("@/lib/navigation");
+    expect(homePathForRole("super_admin")).toBe("/admin");
+    expect(homePathForRole("admin")).toBe("/admin");
+    expect(homePathForRole("dean")).toBe("/dean");
+    expect(homePathForRole("faculty")).toBe("/faculty");
+    for (const r of ["resident", "student", "nurse", "paramedic", undefined]) expect(homePathForRole(r)).toBe("/");
+  });
+});

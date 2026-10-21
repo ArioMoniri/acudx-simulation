@@ -99,10 +99,11 @@ def anthropic_health(store: RegistryStore, settings: Any) -> dict[str, Any]:
 
     rec = store.anthropic_row()
     sealed = store.decrypt_key(rec) if rec is not None else None
-    st = AnthropicProvider(settings, api_key=sealed).status()
+    env_key = (settings.anthropic_key or "").strip()
+    st = AnthropicProvider(settings, api_key=env_key or sealed).status()
     return {
         "configured": bool(st["configured"]), "usable": bool(st["usable"]), "reason": st["reason"],
-        "key_source": ("registry" if sealed else ("env" if (settings.anthropic_key or "").strip() else None)),
+        "key_source": ("env" if env_key else ("registry" if sealed else None)),
         "provider_id": rec.id if rec is not None else None, "enabled": bool(rec.enabled) if rec is not None else None,
         "models": {"author": settings.anthropic_model_author, "repair": settings.anthropic_model_repair,
                    "judges": list(settings.anthropic_judge_models), "persona": settings.anthropic_model_persona,

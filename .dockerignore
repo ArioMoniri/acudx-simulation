@@ -1,0 +1,14 @@
+# Build context for deploy/Dockerfile.* : only source, never local state or secrets.
+.git
+.claude
+.env
+.env.*
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.venv
+server/data/*.db
+server/data/*.db-*
+web/dist
+docs
+video

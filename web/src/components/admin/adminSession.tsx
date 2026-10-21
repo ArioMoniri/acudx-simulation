@@ -18,6 +18,7 @@ import {
   type AdminErrorCode,
   type AdminResult,
 } from "@/lib/adminApi";
+import { hasAccessToken, useAuthSession } from "@/lib/auth";
 
 /* -------------------------------------------------------------------------- */
 /* Session                                                                    */
@@ -37,7 +38,12 @@ interface AdminSessionValue {
 const AdminSessionContext = createContext<AdminSessionValue | null>(null);
 
 export function AdminSessionProvider({ children, api = adminApi }: { children: ReactNode; api?: AdminApi }) {
-  const [signedIn, setSignedIn] = useState<boolean>(() => getAdminToken() !== null);
+  const [tokenSignedIn, setSignedIn] = useState<boolean>(() => getAdminToken() !== null);
+  // A verified OIDC session (admin / super_admin) opens the console without the bootstrap
+  // token; the server still checks the bearer's role on every /admin call. Subscribing to the
+  // auth session re-renders once a reload has refreshed the access token.
+  const auth = useAuthSession();
+  const signedIn = tokenSignedIn || (auth.status === "signed-in" && hasAccessToken());
 
   const signOut = useCallback(() => {
     setAdminToken(null);
