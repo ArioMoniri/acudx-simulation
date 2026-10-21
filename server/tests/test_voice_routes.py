@@ -236,3 +236,16 @@ def test_warm_is_signed_in_only_and_wakes_the_worker_without_waiting(tmp_path):
         (tmp_path / sub).mkdir()
         other, _, _ = _app(tmp_path / sub, worker=wm)
         assert TestClient(other).post("/v1/voice/warm", headers=LEARNER).json()[key] is want
+
+
+def test_a_learner_waiting_for_the_video_keeps_the_worker_out_of_the_idle_reaper(tmp_path):
+    """Live 2026-10-21: the worker answered, its runner took longer than the idle window to come up,
+    and the reaper stopped it while the learner watched the start-up panel. The tile re-posts /warm
+    while it waits; each one counts as use of the worker."""
+    worker = FakeWorkerManager(ready=True)
+    app, _, _ = _app(tmp_path, worker=worker)
+    c = TestClient(app)
+    before = worker.touches
+    for _ in range(3):
+        assert c.post("/v1/voice/warm", headers=LEARNER).json()["ready"] is True
+    assert worker.touches == before + 3

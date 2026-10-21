@@ -27,6 +27,7 @@ import json
 import logging
 import struct
 import time
+from pathlib import Path
 from typing import Any, Literal
 
 import httpx
@@ -261,7 +262,10 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
             gen = await sync_mod.pick_gen_worker(svc.client, wm, worker) if reuse is None else None
             s.appearance, s.avatar_id = await sync_mod.start(
                 svc.client, worker, thread_id=str(body.thread_id), photo_id=str(body.photo_id), portrait=portrait,
-                spec=view[0], director=view[1], wait_s=wait_s, gen_worker=gen, existing=reuse)
+                spec=view[0], director=view[1], wait_s=wait_s, gen_worker=gen, existing=reuse,
+                services_wait_s=_services_wait_s(svc), keepalive=lambda: _touch(svc, worker))
+            if reuse is None and body.thread_id:
+                _remember_look(request.app, f"{body.thread_id}:{body.photo_id}", s.appearance)
             s.appearance.worker_origin = worker.origin
             s.metrics["appearance_reused"] = reuse is not None
             s.metrics["appearance_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
@@ -603,15 +607,89 @@ async def notify_director(app: Any, thread_id: str) -> int:
     return len(calls)
 
 
+def _services_wait_s(svc: VoiceService) -> float:
+    return float(getattr(svc.settings, "avatar_services_wait_s", sync_mod.DEFAULT_SERVICES_WAIT_S))
+
+
+def _remember_look(app: Any, key: str, a: sync_mod.Appearance) -> None:
+    looks = getattr(app.state, "avatar_looks", None)
+    if looks is None:
+        looks = {}
+        app.state.avatar_looks = looks
+    if key not in looks and len(looks) >= MAX_LOOKS:
+        looks.pop(next(iter(looks)))
+    looks[key] = a
+
+
+def _ready_endpoints(wm: Any) -> list[dict[str, Any]]:
+    if wm is None:
+        return []
+    eps = wm.endpoints() if hasattr(wm, "endpoints") else [wm.llm_endpoint()]
+    return [e for e in eps if e]
+
+
+async def _begin_ladder(app: Any, svc: VoiceService, *, thread_id: str, photo_id: str, spec: dict[str, Any],
+                        director: dict[str, Any], photo: Path, store: SessionStore) -> sync_mod.Appearance:
+    """Make the case's pictures on a ready worker (the one a call would get) and remember them for
+    the call and the chart. The ladder waits for the worker's edit server and runner when they are
+    still coming up."""
+    wm = svc.resolver.worker_manager
+    eps = _ready_endpoints(wm)
+    worker, _h, _cap = await mt.pick_worker(svc.client, wm, gateway_limit=_max_calls(svc), pending=store.pending_on)
+    worker = worker or mt.worker_from_endpoint(eps[0])
+    assert worker is not None
+    gen = await sync_mod.pick_gen_worker(svc.client, wm, worker)
+    a = sync_mod.new_appearance(thread_id=thread_id, photo_id=photo_id, spec=spec, director=director,
+                                worker=worker, gen_worker=gen)
+    a.worker_origin = worker.origin
+    ig = await mt.imagegen_health(svc.client, a.gen_worker)
+    a.gen_mode = ig.get("mode")
+    if not ig.get("ok"):
+        a.reason = (f"image edit server: {ig.get('reason') or 'not ready'}; the pictures are made when it is up")
+    a.first_done = sync_mod.run_ladder(svc.client, worker, a, photo.read_bytes(), services_wait_s=_services_wait_s(svc),
+                                       keepalive=lambda: _touch(svc, worker))
+    _remember_look(app, f"{thread_id}:{photo_id}", a)
+    return a
+
+
+def _prewarms(app: Any) -> dict[str, asyncio.Task[Any]]:
+    tasks = getattr(app.state, "avatar_prewarm", None)
+    if tasks is None:
+        tasks = {}
+        app.state.avatar_prewarm = tasks
+    return tasks
+
+
+async def _prewarm(app: Any, svc: VoiceService, *, thread_id: str, photo_id: str, photo: Path,
+                   store: SessionStore) -> None:
+    """Case start with live video enabled: bring a worker up, then make the patient's pictures."""
+    wm = svc.resolver.worker_manager
+    try:
+        await wm.ensure_worker()
+    except WorkerRefused as exc:
+        log.info("avatar prewarm: worker launch refused: %s", exc.reason)
+        return
+    view = await sync_mod.case_view(app, thread_id)
+    if view is None or not _ready_endpoints(wm):
+        return
+    key = f"{thread_id}:{photo_id}"
+    if key in (getattr(app.state, "avatar_looks", None) or {}):
+        return   # a call that started meanwhile made them
+    await _begin_ladder(app, svc, thread_id=thread_id, photo_id=photo_id, spec=view[0], director=view[1],
+                        photo=photo, store=store)
+
+
 @router.post("/prepare")
 async def prepare(request: Request, body: PrepareBody, user: Principal = Depends(current_user)):
     """At case start: make the patient's pictures (presenting, worse, critical, improved...) from the
     case thread on a worker before any call, so the call opens on the patient as they are now. A call
-    started later on the same worker reuses them.
+    started later on the same worker reuses them, and the chart's still portrait shows them.
 
-    Never launches a worker: every case open calls this, and most cases never start a call. Only an
-    explicit call start (POST /session) or spoken voice brings a GPU up; until a worker is ready this
-    answers ``no_worker`` (or ``worker_starting`` while a boot someone else asked for is in flight)."""
+    Launches a worker only when live video is enabled for case starts
+    (``AVATAR_PREWARM_ON_CASE_START``): it then answers ``worker_starting`` with ``pending_launch``
+    and makes the pictures as soon as the worker is up (the idle reaper still stops it when nobody
+    calls). Otherwise only an explicit call start (POST /session) or spoken voice brings a GPU up and
+    this answers ``no_worker`` (``worker_starting`` while a boot someone else asked for is in flight)."""
     svc = _svc(request)
     view = await _thread_view(request, body.thread_id, user)
     if view is None:
@@ -620,37 +698,82 @@ async def prepare(request: Request, body: PrepareBody, user: Principal = Depends
     if photo is None:
         raise HTTPException(status_code=400, detail={"error": "unknown_photo_id", "photo_id": body.photo_id})
     wm = svc.resolver.worker_manager
-    eps = (wm.endpoints() if hasattr(wm, "endpoints") else [wm.llm_endpoint()]) if wm is not None else []
-    eps = [e for e in eps if e]
+    eps = _ready_endpoints(wm)
+    key = f"{body.thread_id}:{body.photo_id}"
     if not eps:
+        prewarms = _prewarms(request.app)
+        t = prewarms.get(key)
+        if t is not None and not t.done():
+            return JSONResponse(status_code=202, content={"state": "worker_starting", "pending_launch": True})
+        if wm is not None and getattr(svc.settings, "avatar_prewarm_on_case_start", False):
+            status = await wm.status()
+            if status.get("can_launch"):
+                task = asyncio.get_running_loop().create_task(_prewarm(
+                    request.app, svc, thread_id=body.thread_id, photo_id=body.photo_id, photo=photo,
+                    store=_store(request)))
+                prewarms[key] = task
+                task.add_done_callback(lambda t, k=key: _prewarm_done(prewarms, k, t))
+                return JSONResponse(status_code=202, content={"state": "worker_starting", "pending_launch": True})
         booting = bool(wm is not None and hasattr(wm, "store") and wm.store.active_workers())
         return JSONResponse(status_code=202, content={"state": "worker_starting" if booting else "no_worker",
                                                       "pending_launch": False})
     looks = _looks(request)
-    key = f"{body.thread_id}:{body.photo_id}"
     a = looks.get(key)
     origins = {mt.worker_from_endpoint(e).origin for e in eps}  # type: ignore[union-attr]
     if a is not None and a.worker_origin in origins:
         return {"state": "prepared" if a.first_done is not None and a.first_done.is_set() else "preparing",
                 "appearance": a.public()}
-    worker, _h, _cap = await mt.pick_worker(svc.client, wm, gateway_limit=_max_calls(svc),
-                                            pending=_store(request).pending_on)
-    worker = worker or mt.worker_from_endpoint(eps[0])
-    assert worker is not None
-    gen = await sync_mod.pick_gen_worker(svc.client, wm, worker)
-    a = sync_mod.new_appearance(thread_id=body.thread_id, photo_id=body.photo_id, spec=view[0], director=view[1],
-                                worker=worker, gen_worker=gen)
-    a.worker_origin = worker.origin
-    ig = await mt.imagegen_health(svc.client, a.gen_worker)
-    a.gen_mode = ig.get("mode")
-    if not ig.get("ok"):
-        return JSONResponse(status_code=503, content={"state": "no_image_edits",
-                                                      "reason": f"image edit server: {ig.get('reason') or 'not ready'}"})
-    a.first_done = sync_mod.run_ladder(svc.client, worker, a, photo.read_bytes())
-    if len(looks) >= MAX_LOOKS:
-        looks.pop(next(iter(looks)))
-    looks[key] = a
+    a = await _begin_ladder(request.app, svc, thread_id=body.thread_id, photo_id=body.photo_id, spec=view[0],
+                            director=view[1], photo=photo, store=_store(request))
     return JSONResponse(status_code=202, content={"state": "preparing", "appearance": a.public()})
+
+
+def _prewarm_done(tasks: dict[str, asyncio.Task[Any]], key: str, t: asyncio.Task[Any]) -> None:
+    if tasks.get(key) is t:
+        tasks.pop(key, None)
+    if not t.cancelled() and t.exception() is not None:
+        log.warning("avatar prewarm for a case failed: %s", type(t.exception()).__name__)
+
+
+def _chart_variant(a: sync_mod.Appearance, live: ap.Look) -> sync_mod.Variant | None:
+    """The generated picture closest to the patient now that shows no sign they no longer have."""
+    made = {k: v.look for k, v in a.variants.items() if v.image is not None}
+    pick = ap.choose_variant(live, made)
+    return a.variants[pick.key] if pick is not None else None
+
+
+@router.get("/look")
+async def look(request: Request, thread_id: str, photo_id: str, user: Principal = Depends(current_user)):
+    """The chart's still portrait: the case's generated picture for how the patient is now
+    (``state`` none | preparing | ready). The picture itself is at ``/look/image``."""
+    view = await _thread_view(request, thread_id, user)
+    if view is None:
+        raise HTTPException(status_code=404, detail={"error": "thread_not_found"})
+    a = _looks(request).get(f"{thread_id}:{photo_id}")
+    if a is None:
+        return {"state": "none", "has_image": False}
+    live = sync_mod.live_look(*view)
+    v = _chart_variant(a, live)
+    done = a.first_done is not None and a.first_done.is_set()
+    out: dict[str, Any] = {"state": "ready" if v is not None else ("failed" if done else "preparing"),
+                           "has_image": v is not None, "live_key": live.key, "reason": a.reason,
+                           "signs": live.public()["signs"], "phase": live.phase}
+    if v is not None:
+        out.update({"key": v.look.key, "exact": v.look.key == live.key, "name": v.name})
+    return out
+
+
+@router.get("/look/image")
+async def look_image(request: Request, thread_id: str, photo_id: str, key: str,
+                     user: Principal = Depends(current_user)):
+    view = await _thread_view(request, thread_id, user)
+    a = _looks(request).get(f"{thread_id}:{photo_id}") if view is not None else None
+    v = a.variants.get(key) if a is not None else None
+    if v is None or v.image is None:
+        raise HTTPException(status_code=404, detail={"error": "unknown_image"})
+    from fastapi.responses import Response  # noqa: PLC0415
+
+    return Response(content=v.image, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.get("/appearance")

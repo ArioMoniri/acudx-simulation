@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { etaMinutes, wakeOnCallStart, wakeStatus, watchWorker } from "@/lib/workerWake";
-import type { VoiceApi, VoiceCapabilities, WorkerWake } from "@/lib/voiceApi";
+import type { VideoWake, VoiceApi, VoiceCapabilities, WorkerWake } from "@/lib/voiceApi";
 
 function caps(over: {
   avatarEnabled?: boolean;
@@ -125,5 +125,50 @@ describe("watchWorker", () => {
     await vi.advanceTimersByTimeAsync(5000);
     expect(capabilities).toHaveBeenCalledTimes(1);
     expect(onStatus.mock.calls[0][0]).toEqual({ kind: "failed", detail: "x" });
+  });
+});
+
+describe("keep-alive while the learner waits", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("re-posts warm on every waking read and stops with the watch", async () => {
+    const capabilities = vi.fn(async () => ({ ok: true as const, data: caps({ ready: true, runner: "building" }) }));
+    const warm = vi.fn(async () => ({ ok: true as const, data: { ready: true, pending_launch: false, refusal: null } }));
+    let active = true;
+    watchWorker({ api: { capabilities, warm } as unknown as VoiceApi, isActive: () => active, onStatus: () => {}, intervalMs: 1000 });
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(1000);
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    expect(warm).toHaveBeenCalledTimes(2);
+    active = false;
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(warm).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("the live video stage (avatar.wake)", () => {
+  function withVideo(wake: VideoWake, over: Parameters<typeof caps>[0] = {}): VoiceCapabilities {
+    const c = caps(over);
+    return { ...c, avatar: { ...c.avatar, wake } };
+  }
+
+  it("names the stage and gives progress and the minutes left to live video", () => {
+    const machine = wakeStatus(withVideo({ stage: "machine", elapsed_s: 300, estimate_s: 1200, progress: 0.25 }));
+    expect(machine).toEqual({ kind: "waking", minutes: 15, stage: "machine", progress: 0.25 });
+    // The worker answers but the runner is still building: the estimate keeps counting down, it
+    // does not restart at the machine's 10 minutes.
+    const services = wakeStatus(
+      withVideo({ stage: "video_services", elapsed_s: 900, estimate_s: 1200, progress: 0.75, runner: "building" },
+        { ready: true, runner: "building", wake: { state: "ready", elapsed_s: null } }),
+    );
+    expect(services).toEqual({ kind: "waking", minutes: 5, stage: "video_services", progress: 0.75 });
+  });
+
+  it("past the estimate it still says at least a minute, and a failed stage carries its reason", () => {
+    expect(wakeStatus(withVideo({ stage: "video_services", elapsed_s: 1500, estimate_s: 1200, progress: 0.95 }, { ready: true })))
+      .toEqual({ kind: "waking", minutes: 1, stage: "video_services", progress: 0.95 });
+    expect(wakeStatus(withVideo({ stage: "failed", elapsed_s: null, estimate_s: 1200, progress: 0, detail: "insufficient_vram" }, { ready: true })))
+      .toEqual({ kind: "failed", detail: "insufficient_vram" });
   });
 });

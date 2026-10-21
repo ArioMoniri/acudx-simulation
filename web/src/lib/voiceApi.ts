@@ -54,6 +54,30 @@ export interface AvatarCapabilities {
   model?: string;
   infer_fps?: number | null;
   vram?: { name?: string; total_mb?: number; free_mb?: number; required_mb?: number; process_reserved_mb?: number };
+  /** How far the GPU worker's live video is from ready (server/voice/service.py `_video_wake`). */
+  wake?: VideoWake;
+}
+
+/** Stage of the live video launch: the machine boots, then the runner, voices and image edits load. */
+export interface VideoWake {
+  stage: "idle" | "machine" | "video_services" | "ready" | "failed";
+  elapsed_s: number | null;
+  estimate_s: number;
+  /** 0..1 (capped at 0.95 until ready). */
+  progress: number;
+  detail?: string;
+  runner?: string;
+}
+
+/** GET /v1/voice/avatar/look: the case's generated picture for how the patient is now. */
+export interface AvatarLook {
+  state: "none" | "preparing" | "ready" | "failed";
+  has_image: boolean;
+  key?: string;
+  live_key?: string;
+  exact?: boolean;
+  reason?: string | null;
+  signs?: Record<string, number>;
 }
 
 /** POST /v1/voice/avatar/session (server/voice/avatar/routes.py). */
@@ -451,6 +475,29 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
      */
     avatarPrepare(threadId: string, photoId: string, opts: RequestOptions = {}): Promise<BackendResult<{ state: string }>> {
       return signedJson("/v1/voice/avatar/prepare", { thread_id: threadId, photo_id: photoId }, { timeoutMs: 30_000, ...opts });
+    },
+
+    /** The chart's still portrait: the generated look for how the patient is now (owner only). */
+    async avatarLook(threadId: string, photoId: string, opts: RequestOptions = {}): Promise<BackendResult<AvatarLook>> {
+      const headers = await identityOrNone();
+      const q = new URLSearchParams({ thread_id: threadId, photo_id: photoId });
+      return json<AvatarLook>(`/v1/voice/avatar/look?${q.toString()}`, { method: "GET", headers }, opts);
+    },
+
+    /** One generated picture as a Blob (signed in: the image route needs the bearer, so no plain <img src>). */
+    async avatarLookImage(threadId: string, photoId: string, key: string, opts: RequestOptions = {}): Promise<BackendResult<Blob>> {
+      const headers = await identityOrNone();
+      const q = new URLSearchParams({ thread_id: threadId, photo_id: photoId, key });
+      const { signal, clear } = composeSignal(opts, opts.timeoutMs ?? defaultTimeout);
+      try {
+        const res = await fetchFn(`${base}/v1/voice/avatar/look/image?${q.toString()}`, { method: "GET", headers, signal });
+        if (!res.ok) return { ok: false, error: `http_${res.status}`, status: res.status };
+        return { ok: true, data: await res.blob() };
+      } catch (err) {
+        return failure(err, opts.signal);
+      } finally {
+        clear();
+      }
     },
 
     avatarEnd(sessionId: string, opts: RequestOptions = {}): Promise<BackendResult<{ ok: boolean }>> {

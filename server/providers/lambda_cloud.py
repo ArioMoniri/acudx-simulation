@@ -13,6 +13,7 @@ responses captured into ``server/tests/fixtures/lambda/`` (Oct 2026):
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Literal, Sequence
 
@@ -248,18 +249,27 @@ class Choice:
     price_cents_per_hour: int
 
 
+def gpu_memory_gb(it: InstanceType) -> int | None:
+    """Memory per GPU in GB from the offer's ``gpu_description`` ("A10 (24 GB PCIe)"), else None."""
+    m = re.search(r"\((\d+)\s*GB", it.gpu_description or it.description or "")
+    return int(m.group(1)) if m else None
+
+
 def pick_cheapest(offers: dict[str, InstanceTypeOffer], allowlist: Sequence[str],
-                  region_preference: Sequence[str] = ()) -> Choice | None:
+                  region_preference: Sequence[str] = (), *, min_gpu_memory_gb: int = 0) -> Choice | None:
     """Cheapest allow-listed type that has capacity now.
 
     ``region_preference`` (ordered) restricts and ranks regions when given;
     otherwise the first region with capacity is taken. Ties on price keep the
-    allowlist order.
+    allowlist order. ``min_gpu_memory_gb`` skips cards with less memory per GPU (and cards whose
+    memory the offer does not state).
     """
     best: Choice | None = None
     for rank, name in enumerate(allowlist):
         offer = offers.get(name)
         if offer is None or not offer.regions_with_capacity_available:
+            continue
+        if min_gpu_memory_gb > 0 and (gpu_memory_gb(offer.instance_type) or 0) < min_gpu_memory_gb:
             continue
         available = [r.name for r in offer.regions_with_capacity_available]
         if region_preference:

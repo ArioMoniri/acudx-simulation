@@ -75,6 +75,14 @@ def build_worker_double(sc: WorkerScenario) -> FastAPI:
 
         return StreamingResponse(gen(), media_type="audio/wav")
 
+    @app.post("/tts-en/v1/audio/speech")
+    async def kokoro_speech(request: Request, authorization: str | None = Header(default=None)):
+        """The worker's Kokoro (English voices) behind Caddy's /tts-en prefix."""
+        _auth(authorization)
+        body = await request.json()
+        sc.tts_calls.append({**body, "_route": "kokoro"})
+        return Response(wav_bytes(), media_type="audio/wav")
+
     @app.post("/tts/v1/audio/speech/stream")
     async def speech_stream(request: Request, authorization: str | None = Header(default=None)):
         """Chatterbox ``/speech/stream``: a WAV header with an unknown size, then PCM per text chunk."""

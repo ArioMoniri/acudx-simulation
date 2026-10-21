@@ -90,7 +90,7 @@ class Appearance:
 
 # Bumped whenever the pictures for the same look change (prompts, the fever tint), so a worker never
 # reuses a face it prepared from an older picture under the same id.
-APPEARANCE_VERSION = 3
+APPEARANCE_VERSION = 4
 
 
 def variant_avatar_id(photo_id: str, thread_id: str, key: str) -> str:
@@ -150,6 +150,37 @@ def voice_for(app_state: Appearance | None) -> dict[str, Any]:
 
 GEN_RETRIES = 2
 GEN_RETRY_S = 15.0
+# How often the pictures re-check a worker whose image edit server or runner is still coming up
+# (imagegen.sh starts after the runner, several minutes after the worker's LLM answers).
+SERVICES_POLL_S = 10.0
+DEFAULT_SERVICES_WAIT_S = 1800.0
+
+
+async def await_services(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, *,
+                         wait_s: float = DEFAULT_SERVICES_WAIT_S, poll_s: float | None = None,
+                         keepalive: Any = None) -> bool:
+    """Wait until the image edit server (on ``a.gen_worker``) and the call's runner both answer.
+    False after ``wait_s``, with the reason on ``a.reason``. Production 2026-10-21: a call that came
+    in while the edit server was still loading kept the plain portrait for the whole case."""
+    poll = SERVICES_POLL_S if poll_s is None else poll_s
+    deadline = time.monotonic() + max(0.0, wait_s)
+    while True:
+        ig = await mt.imagegen_health(client, a.gen_worker or worker)
+        if ig.get("ok"):
+            a.gen_mode = ig.get("mode") or a.gen_mode
+            h = await mt.health(client, worker)
+            if h.get("ok"):
+                return True
+            why = f"avatar runner: {h.get('state')} {h.get('reason') or h.get('detail') or ''}".strip()
+        else:
+            why = f"image edit server: {ig.get('reason') or 'not ready'}"
+        if time.monotonic() >= deadline:
+            a.reason = f"{why}; gave up after {wait_s:.0f} s, the call keeps the case portrait"
+            return False
+        a.reason = f"{why}; the face switches to the patient's look when the pictures are ready"
+        if keepalive is not None:
+            keepalive()   # pictures on the way are use of the worker: keep it out of the idle reaper
+        await asyncio.sleep(poll)
 
 
 async def _retrying(step: Any, v: Variant, retry_s: float | None) -> bool:
@@ -173,7 +204,7 @@ async def _gen(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
         except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
             _failed(a, v, exc)
             return False
-        flush = int(v.look.signs.get("fever_flush", 0))
+        flush = ap.tint_level(v.look)
         if flush:
             try:
                 img = warm_flush(img, flush)
@@ -233,11 +264,13 @@ def new_appearance(*, thread_id: str, photo_id: str, spec: dict[str, Any], direc
     return a
 
 
-def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, portrait: bytes) -> asyncio.Event:
+def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, portrait: bytes, *,
+               services_wait_s: float = DEFAULT_SERVICES_WAIT_S, keepalive: Any = None) -> asyncio.Event:
     """Make every picture first, then prepare them (presenting first), switching a connected call as each
     one lands. Pictures before preparations: the image edit server and the runner share a 40 GB card,
-    and the runner's preparation buffers left the edits no room (live 2026-10-21). Returns an event set
-    once the presenting look is ready (or has failed)."""
+    and the runner's preparation buffers left the edits no room (live 2026-10-21). A worker whose edit
+    server or runner is still starting is waited for (``services_wait_s``). Returns an event set once
+    the presenting look is ready (or has failed)."""
     first_done = asyncio.Event()
     seed = seed_for(a.thread_id)
     first = a.variants.get(a.live.key) if a.live is not None else None
@@ -245,9 +278,14 @@ def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
 
     async def pipeline() -> None:
         try:
+            if not await await_services(client, worker, a, wait_s=services_wait_s, keepalive=keepalive):
+                return
+            a.reason = None
             for v in order:
                 if v.image is None and v.status != "ready":
                     await _gen(client, worker, a, v, portrait, seed=seed)
+                    if keepalive is not None:
+                        keepalive()
             for v in order:
                 if v.status == "generated":
                     ok = await _prep(client, worker, a, v)
@@ -267,7 +305,7 @@ def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
 async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id: str, photo_id: str,
                 portrait: bytes, spec: dict[str, Any], director: dict[str, Any], wait_s: float = 45.0,
                 gen_worker: mt.WorkerAvatar | None = None, existing: Appearance | None = None,
-                ) -> tuple[Appearance, str]:
+                services_wait_s: float = DEFAULT_SERVICES_WAIT_S, keepalive: Any = None) -> tuple[Appearance, str]:
     """The call's appearance: the one prepared at case start when there is one (``existing``), else a
     new ladder. Waits up to ``wait_s`` for the presenting look; returns the state and the avatar id the
     call should open with (the case portrait until the look is ready, then a crossfade to it)."""
@@ -283,12 +321,14 @@ async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id
                            gen_worker=gen_worker)
         ig = await mt.imagegen_health(client, a.gen_worker)
         a.gen_mode = ig.get("mode")
-        if not ig.get("ok"):
-            a.variants.clear()
-            a.reason = f"image edit server: {ig.get('reason') or 'not ready'}"
-            return a, base
-        first_done = run_ladder(client, worker, a, portrait)
+        first_done = run_ladder(client, worker, a, portrait, services_wait_s=services_wait_s, keepalive=keepalive)
         a.first_done = first_done
+        if not ig.get("ok"):
+            # Still loading (or out of room): the call opens on the portrait now, the ladder waits for
+            # the edit server and the live call crossfades into the look when it lands.
+            a.reason = (f"image edit server: {ig.get('reason') or 'not ready'}; the face switches to the "
+                        "patient's look when the pictures are ready")
+            return a, base
     try:
         await asyncio.wait_for(first_done.wait(), timeout=wait_s)
     except asyncio.TimeoutError:
@@ -372,6 +412,8 @@ async def _switch_to_best(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a:
              "switch_ms": round((time.monotonic() - t) * 1000.0, 1), "runner": res}
     a.current_key = target_key
     a.switches.append(entry)
+    if entry["exact"]:
+        a.reason = None   # the face shows the patient as they are now: no "not ready yet" note any more
     return {"switched": True, **entry}
 
 

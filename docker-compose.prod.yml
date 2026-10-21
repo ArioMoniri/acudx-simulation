@@ -34,6 +34,9 @@ services:
       # address: allow-list it so the registry probe of the identity provider is not refused
       # as DNS rebinding (server/net_guard.py).
       - LOCAL_ALLOWLIST=${DOMAIN}
+      # Live patient video: a case start wakes the on-demand GPU worker and makes the patient's
+      # pictures (the case signs) before the call; the idle reaper still stops it (GPU_IDLE_MINUTES).
+      - AVATAR_PREWARM_ON_CASE_START=${AVATAR_PREWARM_ON_CASE_START:-true}
     volumes:
       - server_data:/app/server/data
       - /var/lib/acudx/bootstrap:/run/acudx-bootstrap   # root-only on the host (0700)

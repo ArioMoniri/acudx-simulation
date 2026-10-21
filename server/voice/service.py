@@ -42,6 +42,7 @@ log = logging.getLogger("acudx.voice")
 
 # Chatterbox TTS API health route behind the worker's Caddy /tts prefix (bearer required).
 WORKER_TTS_HEALTH_PATH = "/tts/health"
+WORKER_KOKORO_PATH = "/tts-en"   # Kokoro FastAPI behind the worker's Caddy (English voices)
 WORKER_PROBE_TIMEOUT_S = 3.0
 
 # Languages the self-hosted worker serves (Chatterbox Multilingual list, research doc section 3.2).
@@ -57,6 +58,9 @@ WORKER_TTS_BOOT_WAIT_S = 0.25
 WORKER_TTS_READY_WAIT_S = 10.0
 # Typical cold boot of a worker (image pull, weights, vLLM, Chatterbox, MuseTalk), shown as an estimate.
 WORKER_BOOT_ESTIMATE_S = 600
+# Cold launch to live video: the worker above, then the MuseTalk runner build and its models, the
+# voices and the image edit server (measured on a Lambda A100 40 GB, docs/architecture/18 6.7).
+VIDEO_READY_ESTIMATE_S = 1200
 
 
 class NoVoiceProvider(RuntimeError):
@@ -133,6 +137,15 @@ class VoiceService:
         worker = await self._worker_for_tts(flags)
         if worker is not None:
             yield worker
+            # The worker's Kokoro (English only, /tts-en): the patient keeps an English voice when the
+            # worker's Chatterbox is down (live 2026-10-21: its image build failed on a PPA outage).
+            origin = worker.base_url.rstrip("/")
+            origin = origin[: -len(WORKER_PATHS["tts"])] if origin.endswith(WORKER_PATHS["tts"]) else origin
+            yield ProviderEndpoint(kind="tts", name="gpu-worker-kokoro", base_url=origin + WORKER_KOKORO_PATH,
+                                   model="kokoro", api_key=worker.api_key, source="gpu_worker",
+                                   extra={"voice_family": "kokoro", "languages": ["en"],
+                                          # Kokoro streams its plain /speech route (chunked).
+                                          "tts_stream_path": "/speech", "tts_stream_body": {}})
 
     # -- on-demand GPU worker ---------------------------------------------------- #
     def wake_worker(self) -> asyncio.Task[ProviderEndpoint | None] | None:
@@ -425,6 +438,39 @@ class VoiceService:
                     reasons.append(f"gpu-worker: {out['gpu_worker']['refusal']['reason']}")
             out[kind] = self._describe(kind, ep, reasons, worker_launchable=launchable)
         out["avatar"] = await self._avatar_capabilities(out.get("gpu_worker"), probe_worker=probe_worker)
+        if wm is not None and out["avatar"].get("source") == "gpu_worker":
+            out["avatar"]["wake"] = self._video_wake(status, out["avatar"])
+        return out
+
+    def _video_wake(self, status: dict[str, Any], avatar: dict[str, Any]) -> dict[str, Any]:
+        """How far the live video is from ready: stage ``idle`` (nothing launched), ``machine`` (the GPU
+        machine boots), ``video_services`` (the worker answers; runner, voices and image edits load),
+        ``ready`` or ``failed``, with the time since launch and an estimate for the progress bar."""
+        if avatar.get("enabled") and avatar.get("live_video"):
+            return {"stage": "ready", "elapsed_s": None, "estimate_s": VIDEO_READY_ESTIMATE_S, "progress": 1.0}
+        workers = [w for w in (status.get("workers") or [])
+                   if isinstance(w, dict) and w.get("status") in ("launching", "booting", "ready")]
+        started = [float(w["launched_at"]) for w in workers if w.get("launched_at")]
+        running = self._wake is not None and not self._wake.done()
+        if running and self._wake_started_at is not None:
+            started.append(self._wake_started_at)
+        state = str(avatar.get("state") or "")
+        if any(w.get("status") == "ready" for w in workers):
+            stage = "failed" if state in ("disabled", "failed", "error") else "video_services"
+        elif workers or running or (status.get("capacity") or {}).get("launching"):
+            stage = "machine"
+        elif self._wake_error:
+            return {"stage": "failed", "elapsed_s": None, "estimate_s": VIDEO_READY_ESTIMATE_S, "progress": 0.0,
+                    "detail": self._wake_error}
+        else:
+            return {"stage": "idle", "elapsed_s": None, "estimate_s": VIDEO_READY_ESTIMATE_S, "progress": 0.0}
+        elapsed = round(max(0.0, time.time() - min(started)), 1) if started else 0.0
+        out = {"stage": stage, "elapsed_s": elapsed, "estimate_s": VIDEO_READY_ESTIMATE_S,
+               "progress": round(min(0.95, elapsed / VIDEO_READY_ESTIMATE_S), 3)}
+        if stage == "failed":
+            out["detail"] = (avatar.get("reasons") or [state])[-1]
+        elif stage == "video_services" and state:
+            out["runner"] = state
         return out
 
     async def _avatar_capabilities(self, gpu: dict[str, Any] | None, *, probe_worker: bool) -> dict[str, Any]:

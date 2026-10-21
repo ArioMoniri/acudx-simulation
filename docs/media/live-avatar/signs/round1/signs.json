@@ -1,0 +1,401 @@
+{
+  "summary": {
+    "model": "black-forest-labs/FLUX.2-klein-4B",
+    "licence": "Apache-2.0",
+    "mode": "offload",
+    "vision_model": "claude-opus-5-5",
+    "signs": 19,
+    "passed": 14,
+    "scored": 19,
+    "captured_at": "2026-10-21T19:35:36Z"
+  },
+  "rows": [
+    {
+      "sign": "petechiae",
+      "level": 2,
+      "photo": "p11",
+      "file": "petechiae-p11.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: many tiny pinpoint dark red petechial dots scattered over the face and neck. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 15129.6,
+      "mode": "offload",
+      "wall_ms": 16576,
+      "vision": {
+        "visible": true,
+        "confidence": 0.85,
+        "same_person": true,
+        "unintended": [
+          "some lesions larger than pinpoint, resembling purpura or papules",
+          "very dense diffuse distribution extending to scalp and forehead",
+          "shirt color changed from black to blue (non-clinical)"
+        ],
+        "notes": "Numerous red-purple pinpoint spots cover the face and neck in image 2 and are absent in image 1, though some dots vary in size and density looks exaggerated."
+      }
+    },
+    {
+      "sign": "purpura",
+      "level": 2,
+      "photo": "p25",
+      "file": "purpura-p25.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: several purple-red non-blanching purpuric patches on the face and neck. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 12583.2,
+      "mode": "offload",
+      "wall_ms": 14247,
+      "vision": {
+        "visible": true,
+        "confidence": 0.85,
+        "same_person": true,
+        "unintended": [
+          "targetoid/ring-shaped lesions resembling erythema multiforme rather than classic petechiae/purpura",
+          "large confluent ecchymosis-like patches suggesting bruising",
+          "mild diffuse facial erythema/flushing"
+        ],
+        "notes": "A purple-red rash is clearly added to the face and neck, though its ringed, bruise-like morphology is less typical of meningococcal purpura, and the clothing changed to blue scrubs (non-clinical)."
+      }
+    },
+    {
+      "sign": "urticaria",
+      "level": 2,
+      "photo": "p08",
+      "file": "urticaria-p08.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: many raised pink-white wheals (hives) with red edges on the face and neck. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 9481.8,
+      "mode": "offload",
+      "wall_ms": 11820,
+      "vision": {
+        "visible": true,
+        "confidence": 0.6,
+        "same_person": true,
+        "unintended": [
+          "lesions with white centers resemble vesicles/pustules",
+          "small red papules or petechia-like dots"
+        ],
+        "notes": "Raised pink lesions on the face and neck are new and absent in the original, but their discrete round shape with white, blister-like centers looks more vesiculopustular than classic edematous urticarial wheals."
+      }
+    },
+    {
+      "sign": "jaundice",
+      "level": 2,
+      "photo": "p05",
+      "file": "jaundice-p05.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: deep yellow skin and yellow whites of the eyes. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 10632.4,
+      "mode": "offload",
+      "wall_ms": 13154,
+      "vision": {
+        "visible": true,
+        "confidence": 0.9,
+        "same_person": true,
+        "unintended": [
+          "yellow-tinted irises (not physiologic)",
+          "marked wrinkle reduction / younger apparent age"
+        ],
+        "notes": "Jaundice is obvious but the yellow is unrealistically saturated, like paint, and the face has been noticeably smoothed and de-aged compared with the original."
+      }
+    },
+    {
+      "sign": "scleral_icterus",
+      "level": 2,
+      "photo": "p22",
+      "file": "scleral_icterus-p22.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: clearly yellow whites of the eyes. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 9898.1,
+      "mode": "offload",
+      "wall_ms": 12438,
+      "vision": {
+        "visible": false,
+        "confidence": 0.85,
+        "same_person": true,
+        "unintended": [
+          "non-physiologic bright yellow irises/pupils",
+          "mild periorbital puffiness/dark circles",
+          "reddened lid margins"
+        ],
+        "notes": "The yellow was applied to the irises rather than the sclerae, which stay white-pink, so this does not depict scleral icterus."
+      }
+    },
+    {
+      "sign": "cyanosis",
+      "level": 2,
+      "photo": "p26",
+      "file": "cyanosis-p26.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: dusky blue-grey lips and a greyish tinge around the mouth. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 11067.0,
+      "mode": "offload",
+      "wall_ms": 12688,
+      "vision": {
+        "visible": true,
+        "confidence": 0.85,
+        "same_person": true,
+        "unintended": [
+          "generalized facial pallor",
+          "marked reduction of facial wrinkles (apparent younger skin age)",
+          "mild periorbital redness"
+        ],
+        "notes": "Blue-grey lips with a faint grey perioral tinge are clearly shown, though the lip color looks somewhat flat and lipstick-like, and the skin was smoothed and the clothing changed to scrubs."
+      }
+    },
+    {
+      "sign": "pallor",
+      "level": 2,
+      "photo": "p13",
+      "file": "pallor-p13.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: very pale, greyish skin. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 10503.1,
+      "mode": "offload",
+      "wall_ms": 13327,
+      "vision": {
+        "visible": true,
+        "confidence": 0.7,
+        "same_person": false,
+        "unintended": [
+          "bluish-grey tint suggestive of cyanosis",
+          "global depigmentation resembling albinism rather than pallor"
+        ],
+        "notes": "Pallor is clearly present but grossly exaggerated, replacing the patient's natural dark skin tone entirely, and facial features (nose, lips, face shape) were altered, so identity is not preserved."
+      }
+    },
+    {
+      "sign": "mottling",
+      "level": 2,
+      "photo": "p16",
+      "file": "mottling-p16.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: marked purple-grey mottled skin on the neck and chin. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 10800.3,
+      "mode": "offload",
+      "wall_ms": 14068,
+      "vision": {
+        "visible": true,
+        "confidence": 0.75,
+        "same_person": true,
+        "unintended": [
+          "prominent reticular vein-like network (livedo-like) rather than blotchy mottling",
+          "sharply demarcated, uniform purple patch confined to the neck"
+        ],
+        "notes": "Purple discoloration is clearly added to the neck and absent in the original, but it reads as a vivid violet, sharply bordered, vein-patterned patch rather than natural blotchy purple-grey mottling."
+      }
+    },
+    {
+      "sign": "diaphoresis",
+      "level": 2,
+      "photo": "p14",
+      "file": "diaphoresis-p14.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: beads of sweat on the forehead and damp hair at the temples. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 11104.6,
+      "mode": "offload",
+      "wall_ms": 14574,
+      "vision": {
+        "visible": true,
+        "confidence": 0.95,
+        "same_person": false,
+        "unintended": [
+          "furrowed brow / distressed expression",
+          "wet, matted hair"
+        ],
+        "notes": "Sweat beads are clearly visible on the forehead, nose and cheeks in image 2 and absent in image 1, but the edit shows a noticeably different, younger individual rather than the original patient."
+      }
+    },
+    {
+      "sign": "flushing",
+      "level": 2,
+      "photo": "p03",
+      "file": "flushing-p03.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Make the person look well and comfortable. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 9654.2,
+      "mode": "offload",
+      "wall_ms": 12174,
+      "vision": {
+        "visible": false,
+        "confidence": 0.7,
+        "same_person": true,
+        "unintended": [
+          "freckles and sun damage removed",
+          "reduced facial wrinkling"
+        ],
+        "notes": "Image 2 has only a mild overall pinkish tone, mainly on the nose and cheeks, not a clear, even red flush of the face and neck; the skin is also smoothed and the clothing changed to scrubs."
+      }
+    },
+    {
+      "sign": "fever_flush",
+      "level": 2,
+      "photo": "p04",
+      "file": "fever_flush-p04.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: a feverish, unwell look: tired, heavy, glassy eyes. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 10062.4,
+      "mode": "offload",
+      "wall_ms": 12432,
+      "vision": {
+        "visible": true,
+        "confidence": 0.55,
+        "same_person": true,
+        "unintended": [
+          "furrowed brow / distressed expression",
+          "darker under-eye circles",
+          "reduced facial wrinkles (younger-looking skin)"
+        ],
+        "notes": "Image 2 has a modestly warmer, ruddier tone on the cheeks and nose with an unwell look, but the flush is subtle and partly conveyed by expression rather than clear skin redness."
+      }
+    },
+    {
+      "sign": "facial_droop",
+      "level": 2,
+      "photo": "p24",
+      "file": "facial_droop-p24.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: a clear droop of one side of the face and mouth. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 10258.5,
+      "mode": "offload",
+      "wall_ms": 13177,
+      "vision": {
+        "visible": false,
+        "confidence": 0.7,
+        "same_person": false,
+        "unintended": [
+          "thinner, gaunter face",
+          "prominent neck cords"
+        ],
+        "notes": "Mouth and face look nearly symmetric with at most a subtle corner asymmetry, and facial structure and age differ noticeably from the original."
+      }
+    },
+    {
+      "sign": "periorbital_oedema",
+      "level": 2,
+      "photo": "p09",
+      "file": "periorbital_oedema-p09.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: markedly swollen puffy eyelids, eyes narrowed by the swelling. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 9909.1,
+      "mode": "offload",
+      "wall_ms": 12448,
+      "vision": {
+        "visible": true,
+        "confidence": 0.8,
+        "same_person": true,
+        "unintended": [
+          "glossy blister-like fluid sacs rather than diffuse eyelid swelling",
+          "periorbital erythema/discoloration",
+          "furrowed brow suggesting distress"
+        ],
+        "notes": "Periorbital swelling is clearly present but looks unnaturally shiny and bulla-like, and the frowning expression is also a change from the original."
+      }
+    },
+    {
+      "sign": "facial_swelling",
+      "level": 2,
+      "photo": "p31",
+      "file": "facial_swelling-p31.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: markedly swollen lips and puffy swollen face. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 9981.0,
+      "mode": "offload",
+      "wall_ms": 11741,
+      "vision": {
+        "visible": true,
+        "confidence": 0.7,
+        "same_person": true,
+        "unintended": [
+          "marked generalized skin lightening/pallor",
+          "bluish-grey dusky discoloration of lower face and chin",
+          "periorbital puffiness"
+        ],
+        "notes": "Lip and lower-face swelling is visible, but the edit also substantially lightened the skin tone and added a dusky lower-face discoloration that could be misread as cyanosis."
+      }
+    },
+    {
+      "sign": "wound",
+      "level": 2,
+      "photo": "p19",
+      "file": "wound-p19.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual. Change only this: a sutured laceration on the forehead with bruising around it. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 10412.7,
+      "mode": "offload",
+      "wall_ms": 13120,
+      "vision": {
+        "visible": true,
+        "confidence": 0.93,
+        "same_person": true,
+        "unintended": [
+          "suture thread extending across forehead",
+          "small blood drop/trickle at glabella",
+          "surrounding bruising/abrasion around wound"
+        ],
+        "notes": "A forehead laceration with bleeding is clearly added and identity is preserved, but the edit also adds visible suture material and changes the black t-shirt to blue scrubs."
+      }
+    },
+    {
+      "sign": "burn",
+      "level": 2,
+      "photo": "p23",
+      "file": "burn-p23.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual. Change only this: red, blistered partial-thickness burn on one cheek and the chin. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 9946.9,
+      "mode": "offload",
+      "wall_ms": 11590,
+      "vision": {
+        "visible": true,
+        "confidence": 0.55,
+        "same_person": true,
+        "unintended": [
+          "multiple punched-out wounds resembling puncture or pellet injuries",
+          "active bleeding or hemorrhagic crusting"
+        ],
+        "notes": "A new lesion cluster on the left cheek and jaw is clearly added, but its round, punched-out, bloody look reads more like puncture wounds or ulcers than a typical thermal burn (possibly cigarette burns)."
+      }
+    },
+    {
+      "sign": "dehydration",
+      "level": 2,
+      "photo": "p06",
+      "file": "dehydration-p06.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: very dry cracked lips, sunken eyes and dark circles. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 9410.4,
+      "mode": "offload",
+      "wall_ms": 11813,
+      "vision": {
+        "visible": true,
+        "confidence": 0.6,
+        "same_person": true,
+        "unintended": [
+          "periorbital dark discoloration resembling bruising",
+          "overall lighter skin tone suggesting pallor",
+          "small dark spot below right eye"
+        ],
+        "notes": "Sunken eyes are evident, but lip dryness and cracking are only mild, and the strong dark circles could be misread as bruising."
+      }
+    },
+    {
+      "sign": "resp_distress",
+      "level": 2,
+      "photo": "p15",
+      "file": "resp_distress-p15.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: struggling to breathe, nostrils flared, neck muscles straining. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 9735.9,
+      "mode": "offload",
+      "wall_ms": 12622,
+      "vision": {
+        "visible": false,
+        "confidence": 0.7,
+        "same_person": true,
+        "unintended": [
+          "anxious furrowed brow",
+          "mild facial flushing",
+          "slight facial puffiness"
+        ],
+        "notes": "The nostrils show no clear flaring and there are no obvious signs of accessory muscle use or straining, so respiratory distress is not convincingly depicted, though the expression is more worried and the shirt has changed to scrubs."
+      }
+    },
+    {
+      "sign": "accessory_muscles",
+      "level": 2,
+      "photo": "p17",
+      "file": "accessory_muscles-p17.jpg",
+      "prompt": "Edit this photo of a hospital patient. Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Clinical teaching photo: fully clothed, head and shoulders only, no nudity, nothing sexual, no blood, no injuries. Change only this: neck muscles standing out with each breath. Photorealistic, natural skin texture, no text.",
+      "gen_ms": 11077.9,
+      "mode": "offload",
+      "wall_ms": 13951,
+      "vision": {
+        "visible": false,
+        "confidence": 0.7,
+        "same_person": true,
+        "unintended": [],
+        "notes": "The edit shows more of the neck, but the sternocleidomastoid and other neck muscles look relaxed with only faint normal contours, not clearly tensed or standing out as in accessory muscle use."
+      }
+    }
+  ]
+}

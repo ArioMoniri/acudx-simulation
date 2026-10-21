@@ -7,6 +7,10 @@ RUN pip install -r server/requirements.txt
 COPY server server
 # The on-demand GPU worker's cloud-init template (server/providers/gpu_worker.py DEFAULT_TEMPLATE).
 COPY infra/gpu-worker infra/gpu-worker
+# The case portraits: the live video runner is prepared from them and the case's pictures are edits
+# of them (server/voice/avatar/musetalk.py DEFAULT_PORTRAIT_DIR). Without them every call start
+# answered 400 unknown_photo_id in production.
+COPY web/public/patients/*.jpg web/public/patients/
 RUN mkdir -p /app/server/data
 ENV HOST=0.0.0.0 PORT=8890 ACUDX_DB_PATH=/app/server/data/acudx.db
 EXPOSE 8890

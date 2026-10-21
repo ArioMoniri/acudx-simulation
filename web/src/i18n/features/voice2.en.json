@@ -54,7 +54,20 @@
         "workerStarting": "Live video starts when the GPU worker is up; showing the animated portrait",
         "waking": "Video connecting, the GPU is waking up (about {{minutes}} min)",
         "failed": "Live video could not start (the GPU did not come up); showing the animated portrait",
-        "unavailable": "Live video unavailable; showing the animated portrait"
+        "unavailable": "Live video unavailable; showing the animated portrait",
+        "title": "Starting the live video call",
+        "failedTitle": "The live video call could not start",
+        "stage": {
+          "machine": "Step 1 of 3: starting the GPU machine",
+          "video_services": "Step 2 of 3: loading the patient's voice and moving face",
+          "preparing": "Step 3 of 3: preparing the patient's face",
+          "connecting": "Step 3 of 3: connecting the video",
+          "starting": "Starting the GPU"
+        },
+        "eta": "About {{minutes}} min left",
+        "progress": "Live video start-up",
+        "meanwhile": "Until then the patient answers in text and with the browser voice. This picture is not the call.",
+        "reason": "Reason: {{reason}}"
       }
     }
   }

@@ -218,6 +218,14 @@ class Settings(BaseSettings):
     gpu_max_workers: int = 3
     # Hard cap on one worker's life (hours), enforced by the reaper whatever the load.
     gpu_max_lifetime_hours: float = 6.0
+    # Smallest card (GB per GPU) a worker is launched on. The worker also runs the patient video
+    # (MuseTalk runner, FLUX.2 image edits) next to vLLM and the voices; a 24 GB A10 cannot hold
+    # them, so the cheapest-card rule picked a worker that never served video (docs/architecture/18 6.7).
+    gpu_min_gpu_memory_gb: int = Field(default=40, ge=0, le=1024)
+    # Orphan sweep: only workers this gateway launched (its id is in the instance name and tags)
+    # are swept. True also sweeps acudx-worker-* instances that carry no gateway id (launched by a
+    # gateway before 2026-10-21); leave False when another gateway shares the Lambda account.
+    gpu_sweep_unowned: bool = False
     admin_token: str | None = None               # guards /admin/*; 503 when unset
     # --- Live patient video (server/voice/avatar, docs/architecture/18 section 6) --- #
     # The gateway's internet-reachable origin; Tavus's custom LLM calls back
@@ -244,6 +252,14 @@ class Settings(BaseSettings):
     # How long a call start waits for the patient's presenting look (image edit + MuseTalk preparation)
     # before it opens on the case portrait and crossfades into the look once it is ready.
     avatar_appearance_wait_s: float = Field(default=45.0, ge=0, le=300)
+    # Case start with live video enabled: a case open wakes the on-demand GPU worker in the
+    # background and makes the patient's pictures (presenting, worse, critical, improved) as soon
+    # as it is up, so a later call opens on the symptoms. The idle reaper still stops the worker
+    # (GPU_IDLE_MINUTES) when nobody calls. False: only an explicit call start launches a worker.
+    avatar_prewarm_on_case_start: bool = False
+    # How long the pictures for a case wait for the worker's image edit server and runner to come
+    # up (they start several minutes after the worker's LLM answers).
+    avatar_services_wait_s: float = Field(default=1800.0, ge=0, le=7200)
     acudx_db_path: str = "server/data/acudx.db"  # SQLite: worker state + cost ledger + registry + telemetry
 
     # --- Identity (server/auth, docs/architecture/19) --- #

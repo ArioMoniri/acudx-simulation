@@ -12,7 +12,7 @@ import type { VoiceApi, VoiceCapabilities, WorkerWake } from "@/lib/voiceApi";
 
 /** What the call tile shows while the worker is not serving live video yet. */
 export type WakeStatus =
-  | { kind: "waking"; minutes: number }
+  | { kind: "waking"; minutes: number; stage?: "machine" | "video_services"; progress?: number }
   | { kind: "ready" }
   | { kind: "failed"; detail: string | null };
 
@@ -37,6 +37,18 @@ export function liveVideoReady(caps: VoiceCapabilities): boolean {
 /** Read one capabilities answer as a wake status. */
 export function wakeStatus(caps: VoiceCapabilities): WakeStatus {
   if (liveVideoReady(caps)) return { kind: "ready" };
+  // The gateway's live-video stage (machine boot, then runner, voices and image edits): one
+  // countdown to live video instead of the machine's estimate starting over once it answers.
+  const video = caps.avatar?.wake;
+  if (video?.stage === "failed") return { kind: "failed", detail: video.detail ?? null };
+  if (video && (video.stage === "machine" || video.stage === "video_services")) {
+    return {
+      kind: "waking",
+      minutes: etaMinutes({ elapsed_s: video.elapsed_s, estimate_s: video.estimate_s }),
+      stage: video.stage,
+      progress: video.progress,
+    };
+  }
   const gpu = caps.gpu_worker;
   if (!gpu) return { kind: "failed", detail: null };
   if (gpu.wake?.state === "failed") return { kind: "failed", detail: gpu.wake.detail ?? null };
@@ -64,7 +76,8 @@ export async function wakeOnCallStart(api: Pick<VoiceApi, "warm">): Promise<Wake
 }
 
 export interface WatchOptions {
-  api: Pick<VoiceApi, "capabilities">;
+  /** `warm` (optional) is re-posted while waiting: the learner waiting counts as use of the worker. */
+  api: Pick<VoiceApi, "capabilities"> & Partial<Pick<VoiceApi, "warm">>;
   /** False once the call ended (or the tile unmounted): the watch stops. */
   isActive: () => boolean;
   /** Every status read, including the final ready / failed one. */
@@ -93,6 +106,9 @@ export function watchWorker({ api, isActive, onStatus, intervalMs = WAKE_POLL_MS
       const status = wakeStatus(res.data);
       onStatus(status, res.data);
       if (status.kind !== "waking") return stop();
+      // Keep-alive: the worker answers minutes before its runner and image edits are up, and the
+      // gateway's idle reaper stopped it while the learner watched the start-up panel (2026-10-21).
+      void api.warm?.({ timeoutMs: 6000 });
     }
     timer = setTimeout(() => void tick(), intervalMs);
   };

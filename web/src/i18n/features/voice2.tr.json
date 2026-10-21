@@ -54,7 +54,20 @@
         "workerStarting": "Canlı video GPU sunucusu açılınca başlar; hareketli portre gösteriliyor",
         "waking": "Video bağlanıyor, GPU uyanıyor (yaklaşık {{minutes}} dk)",
         "failed": "Canlı video başlatılamadı (GPU açılmadı); hareketli portre gösteriliyor",
-        "unavailable": "Canlı video kullanılamıyor; hareketli portre gösteriliyor"
+        "unavailable": "Canlı video kullanılamıyor; hareketli portre gösteriliyor",
+        "title": "Canlı görüntülü görüşme başlatılıyor",
+        "failedTitle": "Canlı görüntülü görüşme başlatılamadı",
+        "stage": {
+          "machine": "Adım 1/3: GPU makinesi açılıyor",
+          "video_services": "Adım 2/3: hastanın sesi ve hareketli yüzü yükleniyor",
+          "preparing": "Adım 3/3: hastanın yüzü hazırlanıyor",
+          "connecting": "Adım 3/3: görüntü bağlanıyor",
+          "starting": "GPU başlatılıyor"
+        },
+        "eta": "Yaklaşık {{minutes}} dk kaldı",
+        "progress": "Canlı video hazırlığı",
+        "meanwhile": "O zamana kadar hasta yazıyla ve tarayıcı sesiyle yanıt verir. Bu resim görüşme değildir.",
+        "reason": "Neden: {{reason}}"
       }
     }
   }

@@ -1,0 +1,242 @@
+{
+  "ok": true,
+  "captured_at": "2026-10-21T19:26:56.028Z",
+  "base_url": "https://acudx.localhost:18443",
+  "lang": "en",
+  "turn_tls_only": true,
+  "sessions": [
+    {
+      "status": 200,
+      "ice_servers_from_gateway": [
+        {
+          "urls": [
+            "turn:137-23-59-226.sslip.io:3478?transport=udp",
+            "turn:137-23-59-226.sslip.io:3478?transport=tcp",
+            "turns:turn.137-23-59-226.sslip.io:443?transport=tcp"
+          ],
+          "username": "(redacted)",
+          "credential": "(redacted)"
+        }
+      ]
+    }
+  ],
+  "stages": [
+    {
+      "at_s": 20,
+      "stage": "preparing",
+      "progress": "96",
+      "text": "Starting the live video call Step 3 of 3: preparing the patient's face Until then the patient answers in text and with the browser voice. This picture is not the call."
+    },
+    {
+      "at_s": 76,
+      "stage": "connecting",
+      "progress": "98",
+      "text": "Starting the live video call Step 3 of 3: connecting the video Until then the patient answers in text and with the browser voice. This picture is not the call."
+    }
+  ],
+  "selected_pair": {
+    "localType": "relay",
+    "relayProtocol": "tls",
+    "url": "turns:turn.137-23-59-226.sslip.io:4443?transport=tcp",
+    "state": "in-progress"
+  },
+  "ice_stats": {
+    "audioPackets": 98,
+    "audioEnergy": 0,
+    "videoFrames": 49,
+    "videoFps": 27,
+    "rttMs": 242,
+    "audioJitterMs": 122,
+    "videoJitterMs": 40,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tls",
+      "url": "turns:turn.137-23-59-226.sslip.io:4443?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "track": {
+    "track": "4480442c-bd3e-449e-a425-dda9707eea83",
+    "readyState": "live"
+  },
+  "turn1": {
+    "question": "How are you feeling right now? Tell me about the fever.",
+    "caption": "You:How are you feeling right now? Tell me about the fever. Patient:Right now it's still that sharp pain in my chest, but it's better sitting up like this. The fever's been low, I've just felt warm, achy and really tired since the cold. I didn't actually take my temperature, so I'm not sure how high it got.",
+    "speak": {
+      "provider": "gpu-worker",
+      "model": "chatterbox-multilingual",
+      "first_chunk_ms": 2889.8,
+      "audio_duration_ms": 16040,
+      "runner": {
+        "frames": 802,
+        "first_frame_ms": 2863.5,
+        "elapsed_ms": 17187.1
+      },
+      "voice": {
+        "speed": 1
+      }
+    },
+    "audio_energy_delta": 0.6271439733452117,
+    "audio_packets_delta": 1824,
+    "video_frames_delta": 908,
+    "video_fps": 25,
+    "samples": 868,
+    "voiced_frames": 196,
+    "quiet_frames": 590,
+    "mouth_motion_voiced": 4.577703151573126,
+    "mouth_motion_quiet": 1.0618059233757067,
+    "mouth_open_voiced": 137.3003128985969,
+    "mouth_open_quiet": 135.2072342867231,
+    "peak_rms": 0.15758439228315316,
+    "speech_start_ms": 3968,
+    "lip_lag_ms": 80
+  },
+  "turn2": {
+    "question": "Are you feeling worse now? How is your breathing?",
+    "caption": "You:Are you feeling worse now? How is your breathing? Patient:This morning on the stairs I got a little more winded than usual. I'm fine sitting here, though.",
+    "speak": {
+      "provider": "gpu-worker",
+      "model": "chatterbox-multilingual",
+      "first_chunk_ms": 3135.7,
+      "audio_duration_ms": 5620,
+      "runner": {
+        "frames": 281,
+        "first_frame_ms": 2541.6,
+        "elapsed_ms": 6683.1
+      },
+      "voice": {
+        "speed": 1
+      }
+    },
+    "audio_energy_delta": 0.24356528930480792,
+    "audio_packets_delta": 790,
+    "video_frames_delta": 394,
+    "video_fps": 25,
+    "samples": 170,
+    "voiced_frames": 24,
+    "quiet_frames": 138,
+    "mouth_motion_voiced": 4.194715711805556,
+    "mouth_motion_quiet": 1.15764171950483,
+    "mouth_open_voiced": 152.35706922743057,
+    "mouth_open_quiet": 147.86075728411834,
+    "peak_rms": 0.12922620870496232,
+    "speech_start_ms": 4340,
+    "lip_lag_ms": 80
+  },
+  "director_step": {
+    "status": 200,
+    "phase": "stable",
+    "vitals": {
+      "hr": 104,
+      "systolic": 128,
+      "diastolic": 78,
+      "rr": 20,
+      "spo2": 98,
+      "tempC": 37.9
+    }
+  },
+  "appearance_before": {
+    "current_key": "e3b0c44298",
+    "live": {
+      "key": "8dd3d2ec69",
+      "phase": "stable",
+      "signs": {
+        "diaphoresis": 1,
+        "flushing": 1
+      },
+      "cough": true
+    },
+    "source": "generated",
+    "variants": [
+      {
+        "name": "presenting",
+        "key": "e3b0c44298",
+        "status": "ready",
+        "signs": {},
+        "gen_ms": 12340.4
+      },
+      {
+        "name": "critical",
+        "key": "be4a95a56a",
+        "status": "preparing",
+        "signs": {
+          "drowsy": 1
+        },
+        "gen_ms": 11231.3
+      },
+      {
+        "name": "live",
+        "key": "8dd3d2ec69",
+        "status": "generating",
+        "signs": {
+          "diaphoresis": 1,
+          "flushing": 1
+        },
+        "gen_ms": null
+      }
+    ]
+  },
+  "appearance_after": {
+    "current_key": "8dd3d2ec69",
+    "live": {
+      "key": "8dd3d2ec69",
+      "phase": "stable",
+      "signs": {
+        "diaphoresis": 1,
+        "flushing": 1
+      },
+      "cough": true
+    },
+    "switches": [
+      {
+        "at": 1792610753.3062198,
+        "reason": "director:generated",
+        "from": "e3b0c44298",
+        "to": "8dd3d2ec69",
+        "avatar_id": "acudx-p11-6c17676f-8dd3d2ec69",
+        "live_key": "8dd3d2ec69",
+        "exact": true,
+        "phase": "stable",
+        "switch_ms": 260.2,
+        "runner": {
+          "ok": true,
+          "avatar": "acudx-p11-6c17676f-8dd3d2ec69",
+          "previous": "acudx-p11-6c17676f-e3b0c44298",
+          "crossfade_ms": 900,
+          "switch_ms": 0.4
+        }
+      }
+    ]
+  },
+  "chart_look": {
+    "state": "ready",
+    "has_image": true,
+    "live_key": "8dd3d2ec69",
+    "reason": "presenting look not ready yet; the call opens on the case portrait and switches when it lands",
+    "signs": {
+      "diaphoresis": 1,
+      "flushing": 1
+    },
+    "phase": "stable",
+    "key": "8dd3d2ec69",
+    "exact": true,
+    "name": "live"
+  },
+  "banner_generated_look": 1,
+  "log": [
+    "9.8s signed in as acudx-student",
+    "14.8s case open",
+    "15.2s voice call started",
+    "20.3s panel preparing 96% | Starting the live video call Step 3 of 3: preparing the patient's face Until then the patient answers in text and with the browser voice. This picture is not the call.",
+    "76.0s panel connecting 98% | Starting the live video call Step 3 of 3: connecting the video Until then the patient answers in text and with the browser voice. This picture is not the call.",
+    "86.2s live video connected",
+    "88.2s appearance: current=e3b0c44298 live=8dd3d2ec69 variants=presenting:ready,critical:preparing,live:generating",
+    "90.6s 05-before-step: question sent",
+    "139.0s turn1 {\"question\":\"How are you feeling right now? Tell me about the fever.\",\"caption\":\"You:How are you feeling right now? Tell me about the fever. Patient:Right now it's still that sharp pain in my chest, but it's better sitting up like this. The fever's been low, I've just felt warm, achy and really tired since the cold. I didn't actually take my temperature, so I'm not sure how high it got.\",\"speak\":{\"provider\":\"gpu-worker\",\"model\":\"chatterbox-multilingual\",\"first_chunk_ms\":2889.8,\"audio_duration_ms\":16040,\"runner\":{\"frames\":802,\"first_frame_ms\":2863.5,\"elapsed_ms\":17187.1},\"voice\":{\"speed\":1}},\"audio_energy_delta\":0.6271439733452117,\"audio_packets_delta\":1824,\"video_frames_delta\":908,\"video_fps\":25,\"samples\":868,\"voiced_frames\":196,\"quiet_frames\":590,\"mouth_motion_voiced\":4.577703151573126,\"mouth_motion_quiet\":1.0618059233757067,\"mouth_open_voiced\":137.3003128985969,\"mouth_open_quiet\":135.2072342867231,\"peak_rms\":0.15758439228315316,\"speech_start_ms\":3968,\"lip_lag_ms\":80}",
+    "139.1s director step 200 phase=stable vitals={\"hr\":104,\"systolic\":128,\"diastolic\":78,\"rr\":20,\"spo2\":98,\"tempC\":37.9}",
+    "139.1s after step: current=8dd3d2ec69 live=8dd3d2ec69 switches=[[\"director:generated\",\"e3b0c44298\",\"8dd3d2ec69\"]]",
+    "142.6s 07-after-step: question sent",
+    "164.5s turn2 {\"question\":\"Are you feeling worse now? How is your breathing?\",\"caption\":\"You:Are you feeling worse now? How is your breathing? Patient:This morning on the stairs I got a little more winded than usual. I'm fine sitting here, though.\",\"speak\":{\"provider\":\"gpu-worker\",\"model\":\"chatterbox-multilingual\",\"first_chunk_ms\":3135.7,\"audio_duration_ms\":5620,\"runner\":{\"frames\":281,\"first_frame_ms\":2541.6,\"elapsed_ms\":6683.1},\"voice\":{\"speed\":1}},\"audio_energy_delta\":0.24356528930480792,\"audio_packets_delta\":790,\"video_frames_delta\":394,\"video_fps\":25,\"samples\":170,\"voiced_frames\":24,\"quiet_frames\":138,\"mouth_motion_voiced\":4.194715711805556,\"mouth_motion_quiet\":1.15764171950483,\"mouth_open_voiced\":152.35706922743057,\"mouth_open_quiet\":147.86075728411834,\"peak_rms\":0.12922620870496232,\"speech_start_ms\":4340,\"lip_lag_ms\":80}",
+    "164.9s selected pair {\"localType\":\"relay\",\"relayProtocol\":\"tls\",\"url\":\"turns:turn.137-23-59-226.sslip.io:4443?transport=tcp\",\"state\":\"in-progress\"}"
+  ]
+}

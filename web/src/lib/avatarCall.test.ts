@@ -1,7 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { crossCorrelationLag, mouthRegion, resample, sessionBody } from "@/lib/avatarCall";
+import { crossCorrelationLag, mouthRegion, resample, selectedIcePath, sessionBody } from "@/lib/avatarCall";
 import { createVoiceApi } from "@/lib/voiceApi";
+
+describe("selectedIcePath", () => {
+  it("reads the relay candidate and its TURN transport from the selected pair", () => {
+    const rows: Record<string, Record<string, unknown>> = {
+      T1: { id: "T1", type: "transport", selectedCandidatePairId: "P1" },
+      P1: { id: "P1", type: "candidate-pair", state: "succeeded", localCandidateId: "L1", remoteCandidateId: "R1" },
+      L1: { id: "L1", type: "local-candidate", candidateType: "relay", relayProtocol: "tls",
+        url: "turns:turn.1-2-3-4.sslip.io:443?transport=tcp" },
+      R1: { id: "R1", type: "remote-candidate", candidateType: "host" },
+    };
+    const report = { forEach: (cb: (r: Record<string, unknown>) => void) => Object.values(rows).forEach(cb), get: (id: string) => rows[id] };
+    expect(selectedIcePath(report)).toEqual({ localType: "relay", relayProtocol: "tls",
+      url: "turns:turn.1-2-3-4.sslip.io:443?transport=tcp", state: "succeeded" });
+    expect(selectedIcePath({ forEach: () => {}, get: () => undefined })).toBeNull();
+  });
+});
 
 describe("crossCorrelationLag", () => {
   const pulse = (n: number, at: number[]) => Array.from({ length: n }, (_, i) => (at.includes(i) ? 1 : 0));

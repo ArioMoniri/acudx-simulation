@@ -35,6 +35,8 @@ import { signsFromVitals } from "@/components/ehr/PatientAvatar";
 import {
   getCurrentVitals,
   getDiscoveredExam,
+  getGeneration,
+  useEncounterSelector,
   useEncounterState,
 } from "@/state/encounterStore";
 import type { CaseInstance, TriageVitals } from "@/domain/case";
@@ -294,6 +296,7 @@ export function PatientViewer({
   const { t, i18n } = useTranslation();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const lookThreadId = useEncounterSelector((s) => getGeneration(s)?.threadId ?? null);
 
   // Live vitals from the SAME store the bedside monitor reads. Guard on the case
   // id so we never show another encounter's numbers; fall back to triage before
@@ -441,6 +444,7 @@ export function PatientViewer({
                 sex={visual.sexAtBirth}
                 age={visual.age}
                 photoId={visual.photoId}
+                lookThreadId={lookThreadId}
                 signs={signs}
                 rr={vitals.rr}
                 alt={t("patientviewer.syntheticNote")}

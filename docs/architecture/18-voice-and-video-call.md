@@ -260,6 +260,41 @@ The face and voice on the call follow the same server case state as the labs, ex
 
 **Measured (Lambda 1x H100 SXM, offload mode, 2026-10-21; docs/media/live-avatar/state-sync/).** Each edit 9.5 s; ladder plus the first look prepared 73 s after case start; call session 0.14 s prepare when the look is ready; switch after a Director step 9 to 36 s for the ladder variant and 49 to 68 s for an exact look generated on demand, 339 ms when the exact look was already prepared; runner swap 0.5 ms, gateway `/switch` round trip 58 to 95 ms. The fever pneumonia case in EN and TR: frames before and after each step in `en/` and `tr/` (`summary-frames.jpg`, `summary-pictures.jpg`).
 
+### 6.7 The production path (2026-10-21)
+
+The live site (AWS host, OIDC, Claude for text, GPU workers on demand) showed a still portrait as the call: no voice, no lip sync, no case signs. Run on a local copy of the production stack (docker-compose.prod.yml, Caddy, the gateway in OIDC mode, Keycloak with the provisioned accounts, Claude as the model) with real Lambda workers launched by that gateway, these were the causes, each fixed and covered by a test:
+
+| Cause | Effect on the live site | Fix | Test |
+|---|---|---|---|
+| The cheapest card won: a 24 GB A10 (the production deploy record shows `gpu_1x_a10`) | vLLM with the 32B model, the voices, the runner and the image edits cannot share 24 GB: no worker health, or the runner `insufficient_vram` | `policy.min_gpu_memory_gb` (40, `GPU_MIN_GPU_MEMORY_GB`) from the offer's GPU description; Qwen3-32B-AWQ becomes 14B under 70 GB | `test_gpu_video_capacity.py` |
+| The gateway image had no case portraits | every call start answered 400 `unknown_photo_id` | `deploy/Dockerfile.server` copies `web/public/patients/*.jpg` | `test_avatar_prod_path.py` |
+| `/avatar/prepare` never launched a worker | the pictures (the case signs) existed only when a worker was already up at case open | `AVATAR_PREWARM_ON_CASE_START` (on in docker-compose.prod.yml): the case start wakes the worker and makes the pictures once it is up | same |
+| The ladder gave up when the edit server was not up yet | a call that woke the worker kept the plain portrait for the whole case | the ladder waits for the edit server and runner (`AVATAR_SERVICES_WAIT_S`) and crossfades the live call in | same |
+| The idle reaper stopped a worker while the learner watched the start-up panel (its runner came up after the idle window) | the call never got video | `/v1/voice/warm` touches a ready worker, the tile re-posts it on every wait poll, the pictures touch it while they wait | `test_voice_routes.py`, `workerWake.test.ts` |
+| The Chatterbox image needed the deadsnakes PPA, which answered 503 during this run | no voice at all; the runner waited 30 minutes for it | Python from uv, apt retries, the build retried, the runner starts once cloud-init is done; English falls back to the worker's Kokoro | `test_gpu_worker.py`, `test_voice_service.py` |
+| A reloaded tab sent the first request (the case start) with no bearer | 401 on the case start after a reload | `identityHeaders` refreshes when the tab holds a refresh token | `panelsApi.test.ts` |
+| The orphan sweep matched every `acudx-worker-*` on the account | a second gateway on the same Lambda account (this run) would stop production's workers, and the other way round | a gateway id (`gpu_meta`) in each worker's name and tags; only own workers are swept (`GPU_SWEEP_UNOWNED` for pre-id ones) | `test_gpu_video_capacity.py` |
+| The tile showed the animated portrait with a one-line status | the portrait read as the call | a start-up panel over the picture: step (GPU machine, voice and moving face, preparing the face, connecting), progress bar and minutes left from `capabilities.avatar.wake`, or the reason the call failed and Retry | `workerWake.test.ts` |
+
+Also new: the chart's still portraits (banner, viewer, the tile before the call) show the generated look of the patient now (`GET /v1/voice/avatar/look`, `/look/image`, `lib/generatedLook.ts`); `avatarCall` reports the selected ICE path; non-febrile flushing is an even tint like the fever flush. Checked and not a cause: the production Caddyfile sets no CSP or Permissions-Policy, so media, autoplay after the click, and the worker's TURN are not blocked; the SDP proxy negotiates the audio and video transceivers (both arrive, see below); the TTS route works under OIDC.
+
+**Measured live** (Lambda A100 SXM4 40 GB, asia-south-1, no weights cache; gateway on the local production stack; Chromium with no proxy and only `turns:turn.<worker>:443` left in the session's ICE servers, relay only; this sandbox has no direct egress, so the browser's TLS session to coturn is piped byte for byte through `scripts/turn_ws_tunnel.py` to the worker's own 443 router via the runner's `/avatar/turn?via=tls`, the Let's Encrypt certificate for `turn.<worker>` verified by Chromium; docs/media/live-avatar/prod-path/{en,tr}/):
+
+| | EN | TR |
+|---|---|---|
+| Case start to the worker launching (prewarm) | 25 s (the case open) | worker already up |
+| Worker launch to `/healthz` (vLLM), then to live video (cold, Chatterbox built from source) | 6.8 min, about 26 min | |
+| GPU cost of this proof | 2 workers, 1.26 + 1.97 USD; the first was stopped by the idle reaper (the defect above), the second from the admin API | |
+| ICE path | relay over TLS (`relayProtocol: tls`, `turns:...`) | same |
+| Voice in the browser: audio energy over the reply | 0.63 | 0.56 |
+| Mouth motion while speaking / silent (mouth box, mean change per frame) | 4.58 / 1.06 | 4.86 / 1.17 |
+| Voice to lips | 80 ms | 40 ms |
+| Speech start (first chunk) | 3.97 s (2.89 s) | 4.40 s (3.41 s) |
+| TTS | worker Chatterbox | worker Chatterbox, speed 0.92 (breathless) |
+| Face follows the Director | `director:generated` switch to the look with flushing and sweat once the exam layers landed | sweat at presenting, then distress after the step (phase deteriorating) |
+
+Still open: a cold launch to live video takes 20 to 30 minutes because the voice and face images are built on the worker; prebuilt images in a registry (or the HF and image cache on a Lambda file system in the launch region) are the way to bring that under 10 minutes. The panel says so honestly meanwhile.
+
 ## 7. The browser tile
 
 `PatientCallTile` (mounted by `PatientPresence` in `InterviewTab`, right column at 1280 px and up, full width under 1024 px):

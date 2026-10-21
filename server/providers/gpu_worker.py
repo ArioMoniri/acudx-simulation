@@ -45,6 +45,7 @@ from server.providers.lambda_cloud import (
     Instance,
     LambdaCloudClient,
     LambdaCloudError,
+    gpu_memory_gb,
     merge_firewall_rules,
     pick_cheapest,
 )
@@ -73,6 +74,8 @@ ACTIVE_STATUSES = ("launching", "booting", "ready")
 # ever considers instances that carry the name (or, when nameless, the tag).
 WORKER_NAME_PREFIX = "acudx-worker-"
 WORKER_TAG = {"key": "acudx", "value": "gpu-worker"}
+# The launching gateway's id (WorkerStore.gateway_id), also in the name as ``-g<id>-``.
+GATEWAY_TAG_KEY = "acudx-gateway"
 
 
 # --------------------------------------------------------------------------- #
@@ -141,6 +144,10 @@ class WorkerPolicy(BaseModel):
     # Hard cap on one worker's life, enforced by the reaper whatever its load: a worker kept busy (or
     # pinned by a bug in the load accounting) is still stopped. A later request launches a fresh one.
     max_lifetime_hours: float = Field(default=6.0, gt=0, le=7 * 24)
+    # Smallest card (GB per GPU) a worker is launched on: the worker also runs the patient video
+    # (MuseTalk runner and FLUX.2 image edits) beside vLLM and the voices, which a 24 GB card cannot
+    # hold (production 2026-10-21: the cheapest rule picked an A10 and the call never got video).
+    min_gpu_memory_gb: int = Field(default=40, ge=0, le=1024)
 
     @field_validator("allowlist")
     @classmethod
@@ -196,6 +203,19 @@ class LedgerEntry(BaseModel):
 # --------------------------------------------------------------------------- #
 # Pure helpers                                                                 #
 # --------------------------------------------------------------------------- #
+# vLLM models that need a large card next to the voices and the video, and what runs instead on a
+# smaller one (Qwen3-32B-AWQ left too little KV cache on a 40 GB card; cloud-init header).
+SMALL_CARD_MODEL = {"Qwen/Qwen3-32B-AWQ": "Qwen/Qwen3-14B-AWQ"}
+LARGE_CARD_GB = 70
+
+
+def llm_model_for(model: str, gpu_gb: int | None) -> str:
+    """The worker's LLM for a card with ``gpu_gb`` per GPU (unknown memory keeps the model)."""
+    if gpu_gb is not None and gpu_gb < LARGE_CARD_GB:
+        return SMALL_CARD_MODEL.get(model, model)
+    return model
+
+
 def sslip_domain(ip: str) -> str:
     """``1.2.3.4`` -> ``1-2-3-4.sslip.io`` (resolves to the IP; Caddy gets a LE cert)."""
     return ip.strip().replace(".", "-") + ".sslip.io"
@@ -254,8 +274,17 @@ class WorkerStore:
                 CREATE TABLE IF NOT EXISTS gpu_boot_logs (
                     worker_id INTEGER PRIMARY KEY, instance_id TEXT NOT NULL,
                     captured_at REAL NOT NULL, body TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS gpu_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 """
             )
+
+    def gateway_id(self) -> str:
+        """This gateway's id (8 hex), made once per database. It goes into every worker's name and
+        tags, so the orphan sweep of one gateway never terminates another gateway's workers on a
+        shared Lambda account."""
+        with self._conn() as c:
+            c.execute("INSERT OR IGNORE INTO gpu_meta (key, value) VALUES ('gateway_id', ?)", (secrets.token_hex(4),))
+            return str(c.execute("SELECT value FROM gpu_meta WHERE key = 'gateway_id'").fetchone()["value"])
 
     def _conn(self) -> sqlite3.Connection:
         c = sqlite3.connect(self.db_path, isolation_level=None)
@@ -450,6 +479,7 @@ class WorkerManager:
             file_system_name=settings.gpu_file_system_name or None,
             max_workers=int(getattr(settings, "gpu_max_workers", 3)),
             max_lifetime_hours=float(getattr(settings, "gpu_max_lifetime_hours", 6.0)),
+            min_gpu_memory_gb=int(getattr(settings, "gpu_min_gpu_memory_gb", 40)),
         )
 
     # -- policy -------------------------------------------------------------- #
@@ -930,11 +960,31 @@ class WorkerManager:
     # -- orphan sweep ---------------------------------------------------------- #
     @staticmethod
     def is_worker_instance(inst: Instance) -> bool:
-        """An instance this manager launched: named ``acudx-worker-*``, or nameless and tagged
-        ``acudx=gpu-worker``. Anything else on the account (``acudx-wm-*``, hand-made boxes) is never ours."""
+        """An AcuDx worker: named ``acudx-worker-*``, or nameless and tagged ``acudx=gpu-worker``.
+        Anything else on the account (``acudx-wm-*``, hand-made boxes) is never a worker."""
         if inst.name:
             return inst.name.startswith(WORKER_NAME_PREFIX)
         return any(t.key == WORKER_TAG["key"] and t.value == WORKER_TAG["value"] for t in inst.tags)
+
+    @staticmethod
+    def owner_of(inst: Instance) -> str | None:
+        """The id of the gateway that launched a worker (its tag, else ``-g<id>-`` in its name)."""
+        for t in inst.tags:
+            if t.key == GATEWAY_TAG_KEY:
+                return t.value
+        m = re.match(rf"^{re.escape(WORKER_NAME_PREFIX)}\d{{9,}}-g([0-9a-f]{{8}})-", inst.name or "")
+        return m.group(1) if m else None
+
+    def is_own_worker(self, inst: Instance) -> bool:
+        """A worker this gateway launched. One without any gateway id (launched before ids existed)
+        counts only with ``GPU_SWEEP_UNOWNED=true``: another gateway on the same account (production
+        beside a staging gateway) may own it."""
+        if not self.is_worker_instance(inst):
+            return False
+        owner = self.owner_of(inst)
+        if owner is None:
+            return bool(getattr(self.settings, "gpu_sweep_unowned", False))
+        return owner == self.store.gateway_id()
 
     @staticmethod
     def _launched_at(inst: Instance) -> float | None:
@@ -962,7 +1012,7 @@ class WorkerManager:
         seen: dict[str, int] = {}
         doomed: list[Instance] = []
         for inst in instances:
-            if not self.is_worker_instance(inst) or inst.id in owned or inst.status in PROVIDER_GONE_STATUSES:
+            if not self.is_own_worker(inst) or inst.id in owned or inst.status in PROVIDER_GONE_STATUSES:
                 continue
             launched = self._launched_at(inst)
             if launched is not None:
@@ -1060,22 +1110,27 @@ class WorkerManager:
                         region_pref = [fs_region]
                         fs_names = [self.policy.file_system_name]
                     break
-        choice = pick_cheapest(offers, self.policy.allowlist, region_pref)
+        min_gb = self.policy.min_gpu_memory_gb
+        choice = pick_cheapest(offers, self.policy.allowlist, region_pref, min_gpu_memory_gb=min_gb)
         if choice is None:
             raise NoCapacity(f"no capacity for any allow-listed type {self.policy.allowlist}"
+                             + (f" with {min_gb} GB or more per GPU" if min_gb else "")
                              + (f" in regions {self.policy.region_preference}" if self.policy.region_preference else ""))
+        offer = offers.get(choice.instance_type_name)
+        llm_model = llm_model_for(self.policy.llm_model, gpu_memory_gb(offer.instance_type) if offer else None)
         self._check_budget(choice.price_cents_per_hour)
         await self._ensure_firewall()
 
         token = secrets.token_urlsafe(32)
         user_data = render_cloud_init(self.template_path.read_text(encoding="utf-8"),
-                                      token=token, llm_model=self.policy.llm_model, domain="auto")
+                                      token=token, llm_model=llm_model, domain="auto")
         now = self._clock()
+        gid = self.store.gateway_id()
         ids = await api.launch(
             region_name=choice.region_name, instance_type_name=choice.instance_type_name,
             ssh_key_name=self.settings.lambda_ssh_key_name or "",
-            name=f"{WORKER_NAME_PREFIX}{int(now)}-{secrets.token_hex(2)}",
-            user_data=user_data, tags=[dict(WORKER_TAG)],
+            name=f"{WORKER_NAME_PREFIX}{int(now)}-g{gid}-{secrets.token_hex(2)}",
+            user_data=user_data, tags=[dict(WORKER_TAG), {"key": GATEWAY_TAG_KEY, "value": gid}],
             file_system_names=fs_names or None, image_family=WORKER_IMAGE_FAMILY,
         )
         if not ids:

@@ -256,6 +256,21 @@ async def test_streamed_worker_tts_uses_the_chatterbox_stream_route(tmp_path):
     assert "_route" not in sc.tts_calls[-1]
 
 
+async def test_english_falls_back_to_the_workers_kokoro_when_chatterbox_is_down(tmp_path):
+    """Live 2026-10-21: the worker's Chatterbox image failed to build (a PPA answered 503), and the
+    patient had no voice at all although the worker's Kokoro (English) was up."""
+    sc = WorkerScenario(tts_status=503)
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=FakeWorkerManager(ready=True), scenario=sc)
+    out = await svc.tts("It hurts when I breathe.", lang="en", sex="female", age=64, output_format="wav", stream=True)
+    audio = await _collect(out.stream)
+    assert audio[:4] == b"RIFF"
+    assert out.endpoint.name == "gpu-worker-kokoro" and out.endpoint.source == "gpu_worker"
+    assert sc.tts_calls[-1]["_route"] == "kokoro"
+    with pytest.raises(NoVoiceProvider):          # Kokoro has no Turkish voices
+        await svc.tts("Nefes alamıyorum.", lang="tr", sex="female", age=64, output_format="wav")
+    assert [c.get("_route") for c in sc.tts_calls].count("kokoro") == 1
+
+
 async def test_a_row_declaring_its_languages_is_skipped_for_others(tmp_path):
     """A Kokoro row (English voices) declares ["en"]: a Turkish line goes on to the worker's Chatterbox."""
     sc = WorkerScenario()
@@ -326,8 +341,9 @@ async def test_tts_side_car_still_loading_on_a_ready_worker_is_pending(tmp_path)
     """Chatterbox builds after vLLM: a ready worker whose /tts fails is still booting, not refused."""
     sc = WorkerScenario(tts_status=503)
     store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=FakeWorkerManager(ready=True), scenario=sc)
+    # Turkish: only Chatterbox speaks it (an English line goes to the worker's Kokoro meanwhile).
     with pytest.raises(NoVoiceProvider) as exc:
-        await svc.tts("Hello", lang="en", sex="male", age=50, output_format="wav")
+        await svc.tts("Merhaba", lang="tr", sex="male", age=50, output_format="wav")
     assert exc.value.pending_launch is True
 
 

@@ -117,6 +117,9 @@ async def warm(request: Request, user: Principal = Depends(current_user)) -> dic
     if wm is None:
         return {"ready": False, "pending_launch": False, "refusal": None}
     if wm.llm_endpoint():
+        # A learner waiting for the live video is using the worker: its runner and image edits come up
+        # minutes after the LLM, and the idle reaper must not stop it meanwhile (live 2026-10-21).
+        wm.touch()
         return {"ready": True, "pending_launch": False, "refusal": None}
     status = await wm.status()
     if not status.get("can_launch"):
