@@ -32,6 +32,7 @@ class SyncRunner(Runner):
         self.imagegen = imagegen
         self.edits: list[dict] = []
         self.switches: list[dict] = []
+        self.puts: list[tuple[str, str | None]] = []   # (avatar_id, ref) in preparation order
         # After the first (presenting) picture: fail the next ``fail_next`` edits with a 500, and with
         # ``hold`` keep every later edit waiting until ``gate`` is set.
         self.hold = hold
@@ -71,6 +72,13 @@ class SyncRunner(Runner):
                 raise HTTPException(status_code=404)
             return {"avatar_id": avatar_id, "face_box": [180, 200, 350, 420], "width": 530, "height": 720,
                     "idle_frames": 75}
+
+        @app.put("/avatar/avatars/{avatar_id}")
+        async def put(avatar_id: str, request: Request, authorization: str | None = Header(default=None)):
+            auth(authorization)
+            self.puts.append((avatar_id, request.query_params.get("ref")))
+            self.avatars[avatar_id] = await request.body()
+            return {"avatar_id": avatar_id, "width": 530, "height": 720, "prepare_ms": 812.0}
 
         @app.post("/avatar/switch")
         async def switch(request: Request, authorization: str | None = Header(default=None)):
@@ -156,6 +164,18 @@ def test_call_opens_on_the_generated_presenting_look_and_prepares_the_ladder(tmp
     assert img.status_code == 200 and img.headers["content-type"] == "image/jpeg" and img.content.startswith(b"\xff\xd8")
     assert c.get("/v1/voice/avatar/appearance/image", params={"session_id": s["session_id"], "key": look.key},
                  headers={"X-User-Id": "learner-2"}).status_code == 404
+
+
+def test_looks_are_prepared_after_the_base_portrait_and_aligned_to_it(tmp_path):
+    # Live 2026-10-21: each look had its own framing, so a switch blended two faces. The base portrait
+    # is prepared first and every look names it as ``ref`` (the runner aligns the look to its face box).
+    app, runner, _row = _setup(tmp_path)
+    c = TestClient(app)
+    assert c.post("/v1/voice/avatar/session", json={**SESSION, "thread_id": THREAD}, headers=USER).status_code == 200
+    assert _wait(lambda: len(runner.puts) >= 6)
+    assert runner.puts[0] == ("acudx-p04", None)
+    looks = [p for p in runner.puts if p[0] != "acudx-p04"]
+    assert len(looks) >= 5 and all(ref == "acudx-p04" for _, ref in looks)
 
 
 def test_director_step_switches_the_live_face_and_arrest_silences_the_voice(tmp_path):

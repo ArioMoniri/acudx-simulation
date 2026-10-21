@@ -1104,3 +1104,46 @@ async def test_admin_stop_that_fails_leaves_the_row_for_the_reaper(tmp_path):
     finally:
         await m.aclose()
     assert m.store.get_worker(w.id).status == "terminating"
+
+
+def _runner_functions(*names: str) -> dict:
+    """The named top-level functions of the avatar runner, compiled on their own (numpy, cv2)."""
+    import ast
+
+    import numpy as np
+    cv2 = pytest.importorskip("cv2")
+    tree = ast.parse(_written("/acudx_avatar_server.py"))
+    mod = ast.Module(body=[n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in names], type_ignores=[])
+    ns: dict = {"np": np, "cv2": cv2}
+    exec(compile(mod, "acudx_avatar_server.py", "exec"), ns)  # noqa: S102 - our own runner source
+    return ns
+
+
+def test_avatar_runner_aligns_a_look_to_the_base_framing():
+    # Live 2026-10-21: the edited look came back zoomed and shifted, and the switch blended two framings.
+    import numpy as np
+    f = _runner_functions("align_to_ref", "framing_differs")
+    base_box, size = (180, 200, 340, 400), (530, 720)
+    # The look: the same face drawn 1.25x larger and shifted, on a canvas of another size.
+    look = np.zeros((800, 600, 3), np.uint8)
+    lx1, ly1, lx2, ly2 = 150, 150, 350, 400
+    look[ly1:ly2, lx1:lx2] = 255
+    out = f["align_to_ref"](look, (lx1, ly1, lx2, ly2), base_box, size)
+    assert out.shape == (720, 530, 3)
+    ys, xs = np.nonzero(out[:, :, 0] > 127)
+    got = (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)
+    assert all(abs(g - b) <= 3 for g, b in zip(got, base_box)), got
+    assert not f["framing_differs"]((720, 530, 3), base_box, out.shape, got)
+    assert f["framing_differs"]((720, 530, 3), base_box, (800, 600, 3), base_box)           # another frame size
+    assert f["framing_differs"]((720, 530, 3), base_box, (720, 530, 3), (150, 150, 350, 400))  # zoomed and shifted
+
+
+def test_avatar_runner_cuts_instead_of_blending_two_framings():
+    runner = _written("/acudx_avatar_server.py")
+    switch = runner.split("async def switch(")[1].split("\n      async def ")[0]
+    assert "framing_differs(" in switch and "ms = 0" in switch and '"cut": cut' in switch
+    fade = runner.split("def _install_crossfade(")[1].split("\n      class ")[0]
+    assert "cv2.resize(" not in fade
+    prep = runner.split("def prepare_avatar(")[1].split("\n      class ")[0]
+    assert "align_to_ref(" in prep and '"aligned_to": aligned_to' in prep
+    assert 'request.query.get("ref")' in runner

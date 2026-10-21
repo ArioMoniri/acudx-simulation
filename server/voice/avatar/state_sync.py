@@ -90,7 +90,7 @@ class Appearance:
 
 # Bumped whenever the pictures for the same look change (prompts, the fever tint), so a worker never
 # reuses a face it prepared from an older picture under the same id.
-APPEARANCE_VERSION = 4
+APPEARANCE_VERSION = 5  # 5: looks are aligned to the base avatar's framing on the worker
 
 
 def variant_avatar_id(photo_id: str, thread_id: str, key: str) -> str:
@@ -222,7 +222,7 @@ async def _prep(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearanc
         v.status, v.retryable = "preparing", False
         t = time.monotonic()
         try:
-            await mt.ensure_avatar(client, worker, v.avatar_id, v.image or b"")
+            await mt.ensure_avatar(client, worker, v.avatar_id, v.image or b"", ref=a.base_avatar_id)
         except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
             _failed(a, v, exc)
             v.status = "generated" if v.image else "failed"
@@ -286,6 +286,11 @@ def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
                     await _gen(client, worker, a, v, portrait, seed=seed)
                     if keepalive is not None:
                         keepalive()
+            # The base portrait first: each look is aligned to its framing on the runner (``ref``).
+            try:
+                await mt.ensure_avatar(client, worker, a.base_avatar_id, portrait)
+            except (mt.AvatarWorkerError, httpx.HTTPError):
+                pass  # the looks are then prepared unaligned and the runner cuts to them instead of blending
             for v in order:
                 if v.status == "generated":
                     ok = await _prep(client, worker, a, v)

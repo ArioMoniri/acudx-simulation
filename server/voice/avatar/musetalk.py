@@ -182,8 +182,9 @@ async def health(client: httpx.AsyncClient, worker: WorkerAvatar, *, timeout_s: 
 
 
 async def ensure_avatar(client: httpx.AsyncClient, worker: WorkerAvatar, avatar_id: str,
-                        image: bytes) -> dict[str, Any]:
-    """Prepare the reference face once per worker (the runner keeps it on disk)."""
+                        image: bytes, *, ref: str | None = None) -> dict[str, Any]:
+    """Prepare the reference face once per worker (the runner keeps it on disk). ``ref`` names the
+    patient's base avatar: the runner aligns this picture to its face box and frame size."""
     r = await client.get(worker.origin + "/avatar/avatars", headers=worker.headers(), timeout=10.0)
     if r.status_code == 200 and avatar_id in (await _json(r)).get("avatars", []):
         out: dict[str, Any] = {"avatar_id": avatar_id, "prepared": False}
@@ -197,6 +198,7 @@ async def ensure_avatar(client: httpx.AsyncClient, worker: WorkerAvatar, avatar_
             pass
         return out
     r = await client.put(worker.origin + f"/avatar/avatars/{avatar_id}", content=image,
+                         params={"ref": ref} if ref else None,
                          headers={**worker.headers(), "Content-Type": "image/jpeg"}, timeout=120.0)
     body = await _json(r)
     if r.status_code != 200:
