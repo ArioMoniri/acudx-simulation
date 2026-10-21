@@ -1,9 +1,9 @@
 {
   "patientviewer": {
     "expand": "Hasta görünümünü büyüt",
-    "title": "Hasta — {{name}}",
+    "title": "Hasta: {{name}}",
     "close": "Kapat",
-    "syntheticNote": "Sentetik hasta — gerçek bir birey değildir",
+    "syntheticNote": "Sentetik hasta, gerçek bir birey değildir",
     "photoLabel": "Hasta fotoğrafı",
     "signsLabel": "Canlı klinik bulgular",
     "summaryLabel": "Klinik bulgular",

@@ -2,7 +2,7 @@
   "debrief": {
     "eyebrow": "After-action",
     "title": "Attending debrief",
-    "subtitle": "How you ran the case — the process behind the diagnosis.",
+    "subtitle": "How you ran the case: the process behind the diagnosis.",
     "forPatient": "Patient: {{name}}",
     "open": "View attending debrief",
     "close": "Close",
@@ -17,7 +17,7 @@
       "nearMiss": "Near miss",
       "incorrect": "Incorrect",
       "correctBody": "You committed the right diagnosis. Now check the process that got you there.",
-      "nearMissBody": "A reasonable diagnosis, but not the leading one for this presentation — review the evidence you weighed.",
+      "nearMissBody": "A reasonable diagnosis, but not the leading one for this presentation. Review the evidence you weighed.",
       "incorrectBody": "This diagnosis does not fit the evidence gathered. Work back through the process below."
     },
     "redFlags": {
@@ -31,7 +31,7 @@
     },
     "workup": {
       "heading": "Work-up appropriateness",
-      "clean": "Appropriate work-up — no key tests missed and nothing over-ordered.",
+      "clean": "Appropriate work-up: no key tests missed and nothing over-ordered.",
       "under": "Under-ordered (gaps)",
       "underNone": "No gaps",
       "over": "Over-ordered",
@@ -39,13 +39,13 @@
     },
     "teaching": {
       "heading": "Teaching points",
-      "safety": "Close the safety-critical gap — check allergies and order the mandatory test before management.",
+      "safety": "Close the safety-critical gap: check allergies and order the mandatory test before management.",
       "redFlags": "You missed {{count}} red-flag danger sign(s). Screen for danger signs before narrowing the differential.",
       "workupGap": "A key test was not ordered ({{label}}). Order it early for this presentation.",
       "dxIncorrect": "Widen the differential and order the key rule-out test before committing.",
-      "dxNear": "You were close — re-weigh the leading differential against the evidence you gathered.",
+      "dxNear": "You were close. Re-weigh the leading differential against the evidence you gathered.",
       "overOrder": "Avoid low-value tests that do not change management; order to a question, not by reflex.",
-      "coverage": "Broaden the history — several expected lines of questioning were not covered.",
+      "coverage": "Broaden the history: several expected lines of questioning were not covered.",
       "clean": "Well-run encounter: safe, focused, and committed on the evidence."
     }
   }

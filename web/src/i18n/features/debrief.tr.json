@@ -2,7 +2,7 @@
   "debrief": {
     "eyebrow": "Değerlendirme",
     "title": "Uzman geri bildirimi",
-    "subtitle": "Vakayı nasıl yönettiniz — tanının arkasındaki süreç.",
+    "subtitle": "Vakayı nasıl yönettiniz: tanının arkasındaki süreç.",
     "forPatient": "Hasta: {{name}}",
     "open": "Uzman geri bildirimini gör",
     "close": "Kapat",
@@ -17,7 +17,7 @@
       "nearMiss": "Yakın tanı",
       "incorrect": "Hatalı",
       "correctBody": "Doğru tanıya karar verdiniz. Şimdi sizi oraya götüren süreci gözden geçirin.",
-      "nearMissBody": "Makul bir tanı, ancak bu tabloda öncelikli olan değil — değerlendirdiğiniz kanıtları gözden geçirin.",
+      "nearMissBody": "Makul bir tanı, ancak bu tabloda öncelikli olan değil. Değerlendirdiğiniz kanıtları gözden geçirin.",
       "incorrectBody": "Bu tanı toplanan kanıtlarla uyuşmuyor. Aşağıdaki süreci baştan gözden geçirin."
     },
     "redFlags": {
@@ -31,7 +31,7 @@
     },
     "workup": {
       "heading": "Tetkik uygunluğu",
-      "clean": "Uygun tetkik — atlanan temel test yok ve gereksiz istem yapılmadı.",
+      "clean": "Uygun tetkik: atlanan temel test yok ve gereksiz istem yapılmadı.",
       "under": "Eksik istenen (boşluklar)",
       "underNone": "Boşluk yok",
       "over": "Fazla istenen",
@@ -39,13 +39,13 @@
     },
     "teaching": {
       "heading": "Öğretim noktaları",
-      "safety": "Güvenlik açısından kritik boşluğu kapatın — tedaviden önce alerjileri kontrol edin ve zorunlu testi isteyin.",
+      "safety": "Güvenlik açısından kritik boşluğu kapatın: tedaviden önce alerjileri kontrol edin ve zorunlu testi isteyin.",
       "redFlags": "{{count}} kırmızı bayrak alarm bulgusunu atladınız. Ayırıcı tanıyı daraltmadan önce alarm bulgularını tarayın.",
       "workupGap": "Temel bir test istenmedi ({{label}}). Bu tabloda erken isteyin.",
       "dxIncorrect": "Karar vermeden önce ayırıcı tanıyı genişletin ve temel dışlama testini isteyin.",
-      "dxNear": "Çok yaklaştınız — öncelikli ayırıcı tanıyı topladığınız kanıtlarla yeniden tartın.",
+      "dxNear": "Çok yaklaştınız. Öncelikli ayırıcı tanıyı topladığınız kanıtlarla yeniden tartın.",
       "overOrder": "Yönetimi değiştirmeyen düşük değerli testlerden kaçının; refleksle değil, bir soruya yönelik isteyin.",
-      "coverage": "Anamnezi genişletin — beklenen birkaç soru hattı sorgulanmadı.",
+      "coverage": "Anamnezi genişletin: beklenen birkaç soru hattı sorgulanmadı.",
       "clean": "İyi yönetilen karşılaşma: güvenli, odaklı ve kanıta dayalı karar."
     }
   }

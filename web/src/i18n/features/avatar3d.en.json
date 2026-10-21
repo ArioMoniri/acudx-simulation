@@ -2,7 +2,7 @@
   "avatar3d": {
     "region": "3D patient avatar",
     "synthetic": "Synthetic patient",
-    "unavailable": "3D unavailable — showing 2D",
+    "unavailable": "3D unavailable, showing 2D",
     "speaking": "Speaking",
     "muted": "Muted (silent lip-sync)",
     "signsLabel": "Observable clinical signs",
@@ -19,7 +19,7 @@
       "moderate": "moderate",
       "marked": "marked"
     },
-    "signItem": "{{sign}} — {{level}}",
+    "signItem": "{{sign}}: {{level}}",
     "alt": "Stylized 3D face of {{name}}. Presentation: {{state}}."
   }
 }

@@ -2,7 +2,7 @@
   "avatar3d": {
     "region": "3B hasta avatarı",
     "synthetic": "Sentetik hasta",
-    "unavailable": "3B kullanılamıyor — 2B gösteriliyor",
+    "unavailable": "3B kullanılamıyor, 2B gösteriliyor",
     "speaking": "Konuşuyor",
     "muted": "Sessiz (dudak senkronu)",
     "signsLabel": "Gözlenebilir klinik bulgular",
@@ -19,7 +19,7 @@
       "moderate": "orta",
       "marked": "belirgin"
     },
-    "signItem": "{{sign}} — {{level}}",
+    "signItem": "{{sign}}: {{level}}",
     "alt": "{{name}} adlı hastanın stilize 3B yüzü. Görünüm: {{state}}."
   }
 }

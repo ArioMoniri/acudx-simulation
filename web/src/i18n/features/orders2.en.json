@@ -13,7 +13,7 @@
     },
     "search": {
       "label": "Search orderable tests",
-      "placeholder": "Search tests — CBC, troponin, CT, culture…",
+      "placeholder": "Search tests: CBC, troponin, CT, culture…",
       "clear": "Clear search",
       "noMatches": "No orderable tests match your search."
     },
@@ -52,7 +52,7 @@
     },
     "treatments": {
       "heading": "Treatments",
-      "subtitle": "Administer to change the patient — the monitor responds live.",
+      "subtitle": "Administer to change the patient. The monitor responds live.",
       "administer": "Administer",
       "administered": "Given",
       "administerAria": "Administer {{name}}",
@@ -73,11 +73,11 @@
       "empty": "No treatments given yet."
     },
     "mar": {
-      "timeline": "MAR: {{name}} {{dose}} {{route}} — {{outcome}}",
+      "timeline": "MAR: {{name}} {{dose}} {{route}}, {{outcome}}",
       "outcome": {
-        "given": "Given — five rights verified",
+        "given": "Given, five rights verified",
         "flagged": "Given with a flag",
-        "blocked": "Not given — blocked by the safety check"
+        "blocked": "Not given, blocked by the safety check"
       },
       "failure": {
         "missing-dose": "a dose is required",
@@ -96,7 +96,7 @@
     "results": {
       "wnl": "Within normal limits",
       "representativeImage": "Representative image",
-      "syntheticNote": "No case-specific abnormality — reported within normal limits.",
+      "syntheticNote": "No case-specific abnormality. Reported within normal limits.",
       "timeline": "Ordered {{ordered}} min → resulted {{resulted}} min",
       "etaLabel": "Expected turnaround {{eta}}",
       "inProgress": "In progress",

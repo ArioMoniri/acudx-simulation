@@ -9,7 +9,7 @@
       "as": "{{role}} olarak",
       "switch": "Rol değiştir",
       "actAs": "{{role}} ol",
-      "hint": "Tek tarayıcı, tüm ekip — aynı hasta üzerinde her rolü oynamak için koltuk değiştir.",
+      "hint": "Tek tarayıcı, tüm ekip: aynı hasta üzerinde her rolü oynamak için koltuk değiştir.",
       "youAreAi": "Bu rolü yapay zekâ tutuyor. Kendin yürütmek için bu koltuğa geç.",
       "label": "Etkin rol"
     },
@@ -55,7 +55,7 @@
       "collect": "Al ve gönder",
       "collectAria": "{{name}} örneğini al ve gönder",
       "doneBy": "Uygulayan: {{role}}",
-      "resultPending": "Laboratuvarda — sonuç işleniyor",
+      "resultPending": "Laboratuvarda, sonuç işleniyor",
       "withheld": "Yatak başı kontrolde verilmedi (ilaç uygulama kaydı)",
       "resultReady": "Sonuç hazır",
       "notYours": "Bu görevi yürütmek için {{role}} koltuğuna geç.",
@@ -74,7 +74,7 @@
       "live": "Canlı",
       "responding": "Tedaviye yanıt veriyor",
       "triage": "Triyaj",
-      "sharedNote": "Tek ortak hasta — her rol aynı canlı monitörü okur."
+      "sharedNote": "Tek ortak hasta: her rol aynı canlı monitörü okur."
     },
     "status": {
       "improving": "Düzeliyor",

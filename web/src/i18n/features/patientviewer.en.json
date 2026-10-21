@@ -1,9 +1,9 @@
 {
   "patientviewer": {
     "expand": "Enlarge patient view",
-    "title": "Patient — {{name}}",
+    "title": "Patient: {{name}}",
     "close": "Close",
-    "syntheticNote": "Synthetic patient — not a real individual",
+    "syntheticNote": "Synthetic patient, not a real individual",
     "photoLabel": "Patient photo",
     "signsLabel": "Live clinical signs",
     "summaryLabel": "Clinical signs",

@@ -40,7 +40,7 @@
       "examine": "Muayene: {{system}}",
       "order": "{{label}} isteyin",
       "screenRedFlags": "Kalan kırmızı bayrakları tarayın",
-      "complete": "Temel tetkik kapsandı — değerlendirmenizi pekiştirin",
+      "complete": "Temel tetkik kapsandı. Değerlendirmenizi pekiştirin",
       "urgent": "Zaman-kritik",
       "within": "{{minutes}} dk içinde"
     },

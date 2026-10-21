@@ -2,7 +2,7 @@
   "livegen": {
     "modeLegend": "Generation",
     "endless": "Generate a fresh case",
-    "endlessHint": "A brand-new synthetic patient every time — endless and never repeating.",
+    "endlessHint": "A brand-new synthetic patient every time, endless and never repeating.",
     "endlessSub": "Draws across every specialty and self-checks each case for consistency.",
     "engineAi": "AI · realtime",
     "engineLocal": "Instant · offline",
@@ -20,7 +20,7 @@
     "generatingHint": "Sampling, grounding and verifying your case. You can cancel.",
     "cancel": "Cancel",
     "unavailable": "Generated offline",
-    "degraded": "Guideline grounding limited — verify the anchors",
+    "degraded": "Guideline grounding limited. Verify the anchors",
     "ready": "Case ready",
     "sourceLabel": "Source",
     "source": {

@@ -2,7 +2,7 @@
   "livegen": {
     "modeLegend": "Üretim",
     "endless": "Yeni bir vaka üret",
-    "endlessHint": "Her seferinde bambaşka bir sentetik hasta — sınırsız ve asla tekrar etmeyen.",
+    "endlessHint": "Her seferinde bambaşka bir sentetik hasta, sınırsız ve asla tekrar etmeyen.",
     "endlessSub": "Tüm branşlardan örnekler ve her vakayı tutarlılık için kendi kontrol eder.",
     "engineAi": "Yapay zeka · gerçek zamanlı",
     "engineLocal": "Anında · çevrimdışı",
@@ -20,7 +20,7 @@
     "generatingHint": "Vakanız örnekleniyor, dayanaklandırılıyor ve doğrulanıyor. İptal edebilirsiniz.",
     "cancel": "İptal",
     "unavailable": "Çevrimdışı üretildi",
-    "degraded": "Kılavuz dayanaklandırması sınırlı — dayanakları doğrulayın",
+    "degraded": "Kılavuz dayanaklandırması sınırlı. Dayanakları doğrulayın",
     "ready": "Vaka hazır",
     "sourceLabel": "Kaynak",
     "source": {

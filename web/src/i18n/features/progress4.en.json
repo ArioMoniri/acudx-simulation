@@ -11,7 +11,7 @@
   "feedback": {
     "empty": {
       "title": "No encounter to report on yet",
-      "body": "Finish an encounter and your formative report — calibration, competency bands and process timing — is built from what you actually did."
+      "body": "Finish an encounter and your formative report (calibration, competency bands and process timing) is built from what you actually did."
     },
     "recorded": "From your last completed encounter",
     "live": "From the encounter in progress"

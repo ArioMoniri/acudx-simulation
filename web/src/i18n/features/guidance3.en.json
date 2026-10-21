@@ -40,7 +40,7 @@
       "examine": "Examine: {{system}}",
       "order": "Order {{label}}",
       "screenRedFlags": "Screen the remaining red flags",
-      "complete": "Core work-up covered — consolidate your assessment",
+      "complete": "Core work-up covered. Consolidate your assessment",
       "urgent": "Time-critical",
       "within": "within {{minutes}} min"
     },

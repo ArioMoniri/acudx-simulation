@@ -13,7 +13,7 @@
     },
     "search": {
       "label": "İstenebilir tetkiklerde ara",
-      "placeholder": "Tetkik ara — hemogram, troponin, BT, kültür…",
+      "placeholder": "Tetkik ara: hemogram, troponin, BT, kültür…",
       "clear": "Aramayı temizle",
       "noMatches": "Aramanızla eşleşen istenebilir tetkik yok."
     },
@@ -52,7 +52,7 @@
     },
     "treatments": {
       "heading": "Tedaviler",
-      "subtitle": "Uygulayın; hasta değişir — monitör canlı yanıt verir.",
+      "subtitle": "Uygulayın; hasta değişir. Monitör canlı yanıt verir.",
       "administer": "Uygula",
       "administered": "Verildi",
       "administerAria": "{{name}} uygula",
@@ -75,7 +75,7 @@
     "results": {
       "wnl": "Normal sınırlar içinde",
       "representativeImage": "Temsili görüntü",
-      "syntheticNote": "Vakaya özgü anormallik yok — normal sınırlar içinde raporlandı.",
+      "syntheticNote": "Vakaya özgü anormallik yok. Normal sınırlar içinde raporlandı.",
       "timeline": "{{ordered}} dk’da istendi → {{resulted}} dk’da sonuçlandı",
       "etaLabel": "Beklenen sonuç süresi {{eta}}",
       "inProgress": "Sürüyor",

@@ -9,7 +9,7 @@
       "as": "Acting as {{role}}",
       "switch": "Switch role",
       "actAs": "Act as {{role}}",
-      "hint": "One browser, the whole team — switch seats to play each role on the same patient.",
+      "hint": "One browser, the whole team: switch seats to play each role on the same patient.",
       "youAreAi": "This role is AI-held. Switch into it to act it yourself.",
       "label": "Acting role"
     },
@@ -55,7 +55,7 @@
       "collect": "Collect & send",
       "collectAria": "Collect and send {{name}}",
       "doneBy": "Executed by {{role}}",
-      "resultPending": "In the lab — result processing",
+      "resultPending": "In the lab, result processing",
       "withheld": "Withheld at the bedside check (MAR)",
       "resultReady": "Result available",
       "notYours": "Switch to the {{role}} seat to execute this task.",
@@ -74,7 +74,7 @@
       "live": "Live",
       "responding": "Responding to treatment",
       "triage": "Triage",
-      "sharedNote": "One shared patient — every role reads the same live monitor."
+      "sharedNote": "One shared patient: every role reads the same live monitor."
     },
     "status": {
       "improving": "Improving",
