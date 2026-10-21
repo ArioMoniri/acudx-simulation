@@ -6,6 +6,7 @@ import { ShieldCheck, WarningCircle } from "@phosphor-icons/react";
 import { PageContainer, PageHeader } from "@/components/shell";
 import { Button, Card } from "@/components/ui";
 import { completeSignIn } from "@/lib/auth";
+import { homePathForRole } from "@/lib/navigation";
 import { retryEventSync } from "@/lib/eventSync";
 import { applyVerifiedIdentity } from "@/state/profileStore";
 
@@ -14,7 +15,8 @@ import { applyVerifiedIdentity } from "@/state/profileStore";
  *
  * Validates the state, exchanges the code with the PKCE verifier, loads the
  * server-verified principal and mirrors it into the profile store, then returns
- * the person to where they started. Any failure is shown with the IdP's reason
+ * the person to where they started (or, from the generic sign-in, to their role's
+ * panel: admin, dean, faculty; learners to home). Any failure is shown with the IdP's reason
  * and a way back to the sign-in screen; nothing is retried silently.
  */
 export function AuthCallbackPage() {
@@ -34,7 +36,8 @@ export function AuthCallbackPage() {
       }
       applyVerifiedIdentity(out.principal);
       void retryEventSync();
-      navigate(out.returnTo || "/", { replace: true });
+      const target = out.returnTo && out.returnTo !== "/" ? out.returnTo : homePathForRole(out.principal.primary_role);
+      navigate(target, { replace: true });
     });
   }, [search, navigate]);
 

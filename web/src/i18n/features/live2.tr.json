@@ -28,7 +28,9 @@
         "no_spec": "Üretici bir vaka olmadan bitti.",
         "cancelled": "Üretim iptal edildi.",
         "unknown": "Üretim başarısız oldu ({{code}}).",
-        "NotModelGeneratedError": "Sunucu model tarafından üretilmemiş bir vaka gönderdi; reddedildi."
+        "NotModelGeneratedError": "Sunucu model tarafından üretilmemiş bir vaka gönderdi; reddedildi.",
+        "model_warming": "Model başlatılıyor: vakanız için bir GPU çalışanı açılıyor (birkaç dakika sürer). Birkaç dakika sonra yeniden deneyin.",
+        "unauthenticated": "Vaka başlatmak için oturum açın."
       },
       "retry": "Model üretimini yeniden dene",
       "onRequestHint": "Her vaka, istediğinizde model tarafından sizin için yazılır. Yerine başka bir şey sunulmaz: model erişilebilir olduğunda yeniden deneyin."

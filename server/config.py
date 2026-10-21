@@ -216,6 +216,13 @@ class Settings(BaseSettings):
     # provider is required. The registry setting `auth_mode` overrides this value.
     auth_mode: Literal["local", "oidc"] = "local"
 
+    # --- One-time credential handoff (server/bootstrap, deploy/one-click.sh) --- #
+    # Directory holding credentials.json + code.json (root-only on the host, mounted into
+    # the container). Unset = /bootstrap/* answers 404. The page refuses plain HTTP unless
+    # BOOTSTRAP_REQUIRE_HTTPS=false (tests and a loopback-only operator check).
+    bootstrap_dir: str | None = None
+    bootstrap_require_https: bool = True
+
     # --- Provider registry + telemetry (server/registry, server/telemetry) --- #
     # Fernet key sealing provider API keys at rest. Unset => keys cannot be stored
     # (the registry refuses, it never falls back to plaintext). Generate with
@@ -227,6 +234,10 @@ class Settings(BaseSettings):
     # Background jobs (server/registry/jobs.py). Enabled provider rows are probed
     # every PROBE_INTERVAL_MINUTES (0 disables); model_calls rows older than the
     # console's telemetry.retention_days are purged every RETENTION_PURGE_INTERVAL_MINUTES.
+    # Import the env model config (LLM_BASE_URL, EMBED_URL, RERANK_URL) as provider rows on
+    # first boot. A production host without a local model stack sets REGISTRY_SEED_ENV=false,
+    # so LLM calls go to the registry rows the admin adds, else to the on-demand GPU worker.
+    registry_seed_env: bool = True
     probe_interval_minutes: int = Field(default=10, ge=0)
     retention_purge_interval_minutes: int = Field(default=60, ge=0)
 

@@ -35,6 +35,17 @@ function draftFrom(p: Provider | null, kind: ProviderKind): DraftState {
   };
 }
 
+/**
+ * Anthropic API row: the gateway calls it through the native Messages API
+ * (server/providers/anthropic_messages.py). The key typed below is sealed in the
+ * registry on the server and never returned to the browser.
+ */
+const ANTHROPIC_PRESET = {
+  name: "anthropic",
+  base_url: "https://api.anthropic.com/v1",
+  model: "claude-opus-5-5",
+} as const;
+
 function isHttpUrl(v: string): boolean {
   try {
     const u = new URL(v);
@@ -159,6 +170,27 @@ export function ProviderDrawer({
                   </Select>
                 )}
               </Field>
+              {!provider && draft.kind === "llm" ? (
+                <div className="flex flex-col gap-2 rounded-control border border-border px-3 py-2.5">
+                  <p className="text-xs text-muted">{t("admin.providers.drawer.presetHint")}</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      setDraft((d) => ({
+                        ...d,
+                        name: d.name || ANTHROPIC_PRESET.name,
+                        base_url: ANTHROPIC_PRESET.base_url,
+                        model: d.model || ANTHROPIC_PRESET.model,
+                        priority: "0",
+                      }))
+                    }
+                  >
+                    {t("admin.providers.drawer.presetAnthropic")}
+                  </Button>
+                </div>
+              ) : null}
               <Field label={t("admin.providers.drawer.name")} hint={t("admin.providers.drawer.nameHint")} error={errors.name}>
                 {(aria) => <TextInput {...aria} value={draft.name} onChange={(e) => set("name", e.target.value)} required />}
               </Field>

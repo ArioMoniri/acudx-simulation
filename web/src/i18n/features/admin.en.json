@@ -145,7 +145,9 @@
         "create": "Create provider",
         "saved": "Saved",
         "required": "Required",
-        "invalidUrl": "Enter an http(s) URL."
+        "invalidUrl": "Enter an http(s) URL.",
+        "presetHint": "Fill in the Anthropic API, then paste the key below: it is encrypted on the server and never shown again.",
+        "presetAnthropic": "Use the Anthropic API"
       }
     },
     "kinds": {

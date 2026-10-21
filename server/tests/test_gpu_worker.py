@@ -994,3 +994,21 @@ def test_chatterbox_patch_reports_timings_and_takes_a_bounded_autocast_switch():
     assert 'api.add_api_route("/acudx/tuning", tuning, methods=["POST"])' in patch
     assert 'if v not in (None, "bf16", "fp16"):' in patch
     assert 'torch.autocast("cuda"' in patch and "torch.compile(" not in patch
+
+
+@respx.mock
+async def test_max_workers_zero_disables_launch_and_one_is_the_ceiling(tmp_path):
+    from server.providers.gpu_worker import LaunchDisabled  # noqa: PLC0415
+
+    clock = FakeClock()
+    m = _manager(tmp_path, clock)
+    try:
+        assert m.policy.max_workers == 1
+        with pytest.raises(ValueError):
+            WorkerPolicy(max_workers=2)
+        m.set_policy(m.policy.model_copy(update={"max_workers": 0}))
+        with pytest.raises(LaunchDisabled):
+            await m.ensure_worker()
+        assert not respx.calls  # refused before any Lambda API call
+    finally:
+        await m.aclose()

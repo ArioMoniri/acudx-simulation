@@ -31,6 +31,7 @@ import httpx
 from pydantic import BaseModel
 
 from server.config import LlmEndpoint, Settings
+from server.providers import anthropic_messages
 from server.registry.resolve import ProviderEndpoint, RegistryResolver
 from server.telemetry import prices
 from server.telemetry.events import TelemetryRecorder
@@ -248,7 +249,16 @@ class ModelGateway:
 
         t0 = time.monotonic()
         try:
-            data = await self._post_json(f"{ep.base_url}/chat/completions", payload, ep.api_key)
+            if anthropic_messages.is_anthropic(ep.base_url):
+                # Anthropic registry row: native Messages API (server/providers/anthropic_messages.py).
+                try:
+                    data = await anthropic_messages.chat(
+                        base_url=ep.base_url, api_key=ep.api_key, model=ep.model, messages=messages,
+                        max_tokens=payload["max_tokens"], timeout_s=self.settings.request_timeout_s)
+                except anthropic_messages.AnthropicCallError as exc:
+                    raise GatewayError(str(exc)) from exc
+            else:
+                data = await self._post_json(f"{ep.base_url}/chat/completions", payload, ep.api_key)
         except GatewayError as exc:
             self._record(ep, kind="llm", model=ep.model, usage=None, latency_ms=(time.monotonic() - t0) * 1000.0,
                          ok=False, error=type(exc).__name__)

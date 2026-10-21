@@ -22,10 +22,29 @@ const base = "http://gateway.test/api";
 describe("adminApi", () => {
   it("refuses to call the network without a token", async () => {
     const { fn, calls } = fakeFetch([]);
-    const api = createAdminApi({ baseUrl: base, fetchFn: fn, getToken: () => null });
+    const api = createAdminApi({ baseUrl: base, fetchFn: fn, getToken: () => null, getBearer: async () => null });
     const r = await api.getHealth();
     expect(r).toEqual({ ok: false, error: "no_token" });
     expect(calls).toHaveLength(0);
+  });
+
+  it("uses the signed-in admin's bearer when no bootstrap token is stored", async () => {
+    const { fn, calls } = fakeFetch([{ status: 200, body: { providers: [], kinds: [], secrets_configured: true } }]);
+    const api = createAdminApi({ baseUrl: base, fetchFn: fn, getToken: () => null, getBearer: async () => "jwt-1" });
+    const r = await api.listProviders();
+    expect(r.ok).toBe(true);
+    const headers = calls[0].init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer jwt-1");
+    expect(headers["X-Admin-Token"]).toBeUndefined();
+  });
+
+  it("prefers the typed bootstrap token over a bearer", async () => {
+    const { fn, calls } = fakeFetch([{ status: 200, body: {} }]);
+    const api = createAdminApi({ baseUrl: base, fetchFn: fn, getToken: () => "tok-9", getBearer: async () => "jwt-1" });
+    await api.getHealth();
+    const headers = calls[0].init.headers as Record<string, string>;
+    expect(headers["X-Admin-Token"]).toBe("tok-9");
+    expect(headers.Authorization).toBeUndefined();
   });
 
   it("sends X-Admin-Token and the kind query on list", async () => {

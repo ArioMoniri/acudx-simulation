@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import uuid
 from dataclasses import dataclass, field
@@ -68,6 +69,8 @@ from server.orchestration.staged import (
 )
 from server.orchestration.store import CaseStore, DirectorStoreView, set_case_store
 from server.orchestration.trace import summarize
+
+log = logging.getLogger("acudx.orchestration.routes")
 from server.telemetry.events import bind_context, current_context, unbind_context
 
 router = APIRouter(prefix="/v2", tags=["orchestration"])
@@ -188,6 +191,15 @@ async def get_runtime(request: Request) -> OrchestrationRuntime:
 def owns_learner(user: Principal, learner_id: str) -> bool:
     """The caller's own learner id (sub or its hash), or any id for faculty and above."""
     return learner_id in (user.sub, user.user_hash) or user.has("faculty")
+
+
+def _signed_in_when_oidc(request: Request, user: Principal | None) -> JSONResponse | None:
+    """Under AUTH_MODE=oidc a case start needs a verified user: an anonymous request could
+    otherwise launch the on-demand GPU worker (billed by the hour) from the open internet."""
+    auth = getattr(request.app.state, "auth", None)
+    if user is None and auth is not None and auth.mode == "oidc":
+        return _error(401, "unauthenticated", "sign in to start a case")
+    return None
 
 
 def _learner_guard(learner_id: str | None, user: Principal | None) -> JSONResponse | None:
@@ -355,11 +367,43 @@ def _fresh_thread_id(rt: OrchestrationRuntime, wanted: str | None) -> str:
     return str(uuid.uuid4())
 
 
-async def _preflight(rt: OrchestrationRuntime) -> JSONResponse | None:
+_WORKER_BOOTS: set[asyncio.Task[Any]] = set()
+
+
+def _boot_worker_in_background(wm: Any) -> dict[str, Any] | None:
+    """Start the on-demand GPU worker without blocking the request; None when it cannot launch."""
+    refusal = wm._refusal() if hasattr(wm, "_refusal") else None
+    if refusal is not None:
+        return None
+
+    async def boot() -> None:
+        try:
+            await wm.ensure_worker()
+        except Exception as exc:  # noqa: BLE001 - surfaced through /admin/gpu/status and the next preflight
+            log.warning("background GPU worker boot failed: %s", type(exc).__name__)
+
+    task = asyncio.get_running_loop().create_task(boot(), name="acudx-gpu-boot")
+    _WORKER_BOOTS.add(task)
+    task.add_done_callback(_WORKER_BOOTS.discard)
+    w = wm.store.active_worker()
+    return {"status": w.status if w else "launching", "instance_type": w.instance_type if w else None}
+
+
+async def _preflight(rt: OrchestrationRuntime, state: Any = None) -> JSONResponse | None:
     if rt.llm is None:
         return _unreachable(rt, None)
+    resolver = getattr(getattr(state, "gateway", None), "resolver", None)
+    routed = rt.llm.route_via_registry(resolver)
     probe = await rt.llm.probe("casegen")
     if not probe.get("reachable"):
+        wm = getattr(state, "worker_manager", None)
+        if not routed and wm is not None and not rt.settings.casegen_base_url:
+            worker = _boot_worker_in_background(wm)
+            if worker is not None:
+                return _error(503, "model_warming",
+                              "No model is serving yet: the on-demand GPU worker is starting (a cold boot takes "
+                              "several minutes). No case was generated; retry when the worker is ready.",
+                              worker=worker, retryable=True)
         return _unreachable(rt, None)
     return None
 
@@ -402,11 +446,11 @@ def _stream_response(body: AsyncIterator[str]) -> StreamingResponse:
 @router.post("/case/generate/stream")
 async def generate_stream(req: GenerateV2Request, request: Request,
                           user: Optional[Principal] = Depends(optional_user)) -> Response:
-    denied = _learner_guard(req.learner_id, user)
+    denied = _signed_in_when_oidc(request, user) or _learner_guard(req.learner_id, user)
     if denied is not None:
         return denied
     rt = await get_runtime(request)
-    blocked = await _preflight(rt)
+    blocked = await _preflight(rt, request.app.state)
     if blocked is not None:
         return blocked
     thread_id = rt.staged.start(_gen_request(req, user), _fresh_thread_id(rt, req.thread_id))
@@ -525,12 +569,13 @@ async def room_task(thread_id: str, body: RoomTaskRequest, request: Request,
 async def generate(req: GenerateV2Request, request: Request,
                    user: Optional[Principal] = Depends(optional_user)) -> JSONResponse:
     """The staged run, answered when S1 and the core layers are in (authoring, API clients)."""
-    denied = _learner_guard(req.learner_id, user)
+    denied = _signed_in_when_oidc(request, user) or _learner_guard(req.learner_id, user)
     if denied is not None:
         return denied
     rt = await get_runtime(request)
     if rt.llm is None:
         return _unreachable(rt, None)
+    rt.llm.route_via_registry(getattr(getattr(request.app.state, "gateway", None), "resolver", None))
     thread_id = rt.staged.start(_gen_request(req, user), _fresh_thread_id(rt, req.thread_id))
     await rt.staged.wait(thread_id)
     st = rt.cases.get(thread_id) or {}

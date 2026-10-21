@@ -18,7 +18,32 @@ be reused outside a local machine.
 Keycloak admin console: http://localhost:8080 with `KC_ADMIN` / `KC_ADMIN_PASSWORD`
 (defaults `admin` / `change-me-dev-only`).
 
-## Start
+## Production
+
+`deploy/one-click.sh` never imports these development users. It renders
+`realm-acudx.json` for `https://<domain>` without any user (`render-prod-realm.py`), runs
+Keycloak 26 in `start` mode on Postgres under `https://<domain>/idp` (the admin console is not
+published), and then `server/bootstrap/provision.py` creates exactly one account per role:
+
+| Username | Realm role |
+|---|---|
+| acudx-student | student |
+| acudx-resident | resident |
+| acudx-nurse | nurse |
+| acudx-paramedic | paramedic |
+| acudx-faculty | faculty |
+| acudx-dean | dean |
+| acudx-admin | admin |
+| acudx-super-admin | super_admin |
+
+Each password is 24 random characters, set as temporary (Keycloak adds UPDATE_PASSWORD, so the
+first sign-in sets a new one), written only to the root-only
+`/var/lib/acudx/bootstrap/credentials.json` on the server, and shown once through the
+single-use retrieval code at `https://<domain>/bootstrap/credentials`
+(`deploy/rotate-bootstrap-code.sh` mints a new code; `--reset-passwords` also issues fresh
+temporary passwords). See `deploy/RUNBOOK.md`.
+
+## Start (development)
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.keycloak.yml up -d keycloak
@@ -35,8 +60,11 @@ curl -X PUT http://localhost:8890/admin/settings -H "X-Admin-Token: $ADMIN_TOKEN
 The web app (`npm --prefix web run dev`, http://localhost:5173) then shows
 "Sign in with your institution" on the sign-in screen. The client is public and
 uses PKCE (S256); the realm adds an `aud: acudx-web` audience mapper so the
-server can verify the audience, and a client scope `acudx-org` that maps the
-user attribute `org` onto the `org` claim (the AcuDx tenant).
+server can verify the audience, and a client mapper `acudx org attribute` that maps the
+user attribute `org` onto the `org` claim (the AcuDx tenant). The realm file defines no
+`clientScopes` of its own: an import that lists any replaces Keycloak's built-in `profile`,
+`email` and `roles` scopes, and every sign-in then fails with "Invalid scopes: openid profile
+email" (found in the production smoke test, 2026-10-21).
 
 ## Mapping a university IdP (SAML) into this realm
 
@@ -57,8 +85,8 @@ realm) while each school signs in through its own IdP.
      Attribute to Role" mapper: `student` -> realm role `student`,
      `faculty` -> `faculty`, `staff` -> `faculty`, `employee` -> no role.
    - `schacHomeOrganization` (urn:oid:1.3.6.1.4.1.25178.1.2.9) -> "Attribute
-     Importer" into the user attribute `org`, so the `acudx-org` scope turns it
-     into the tenant claim.
+     Importer" into the user attribute `org`, so the client's `acudx org attribute`
+     mapper turns it into the tenant claim.
    - `mail` -> `email`, `displayName` -> `firstName`/`lastName`.
 4. First login flow: keep `first broker login` with "Review profile" off so the
    person lands straight in AcuDx; link duplicate emails only if the university

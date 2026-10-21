@@ -45,6 +45,7 @@ from langchain_core.utils.json import parse_json_markdown
 
 from server.config import EgressBlocked, LlmEndpoint, Settings
 from server.model_gateway import strip_think, wants_no_thinking
+from server.providers import anthropic_messages
 from server.telemetry import prices as telemetry_prices
 
 log = logging.getLogger("acudx.orchestration.llm")
@@ -301,7 +302,16 @@ class StructuredLLM:
         t0 = time.monotonic()
         cid = self._begin(ep.base_url)
         try:
-            if on_text is not None:
+            if anthropic_messages.is_anthropic(ep.base_url):
+                # Registry row for the Anthropic API: native Messages call (server/providers/anthropic_messages.py).
+                try:
+                    data = await anthropic_messages.chat(
+                        base_url=ep.base_url, api_key=ep.api_key, model=ep.model, messages=messages,
+                        max_tokens=max_tokens, schema=schema, on_text=on_text,
+                        timeout_s=self._timeout.read or 300.0)
+                except anthropic_messages.AnthropicCallError as exc:
+                    raise ModelUnreachable(str(exc)) from exc
+            elif on_text is not None:
                 data = await self._post_stream(client, url, payload, headers, on_text)
             else:
                 data = await self._post_with_retries(client, url, payload, headers)
@@ -448,6 +458,36 @@ class StructuredLLM:
             if attempt < self._retries:
                 await asyncio.sleep(min(0.2 * (2 ** attempt), 1.0))
         raise ModelUnreachable(f"{url} unreachable: {type(last).__name__}: {last}")
+
+    def route_via_registry(self, resolver: Any) -> bool:
+        """Point every role WITHOUT an explicit ``CASEGEN_*`` / ``JUDGE_*`` base URL at the gateway's
+        registry: the first eligible ``llm`` row (an Anthropic row is called natively), else the
+        on-demand GPU worker when it is ready. Returns True when an endpoint was found.
+
+        Never launches a worker (that would block the request for the whole cold boot); the
+        route starts one in the background instead (server/orchestration/routes.py ``_preflight``).
+        """
+        if resolver is None:
+            return False
+        ep: LlmEndpoint | None = None
+        rows = resolver.endpoints("llm")
+        if rows:
+            r = rows[0]
+            ep = LlmEndpoint(base_url=r.base_url.rstrip("/"), model=r.model or "", api_key=r.api_key,
+                             provider="api")
+        else:
+            wm = getattr(resolver, "worker_manager", None)
+            w = wm.llm_endpoint() if wm is not None else None
+            if w:
+                ep = LlmEndpoint(base_url=w["base_url"].rstrip("/"), model=w["model"], api_key=w["api_key"],
+                                 provider="local")
+        if ep is None:
+            return False
+        explicit = {"casegen": self.settings.casegen_base_url, "judge": self.settings.judge_base_url}
+        for role, pinned in explicit.items():
+            if not pinned:
+                self.endpoints[role] = ep  # type: ignore[index]
+        return True
 
     async def probe(self, role: Role = "casegen") -> dict[str, Any]:
         """Reachability check used by the routes before starting a graph run."""

@@ -1,7 +1,8 @@
 /**
  * AcuDx admin API client (server/registry/routes.py + server/admin_routes.py).
  *
- * Every call carries `X-Admin-Token`. The token is typed by the operator on the
+ * Every call carries `X-Admin-Token` when the operator typed the bootstrap token,
+ * else the signed-in admin's verified OIDC bearer. The token is typed on the
  * /admin sign-in field and kept in `sessionStorage` ONLY (never localStorage,
  * never a cookie): closing the tab ends the admin session. No provider key is
  * ever returned by the server (only `has_key` + `key_last4`), and the client
@@ -18,6 +19,7 @@
  * `AdminResult` and never throws into the UI.
  */
 
+import { ensureAccessToken } from "@/lib/auth";
 import { BACKEND_URL } from "@/lib/backend";
 
 /* -------------------------------------------------------------------------- */
@@ -300,6 +302,8 @@ export interface AdminApiOptions {
   baseUrl?: string;
   fetchFn?: typeof fetch;
   getToken?: () => string | null;
+  /** Verified OIDC access token, used when no bootstrap admin token is stored. */
+  getBearer?: () => Promise<string | null>;
   timeoutMs?: number;
 }
 
@@ -322,14 +326,24 @@ export function createAdminApi(opts: AdminApiOptions = {}) {
   const baseUrl = opts.baseUrl ?? BACKEND_URL;
   const fetchFn = opts.fetchFn ?? ((input, init) => fetch(input, init));
   const getToken = opts.getToken ?? getAdminToken;
+  const getBearer = opts.getBearer ?? (() => ensureAccessToken());
   const timeoutMs = opts.timeoutMs ?? 12_000;
 
   async function request<T>(
     path: string,
     init: { method?: string; body?: unknown; query?: Record<string, string | number | undefined> } = {},
   ): Promise<AdminResult<T>> {
+    // The bootstrap X-Admin-Token wins when the operator typed one; otherwise a signed-in
+    // admin / super_admin uses the verified bearer (server/admin_routes.py require_admin).
     const token = getToken();
-    if (!token) return { ok: false, error: "no_token" };
+    let authHeader: Record<string, string>;
+    if (token) {
+      authHeader = { "X-Admin-Token": token };
+    } else {
+      const bearer = await getBearer();
+      if (!bearer) return { ok: false, error: "no_token" };
+      authHeader = { Authorization: `Bearer ${bearer}` };
+    }
 
     const qs = init.query
       ? Object.entries(init.query)
@@ -346,7 +360,7 @@ export function createAdminApi(opts: AdminApiOptions = {}) {
         method: init.method ?? "GET",
         headers: {
           accept: "application/json",
-          "X-Admin-Token": token,
+          ...authHeader,
           ...(init.body !== undefined ? { "content-type": "application/json" } : {}),
         },
         body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
