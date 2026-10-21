@@ -210,3 +210,46 @@ reaper stopping a worker the learner was waiting for, the voice image failing on
 request after a reload going out without a bearer, and an orphan sweep that would stop another gateway's
 workers. A redeploy of the live host picks them up; `AVATAR_PREWARM_ON_CASE_START` is on in
 docker-compose.prod.yml. The live site itself was not signed in to for this work.
+
+### Redeploy 2026-10-21 to 7bbd84c (user-approved terminate and relaunch)
+
+The user approved replacing the live host so it carries the fixes from their live test. The old
+instance `i-0edbc807a19024f48` (cff3c64) was terminated after `/bootstrap/operator/gpu/stop` (no
+worker running). The Elastic IP 63.178.127.100, security group and key pair were kept.
+`provision.sh` launched `i-05722e5305a69cc12` (t3.large, eu-central-1) at `7bbd84c`. It was ready
+in about 14 min, and both keys were sent at provision (`applied: anthropic, lambda`). The Claude
+route was selected from the first case start, so the stale-probe fix (88e2f03) holds. Lambda had
+one instance not owned by this gateway (`PRP-ICU-MODEL`); it was left alone (no
+`GPU_SWEEP_UNOWNED`).
+
+| Check | Result |
+|---|---|
+| `verify-roles.mjs` `START_CASE=1 FINALIZE=1` | PASS, 8 accounts, 76 checks; case start HTTP 200 on Claude; accounts reset; final code minted |
+| 8 roles land on their panels; UI and API gates | PASS |
+| `/idp/admin/` 404, `http://` 308 to https, anonymous case start 401, anonymous mint-code 401, reused provision token 410 | PASS |
+| Student in TR, stat lab | PASS: Laktat ordered from İstemler (chemistry, 50 min sim turnaround) landed as `Sonuçlandı` after 45 s real time (lab wait cap 45 s, scale 6); 6.2 mmol/L flagged HH |
+| Guidance (Rehberlik), septic shock case | PASS: cited card (sepsis risk criteria) with NICE NG253 pill, verified 2026-10-19, and Surviving Sepsis Campaign 2021 sources |
+| Patient video call: warming panel | PASS: `live-start-panel` stages starting, video_services (Adım 2/3), preparing (Adım 3/3), connecting |
+| Patient video call: live, talking, lip-synced, audio | PASS: webrtc mode, "Canlı video", audio from the GPU worker (Chatterbox multilingual), MuseTalk 1.5 video. A typed TR question got an in-character spoken reply (12.6 s audio, 632 frames, first frame 2.7 s; tile: first frame 3921 ms, speech start 3934 ms, audio-to-lip −520 ms). Live audio track on an unmuted audio element; mouth region moves for the length of the reply only |
+| Video timing, cold worker | Prewarm launched at case start (20:53:57 UTC), machine ready +6 min, call clicked 21:01:01, live video 21:11:09: 606 s after the click, about 17 min 20 s from cold |
+| GPU workers | One `acudx-worker-*-gebcbd193-*` (gpu_1x_a100_sxm4, us-east-1) launched by the prewarm, stopped with `/bootstrap/operator/gpu/stop`; Lambda API then listed no instance. GPU spend that day about 0.73 USD |
+
+How the run was driven: a student session in Chromium through the real UI. Only the generate
+request had `blueprint.condition_id` added (septic_shock for the guidance and lab checks, then
+migraine for the spoken reply, because the untreated septic-shock patient was in arrest by then).
+
+Defects and observations (not fixed in this run):
+
+- Avatar cross-fade ghosting: when the call switches between the idle loop and a speaking clip,
+  the two clips have different framing (wider neutral face vs closer pained face), so one or two
+  frames show a double image (`tr-video-crossfade-ghosting.png`).
+- Mojibake seen once in the patient status line under the name while the Director was updating
+  ("korkmuEџ … kafasД± karДџД±k", UTF-8 read as Windows-1251; `tr-status-line-mojibake.png`). It
+  was not in the stored case or the page a minute later, and the web client decodes UTF-8
+  everywhere. Not reproduced; source unknown.
+- A first `FINALIZE` run failed only the student, because the session's own sign-in had already
+  used the student's temporary password after the last reset. Resetting first and re-running
+  passed. Not a site defect.
+
+Evidence: `docs/review/evidence/09-production-live/tr-*.png` and the role screenshots (the
+anthropic key drawer shot is again left out).
