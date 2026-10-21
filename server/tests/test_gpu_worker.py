@@ -337,6 +337,7 @@ async def test_touch_resets_idle_window(tmp_path):
     assert not term.called
 
 
+@respx.mock   # the loop's orphan sweep lists instances; never against the real API
 async def test_reaper_task_starts_and_stops(tmp_path):
     clock = FakeClock()
     m = _manager(tmp_path, clock)

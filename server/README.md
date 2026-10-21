@@ -157,6 +157,7 @@ asyncio task started in the app lifespan) terminates it after
 | `GPU_FILE_SYSTEM_NAME` | unset | Lambda file system to attach at launch (pre-baked weights shorten the cold start) |
 | `GPU_BOOT_TIMEOUT_S` | `900` | how long the provider may take to report the instance active with an IP |
 | `GPU_DAILY_BUDGET_USD` | unset | optional daily cap in USD; unset means no cap (idle workers still stop after `GPU_IDLE_MINUTES`) |
+| `GPU_MAX_LIFETIME_HOURS` | `6` | hard cap on one worker's life; the reaper stops it whatever its load |
 | `GPU_LLM_MODEL` | `Qwen/Qwen3-32B-AWQ` | model vLLM loads on the worker |
 | `GPU_INSTANCE_ALLOWLIST` | see above | CSV or JSON list |
 | `GPU_REGION_PREFERENCE` | empty | CSV or JSON list, ordered |

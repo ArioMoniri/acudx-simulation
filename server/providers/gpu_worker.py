@@ -3,7 +3,10 @@
 Policy (docs/process/AGENT-PROTOCOL.md §2.4):
 
 * launch only when a request needs a GPU and no healthy worker exists;
-* terminate after ``idle_minutes`` without a request (idle reaper task);
+* terminate after ``idle_minutes`` without a request (idle reaper task), and after
+  ``max_lifetime_hours`` whatever the load;
+* a failed stop is retried every reaper pass, and ``acudx-worker-*`` instances that no
+  active row owns are swept (on start, then every 5 minutes);
 * optional daily budget cap in USD (None, the default, means no cap; the idle reaper
   still stops every worker that is not in use);
 * cheapest allow-listed instance type that has capacity wins;
@@ -39,6 +42,7 @@ from pydantic import BaseModel, Field, field_validator
 from server.config import Settings
 from server.providers.lambda_cloud import (
     WORKER_FIREWALL_RULES,
+    Instance,
     LambdaCloudClient,
     LambdaCloudError,
     merge_firewall_rules,
@@ -65,6 +69,10 @@ WORKER_IMAGE_FAMILY = "lambda-stack-24-04"
 
 _MARKERS = {"__WORKER_TOKEN__": "token", "__WORKER_LLM_MODEL__": "llm_model", "__WORKER_DOMAIN__": "domain"}
 ACTIVE_STATUSES = ("launching", "booting", "ready")
+# Every worker is launched as ``acudx-worker-<epoch>-<hex>`` with this tag; the orphan sweep only
+# ever considers instances that carry the name (or, when nameless, the tag).
+WORKER_NAME_PREFIX = "acudx-worker-"
+WORKER_TAG = {"key": "acudx", "value": "gpu-worker"}
 
 
 # --------------------------------------------------------------------------- #
@@ -130,6 +138,9 @@ class WorkerPolicy(BaseModel):
     # own idle window, so the pool shrinks back to nothing when the load goes.
     max_workers: int = Field(default=3, ge=0, le=64)
     llm_queue_per_worker: int = Field(default=6, ge=1, le=256)
+    # Hard cap on one worker's life, enforced by the reaper whatever its load: a worker kept busy (or
+    # pinned by a bug in the load accounting) is still stopped. A later request launches a fresh one.
+    max_lifetime_hours: float = Field(default=6.0, gt=0, le=7 * 24)
 
     @field_validator("allowlist")
     @classmethod
@@ -424,12 +435,21 @@ class WorkerManager:
         self.call_refusal_window_s = call_refusal_window_s
         self._call_refused_at: float | None = None
         self.last_scale_up: dict[str, Any] | None = None
-        self._policy = self.store.get_policy() or WorkerPolicy(
+        # Instances named like ours that no active row owns (orphan sweep): instance id -> sweeps seen.
+        self.orphan_sweep_interval_s = 300.0
+        self.orphan_min_age_s = 600.0
+        self._orphan_seen: dict[str, int] = {}
+        self._last_sweep: float | None = None
+        saved = self.store.get_policy()
+        # A policy saved from the admin panel (SQLite) wins over the env; log_policy says which applies.
+        self.policy_source = "saved" if saved is not None else "env"
+        self._policy = saved or WorkerPolicy(
             idle_minutes=settings.gpu_idle_minutes, daily_budget_usd=settings.gpu_daily_budget_usd,
             allowlist=settings.gpu_instance_allowlist or DEFAULT_ALLOWLIST, llm_model=settings.gpu_llm_model,
             region_preference=settings.gpu_region_preference,
             file_system_name=settings.gpu_file_system_name or None,
             max_workers=int(getattr(settings, "gpu_max_workers", 3)),
+            max_lifetime_hours=float(getattr(settings, "gpu_max_lifetime_hours", 6.0)),
         )
 
     # -- policy -------------------------------------------------------------- #
@@ -440,7 +460,19 @@ class WorkerManager:
     def set_policy(self, policy: WorkerPolicy) -> WorkerPolicy:
         self.store.set_policy(policy)
         self._policy = policy
+        self.policy_source = "saved"
         return policy
+
+    def log_policy(self) -> str:
+        """Log the policy in effect (a saved policy overrides GPU_* env values, so the env alone
+        does not tell an operator what the reaper enforces). Returns the logged line."""
+        p = self.policy
+        line = (f"gpu policy ({'saved in SQLite, overrides env' if self.policy_source == 'saved' else 'from env'}): "
+                f"idle_minutes={p.idle_minutes} max_workers={p.max_workers} "
+                f"max_lifetime_hours={p.max_lifetime_hours:g} daily_budget_usd="
+                f"{'none' if p.daily_budget_usd is None else f'{p.daily_budget_usd:g}'}")
+        log.info(line)
+        return line
 
     # -- configuration gates ------------------------------------------------- #
     @property
@@ -792,10 +824,11 @@ class WorkerManager:
     # -- idle reaper --------------------------------------------------------- #
     async def reap_once(self) -> bool:
         """One reaper pass over every worker. Each one is terminated when it is idle past the policy
-        window, when today's spend has reached the daily budget (the launch-time check alone lets a
-        worker that is kept busy run past the cap), or when a boot has been orphaned (the gateway
-        restarted mid-boot and no request re-attached) for longer than both boot budgets. Returns True
-        when any worker was stopped."""
+        window, when it has run for ``max_lifetime_hours`` (whatever its load), when today's spend has
+        reached the daily budget (the launch-time check alone lets a worker that is kept busy run past
+        the cap), or when a boot has been orphaned (the gateway restarted mid-boot and no request
+        re-attached) for longer than both boot budgets. Rows left ``terminating`` by a failed stop are
+        retried first. Returns True when any worker was stopped."""
         stopped = False
         for w in self.store.workers_in("terminating"):
             # A stop that failed earlier (provider or network error): retry until Lambda confirms it.
@@ -814,6 +847,16 @@ class WorkerManager:
 
     async def _reap(self, w: WorkerRecord) -> bool:
         now = self._clock()
+        lifetime_s = self.policy.max_lifetime_hours * 3600
+        if now - w.launched_at >= lifetime_s:
+            # Regardless of load: the last line of defence against a worker that never goes idle.
+            t = self._tasks.get(w.id)
+            if t is not None and not t.done() and t is not asyncio.current_task():
+                t.cancel()
+            log.warning("gpu worker %s: running %.1f h >= max lifetime %g h; terminating", w.instance_id,
+                        (now - w.launched_at) / 3600, self.policy.max_lifetime_hours)
+            await self._terminate_one(w, "max_lifetime")
+            return True
         if w.status in ("booting", "launching"):
             # Boot time is never idle time; a boot that an in-flight task is still watching is
             # bounded by ready_timeout_s. Without a watcher (process restart) nothing else would
@@ -884,6 +927,69 @@ class WorkerManager:
         self.store.update_worker(w.id, status="failed", terminated_at=now)
         return True
 
+    # -- orphan sweep ---------------------------------------------------------- #
+    @staticmethod
+    def is_worker_instance(inst: Instance) -> bool:
+        """An instance this manager launched: named ``acudx-worker-*``, or nameless and tagged
+        ``acudx=gpu-worker``. Anything else on the account (``acudx-wm-*``, hand-made boxes) is never ours."""
+        if inst.name:
+            return inst.name.startswith(WORKER_NAME_PREFIX)
+        return any(t.key == WORKER_TAG["key"] and t.value == WORKER_TAG["value"] for t in inst.tags)
+
+    @staticmethod
+    def _launched_at(inst: Instance) -> float | None:
+        """Launch time from the name ``acudx-worker-<epoch>-<hex>`` (Lambda reports none), else None."""
+        m = re.match(rf"^{re.escape(WORKER_NAME_PREFIX)}(\d{{9,}})-", inst.name or "")
+        return float(m.group(1)) if m else None
+
+    async def sweep_orphans(self) -> list[str]:
+        """Terminate worker instances that Lambda runs but no active row owns (a launch whose row was
+        lost, a restore from an old database, a stop that never reached Lambda before the row was
+        closed). Only :meth:`is_worker_instance` matches are considered, and only when older than
+        ``orphan_min_age_s`` by the launch time in their name; one without a readable launch time must
+        be seen orphaned on two consecutive sweeps. Returns the terminated instance ids."""
+        if self.settings.airgapped or not self.settings.lambda_key:
+            return []
+        self._last_sweep = self._clock()
+        try:
+            instances = await self._lambda().list_instances()
+        except (LambdaCloudError, httpx.HTTPError) as exc:
+            log.warning("gpu orphan sweep: listing instances failed: %s",
+                        exc if isinstance(exc, LambdaCloudError) else type(exc).__name__)
+            return []
+        owned = {w.instance_id for w in self.store.workers_in(*ACTIVE_STATUSES, "terminating")}
+        now = self._clock()
+        seen: dict[str, int] = {}
+        doomed: list[Instance] = []
+        for inst in instances:
+            if not self.is_worker_instance(inst) or inst.id in owned or inst.status in PROVIDER_GONE_STATUSES:
+                continue
+            launched = self._launched_at(inst)
+            if launched is not None:
+                if now - launched >= self.orphan_min_age_s:
+                    doomed.append(inst)
+                continue
+            if self._launching:
+                continue   # a launch in flight may own it before its row exists
+            seen[inst.id] = self._orphan_seen.get(inst.id, 0) + 1
+            if seen[inst.id] >= 2:
+                doomed.append(inst)
+        self._orphan_seen = seen
+        stopped: list[str] = []
+        for inst in doomed:
+            try:
+                await self._lambda().terminate([inst.id])
+            except (LambdaCloudError, httpx.HTTPError) as exc:
+                if not (isinstance(exc, LambdaCloudError) and exc.not_found):
+                    log.warning("gpu orphan sweep: terminate %s failed: %s", inst.id,
+                                exc if isinstance(exc, LambdaCloudError) else type(exc).__name__)
+                    continue
+            self._orphan_seen.pop(inst.id, None)
+            self.store.close_ledger(inst.id, now, "orphan")
+            log.warning("gpu orphan sweep: terminated %s (%s, no active row)", inst.id, inst.name or "unnamed")
+            stopped.append(inst.id)
+        return stopped
+
     @property
     def reaper_running(self) -> bool:
         return self._reaper is not None and not self._reaper.done()
@@ -891,11 +997,14 @@ class WorkerManager:
     def start_reaper(self, interval_s: float = 60.0) -> None:
         if self.reaper_running:
             return
+        self.log_policy()
 
         async def loop() -> None:
             while True:
                 try:
                     await self.reap_once()
+                    if self._last_sweep is None or self._clock() - self._last_sweep >= self.orphan_sweep_interval_s:
+                        await self.sweep_orphans()   # on start, then every orphan_sweep_interval_s
                     await self.maybe_scale_up()
                 except Exception:  # noqa: BLE001 - the reaper must survive provider hiccups
                     log.exception("gpu worker reaper iteration failed")
@@ -965,8 +1074,8 @@ class WorkerManager:
         ids = await api.launch(
             region_name=choice.region_name, instance_type_name=choice.instance_type_name,
             ssh_key_name=self.settings.lambda_ssh_key_name or "",
-            name=f"acudx-worker-{int(now)}-{secrets.token_hex(2)}",
-            user_data=user_data, tags=[{"key": "acudx", "value": "gpu-worker"}],
+            name=f"{WORKER_NAME_PREFIX}{int(now)}-{secrets.token_hex(2)}",
+            user_data=user_data, tags=[dict(WORKER_TAG)],
             file_system_names=fs_names or None, image_family=WORKER_IMAGE_FAMILY,
         )
         if not ids:

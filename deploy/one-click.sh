@@ -98,9 +98,12 @@ fi
 python3 - "$ETC/gateway.env" <<'PY'
 import os, sys
 path = sys.argv[1]
+# GPU spend limits: written when set in the environment, else the host's value is kept (unset = the
+# gateway default: no daily cap, 3 workers, 6 h max lifetime).
+LIMITS = ("GPU_DAILY_BUDGET_USD", "GPU_MAX_WORKERS", "GPU_MAX_LIFETIME_HOURS")
 keep = [l for l in open(path).read().splitlines()
         if l.split("=", 1)[0] not in {"LAMBDA_KEY", "ANTHROPIC_KEY", "LAMBDA_SSH_KEY_NAME", "GPU_IDLE_MINUTES",
-                                       "GPU_DAILY_BUDGET_USD"}]
+                                       *LIMITS}]
 old = {l.split("=", 1)[0]: l.split("=", 1)[1] for l in open(path).read().splitlines() if "=" in l}
 key = os.environ.get("LAMBDA_KEY") or old.get("LAMBDA_KEY", "")
 ssh = os.environ.get("LAMBDA_SSH_KEY_NAME") or old.get("LAMBDA_SSH_KEY_NAME", "")
@@ -110,6 +113,9 @@ if key: keep.append(f"LAMBDA_KEY={key}")
 if ant: keep.append(f"ANTHROPIC_KEY={ant}")
 if ssh: keep.append(f"LAMBDA_SSH_KEY_NAME={ssh}")
 keep.append(f"GPU_IDLE_MINUTES={idle}")
+for name in LIMITS:
+    val = os.environ.get(name) or old.get(name, "")
+    if val: keep.append(f"{name}={val}")
 fd = os.open(path + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
 with os.fdopen(fd, "w") as fh:
     fh.write("\n".join(keep) + "\n")
