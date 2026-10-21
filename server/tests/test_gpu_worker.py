@@ -147,6 +147,7 @@ async def test_ensure_worker_launches_cheapest_and_waits_for_health(tmp_path):
     # The public IP is unknown before launch: the template resolves the domain at boot.
     assert "WORKER_DOMAIN=auto" in body["user_data"]
     assert body["tags"] == [{"key": "acudx", "value": "gpu-worker"}]
+    assert body["image"] == {"family": "lambda-stack-24-04"}   # the template's OS, never the region default
     # Health probe used the bearer token.
     assert health.calls.last.request.headers["authorization"] == f"Bearer {w.token}"
     # Ledger has one open entry.
@@ -172,6 +173,31 @@ async def test_ensure_worker_reuses_healthy_worker(tmp_path):
     assert second.instance_id == first.instance_id
     assert second.last_used_at > first.last_used_at
     assert len(_launch_calls()) == 1
+
+
+@respx.mock
+async def test_a_healthy_worker_is_not_probed_again_on_every_request(tmp_path):
+    """Every TTS / STT / LLM resolution used to pay one /healthz round trip before the real request."""
+    clock = FakeClock()
+    _mock_launch_flow()
+    m = _manager(tmp_path, clock)
+    try:
+        await m.ensure_worker()
+        probe = respx.get(f"https://{DOMAIN}/healthz").mock(return_value=httpx.Response(200, text="ok"))
+        base = probe.call_count                  # the launch's own readiness probes
+        clock.advance(60)
+        await m.ensure_worker()                  # stale: probed once
+        clock.advance(3)
+        await m.ensure_worker()                  # inside the TTL: no probe
+        m.touch()                                # a request just used it
+        clock.advance(m.health_ttl_s - 1)
+        await m.ensure_worker()
+        assert probe.call_count - base == 1
+        clock.advance(m.health_ttl_s + 1)
+        await m.ensure_worker()
+        assert probe.call_count - base == 2      # past the TTL the worker is probed again
+    finally:
+        await m.aclose()
 
 
 @respx.mock
@@ -794,6 +820,14 @@ def test_first_clause_is_sent_as_its_own_short_chunk():
                                                        "geçmedi ve sabah daha da kötüleşti."]
     p.TUNING["first_clause"] = False
     assert p.split_with_first_clause(split, long) == [long]
+    # Upstream's comma split leaves one-word chunks; they are folded into the next one (or the last).
+    assert p.merge_tiny(["Terliyorum", "biraz midem bulanıyor ve", "Evet"]) == [
+        "Terliyorum biraz midem bulanıyor ve Evet"]
+    assert p.merge_tiny(["Ağrı yaklaşık iki saat önce", "Terliyorum", "biraz midem bulanıyor"]) == [
+        "Ağrı yaklaşık iki saat önce", "Terliyorum biraz midem bulanıyor"]
+    assert p.merge_tiny(["Evet."]) == ["Evet."]
+    src = "Terliyorum, biraz midem bulanıyor ve merdivende kötüleşiyor."
+    assert p.merge_tiny(["Terliyorum", "biraz midem bulanıyor ve merdivende kötüleşiyor."], text=src) == [src]
 
 
 class _Conds:

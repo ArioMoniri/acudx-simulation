@@ -181,8 +181,11 @@ class LambdaCloudClient:
     async def launch(self, *, region_name: str, instance_type_name: str, ssh_key_name: str,
                      name: str | None = None, user_data: str | None = None,
                      tags: Sequence[dict[str, str]] | None = None,
-                     file_system_names: Sequence[str] | None = None) -> list[str]:
-        """``POST /instance-operations/launch``; returns the new instance ids."""
+                     file_system_names: Sequence[str] | None = None,
+                     image_family: str | None = None) -> list[str]:
+        """``POST /instance-operations/launch``; returns the new instance ids. ``image_family`` pins
+        the machine image (``{"image": {"family": ...}}``, the API's ImageSpecificationFamily); left
+        out, the region's default applies, which was ``lambda-stack-22-04`` in us-south-2 on 2026-10-21."""
         if user_data is not None and len(user_data.encode("utf-8")) > 1_000_000:
             raise ValueError("user_data exceeds the 1 MB cloud-init limit")
         body: dict[str, Any] = {
@@ -198,6 +201,8 @@ class LambdaCloudClient:
             body["tags"] = [dict(t) for t in tags]
         if file_system_names:
             body["file_system_names"] = list(file_system_names)
+        if image_family:
+            body["image"] = {"family": image_family}
         data = await self._request("POST", "/instance-operations/launch", json=body)
         return [str(i) for i in (data or {}).get("instance_ids", [])]
 

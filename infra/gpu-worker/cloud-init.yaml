@@ -248,13 +248,43 @@ write_files:
           return " ".join(words[:k]), " ".join(words[k:])
 
 
+      def _join(a: str, b: str, text: str) -> str:
+          # Put back the ", " (or "; ", ": ") upstream's split removed between the two pieces.
+          for sep in (", ", "; ", ": "):
+              if b and f"{a}{sep}{b.split()[0]}" in text:
+                  return f"{a}{sep}{b}"
+          return f"{a} {b}"
+
+
+      def merge_tiny(chunks: list, min_words: int = FIRST_CLAUSE_MIN_WORDS, text: str = "") -> list:
+          """Fold chunks under ``min_words`` words into their neighbour. Upstream's long-sentence split cuts
+          at every ", ", so "Terliyorum, biraz midem ..." became a one-word chunk; T3 often ran on for
+          4 to 18 s of audio on such a chunk (live timings 2026-10-21), a long gap and garbled speech."""
+          out: list = []
+          carry = ""
+          for c in chunks:
+              c = _join(carry, c, text) if carry else c
+              carry = ""
+              if len(c.split()) < min_words:
+                  carry = c
+                  continue
+              out.append(c)
+          if carry:
+              if out:
+                  out[-1] = _join(out[-1], carry, text)
+              else:
+                  out.append(carry)
+          return out
+
+
       def split_with_first_clause(split: Callable[..., list], text: str, *args: Any, **kwargs: Any) -> list:
-          """[first clause, optional second clause (TUNING second_max_words), the rest as upstream chunks]."""
+          """[first clause, optional second clause (TUNING second_max_words), the rest as upstream chunks],
+          with chunks under three words folded into a neighbour."""
           if not TUNING.get("first_clause", True):
-              return split(text, *args, **kwargs)
+              return merge_tiny(list(split(text, *args, **kwargs)), text=text)
           head, rest = first_clause(text, max_words=int(TUNING.get("first_max_words") or FIRST_CLAUSE_MAX_WORDS))
           if not rest:
-              return split(text, *args, **kwargs)
+              return merge_tiny(list(split(text, *args, **kwargs)), text=text)
           STATS["first_clause_splits"] += 1
           out = [head]
           second = int(TUNING.get("second_max_words") or 0)
@@ -263,7 +293,7 @@ write_files:
               out.append(mid)
               if not rest:
                   return out
-          return out + list(split(rest, *args, **kwargs))
+          return out + merge_tiny(list(split(rest, *args, **kwargs)), text=rest)
 
 
       def _sha256(path: str) -> str:

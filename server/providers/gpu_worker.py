@@ -55,6 +55,12 @@ SERVED_MODEL_NAME = "acudx-llm"   # --served-model-name in the worker's vLLM
 DIAG_SECRET_LABEL = b"acudx-diag-v1"
 PROVIDER_GONE_STATUSES = ("terminated", "terminating", "preempted")
 
+# The cloud-init template targets Lambda Stack 24.04 (docker compose plugin, NVIDIA toolkit). Two
+# us-south-2 workers launched without an image on 2026-10-21 came up on lambda-stack-22-04 and never
+# served a route (no diagnostics on 80, no TLS on 443); the us-southeast-1 one on 24.04 did. Pinning
+# the family takes the region default out of the launch.
+WORKER_IMAGE_FAMILY = "lambda-stack-24-04"
+
 _MARKERS = {"__WORKER_TOKEN__": "token", "__WORKER_LLM_MODEL__": "llm_model", "__WORKER_DOMAIN__": "domain"}
 ACTIVE_STATUSES = ("launching", "booting", "ready")
 
@@ -322,7 +328,8 @@ class WorkerManager:
                  clock: Callable[[], float] = time.time,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  poll_interval_s: float = 5.0, boot_timeout_s: float = 900.0,
-                 ready_timeout_s: float = 1500.0, boot_log_interval_s: float = 60.0):
+                 ready_timeout_s: float = 1500.0, boot_log_interval_s: float = 60.0,
+                 health_ttl_s: float = 10.0):
         self.settings = settings
         self.store = store or WorkerStore(settings.acudx_db_path)
         self._client = client
@@ -335,6 +342,11 @@ class WorkerManager:
         self.ready_timeout_s = ready_timeout_s
         self.boot_log_interval_s = boot_log_interval_s
         self._last_probe: dict[int, str] = {}
+        # A ready worker that answered /healthz (or served a request) is trusted for this long without
+        # another probe. Every TTS, STT and LLM resolution used to pay one bearer /healthz round trip
+        # before the real request (about 0.5 s on the patient's speak path through an egress proxy).
+        self.health_ttl_s = health_ttl_s
+        self._healthy_until: dict[int, float] = {}
         self._lock = asyncio.Lock()
         self._inflight: asyncio.Task[WorkerRecord] | None = None
         self._reaper: asyncio.Task[None] | None = None
@@ -409,7 +421,10 @@ class WorkerManager:
         """Record a request that used the worker (resets the idle window)."""
         w = self.store.active_worker()
         if w is not None:
-            self.store.update_worker(w.id, last_used_at=self._clock())
+            now = self._clock()
+            self.store.update_worker(w.id, last_used_at=now)
+            if w.status == "ready":
+                self._healthy_until[w.id] = now + self.health_ttl_s
 
     def llm_endpoint(self) -> dict[str, str] | None:
         """Internal consumers only: carries the bearer token."""
@@ -448,8 +463,13 @@ class WorkerManager:
                 raise refusal
             now = self._clock()
             w = self.store.active_worker()
-            if w is not None and w.status == "ready" and await self._healthy(w):
-                return self.store.update_worker(w.id, last_used_at=now)
+            if w is not None and w.status == "ready":
+                if now < self._healthy_until.get(w.id, 0.0):
+                    return self.store.update_worker(w.id, last_used_at=now)
+                if await self._healthy(w):
+                    self._healthy_until[w.id] = now + self.health_ttl_s
+                    return self.store.update_worker(w.id, last_used_at=now)
+                self._healthy_until.pop(w.id, None)
             if self._inflight is None or self._inflight.done():
                 self._inflight = asyncio.create_task(self._wait_ready(w) if w is not None else self._launch())
             task = self._inflight
@@ -607,7 +627,7 @@ class WorkerManager:
             region_name=choice.region_name, instance_type_name=choice.instance_type_name,
             ssh_key_name=self.settings.lambda_ssh_key_name or "", name=f"acudx-worker-{int(now)}",
             user_data=user_data, tags=[{"key": "acudx", "value": "gpu-worker"}],
-            file_system_names=fs_names or None,
+            file_system_names=fs_names or None, image_family=WORKER_IMAGE_FAMILY,
         )
         if not ids:
             raise WorkerFailed("launch returned no instance id")

@@ -92,7 +92,10 @@ async def test_launch_sends_documented_body_and_returns_ids(client):
     assert sent["name"] == "acudx-worker"
     assert sent["user_data"].startswith("#cloud-config")
     assert sent["tags"] == [{"key": "app", "value": "acudx"}]
-    assert "file_system_names" not in sent
+    assert "file_system_names" not in sent and "image" not in sent
+    await client.launch(region_name="us-east-1", instance_type_name="gpu_1x_a10", ssh_key_name="k",
+                        image_family="lambda-stack-24-04")
+    assert json.loads(route.calls.last.request.content)["image"] == {"family": "lambda-stack-24-04"}
 
 
 @respx.mock
