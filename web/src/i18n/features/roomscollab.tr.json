@@ -21,6 +21,7 @@
     "tabs": {
       "workspace": "Çalışma alanı",
       "interview": "Görüşme",
+      "diagnosis": "Tanı",
       "prehospital": "Hastane öncesi",
       "orders": "İstemler ve görevler",
       "floor": "Ekip zemini",

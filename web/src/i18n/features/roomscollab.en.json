@@ -21,6 +21,7 @@
     "tabs": {
       "workspace": "Workspace",
       "interview": "Interview",
+      "diagnosis": "Diagnosis",
       "prehospital": "Prehospital",
       "orders": "Orders & tasks",
       "floor": "Team floor",

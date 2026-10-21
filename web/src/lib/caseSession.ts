@@ -219,6 +219,11 @@ function openSession(threadId: string, signal?: AbortSignal): ThreadSession {
         setCaseLayers(threadId, { [ev.layer]: "pending" });
         break;
       case "layer.ready":
+        // The debrief another member's commit requested reaches every member of the room.
+        if (ev.layer === "debrief" && ev.data) {
+          setDebrief(threadId, { status: "ready", data: ev.data as unknown as DebriefLayerData, error: null });
+          syncRenderings();
+        }
         merge(ev.spec, { [ev.layer]: "ready" });
         break;
       case "layer.rendered":

@@ -219,5 +219,14 @@ describe("tasks and treatment steps from other members", () => {
     expect(getCurrentVitals(s)?.hr).toBe(DIRECTOR_VITALS.hr);
     // The shared course carries the treatment on this device too (same ramps from now on).
     expect(s.treatments.map((t) => t.code)).toEqual(["161"]);
+    // The same step arriving on a second stream of the thread is applied once.
+    applyThreadDirector("th-room", {
+      thread_id: "th-room", client_id: "tab-nurse", action: { kind: "treatment", ref: "161" },
+      case_state: { t_ms: 90_000 } as never,
+      patient_visible_changes: { t_ms: 90_000, vitals: DIRECTOR_VITALS, new_facts: [], complications_fired: [], trace: [] } as never,
+      director_notes: [],
+    });
+    expect(getEncounterSnapshot().treatments).toHaveLength(1);
+    expect(getEncounterSnapshot().director.steps).toBe(1);
   });
 });

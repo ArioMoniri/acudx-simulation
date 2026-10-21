@@ -1280,7 +1280,10 @@ export function applyThreadDirector(threadId: string, ev: DirectorThreadEvent): 
   if (!state.caseInstance || state.generation?.threadId !== threadId) return;
   if (ev.client_id && ev.client_id === DIRECTOR_CLIENT_ID) return;
   const prevT = Number(state.director.caseState?.t_ms ?? -1);
-  if (Number(ev.case_state?.t_ms ?? 0) < prevT) return;
+  // Every step advances the Director's sim time: a step at or before the last one applied is
+  // a duplicate (the owner's tab receives the thread log on its generate stream and on its
+  // follow stream; live acceptance 2026-10-21) and is applied once.
+  if (Number(ev.case_state?.t_ms ?? 0) <= prevT) return;
   // A team member gave a treatment on the shared thread (doc 15 12.8): the shared course
   // carries it here too, so this monitor ramps the same effect from the same Director vitals.
   if (ev.action?.kind === "treatment" && ev.action.ref) {

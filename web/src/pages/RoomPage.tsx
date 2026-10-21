@@ -27,6 +27,8 @@ import {
 } from "@/components/ui";
 import { PatientBanner, SimBadge } from "@/components/ehr";
 import { InterviewTab } from "@/components/ehr/tabs/InterviewTab";
+import { ProblemListTab } from "@/components/ehr/tabs/ProblemListTab";
+import { CaseDebriefLayer } from "@/components/ehr/CaseDebriefLayer";
 import { LayerStrip } from "@/components/ehr/LayerStrip";
 import {
   RoomCard,
@@ -415,7 +417,8 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
     actingRole === "doctor" ? "interview" : actingRole === "paramedic" ? "prehospital" : "orders";
   const availableTabs = useMemo(() => {
     const tabs: string[] = [];
-    if (actingRole === "doctor") tabs.push("interview");
+    // The doctor commits the team's working diagnosis; the debrief layer is written for it.
+    if (actingRole === "doctor") tabs.push("interview", "diagnosis");
     if (actingRole === "paramedic") tabs.push("prehospital");
     tabs.push("orders", "floor", "debrief");
     return tabs;
@@ -646,7 +649,14 @@ function InRoom({ id, runtime }: { id: string; runtime: RoomRuntime }) {
               />
             </TabsContent>
 
+            {actingRole === "doctor" ? (
+              <TabsContent value="diagnosis">
+                <ProblemListTab caseInstance={shownCase} lang={lang} />
+              </TabsContent>
+            ) : null}
+
             <TabsContent value="debrief">
+              <CaseDebriefLayer className="mb-4" headingLevel={2} />
               <DebriefPanel
                 lang={lang}
                 woreHat={iAmLead}
