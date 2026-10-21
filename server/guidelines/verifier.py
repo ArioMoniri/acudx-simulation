@@ -538,6 +538,35 @@ class VerificationOutcome:
     retrieved_at: str = ""
 
 
+def focus_quote(quote: str, statement: str, limit: int = QUOTE_MAX_CHARS) -> str:
+    """Trim an over-long supporting passage to the ``limit``-character span that carries the
+    most of the statement's content terms (numbers weigh double), on word boundaries. A
+    head-only cut can drop the very figures the statement rests on when the passage is a
+    long table row without sentence breaks; the independent crosscheck would then reject
+    the statement because its numbers are no longer in the quote."""
+    if len(quote) <= limit:
+        return quote
+    weights = content_terms(statement)
+    words = quote.split(" ")
+    starts, pos = [], 0
+    for w in words:
+        starts.append(pos)
+        pos += len(w) + 1
+    scores = [weights.get(next(iter(tokens(w)), ""), 0.0) if tokens(w) else 0.0 for w in words]
+    best, best_i, best_j = -1.0, 0, 0
+    j, acc = 0, 0.0
+    for i in range(len(words)):
+        while j < len(words) and starts[j] + len(words[j]) - starts[i] <= limit - 2:
+            acc += scores[j]
+            j += 1
+        if acc > best:
+            best, best_i, best_j = acc, i, j
+        acc -= scores[i] if j > i else 0.0
+        j = max(j, i + 1)
+    span = " ".join(words[best_i:best_j])
+    return ("…" if best_i > 0 else "") + span + ("…" if best_j < len(words) else "")
+
+
 def _replaced_notice(text: str) -> str:
     low = text[:1500].lower()
     m = re.search(r"this guideline has been (updated and )?replaced by[^.]{0,200}", low)
@@ -580,9 +609,7 @@ async def verify_statement(stmt: GuidelineStatement, client: httpx.AsyncClient, 
         return VerificationOutcome(stmt.id, "failed", why + best, score=match.score if match else 0.0,
                                    method=match.method if match else "lexical",
                                    verification_url=fetched.final_url, retrieved_at=fetched.retrieved_at)
-    quote = match.quote
-    if len(quote) > QUOTE_MAX_CHARS:
-        quote = quote[: QUOTE_MAX_CHARS - 1].rsplit(" ", 1)[0] + "…"
+    quote = focus_quote(match.quote, stmt.statement_en)
     audit = (f"score {match.score:.2f}; {match.matched_terms}/{match.total_terms} terms"
              + ("; composite quote" if match.composite else "")
              + (f"; embedding {match.embedding_score:.2f}" if match.embedding_score is not None else "")

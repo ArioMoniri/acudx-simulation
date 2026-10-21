@@ -359,9 +359,14 @@ def open_statements() -> List[GuidelineStatement]:  # noqa: C901 - a flat author
         "Commence a fixed rate intravenous insulin infusion (FRIII) at 0.1 unit/kg/hour based on an estimate of weight, made up as 50 units human soluble insulin in 50 ml 0.9% sodium chloride solution, and continue the patient's usual long-acting insulin analogue at the usual dose and time.",
         "Tahmini ağırlığa göre 0,1 ünite/kg/saat sabit hızlı intravenöz insülin infüzyonu (FRIII) başlayın (50 ünite insan soluble insülin 50 ml %0,9 sodyum klorür içinde) ve hastanın kullandığı uzun etkili insülin analoğuna olağan doz ve zamanda devam edin.",
         DKA, specialties=["endocrine"]))
-    S.append(_s("gs_jbds_dka_fluids_potassium", "jbds_dka",
-        "Commence 0.9% sodium chloride solution via an infusion pump using a large bore cannula: if systolic BP is below 90 mmHg give 500 ml over 10 to 15 minutes and repeat whilst awaiting senior input, otherwise give 1 L over the first 60 minutes; add 40 mmol/L potassium chloride when the potassium level is 3.5 to 5.5 mmol/L and seek senior review if below 3.5.",
-        "Geniş lümenli bir kanülle infüzyon pompası üzerinden %0,9 sodyum klorür başlayın: sistolik KB 90 mmHg altındaysa 10-15 dakikada 500 ml verip kıdemli görüş beklenirken tekrarlayın, aksi halde ilk 60 dakikada 1 L verin; potasyum 3,5-5,5 mmol/L ise 40 mmol/L potasyum klorür ekleyin, 3,5 altındaysa kıdemli değerlendirme isteyin.",
+    # Split in two (fluids; potassium) so that every number sits in one verifiable passage.
+    S.append(_s("gs_jbds_dka_fluids", "jbds_dka",
+        "Commence 0.9% sodium chloride solution via an infusion pump using a large bore cannula: if systolic BP is below 90 mmHg give 500 ml over 10 to 15 minutes and repeat whilst awaiting senior input, otherwise give 1 L over the first 60 minutes.",
+        "Geniş lümenli bir kanülle infüzyon pompası üzerinden %0,9 sodyum klorür başlayın: sistolik KB 90 mmHg altındaysa 10-15 dakikada 500 ml verip kıdemli görüş beklenirken tekrarlayın, aksi halde ilk 60 dakikada 1 L verin.",
+        DKA, specialties=["endocrine"]))
+    S.append(_s("gs_jbds_dka_potassium", "jbds_dka",
+        "Add 40 mmol/L potassium chloride to the 0.9% sodium chloride when the potassium level is 3.5 to 5.5 mmol/L, and seek senior review if the potassium is below 3.5 mmol/L.",
+        "Potasyum 3,5-5,5 mmol/L ise %0,9 sodyum klorüre 40 mmol/L potasyum klorür ekleyin; potasyum 3,5 mmol/L altındaysa kıdemli değerlendirme isteyin.",
         DKA, specialties=["endocrine"]))
     S.append(_s("gs_jbds_dka_targets_glucose", "jbds_dka",
         "Aim for a rate of fall of ketones of at least 0.5 mmol/L/hr, a bicarbonate rise of 3 mmol/L/hr and a blood glucose fall of 3 mmol/L/hr; add 10% glucose at 125 ml/hr if blood glucose falls below 14 mmol/L and consider reducing the intravenous insulin infusion to 0.05 units/kg/hour.",
@@ -573,9 +578,14 @@ def open_statements() -> List[GuidelineStatement]:  # noqa: C901 - a flat author
         "Investigate for acute kidney injury, by measuring serum creatinine and comparing with baseline, in adults with acute illness if any of the following are likely or present: chronic kidney disease, heart failure, liver disease, diabetes, history of acute kidney injury, oliguria, hypovolaemia, use of drugs that can cause or exacerbate kidney injury (such as NSAIDs, aminoglycosides, ACE inhibitors, ARBs and diuretics) within the past week, iodine-based contrast media within the past week, urological obstruction, sepsis, deteriorating early warning scores or age 65 years or over.",
         "Akut hastalığı olan erişkinlerde şunlardan herhangi biri varsa veya olasıysa serum kreatinini ölçüp bazal değerle karşılaştırarak akut böbrek hasarını araştırın: kronik böbrek hastalığı, kalp yetersizliği, karaciğer hastalığı, diyabet, akut böbrek hasarı öyküsü, oligüri, hipovolemi, son bir hafta içinde böbrek hasarına yol açabilen veya kötüleştirebilen ilaç kullanımı (NSAİİ, aminoglikozid, ACE inhibitörü, ARB ve diüretik gibi), son bir hafta içinde iyotlu kontrast madde, ürolojik obstrüksiyon, sepsis, kötüleşen erken uyarı skorları veya 65 yaş ve üzeri.",
         ["N17.9"], specialties=["renal"]))
-    S.append(_s("gs_nice_ng148_urinalysis_us", "ng148",
-        "Perform urine dipstick testing for blood, protein, leucocytes, nitrites and glucose in all people as soon as acute kidney injury is suspected or detected; when pyonephrosis is suspected offer immediate ultrasound of the urinary tract (within 6 hours of assessment), and when there is no identified cause of the acute kidney injury or a risk of urinary tract obstruction offer urgent ultrasound (within 24 hours of assessment).",
-        "Akut böbrek hasarından şüphelenildiği veya saptandığı anda herkeste kan, protein, lökosit, nitrit ve glukoz için idrar çubuk testi yapın; piyonefroz şüphesinde hemen (değerlendirmeden sonraki 6 saat içinde) üriner sistem ultrasonu, akut böbrek hasarının nedeni saptanamamışsa veya üriner obstrüksiyon riski varsa acil (24 saat içinde) ultrason önerin.",
+    # Split in two (dipstick and pyonephrosis; unexplained AKI) so every number sits in one passage.
+    S.append(_s("gs_nice_ng148_urinalysis", "ng148",
+        "Perform urine dipstick testing for blood, protein, leucocytes, nitrites and glucose in all people as soon as acute kidney injury is suspected or detected, and when pyonephrosis is suspected offer immediate ultrasound of the urinary tract (to be performed within 6 hours of assessment).",
+        "Akut böbrek hasarından şüphelenildiği veya saptandığı anda herkeste kan, protein, lökosit, nitrit ve glukoz için idrar çubuk testi yapın ve piyonefroz şüphesinde hemen (değerlendirmeden sonraki 6 saat içinde) üriner sistem ultrasonu önerin.",
+        ["N17.9"], specialties=["renal"]))
+    S.append(_s("gs_nice_ng148_us_24h", "ng148",
+        "When people with acute kidney injury have no identified cause or are at risk of urinary tract obstruction, offer urgent ultrasound of the urinary tract (to be performed within 24 hours of assessment).",
+        "Nedeni saptanamayan veya üriner sistem obstrüksiyonu riski olan akut böbrek hasarlı kişilere acil (değerlendirmeden sonraki 24 saat içinde) üriner sistem ultrasonu önerin.",
         ["N17.9"], specialties=["renal"]))
     S.append(_s("gs_nice_ng148_rrt", "ng148",
         "Refer adults immediately for renal replacement therapy if any of the following are not responding to medical management: hyperkalaemia, metabolic acidosis, symptoms or complications of uraemia (for example, pericarditis or encephalopathy), fluid overload or pulmonary oedema; base the decision to start renal replacement therapy on the condition of the person as a whole and not on an isolated urea, creatinine or potassium value.",
