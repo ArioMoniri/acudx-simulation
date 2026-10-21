@@ -256,6 +256,67 @@ SRC.update({
                         license="open"),
 })
 
+# ---- Musculoskeletal and toxicology -----------------------------------------------
+SRC.update({
+    "ng219": _nice("ng219", "Gout: diagnosis and management", "NG219, June 2022", "Recommendations", "2022-06-09"),
+    "cg124": _nice("cg124", "Hip fracture: management", "CG124, June 2011 (updated January 2023)", "Recommendations", "2011-06-22"),
+    "ng59": _nice("ng59", "Low back pain and sciatica in over 16s: assessment and management", "NG59, November 2016 (updated 2026)",
+                  "Recommendations", "2016-11-30"),
+    "boast4": dict(body="British Orthopaedic Association", title="BOAST: Open Fractures", edition="BOA Standards for Trauma, December 2017",
+                   url="https://www.boa.ac.uk/resource/boast-4-pdf.html", published="2017-12-01", license="open", countries="UK"),
+    "boast10": dict(body="British Orthopaedic Association", title="BOAST: Diagnosis and Management of Compartment Syndrome of the Extremities",
+                    edition="BOA Standards for Trauma, July 2014 (updated July 2025)",
+                    url="https://www.boa.ac.uk/resource/boast-10-pdf.html", published="2025-07-01", license="open", countries="UK"),
+    "aagbi_acs21": dict(body="Association of Anaesthetists", title="Regional analgesia for lower leg trauma and the risk of acute compartment syndrome: guideline from the Association of Anaesthetists",
+                        edition="Anaesthesia 2021;76:1578-1592", doi="10.1111/anae.15504",
+                        url="https://doi.org/10.1111/anae.15504", fetch=EPMC.format(pmc="PMC9292897"),
+                        published="2021-06-01", license="open", countries="UK"),
+    "aast_rhabdo22": dict(body="AAST Critical Care Committee", title="Rhabdomyolysis: an American Association for the Surgery of Trauma Critical Care Committee Clinical Consensus Document",
+                          edition="Trauma Surgery and Acute Care Open 2022;7:e000836", doi="10.1136/tsaco-2021-000836",
+                          url="https://doi.org/10.1136/tsaco-2021-000836", fetch=EPMC.format(pmc="PMC8804685"),
+                          published="2022-01-25", license="open", countries="US"),
+    "extrip_tca14": dict(body="EXTRIP Workgroup", title="Extracorporeal treatment for tricyclic antidepressant poisoning: recommendations from the EXTRIP Workgroup",
+                         edition="Seminars in Dialysis 2014;27(4):381-389", doi="10.1111/sdi.12227",
+                         url="https://doi.org/10.1111/sdi.12227", fetch=EPMC.format(pmc="PMC4282541"),
+                         published="2014-07-01", license="open"),
+})
+
+# ---- Neurology ---------------------------------------------------------------------
+SRC.update({
+    "cg103": _nice("cg103", "Delirium: prevention, diagnosis and management in hospital and long-term care",
+                   "CG103, July 2010 (updated January 2023)", "Recommendations", "2010-07-28"),
+    "cg150": _nice("cg150", "Headaches in over 12s: diagnosis and management", "CG150, September 2012 (updated June 2025)",
+                   "Recommendations", "2012-09-19"),
+    "ng234": _nice("ng234", "Spinal metastases and metastatic spinal cord compression", "NG234, September 2023",
+                   "Recommendations", "2023-09-06"),
+    "coch_bell16": dict(body="Cochrane", title="Corticosteroids for Bell's palsy (idiopathic facial paralysis)",
+                        edition="Cochrane Database of Systematic Reviews 2016, CD001942.pub5", doi="10.1002/14651858.CD001942.pub5",
+                        url="https://doi.org/10.1002/14651858.CD001942.pub5",
+                        fetch="https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:10.1002/14651858.CD001942.pub5&resultType=core&format=xml",
+                        published="2016-07-18"),
+    "coch_bell_av19": dict(body="Cochrane", title="Antiviral treatment for Bell's palsy (idiopathic facial paralysis)",
+                           edition="Cochrane Database of Systematic Reviews 2019, CD001869.pub9", doi="10.1002/14651858.CD001869.pub9",
+                           url="https://doi.org/10.1002/14651858.CD001869.pub9",
+                           fetch="https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:10.1002/14651858.CD001869.pub9&resultType=core&format=xml",
+                           published="2019-09-05"),
+    "ean_enc26": dict(body="EAN / ESCMID", title="Diagnosis and Management of Infectious Encephalitis in Adults: Guidelines From the European Academy of Neurology and European Society of Clinical Microbiology and Infectious Diseases",
+                      edition="European Journal of Neurology 2026", url="https://europepmc.org/article/PMC/PMC13650609",
+                      fetch=EPMC.format(pmc="PMC13650609"), published="2026-06-01", license="open"),
+    "gbs19": dict(body="International GBS expert group (IGOS)", title="Diagnosis and management of Guillain-Barré syndrome in ten steps",
+                  edition="Nature Reviews Neurology 2019;15:671-683", doi="10.1038/s41582-019-0250-9",
+                  url="https://doi.org/10.1038/s41582-019-0250-9", fetch=EPMC.format(pmc="PMC6821638"),
+                  published="2019-09-20", license="open"),
+    "mg16": dict(body="MGFA international consensus", title="International consensus guidance for management of myasthenia gravis: Executive summary",
+                 edition="Neurology 2016;87(4):419-425", doi="10.1212/WNL.0000000000002790",
+                 url="https://doi.org/10.1212/WNL.0000000000002790", fetch=EPMC.format(pmc="PMC4977114"),
+                 published="2016-07-26", license="open"),
+    "bppv_kas23": dict(body="AAO-HNSF (key action statements, reproduced)",
+                       title="Clinical Practice Guideline: Benign Paroxysmal Positional Vertigo (Update) key action statements, as tabulated in: Adoption of clinical practice guidelines in cases of benign paroxysmal positional vertigo",
+                       edition="European Archives of Oto-Rhino-Laryngology 2023;280:4381 (guideline: Otolaryngol Head Neck Surg 2017)",
+                       doi="10.1007/s00405-023-07981-3", url="https://doi.org/10.1007/s00405-023-07981-3",
+                       fetch=EPMC.format(pmc="PMC10133903"), published="2023-04-26", license="open"),
+})
+
 
 def _c(sid: str, src: str, section: str, stages: List[str], en: str, tr: str, codes: List[str], *,
        specialties: List[str] | None = None, countries: List[str] | None = None,
@@ -1174,6 +1235,266 @@ def catalog_statements() -> List[GuidelineStatement]:  # noqa: C901 - a flat aut
          "Preventing tetanus involves proper wound care, use of tetanus vaccine and tetanus immune globulin (TIG) prophylaxis; even with modern intensive care, generalized tetanus results in death for about 1 in 10 cases.",
          "Tetanozun önlenmesi uygun yara bakımı, tetanoz aşısı kullanımı ve tetanoz immünoglobulini (TIG) profilaksisini içerir; modern yoğun bakıma rağmen jeneralize tetanoz olguların yaklaşık 10'da 1'inde ölümle sonuçlanır.",
          TET, specialties=["infectious"], countries=["US"]))
+
+    # ======================= MUSCULOSKELETAL / TOXICOLOGY ======================
+    GOUT, HIP, LBP, OPENFX, ACS_, RHAB, TCA = (["M10.9"], ["S72.009"], ["M54.5"], ["S82.90"], ["T79.A0"],
+                                              ["M62.82"], ["T43.0X"])
+    # ---- Acute gout (NICE NG219) -------------------------------------------
+    a(_c("gs_nice_ng219_septic_first", "ng219", "1.1.3; 1.1.4", ["exam", "disposition"],
+         "Assess the possibility of septic arthritis, calcium pyrophosphate crystal deposition and inflammatory arthritis in people presenting with a painful, red, swollen joint, and if septic arthritis is suspected refer immediately according to the local care pathway.",
+         "Ağrılı, kızarık, şiş eklemle başvuranlarda septik artrit, kalsiyum pirofosfat kristal birikimi ve inflamatuvar artrit olasılığını değerlendirin; septik artritten şüpheleniliyorsa yerel bakım yoluna göre hemen yönlendirin.",
+         GOUT + ["M00.9"], specialties=["rheumatology"]))
+    a(_c("gs_nice_ng219_urate_aspiration", "ng219", "1.1.7; 1.1.8", ["workup"],
+         "Measure the serum urate level to confirm the clinical diagnosis of gout (360 micromol/litre or more); if it is below 360 micromol/litre during a flare and gout is strongly suspected, repeat it later, and consider joint aspiration and microscopy of synovial fluid if the diagnosis remains uncertain.",
+         "Gutun klinik tanısını doğrulamak için serum ürat düzeyini ölçün (360 mikromol/litre veya üzeri); atak sırasında 360 mikromol/litrenin altındaysa ve gut kuvvetle düşünülüyorsa daha sonra tekrarlayın; tanı belirsiz kalırsa eklem aspirasyonu ve sinovyal sıvı mikroskopisini düşünün.",
+         GOUT, specialties=["rheumatology"]))
+    a(_c("gs_nice_ng219_flare_first_line", "ng219", "1.3.1; 1.3.2; 1.3.3", ["treatment"],
+         "Offer an NSAID, colchicine or a short course of an oral corticosteroid for first-line treatment of a gout flare, taking into account comorbidities, co-prescriptions and preferences; consider adding a proton pump inhibitor with an NSAID, and an intra-articular or intramuscular corticosteroid injection if NSAIDs and colchicine are contraindicated, not tolerated or ineffective.",
+         "Gut atağının ilk basamak tedavisi için eşlik eden hastalıkları, birlikte kullanılan ilaçları ve tercihleri göz önünde bulundurarak NSAİİ, kolşisin veya kısa süreli oral kortikosteroid önerin; NSAİİ ile birlikte proton pompa inhibitörü eklemeyi, NSAİİ ve kolşisin kontrendike, tolere edilemez veya etkisizse eklem içi ya da kas içi kortikosteroid enjeksiyonunu düşünün.",
+         GOUT, specialties=["rheumatology"]))
+    a(_c("gs_nice_ng219_ult_timing_target", "ng219", "1.5.4; 1.5.6; 1.5.8", ["disposition"],
+         "Start urate-lowering therapy at least 2 to 4 weeks after a gout flare has settled, offering allopurinol or febuxostat first line, and aim for a target serum urate level below 360 micromol/litre.",
+         "Ürat düşürücü tedaviye gut atağı yatıştıktan en az 2-4 hafta sonra başlayın, ilk basamakta allopurinol veya febuksostat önerin ve 360 mikromol/litrenin altında hedef serum ürat düzeyi amaçlayın.",
+         GOUT, specialties=["rheumatology"]))
+
+    # ---- Hip fracture (NICE CG124) -------------------------------------------
+    a(_c("gs_nice_cg124_mri_occult", "cg124", "1.1.1", ["workup"],
+         "Offer MRI if hip fracture is suspected despite negative X-rays of the hip of an adequate standard; if MRI is not available within 24 hours or is contraindicated, consider CT.",
+         "Yeterli standarttaki kalça grafileri negatif olmasına rağmen kalça kırığından şüpheleniliyorsa MRG önerin; MRG 24 saat içinde yapılamıyorsa veya kontrendikeyse BT'yi düşünün.",
+         HIP, specialties=["orthopaedics"]))
+    a(_c("gs_nice_cg124_analgesia_immediate", "cg124", "1.3.1; 1.3.2; 1.3.4; 1.3.5; 1.3.6", ["triage", "treatment"],
+         "Assess pain immediately on presentation and within 30 minutes of initial analgesia, offer immediate analgesia to people with suspected hip fracture including those with cognitive impairment, offer paracetamol every 6 hours preoperatively with additional opioids if needed, and consider nerve blocks if these are insufficient.",
+         "Ağrıyı başvuruda hemen ve ilk analjeziden sonraki 30 dakika içinde değerlendirin, bilişsel bozukluğu olanlar dahil şüpheli kalça kırığı olan herkese hemen analjezi verin, ameliyat öncesi 6 saatte bir parasetamol ve gerekirse ek opioid önerin, bunlar yetersizse sinir bloklarını düşünün.",
+         HIP, specialties=["orthopaedics"]))
+    a(_c("gs_nice_cg124_surgery_day", "cg124", "1.2.1; 1.2.2", ["disposition"],
+         "Perform surgery on the day of, or the day after, admission, and identify and treat correctable comorbidities immediately so that surgery is not delayed, such as anaemia, anticoagulation, volume depletion, electrolyte imbalance, uncontrolled diabetes or heart failure.",
+         "Ameliyatı yatış günü veya ertesi gün yapın ve ameliyatın gecikmemesi için anemi, antikoagülasyon, hacim kaybı, elektrolit bozukluğu, kontrolsüz diyabet veya kalp yetmezliği gibi düzeltilebilir eşlik eden hastalıkları hemen saptayıp tedavi edin.",
+         HIP, specialties=["orthopaedics"]))
+    a(_c("gs_nice_cg124_mobilise_day1", "cg124", "1.7.1", ["disposition"],
+         "Offer people a physiotherapy assessment and, unless medically or surgically contraindicated, mobilisation on the day after surgery.",
+         "Tıbbi veya cerrahi kontrendikasyon yoksa kişilere ameliyattan sonraki gün fizyoterapi değerlendirmesi ve mobilizasyon önerin.",
+         HIP, specialties=["orthopaedics"]))
+
+    # ---- Mechanical low back pain (NICE NG59) -------------------------------
+    a(_c("gs_nice_ng59_alternative_dx", "ng59", "1.1.1", ["history"],
+         "Think about alternative diagnoses when examining or reviewing people with low back pain, particularly if they develop new or changed symptoms, and exclude specific causes such as cancer, infection, trauma or inflammatory disease such as spondyloarthritis.",
+         "Bel ağrılı kişileri muayene ederken veya gözden geçirirken, özellikle yeni ya da değişen belirtiler gelişirse alternatif tanıları düşünün ve kanser, enfeksiyon, travma veya spondiloartrit gibi inflamatuvar hastalık gibi özgül nedenleri dışlayın.",
+         LBP + ["G83.4"], specialties=["musculoskeletal"]))
+    a(_c("gs_nice_ng59_no_routine_imaging", "ng59", "1.1.4; 1.1.6", ["workup"],
+         "Do not routinely offer imaging in a non-specialist setting for people with low back pain with or without sciatica, and in specialist settings consider imaging only if the result is likely to change management.",
+         "Siyatiği olsun olmasın bel ağrılı kişilere uzman olmayan ortamda rutin görüntüleme önermeyin; uzman ortamda yalnızca sonuç yönetimi değiştirecekse görüntülemeyi düşünün.",
+         LBP, specialties=["musculoskeletal"]))
+    a(_c("gs_nice_ng59_nsaid_not_paracetamol", "ng59", "1.2.23; 1.2.24; 1.2.25; 1.2.26", ["treatment"],
+         "Prescribe oral NSAIDs for low back pain at the lowest effective dose for the shortest possible period, with clinical assessment and gastroprotection as needed; consider weak opioids for acute low back pain only if an NSAID is contraindicated, not tolerated or ineffective, and do not offer paracetamol alone.",
+         "Bel ağrısında oral NSAİİ'leri en düşük etkili dozda ve mümkün olan en kısa süre, gerektiğinde klinik değerlendirme ve gastroproteksiyonla reçete edin; akut bel ağrısında zayıf opioidleri yalnızca NSAİİ kontrendike, tolere edilemez veya etkisizse düşünün ve yalnızca parasetamol vermeyin.",
+         LBP, specialties=["musculoskeletal"]))
+    a(_c("gs_nice_ng59_self_management", "ng59", "1.2.1; 1.1.2", ["disposition"],
+         "Provide advice and information to help people self-manage low back pain with or without sciatica, including encouragement to continue with normal activities, and consider risk stratification such as the STarT Back tool at first contact.",
+         "Siyatiği olsun olmasın bel ağrısını kendi kendine yönetmelerine yardımcı olacak öneri ve bilgiler verin, normal etkinliklerini sürdürmeleri için cesaretlendirin ve ilk temasta STarT Back aracı gibi risk sınıflamasını düşünün.",
+         LBP, specialties=["musculoskeletal"]))
+
+    # ---- Open long-bone fracture (BOAST 4) ------------------------------------
+    a(_c("gs_boast4_antibiotics_1h", "boast4", "Standards for practice", ["treatment"],
+         "Intravenous prophylactic antibiotics should be administered as soon as possible, ideally within 1 hour of injury, for open fractures of long bones, hind foot or midfoot.",
+         "Uzun kemik, arka ayak veya orta ayak açık kırıklarında intravenöz profilaktik antibiyotikler mümkün olan en kısa sürede, ideal olarak yaralanmadan sonraki 1 saat içinde verilmelidir.",
+         OPENFX, specialties=["orthopaedics"]))
+    a(_c("gs_boast4_neurovascular_splint", "boast4", "Standards for practice", ["exam"],
+         "Examination of the injured limb should include assessment and documentation of vascular and neurological status, repeated systematically, particularly after reduction manoeuvres or the application of splints, and the limb should be re-aligned and splinted.",
+         "Yaralı ekstremitenin muayenesi damar ve sinir durumunun değerlendirilip kaydedilmesini içermeli, özellikle redüksiyon manevraları veya atel uygulamasından sonra sistematik olarak tekrarlanmalı ve ekstremite hizalanıp atele alınmalıdır.",
+         OPENFX, specialties=["orthopaedics"]))
+    a(_c("gs_boast4_wound_photo_dressing", "boast4", "Standards for practice", ["treatment"],
+         "Before formal debridement the wound should be handled only to remove gross contamination and to allow photography, then dressed with a saline-soaked gauze and covered with an occlusive film; mini-washouts outside the operating theatre are not indicated.",
+         "Resmi debridmandan önce yaraya yalnızca kaba kirlenmeyi temizlemek ve fotoğraf çekmek için dokunulmalı, ardından salinle ıslatılmış gazlı bezle kapatılıp okluzif filmle örtülmelidir; ameliyathane dışında mini yıkamalar endike değildir.",
+         OPENFX, specialties=["orthopaedics"]))
+    a(_c("gs_boast4_orthoplastic_debridement", "boast4", "Standards for practice", ["disposition"],
+         "Patients with open fractures of long bones, hind foot or midfoot should be taken directly or transferred to a specialist centre that can provide orthoplastic care; debridement should be performed immediately for highly contaminated wounds or associated vascular compromise, within 12 hours for other solitary high energy open fractures and within 24 hours for other low energy open fractures.",
+         "Uzun kemik, arka ayak veya orta ayak açık kırığı olan hastalar doğrudan ortoplastik bakım sağlayabilen bir uzman merkeze götürülmeli veya nakledilmelidir; debridman yüksek derecede kirli yaralarda veya eşlik eden damar tehlikesinde hemen, diğer tek yüksek enerjili açık kırıklarda 12 saat içinde ve diğer düşük enerjili açık kırıklarda 24 saat içinde yapılmalıdır.",
+         OPENFX, specialties=["orthopaedics"]))
+
+    # ---- Acute compartment syndrome (BOAST 10, Association of Anaesthetists) --
+    a(_c("gs_boast10_pain_out_of_proportion", "boast10", "Background", ["exam"],
+         "Key clinical findings of acute compartment syndrome include pain out of proportion to the associated injury and pain on passive movement of the muscles of the involved compartments.",
+         "Akut kompartman sendromunun temel klinik bulguları ilişkili yaralanmayla orantısız ağrı ve tutulan kompartman kaslarının pasif hareketiyle ağrıdır.",
+         ACS_, specialties=["orthopaedics"]))
+    a(_c("gs_boast10_hourly_release_30min", "boast10", "Standards for practice", ["workup", "treatment"],
+         "Patients at risk of acute compartment syndrome should be assessed hourly with documentation; patients with symptoms or signs should have circumferential dressings released to expose the skin, the limb elevated and re-evaluation within 30 minutes.",
+         "Akut kompartman sendromu riski taşıyan hastalar saatte bir değerlendirilip kaydedilmelidir; belirti veya bulgusu olanlarda cildi açığa çıkaracak şekilde çevresel sargılar gevşetilmeli, ekstremite yükseltilmeli ve 30 dakika içinde yeniden değerlendirme yapılmalıdır.",
+         ACS_, specialties=["orthopaedics"]))
+    a(_c("gs_boast10_pressures_decompression", "boast10", "Standards for practice; footnote", ["workup", "disposition"],
+         "A difference between the diastolic blood pressure and the compartment pressure of less than 30 mmHg indicates an increased risk of compartment syndrome, and immediate surgical decompression of all involved compartments should follow a diagnosis of compartment syndrome.",
+         "Diyastolik kan basıncı ile kompartman basıncı arasındaki farkın 30 mmHg'den az olması artmış kompartman sendromu riskini gösterir ve kompartman sendromu tanısını tüm tutulan kompartmanların hemen cerrahi dekompresyonu izlemelidir.",
+         ACS_, specialties=["orthopaedics"]))
+    a(_c("gs_aagbi21_breakthrough_pain", "aagbi_acs21", "Recommendations; clinical features", ["exam"],
+         "Patients at risk of acute compartment syndrome should be identified on admission or at the time of surgery and managed within agreed multidisciplinary protocols; pain out of proportion to the injury is often the earliest sign, and breakthrough pain is considered a cardinal feature, although severe pain is not always present.",
+         "Akut kompartman sendromu riski taşıyan hastalar yatışta veya ameliyat sırasında belirlenmeli ve üzerinde anlaşılmış multidisipliner protokollerle yönetilmelidir; yaralanmayla orantısız ağrı çoğu kez en erken bulgudur ve kırılma ağrısı temel özellik sayılır, ancak şiddetli ağrı her zaman bulunmaz.",
+         ACS_, specialties=["anaesthesia", "orthopaedics"]))
+
+    # ---- Rhabdomyolysis (AAST 2022) ----------------------------------------------
+    a(_c("gs_aast_rhabdo_suspect_ck", "aast_rhabdo22", "Recommendations: presentation and laboratory evaluation", ["workup"],
+         "Rhabdomyolysis is suggested by elevated serum CK (more than 5 times the upper limit of normal or more than 1000 IU/L), myoglobin, LDH, potassium, creatinine and AST; CK should be followed with serial measurement until a peak is identified, typically at 24 to 72 hours.",
+         "Rabdomiyoliz yüksek serum CK (normalin üst sınırının 5 katından fazla veya 1000 IU/L üzeri), miyoglobin, LDH, potasyum, kreatinin ve AST ile düşündürülür; CK zirve saptanana kadar (genellikle 24-72 saatte) seri ölçümlerle izlenmelidir.",
+         RHAB, specialties=["critical care"], countries=["US"]))
+    a(_c("gs_aast_rhabdo_fluids", "aast_rhabdo22", "Recommendation: crystalloid type, rate and urine output goals", ["treatment"],
+         "Either lactated Ringer's solution or saline is an acceptable fluid for resuscitation in rhabdomyolysis; a starting rate of 400 mL/hour can be initiated, with goal-directed therapy to a urine output of 1 to 3 mL/kg/hour and up to 300 mL/hour.",
+         "Rabdomiyolizde resüsitasyon için laktatlı Ringer veya salin kabul edilebilir sıvıdır; saatte 400 mL başlangıç hızıyla başlanabilir ve idrar çıkışı saatte 1-3 mL/kg ve saatte 300 mL'ye kadar hedeflenir.",
+         RHAB, specialties=["critical care"], countries=["US"]))
+    a(_c("gs_aast_rhabdo_no_bicarb_rrt", "aast_rhabdo22", "Recommendations: bicarbonate, diuretics and RRT", ["treatment", "disposition"],
+         "The use of sodium bicarbonate or diuretics for prevention of AKI in rhabdomyolysis is not recommended, and there is no role for renal replacement therapy to prevent AKI; RRT should be based on traditional indications for AKI.",
+         "Rabdomiyolizde ABH'yi önlemek için sodyum bikarbonat veya diüretik kullanımı önerilmez ve ABH'yi önlemede renal replasman tedavisinin yeri yoktur; RRT geleneksel ABH endikasyonlarına göre verilmelidir.",
+         RHAB, specialties=["critical care"], countries=["US"]))
+    a(_c("gs_aast_rhabdo_potassium", "aast_rhabdo22", "Recommendation: electrolytes", ["workup"],
+         "Hyperkalemia, hyperphosphatemia and hypocalcemia are the electrolyte abnormalities most commonly encountered in rhabdomyolysis, and correcting them should proceed meticulously; hyperkalemia is the abnormality that requires the most urgent attention.",
+         "Rabdomiyolizde en sık görülen elektrolit bozuklukları hiperkalemi, hiperfosfatemi ve hipokalsemidir ve titizlikle düzeltilmelidir; en acil dikkat gerektiren bozukluk hiperkalemidir.",
+         RHAB, specialties=["critical care"], countries=["US"]))
+
+    # ---- Tricyclic antidepressant overdose (EXTRIP 2014) -------------------------
+    a(_c("gs_extrip_tca_ecg_qrs", "extrip_tca14", "Pharmacology and toxicity", ["workup"],
+         "TCA concentrations are less predictive than ECG findings to identify high-risk patients: QRS duration is a better predictor of seizures and ventricular arrhythmia than serum concentrations, and an R wave in aVR of more than 3 mm had a good predictive value for seizures or arrhythmias.",
+         "Yüksek riskli hastaları belirlemede TSA düzeyleri EKG bulgularından daha az öngörücüdür: QRS süresi nöbet ve ventriküler aritmiyi serum düzeylerinden daha iyi öngörür ve aVR'de 3 mm'den büyük R dalgası nöbet veya aritmi için iyi öngörü değerine sahiptir.",
+         TCA, specialties=["toxicology"]))
+    a(_c("gs_extrip_tca_bicarbonate", "extrip_tca14", "Management", ["treatment"],
+         "Although there is no specific antidote for TCA poisoning, sodium bicarbonate remains the therapy of choice for symptomatic patients, especially those presenting with seizures, fluid-unresponsive hypotension, or typical ECG findings (ventricular dysrhythmia, QRS more than 100 ms, prominent R waves in aVR).",
+         "TSA zehirlenmesinin özgül bir antidotu olmasa da sodyum bikarbonat semptomatik hastalarda, özellikle nöbet, sıvıya yanıtsız hipotansiyon veya tipik EKG bulgularıyla (ventriküler disritmi, 100 ms'den uzun QRS, aVR'de belirgin R dalgaları) başvuranlarda seçilecek tedavi olmaya devam eder.",
+         TCA, specialties=["toxicology"]))
+    a(_c("gs_extrip_tca_no_ectr", "extrip_tca14", "Recommendations: executive summary", ["disposition"],
+         "The EXTRIP workgroup recommends not to perform extracorporeal treatment in patients with TCA poisoning.",
+         "EXTRIP çalışma grubu TSA zehirlenmesi olan hastalarda ekstrakorporeal tedavi uygulanmamasını önerir.",
+         TCA, specialties=["toxicology"]))
+
+    # ======================= NEUROLOGY =========================================
+    BELL, DELIR, ENC, GBS, MIG, MGC, SCC, BPPV = (["G51.0"], ["F05"], ["G04.90"], ["G61.0"], ["G43.909"],
+                                                  ["G70.01"], ["G95.20"], ["H81.1"])
+    # ---- Bell palsy (Cochrane) --------------------------------------------------
+    a(_c("gs_coch_bell_steroids", "coch_bell16", "Main results; authors' conclusions", ["treatment"],
+         "Moderate- to high-quality evidence from randomised trials shows significant benefit from treating Bell's palsy with corticosteroids: 17% of participants given corticosteroids had incomplete recovery of facial motor function at six months or more, against 28% of controls, and the number needed to treat to avoid one incomplete recovery was 10.",
+         "Randomize çalışmalardan elde edilen orta-yüksek kaliteli kanıt Bell paralizisinin kortikosteroidle tedavisinden anlamlı yarar gösterir: kortikosteroid verilenlerin yüzde 17'sinde altı ay veya sonrasında yüz motor işlevinde tam olmayan iyileşme görülürken bu oran kontrollerde yüzde 28'dir ve bir tam olmayan iyileşmeyi önlemek için tedavi edilmesi gereken sayı 10'dur.",
+         BELL, specialties=["neurology"]))
+    a(_c("gs_coch_bell_antivirals", "coch_bell_av19", "Authors' conclusions", ["treatment"],
+         "Corticosteroids alone were probably more effective than antivirals alone in Bell's palsy, there was no clear benefit from antivirals alone over placebo, and the combination of antivirals and corticosteroids may have little or no effect on incomplete recovery compared with corticosteroids alone, although it probably reduced late sequelae.",
+         "Bell paralizisinde tek başına kortikosteroidler büyük olasılıkla tek başına antivirallerden daha etkiliydi, tek başına antivirallerin plaseboya göre açık bir yararı yoktu ve antiviral ile kortikosteroid kombinasyonunun tam olmayan iyileşme üzerinde tek başına kortikosteroide göre çok az etkisi olabilir ya da hiç olmayabilir, ancak geç sekelleri büyük olasılıkla azalttı.",
+         BELL, specialties=["neurology"]))
+
+    # ---- Delirium (NICE CG103) ----------------------------------------------------
+    a(_c("gs_nice_cg103_recent_change", "cg103", "1.3.1", ["triage", "history"],
+         "At presentation, assess people at risk for recent (within hours or days) changes or fluctuations that may indicate delirium, which may be reported by the person or a carer or relative and may affect cognitive function, perception, physical function or social behaviour.",
+         "Başvuruda risk altındaki kişileri, kişinin kendisi ya da bir bakım veren veya yakını tarafından bildirilebilen ve bilişsel işlevi, algıyı, fiziksel işlevi veya sosyal davranışı etkileyebilen, deliryumu düşündüren yakın zamanlı (saatler veya günler içinde) değişiklikler ya da dalgalanmalar açısından değerlendirin.",
+         DELIR, specialties=["geriatrics", "neurology"]))
+    a(_c("gs_nice_cg103_4at", "cg103", "1.6.1", ["exam"],
+         "If indicators of delirium are identified, a practitioner who is competent to do so should carry out an assessment using the 4AT tool, or in critical care or the recovery room the CAM-ICU or Intensive Care Delirium Screening Checklist.",
+         "Deliryum belirteçleri saptanırsa yetkin bir uygulayıcı 4AT aracıyla, yoğun bakımda veya ameliyat sonrası derlenme odasında ise CAM-ICU veya Yoğun Bakım Deliryum Tarama Kontrol Listesi ile değerlendirme yapmalıdır.",
+         DELIR, specialties=["geriatrics", "neurology"]))
+    a(_c("gs_nice_cg103_hypoactive", "cg103", "1.3.2", ["exam"],
+         "Be particularly vigilant for changes that may indicate hypoactive delirium, which are often missed, such as withdrawal, slow responses, reduced mobility and movement, worsened concentration and reduced appetite.",
+         "Sık gözden kaçan hipoaktif deliryumu gösterebilecek içe kapanma, yavaş yanıtlar, azalmış hareketlilik, kötüleşen konsantrasyon ve azalmış iştah gibi değişikliklere özellikle dikkat edin.",
+         DELIR, specialties=["geriatrics", "neurology"]))
+    a(_c("gs_nice_cg103_cause_deescalate", "cg103", "1.7.1; 1.7.2; 1.7.3", ["treatment"],
+         "In people diagnosed with delirium, identify and manage the possible underlying cause or combination of causes, ensure effective communication, reorientation and reassurance, and if the person is distressed or a risk to themselves or others, first use verbal and non-verbal de-escalation techniques.",
+         "Deliryum tanısı konan kişilerde olası altta yatan nedeni veya nedenler kombinasyonunu belirleyip yönetin, etkili iletişim, yeniden yönlendirme ve güvence sağlayın; kişi sıkıntılıysa veya kendisi ya da başkaları için risk oluşturuyorsa önce sözel ve sözel olmayan yatıştırma tekniklerini kullanın.",
+         DELIR, specialties=["geriatrics", "neurology"]))
+    a(_c("gs_nice_cg103_haloperidol_short", "cg103", "1.7.4; 1.7.5", ["treatment", "disposition"],
+         "If de-escalation is ineffective or inappropriate in a distressed person with delirium, consider short-term haloperidol (usually for 1 week or less), starting at the lowest clinically appropriate dose and titrating cautiously; if delirium does not resolve, re-evaluate for underlying causes and assess for possible dementia.",
+         "Sıkıntılı deliryum hastasında yatıştırma etkisiz veya uygunsuzsa kısa süreli haloperidol (genellikle 1 hafta veya daha az) düşünün, klinik olarak uygun en düşük dozla başlayıp dikkatle titre edin; deliryum düzelmezse altta yatan nedenleri yeniden değerlendirin ve olası demans açısından değerlendirin.",
+         DELIR, specialties=["geriatrics", "neurology"]))
+
+    # ---- Viral encephalitis (EAN/ESCMID 2026) -----------------------------------
+    a(_c("gs_ean26_aciclovir_6h", "ean_enc26", "Recommendation 9", ["treatment"],
+         "Upon suspicion of encephalitis, initiation of IV aciclovir is recommended as soon as possible, ideally within 6 h from presentation to hospital; pregnancy is not considered an absolute contraindication for aciclovir initiation.",
+         "Ensefalit şüphesinde IV asiklovirin mümkün olan en kısa sürede, ideal olarak hastaneye başvurudan sonraki 6 saat içinde başlatılması önerilir; gebelik asiklovir başlatılması için mutlak kontrendikasyon sayılmaz.",
+         ENC, specialties=["neurology", "infectious"]))
+    a(_c("gs_ean26_hsv_normal_tests", "ean_enc26", "Question 9a", ["workup", "treatment"],
+         "HSV is a common cause of infectious encephalitis in adults in Europe (10% to 20% of suspected cases) and HSV encephalitis can present with an initially normal CSF leukocyte count, negative CSF HSV PCR and normal MRI brain appearances; temporal lobe hyperintensity on MRI supports continuing aciclovir if the first PCR is negative.",
+         "HSV Avrupa'da erişkinlerde enfeksiyöz ensefalitin sık bir nedenidir (şüpheli olguların yüzde 10-20'si) ve HSV ensefaliti başlangıçta normal BOS lökosit sayısı, negatif BOS HSV PCR ve normal beyin MRG görünümüyle başvurabilir; MRG'de temporal lob hiperintensitesi ilk PCR negatifse asiklovire devam etmeyi destekler.",
+         ENC, specialties=["neurology", "infectious"]))
+    a(_c("gs_ean26_pathogen_pcr", "ean_enc26", "Recommendation: CSF multiplex PCR", ["workup"],
+         "The guideline conditionally recommends against replacing pathogen-specific PCR testing of CSF with multiplex CSF PCR panels for the diagnosis of adult patients with suspected infectious encephalitis.",
+         "Kılavuz, şüpheli enfeksiyöz ensefaliti olan erişkinlerin tanısında BOS'un patojene özgü PCR testinin multipleks BOS PCR panelleriyle değiştirilmemesini koşullu olarak önerir.",
+         ENC, specialties=["neurology", "infectious"]))
+    a(_c("gs_ean26_seizure_monitoring", "ean_enc26", "EEG and seizure management", ["disposition"],
+         "Patients with suspected encephalitis at higher risk of seizures, for example those with HSV encephalitis, an abnormal Glasgow Coma Scale or a greater degree of temporal lobe oedema, should be considered for transfer to settings with capacity for continuous or prolonged EEG monitoring.",
+         "HSV ensefaliti, anormal Glasgow Koma Skalası veya daha belirgin temporal lob ödemi olanlar gibi nöbet riski yüksek şüpheli ensefalit hastaları sürekli veya uzun süreli EEG izlemi yapılabilen ortamlara nakil için değerlendirilmelidir.",
+         ENC, specialties=["neurology", "infectious"]))
+
+    # ---- Guillain-Barre syndrome (ten steps, 2019) ---------------------------------
+    a(_c("gs_gbs19_csf_dissociation", "gbs19", "Step 2: diagnosis, CSF examination", ["workup"],
+         "The classic finding in GBS is an elevated CSF protein level with a normal CSF cell count (albumino-cytological dissociation), but protein levels are normal in 30 to 50% of patients in the first week after onset, so normal CSF protein does not rule out the diagnosis.",
+         "GBS'deki klasik bulgu normal BOS hücre sayısıyla birlikte yüksek BOS proteinidir (albüminositolojik disosiyasyon), ancak protein düzeyi başlangıçtan sonraki ilk haftada hastaların yüzde 30-50'sinde normaldir; bu nedenle normal BOS proteini tanıyı dışlamaz.",
+         GBS, specialties=["neurology"]))
+    a(_c("gs_gbs19_icu_criteria", "gbs19", "Step 3: when to admit to the ICU", ["disposition"],
+         "Admit patients with GBS to the ICU for evolving respiratory distress with imminent respiratory insufficiency, severe autonomic cardiovascular dysfunction, severe swallowing dysfunction or diminished cough reflex, or rapid progression of weakness; imminent respiratory insufficiency includes inability to count to 15 in a single breath or a vital capacity below 15 to 20 ml/kg or below 1 l.",
+         "GBS hastalarını yaklaşan solunum yetmezliğiyle gelişen solunum sıkıntısı, ağır otonom kardiyovasküler işlev bozukluğu, ağır yutma bozukluğu veya azalmış öksürük refleksi ya da güçsüzlüğün hızlı ilerlemesi varsa yoğun bakıma yatırın; yaklaşan solunum yetmezliği tek nefeste 15'e kadar sayamamayı veya 15-20 ml/kg altı ya da 1 l altı vital kapasiteyi içerir.",
+         GBS, specialties=["neurology"]))
+    a(_c("gs_gbs19_ivig_plex", "gbs19", "Step 4: when to start treatment", ["treatment"],
+         "Immunomodulatory therapy should be started if patients are unable to walk independently for 10 m; IVIg (0.4 g/kg body weight daily for 5 days) and plasma exchange (200 to 250 ml plasma/kg in five sessions) are equally effective, and IVIg is usually the treatment of choice as it is easier to administer.",
+         "Hastalar 10 m bağımsız yürüyemiyorsa immünomodülatör tedavi başlatılmalıdır; IVIg (5 gün boyunca günde 0,4 g/kg) ve plazma değişimi (beş seansta 200-250 ml plazma/kg) eşit derecede etkilidir ve uygulaması daha kolay olduğu için genellikle IVIg tercih edilir.",
+         GBS, specialties=["neurology"]))
+    a(_c("gs_gbs19_time_course", "gbs19", "Step 1: clinical features", ["history"],
+         "Disease onset in GBS is acute or subacute and patients typically reach maximum disability within 2 weeks; in patients who reach maximum disability within 24 h of onset or after 4 weeks, alternative diagnoses should be considered.",
+         "GBS'de başlangıç akut veya subakuttur ve hastalar genellikle 2 hafta içinde en ağır tabloya ulaşır; başlangıçtan sonraki 24 saat içinde veya 4 haftadan sonra en ağır tabloya ulaşanlarda alternatif tanılar düşünülmelidir.",
+         GBS, specialties=["neurology"]))
+
+    # ---- Migraine (NICE CG150) -----------------------------------------------------
+    a(_c("gs_nice_cg150_triptan_combo", "cg150", "1.3.10; 1.3.11", ["treatment"],
+         "Offer combination therapy with an oral triptan and an NSAID, or an oral triptan and paracetamol, for the acute treatment of migraine; for people who prefer only 1 drug, consider monotherapy with an oral triptan, NSAID, aspirin (900 mg) or paracetamol.",
+         "Migrenin akut tedavisi için oral triptan ile NSAİİ ya da oral triptan ile parasetamol kombinasyonu önerin; tek ilaç tercih edenlerde oral triptan, NSAİİ, aspirin (900 mg) veya parasetamol monoterapisini düşünün.",
+         MIG, specialties=["neurology"]))
+    a(_c("gs_nice_cg150_non_oral_antiemetic", "cg150", "1.3.14", ["treatment"],
+         "If oral preparations for the acute treatment of migraine are ineffective or not tolerated, consider a non-oral preparation of metoclopramide or prochlorperazine, and consider adding a non-oral NSAID or triptan.",
+         "Migrenin akut tedavisinde oral preparatlar etkisiz veya tolere edilemiyorsa metoklopramid veya proklorperazinin oral olmayan bir preparatını düşünün ve oral olmayan bir NSAİİ veya triptan eklemeyi düşünün.",
+         MIG, specialties=["neurology"]))
+    a(_c("gs_nice_cg150_aura_atypical", "cg150", "1.2.2; 1.2.4", ["history"],
+         "Suspect aura when neurological symptoms are fully reversible, develop gradually over at least 5 minutes and last 5 to 60 minutes; consider further investigations or referral for atypical aura symptoms such as motor weakness, double vision, visual symptoms affecting only 1 eye or poor balance.",
+         "Nörolojik belirtiler tamamen geri dönüşlüyse, en az 5 dakikada yavaş yavaş gelişiyorsa ve 5-60 dakika sürüyorsa aurayı düşünün; motor güçsüzlük, çift görme, yalnızca bir gözü etkileyen görsel belirtiler veya denge bozukluğu gibi atipik aura belirtilerinde ek tetkik veya sevki düşünün.",
+         MIG, specialties=["neurology"]))
+    a(_c("gs_nice_cg150_moh_imaging", "cg150", "1.2.7; 1.3.3", ["disposition"],
+         "Be alert to medication overuse headache in people taking triptans, opioids, ergots or combination analgesics on 10 days per month or more, or paracetamol, aspirin or an NSAID on 15 days per month or more, for 3 months or more; do not refer people diagnosed with migraine for neuroimaging solely for reassurance.",
+         "3 ay veya daha uzun süre ayda 10 gün veya daha fazla triptan, opioid, ergot veya kombine analjezik ya da ayda 15 gün veya daha fazla parasetamol, aspirin veya NSAİİ kullananlarda ilaç aşırı kullanımı baş ağrısına dikkat edin; migren tanısı konan kişileri yalnızca güvence vermek için nörogörüntülemeye yönlendirmeyin.",
+         MIG, specialties=["neurology"]))
+
+    # ---- Myasthenic crisis (MGFA consensus 2016) -------------------------------------
+    a(_c("gs_mg16_crisis_admit", "mg16", "Impending and manifest myasthenic crisis, statement 1", ["disposition"],
+         "Impending myasthenic crisis requires hospital admission and close observation of respiratory and bulbar function, with the ability to transfer to an intensive care unit, and manifest myasthenic crisis requires admission to an intensive care or step-down unit to monitor for or manage respiratory failure and bulbar dysfunction.",
+         "Yaklaşan miyastenik kriz hastaneye yatış ve yoğun bakıma nakil olanağıyla solunum ve bulber işlevin yakından izlenmesini, belirgin miyastenik kriz ise solunum yetmezliği ve bulber işlev bozukluğunu izlemek veya yönetmek için yoğun bakım ya da ara yoğun bakım birimine yatışı gerektirir.",
+         MGC, specialties=["neurology"]))
+    a(_c("gs_mg16_plex_ivig_crisis", "mg16", "Impending and manifest myasthenic crisis, statements 2 and 3", ["treatment"],
+         "PLEX and IVIg are the mainstay of management in myasthenic crisis and are used as short-term treatment; corticosteroids or other immunosuppressive agents are often started at the same time, but because corticosteroids may cause transient worsening, it may be appropriate to wait several days for PLEX or IVIg to have an effect before starting them.",
+         "Plazma değişimi ve IVIg miyastenik krizde yönetimin temelidir ve kısa süreli tedavi olarak kullanılır; kortikosteroidler veya diğer immünosupresifler çoğu kez aynı anda başlatılır, ancak kortikosteroidler geçici kötüleşmeye yol açabileceğinden başlamadan önce plazma değişimi veya IVIg'nin etki etmesi için birkaç gün beklemek uygun olabilir.",
+         MGC, specialties=["neurology"]))
+    a(_c("gs_mg16_secretions_choice", "mg16", "Myasthenic crisis; IVIg and PLEX statement 2", ["treatment"],
+         "Cholinesterase inhibitors increase airway secretions, which may exacerbate breathing difficulties in crisis; the choice between PLEX and IVIg depends on individual factors (PLEX cannot be used in patients with sepsis and IVIg cannot be used in renal failure) and on availability.",
+         "Kolinesteraz inhibitörleri hava yolu sekresyonlarını artırarak krizde solunum güçlüğünü kötüleştirebilir; plazma değişimi ile IVIg arasındaki seçim bireysel etkenlere (sepsisli hastada plazma değişimi, böbrek yetmezliğinde IVIg kullanılamaz) ve erişilebilirliğe bağlıdır.",
+         MGC, specialties=["neurology"]))
+
+    # ---- Metastatic spinal cord compression (NICE NG234) --------------------------------
+    a(_c("gs_nice_ng234_emergency_coordinator", "ng234", "1.3.2; 1.3.3", ["triage"],
+         "Immediately contact the MSCC coordinator if a person with a past or current diagnosis of cancer presents with symptoms or signs of cord compression and treat this as an oncological emergency; seek advice within 24 hours if they present with pain suggesting spinal metastases.",
+         "Geçmişte veya halen kanser tanısı olan kişi omurilik basısı belirti veya bulgularıyla başvurursa MSCC koordinatörüyle hemen iletişime geçin ve bunu onkolojik acil durum olarak ele alın; spinal metastazı düşündüren ağrıyla başvurursa 24 saat içinde görüş alın.",
+         SCC, specialties=["oncology", "neurology"]))
+    a(_c("gs_nice_ng234_mri_24h", "ng234", "1.5.2; 1.5.5", ["workup"],
+         "Offer an MRI scan to people with suspected MSCC as soon as possible and always within 24 hours, including sagittal sequences of the whole spine.",
+         "Şüpheli MSCC'si olanlara mümkün olan en kısa sürede ve her zaman 24 saat içinde, tüm omurganın sagital sekanslarını içeren MRG önerin.",
+         SCC, specialties=["oncology", "neurology"]))
+    a(_c("gs_nice_ng234_dexamethasone_16", "ng234", "1.8.1; 1.8.2", ["treatment"],
+         "For people with neurological symptoms or signs of MSCC, offer 16 mg of oral dexamethasone (or equivalent parenteral dose) as soon as possible and continue 16 mg daily while awaiting surgery or radiotherapy; if MSCC is subsequently ruled out, discontinue it.",
+         "MSCC'nin nörolojik belirti veya bulguları olanlara mümkün olan en kısa sürede 16 mg oral deksametazon (veya eşdeğer parenteral doz) verin ve cerrahi ya da radyoterapi beklerken günde 16 mg sürdürün; MSCC daha sonra dışlanırsa kesin.",
+         SCC, specialties=["oncology", "neurology"]))
+    a(_c("gs_nice_ng234_flat_nursing", "ng234", "1.4.3; 1.4.4", ["disposition"],
+         "Nurse people who are immobilised in a supine position to minimise weight bearing by the spine, and seek early advice (within 24 hours) from an expert and start assessment of spinal stability to minimise the duration of immobilisation.",
+         "Hareketsiz bırakılan kişileri omurganın yük taşımasını en aza indirmek için sırtüstü pozisyonda bakın ve hareketsizlik süresini kısaltmak için bir uzmandan erken (24 saat içinde) görüş alıp spinal stabilite değerlendirmesine başlayın.",
+         SCC, specialties=["oncology", "neurology"]))
+
+    # ---- BPPV (AAO-HNSF 2017 key action statements) -------------------------------------
+    a(_c("gs_bppv_dix_hallpike", "bppv_kas23", "Key action statements 1a and 1b", ["exam"],
+         "Clinicians should diagnose posterior semicircular canal BPPV when vertigo associated with torsional, up-beating nystagmus is provoked by the Dix-Hallpike maneuver, and should perform a supine roll test for lateral canal BPPV if the history is compatible and the Dix-Hallpike test shows horizontal or no nystagmus.",
+         "Klinisyenler Dix-Hallpike manevrasıyla torsiyonel, yukarı vuran nistagmusla birlikte vertigo tetiklendiğinde arka semisirküler kanal BPPV tanısı koymalı; öykü uyumluysa ve Dix-Hallpike testi yatay nistagmus gösteriyor ya da hiç göstermiyorsa lateral kanal BPPV için sırtüstü yuvarlama testi yapmalıdır.",
+         BPPV, specialties=["neurology", "ent"]))
+    a(_c("gs_bppv_no_imaging_no_suppressants", "bppv_kas23", "Key action statements 3a and 6", ["workup", "treatment"],
+         "Clinicians should not obtain radiographic imaging in a patient who meets diagnostic criteria for BPPV, and should not routinely treat BPPV with vestibular suppressant medications.",
+         "Klinisyenler BPPV tanı kriterlerini karşılayan hastada radyolojik görüntüleme istememeli ve BPPV'yi rutin olarak vestibüler baskılayıcı ilaçlarla tedavi etmemelidir.",
+         BPPV, specialties=["neurology", "ent"]))
+    a(_c("gs_bppv_crp", "bppv_kas23", "Key action statements 4a and 4c; Epley", ["treatment", "disposition"],
+         "Clinicians should treat, or refer to a clinician who can treat, patients with posterior canal BPPV with a canal repositioning procedure, the most successful being the Epley maneuver; observation with follow-up may be offered as initial management.",
+         "Klinisyenler arka kanal BPPV'li hastaları kanal yeniden konumlandırma manevrasıyla (en başarılısı Epley manevrasıdır) tedavi etmeli veya tedavi edebilecek bir klinisyene yönlendirmelidir; ilk yaklaşım olarak izlemli gözlem önerilebilir.",
+         BPPV, specialties=["neurology", "ent"]))
 
     return S
 
