@@ -1,4 +1,3 @@
-/* global AudioContext, MediaStream, RTCPeerConnection, console, document, fetch, performance, process, requestAnimationFrame, setTimeout, window */
 // Concurrent live calls on one GPU worker (docs/architecture/18 section 6.3, "Concurrency").
 //
 // Opens CALLS receive-only WebRTC calls through the gateway (/v1/voice/avatar/session, /offer),
