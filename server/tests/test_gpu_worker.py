@@ -753,3 +753,177 @@ def test_avatar_runner_streams_audio_bounds_latency_and_reports_calls():
     env = _compose()["services"]["avatar"]["environment"]
     assert "AVATAR_BATCH_SIZE=4" in env and "AVATAR_AHEAD_FRAMES=6" in env and "TURN_SECRET=${TURN_SECRET}" in env
     compile(runner, "acudx_avatar_server.py", "exec")
+
+
+# --- Chatterbox latency patch (docs/architecture/18 section 6.3.8) ---------- #
+
+def _chatterbox_patch():
+    """The patch module cloud-init writes into the Chatterbox checkout, loaded without torch."""
+    import types
+
+    mod = types.ModuleType("acudx_patch_under_test")
+    exec(compile(_written("/chatterbox-acudx-patch.py"), "acudx_patch.py", "exec"), mod.__dict__)
+    return mod
+
+
+def test_first_clause_is_sent_as_its_own_short_chunk():
+    p = _chatterbox_patch()
+    tr = "Göğsümün tam ortasında başladı, sonra sol koluma yayıldı ve terledim."
+    assert p.first_clause(tr) == ("Göğsümün tam ortasında başladı,", "sonra sol koluma yayıldı ve terledim.")
+    # A comma after fewer than three words is not a clause worth a chunk; no punctuation in the first
+    # ten words cuts after eight; short lines and short remainders stay whole.
+    assert p.first_clause("Well, the pain started about two hours ago in my chest and arm.")[0] == \
+        "Well, the pain started about two hours ago"
+    assert p.first_clause("Merhaba doktor.") == ("Merhaba doktor.", "")
+    assert p.first_clause("Since this morning, doctor.") == ("Since this morning, doctor.", "")
+    assert p.first_clause("Two hours ago. Then it got worse on the stairs.") == (
+        "Two hours ago.", "Then it got worse on the stairs.")
+    calls = []
+
+    def split(text, chunk_size=None, strategy=None, quality=None):
+        calls.append((text, chunk_size, strategy))
+        return [text]
+
+    out = p.split_with_first_clause(split, tr, chunk_size=60, strategy="sentence")
+    assert out == ["Göğsümün tam ortasında başladı,", "sonra sol koluma yayıldı ve terledim."]
+    assert calls == [("sonra sol koluma yayıldı ve terledim.", 60, "sentence")]
+
+
+class _Conds:
+    def __init__(self, t3, gen):
+        self.t3, self.gen = t3, gen
+
+
+def _fake_model_class(prepared: list):
+    class Model:
+        device = "cuda"
+        conds = None
+
+        def prepare_conditionals(self, wav_fpath, exaggeration=0.5):
+            prepared.append((wav_fpath, exaggeration))
+            self.conds = _Conds({"emotion": exaggeration, "clip": wav_fpath}, {"ref": wav_fpath})
+
+        def generate(self, text, language_id=None, audio_prompt_path=None, exaggeration=0.5):
+            if audio_prompt_path:
+                self.prepare_conditionals(audio_prompt_path, exaggeration=exaggeration)
+            return (text, self.conds.t3["clip"], self.conds.t3["emotion"])
+
+    return Model
+
+
+def test_voice_conditionals_are_prepared_once_per_voice_and_clip(tmp_path):
+    import os
+    import threading
+
+    p = _chatterbox_patch()
+    cache = p.ConditionalsCache(lambda c, ex, dev: _Conds({**c.t3, "emotion": ex}, dict(c.gen)))
+    prepared: list = []
+    Model = _fake_model_class(prepared)
+    p.patch_model_class(Model, cache=cache, lock=threading.RLock())
+    tr, en = tmp_path / "acudx_tr_female.mp3", tmp_path / "acudx_en_female.mp3"
+    tr.write_bytes(b"tr-clip")
+    en.write_bytes(b"en-clip")
+    m = Model()
+    assert m.generate("a", "tr", audio_prompt_path=str(tr)) == ("a", str(tr), 0.5)
+    assert m.generate("b", "tr", audio_prompt_path=str(tr), exaggeration=0.7) == ("b", str(tr), 0.7)
+    assert m.generate("c", "en", audio_prompt_path=str(en)) == ("c", str(en), 0.5)
+    assert m.generate("d", "tr", audio_prompt_path=str(tr)) == ("d", str(tr), 0.5)
+    assert prepared == [(str(tr), 0.5), (str(en), 0.5)]   # the 1.3 s step ran once per voice
+    assert p.STATS["conds_hits"] == 2 and len(cache) == 2
+    # The cached object is never handed to the model itself (generate may rebuild conds.t3).
+    assert all(m.conds is not v for v in cache._conds.values())
+    # A replaced clip (same voice id, new content) is prepared again.
+    tr.write_bytes(b"tr-clip-v2")
+    os.utime(tr, ns=(1, 1))
+    m.generate("e", "tr", audio_prompt_path=str(tr))
+    assert len(prepared) == 3
+
+
+def test_voice_library_changes_drop_the_cached_conditionals(tmp_path):
+    import threading
+
+    p = _chatterbox_patch()
+    cache = p.ConditionalsCache(lambda c, ex, dev: c)
+    prepared: list = []
+    Model = _fake_model_class(prepared)
+    p.patch_model_class(Model, cache=cache, lock=threading.RLock())
+
+    class Library:
+        def add_voice(self, voice_name, file_content, original_filename, language="en"):
+            return {"name": voice_name}
+
+        def delete_voice(self, voice_name):
+            return True
+
+        def rename_voice(self, old_name, new_name):
+            return True
+
+    p.patch_voice_library(Library, cache=cache)
+    clip = tmp_path / "acudx_tr_male.mp3"
+    clip.write_bytes(b"x")
+    Model().generate("a", "tr", audio_prompt_path=str(clip))
+    assert len(cache) == 1
+    assert Library().add_voice("acudx_en_male", b"y", "a.mp3") == {"name": "acudx_en_male"}
+    assert len(cache) == 1                     # another voice: kept
+    Library().delete_voice("acudx_tr_male")
+    assert len(cache) == 0
+    Model().generate("a", "tr", audio_prompt_path=str(clip))
+    Library().rename_voice("acudx_tr_male", "tr_male_2")
+    assert len(cache) == 0 and len(prepared) == 2
+
+
+def test_generate_is_serialised_so_two_calls_never_share_conditionals():
+    import threading
+    import time
+
+    p = _chatterbox_patch()
+    active, peak = [0], [0]
+
+    class Model:
+        def prepare_conditionals(self, wav_fpath, exaggeration=0.5):
+            pass
+
+        def generate(self, text, **kw):
+            active[0] += 1
+            peak[0] = max(peak[0], active[0])
+            time.sleep(0.02)
+            active[0] -= 1
+            return text
+
+    p.patch_model_class(Model, cache=p.ConditionalsCache(lambda c, e, d: c), lock=threading.RLock())
+    threads = [threading.Thread(target=Model().generate, args=(str(i),)) for i in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert peak[0] == 1
+
+
+def test_chatterbox_patch_is_installed_into_the_pinned_checkout_and_primed_at_boot():
+    dockerfile = _written("/chatterbox.Dockerfile")
+    assert "_acudx_patch.install()" in dockerfile and ">> app/main.py" in dockerfile
+    assert dockerfile.index("COPY app/ ./app/") < dockerfile.index(">> app/main.py")
+    runcmd = "\n".join(_cloud_init()["runcmd"])
+    assert ("install -m 0644 /opt/acudx/chatterbox-acudx-patch.py /opt/acudx/chatterbox-tts-api/app/acudx_patch.py"
+            in runcmd)
+    assert runcmd.index("chatterbox-acudx-patch.py") < runcmd.index("docker compose up -d --build chatterbox")
+    patch = _written("/chatterbox-acudx-patch.py")
+    # Eager mode only on these hosts (CUDA graph capture fails on Lambda A100 SXM4).
+    assert "torch.compile(" not in patch and "CUDAGraph" not in patch
+    seed = _written("/seed-voices.sh")
+    assert "for v in acudx_tr_female acudx_tr_male acudx_en_female acudx_en_male; do" in seed
+    assert "localhost:4123/v1/audio/speech/stream" in seed and "acudx/stats" in seed
+
+
+def test_kokoro_runs_two_replicas_behind_least_conn():
+    """A single Kokoro FastAPI process synthesises one request at a time: the second of two calls
+    speaking together waited up to 2.7 s for its first chunk."""
+    services = _compose()["services"]
+    assert services["kokoro"]["image"] == services["kokoro2"]["image"] == "ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4"
+    caddy = _written("/Caddyfile")
+    block = caddy[caddy.index("handle_path /tts-en/* {"):]
+    block = block[:block.index("handle_path /stt/*")]
+    assert "reverse_proxy kokoro:8880 kokoro2:8880 {" in block and "lb_policy least_conn" in block
+    assert "flush_interval -1" in block
+    runcmd = "\n".join(_cloud_init()["runcmd"])
+    assert "docker compose up -d speaches kokoro kokoro2" in runcmd

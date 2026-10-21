@@ -204,6 +204,10 @@ class Settings(BaseSettings):
     avatar_ahead_frames: int | None = Field(default=None, ge=4, le=40)
     avatar_lookahead_frames: int | None = Field(default=None, ge=4, le=10)
     avatar_av_shift_ms: int | None = Field(default=160, ge=-1000, le=1000)
+    # Silence streamed into a call right after the offer, before the first patient line, so the
+    # runner's speech path and the browser's jitter buffer have settled when the first real line
+    # plays (the first two lines swung up to 420 ms either way; docs/architecture/18 6.3.8). 0 = off.
+    avatar_preroll_ms: int = Field(default=800, ge=0, le=3000)
     acudx_db_path: str = "server/data/acudx.db"  # SQLite: worker state + cost ledger + registry + telemetry
 
     # --- Identity (server/auth, docs/architecture/19) --- #

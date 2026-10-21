@@ -329,21 +329,82 @@ def _call_flow(c, runner, worker, runner_sockets):
     assert len(runner_sockets) == 1
     ws = runner_sockets[0]
     assert ws.url == "ws://worker.test/avatar/stream" and ws.headers["Authorization"] == f"Bearer {WORKER_TOKEN}"
-    begin = json.loads(ws.sent[0])
-    assert begin == {"type": "begin", "sessionid": "lt-1", "sample_rate": 24000, "interrupt": False}
-    pcm = [m for m in ws.sent if isinstance(m, bytes)]
+    lines = _utterances(ws.sent)
+    # The pre-roll: 800 ms of 16 kHz silence right after the offer, before the first patient line.
+    assert lines[0]["begin"] == {"type": "begin", "sessionid": "lt-1", "sample_rate": 16000, "interrupt": False}
+    assert lines[0]["bytes"] == 16000 * 2 * 800 // 1000 and not any(any(p) for p in lines[0]["pcm"])
+    assert lines[1]["begin"] == {"type": "begin", "sessionid": "lt-1", "sample_rate": 24000, "interrupt": False}
+    pcm = lines[1]["pcm"]
     assert pcm and all(len(p) % 2 == 0 for p in pcm)   # httpx's ASGI transport may merge the chunks
-    assert sum(len(p) for p in pcm) == 24000 == body["audio_bytes"]  # 0.5 s of 16-bit 24 kHz, no header bytes
+    assert lines[1]["bytes"] == 24000 == body["audio_bytes"]  # 0.5 s of 16-bit 24 kHz, no header bytes
     assert json.loads(ws.sent[-1]) == {"type": "end"}
     assert body["audio_duration_ms"] == 500 and body["sample_rate"] == 24000 and body["first_chunk_ms"] is not None
+    assert body["preroll"]["ms"] == 800 and isinstance(body["stream_stall_ms"], float)
     # a second line reuses the same socket
     assert c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "Since this morning."},
                   headers=USER).status_code == 200
-    assert len(runner_sockets) == 1 and sum(1 for m in ws.sent if isinstance(m, str) and '"begin"' in m) == 2
+    assert len(runner_sockets) == 1 and len(_utterances(ws.sent)) == 3
     assert worker.touches >= 2
     r = c.post("/v1/voice/avatar/end", json={"session_id": sid}, headers=USER)
     assert r.status_code == 200 and runner.closed == ["lt-1"] and ws.close_code == 1000
     assert c.post("/v1/voice/avatar/end", json={"session_id": sid}, headers=USER).status_code == 404
+
+
+def _utterances(sent: list) -> list[dict]:
+    """Split what the gateway sent on the runner socket into lines: begin, PCM chunks, end."""
+    out: list[dict] = []
+    for m in sent:
+        if isinstance(m, str) and json.loads(m).get("type") == "begin":
+            out.append({"begin": json.loads(m), "pcm": [], "bytes": 0})
+        elif isinstance(m, bytes) and out:
+            out[-1]["pcm"].append(m)
+            out[-1]["bytes"] += len(m)
+    return out
+
+
+def test_preroll_can_be_turned_off_and_takes_its_length_from_the_settings(tmp_path, runner_sockets):
+    for preroll, expected in ((0, []), (300, [16000 * 2 * 300 // 1000])):
+        app, _ = _app(tmp_path / str(preroll), worker=FakeWorkerManager(ready=True), avatar_preroll_ms=preroll)
+        runner_sockets.clear()
+        with TestClient(app) as c:
+            sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+            assert c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"},
+                          headers=USER).status_code == 200
+            r = c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "Hello."}, headers=USER)
+            assert r.status_code == 200, r.text
+        lines = _utterances(runner_sockets[0].sent)
+        assert [u["bytes"] for u in lines[:-1]] == expected and lines[-1]["begin"]["sample_rate"] == 24000
+        assert (r.json()["preroll"] or {}).get("ms") == (preroll or None)
+
+
+def test_stream_stall_measures_how_far_the_tts_fell_behind_real_time(tmp_path, runner_sockets, monkeypatch):
+    """Two chunks of 100 ms audio with the second one 400 ms late: the voice ran dry for about 300 ms."""
+    import asyncio
+
+    from server.voice.base import TtsStream
+
+    async def chunks():
+        yield _wav_stream_header()
+        yield b"\x01\x00" * 2400
+        await asyncio.sleep(0.4)
+        yield b"\x01\x00" * 2400
+
+    app, _ = _app(tmp_path, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+    svc = app.state.voice
+    real_tts = svc.tts
+
+    async def slow_tts(*a, **kw):
+        out = await real_tts(*a, **kw)
+        out.stream = TtsStream(content_type="audio/wav", chunks=chunks(), model=out.stream.model)
+        return out
+
+    monkeypatch.setattr(svc, "tts", slow_tts)
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+        c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"}, headers=USER)
+        r = c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "Hello."}, headers=USER)
+    assert r.status_code == 200, r.text
+    assert 250 <= r.json()["stream_stall_ms"] <= 600 and r.json()["audio_bytes"] == 9600
 
 
 def test_session_reports_disabled_runner_with_vram_reason(tmp_path):

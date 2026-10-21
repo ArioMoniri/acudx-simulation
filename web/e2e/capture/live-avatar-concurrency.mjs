@@ -8,6 +8,8 @@
 //
 // usage (gateway in local auth mode, a ready worker):
 //   GATEWAY=http://127.0.0.1:8895 CALLS=2 OUT=../docs/media/live-avatar node e2e/capture/live-avatar-concurrency.mjs
+//   CALL_LANG=tr (Turkish line, the worker's Chatterbox voice), ROUNDS=6 (the line spoken six times per
+//   call), OUT_FILE=lipsync-rounds.json (output name, default concurrency.json)
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,8 +17,15 @@ import path from "node:path";
 const GW = process.env.GATEWAY ?? "http://127.0.0.1:8895";
 const CALLS = Number(process.env.CALLS ?? 2);
 const OUT = path.resolve(process.env.OUT ?? "../docs/media/live-avatar");
-const LINE = process.env.LINE ?? "The pain started about two hours ago, right in the middle of my chest, and it spreads to my " +
-  "left arm. I feel sweaty and a bit sick, and it gets worse when I walk up the stairs.";
+const CALL_LANG = process.env.CALL_LANG === "tr" ? "tr" : "en";
+const LINES = {
+  en: "The pain started about two hours ago, right in the middle of my chest, and it spreads to my " +
+    "left arm. I feel sweaty and a bit sick, and it gets worse when I walk up the stairs.",
+  tr: "Ağrı yaklaşık iki saat önce, göğsümün tam ortasında başladı ve sol koluma yayılıyor. " +
+    "Terliyorum, biraz midem bulanıyor ve merdiven çıkınca daha da kötüleşiyor.",
+};
+const LINE = process.env.LINE ?? LINES[CALL_LANG];
+const OUT_FILE = process.env.OUT_FILE ?? "concurrency.json";
 const PHOTOS = ["p04", "p01", "p07", "p09"];
 
 const api = async (user, route, body) => {
@@ -30,7 +39,7 @@ const calls = [];
 for (let i = 0; i < CALLS; i++) {
   const user = `concurrency-${i}`;
   const ses = await api(user, "/v1/voice/avatar/session", { encounter_id: `concurrency-${i}`, photo_id: PHOTOS[i % PHOTOS.length],
-    lang: "en", sex: i % 2 ? "female" : "male", age: 60, case_state: {} });
+    lang: CALL_LANG, sex: i % 2 ? "female" : "male", age: 60, case_state: {} });
   if (ses.status !== 200) throw new Error(`session ${i}: ${ses.status} ${JSON.stringify(ses.body)}`);
   const page = await (await browser.newContext()).newPage();
   await page.goto("about:blank");
@@ -132,8 +141,11 @@ for (let round = 0; round < ROUNDS; round++) {
     return best * step;
   })));
   const trace = (await api(calls[0].user, "/v1/voice/capabilities")).body.avatar?.last_speech_trace ?? null;
-  rounds.push({ round, speechStartMs: starts, lipLagMs: lags, first_chunk_ms: spoken.map((x) => x.body.first_chunk_ms), trace });
-  console.log(`round ${round}: speech start ${starts.join(", ")} ms, mouth-after-voice ${lags.join(", ")} ms`);
+  rounds.push({ round, speechStartMs: starts, lipLagMs: lags, first_chunk_ms: spoken.map((x) => x.body.first_chunk_ms),
+    stream_stall_ms: spoken.map((x) => x.body.stream_stall_ms), provider: spoken.map((x) => x.body.provider),
+    preroll: spoken.map((x) => x.body.preroll ?? null), trace });
+  console.log(`round ${round}: speech start ${starts.join(", ")} ms, mouth-after-voice ${lags.join(", ")} ms, ` +
+    `first chunk ${spoken.map((x) => x.body.first_chunk_ms).join(", ")} ms, stall ${spoken.map((x) => x.body.stream_stall_ms).join(", ")} ms`);
 }
 sampling = false;
 await sampler;
@@ -153,11 +165,11 @@ for (const [i, c] of calls.entries()) {
 // Busiest moment: the sample where both calls were speaking (or the last one).
 const talking = samples.filter((s) => s.calls.filter((x) => x.speaking).length >= Math.min(CALLS, 2));
 const peak = (talking.length ? talking : samples).at(-1);
-const out = { captured_at: new Date().toISOString(), gateway: GW, calls: CALLS, line_chars: LINE.length,
+const out = { captured_at: new Date().toISOString(), gateway: GW, calls: CALLS, lang: CALL_LANG, line_chars: LINE.length,
   extra_session: { status: extra.status, state: extra.body.state, reasons: extra.body.reasons, max_calls: extra.body.max_calls },
   per_call: perCall, rounds, runner_while_talking: peak, samples_with_all_speaking: talking.length, samples: samples.length };
 fs.mkdirSync(OUT, { recursive: true });
-fs.writeFileSync(path.join(OUT, "concurrency.json"), JSON.stringify(out, null, 2) + "\n");
+fs.writeFileSync(path.join(OUT, OUT_FILE), JSON.stringify(out, null, 2) + "\n");
 console.log(JSON.stringify({ per_call: perCall.map((p) => ({ call: p.call, speechStartMs: p.browser.speechStartMs, fps: p.browser.fps,
   first_chunk_ms: p.speak.first_chunk_ms })), runner: peak?.calls, vram: peak?.vram, extra: out.extra_session }, null, 1));
 for (const c of calls) await api(c.user, "/v1/voice/avatar/end", { session_id: c.session.session_id });

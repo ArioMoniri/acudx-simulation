@@ -272,13 +272,34 @@ async def offer(request: Request, body: OfferBody, user: Principal = Depends(cur
     s.metrics["answer_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
     # Open the audio WebSocket now, while the browser finishes ICE, so the first line does not pay it.
     s.audio_link = mt.RunnerAudioLink(worker=worker, worker_session=s.worker_session)
-    asyncio.get_running_loop().create_task(_warm_link(s.audio_link))
+    preroll_ms = int(getattr(svc.settings, "avatar_preroll_ms", 0) or 0)
+    asyncio.get_running_loop().create_task(_warm_link(s.audio_link, preroll_ms=preroll_ms, metrics=s.metrics))
     return {"sdp": ans["sdp"], "type": ans.get("type") or "answer", "answer_ms": s.metrics["answer_ms"]}
 
 
-async def _warm_link(link: mt.RunnerAudioLink) -> None:
+PREROLL_RATE = 16000
+
+
+async def _silence(ms: int, *, rate: int = PREROLL_RATE, piece_ms: int = 200) -> Any:
+    piece = b"\x00\x00" * (rate * piece_ms // 1000)
+    left = rate * ms // 1000 * 2
+    while left > 0:
+        out = piece[:left]
+        left -= len(out)
+        yield out
+
+
+async def _warm_link(link: mt.RunnerAudioLink, *, preroll_ms: int = 0, metrics: dict[str, Any] | None = None) -> None:
+    """Open the call's audio socket and, when set, play a short silent line through the whole speech
+    path (runner queues, delay line, WebRTC audio track) before the first patient line."""
     try:
         await link.ensure()
+        if preroll_ms > 0:
+            t0 = time.monotonic()
+            stats = await link.utterance(_silence(preroll_ms), PREROLL_RATE)
+            if metrics is not None:
+                metrics["preroll"] = {"ms": preroll_ms, "frames": stats.get("frames"),
+                                      "sent_ms": round((time.monotonic() - t0) * 1000.0, 1)}
     except Exception as exc:  # noqa: BLE001 - the first speak connects again and reports the error
         log.info("avatar audio link warm-up failed: %s", type(exc).__name__)
 
@@ -355,18 +376,33 @@ async def _speak_streaming(svc: VoiceService, s: CallSession, worker: mt.WorkerA
         s.metrics["last_stream_error"] = f"tts stream: {type(exc).__name__} {exc}"[:200]
         return None
 
+    rate = float(parser.sample_rate or 24000)
+    stall = {"max_ms": 0.0, "t0": None}
+
+    def arrived() -> None:
+        # How far behind real time the TTS stream fell: audio played from the first chunk on runs dry
+        # whenever a chunk arrives later than the audio already received lasts (a gap in the voice).
+        now = time.monotonic()
+        if stall["t0"] is None:
+            stall["t0"] = now
+            return
+        behind = (now - stall["t0"]) * 1000.0 - total / 2 / rate * 1000.0
+        stall["max_ms"] = max(stall["max_ms"], behind)
+
     async def pcm():
         nonlocal total
         odd = b""
         for piece in head:
+            arrived()
             total += len(piece)
             yield piece
         async for chunk in it:
             data = odd + chunk
             odd = data[len(data) // 2 * 2:]
             data = data[:len(data) // 2 * 2]
-            total += len(data)
             if data:
+                arrived()
+                total += len(data)
                 yield data
 
     def first() -> None:
@@ -392,6 +428,7 @@ async def _speak_streaming(svc: VoiceService, s: CallSession, worker: mt.WorkerA
             "tts_ms": round(out.ttfb_ms, 1), "first_chunk_ms": marks.get("first_chunk_ms"),
             "stream_ms": round((time.monotonic() - t0) * 1000.0, 1), "queued_ms": 0.0,
             "audio_bytes": total, "audio_duration_ms": duration_ms, "sample_rate": parser.sample_rate,
+            "stream_stall_ms": round(stall["max_ms"], 1), "preroll": s.metrics.get("preroll"),
             "link_connect_ms": link.connect_ms, "runner": {k: stats.get(k) for k in
                                                            ("frames", "first_frame_ms", "elapsed_ms")}}
 
