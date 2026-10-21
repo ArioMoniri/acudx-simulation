@@ -64,6 +64,33 @@ export interface AvatarCallStats {
   /** Mean receiver jitter-buffer delay (ms): where the browser holds media, e.g. audio held back to video for lip sync. */
   audioJitterMs: number | null;
   videoJitterMs: number | null;
+  /** The ICE pair carrying the call: a relay candidate, and over which TURN transport (udp, tcp, tls). */
+  path?: IcePath | null;
+}
+
+export interface IcePath {
+  localType: string | null;
+  relayProtocol: string | null;
+  url: string | null;
+  state: string | null;
+}
+
+/** The selected candidate pair of a getStats report (the transport's selectedCandidatePairId). */
+export function selectedIcePath(report: { forEach: (cb: (r: Record<string, unknown>) => void) => void;
+  get: (id: string) => Record<string, unknown> | undefined }): IcePath | null {
+  let out: IcePath | null = null;
+  report.forEach((r) => {
+    if (out || r.type !== "transport" || typeof r.selectedCandidatePairId !== "string") return;
+    const pair = report.get(r.selectedCandidatePairId);
+    const local = pair && typeof pair.localCandidateId === "string" ? report.get(pair.localCandidateId) : undefined;
+    out = {
+      localType: local?.candidateType != null ? String(local.candidateType) : null,
+      relayProtocol: local?.relayProtocol != null ? String(local.relayProtocol) : null,
+      url: local?.url != null ? String(local.url) : null,
+      state: pair?.state != null ? String(pair.state) : null,
+    };
+  });
+  return out;
 }
 
 /** Mean jitter-buffer delay in ms from an inbound-rtp report (jitterBufferDelay is seconds summed per emitted unit). */
@@ -405,6 +432,7 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
         out.rttMs = Math.round(Number(r.currentRoundTripTime) * 1000);
       }
     });
+    out.path = selectedIcePath(report as unknown as Parameters<typeof selectedIcePath>[0]);
     return out;
   };
 

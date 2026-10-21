@@ -331,6 +331,15 @@ export function hasAccessToken(): boolean {
   return accessToken !== null;
 }
 
+/** True when this tab holds a refresh token (a reload drops the in-memory access token only). */
+export function canRefreshAccessToken(): boolean {
+  try {
+    return sessionStorage.getItem(REFRESH_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 /** Reset for tests. */
 export function __resetAuthForTests(): void {
   accessToken = null;

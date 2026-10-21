@@ -10,7 +10,7 @@
 
 import { BACKEND_URL } from "@/lib/backend";
 import { getAdminToken } from "@/lib/adminApi";
-import { bearerHeader, ensureAccessToken, hasAccessToken, type AcuDxRole } from "@/lib/auth";
+import { bearerHeader, canRefreshAccessToken, ensureAccessToken, hasAccessToken, type AcuDxRole } from "@/lib/auth";
 import { getProfileState, localIdentityHeaders } from "@/state/profileStore";
 
 /* -------------------------------------------------------------------------- */
@@ -279,7 +279,9 @@ function reasonFor(err: unknown): PanelsErrorCode {
  * the faculty and dean panels open for the role the local profile declares.
  */
 export async function identityHeaders(): Promise<Record<string, string>> {
-  if (hasAccessToken()) {
+  // A reloaded tab has no token in memory but may hold a refresh token: refresh first, so the very
+  // first request after a reload (a case start) carries the bearer.
+  if (hasAccessToken() || canRefreshAccessToken()) {
     await ensureAccessToken();
     const bearer = bearerHeader();
     if (bearer.Authorization) return bearer;
