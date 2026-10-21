@@ -88,9 +88,11 @@ it (default: the branch head when the instance boots).
 
 6. Verify over HTTPS with Playwright (from `web/`). The script mints a code, reads the temporary
    passwords once, signs in as every role (forced new password, landing panel, UI and API gates),
-   starts a case as the student (with `LAMBDA_KEY` and no Claude key the answer is
-   `model_warming`; it then waits for the GPU worker and stops it), and with `FINALIZE=1` resets
-   every account to a fresh temporary password and prints the final code to hand over:
+   starts a fever case as the student and times it (playable, first reply), checks one GPU worker
+   (launched by the case start when no model serves it, else woken by `POST /v1/voice/warm` as the
+   patient call does; it waits for it and stops it; `GPU_CHECK=0` skips this), and with
+   `FINALIZE=1` resets every account to a fresh temporary password and prints the final code to
+   hand over:
 
    ```bash
    cd web && npm ci
@@ -100,9 +102,8 @@ it (default: the branch head when the instance boots).
    cd ..
    ```
 
-   With a Claude key the case start is served by Claude and no GPU worker launches; to exercise
-   the worker path anyway, send only `LAMBDA_KEY` first and paste the Anthropic key in the admin
-   panel afterwards.
+   With a Claude key the case start is served by Claude and does not launch a worker; the GPU
+   check then wakes one through `/v1/voice/warm`.
 
 7. Confirm the GPU worker on Lambda (only the `acudx-worker-*` instance this run launched; never
    touch `acudx-wm-*`, `Liver` or other instances):

@@ -8,8 +8,10 @@
 //
 // With OPERATOR_TOKEN_FILE the script mints a single-use code (/bootstrap/operator/mint-code) and
 // reads the temporary passwords once through /bootstrap/credentials, in memory only. With START_CASE=1
-// it also waits for the on-demand GPU worker the case start launches (/bootstrap/operator/gpu), then
-// stops it (/bootstrap/operator/gpu/stop). With FINALIZE=1 it ends by giving every account a fresh
+// it times the learner's fever case (playable, first reply) and checks one on-demand GPU worker: the
+// one the case start launches without a serving model, else one woken by POST /v1/voice/warm as the
+// patient call does; it waits for it (/bootstrap/operator/gpu) and stops it (/bootstrap/operator/gpu/stop).
+// GPU_CHECK=0 skips the worker. With FINALIZE=1 it ends by giving every account a fresh
 // temporary password (/bootstrap/operator/reset-accounts) and minting the code to hand over, which it
 // prints (a code may be reported; a password never is). For each account it signs in through Keycloak with the
 // temporary password, completes the UPDATE_PASSWORD step with a random new password (kept in
@@ -191,14 +193,66 @@ for (const u of creds.users) {
         lines.push(check(allowed ? r.status === 200 : [401, 403].includes(r.status), `API ${g.path}: ${r.status}`));
       }
       if (process.env.START_CASE === "1" && u.role === (process.env.CASE_ROLE || "student")) {
-        const r = await api("/api/v2/case/generate/stream", token, {
+        // Time to playable: the opening is ready (the encounter can start); time to first reply: the
+        // patient's first answer to a typed question. The stream only tails the generation, which
+        // keeps running on the server after this reader stops.
+        const t0 = Date.now();
+        const res = await fetch(`${BASE}/api/v2/case/generate/stream`, {
           method: "POST",
-          headers: { "content-type": "application/json", accept: "text/event-stream" },
+          headers: { Authorization: `Bearer ${token}`, "content-type": "application/json", accept: "text/event-stream" },
           body: JSON.stringify({ complaint: "fever", locale: "en" }),
         });
-        lines.push(`info case start: HTTP ${r.status} ${r.body?.error || ""} ${JSON.stringify(r.body?.worker || "")}`);
-        if (OP_TOKEN && r.body?.error === "model_warming") {
-          // The case start launched the on-demand GPU worker: confirm it, then stop it.
+        let warming = null;
+        if (res.status === 200) {
+          const reader = res.body.getReader();
+          const dec = new TextDecoder();
+          let buf = "";
+          let thread = null;
+          let playable = null;
+          while (Date.now() - t0 < 300_000 && playable === null) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            for (let i = buf.indexOf("\n\n"); i >= 0; i = buf.indexOf("\n\n")) {
+              const chunk = buf.slice(0, i);
+              buf = buf.slice(i + 2);
+              const ev = /^event: (.+)$/m.exec(chunk)?.[1];
+              let d = {};
+              try { d = JSON.parse(/^data: (.+)$/m.exec(chunk)?.[1] || "{}"); } catch { /* keepalive */ }
+              thread = thread || d.thread_id || null;
+              if (ev === "opening.ready") playable = Date.now() - t0;
+              if (ev === "error" && d.fatal) break;
+            }
+          }
+          await reader.cancel().catch(() => {});
+          lines.push(check(playable !== null && Boolean(thread), `case start: playable after ${playable === null ? "-" : (playable / 1000).toFixed(1)} s`));
+          if (thread) {
+            const t1 = Date.now();
+            let r = null;
+            for (let k = 0; k < 40; k += 1) {
+              r = await api(`/api/v2/case/${thread}/interview`, token, {
+                method: "POST", headers: { "content-type": "application/json" },
+                body: JSON.stringify({ message: "When did the fever start, and how high has it been?", locale: "en" }),
+              });
+              if (r.status !== 409) break;
+              await new Promise((ok) => setTimeout(ok, 3000));
+            }
+            const reply = String(r.body?.reply || "");
+            lines.push(check(r.status === 200 && reply.length > 0,
+              `first reply after ${((Date.now() - t1) / 1000).toFixed(1)} s (${r.body?.meta?.provider || "?"} ${r.body?.meta?.model || ""}): ${JSON.stringify(reply.slice(0, 160))}`));
+          }
+        } else {
+          const body = await res.json().catch(() => ({}));
+          lines.push(`info case start: HTTP ${res.status} ${body.error || ""} ${JSON.stringify(body.worker || "")}`);
+          warming = body.error === "model_warming";
+        }
+        if (OP_TOKEN && process.env.GPU_CHECK !== "0") {
+          // One GPU worker launch and stop. Without a serving model the case start already launched it
+          // (model_warming); with Claude serving cases, wake it the way the patient call does.
+          if (!warming) {
+            const w = await api("/api/v1/voice/warm", token, { method: "POST" });
+            lines.push(`info /v1/voice/warm: HTTP ${w.status} ${JSON.stringify(w.body)}`);
+          }
           let w = null;
           for (let i = 0; i < 30 && !w?.instance_id; i += 1) {
             w = (await operator("/bootstrap/operator/gpu", {}, "GET")).worker;
