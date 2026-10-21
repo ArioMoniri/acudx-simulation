@@ -236,12 +236,26 @@ _DIRECTIVE = {
 }
 
 
+# The persona sees at most WINDOW transcript entries. The window start moves in steps of
+# WINDOW_STEP, not by one exchange per turn, so the cached transcript prefix survives
+# the turns in between.
+WINDOW = 16
+WINDOW_STEP = 8
+
+
+def window_start(n: int) -> int:
+    """Index of the first transcript entry the persona sees, for a transcript of ``n`` entries."""
+    if n <= WINDOW:
+        return 0
+    return -(-(n - WINDOW) // WINDOW_STEP) * WINDOW_STEP
+
+
 def persona_turn(view: PatientView, transcript: list[dict[str, str]], message: str, label: str
                  ) -> list[dict[str, str]]:
     """Messages for one persona turn: stable system (cached), the transcript, then the
     volatile state and the doctor's line in the last user message."""
     msgs: list[dict[str, str]] = [{"role": "system", "content": persona_system(view)}]
-    for turn in transcript[-16:]:
+    for turn in transcript[window_start(len(transcript)):]:
         role = "assistant" if turn.get("role") == "patient" else "user"
         text = _s(turn.get("text"))
         if text:
@@ -257,5 +271,5 @@ def persona_turn(view: PatientView, transcript: list[dict[str, str]], message: s
 
 __all__ = [
     "PERSONA_CHARTER", "PatientView", "adjectives", "derangement", "forbidden_terms", "leaks", "patient_view",
-    "persona_system", "persona_turn",
+    "persona_system", "persona_turn", "window_start",
 ]

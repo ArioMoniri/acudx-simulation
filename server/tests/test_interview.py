@@ -12,11 +12,11 @@ import pytest
 
 from server import app as app_module
 from server.interview.guard import combine, parse_model, rule_classify
-from server.interview.patient import adjectives, forbidden_terms, patient_view, persona_turn
+from server.interview.patient import PatientView, adjectives, forbidden_terms, patient_view, persona_turn, window_start
 from server.interview.tutor import candidate_actions, code_system
 from server.model_gateway import ModelGateway
 from server.orchestration.routes import OrchestrationRuntime
-from server.providers.anthropic_provider import AnthropicProvider
+from server.providers.anthropic_provider import AnthropicProvider, split_messages
 from server.tests.anthropic_double import AnthropicDouble, Scripted
 from server.tests.conftest import make_settings
 
@@ -111,7 +111,7 @@ async def test_free_text_question_gets_a_grounded_persona_reply(runtime, client)
     for term in forbidden_terms(st):
         assert term not in system
     assert persona["system"][0]["cache_control"] == {"type": "ephemeral"}
-    assert persona["cache_control"] == {"type": "ephemeral"}
+    assert "cache_control" not in persona     # first turn: nothing stable after the system yet
     assert "[The doctor says]: Do you take any medicine at home?" in persona["messages"][-1]["content"]
     # The exchange is held server-side.
     log = (await client.get(f"/v2/case/{tid}/interview", headers=ME)).json()["turns"]
@@ -187,6 +187,36 @@ def test_patient_view_follows_director_trend_without_numbers():
     assert "95" not in msgs[0]["content"]            # numbers only via WHAT STAFF TOLD YOU
     assert "The nurse said your oxygen level is 95." in msgs[-1]["content"]
     assert adjectives({"spo2": 80}) == ["severely hypoxic"]
+
+
+def test_persona_transcript_prefix_is_cacheable_across_turns():
+    """Live run 2026-10-21: with the breakpoint on the volatile tail and a window that slid one
+    exchange per turn, persona cache reads never grew past the system block. The prefix up to
+    last turn's breakpoint must be a prefix of this turn's request on most turns."""
+    prov = AnthropicProvider(make_settings(airgapped=False, anthropic_key="sk-ant-test-0000"))
+    view = PatientView(name="Ana", chief_complaint="fever", now=["you feel hot"])
+    assert [window_start(n) for n in (0, 16, 17, 24, 25, 32, 33)] == [0, 0, 8, 8, 16, 16, 24]
+    def plain(msgs: list[dict]) -> list[tuple[str, str]]:
+        return [(m["role"], m["content"] if isinstance(m["content"], str) else m["content"][0]["text"])
+                for m in msgs]
+
+    transcript: list[dict[str, str]] = []
+    prev_cached = None
+    hits = 0
+    for i in range(20):
+        system, msgs = split_messages(persona_turn(view, transcript, f"question {i}?", "clinical"))
+        req = prov._request(model="claude-opus-5-5", system=system, messages=msgs, max_tokens=300,
+                            effort="low", schema=None, cache_tail=True)
+        assert "cache_control" not in req                      # never the volatile tail
+        assert "question" in req["messages"][-1]["content"] and "[NOTE]" in req["messages"][-1]["content"]
+        if prev_cached is not None and plain(req["messages"][:len(prev_cached)]) == plain(prev_cached):
+            hits += 1
+        marked = [j for j, m in enumerate(req["messages"]) if isinstance(m["content"], list)]
+        prev_cached = req["messages"][:marked[0] + 1] if marked else None
+        assert len(marked) == (0 if not transcript else 1)
+        transcript += [{"role": "doctor", "text": f"question {i}?"}, {"role": "patient", "text": f"answer {i}."}]
+    # 19 follow-up turns; the window steps (every 4 exchanges once past 8) cost a few misses.
+    assert hits >= 14, hits
 
 
 def test_tutor_candidates_and_code_systems():

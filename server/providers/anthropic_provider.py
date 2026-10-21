@@ -9,7 +9,7 @@ docs/architecture/20-chat-contract.md section 2 describes the routing.
   ``ANTHROPIC_API_KEY``) or a sealed admin-registry key, and stays in this process: it is
   never part of a reply, a log line or :func:`repr`.
 * Long, stable system prompts carry an explicit ``cache_control`` breakpoint; multi-turn
-  calls (the persona) also use top-level automatic caching for the growing transcript.
+  calls (the persona) add a second breakpoint on the last stable turn of the transcript.
 * JSON layers use structured outputs (``output_config.format`` with a JSON schema reduced
   to the supported subset by :func:`to_anthropic_schema`). A schema that cannot be
   expressed (free maps, recursion) falls back to a prompt-level JSON contract parsed by
@@ -332,9 +332,13 @@ class AnthropicProvider:
         thinking = thinking_for(model, effort)
         if thinking is not None:
             req["thinking"] = thinking
-        if cache_tail:
-            # Multi-turn: the automatic breakpoint follows the growing transcript.
-            req["cache_control"] = {"type": "ephemeral"}
+        if cache_tail and len(messages) >= 2:
+            # Multi-turn: breakpoint on the last STABLE turn, not the tail. The last user message
+            # carries volatile state and is rebuilt shorter next turn, so a tail breakpoint writes
+            # an entry no later request matches (live run 2026-10-21: reads stayed at the system).
+            stable = dict(messages[-2])
+            stable["content"] = [{"type": "text", "text": stable["content"], "cache_control": {"type": "ephemeral"}}]
+            req["messages"] = [*messages[:-2], stable, messages[-1]]
         if model in _FALLBACK_MODELS:
             req["extra_headers"] = {"anthropic-beta": _FALLBACK_BETA}
             req["extra_body"] = {"fallbacks": "default"}

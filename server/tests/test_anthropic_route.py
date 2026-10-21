@@ -128,11 +128,17 @@ async def test_gateway_persona_goes_to_claude_with_cache_tail(tmp_path):
     gw, _ = _gateway(tmp_path, key=ANT, dbl=dbl)
     await gw.start()
     res = await gw.chat([{"role": "system", "content": "You are the patient."},
+                         {"role": "user", "content": "Is it worse?"}, {"role": "assistant", "content": "Yes."},
                          {"role": "user", "content": "When did it start?"}], task="patient")
     await gw.aclose()
     assert res.provider == "anthropic" and res.text == "It started this morning, doctor."
-    assert dbl.calls[0]["model"] == "claude-opus-5-5"
-    assert dbl.calls[0]["cache_control"] == {"type": "ephemeral"}
+    body = dbl.calls[0]
+    assert body["model"] == "claude-opus-5-5"
+    # The transcript breakpoint sits on the last stable turn, never on the volatile tail.
+    assert "cache_control" not in body
+    assert body["messages"][-2]["content"] == [{"type": "text", "text": "Yes.",
+                                                "cache_control": {"type": "ephemeral"}}]
+    assert body["messages"][-1]["content"] == "When did it start?"
     assert res.usage["cache_read_input_tokens"] == 1500
 
 
