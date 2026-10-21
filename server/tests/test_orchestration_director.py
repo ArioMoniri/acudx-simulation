@@ -164,6 +164,29 @@ async def test_narrator_model_only_changes_wording_and_affect():
     assert len(sc.role_calls("director")) == 1
 
 
+def test_clean_model_text_repairs_or_rejects_mojibake():
+    # Seen live: the narrator's mood_tr arrived as UTF-8 read as Windows-1251.
+    assert D.clean_model_text("korkmuЕџ, uykulu ve kafasД± karД±ЕџД±k", 120) == "korkmuş, uykulu ve kafası karışık"
+    assert D.clean_model_text("kafasÄ± karÄ±ÅŸÄ±k", 120) == "kafası karışık"
+    assert D.clean_model_text("Д±Д± Д", 120) is None  # not valid UTF-8 underneath: the caller keeps its text
+    assert D.clean_model_text("uykulu, kafası karışık ve endişeli", 120) == "uykulu, kafası karışık ve endişeli"
+    assert D.clean_model_text("  ", 120) is None and D.clean_model_text(None, 120) is None
+    assert D.clean_model_text("x" * 200, 120) == "x" * 120
+
+
+async def test_narrator_repairs_mojibake_and_keeps_its_own_text_when_unrepairable():
+    sc = Scenario(director_reply={"mood_tr": "korkmuЕџ, uykulu ve kafasД± karД±ЕџД±k", "utterance_tr": "Д±Д± Д"})
+    llm = StructuredLLM(make_settings(), transport=httpx.ASGITransport(app=build_double(sc)))
+    try:
+        state = D.CaseState.from_spec(_spec("acs_stemi"))
+        _, det_visible, _ = D.next_state(state, D.Action(kind="question", ref="severity"))
+        mod_state, mod_visible, _ = await D.anext_state(state, D.Action(kind="question", ref="severity"), llm)
+    finally:
+        await llm.aclose()
+    assert mod_state.affect.mood_tr == "korkmuş, uykulu ve kafası karışık"
+    assert mod_visible["utterance_tr"] == det_visible["utterance_tr"]
+
+
 async def test_narrator_falls_back_when_model_unreachable():
     llm = StructuredLLM(make_settings(llm_base_url="http://127.0.0.1:9/v1"), retries=0)
     try:

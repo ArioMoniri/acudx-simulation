@@ -1668,6 +1668,19 @@ write_files:
           pass
 
 
+      def framing_differs(shape_a, box_a, shape_b, box_b, tol: float = 0.06) -> bool:
+          """True when two avatars' frames differ in size, or their face boxes differ in centre or size by
+          more than ``tol`` of the face height: a cross-fade between them would show two faces, so /switch
+          cuts instead (a look prepared before registration, or one ``align_to`` could not place)."""
+          if tuple(shape_a[:2]) != tuple(shape_b[:2]):
+              return True
+          ax1, ay1, ax2, ay2 = (float(v) for v in box_a)
+          bx1, by1, bx2, by2 = (float(v) for v in box_b)
+          fh = max(1.0, ay2 - ay1)
+          return (abs((ax1 + ax2) - (bx1 + bx2)) / 2.0 > tol * fh or abs((ay1 + ay2) - (by1 + by2)) / 2.0 > tol * fh
+                  or abs((ax2 - ax1) - (bx2 - bx1)) > tol * fh or abs((ay2 - ay1) - (by2 - by1)) > tol * fh)
+
+
       def extend_portrait(img: np.ndarray, top: int, bottom: int, left: int, right: int) -> np.ndarray:
           """Grow the portrait on the sides that need it without streaks. Right at the seam the border
           is the mirrored image (texture continues, no hard edge); within ``feather`` px it fades into
@@ -2008,7 +2021,7 @@ write_files:
           speaking frame for QUIET_FRAMES), then each frame of the fade blends the old picture's idle
           frame at the same loop index with the new one (smoothstep over the crossfade time). The base
           and its variants are registered to one frame (acudx_register), so the blend shows one face in
-          one pose; a mismatched size is resized only as a last resort."""
+          one pose; two framings that still differ are cut, never blended (framing_differs)."""
           out = sess.output
           orig_v = out.push_video_frame
           st = {"last": None, "from": None, "t0": 0.0, "dur": 0.0, "pending": None, "quiet": 0, "applied": 0}
@@ -2032,11 +2045,11 @@ write_files:
                   else:
                       idx = getattr(sess, "_acudx_idx", None)
                       src = src_cycle[idx % len(src_cycle)] if idx is not None and len(src_cycle) else st["last"]
-                      if src is not None:
-                          if src.shape != frame.shape:
-                              src = cv2.resize(src, (frame.shape[1], frame.shape[0]), interpolation=cv2.INTER_AREA)
+                      if src is not None and src.shape == frame.shape:
                           a = u * u * (3.0 - 2.0 * u)
                           frame = cv2.addWeighted(src, 1.0 - a, frame, a, 0.0)
+                      else:
+                          st["from"] = None   # another frame size: never stretch one framing over the other
               st["last"] = frame
               orig_v(frame)
 
@@ -2201,6 +2214,10 @@ write_files:
               return web.json_response({"error": "frame_count_mismatch", "have": len(sess.frame_list_cycle),
                                         "got": len(av[0])}, status=409)
           previous = getattr(sess, "_acudx_avatar", None)
+          # A look whose framing still differs is cut to, never blended: a blend of two framings shows two faces.
+          cut = framing_differs(sess.frame_list_cycle[0].shape, sess.coord_list_cycle[0], av[0][0].shape, av[2][0])
+          if cut:
+              ms = 0
           st = getattr(sess, "_acudx_fade", None)
           deferred = False
           if st is not None:
@@ -2212,7 +2229,7 @@ write_files:
               sess._acudx_avatar = avatar_id
           MEDIA["switches"] = MEDIA.get("switches", 0) + 1
           return web.json_response({"ok": True, "avatar": avatar_id, "previous": previous, "crossfade_ms": ms,
-                                    "deferred_until_silent": deferred,
+                                    "cut": cut, "deferred_until_silent": deferred,
                                     "switch_ms": round((time.monotonic() - t) * 1000.0, 1)})
 
 

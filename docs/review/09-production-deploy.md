@@ -264,7 +264,7 @@ docs/media/live-avatar/prod-path-v2/. The live site was not touched; a redeploy 
 |---|---|---|
 | Reply latency 12.6 s | guard, whole Opus reply, a second request, TTS, one after another | reply streamed into the call clause by clause, persona started next to the guard; EN 1.8 to 2.5 s; TR 5.5 s (worker Chatterbox on a 40 GB card) |
 | Lips -520 ms | a picture switch mid-reply with other framing, meter window cut short | switches wait for silence, one frame for every picture, whole-line meter, closed loop, paced audio: EN 0 to +40 ms on six of six lines, TR five of six inside ±80 ms |
-| Cross-fade ghost | edits shifted and scaled, fade from a frozen frame | edits registered onto the portrait, faded on matched loop frames |
+| Cross-fade ghost | edits shifted and scaled, fade from a frozen frame | edits registered onto the portrait, faded on matched loop frames; a pair whose framing still differs is cut (9f843ed's safety net) |
 | Cold start 17 min 20 s | three images built on every boot, serial start | content-keyed images from the registry or the Lambda filesystem, parallel start: 8 min 5 s to a ready worker from the cache; the call then still takes about 90 s |
-| Mojibake | not reproduced; no decode without UTF-8 found that could give Windows-1251 | every gateway text reply names `charset=utf-8`; worker replies decoded as UTF-8; tests with ı ş ğ ü ö ç İ |
+| Mojibake | the narrator model returned mood_tr already mis-decoded (found by 7ef1701); no decode of ours gives Windows-1251 | the Director repairs or drops such text (7ef1701); in addition every gateway text reply names `charset=utf-8` and worker replies are decoded as UTF-8; tests with ı ş ğ ü ö ç İ |
 

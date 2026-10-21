@@ -48,6 +48,7 @@ class Runner:
         self.avatars: dict[str, bytes] = {}
         self.refs: dict[str, str | None] = {}
         self.tunings: list[dict] = []
+        self.puts: list[tuple[str, str | None]] = []   # (avatar_id, ref) in preparation order
         self.offers: list[dict] = []
         self.audio: list[dict] = []
         self.closed: list[str] = []
@@ -84,6 +85,7 @@ class Runner:
                 return JSONResponse(status_code=409, content={"error": "ref_not_prepared", "ref": ref})
             self.avatars[avatar_id] = await request.body()
             self.refs[avatar_id] = ref
+            self.puts.append((avatar_id, ref))
             return {"avatar_id": avatar_id, "width": 530, "height": 720, "prepare_ms": 812.0, "ref": ref}
 
         @app.post("/avatar/offer")

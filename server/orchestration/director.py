@@ -225,6 +225,29 @@ _COURSE_FLAGS = frozenset({"heart_failure", "renal_failure", "copd", "beta_block
                            "red_flags", "hypercapnic_target"})
 
 
+# UTF-8 text decoded as Windows-1251 ("kafası" -> "kafasД±") or Windows-1252 ("kafasÄ±"). Neither
+# pattern occurs in English or Turkish, so a match means the model returned mojibake.
+_MOJIBAKE = re.compile(r"[ДЕГ][Ѐ-ӿ\u0080-¿]|[ÃÄÅ][\u0080-¿]")
+
+
+def clean_model_text(text: Any, limit: int) -> Optional[str]:
+    """Model-written display text, repaired when it is mojibake; None when it cannot be repaired
+    (the caller keeps its deterministic text)."""
+    s = str(text or "").strip()
+    if not s:
+        return None
+    if _MOJIBAKE.search(s):
+        for enc in ("cp1251", "cp1252", "latin-1"):
+            try:
+                fixed = s.encode(enc).decode("utf-8")
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                continue
+            if not _MOJIBAKE.search(fixed):
+                return fixed[:limit]
+        return None
+    return s[:limit]
+
+
 def resolve_condition_id(spec: dict[str, Any]) -> str:
     """Catalogue id of the spec's condition (meta first, then label, then ICD-10)."""
     meta = spec.get("meta") or {}
@@ -886,14 +909,12 @@ def make_narrate_model(llm: StructuredLLM):
             state.affect.pain = max(0.0, min(10.0, float(d.get("pain", state.affect.pain))))
         except (TypeError, ValueError):
             pass
-        if str(d.get("mood_en") or "").strip():
-            state.affect.mood_en = str(d["mood_en"])[:120]
-        if str(d.get("mood_tr") or "").strip():
-            state.affect.mood_tr = str(d["mood_tr"])[:120]
+        state.affect.mood_en = clean_model_text(d.get("mood_en"), 120) or state.affect.mood_en
+        state.affect.mood_tr = clean_model_text(d.get("mood_tr"), 120) or state.affect.mood_tr
         return {
             "case": state.model_dump(),
-            "utterance_en": str(d.get("utterance_en") or en)[:400],
-            "utterance_tr": str(d.get("utterance_tr") or tr)[:400],
+            "utterance_en": clean_model_text(d.get("utterance_en"), 400) or en[:400],
+            "utterance_tr": clean_model_text(d.get("utterance_tr"), 400) or tr[:400],
             "trace": [make_event("director:narrate", started=started, model=reply.model,
                                  model_requested=reply.model_requested, provider=reply.provider,
                                  tokens_in=reply.tokens_in, tokens_out=reply.tokens_out)],
