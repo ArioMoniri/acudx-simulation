@@ -1,112 +1,158 @@
 {
-  "captured_at": "2026-10-21T09:53:13.450Z",
+  "captured_at": "2026-10-21T10:30:24.965Z",
   "gateway": "http://127.0.0.1:8897",
   "lang": "tr",
   "condition": "pneumonia_cap",
-  "thread_id": "3fa55b54-7dca-461d-a6ea-932bcf50955c",
+  "thread_id": "14089a25-9594-4a0b-96d0-a5657ac2eaf4",
   "case": {
     "label": "Community-acquired pneumonia",
-    "age": 56,
+    "age": 52,
     "sex": "female",
-    "chief_complaint": "Öksürük, hafif nefes darlığı ve halsizlik",
+    "chief_complaint": "Üşüme ve nefes darlığı",
     "triage_vitals": {
       "hr": 102,
       "systolic": 120,
       "diastolic": 80,
       "rr": 20,
-      "spo2": 95,
+      "spo2": 96,
       "tempC": 39
     },
     "exam": [
-      "Hasta hafif halsiz görünüyor, yüzü kızarmış ve terli. Ateşi var, nefes alırken biraz zorlanıyor. Hafif öksürük yapmakta. Kilo kaybı yok, öksürük kuru ve kuru balgamla birlikte. Ateşi 39°C. Ateş ve halsizlik artarsa hipotansiyon ve organ yetmezliği riski artar.",
-      "Ateş 39°C, nabız 102/dakika, solunum 20/dakika, O2 satürasyonu",
-      "Hafif halsiz, yüzü kızarmış ve terli. Ateşi 39°C. Solunum 20/dakika, nabız 102/dakika. O2 satürasyonu 95%.",
-      "Kalp ritmi düzgün, nabız 102/dakika, periferik nabızlar güçlü ve simetrik."
+      "Hasta, hafif zorlanmış görünümde, açık ve net bir şekilde konuşuyor. Soluk, hafif iltihaplı görünümde. Göğüs bölgesinde hafif hassasiyet.",
+      "Vücut ısısı 39,0°C, nabız 102/dakika, solunum 20/dakika, oksijen satürasyonu 96% (hava), kan basıncı 120/",
+      "Göğüs duvarı simetrik ve hareketli. Ateş 39,0°C. Solunum 20/dakika. Nabız 102/dakika. Oksijen satürasyonu 96%. Atelektazi, krepitasyon veya rales yok. Göğüs duvarı simetrik ve hareketli. Akciğerlerde yaygın hiperemise ve hafif bir nekrotik görünüm. Atelektazi,",
+      "Kalp ritmi düzensiz değil, nabız 102/dakika, periferik nabızlar güçlü ve simetrik. Kalp sesleri normal, ekstremite edem yok."
     ]
   },
   "photo": "p35",
+  "prepared_at_case_start": {
+    "ms": 72899,
+    "status": 200,
+    "state": "prepared",
+    "variants": [
+      {
+        "name": "presenting",
+        "status": "ready",
+        "gen_ms": 9527.1,
+        "prepare_ms": 29764.2
+      },
+      {
+        "name": "worse",
+        "status": "preparing",
+        "gen_ms": 9472.5,
+        "prepare_ms": null
+      },
+      {
+        "name": "critical",
+        "status": "generated",
+        "gen_ms": 9437.5,
+        "prepare_ms": null
+      },
+      {
+        "name": "improved",
+        "status": "generated",
+        "gen_ms": 9423,
+        "prepare_ms": null
+      }
+    ]
+  },
   "session": {
-    "avatar_id": "acudx-p35-0893df04-6c3ac19b78",
-    "prepare_ms": 73,
+    "avatar_id": "acudx-p35-6b13febf-50845d1e8a",
+    "prepare_ms": 135.1,
     "worker": {
-      "infer_fps": 45.58,
+      "infer_fps": 90.6,
       "sessions": 0,
       "max_sessions": 2,
       "gpu": {
         "cuda": true,
-        "name": "NVIDIA A100-SXM4-40GB",
-        "total_mb": 40441,
-        "free_mb": 9152,
-        "process_reserved_mb": 2678,
-        "process_allocated_mb": 2090
+        "name": "NVIDIA H100 80GB HBM3",
+        "total_mb": 81079,
+        "free_mb": 13304,
+        "process_reserved_mb": 3096,
+        "process_allocated_mb": 2628
       },
-      "domain": "150-136-92-243.sslip.io",
+      "domain": "68-209-73-230.sslip.io",
       "max_calls": 2,
       "active_calls": 1
     },
     "appearance": {
-      "thread_id": "3fa55b54-7dca-461d-a6ea-932bcf50955c",
+      "thread_id": "14089a25-9594-4a0b-96d0-a5657ac2eaf4",
       "source": "generated",
       "reason": null,
       "gen_mode": "offload",
-      "gen_worker": "150-136-92-243.sslip.io",
+      "gen_worker": "68-209-73-230.sslip.io",
       "live": {
-        "key": "6c3ac19b78",
+        "key": "50845d1e8a",
         "phase": "stable",
         "signs": {
           "fever_flush": 2,
-          "diaphoresis": 1
+          "pallor": 1
         },
         "cough": true
       },
-      "current_key": "6c3ac19b78",
+      "current_key": "50845d1e8a",
       "variants": [
         {
           "name": "presenting",
-          "key": "6c3ac19b78",
-          "avatar_id": "acudx-p35-0893df04-6c3ac19b78",
+          "key": "50845d1e8a",
+          "avatar_id": "acudx-p35-6b13febf-50845d1e8a",
           "status": "ready",
-          "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip. Photorealistic, natural skin texture, no text.",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; pale, washed-out skin. Photorealistic, natural skin texture, no text.",
           "has_image": true,
           "signs": {
             "fever_flush": 2,
-            "diaphoresis": 1
+            "pallor": 1
           },
-          "gen_ms": 13976.6,
-          "prepare_ms": 108.3,
+          "gen_ms": 9527.1,
+          "prepare_ms": 29764.2,
+          "error": null,
+          "mode": "offload"
+        },
+        {
+          "name": "worse",
+          "key": "0f2268139c",
+          "avatar_id": "acudx-p35-6b13febf-0f2268139c",
+          "status": "preparing",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; very pale, greyish skin. Photorealistic, natural skin texture, no text.",
+          "has_image": true,
+          "signs": {
+            "fever_flush": 2,
+            "pallor": 2
+          },
+          "gen_ms": 9472.5,
+          "prepare_ms": null,
           "error": null,
           "mode": "offload"
         },
         {
           "name": "critical",
-          "key": "efc81f5e51",
-          "avatar_id": "acudx-p35-0893df04-efc81f5e51",
-          "status": "ready",
-          "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
+          "key": "56811e4378",
+          "avatar_id": "acudx-p35-6b13febf-56811e4378",
+          "status": "generated",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; very pale, greyish skin; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
           "has_image": true,
           "signs": {
             "fever_flush": 2,
-            "diaphoresis": 1,
+            "pallor": 2,
             "drowsy": 1
           },
-          "gen_ms": 13823.2,
-          "prepare_ms": 108.1,
+          "gen_ms": 9437.5,
+          "prepare_ms": null,
           "error": null,
           "mode": "offload"
         },
         {
           "name": "improved",
-          "key": "ba6a3e82fc",
-          "avatar_id": "acudx-p35-0893df04-ba6a3e82fc",
-          "status": "ready",
-          "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: the complexion very slightly pinker and warmer than in the original, subtle and even (no patches, no rash, no spots); a light sheen of sweat on the forehead and upper lip. Photorealistic, natural skin texture, no text.",
+          "key": "dab7ce5ef3",
+          "avatar_id": "acudx-p35-6b13febf-dab7ce5ef3",
+          "status": "generated",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a slightly tired, feverish look in the eyes. Photorealistic, natural skin texture, no text.",
           "has_image": true,
           "signs": {
-            "fever_flush": 1,
-            "diaphoresis": 1
+            "fever_flush": 1
           },
-          "gen_ms": 13799.3,
-          "prepare_ms": 107.3,
+          "gen_ms": 9423,
+          "prepare_ms": null,
           "error": null,
           "mode": "offload"
         }
@@ -115,80 +161,95 @@
     }
   },
   "connect": {
-    "first_frame_ms": 12528,
-    "w": 590,
+    "first_frame_ms": 11460,
+    "w": 548,
     "h": 720,
-    "answer_ms": 757.5
+    "answer_ms": 652.6
   },
   "presenting": {
     "frame": "01-presenting-idle.png",
     "appearance": {
-      "session_id": "5FJKZu4NXWa9iVj_VGD07LVH",
-      "thread_id": "3fa55b54-7dca-461d-a6ea-932bcf50955c",
-      "avatar_id": "acudx-p35-0893df04-6c3ac19b78",
+      "session_id": "RxcpcyB5UyOymKVnXYOosIrH",
+      "thread_id": "14089a25-9594-4a0b-96d0-a5657ac2eaf4",
+      "avatar_id": "acudx-p35-6b13febf-50845d1e8a",
       "appearance": {
-        "thread_id": "3fa55b54-7dca-461d-a6ea-932bcf50955c",
+        "thread_id": "14089a25-9594-4a0b-96d0-a5657ac2eaf4",
         "source": "generated",
         "reason": null,
         "gen_mode": "offload",
-        "gen_worker": "150-136-92-243.sslip.io",
+        "gen_worker": "68-209-73-230.sslip.io",
         "live": {
-          "key": "6c3ac19b78",
+          "key": "50845d1e8a",
           "phase": "stable",
           "signs": {
             "fever_flush": 2,
-            "diaphoresis": 1
+            "pallor": 1
           },
           "cough": true
         },
-        "current_key": "6c3ac19b78",
+        "current_key": "50845d1e8a",
         "variants": [
           {
             "name": "presenting",
-            "key": "6c3ac19b78",
-            "avatar_id": "acudx-p35-0893df04-6c3ac19b78",
+            "key": "50845d1e8a",
+            "avatar_id": "acudx-p35-6b13febf-50845d1e8a",
             "status": "ready",
-            "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip. Photorealistic, natural skin texture, no text.",
+            "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; pale, washed-out skin. Photorealistic, natural skin texture, no text.",
             "has_image": true,
             "signs": {
               "fever_flush": 2,
-              "diaphoresis": 1
+              "pallor": 1
             },
-            "gen_ms": 13976.6,
-            "prepare_ms": 108.3,
+            "gen_ms": 9527.1,
+            "prepare_ms": 29764.2,
+            "error": null,
+            "mode": "offload"
+          },
+          {
+            "name": "worse",
+            "key": "0f2268139c",
+            "avatar_id": "acudx-p35-6b13febf-0f2268139c",
+            "status": "preparing",
+            "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; very pale, greyish skin. Photorealistic, natural skin texture, no text.",
+            "has_image": true,
+            "signs": {
+              "fever_flush": 2,
+              "pallor": 2
+            },
+            "gen_ms": 9472.5,
+            "prepare_ms": null,
             "error": null,
             "mode": "offload"
           },
           {
             "name": "critical",
-            "key": "efc81f5e51",
-            "avatar_id": "acudx-p35-0893df04-efc81f5e51",
-            "status": "ready",
-            "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
+            "key": "56811e4378",
+            "avatar_id": "acudx-p35-6b13febf-56811e4378",
+            "status": "generated",
+            "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; very pale, greyish skin; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
             "has_image": true,
             "signs": {
               "fever_flush": 2,
-              "diaphoresis": 1,
+              "pallor": 2,
               "drowsy": 1
             },
-            "gen_ms": 13823.2,
-            "prepare_ms": 108.1,
+            "gen_ms": 9437.5,
+            "prepare_ms": null,
             "error": null,
             "mode": "offload"
           },
           {
             "name": "improved",
-            "key": "ba6a3e82fc",
-            "avatar_id": "acudx-p35-0893df04-ba6a3e82fc",
-            "status": "ready",
-            "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: the complexion very slightly pinker and warmer than in the original, subtle and even (no patches, no rash, no spots); a light sheen of sweat on the forehead and upper lip. Photorealistic, natural skin texture, no text.",
+            "key": "dab7ce5ef3",
+            "avatar_id": "acudx-p35-6b13febf-dab7ce5ef3",
+            "status": "generated",
+            "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a slightly tired, feverish look in the eyes. Photorealistic, natural skin texture, no text.",
             "has_image": true,
             "signs": {
-              "fever_flush": 1,
-              "diaphoresis": 1
+              "fever_flush": 1
             },
-            "gen_ms": 13799.3,
-            "prepare_ms": 107.3,
+            "gen_ms": 9423,
+            "prepare_ms": null,
             "error": null,
             "mode": "offload"
           }
@@ -206,7 +267,7 @@
     },
     "turn": {
       "question": "Şu an kendinizi nasıl hissediyorsunuz?",
-      "utterance": "Şu an halsiz hissediyorum, öksürüğüm var ve biraz titriyorum. Nefes alırken hafif zorlanıyorum.",
+      "utterance": "Acıyan ve nefes darlığı var, bazen üşüyorum, bazen titkın oluyorum.",
       "speak": {
         "provider": "gpu-worker",
         "adapter": "openai_compatible",
@@ -214,35 +275,35 @@
         "voice_id": "acudx_tr_female",
         "source": "gpu_worker",
         "transport": "stream",
-        "tts_ms": 322.1,
-        "first_chunk_ms": 2205.3,
-        "stream_ms": 9816.5,
+        "tts_ms": 324,
+        "first_chunk_ms": 1653.3,
+        "stream_ms": 3334.7,
         "queued_ms": 0,
-        "audio_bytes": 452160,
-        "audio_duration_ms": 9420,
+        "audio_bytes": 274560,
+        "audio_duration_ms": 5720,
         "sample_rate": 24000,
-        "stream_stall_ms": 3081.3,
+        "stream_stall_ms": 0,
         "preroll": {
           "ms": 800,
           "frames": 40,
-          "sent_ms": 69.5
+          "sent_ms": 61.3
         },
-        "link_connect_ms": 643.7,
+        "link_connect_ms": 500.6,
         "runner": {
-          "frames": 471,
-          "first_frame_ms": 1878.9,
-          "elapsed_ms": 9432.1
+          "frames": 286,
+          "first_frame_ms": 1323,
+          "elapsed_ms": 2938.2
         },
         "voice": {
           "speed": 1
         },
-        "spoken_text": "Şu an halsiz hissediyorum, öksürüğüm var ve biraz titriyorum. Nefes alırken hafif zorlanıyorum.",
+        "spoken_text": "Acıyan ve nefes darlığı var, bazen üşüyorum, bazen titkın oluyorum.",
         "look": {
-          "key": "6c3ac19b78",
+          "key": "50845d1e8a",
           "phase": "stable",
           "signs": {
             "fever_flush": 2,
-            "diaphoresis": 1
+            "pallor": 1
           },
           "cough": true
         }
@@ -269,7 +330,7 @@
       "systolic": 104,
       "diastolic": 64,
       "rr": 31,
-      "spo2": 86,
+      "spo2": 87,
       "tempC": 39
     },
     "bedside": {
@@ -293,31 +354,31 @@
     },
     "affect": {
       "pain": 3,
-      "anxiety": 0.7,
-      "dyspnea": 0.95,
+      "anxiety": 0.68,
+      "dyspnea": 0.9,
       "consciousness": "drowsy",
       "mood_en": "drowsy and confused, slow to answer",
       "mood_tr": "uykulu ve konfüze, yavaş yanıt veriyor"
     },
     "switch": {
-      "at": 1792576186.0894685,
-      "reason": "director",
-      "from": "6c3ac19b78",
-      "to": "efc81f5e51",
-      "avatar_id": "acudx-p35-0893df04-efc81f5e51",
-      "live_key": "7dc7376324",
-      "exact": false,
+      "at": 1792578545.8731217,
+      "reason": "director:generated",
+      "from": "50845d1e8a",
+      "to": "e072772fb4",
+      "avatar_id": "acudx-p35-6b13febf-e072772fb4",
+      "live_key": "e072772fb4",
+      "exact": true,
       "phase": "deteriorating",
-      "switch_ms": 49.4,
+      "switch_ms": 61.6,
       "runner": {
         "ok": true,
-        "avatar": "acudx-p35-0893df04-efc81f5e51",
-        "previous": "acudx-p35-0893df04-6c3ac19b78",
+        "avatar": "acudx-p35-6b13febf-e072772fb4",
+        "previous": "acudx-p35-6b13febf-50845d1e8a",
         "crossfade_ms": 900,
-        "switch_ms": 0.4
+        "switch_ms": 0.3
       }
     },
-    "switch_after_step_ms": 362,
+    "switch_after_step_ms": 68031,
     "frames": [
       "05-worse-crossfade.png",
       "06-worse-crossfade.png",
@@ -331,7 +392,7 @@
     ],
     "turn": {
       "question": "Şimdi nasılsınız, anlatır mısınız?",
-      "utterance": "(cough) ...hafif nefes ...alıyorum ...halsiz ...hissettiklerim ...sizi ...duyurdum ...daha ...iyi ...olmam ...gerek ...diyorum ...ama ...çok ...iyi ...değilim.",
+      "utterance": "Üşüyorum... nefes almak zor... (cough) ...kollarım titiyor...",
       "speak": {
         "provider": "gpu-worker",
         "adapter": "openai_compatible",
@@ -339,35 +400,35 @@
         "voice_id": "acudx_tr_female",
         "source": "gpu_worker",
         "transport": "stream",
-        "tts_ms": 63.2,
-        "first_chunk_ms": 5035.2,
-        "stream_ms": 9903.4,
+        "tts_ms": 403.2,
+        "first_chunk_ms": 1832.5,
+        "stream_ms": 3534.5,
         "queued_ms": 0,
-        "audio_bytes": 539520,
-        "audio_duration_ms": 11240,
+        "audio_bytes": 288000,
+        "audio_duration_ms": 6000,
         "sample_rate": 24000,
         "stream_stall_ms": 0,
         "preroll": {
           "ms": 800,
           "frames": 40,
-          "sent_ms": 69.5
+          "sent_ms": 61.3
         },
-        "link_connect_ms": 643.7,
+        "link_connect_ms": 500.6,
         "runner": {
-          "frames": 562,
-          "first_frame_ms": 4969.9,
-          "elapsed_ms": 9791.9
+          "frames": 300,
+          "first_frame_ms": 1408.9,
+          "elapsed_ms": 3047.5
         },
         "voice": {
           "speed": 0.85
         },
-        "spoken_text": "öhö, ...hafif nefes ...alıyorum ...halsiz ...hissettiklerim ...sizi ...duyurdum ...daha ...iyi ...olmam ...gerek ...diyorum ...ama ...çok ...iyi ...değilim.",
+        "spoken_text": "Üşüyorum... nefes almak zor... öhö, ...kollarım titiyor...",
         "look": {
-          "key": "7dc7376324",
+          "key": "e072772fb4",
           "phase": "deteriorating",
           "signs": {
             "fever_flush": 2,
-            "diaphoresis": 1,
+            "pallor": 1,
             "resp_distress": 2,
             "drowsy": 1
           },
@@ -390,13 +451,13 @@
       "locale": "tr"
     },
     "phase": "deteriorating",
-    "severity": 0.755,
+    "severity": 0.752,
     "vitals": {
       "hr": 128,
       "systolic": 103,
       "diastolic": 63,
       "rr": 34,
-      "spo2": 86,
+      "spo2": 81,
       "tempC": 39
     },
     "bedside": {
@@ -415,19 +476,36 @@
       "rhythm": "sinus tachycardia",
       "pulse": true,
       "fluid_in_ml": 0,
-      "o2": true,
-      "news2": 15
+      "o2": false,
+      "news2": 13
     },
     "affect": {
       "pain": 3,
-      "anxiety": 0.75,
+      "anxiety": 0.85,
       "dyspnea": 1,
       "consciousness": "drowsy",
       "mood_en": "drowsy and confused, slow to answer",
       "mood_tr": "uykulu ve konfüze, yavaş yanıt veriyor"
     },
-    "switch": null,
-    "switch_after_step_ms": 156124,
+    "switch": {
+      "at": 1792578606.9763772,
+      "reason": "director:generated",
+      "from": "e072772fb4",
+      "to": "11f202f489",
+      "avatar_id": "acudx-p35-6b13febf-11f202f489",
+      "live_key": "11f202f489",
+      "exact": true,
+      "phase": "deteriorating",
+      "switch_ms": 46.9,
+      "runner": {
+        "ok": true,
+        "avatar": "acudx-p35-6b13febf-11f202f489",
+        "previous": "acudx-p35-6b13febf-e072772fb4",
+        "crossfade_ms": 900,
+        "switch_ms": 0.5
+      }
+    },
+    "switch_after_step_ms": 48834,
     "frames": [
       "17-treated-crossfade.png",
       "18-treated-crossfade.png",
@@ -442,16 +520,12 @@
     "treatment": [
       {
         "code": "severity_abx",
-        "label": "Antibiyotik tedavisi (CURB-65 kriterlerine göre)"
-      },
-      {
-        "code": "oxygen",
-        "label": "Oksijen tedavisi"
+        "label": "Ampisilin-klavulanik asit + klaritromisin"
       }
     ],
     "turn": {
       "question": "Peki şimdi nasıl hissediyorsunuz?",
-      "utterance": "(cough) ...hafif nefes... alamıyorum ...halsizim ...vücudum titiyor...",
+      "utterance": "Üşüyorum... nefes almak zor... (cough) ...kollarım titiyor...",
       "speak": {
         "provider": "gpu-worker",
         "adapter": "openai_compatible",
@@ -459,35 +533,36 @@
         "voice_id": "acudx_tr_female",
         "source": "gpu_worker",
         "transport": "stream",
-        "tts_ms": 595.2,
-        "first_chunk_ms": 3033.8,
-        "stream_ms": 7038.2,
+        "tts_ms": 48.3,
+        "first_chunk_ms": 2193.9,
+        "stream_ms": 3787.5,
         "queued_ms": 0,
-        "audio_bytes": 336000,
-        "audio_duration_ms": 7000,
+        "audio_bytes": 368640,
+        "audio_duration_ms": 7680,
         "sample_rate": 24000,
-        "stream_stall_ms": 1158.5,
+        "stream_stall_ms": 0,
         "preroll": {
           "ms": 800,
           "frames": 40,
-          "sent_ms": 69.5
+          "sent_ms": 61.3
         },
-        "link_connect_ms": 643.7,
+        "link_connect_ms": 500.6,
         "runner": {
-          "frames": 350,
-          "first_frame_ms": 2437.1,
-          "elapsed_ms": 6396.8
+          "frames": 384,
+          "first_frame_ms": 2141.2,
+          "elapsed_ms": 3667.4
         },
         "voice": {
           "speed": 0.85
         },
-        "spoken_text": "öhö, ...hafif nefes... alamıyorum ...halsizim ...vücudum titiyor...",
+        "spoken_text": "Üşüyorum... nefes almak zor... öhö, ...kollarım titiyor...",
         "look": {
-          "key": "7dc7376324",
+          "key": "11f202f489",
           "phase": "deteriorating",
           "signs": {
             "fever_flush": 2,
-            "diaphoresis": 1,
+            "pallor": 1,
+            "cyanosis": 1,
             "resp_distress": 2,
             "drowsy": 1
           },
@@ -503,113 +578,166 @@
     }
   },
   "final_appearance": {
-    "session_id": "5FJKZu4NXWa9iVj_VGD07LVH",
-    "thread_id": "3fa55b54-7dca-461d-a6ea-932bcf50955c",
-    "avatar_id": "acudx-p35-0893df04-efc81f5e51",
+    "session_id": "RxcpcyB5UyOymKVnXYOosIrH",
+    "thread_id": "14089a25-9594-4a0b-96d0-a5657ac2eaf4",
+    "avatar_id": "acudx-p35-6b13febf-e072772fb4",
     "appearance": {
-      "thread_id": "3fa55b54-7dca-461d-a6ea-932bcf50955c",
+      "thread_id": "14089a25-9594-4a0b-96d0-a5657ac2eaf4",
       "source": "generated",
       "reason": null,
       "gen_mode": "offload",
-      "gen_worker": "150-136-92-243.sslip.io",
+      "gen_worker": "68-209-73-230.sslip.io",
       "live": {
-        "key": "7dc7376324",
+        "key": "11f202f489",
         "phase": "deteriorating",
         "signs": {
           "fever_flush": 2,
-          "diaphoresis": 1,
+          "pallor": 1,
+          "cyanosis": 1,
           "resp_distress": 2,
           "drowsy": 1
         },
         "cough": true
       },
-      "current_key": "efc81f5e51",
+      "current_key": "11f202f489",
       "variants": [
         {
           "name": "presenting",
-          "key": "6c3ac19b78",
-          "avatar_id": "acudx-p35-0893df04-6c3ac19b78",
+          "key": "50845d1e8a",
+          "avatar_id": "acudx-p35-6b13febf-50845d1e8a",
           "status": "ready",
-          "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip. Photorealistic, natural skin texture, no text.",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; pale, washed-out skin. Photorealistic, natural skin texture, no text.",
           "has_image": true,
           "signs": {
             "fever_flush": 2,
-            "diaphoresis": 1
+            "pallor": 1
           },
-          "gen_ms": 13976.6,
-          "prepare_ms": 108.3,
+          "gen_ms": 9527.1,
+          "prepare_ms": 29764.2,
+          "error": null,
+          "mode": "offload"
+        },
+        {
+          "name": "worse",
+          "key": "0f2268139c",
+          "avatar_id": "acudx-p35-6b13febf-0f2268139c",
+          "status": "ready",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; very pale, greyish skin. Photorealistic, natural skin texture, no text.",
+          "has_image": true,
+          "signs": {
+            "fever_flush": 2,
+            "pallor": 2
+          },
+          "gen_ms": 9472.5,
+          "prepare_ms": 30610,
           "error": null,
           "mode": "offload"
         },
         {
           "name": "critical",
-          "key": "efc81f5e51",
-          "avatar_id": "acudx-p35-0893df04-efc81f5e51",
+          "key": "56811e4378",
+          "avatar_id": "acudx-p35-6b13febf-56811e4378",
           "status": "ready",
-          "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; very pale, greyish skin; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
           "has_image": true,
           "signs": {
             "fever_flush": 2,
-            "diaphoresis": 1,
+            "pallor": 2,
             "drowsy": 1
           },
-          "gen_ms": 13823.2,
-          "prepare_ms": 108.1,
+          "gen_ms": 9437.5,
+          "prepare_ms": 30672.3,
           "error": null,
           "mode": "offload"
         },
         {
           "name": "improved",
-          "key": "ba6a3e82fc",
-          "avatar_id": "acudx-p35-0893df04-ba6a3e82fc",
+          "key": "dab7ce5ef3",
+          "avatar_id": "acudx-p35-6b13febf-dab7ce5ef3",
           "status": "ready",
-          "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: the complexion very slightly pinker and warmer than in the original, subtle and even (no patches, no rash, no spots); a light sheen of sweat on the forehead and upper lip. Photorealistic, natural skin texture, no text.",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a slightly tired, feverish look in the eyes. Photorealistic, natural skin texture, no text.",
           "has_image": true,
           "signs": {
-            "fever_flush": 1,
-            "diaphoresis": 1
+            "fever_flush": 1
           },
-          "gen_ms": 13799.3,
-          "prepare_ms": 107.3,
+          "gen_ms": 9423,
+          "prepare_ms": 61470.1,
           "error": null,
           "mode": "offload"
         },
         {
           "name": "live",
-          "key": "7dc7376324",
-          "avatar_id": "acudx-p35-0893df04-7dc7376324",
-          "status": "failed",
-          "prompt": "Edit this photo of a hospital patient (56 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Change only this: a feverish look, the complexion a little pinker and warmer than in the original, subtle and even over the whole face (no patches, no rash, no spots); tired, glassy eyes; a light sheen of sweat on the forehead and upper lip; struggling to breathe, nostrils flared, neck muscles straining; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
-          "has_image": false,
+          "key": "e072772fb4",
+          "avatar_id": "acudx-p35-6b13febf-e072772fb4",
+          "status": "ready",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; pale, washed-out skin; struggling to breathe, nostrils flared, neck muscles straining; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
+          "has_image": true,
           "signs": {
             "fever_flush": 2,
-            "diaphoresis": 1,
+            "pallor": 1,
             "resp_distress": 2,
             "drowsy": 1
           },
-          "gen_ms": null,
-          "prepare_ms": null,
-          "error": "oom",
-          "mode": null
+          "gen_ms": 9797.7,
+          "prepare_ms": 57326.5,
+          "error": null,
+          "mode": "offload"
+        },
+        {
+          "name": "live",
+          "key": "11f202f489",
+          "avatar_id": "acudx-p35-6b13febf-11f202f489",
+          "status": "ready",
+          "prompt": "Edit this photo of a hospital patient (52 years old, female). Keep the same person: identical face identity, age, hairstyle, clothing, head position, camera framing, background and lighting. Keep the mouth closed and relaxed. Keep the skin clear and uniform: no blotches, no rash, no spots, no patches. Change only this: a feverish, unwell look: tired, heavy, glassy eyes; pale, washed-out skin; a faint dusky blue-grey tinge to the natural lip colour; struggling to breathe, nostrils flared, neck muscles straining; heavy eyelids, looks tired and drowsy. Photorealistic, natural skin texture, no text.",
+          "has_image": true,
+          "signs": {
+            "fever_flush": 2,
+            "pallor": 1,
+            "cyanosis": 1,
+            "resp_distress": 2,
+            "drowsy": 1
+          },
+          "gen_ms": 9674.2,
+          "prepare_ms": 38481,
+          "error": null,
+          "mode": "offload"
         }
       ],
       "switches": [
         {
-          "at": 1792576186.0894685,
-          "reason": "director",
-          "from": "6c3ac19b78",
-          "to": "efc81f5e51",
-          "avatar_id": "acudx-p35-0893df04-efc81f5e51",
-          "live_key": "7dc7376324",
-          "exact": false,
+          "at": 1792578545.8731217,
+          "reason": "director:generated",
+          "from": "50845d1e8a",
+          "to": "e072772fb4",
+          "avatar_id": "acudx-p35-6b13febf-e072772fb4",
+          "live_key": "e072772fb4",
+          "exact": true,
           "phase": "deteriorating",
-          "switch_ms": 49.4,
+          "switch_ms": 61.6,
           "runner": {
             "ok": true,
-            "avatar": "acudx-p35-0893df04-efc81f5e51",
-            "previous": "acudx-p35-0893df04-6c3ac19b78",
+            "avatar": "acudx-p35-6b13febf-e072772fb4",
+            "previous": "acudx-p35-6b13febf-50845d1e8a",
             "crossfade_ms": 900,
-            "switch_ms": 0.4
+            "switch_ms": 0.3
+          }
+        },
+        {
+          "at": 1792578606.9763772,
+          "reason": "director:generated",
+          "from": "e072772fb4",
+          "to": "11f202f489",
+          "avatar_id": "acudx-p35-6b13febf-11f202f489",
+          "live_key": "11f202f489",
+          "exact": true,
+          "phase": "deteriorating",
+          "switch_ms": 46.9,
+          "runner": {
+            "ok": true,
+            "avatar": "acudx-p35-6b13febf-11f202f489",
+            "previous": "acudx-p35-6b13febf-e072772fb4",
+            "crossfade_ms": 900,
+            "switch_ms": 0.5
           }
         }
       ]
@@ -629,27 +757,18 @@
     "ok": true,
     "metrics": {
       "appearance_reused": true,
-      "appearance_ms": 2.3,
-      "prepare_ms": 73,
-      "answer_ms": 757.5,
+      "appearance_ms": 1.2,
+      "prepare_ms": 135.1,
+      "answer_ms": 652.6,
       "preroll": {
         "ms": 800,
         "frames": 40,
-        "sent_ms": 69.5
+        "sent_ms": 61.3
       },
       "turns": 3,
       "syncs": [
         {
-          "at": 1792576186.0895982,
-          "switched": true,
-          "why": null,
-          "to": "efc81f5e51",
-          "live_key": "7dc7376324",
-          "exact": false,
-          "phase": "deteriorating"
-        },
-        {
-          "at": 1792576215.9864986,
+          "at": 1792578478.202588,
           "switched": false,
           "why": "unchanged",
           "to": null,
@@ -658,7 +777,7 @@
           "phase": null
         },
         {
-          "at": 1792576216.0253377,
+          "at": 1792578558.268655,
           "switched": false,
           "why": "unchanged",
           "to": null,
@@ -667,7 +786,7 @@
           "phase": null
         },
         {
-          "at": 1792576216.0711153,
+          "at": 1792578558.341044,
           "switched": false,
           "why": "unchanged",
           "to": null,
@@ -679,18 +798,19 @@
     }
   },
   "log": [
-    "2026-10-21T09:49:14.777Z case 3fa55b54-7dca-461d-a6ea-932bcf50955c Community-acquired pneumonia age 56 female in 66 ms",
-    "2026-10-21T09:49:15.296Z session 5FJKZu4NXWa9iVj_VGD07LVH avatar acudx-p35-0893df04-6c3ac19b78 in 519 ms; appearance generated",
-    "2026-10-21T09:49:28.065Z connected {\"first_frame_ms\":12528,\"w\":590,\"h\":720,\"answer_ms\":757.5}",
-    "2026-10-21T09:49:35.631Z patient (presenting): Şu an halsiz hissediyorum, öksürüğüm var ve biraz titriyorum. Nefes alırken hafif zorlanıyorum.",
-    "2026-10-21T09:49:45.462Z speak presenting: {\"first_chunk_ms\":2205.3,\"voice\":{\"speed\":1},\"spoken\":\"Şu an halsiz hissediyorum, öksürüğüm var ve biraz titriyorum. Nefes alırken hafif zorlanıyorum.\"}",
-    "2026-10-21T09:49:46.059Z director worse: phase deteriorating vitals {\"hr\":121,\"systolic\":104,\"diastolic\":64,\"rr\":31,\"spo2\":86,\"tempC\":39}",
-    "2026-10-21T09:49:49.617Z switch worse after 362 ms: {\"to\":\"efc81f5e51\",\"exact\":false,\"phase\":\"deteriorating\",\"reason\":\"director\"}",
-    "2026-10-21T09:50:04.104Z patient (worse): (cough) ...hafif nefes ...alıyorum ...halsiz ...hissettiklerim ...sizi ...duyurdum ...daha ...iyi ...olmam ...gerek ...diyorum ...ama ...çok ...iyi ...değilim.",
-    "2026-10-21T09:50:14.015Z speak worse: {\"first_chunk_ms\":5035.2,\"voice\":{\"speed\":0.85},\"spoken\":\"öhö, ...hafif nefes ...alıyorum ...halsiz ...hissettiklerim ...sizi ...duyurdum ...daha ...iyi ...olmam ...gerek ...diyorum ...ama ...çok ...iyi ...değilim.\"}",
-    "2026-10-21T09:50:16.087Z director treated: phase deteriorating vitals {\"hr\":128,\"systolic\":103,\"diastolic\":63,\"rr\":34,\"spo2\":86,\"tempC\":39}",
-    "2026-10-21T09:52:56.164Z switch treated after 156124 ms: null",
-    "2026-10-21T09:52:57.761Z patient (treated): (cough) ...hafif nefes... alamıyorum ...halsizim ...vücudum titiyor...",
-    "2026-10-21T09:53:04.812Z speak treated: {\"first_chunk_ms\":3033.8,\"voice\":{\"speed\":0.85},\"spoken\":\"öhö, ...hafif nefes... alamıyorum ...halsizim ...vücudum titiyor...\"}"
+    "2026-10-21T10:26:24.209Z case 14089a25-9594-4a0b-96d0-a5657ac2eaf4 Community-acquired pneumonia age 52 female in 51 ms",
+    "2026-10-21T10:27:37.108Z prepared at case start in 72899 ms: prepared",
+    "2026-10-21T10:27:37.732Z session RxcpcyB5UyOymKVnXYOosIrH avatar acudx-p35-6b13febf-50845d1e8a in 624 ms; appearance generated",
+    "2026-10-21T10:27:49.425Z connected {\"first_frame_ms\":11460,\"w\":548,\"h\":720,\"answer_ms\":652.6}",
+    "2026-10-21T10:27:51.745Z patient (presenting): Acıyan ve nefes darlığı var, bazen üşüyorum, bazen titkın oluyorum.",
+    "2026-10-21T10:27:55.175Z speak presenting: {\"first_chunk_ms\":1653.3,\"voice\":{\"speed\":1},\"spoken\":\"Acıyan ve nefes darlığı var, bazen üşüyorum, bazen titkın oluyorum.\"}",
+    "2026-10-21T10:27:58.276Z director worse: phase deteriorating vitals {\"hr\":121,\"systolic\":104,\"diastolic\":64,\"rr\":31,\"spo2\":87,\"tempC\":39}",
+    "2026-10-21T10:29:10.219Z switch worse after 68031 ms: {\"to\":\"e072772fb4\",\"exact\":true,\"phase\":\"deteriorating\",\"reason\":\"director:generated\"}",
+    "2026-10-21T10:29:11.586Z patient (worse): Üşüyorum... nefes almak zor... (cough) ...kollarım titiyor...",
+    "2026-10-21T10:29:15.215Z speak worse: {\"first_chunk_ms\":1832.5,\"voice\":{\"speed\":0.85},\"spoken\":\"Üşüyorum... nefes almak zor... öhö, ...kollarım titiyor...\"}",
+    "2026-10-21T10:29:18.364Z director treated: phase deteriorating vitals {\"hr\":128,\"systolic\":103,\"diastolic\":63,\"rr\":34,\"spo2\":81,\"tempC\":39}",
+    "2026-10-21T10:30:10.356Z switch treated after 48834 ms: {\"to\":\"11f202f489\",\"exact\":true,\"phase\":\"deteriorating\",\"reason\":\"director:generated\"}",
+    "2026-10-21T10:30:11.741Z patient (treated): Üşüyorum... nefes almak zor... (cough) ...kollarım titiyor...",
+    "2026-10-21T10:30:15.537Z speak treated: {\"first_chunk_ms\":2193.9,\"voice\":{\"speed\":0.85},\"spoken\":\"Üşüyorum... nefes almak zor... öhö, ...kollarım titiyor...\"}"
   ]
 }

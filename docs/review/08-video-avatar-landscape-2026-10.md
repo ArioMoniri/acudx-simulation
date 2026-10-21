@@ -78,7 +78,39 @@ Sources: https://huggingface.co/black-forest-labs/FLUX.2-klein-4B ; https://hugg
 
 ## 5. What was and was not tested live
 
-LIVE_RESULTS
+Everything below ran on 2026-10-21 through a private gateway on this branch (port 8897, its own database) talking to Lambda workers it launched itself. Captures, metrics and the frames are in docs/media/live-avatar/state-sync/ (en/, tr/, prompt-tuning/, pool-status-two-workers.json).
+
+**Fever case, end to end (community-acquired pneumonia, 1x H100 SXM, offload image mode)**
+
+| Step | EN (42 M, photo p22) | TR (52 F, photo p35) |
+|---|---|---|
+| Case start: 4 pictures generated and the presenting look prepared (`POST /v1/voice/avatar/prepare`) | 73.2 s (each picture 9.5 s, prepare 31 s) | 72.9 s (9.5 s each, prepare 29.8 s) |
+| Call session created (look already prepared) | 0.14 s prepare, about 1 s total | 0.14 s prepare, 0.62 s total |
+| First video frame in the browser (through an SSH tunnel) | 11.6 s | similar |
+| Runner speed | 86 fps inference (25 fps output) | 91 fps |
+| Director step 1 (4 h, no treatment): SpO2 94 to 86, RR 32, drowsy | switched to the pre-built "worse" look 9 s after the step (reason `ladder_ready`) | exact look generated and switched 68 s after the step (`director:generated`) |
+| Director step 2 (3 h more): SpO2 80, GCS 11 | switched to "critical" 36 s after the step | exact look switched 49 s after the step |
+| Voice | speed 0.92 then 0.85, coughs spoken as "ahem," | speed 1.0 then 0.85, "öhö," |
+| First audio chunk of a reply | about 1.5 s | about 1.5 s |
+
+An earlier EN run (thread d387, photo p34) where the exact look was already prepared switched 339 ms after the Director step. The runner swaps frame sets in about 0.5 ms; the gateway round trip for `/switch` is 58 to 95 ms. Crossfade is 0.6 s.
+
+What the face shows comes only from the server case thread: the spec plus the Director CaseState snapshot. Negated text ("no cyanosis") is ignored, peripheral cyanosis is not drawn on the face, and a sign the vitals no longer support is dropped. The fever flush is an even warm tint applied by the gateway (server/voice/avatar/tint.py), never drawn by the model; prompts that asked the model for a flush gave blotches and rash-like patches on 3 of 5 portraits (prompt-tuning/). The TR case lists pallor in the exam, so the TR ladder goes grey-pale; the EN case lists sweating and distress, so it shows sweat and strain.
+
+**Pool**
+
+* Two workers served at once (pool-status-two-workers.json): calls and LLM requests went to the least-loaded ready worker, a refused call triggered a scale-up, and idle workers were reaped one by one (an A100 was reaped after its idle window).
+* 4x H100 SXM (gpu_4x_h100_sxm5): booted, but CUDA failed with error 802 because the NVSwitch fabric manager was not running. Stopped from the admin page (cost 5.63 USD). Cloud-init now installs and starts the fabric manager; that fix has not been seen working on a live 4x or 8x box yet.
+* Image edits: about 9.5 s each in offload mode on an H100 that also runs vLLM and the runner; sequential mode took 154 s for the first edit before the warm-up at load was added.
+
+**Not tested live**
+
+* Tavus (no key in this environment).
+* FlashHead Lite, Ditto and Live Avatar (not benchmarked; see section 6).
+* 8x workers and a working multi-GPU layout (only the failed 4x boot above).
+* A real browser on a phone network: frames went through an SSH tunnel to a headless browser.
+
+Total GPU spend for this pass was 5 workers: three A100 (1.29 USD/h), one 4x H100 and one H100 (4.29 USD/h), all stopped and confirmed gone through the Lambda instances API.
 
 ## 6. Open items
 

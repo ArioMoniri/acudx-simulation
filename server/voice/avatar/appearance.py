@@ -75,15 +75,15 @@ _PHRASES: dict[str, tuple[str, str]] = {
     # blush patches, "feverish redness" a blotchy rash (a finding the case does not have), "an even
     # pink-red tint" a lobster-red face; "a little pinker and warmer than in the original, subtle and
     # even" reads as fever (docs/media/live-avatar/state-sync/prompt-tuning/).
-    "fever_flush": ("the complexion very slightly pinker and warmer than in the original, subtle and even "
-                    "(no patches, no rash, no spots)",
-                    "a feverish look, the complexion a little pinker and warmer than in the original, subtle "
-                    "and even over the whole face (no patches, no rash, no spots); tired, glassy eyes"),
+    # The colour itself is added by the gateway (tint.warm_flush): even, never blotchy.
+    "fever_flush": ("a slightly tired, feverish look in the eyes",
+                    "a feverish, unwell look: tired, heavy, glassy eyes"),
     "diaphoresis": ("a light sheen of sweat on the forehead and upper lip",
                     "beads of sweat on the forehead and damp hair at the temples"),
     "pallor": ("pale, washed-out skin", "very pale, greyish skin"),
     "mottling": ("faint blotchy mottled skin on the neck", "marked purple-grey mottled skin on the neck and chin"),
-    "cyanosis": ("slightly bluish lips", "clearly blue-grey lips"),
+    # Live 2026-10-21: "slightly bluish lips" came out as a saturated blue, close to lipstick.
+    "cyanosis": ("a faint dusky blue-grey tinge to the natural lip colour", "dusky blue-grey lips and a greyish tinge around the mouth"),
     "jaundice": ("a yellow tinge to the skin and to the whites of the eyes",
                  "deep yellow skin and yellow whites of the eyes"),
     "resp_distress": ("looks short of breath, nostrils slightly flared, neck a little tense",
@@ -217,8 +217,12 @@ def edit_prompt(look: Look) -> str:
         who.append(str(look.identity["ethnicity"]))
     person = f" ({', '.join(who)})" if who else ""
     mouth = "Keep the mouth closed and relaxed." if not look.signs.get("unresponsive") else "Keep the mouth closed."
+    # Never a sign the case does not have: a colour change drifted into blotches that read as a rash on
+    # some faces (live 2026-10-21, p35), so clear, uniform skin is part of every instruction.
+    skin = ("" if look.signs.get("mottling") else
+            " Keep the skin clear and uniform: no blotches, no rash, no spots, no patches.")
     head = (f"Edit this photo of a hospital patient{person}. Keep the same person: identical face identity, age, "
-            "hairstyle, clothing, head position, camera framing, background and lighting. " + mouth)
+            "hairstyle, clothing, head position, camera framing, background and lighting. " + mouth + skin)
     if not changes:
         return head + " Make the person look well and comfortable. Photorealistic, natural skin texture, no text."
     return head + " Change only this: " + "; ".join(changes) + ". Photorealistic, natural skin texture, no text."

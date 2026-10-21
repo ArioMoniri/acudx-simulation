@@ -72,7 +72,22 @@ const photo = process.env.PHOTO ??
 const persona = { name: demo.name_hint || (LANG === "tr" ? "Hasta" : "The patient"), age };
 const caseState = { persona, narrative: [spec.chief_complaint_en ?? ""].filter(Boolean) };
 
-// 2. The call, bound to the thread.
+// 2. Case start: the gateway makes the patient's pictures from the thread before any call (the web app
+//    does this when the case opens, lib/caseSession.ts). PREPARE=0 skips it (the call then makes them).
+let prepared = null;
+if (process.env.PREPARE !== "0") {
+  const p0 = Date.now();
+  let st = await api("/v1/voice/avatar/prepare", { thread_id: thread, photo_id: photo });
+  while (st.status < 300 && st.json.state === "preparing" && Date.now() - p0 < 600_000) {
+    await new Promise((r) => setTimeout(r, 3000));
+    st = await api("/v1/voice/avatar/prepare", { thread_id: thread, photo_id: photo });
+  }
+  prepared = { ms: Date.now() - p0, status: st.status, state: st.json.state,
+    variants: (st.json.appearance?.variants ?? []).map((v) => ({ name: v.name, status: v.status, gen_ms: v.gen_ms, prepare_ms: v.prepare_ms })) };
+  t(`prepared at case start in ${prepared.ms} ms: ${prepared.state}`);
+}
+
+// 3. The call, bound to the thread.
 const s0 = Date.now();
 const ses = await api("/v1/voice/avatar/session", {
   encounter_id: thread, thread_id: thread, photo_id: photo, lang: LANG, sex, age, case_state: caseState, persona,
@@ -227,7 +242,7 @@ const out = {
   captured_at: new Date().toISOString(), gateway: GW, lang: LANG, condition: CONDITION, thread_id: thread,
   case: { label: spec.condition?.label_en, age, sex, chief_complaint: spec.chief_complaint_en, triage_vitals: spec.triage_vitals,
     exam: (spec.exam ?? []).map((e) => e.finding_en) },
-  photo, session: { avatar_id: session.avatar_id, prepare_ms: session.prepare_ms, worker: session.worker, appearance: session.appearance },
+  photo, prepared_at_case_start: prepared, session: { avatar_id: session.avatar_id, prepare_ms: session.prepare_ms, worker: session.worker, appearance: session.appearance },
   connect: conn, presenting: { frame: idle, appearance: a0, turn: turn1 }, worse: { ...worse, turn: turn2 },
   treated: better ? { ...better, turn: turn3 } : null, final_appearance: finalAppearance, end: end.json,
   log: log.slice(-80),

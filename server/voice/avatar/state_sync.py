@@ -30,6 +30,7 @@ import httpx
 
 from server.voice.avatar import appearance as ap
 from server.voice.avatar import musetalk as mt
+from server.voice.avatar.tint import warm_flush
 
 log = logging.getLogger("acudx.voice.avatar.state")
 
@@ -87,8 +88,13 @@ class Appearance:
                 "variants": [v.public() for v in self.variants.values()], "switches": self.switches[-20:]}
 
 
+# Bumped whenever the pictures for the same look change (prompts, the fever tint), so a worker never
+# reuses a face it prepared from an older picture under the same id.
+APPEARANCE_VERSION = 3
+
+
 def variant_avatar_id(photo_id: str, thread_id: str, key: str) -> str:
-    t = hashlib.sha256(thread_id.encode("utf-8")).hexdigest()[:8]
+    t = hashlib.sha256(f"{thread_id}:v{APPEARANCE_VERSION}".encode("utf-8")).hexdigest()[:8]
     return f"acudx-{photo_id}-{t}-{key}"
 
 
@@ -167,6 +173,12 @@ async def _gen(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
         except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
             _failed(a, v, exc)
             return False
+        flush = int(v.look.signs.get("fever_flush", 0))
+        if flush:
+            try:
+                img = warm_flush(img, flush)
+            except Exception as exc:  # noqa: BLE001 - an undecodable picture keeps its model colours
+                log.info("fever tint skipped: %s", type(exc).__name__)
         v.gen_ms, v.mode, v.image, v.status = meta.get("gen_ms"), meta.get("mode"), img, "generated"
         return True
     return await _retrying(once, v, retry_s)
