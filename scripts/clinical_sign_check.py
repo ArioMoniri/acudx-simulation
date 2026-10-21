@@ -59,8 +59,9 @@ SIGN_SET: list[tuple[str, int, str, str]] = [
 VISION_PROMPT = """You are checking a medical-education image edit. Image 1 is the original synthetic patient \
 portrait, image 2 is the edit. The edit was asked to show exactly one finding: {desc}.
 Answer only JSON: {{"visible": true|false (is the finding clearly visible in image 2 and not in image 1), \
-"confidence": 0..1, "same_person": true|false, "unintended": [other clinical findings visible in image 2 \
-that were not asked for], "notes": "one short sentence"}}"""
+"realistic": true|false (would a clinician accept it as a realistic photo of this finding, not paint or an \
+exaggeration), "confidence": 0..1, "same_person": true|false, "unintended": [other clinical findings visible in image 2 \
+that were not asked for, at most 3 short items], "notes": "one short sentence"}}"""
 
 
 def _jpeg(img_bytes: bytes, size: int = 360) -> bytes:
@@ -81,7 +82,7 @@ async def score(client: httpx.AsyncClient, key: str, model: str, base: bytes, ed
     ]
     r = await client.post("https://api.anthropic.com/v1/messages", timeout=120.0,
                           headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                          json={"model": model, "max_tokens": 400, "messages": [{"role": "user", "content": content}]})
+                          json={"model": model, "max_tokens": 1000, "messages": [{"role": "user", "content": content}]})
     r.raise_for_status()
     text = "".join(b.get("text", "") for b in r.json().get("content", []) if b.get("type") == "text")
     try:
@@ -107,7 +108,8 @@ def sheet(rows: list[dict], out: Path) -> None:
         im.thumbnail((cell, cell))
         canvas.paste(im, (x + (cell - im.width) // 2, y))
         v = row.get("vision") or {}
-        verdict = "not scored" if v.get("visible") is None else ("PASS" if v.get("visible") else "FAIL")
+        verdict = ("not scored" if v.get("visible") is None else "PASS" if v.get("visible") and v.get("realistic") is not False
+                   else "UNREALISTIC" if v.get("visible") else "FAIL")
         conf = v.get("confidence")
         d.text((x, y + cell + 4), row["sign"], fill=(20, 20, 20))
         d.text((x, y + cell + 20), f"{verdict}" + (f" ({conf:.2f})" if isinstance(conf, (int, float)) else ""),
@@ -162,9 +164,12 @@ async def main() -> None:
     if good:
         sheet(good, out)
     scored = [r for r in good if (r.get("vision") or {}).get("visible") is not None]
+    for r in scored:
+        r["pass"] = bool(r["vision"].get("visible")) and r["vision"].get("realistic") is not False
     summary = {"model": health.get("model"), "licence": health.get("licence"), "mode": health.get("mode"),
                "vision_model": a.model if key else None, "signs": len(rows),
-               "passed": sum(1 for r in scored if r["vision"]["visible"]), "scored": len(scored),
+               "visible": sum(1 for r in scored if r["vision"]["visible"]),
+               "passed": sum(1 for r in scored if r["pass"]), "scored": len(scored),
                "captured_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     (out / "signs.json").write_text(json.dumps({"summary": summary, "rows": rows}, indent=2) + "\n")
     print(json.dumps(summary))

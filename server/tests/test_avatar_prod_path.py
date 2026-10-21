@@ -127,6 +127,8 @@ def test_pictures_wait_for_the_image_edit_server_instead_of_giving_up(tmp_path, 
         assert _wait(lambda: len(runner.switches) > 0, timeout=8)   # the live call moves to the look
         look = ap.look_from_case(_spec(), _director())
         assert runner.switches[0]["avatar"].endswith(look.key)
+        st = c.get("/v1/voice/avatar/appearance", params={"session_id": s["session_id"]}, headers=USER).json()
+        assert st["appearance"]["reason"] is None          # the "not ready yet" note goes with the switch
 
 
 def test_prepare_on_a_worker_without_an_edit_server_yet_waits_too(tmp_path, monkeypatch):

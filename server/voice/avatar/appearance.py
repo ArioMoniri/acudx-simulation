@@ -108,12 +108,14 @@ _PHRASES: dict[str, tuple[str, str]] = {
                     "a feverish, unwell look: tired, heavy, glassy eyes"),
     "diaphoresis": ("a light sheen of sweat on the forehead and upper lip",
                     "beads of sweat on the forehead and damp hair at the temples"),
-    "pallor": ("pale, washed-out skin", "very pale, greyish skin"),
+    "pallor": ("slightly paler skin with less colour in the cheeks and lips, still a natural skin tone",
+               "clearly pale skin and pale lips, still a natural human skin tone with its texture, not white"),
     "mottling": ("faint blotchy mottled skin on the neck", "marked purple-grey mottled skin on the neck and chin"),
     # Live 2026-10-21: "slightly bluish lips" came out as a saturated blue, close to lipstick.
     "cyanosis": ("a faint dusky blue-grey tinge to the natural lip colour", "dusky blue-grey lips and a greyish tinge around the mouth"),
-    "jaundice": ("a yellow tinge to the skin and to the whites of the eyes",
-                 "deep yellow skin and yellow whites of the eyes"),
+    "jaundice": ("a faint yellowish tinge to the skin and pale yellow whites of the eyes, natural skin texture",
+                 "a clear yellow-tan jaundiced tinge to the skin and yellow whites of the eyes, the skin keeps its "
+                 "natural tone variation and texture, not painted"),
     "resp_distress": ("looks short of breath, nostrils slightly flared, neck a little tense",
                       "struggling to breathe, nostrils flared, neck muscles straining"),
     "accessory_muscles": ("visible neck muscle strain with each breath", "neck muscles standing out with each breath"),
@@ -124,17 +126,23 @@ _PHRASES: dict[str, tuple[str, str]] = {
                   "many tiny pinpoint dark red petechial dots scattered over the face and neck"),
     "purpura": ("a few small irregular purple-red non-blanching spots on the cheek and neck",
                 "several purple-red non-blanching purpuric patches on the face and neck"),
-    "urticaria": ("a few raised pink wheals (hives) on the neck and cheek",
-                  "many raised pink-white wheals (hives) with red edges on the face and neck"),
-    "scleral_icterus": ("a faint yellow tinge to the whites of the eyes", "clearly yellow whites of the eyes"),
+    "urticaria": ("a few flat-topped raised pale-pink wheals (hives) with red flare edges on the neck and cheek, "
+                  "no blisters", "several flat-topped raised pale-pink wheals (hives) with red flare edges on the face "
+                  "and neck, smooth, no blisters, no pustules"),
+    "scleral_icterus": ("the whites of the eyes (sclera) around the irises are faintly yellow; the irises and pupils keep "
+                        "their colour", "the whites of the eyes (sclera) around the irises are clearly yellow; the irises "
+                        "and pupils keep their natural colour"),
     "flushing": ("an even pink flush over the cheeks and neck", "a deep even red flush over the whole face and neck"),
     "periorbital_oedema": ("slightly puffy swollen eyelids", "markedly swollen puffy eyelids, eyes narrowed by the swelling"),
-    "facial_droop": ("a slight droop of one corner of the mouth", "a clear droop of one side of the face and mouth"),
+    "facial_droop": ("the left corner of the mouth sits slightly lower than the right, the left fold beside the nose "
+                     "a little flatter", "the left side of the face droops: the left corner of the mouth clearly lower "
+                     "than the right, the left nasolabial fold flattened, the left lower eyelid slightly lower"),
     "facial_swelling": ("mildly swollen lips", "markedly swollen lips and puffy swollen face"),
     "dehydration": ("dry cracked lips and slightly sunken eyes", "very dry cracked lips, sunken eyes and dark circles"),
     "wound": ("a small cleaned laceration with a little dried blood on the forehead",
               "a sutured laceration on the forehead with bruising around it"),
-    "burn": ("a patch of red, superficial burn on one cheek", "red, blistered partial-thickness burn on one cheek and the chin"),
+    "burn": ("a patch of red, superficial burn on one cheek, no bleeding",
+             "a red partial-thickness burn with a few intact blisters on one cheek and the chin, no bleeding, no holes"),
 }
 
 

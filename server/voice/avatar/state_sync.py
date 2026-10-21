@@ -412,6 +412,8 @@ async def _switch_to_best(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a:
              "switch_ms": round((time.monotonic() - t) * 1000.0, 1), "runner": res}
     a.current_key = target_key
     a.switches.append(entry)
+    if entry["exact"]:
+        a.reason = None   # the face shows the patient as they are now: no "not ready yet" note any more
     return {"switched": True, **entry}
 
 
