@@ -609,6 +609,7 @@ export function PatientCallTile({
               speaking={state === "live" && speaking}
               alt={t("patientviewer.syntheticNote")}
               className="h-full w-full"
+              bare
             />
           ) : null}
 
@@ -629,20 +630,23 @@ export function PatientCallTile({
             />
           ) : null}
 
-          {/* Symptom overlay: top-left clinical signs */}
-          <div className="absolute left-2 top-2 max-w-[80%] rounded-control bg-surface/85 px-2 py-1 shadow-soft backdrop-blur-sm">
-            <SymptomSummary vitals={vitals} variant="inline" className="text-fg" />
-          </div>
-
-          {/* Honest label for the fallback: never mistaken for a live stream */}
-          {!liveVideo && state !== "ended" ? (
-            <div
-              className="absolute right-2 top-2 rounded-control bg-black/60 px-2 py-1 text-[11px] font-medium text-white"
-              data-testid="not-live-label"
-            >
-              {t("voice2.tile.notLive")}
+          {/* Top row: the clinical signs (left) and, for the fallback, the honest
+              not-live label (right). One wrapping flex row, so on a narrow tile the
+              label drops under the signs instead of painting over them. */}
+          <div className="pointer-events-none absolute inset-x-2 top-2 flex flex-wrap items-start justify-between gap-1.5">
+            <div className="max-w-full rounded-control bg-surface/85 px-2 py-1 shadow-soft">
+              <SymptomSummary vitals={vitals} variant="inline" className="text-fg" />
             </div>
-          ) : null}
+            {/* Honest label for the fallback: never mistaken for a live stream */}
+            {!liveVideo && state !== "ended" ? (
+              <div
+                className="ms-auto rounded-control bg-black/60 px-2 py-1 text-[11px] font-medium text-white"
+                data-testid="not-live-label"
+              >
+                {t("voice2.tile.notLive")}
+              </div>
+            ) : null}
+          </div>
 
           {/* Name plate */}
           <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-control bg-black/60 px-2 py-1 text-[11px] font-medium text-white">

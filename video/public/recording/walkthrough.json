@@ -1,9 +1,9 @@
 {
   "width": 1920,
   "height": 1080,
-  "duration": 344.527,
-  "base": "http://127.0.0.1:4231",
-  "recordedAt": "2026-10-20T21:36:07.419Z",
+  "duration": 325.22,
+  "base": "http://127.0.0.1:4205",
+  "recordedAt": "2026-10-21T09:47:44.490Z",
   "events": [
     {
       "t": 0,
@@ -17,13 +17,13 @@
       "label": "first load"
     },
     {
-      "t": 1.493,
+      "t": 1.788,
       "chapter": "profile",
       "action": "skip-end",
       "label": "first load"
     },
     {
-      "t": 2.764,
+      "t": 3.241,
       "chapter": "profile",
       "action": "click",
       "label": "Create your profile",
@@ -37,33 +37,33 @@
       "zoom": 1.4
     },
     {
-      "t": 4.268,
+      "t": 4.695,
       "chapter": "profile",
       "action": "type",
       "label": "Full name",
       "text": "Elif Kaya",
       "box": {
         "x": 737,
-        "y": 418.9,
+        "y": 438.9,
         "w": 678,
         "h": 36
       },
       "focus": {
         "x": 737,
-        "y": 264.9,
+        "y": 284.9,
         "w": 678,
         "h": 552
       },
       "zoom": 1.5
     },
     {
-      "t": 5.671,
+      "t": 6.033,
       "chapter": "profile",
       "action": "select",
       "label": "Role: student",
       "box": {
         "x": 737,
-        "y": 526.9,
+        "y": 546.9,
         "w": 327,
         "h": 36
       },
@@ -71,63 +71,63 @@
       "zoom": 1.5
     },
     {
-      "t": 7.023,
+      "t": 7.686,
       "chapter": "profile",
       "action": "type",
       "label": "Institution",
       "text": "Ankara Faculty of Medicine",
       "box": {
         "x": 737,
-        "y": 612.9,
+        "y": 632.9,
         "w": 678,
         "h": 36
       },
       "focus": {
         "x": 737,
-        "y": 264.9,
+        "y": 284.9,
         "w": 678,
         "h": 552
       },
       "zoom": 1.5
     },
     {
-      "t": 9.281,
+      "t": 10.193,
       "chapter": "profile",
       "action": "click",
       "label": "Create profile",
       "box": {
         "x": 737,
-        "y": 784.9,
-        "w": 108.7,
+        "y": 804.9,
+        "w": 109.5,
         "h": 32
       },
       "focus": {
         "x": 737,
-        "y": 264.9,
+        "y": 284.9,
         "w": 678,
         "h": 552
       },
       "zoom": 1.5
     },
     {
-      "t": 9.76,
+      "t": 10.677,
       "chapter": "profile",
       "action": "skip-begin",
       "label": "home load"
     },
     {
-      "t": 10.259,
+      "t": 14.121,
       "chapter": "profile",
       "action": "skip-end",
       "label": "home load"
     },
     {
-      "t": 10.961,
+      "t": 14.822,
       "chapter": "request",
       "action": "chapter"
     },
     {
-      "t": 12.729,
+      "t": 16.654,
       "chapter": "request",
       "action": "click",
       "label": "Start",
@@ -141,19 +141,19 @@
       "zoom": 0
     },
     {
-      "t": 13.189,
+      "t": 17.117,
       "chapter": "request",
       "action": "skip-begin",
       "label": "start load"
     },
     {
-      "t": 13.519,
+      "t": 17.45,
       "chapter": "request",
       "action": "skip-end",
       "label": "start load"
     },
     {
-      "t": 15.151,
+      "t": 19.15,
       "chapter": "request",
       "action": "click",
       "label": "Presentation: Fever",
@@ -167,7 +167,7 @@
       "zoom": 1.4
     },
     {
-      "t": 17.273,
+      "t": 21.326,
       "chapter": "request",
       "action": "click",
       "label": "Begin encounter",
@@ -181,12 +181,12 @@
       "zoom": 1.4
     },
     {
-      "t": 18.003,
+      "t": 21.864,
       "chapter": "generate",
       "action": "chapter"
     },
     {
-      "t": 19.264,
+      "t": 23.403,
       "chapter": "generate",
       "action": "focus",
       "label": "Opening streams in",
@@ -205,7 +205,7 @@
       "zoom": 1.5
     },
     {
-      "t": 25.28,
+      "t": 29.352,
       "chapter": "generate",
       "action": "focus",
       "label": "Layers written for this patient",
@@ -224,73 +224,73 @@
       "zoom": 1.2
     },
     {
-      "t": 28.239,
+      "t": 32.325,
       "chapter": "generate",
       "action": "skip-begin",
       "label": "layers finish"
     },
     {
-      "t": 40.406,
+      "t": 44.489,
       "chapter": "generate",
       "action": "skip-end",
       "label": "layers finish"
     },
     {
-      "t": 40.406,
+      "t": 44.489,
       "chapter": "chart",
       "action": "chapter"
     },
     {
-      "t": 41.025,
+      "t": 44.966,
       "chapter": "chart",
       "action": "focus",
       "label": "Banner: model generated",
       "box": {
         "x": 354,
         "y": 65.3,
-        "w": 544.5,
+        "w": 539,
         "h": 27.5
       },
       "focus": {
         "x": 354,
         "y": 65.3,
-        "w": 544.5,
+        "w": 539,
         "h": 27.5
       },
       "zoom": 1.6
     },
     {
-      "t": 44.334,
+      "t": 48.216,
       "chapter": "chart",
       "action": "focus",
       "label": "Vitals snapshot",
       "box": {
         "x": 301,
-        "y": 692.5,
+        "y": 697.3,
         "w": 258,
-        "h": 141
+        "h": 197
       },
       "focus": {
         "x": 301,
-        "y": 692.5,
+        "y": 697.3,
         "w": 258,
-        "h": 141
+        "h": 197
       },
       "zoom": 1.6
     },
     {
-      "t": 45.636,
+      "t": 49.517,
       "chapter": "interview",
       "action": "chapter"
     },
     {
-      "t": 46.675,
+      "t": 50.443,
       "chapter": "interview",
       "action": "click",
       "label": "Interview tab",
       "box": {
-        "x": 704.5,
-        "y": 233,
+        "x": 705.1,
+        "y": 227,
         "w": 99.5,
         "h": 39.5
       },
@@ -298,174 +298,269 @@
       "zoom": 0
     },
     {
-      "t": 48.58,
+      "t": 52.446,
       "chapter": "interview",
       "action": "type",
       "label": "Question 1",
       "text": "When did the fever start?",
       "box": {
-        "x": 597,
-        "y": 570.5,
-        "w": 792.1,
-        "h": 36
+        "x": 602,
+        "y": 948,
+        "w": 912,
+        "h": 44
       },
       "focus": {
         "x": 581,
-        "y": 305.5,
+        "y": 299.5,
         "w": 954,
-        "h": 240
+        "h": 596.5
       },
       "zoom": 1.3
     },
     {
-      "t": 52.222,
+      "t": 61.603,
       "chapter": "interview",
       "action": "type",
       "label": "Question 2",
-      "text": "How high has the temperature been?",
+      "text": "How severe is the fever?",
       "box": {
-        "x": 597,
-        "y": 605.3,
-        "w": 792.1,
-        "h": 36
+        "x": 602,
+        "y": 948,
+        "w": 912,
+        "h": 44
       },
       "focus": {
         "x": 581,
-        "y": 305.5,
+        "y": 299.5,
         "w": 954,
-        "h": 274.8
+        "h": 596.5
       },
       "zoom": 1.3
     },
     {
-      "t": 56.134,
+      "t": 70.506,
       "chapter": "interview",
       "action": "type",
       "label": "Question 3",
-      "text": "Is the fever constant or does it come and go?",
+      "text": "Have you had chills or body aches?",
       "box": {
-        "x": 597,
-        "y": 786.3,
-        "w": 792.1,
-        "h": 36
+        "x": 602,
+        "y": 948,
+        "w": 912,
+        "h": 44
       },
       "focus": {
         "x": 581,
-        "y": 305.5,
+        "y": 299.5,
         "w": 954,
-        "h": 455.8
+        "h": 596.5
       },
       "zoom": 1.3
     },
     {
-      "t": 60.308,
+      "t": 80.031,
       "chapter": "interview",
       "action": "focus",
       "label": "Transcript with patient replies",
       "box": {
         "x": 581,
-        "y": 305.5,
+        "y": 299.5,
         "w": 954,
-        "h": 496.8
+        "h": 596.5
       },
       "focus": {
         "x": 581,
-        "y": 305.5,
+        "y": 299.5,
         "w": 954,
-        "h": 496.8
+        "h": 596.5
       },
       "zoom": 1.3
     },
     {
-      "t": 62.24,
+      "t": 81.929,
       "chapter": "call",
       "action": "chapter"
     },
     {
-      "t": 63.502,
+      "t": 82.852,
       "chapter": "call",
       "action": "focus",
       "label": "Patient call tile",
       "box": {
         "x": 1552,
-        "y": 304.5,
+        "y": 298.5,
         "w": 296,
         "h": 682.5
       },
       "focus": {
         "x": 1552,
-        "y": 304.5,
+        "y": 298.5,
         "w": 296,
         "h": 682.5
       },
       "zoom": 1.3
     },
     {
-      "t": 65.303,
+      "t": 84.653,
       "chapter": "exam",
       "action": "chapter"
     },
     {
-      "t": 66.944,
+      "t": 86.106,
+      "chapter": "exam",
+      "action": "click",
+      "label": "Open suggestions",
+      "box": {
+        "x": 608,
+        "y": 984,
+        "w": 115.3,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 1.35
+    },
+    {
+      "t": 87.605,
       "chapter": "exam",
       "action": "click",
       "label": "Auscultate lungs",
       "box": {
-        "x": 1687.8,
-        "y": 882,
-        "w": 118.1,
-        "h": 26
+        "x": 992.5,
+        "y": 846,
+        "w": 125.1,
+        "h": 32
       },
       "focus": null,
       "zoom": 1.45
     },
     {
-      "t": 69.657,
+      "t": 89.545,
+      "chapter": "exam",
+      "action": "click",
+      "label": "Close suggestions",
+      "box": {
+        "x": 608,
+        "y": 984,
+        "w": 115.3,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 91.35,
       "chapter": "exam",
       "action": "focus",
-      "label": "Exam findings in the chart rail",
+      "label": "Exam finding in the transcript",
       "box": {
-        "x": 301,
-        "y": 731.5,
-        "w": 258,
-        "h": 78.3
+        "x": 581,
+        "y": 785.3,
+        "w": 954,
+        "h": 94.8
       },
       "focus": {
-        "x": 301,
-        "y": 731.5,
-        "w": 258,
-        "h": 78.3
+        "x": 581,
+        "y": 785.3,
+        "w": 954,
+        "h": 94.8
+      },
+      "zoom": 1.5
+    },
+    {
+      "t": 92.651,
+      "chapter": "chatorder",
+      "action": "chapter"
+    },
+    {
+      "t": 93.545,
+      "chapter": "chatorder",
+      "action": "type",
+      "label": "Slash command: /order lactate",
+      "text": "/order lactate",
+      "box": {
+        "x": 602,
+        "y": 940,
+        "w": 912,
+        "h": 44
+      },
+      "focus": null,
+      "zoom": 1.4
+    },
+    {
+      "t": 96.318,
+      "chapter": "chatorder",
+      "action": "click",
+      "label": "Lactate",
+      "box": {
+        "x": 602,
+        "y": 896,
+        "w": 912,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 1.4
+    },
+    {
+      "t": 97.629,
+      "chapter": "chatorder",
+      "action": "focus",
+      "label": "Order chip, confirm step",
+      "box": {
+        "x": 601,
+        "y": 857,
+        "w": 283.7,
+        "h": 34
+      },
+      "focus": {
+        "x": 601,
+        "y": 857,
+        "w": 283.7,
+        "h": 34
       },
       "zoom": 1.6
     },
     {
-      "t": 70.958,
+      "t": 100.592,
+      "chapter": "chatorder",
+      "action": "click",
+      "label": "Place order",
+      "box": {
+        "x": 730.5,
+        "y": 862,
+        "w": 82.3,
+        "h": 24
+      },
+      "focus": null,
+      "zoom": 1.6
+    },
+    {
+      "t": 101.949,
       "chapter": "orders",
       "action": "chapter"
     },
     {
-      "t": 72.466,
+      "t": 103.334,
       "chapter": "orders",
       "action": "click",
       "label": "Orders tab",
       "box": {
-        "x": 1006.7,
-        "y": 233,
-        "w": 84.5,
+        "x": 1007.6,
+        "y": 227,
+        "w": 110.5,
         "h": 39.5
       },
       "focus": null,
       "zoom": 0
     },
     {
-      "t": 74.354,
+      "t": 105.221,
       "chapter": "orders",
       "action": "type",
       "label": "Search CBC",
       "text": "CBC",
       "box": {
         "x": 580,
-        "y": 354,
+        "y": 348,
         "w": 916,
         "h": 36
       },
@@ -473,13 +568,13 @@
       "zoom": 1.25
     },
     {
-      "t": 75.863,
+      "t": 106.683,
       "chapter": "orders",
       "action": "click",
       "label": "Order CBC",
       "box": {
         "x": 1408.3,
-        "y": 460.8,
+        "y": 471.3,
         "w": 74.7,
         "h": 28
       },
@@ -487,43 +582,14 @@
       "zoom": 1.25
     },
     {
-      "t": 77.412,
-      "chapter": "orders",
-      "action": "type",
-      "label": "Search lactate",
-      "text": "lactate",
-      "box": {
-        "x": 580,
-        "y": 354,
-        "w": 916,
-        "h": 36
-      },
-      "focus": null,
-      "zoom": 1.25
-    },
-    {
-      "t": 79.15,
-      "chapter": "orders",
-      "action": "click",
-      "label": "Order lactate",
-      "box": {
-        "x": 1408.3,
-        "y": 515.3,
-        "w": 74.7,
-        "h": 28
-      },
-      "focus": null,
-      "zoom": 1.25
-    },
-    {
-      "t": 80.728,
+      "t": 108.277,
       "chapter": "orders",
       "action": "type",
       "label": "Search blood culture",
       "text": "blood culture",
       "box": {
         "x": 580,
-        "y": 354,
+        "y": 348,
         "w": 916,
         "h": 36
       },
@@ -531,13 +597,13 @@
       "zoom": 1.25
     },
     {
-      "t": 82.85,
+      "t": 110.463,
       "chapter": "orders",
       "action": "click",
       "label": "Order blood culture",
       "box": {
         "x": 1408.3,
-        "y": 460.8,
+        "y": 471.3,
         "w": 74.7,
         "h": 28
       },
@@ -545,14 +611,14 @@
       "zoom": 1.25
     },
     {
-      "t": 84.32,
+      "t": 112.004,
       "chapter": "orders",
       "action": "type",
       "label": "Search chest x-ray",
       "text": "chest x-ray",
       "box": {
         "x": 580,
-        "y": 354,
+        "y": 348,
         "w": 916,
         "h": 36
       },
@@ -560,13 +626,13 @@
       "zoom": 1.25
     },
     {
-      "t": 86.56,
+      "t": 114.129,
       "chapter": "orders",
       "action": "click",
       "label": "Order chest x-ray",
       "box": {
         "x": 1408.3,
-        "y": 460.8,
+        "y": 455.3,
         "w": 74.7,
         "h": 28
       },
@@ -574,14 +640,14 @@
       "zoom": 1.25
     },
     {
-      "t": 87.99,
+      "t": 115.607,
       "chapter": "orders",
       "action": "type",
       "label": "Search ECG",
       "text": "ECG",
       "box": {
         "x": 580,
-        "y": 354,
+        "y": 348,
         "w": 916,
         "h": 36
       },
@@ -589,13 +655,13 @@
       "zoom": 1.25
     },
     {
-      "t": 89.578,
+      "t": 117.317,
       "chapter": "orders",
       "action": "click",
       "label": "Order ECG",
       "box": {
         "x": 1408.3,
-        "y": 460.8,
+        "y": 471.3,
         "w": 74.7,
         "h": 28
       },
@@ -603,32 +669,51 @@
       "zoom": 1.25
     },
     {
-      "t": 90.577,
+      "t": 118.941,
+      "chapter": "orders",
+      "action": "focus",
+      "label": "Order tracker with turnaround",
+      "box": {
+        "x": 1512,
+        "y": 298.5,
+        "w": 340,
+        "h": 28.6
+      },
+      "focus": {
+        "x": 1512,
+        "y": 298.5,
+        "w": 340,
+        "h": 28.6
+      },
+      "zoom": 1.35
+    },
+    {
+      "t": 121.32,
       "chapter": "treat",
       "action": "chapter"
     },
     {
-      "t": 91.624,
+      "t": 122.782,
       "chapter": "treat",
       "action": "click",
       "label": "Treatments",
       "box": {
         "x": 665.2,
-        "y": 304.5,
-        "w": 70.4,
+        "y": 298.5,
+        "w": 71,
         "h": 33.5
       },
       "focus": null,
       "zoom": 1.3
     },
     {
-      "t": 93.7,
+      "t": 124.867,
       "chapter": "treat",
       "action": "click",
       "label": "Administer IV fluid bolus",
       "box": {
         "x": 1379.1,
-        "y": 555.3,
+        "y": 549.3,
         "w": 103.9,
         "h": 28
       },
@@ -636,32 +721,32 @@
       "zoom": 1.35
     },
     {
-      "t": 95.329,
+      "t": 126.427,
       "chapter": "treat",
       "action": "focus",
       "label": "Dose, route and indication form",
       "box": {
         "x": 606,
-        "y": 639,
+        "y": 633,
         "w": 864,
         "h": 52.5
       },
       "focus": {
         "x": 606,
-        "y": 639,
+        "y": 633,
         "w": 864,
         "h": 52.5
       },
       "zoom": 1.4
     },
     {
-      "t": 98.122,
+      "t": 129.397,
       "chapter": "treat",
       "action": "click",
       "label": "Confirm IV fluid bolus",
       "box": {
         "x": 1424.3,
-        "y": 639,
+        "y": 633,
         "w": 45.7,
         "h": 28
       },
@@ -669,13 +754,13 @@
       "zoom": 1.35
     },
     {
-      "t": 100.124,
+      "t": 131.614,
       "chapter": "treat",
       "action": "click",
       "label": "Administer Oxygen",
       "box": {
         "x": 1379.1,
-        "y": 435.8,
+        "y": 429.8,
         "w": 103.9,
         "h": 28
       },
@@ -683,13 +768,13 @@
       "zoom": 1.35
     },
     {
-      "t": 101.9,
+      "t": 133.453,
       "chapter": "treat",
       "action": "click",
       "label": "Confirm Oxygen",
       "box": {
         "x": 1424.3,
-        "y": 519.5,
+        "y": 513.5,
         "w": 45.7,
         "h": 28
       },
@@ -697,7 +782,7 @@
       "zoom": 1.35
     },
     {
-      "t": 104.702,
+      "t": 136.318,
       "chapter": "treat",
       "action": "click",
       "label": "Administer Ceftriaxone",
@@ -711,7 +796,7 @@
       "zoom": 1.35
     },
     {
-      "t": 106.477,
+      "t": 138.135,
       "chapter": "treat",
       "action": "click",
       "label": "Confirm Ceftriaxone",
@@ -725,18 +810,18 @@
       "zoom": 1.35
     },
     {
-      "t": 107.703,
+      "t": 139.415,
       "chapter": "director",
       "action": "chapter"
     },
     {
-      "t": 109.434,
+      "t": 141.195,
       "chapter": "director",
       "action": "click",
       "label": "Interview tab",
       "box": {
-        "x": 704.5,
-        "y": 233,
+        "x": 705.1,
+        "y": 227,
         "w": 99.5,
         "h": 39.5
       },
@@ -744,107 +829,74 @@
       "zoom": 0
     },
     {
-      "t": 111.248,
+      "t": 143.466,
       "chapter": "director",
-      "action": "focus",
-      "label": "Patient reply after the treatment",
+      "action": "click",
+      "label": "Open suggestions",
       "box": {
-        "x": 597,
-        "y": 436.5,
-        "w": 922,
-        "h": 65.3
+        "x": 608,
+        "y": 984,
+        "w": 115.3,
+        "h": 32
       },
-      "focus": {
-        "x": 597,
-        "y": 436.5,
-        "w": 922,
-        "h": 65.3
-      },
-      "zoom": 1.5
+      "focus": null,
+      "zoom": 1.35
     },
     {
-      "t": 115.426,
+      "t": 144.906,
       "chapter": "director",
       "action": "click",
       "label": "Recheck vitals",
       "box": {
-        "x": 1700.6,
-        "y": 850,
-        "w": 105.1,
-        "h": 26
+        "x": 745,
+        "y": 846,
+        "w": 111.7,
+        "h": 32
       },
       "focus": null,
       "zoom": 1.4
     },
     {
-      "t": 117.305,
+      "t": 146.831,
       "chapter": "director",
       "action": "click",
-      "label": "Recheck vitals",
+      "label": "Close suggestions",
       "box": {
-        "x": 1700.6,
-        "y": 850,
-        "w": 121.1,
-        "h": 26
+        "x": 608,
+        "y": 984,
+        "w": 115.3,
+        "h": 32
       },
       "focus": null,
       "zoom": 0
     },
     {
-      "t": 119.051,
-      "chapter": "director",
-      "action": "click",
-      "label": "Recheck vitals",
-      "box": {
-        "x": 1700.6,
-        "y": 850,
-        "w": 121.1,
-        "h": 26
-      },
-      "focus": null,
-      "zoom": 0
-    },
-    {
-      "t": 120.791,
-      "chapter": "director",
-      "action": "click",
-      "label": "Recheck vitals",
-      "box": {
-        "x": 1700.6,
-        "y": 850,
-        "w": 121.1,
-        "h": 26
-      },
-      "focus": null,
-      "zoom": 0
-    },
-    {
-      "t": 122.68,
+      "t": 148.634,
       "chapter": "director",
       "action": "focus",
       "label": "Director steps",
       "box": {
-        "x": 1604.9,
+        "x": 1586.6,
         "y": 62,
-        "w": 140.6,
+        "w": 140.5,
         "h": 32
       },
       "focus": {
-        "x": 1604.9,
+        "x": 1586.6,
         "y": 62,
-        "w": 140.6,
+        "w": 140.5,
         "h": 32
       },
       "zoom": 1.7
     },
     {
-      "t": 125.266,
+      "t": 151.142,
       "chapter": "director",
       "action": "click",
       "label": "Monitor tab",
       "box": {
-        "x": 916.7,
-        "y": 233,
+        "x": 917.6,
+        "y": 227,
         "w": 90,
         "h": 39.5
       },
@@ -852,33 +904,33 @@
       "zoom": 0
     },
     {
-      "t": 127.588,
+      "t": 153.391,
       "chapter": "director",
       "action": "focus",
       "label": "Bedside monitor",
       "box": {
         "x": 580,
-        "y": 304.5,
+        "y": 298.5,
         "w": 1272,
         "h": 572.5
       },
       "focus": {
         "x": 580,
-        "y": 304.5,
+        "y": 298.5,
         "w": 1272,
         "h": 572.5
       },
       "zoom": 1.15
     },
     {
-      "t": 130.145,
+      "t": 156.07,
       "chapter": "director",
       "action": "scroll",
       "label": "Scroll to the trends",
-      "dy": 790
+      "dy": 784
     },
     {
-      "t": 131.827,
+      "t": 157.693,
       "chapter": "director",
       "action": "focus",
       "label": "Trends with treatment markers",
@@ -897,135 +949,212 @@
       "zoom": 1.3
     },
     {
-      "t": 134.422,
+      "t": 160.369,
       "chapter": "results",
       "action": "chapter"
     },
     {
-      "t": 136.016,
-      "chapter": "results",
-      "action": "click",
-      "label": "Orders tab",
-      "box": {
-        "x": 1006.7,
-        "y": 233,
-        "w": 110.5,
-        "h": 39.5
-      },
-      "focus": null,
-      "zoom": 0
-    },
-    {
-      "t": 136.72,
-      "chapter": "results",
-      "action": "skip-begin",
-      "label": "results turnaround"
-    },
-    {
-      "t": 263.399,
-      "chapter": "results",
-      "action": "skip-end",
-      "label": "results turnaround"
-    },
-    {
-      "t": 264.286,
-      "chapter": "results",
-      "action": "focus",
-      "label": "All five resulted",
-      "box": {
-        "x": 1512,
-        "y": 304.5,
-        "w": 340,
-        "h": 27.6
-      },
-      "focus": {
-        "x": 1512,
-        "y": 304.5,
-        "w": 340,
-        "h": 27.6
-      },
-      "zoom": 1.4
-    },
-    {
-      "t": 266.552,
+      "t": 162.817,
       "chapter": "results",
       "action": "click",
       "label": "Results tab",
       "box": {
-        "x": 1117.2,
-        "y": 233,
-        "w": 135.5,
+        "x": 1118.1,
+        "y": 227,
+        "w": 87.4,
         "h": 39.5
       },
       "focus": null,
       "zoom": 0
     },
     {
-      "t": 268.916,
+      "t": 164.743,
+      "chapter": "results",
+      "action": "focus",
+      "label": "Results pending with turnaround",
+      "box": {
+        "x": 580,
+        "y": 378.5,
+        "w": 1272,
+        "h": 35
+      },
+      "focus": {
+        "x": 580,
+        "y": 378.5,
+        "w": 1272,
+        "h": 35
+      },
+      "zoom": 1.3
+    },
+    {
+      "t": 167.762,
+      "chapter": "results",
+      "action": "click",
+      "label": "Advance to next result 1",
+      "box": {
+        "x": 1628.9,
+        "y": 378.5,
+        "w": 223.1,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 1.4
+    },
+    {
+      "t": 170.005,
+      "chapter": "results",
+      "action": "click",
+      "label": "Advance to next result 2",
+      "box": {
+        "x": 1621.7,
+        "y": 378.5,
+        "w": 230.3,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 171.811,
+      "chapter": "results",
+      "action": "click",
+      "label": "Advance to next result 3",
+      "box": {
+        "x": 1629.1,
+        "y": 378.5,
+        "w": 222.9,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 173.683,
+      "chapter": "results",
+      "action": "click",
+      "label": "Advance to next result 4",
+      "box": {
+        "x": 1623.8,
+        "y": 378.5,
+        "w": 228.2,
+        "h": 28
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 176.756,
+      "chapter": "results",
+      "action": "click",
+      "label": "Interview tab",
+      "box": {
+        "x": 705.1,
+        "y": 227,
+        "w": 99.5,
+        "h": 39.5
+      },
+      "focus": null,
+      "zoom": 0
+    },
+    {
+      "t": 179.159,
+      "chapter": "results",
+      "action": "focus",
+      "label": "Nurse calls the results in",
+      "box": {
+        "x": 581,
+        "y": 808,
+        "w": 954,
+        "h": 80.8
+      },
+      "focus": {
+        "x": 581,
+        "y": 808,
+        "w": 954,
+        "h": 80.8
+      },
+      "zoom": 1.4
+    },
+    {
+      "t": 182.27,
+      "chapter": "results",
+      "action": "click",
+      "label": "Open Results from the chat",
+      "box": {
+        "x": 668,
+        "y": 782.3,
+        "w": 82.3,
+        "h": 19.5
+      },
+      "focus": null,
+      "zoom": 1.5
+    },
+    {
+      "t": 185.151,
       "chapter": "results",
       "action": "focus",
       "label": "Result summary",
       "box": {
         "x": 593,
-        "y": 135,
-        "w": 384.2,
-        "h": 198.5
+        "y": 134,
+        "w": 452.6,
+        "h": 184.5
       },
       "focus": {
         "x": 593,
-        "y": 135,
-        "w": 384.2,
-        "h": 198.5
+        "y": 134,
+        "w": 452.6,
+        "h": 184.5
       },
       "zoom": 1.35
     },
     {
-      "t": 270.457,
+      "t": 186.682,
       "chapter": "results",
       "action": "scroll",
       "label": "Scroll to the ECG",
-      "dy": 937
+      "dy": 1013
     },
     {
-      "t": 272.236,
+      "t": 188.338,
       "chapter": "results",
       "action": "focus",
       "label": "12-lead ECG strip",
       "box": {
         "x": 594,
-        "y": 250.3,
+        "y": 249.8,
         "w": 1244,
         "h": 512
       },
       "focus": {
         "x": 594,
-        "y": 250.3,
+        "y": 249.8,
         "w": 1244,
         "h": 512
       },
       "zoom": 1.3
     },
     {
-      "t": 274.576,
+      "t": 190.733,
       "chapter": "guidance",
       "action": "chapter"
     },
     {
-      "t": 276.303,
+      "t": 192.535,
       "chapter": "guidance",
       "action": "click",
       "label": "Guidance tab",
       "box": {
-        "x": 1230.6,
-        "y": 233,
-        "w": 101.2,
+        "x": 1231.5,
+        "y": 227,
+        "w": 101.9,
         "h": 39.5
       },
       "focus": null,
       "zoom": 0
     },
     {
-      "t": 278.318,
+      "t": 194.518,
       "chapter": "guidance",
       "action": "focus",
       "label": "Guidance panel",
@@ -1044,33 +1173,33 @@
       "zoom": 1.2
     },
     {
-      "t": 280.519,
+      "t": 196.719,
       "chapter": "diagnose",
       "action": "chapter"
     },
     {
-      "t": 281.832,
+      "t": 197.944,
       "chapter": "diagnose",
       "action": "click",
       "label": "Problem List tab",
       "box": {
-        "x": 1331.8,
-        "y": 233,
-        "w": 156.8,
+        "x": 1333.3,
+        "y": 227,
+        "w": 157,
         "h": 39.5
       },
       "focus": null,
       "zoom": 0
     },
     {
-      "t": 283.743,
+      "t": 199.891,
       "chapter": "diagnose",
       "action": "type",
       "label": "Search diagnoses",
       "text": "sepsis",
       "box": {
         "x": 597,
-        "y": 399.5,
+        "y": 393.5,
         "w": 609,
         "h": 36
       },
@@ -1078,13 +1207,13 @@
       "zoom": 1.35
     },
     {
-      "t": 285.391,
+      "t": 201.524,
       "chapter": "diagnose",
       "action": "click",
       "label": "Add Sepsis",
       "box": {
-        "x": 1142.7,
-        "y": 479,
+        "x": 1142.8,
+        "y": 473.5,
         "w": 63.3,
         "h": 26
       },
@@ -1092,51 +1221,51 @@
       "zoom": 1.35
     },
     {
-      "t": 286.869,
+      "t": 202.962,
       "chapter": "diagnose",
       "action": "click",
       "label": "Commit diagnosis",
       "box": {
-        "x": 1724.3,
-        "y": 457.5,
-        "w": 99.7,
+        "x": 1723.7,
+        "y": 451.5,
+        "w": 100.3,
         "h": 22.5
       },
       "focus": null,
       "zoom": 1.35
     },
     {
-      "t": 288.99,
+      "t": 205.179,
       "chapter": "diagnose",
       "action": "focus",
       "label": "Verdict",
       "box": {
         "x": 597,
-        "y": 689.5,
+        "y": 915,
         "w": 1238,
-        "h": 190.5
+        "h": 224
       },
       "focus": {
         "x": 597,
-        "y": 689.5,
+        "y": 915,
         "w": 1238,
-        "h": 190.5
+        "h": 224
       },
       "zoom": 1.3
     },
     {
-      "t": 290.394,
+      "t": 206.58,
       "chapter": "feedback",
       "action": "chapter"
     },
     {
-      "t": 291.175,
+      "t": 208.202,
       "chapter": "feedback",
       "action": "click",
       "label": "View attending debrief",
       "box": {
         "x": 597,
-        "y": 852,
+        "y": 454,
         "w": 1238,
         "h": 28
       },
@@ -1144,7 +1273,7 @@
       "zoom": 1.3
     },
     {
-      "t": 292.451,
+      "t": 209.571,
       "chapter": "feedback",
       "action": "focus",
       "label": "Attending debrief",
@@ -1163,40 +1292,66 @@
       "zoom": 1.15
     },
     {
-      "t": 296.251,
+      "t": 213.383,
       "chapter": "feedback",
       "action": "click",
       "label": "View full report",
       "box": {
-        "x": 1145.4,
+        "x": 1144.6,
         "y": 984.1,
-        "w": 125.6,
+        "w": 126.4,
         "h": 28
       },
       "focus": null,
       "zoom": 1.3
     },
     {
-      "t": 296.734,
+      "t": 213.867,
       "chapter": "feedback",
       "action": "skip-begin",
       "label": "feedback load"
     },
     {
-      "t": 300.134,
+      "t": 214.471,
       "chapter": "feedback",
       "action": "skip-end",
       "label": "feedback load"
     },
     {
-      "t": 300.846,
+      "t": 215.181,
+      "chapter": "feedback",
+      "action": "scroll",
+      "label": "Scroll to process and timing",
+      "dy": 1863
+    },
+    {
+      "t": 216.447,
+      "chapter": "feedback",
+      "action": "focus",
+      "label": "Process and timing, cited",
+      "box": {
+        "x": 524,
+        "y": 55.7,
+        "w": 1104,
+        "h": 1008.5
+      },
+      "focus": {
+        "x": 524,
+        "y": 55.7,
+        "w": 1104,
+        "h": 1008.5
+      },
+      "zoom": 1.15
+    },
+    {
+      "t": 220.215,
       "chapter": "feedback",
       "action": "scroll",
       "label": "Scroll to the calibration plot",
       "dy": 269
     },
     {
-      "t": 302.717,
+      "t": 222.128,
       "chapter": "feedback",
       "action": "focus",
       "label": "Calibration plot",
@@ -1215,12 +1370,12 @@
       "zoom": 1.45
     },
     {
-      "t": 304.693,
+      "t": 224.187,
       "chapter": "admin",
       "action": "chapter"
     },
     {
-      "t": 306.661,
+      "t": 226.225,
       "chapter": "admin",
       "action": "click",
       "label": "Account",
@@ -1234,19 +1389,19 @@
       "zoom": 0
     },
     {
-      "t": 307.146,
+      "t": 226.699,
       "chapter": "admin",
       "action": "skip-begin",
       "label": "account load"
     },
     {
-      "t": 307.473,
+      "t": 227.022,
       "chapter": "admin",
       "action": "skip-end",
       "label": "account load"
     },
     {
-      "t": 308.961,
+      "t": 228.543,
       "chapter": "admin",
       "action": "select",
       "label": "Role: Platform administrator (local profile)",
@@ -1260,21 +1415,21 @@
       "zoom": 1.5
     },
     {
-      "t": 310.396,
+      "t": 229.917,
       "chapter": "admin",
       "action": "click",
       "label": "Save changes",
       "box": {
         "x": 737,
         "y": 874.9,
-        "w": 111.1,
+        "w": 112.6,
         "h": 32
       },
       "focus": null,
       "zoom": 1.5
     },
     {
-      "t": 312.965,
+      "t": 232.582,
       "chapter": "admin",
       "action": "click",
       "label": "Admin",
@@ -1288,26 +1443,26 @@
       "zoom": 0
     },
     {
-      "t": 313.417,
+      "t": 233.099,
       "chapter": "admin",
       "action": "skip-begin",
       "label": "admin load"
     },
     {
-      "t": 313.753,
+      "t": 234.797,
       "chapter": "admin",
       "action": "skip-end",
       "label": "admin load"
     },
     {
-      "t": 315.092,
+      "t": 236.186,
       "chapter": "admin",
       "action": "type",
       "label": "Admin token",
       "text": "walkthrough-admin",
       "box": {
         "x": 873,
-        "y": 398.9,
+        "y": 380.9,
         "w": 406,
         "h": 36
       },
@@ -1315,13 +1470,13 @@
       "zoom": 1.6
     },
     {
-      "t": 316.458,
+      "t": 237.675,
       "chapter": "admin",
       "action": "click",
       "label": "Sign in",
       "box": {
         "x": 873,
-        "y": 450.9,
+        "y": 432.9,
         "w": 406,
         "h": 32
       },
@@ -1329,19 +1484,19 @@
       "zoom": 1.6
     },
     {
-      "t": 317.165,
+      "t": 238.374,
       "chapter": "admin",
       "action": "skip-begin",
       "label": "console load"
     },
     {
-      "t": 318.372,
+      "t": 239.58,
       "chapter": "admin",
       "action": "skip-end",
       "label": "console load"
     },
     {
-      "t": 319.47,
+      "t": 240.875,
       "chapter": "admin",
       "action": "click",
       "label": "Telemetry",
@@ -1355,69 +1510,69 @@
       "zoom": 1.3
     },
     {
-      "t": 320.318,
+      "t": 242.048,
       "chapter": "admin",
       "action": "skip-begin",
       "label": "telemetry load"
     },
     {
-      "t": 321.9,
+      "t": 243.695,
       "chapter": "admin",
       "action": "skip-end",
       "label": "telemetry load"
     },
     {
-      "t": 322.53,
+      "t": 244.437,
       "chapter": "admin",
       "action": "focus",
       "label": "Telemetry headline",
       "box": {
         "x": 545,
         "y": 324.9,
-        "w": 1084.4,
+        "w": 1294,
         "h": 16
       },
       "focus": {
         "x": 545,
         "y": 324.9,
-        "w": 1084.4,
+        "w": 1294,
         "h": 16
       },
       "zoom": 1.3
     },
     {
-      "t": 324.627,
+      "t": 246.58,
       "chapter": "admin",
       "action": "scroll",
       "label": "Scroll to calls by route",
       "dy": 995
     },
     {
-      "t": 326.366,
+      "t": 248.312,
       "chapter": "admin",
       "action": "focus",
       "label": "Calls by route",
       "box": {
         "x": 532,
-        "y": 797.9,
+        "y": 761.9,
         "w": 652,
-        "h": 258
+        "h": 294
       },
       "focus": {
         "x": 532,
-        "y": 797.9,
+        "y": 761.9,
         "w": 652,
-        "h": 258
+        "h": 294
       },
       "zoom": 1.4
     },
     {
-      "t": 328.564,
+      "t": 250.665,
       "chapter": "dean",
       "action": "chapter"
     },
     {
-      "t": 331.039,
+      "t": 253.184,
       "chapter": "dean",
       "action": "click",
       "label": "Institution",
@@ -1431,80 +1586,175 @@
       "zoom": 0
     },
     {
-      "t": 331.512,
+      "t": 253.693,
       "chapter": "dean",
       "action": "skip-begin",
       "label": "dean load"
     },
     {
-      "t": 331.9,
+      "t": 254.237,
       "chapter": "dean",
       "action": "skip-end",
       "label": "dean load"
     },
     {
-      "t": 334.243,
+      "t": 256.665,
       "chapter": "dean",
       "action": "focus",
       "label": "Dean panel and chain check",
       "box": {
         "x": 300,
         "y": 97,
-        "w": 946.3,
-        "h": 109.9
+        "w": 953.6,
+        "h": 129.9
       },
       "focus": {
         "x": 300,
         "y": 97,
-        "w": 946.3,
-        "h": 109.9
+        "w": 953.6,
+        "h": 129.9
       },
       "zoom": 1.4
     },
     {
-      "t": 336.43,
+      "t": 258.916,
       "chapter": "dean",
       "action": "focus",
       "label": "Cohort headline metrics",
       "box": {
         "x": 300,
-        "y": 259.9,
-        "w": 1448.1,
+        "y": 279.9,
+        "w": 1535,
         "h": 61
       },
       "focus": {
         "x": 300,
-        "y": 259.9,
-        "w": 1448.1,
+        "y": 279.9,
+        "w": 1535,
         "h": 61
       },
       "zoom": 1.2
     },
     {
-      "t": 338.45,
+      "t": 260.928,
       "chapter": "dean",
       "action": "scroll",
       "label": "Scroll to the competency grid",
-      "dy": 609
+      "dy": 629
     },
     {
-      "t": 339.597,
+      "t": 262.07,
       "chapter": "dean",
       "action": "focus",
       "label": "Cohort competency grid",
       "box": {
         "x": 324,
         "y": 89.9,
-        "w": 205.1,
+        "w": 183,
         "h": 28
       },
       "focus": {
         "x": 324,
         "y": 89.9,
-        "w": 205.1,
+        "w": 183,
         "h": 28
       },
       "zoom": 1.2
+    },
+    {
+      "t": 265.497,
+      "chapter": "rooms",
+      "action": "chapter"
+    },
+    {
+      "t": 298.592,
+      "chapter": "rooms",
+      "action": "skip-begin",
+      "label": "rooms load"
+    },
+    {
+      "t": 299.898,
+      "chapter": "rooms",
+      "action": "skip-end",
+      "label": "rooms load"
+    },
+    {
+      "t": 302.481,
+      "chapter": "rooms",
+      "action": "click",
+      "label": "Create room",
+      "box": {
+        "x": 1728.6,
+        "y": 77,
+        "w": 123.4,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 1.4
+    },
+    {
+      "t": 303.528,
+      "chapter": "rooms",
+      "action": "focus",
+      "label": "Room: roles, AI backfill, language",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "focus": {
+        "x": 0,
+        "y": 0,
+        "w": 1920,
+        "h": 1080
+      },
+      "zoom": 1.25
+    },
+    {
+      "t": 306.877,
+      "chapter": "rooms",
+      "action": "click",
+      "label": "Create the room",
+      "box": {
+        "x": 1067.6,
+        "y": 843,
+        "w": 123.4,
+        "h": 32
+      },
+      "focus": null,
+      "zoom": 1.4
+    },
+    {
+      "t": 307.618,
+      "chapter": "rooms",
+      "action": "skip-begin",
+      "label": "room case"
+    },
+    {
+      "t": 317.201,
+      "chapter": "rooms",
+      "action": "skip-end",
+      "label": "room case"
+    },
+    {
+      "t": 317.555,
+      "chapter": "rooms",
+      "action": "focus",
+      "label": "Team room: one case, a seat per role",
+      "box": {
+        "x": 232,
+        "y": 49,
+        "w": 1688,
+        "h": 1755
+      },
+      "focus": {
+        "x": 232,
+        "y": 49,
+        "w": 1688,
+        "h": 1755
+      },
+      "zoom": 1.1
     }
   ]
 }

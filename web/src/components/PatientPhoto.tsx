@@ -118,6 +118,12 @@ export interface PatientPhotoProps {
   expandable?: boolean;
   /** Accessible label for the button when `onClick` is set (e.g. "Enlarge"). */
   expandLabel?: string;
+  /**
+   * The host prints the clinical signs itself (the call tile's own overlay row),
+   * so the photo paints no status stack of its own; two stacks in the same corner
+   * overlapped.
+   */
+  bare?: boolean;
 }
 
 interface Physiology {
@@ -281,6 +287,7 @@ export function PatientPhoto({
   onClick,
   expandable,
   expandLabel,
+  bare = false,
 }: PatientPhotoProps) {
   const { t } = useTranslation();
   const photo = useMemo(() => {
@@ -598,7 +605,7 @@ export function PatientPhoto({
       {/* Top-left status stack (the expand affordance owns the top-right): the
           Speaking pill, and — for reduced-motion viewers, who don't see the
           animated signs — a "clinical signs" caption naming what the tint shows. */}
-      {roomy && (isSpeaking || reducedSigns.length > 0) ? (
+      {roomy && !bare && (isSpeaking || reducedSigns.length > 0) ? (
         <div className="pointer-events-none absolute left-1.5 top-1.5 z-10 flex max-w-[calc(100%-2.75rem)] flex-col items-start gap-1">
           {isSpeaking ? (
             <span className="inline-flex items-center gap-1 rounded-chip bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">

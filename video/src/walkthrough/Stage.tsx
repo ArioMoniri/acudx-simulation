@@ -12,7 +12,7 @@ export const RECORDING = "recording/walkthrough.mp4";
  * page while the patient answers,
  * and the lip-synced stream itself.
  */
-export const CALL_PAGE = { src: "recording/call-page.mp4", w: 570, h: 475 };
+export const CALL_PAGE = { src: "recording/call-page.mp4", w: 290, h: 610 };
 export const CALL_FACE = { src: "recording/call-face.mp4", w: 566, h: 720 };
 export const REC_W = TIMELINE.width;
 export const REC_H = TIMELINE.height;

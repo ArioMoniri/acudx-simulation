@@ -76,11 +76,16 @@ test.describe("encounter", () => {
     await expect(page.getByRole("button", { name: imgLabel, exact: true })).toHaveCount(0);
     await search.fill("");
 
-    // Order tracker: 2 placed; wait until both have resulted (real timers).
-    // A landing result advances the store stage and the tab strip follows it to
-    // Results (see handoff finding), so re-open Orders before each check.
+    // Order tracker: 2 placed. Results run on the sim clock with clinical turnaround
+    // (troponin about 60 min, chest X-ray about 1 h), so step the clock with
+    // "Advance to next result" as a learner would until both have resulted.
     await expectOnTab(page, "Orders", page.getByText(/2 placed · \d+ pending · \d+ resulted/), 15_000);
-    await expectOnTab(page, "Orders", page.getByText("2 placed · 0 pending · 2 resulted"), 90_000);
+    const done = page.getByText("2 placed · 0 pending · 2 resulted");
+    for (let i = 0; i < 6 && !(await done.isVisible()); i++) {
+      await page.getByRole("button", { name: /^Advance to next result/ }).first().click();
+      await page.waitForTimeout(1_500);
+    }
+    await expectOnTab(page, "Orders", done, 30_000);
 
     // Results tab shows both.
     await openTab(page, "Results");

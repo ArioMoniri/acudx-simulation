@@ -308,6 +308,9 @@ async function workCase(n: number): Promise<void> {
 
   // Exams.
   await soft(id("C4"), "Student", "Perform the relevant exams", "Each maneuver adds a finding", async () => {
+    // Examination manoeuvres live in the Suggestions drawer above the composer (docs/design/05-chat.md 3.3).
+    const drawer = page.getByRole("button", { name: "Suggestions" }).first();
+    if ((await drawer.count()) && (await drawer.getAttribute("aria-expanded")) !== "true") await drawer.click();
     for (const e of EXAMS) {
       const b = page.getByRole("button", { name: e, exact: true });
       if (await b.count()) await b.first().click();

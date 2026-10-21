@@ -10,7 +10,7 @@
 2. Renders the walkthrough poster from poster.html (a real capture of the
    renewed encounter beside the lockup) with the Playwright Chromium.
 3. Takes the live video call card from a frame of the real live capture
-   (docs/media/live-avatar/frames).
+   (docs/media/live-avatar/en/patient-live.mp4).
 4. Resizes and palette-quantises every image (no dithering, so UI text stays
    crisp) and checks each is under 350 KB.
 
@@ -36,16 +36,20 @@ LIMIT = 350 * 1024
 JOBS = [
     ("hero-encounter.png", "hero-encounter.png", 1760),
     ("feature-generator.png", "feature-generator.png", 1100),
-    ("feature-director.png", "feature-director.png", 900),
-    ("feature-interview.png", "feature-interview.png", 900),
+    ("feature-chat-confirm.png", "feature-chat-confirm.png", 760),
+    ("feature-chat.png", "feature-chat.png", 760),
     ("feature-orders.png", "feature-orders.png", 900),
+    ("feature-results-pending.png", "feature-results-pending.png", 900),
     ("feature-results.png", "feature-results.png", 900),
+    ("feature-director.png", "feature-director.png", 900),
     ("feature-guidance.png", "feature-guidance.png", 900),
+    ("feature-debrief.png", "feature-debrief.png", 1000),
     ("feature-feedback.png", "feature-feedback.png", 900),
     ("panel-student.png", "panel-student.png", 1120),
     ("panel-faculty.png", "panel-faculty.png", 1120),
     ("panel-dean.png", "panel-dean.png", 1120),
     ("panel-admin.png", "panel-admin.png", 1120),
+    ("panel-rooms.png", "panel-rooms.png", 1120),
 ]
 
 PALETTE = {
@@ -95,11 +99,14 @@ def poster() -> None:
 
 def call_frame() -> None:
     """The live video call card: one frame of the real live capture in
-    docs/media/live-avatar (MuseTalk lip-sync on the GPU worker), the head and
-    shoulders only (the bottom rows of that frame carry the blending seam)."""
-    src = os.path.join(ROOT, "docs", "media", "live-avatar", "frames", "talk_05.png")
-    img = Image.open(src).convert("RGB")
-    img.crop((0, 0, img.width, 600)).save(os.path.join(RAW, "feature-call.png"))
+    docs/media/live-avatar/en/patient-live.mp4 (LiveTalking and MuseTalk 1.5 on
+    the GPU worker, measured in metrics.json), head and shoulders, without the
+    runner's corner watermark row or the blended bottom rows."""
+    src = os.path.join(ROOT, "docs", "media", "live-avatar", "en", "patient-live.mp4")
+    frame = os.path.join(RAW, "call-frame.png")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "12", "-i", src, "-frames:v", "1", frame], check=True)
+    img = Image.open(frame).convert("RGB")
+    img.crop((0, 30, img.width, 630)).save(os.path.join(RAW, "feature-call.png"))
     JOBS.append(("feature-call.png", "feature-call.png", 566))
 
 
@@ -123,9 +130,10 @@ def landing() -> None:
         if not os.path.exists(path):
             print(f"skip {name}: no {src} (run capture-readme.mjs with SCHEME=dark)")
             continue
-        img = Image.open(path).resize((1280, 800), Image.Resampling.LANCZOS)
+        img = Image.open(path)
+        img = img.resize((1280, round(img.height * 1280 / img.width)), Image.Resampling.LANCZOS)
         size = save(img, os.path.join(screens, name))
-        print(f"{name:28s} 1280x800  {size / 1024:6.1f} KB")
+        print(f"{name:28s} {img.width}x{img.height}  {size / 1024:6.1f} KB")
 
 
 def main() -> None:
@@ -145,10 +153,11 @@ def main() -> None:
         over += bool(flag)
         print(f"{name:28s} {img.width}x{img.height}  {size / 1024:6.1f} KB{flag}")
     landing()
-    stale = os.path.join(OUT, "hero-encounter.webp")
-    if os.path.exists(stale):
-        os.remove(stale)
-        print("removed hero-encounter.webp (the old cropped hero)")
+    for old in ("hero-encounter.webp", "feature-interview.png"):
+        stale = os.path.join(OUT, old)
+        if os.path.exists(stale):
+            os.remove(stale)
+            print(f"removed {old} (retired)")
     if over:
         sys.exit(f"{over} image(s) over 350 KB")
 

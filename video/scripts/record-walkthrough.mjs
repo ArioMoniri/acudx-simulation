@@ -2,7 +2,9 @@
 /**
  * Record the AcuDx product walkthrough as a real screen recording.
  *
- * Drives the running web app through one student encounter on a case
+ * v3 (renewed UI, chat with in-chat order and navigate chips, results on clinical
+ * turnaround, cited process debrief, rooms). Drives the running web app through
+ * one student encounter on a case
  * generated on request (a recorded live model case, replayed as the staged
  * stream), the Clinical Director stepping the patient after treatments, then
  * the admin console telemetry and the dean panel, with Playwright's
@@ -462,11 +464,13 @@ try {
   await openTab("Interview", "Interview tab");
   await pause(500);
   const composer = page.getByPlaceholder("Type a question to the patient, then press Enter"); // watchdog: allow Playwright locator API, not data
-  const transcript = page.getByRole("log", { name: "Encounter transcript" });
-  const questions = ["When did the fever start?", "How high has the temperature been?", "Is the fever constant or does it come and go?"];
+  const transcript = page.getByRole("log").first();
+  // Typed free text (docs/design/05-chat.md section 2); the composer ignores Enter while a reply is in flight.
+  const questions = ["When did the fever start?", "How severe is the fever?", "Have you had chills or body aches?"];
   for (const [i, q] of questions.entries()) {
     await type(composer, q, `Question ${i + 1}`, { zoom: 1.3, focus: transcript, enter: true });
-    await transcript.getByRole("listitem").filter({ hasText: /^Patient/ }).nth(i).waitFor({ timeout: 15_000 }).catch(() => {});
+    await page.getByText("Sending", { exact: true }).first().waitFor({ state: "hidden", timeout: 60_000 }).catch(() => {});
+    await page.waitForFunction(() => !document.querySelector("textarea")?.value, null, { timeout: 60_000 }).catch(() => {});
     await pause(900);
   }
   await look(transcript, "Transcript with patient replies", { zoom: 1.3, dwell: 1400 });
@@ -479,11 +483,31 @@ try {
 
   /* ------------------------------------------------------------ exam */
   await startChapter("exam");
-  await click(page.getByRole("button", { name: "Auscultate lungs" }), "Auscultate lungs", { zoom: 1.45, hold: 900 });
+  // Examination manoeuvres live in the Suggestions drawer above the composer.
+  const drawerToggle = page.getByRole("button", { name: "Suggestions" }).first();
+  async function drawer(open) {
+    if (((await drawerToggle.getAttribute("aria-expanded")) === "true") !== open) {
+      await click(drawerToggle, open ? "Open suggestions" : "Close suggestions", { zoom: open ? 1.35 : 0, hold: 500 });
+    }
+  }
+  await drawer(true);
+  await click(page.getByRole("button", { name: "Auscultate lungs", exact: true }).first(), "Auscultate lungs", { zoom: 1.45, hold: 900 });
+  await drawer(false);
   await snap("exam");
-  await look(page.getByText(/Exam findings/i).first().locator("xpath=ancestor::section[1]"), "Exam findings in the chart rail", { zoom: 1.6, dwell: 1300 }).catch(
-    async () => pause(900),
-  );
+  await look(transcript.getByRole("listitem").last(), "Exam finding in the transcript", { zoom: 1.5, dwell: 1300 }).catch(async () => pause(900));
+
+  /* ------------------------------------------------------------ chat order */
+  await startChapter("chatorder");
+  await type(composer, "/order lactate", "Slash command: /order lactate", { zoom: 1.4, delay: 55 });
+  const lactate = page.getByRole("option", { name: /^Lactate(?! dehydrogenase)/ }).first();
+  await lactate.waitFor();
+  await pause(500);
+  await click(lactate, "Lactate", { zoom: 1.4, hold: 500 });
+  const place = page.getByRole("button", { name: "Place order" }).first();
+  await place.waitFor();
+  await look(place.locator("xpath=ancestor::*[@role='group'][1]"), "Order chip, confirm step", { zoom: 1.6, dwell: 1500 }).catch(async () => pause(900));
+  await snap("chat-order");
+  await click(place, "Place order", { zoom: 1.6, hold: 1200 });
 
   /* ------------------------------------------------------------ orders */
   await startChapter("orders");
@@ -492,7 +516,6 @@ try {
   const search = page.getByPlaceholder(/Search tests/); // watchdog: allow Playwright locator API, not data
   const orders = [
     ["CBC", /^Order Complete blood count/],
-    ["lactate", /^Order Lactate$/],
     ["blood culture", /^Order Blood culture/],
     ["chest x-ray", /^Order Chest X-ray/],
     ["ECG", /^Order 12-lead ECG/],
@@ -502,6 +525,8 @@ try {
     await click(page.getByRole("button", { name }).first(), `Order ${q}`, { zoom: 1.25, hold: 450 });
   }
   await search.fill("");
+  const tracker = page.getByText("Order tracker").first().locator("xpath=ancestor::*[contains(@class,'border')][1]");
+  await look(tracker, "Order tracker with turnaround", { zoom: 1.35, dwell: 1800 }).catch(async () => pause(1000));
   await snap("orders");
 
   /* ------------------------------------------------------------ treat */
@@ -529,11 +554,10 @@ try {
   await startChapter("director");
   await openTab("Interview", "Interview tab");
   await pause(600);
-  const reply = transcript.getByRole("listitem").filter({ hasText: /^Patient/ }).last();
-  await look(reply, "Patient reply after the treatment", { zoom: 1.5, dwell: 1800 }).catch(async () => pause(1200));
-  await snap("director-reply");
   // Each action is one Director step on the server: the course engine moves the patient.
-  for (let i = 0; i < 4; i++) await click(page.getByRole("button", { name: "Recheck vitals" }), "Recheck vitals", { zoom: i === 0 ? 1.4 : 0, hold: 900 });
+  await drawer(true);
+  await click(page.getByRole("button", { name: "Recheck vitals", exact: true }).first(), "Recheck vitals", { zoom: 1.4, hold: 900 });
+  await drawer(false);
   const chip = page.getByText(/Director: \d+ steps?/).first();
   await look(chip, "Director steps", { zoom: 1.7, dwell: 1200 }).catch(async () => pause(800));
   await openTab("Monitor", "Monitor tab");
@@ -552,16 +576,31 @@ try {
 
   /* ------------------------------------------------------------ results */
   await startChapter("results");
-  await openTab(/^Orders/, "Orders tab");
-  await page.getByRole("tab", { name: "Order tests" }).click().catch(() => {});
-  const trackerPanel = page.getByText("Order tracker").first();
-  skipBegin("results turnaround");
-  await page.getByText(/5 placed · 0 pending · 5 resulted/).first().waitFor({ timeout: 240_000 }).catch(() => {});
-  await pause(400);
-  skipEnd("results turnaround");
-  await look(trackerPanel.locator("xpath=ancestor::*[contains(@class,'border')][1]"), "All five resulted", { zoom: 1.4, dwell: 1300 }).catch(async () => pause(800));
   await openTab(/^Results/, "Results tab");
   await pause(800);
+  await look(page.getByText(/Pending/).first().locator("xpath=ancestor::*[contains(@class,'border')][1]"), "Results pending with turnaround", {
+    zoom: 1.3,
+    dwell: 1800,
+  }).catch(async () => pause(1000));
+  await snap("results-pending");
+  // Turnaround is clinical (ECG minutes, culture days): advance the sim clock to each next result.
+  for (let i = 0; i < 24; i++) {
+    const summary = (await page.getByText(/of \d+ orders resulted/).first().textContent().catch(() => "")) ?? "";
+    const m = /(\d+) of (\d+) orders resulted/.exec(summary);
+    if (m && Number(m[1]) >= Number(m[2]) - 1) break;
+    const advance = page.getByRole("button", { name: /^Advance to next result/ }).first();
+    if (!(await advance.count())) break;
+    await click(advance, `Advance to next result ${i + 1}`, { zoom: i === 0 ? 1.4 : 0, hold: 900 });
+  }
+  await pause(800);
+  // The nurse calls each result in on the chat, with a jump to it.
+  await openTab("Interview", "Interview tab");
+  await pause(800);
+  const nurse = transcript.getByRole("listitem").filter({ hasText: /^Nurse/ }).last();
+  await look(nurse, "Nurse calls the results in", { zoom: 1.4, dwell: 1600 }).catch(async () => pause(1000));
+  await snap("nurse");
+  const openLink = transcript.getByText(/^Open Results$/).last();
+  await click(openLink, "Open Results from the chat", { zoom: 1.5, hold: 1400 });
   await snap("results");
   await lookBox(await union(page.getByText("Result summary").first(), page.getByText(/Critical values|Abnormal/).first()), "Result summary", {
     zoom: 1.35,
@@ -606,6 +645,15 @@ try {
   await click(page.getByRole("button", { name: "View full report" }), "View full report", { zoom: 1.3 });
   await routeLoad("feedback load", page.getByText("Confidence vs performance"));
   await pause(700);
+  // The process section: every check measured against a guideline target, with its citation.
+  const proc = page.getByRole("region", { name: "Process and timing" }).first();
+  const pb0 = await proc.boundingBox().catch(() => null);
+  if (pb0) {
+    await smoothScrollBy(pb0.y - 70, "Scroll to process and timing", 1200);
+    await look(proc, "Process and timing, cited", { zoom: 1.15, dwell: 2600, point: false }).catch(async () => pause(1500));
+    await snap("process");
+    await toTop();
+  }
   const calibTitle = page.getByText("Confidence vs performance").first();
   const ct = await calibTitle.boundingBox();
   if (ct) await smoothScrollBy(ct.y - 70, "Scroll to the calibration plot", 1100);
@@ -676,6 +724,27 @@ try {
   await look(grid, "Cohort competency grid", { zoom: 1.2, dwell: 2600, point: false }).catch(async () => pause(1500));
   await snap("dean-2");
   await pause(600);
+
+  /* ------------------------------------------------------------ rooms */
+  await startChapter("rooms");
+  await toTop();
+  await click(nav("Rooms"), "Rooms").catch(async () => {
+    await page.goto(`${BASE}/rooms`);
+  });
+  await routeLoad("rooms load", page.getByRole("button", { name: "Create room" }));
+  await pause(500);
+  await click(page.getByRole("button", { name: "Create room" }).first(), "Create room", { zoom: 1.4 });
+  const roomDialog = page.getByRole("dialog").first();
+  await roomDialog.waitFor();
+  await look(roomDialog, "Room: roles, AI backfill, language", { zoom: 1.25, dwell: 1800, point: false }).catch(async () => pause(1200));
+  await click(roomDialog.getByRole("button", { name: /Create/ }).last(), "Create the room", { zoom: 1.4, hold: 300 });
+  skipBegin("room case");
+  await page.waitForURL(/\/rooms\/.+/, { timeout: 90_000 });
+  await waitSettled();
+  await pause(2500);
+  skipEnd("room case");
+  await look(page.locator("main#main"), "Team room: one case, a seat per role", { zoom: 1.1, dwell: 2600, point: false }).catch(async () => pause(1500));
+  await snap("room");
 } catch (err) {
   console.error(err);
   await page.screenshot({ path: join(ROOT, "out", "record-failure.png") }).catch(() => {});
