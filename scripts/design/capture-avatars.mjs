@@ -56,7 +56,9 @@ const ctx = await browser.newContext({
   locale: process.env.LOCALE ?? "en-US",
   timezoneId: "Europe/Istanbul",
 });
-await ctx.route("**/api/**", (r) => r.abort("failed"));
+// Only the gateway proxy (/api/... at the path root): the "**/api/**" glob also matched the
+// dev server's module /src/lib/api/interview.ts and crashed every page (as web/e2e/helpers/session.ts).
+await ctx.route((url) => url.pathname.startsWith("/api/"), (r) => r.abort("failed"));
 await ctx.route(/\/case\/generate\/stream/, (r) =>
   r.fulfill({
     status: 200,

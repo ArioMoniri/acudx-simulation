@@ -6,7 +6,7 @@
 // Signs in a dean through the real profile form, opens every route at
 // 375, 768, 1024, 1280, 1440 and 1920 px, and prints every element that scrolls
 // horizontally (and any page-level horizontal scroll). With "shots" it also
-// captures each route at 375 and 1280 px. /api/** is aborted and the case
+// captures each route at 375 and 1280 px. /api/ is aborted and the case
 // generator replays a recorded live case, as web/e2e/helpers/session.ts does.
 //
 // Env: PORT (4321), ROUTES=/a,/b, WIDTHS=375,1280, SHOT_WIDTHS=375,1280,
@@ -60,7 +60,9 @@ const ctx = await browser.newContext({
   locale: process.env.LOCALE ?? "en-US",
   timezoneId: "Europe/Istanbul",
 });
-await ctx.route("**/api/**", (r) => r.abort("failed"));
+// Only the gateway proxy (/api/... at the path root): the "**/api/**" glob also matched the
+// dev server's module /src/lib/api/interview.ts and crashed every page (as web/e2e/helpers/session.ts).
+await ctx.route((url) => url.pathname.startsWith("/api/"), (r) => r.abort("failed"));
 await ctx.route(/\/case\/generate\/stream/, (r) =>
   r.fulfill({
     status: 200,

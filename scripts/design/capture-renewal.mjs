@@ -6,7 +6,7 @@
 // One profile is created through the real form, one encounter is driven
 // through the UI (three questions, an exam, three orders, their results, a
 // committed diagnosis), and every screen is captured at both widths from the
-// same state. /api/** is aborted, exactly as web/e2e/helpers/session.ts does,
+// same state. /api/ is aborted, exactly as web/e2e/helpers/session.ts does,
 // so the run is deterministic and needs no gateway.
 //
 // Env: PORT (default 4205), ONLY=name,name to limit screens, EXTRA=1 to also
@@ -56,7 +56,9 @@ const context = await browser.newContext({
   locale: "en-US",
   timezoneId: "Europe/Istanbul",
 });
-await context.route("**/api/**", (route) => route.abort("failed"));
+// Only the gateway proxy (/api/... at the path root): the "**/api/**" glob also matched the
+// dev server's module /src/lib/api/interview.ts and crashed every page (as web/e2e/helpers/session.ts).
+await context.route((url) => url.pathname.startsWith("/api/"), (route) => route.abort("failed"));
 const page = await context.newPage();
 page.setDefaultTimeout(30_000);
 
@@ -143,7 +145,7 @@ if (need(...encounterScreens)) {
   await shoot("encounter", () => tab("Chart Review"));
 
   await tab("Interview");
-  const composer = page.getByPlaceholder(
+  const composer = page.getByPlaceholder( // watchdog: allow Playwright locator API, not data
     "Type a question to the patient, then press Enter",
   );
   for (const q of [
@@ -155,6 +157,9 @@ if (need(...encounterScreens)) {
     await composer.press("Enter");
     await page.waitForTimeout(1500);
   }
+  // Examination manoeuvres live in the Suggestions drawer above the composer (docs/design/05-chat.md 3.3).
+  const drawer = page.getByRole("button", { name: "Suggestions" }).first();
+  if ((await drawer.getAttribute("aria-expanded").catch(() => "true")) !== "true") await drawer.click().catch(() => {});
   await page
     .getByRole("button", { name: "Auscultate heart" })
     .click()
@@ -163,7 +168,7 @@ if (need(...encounterScreens)) {
   await shoot("encounter-interview", () => tab("Interview"));
 
   await tab("Orders");
-  const search = page.getByPlaceholder(/Search tests/);
+  const search = page.getByPlaceholder(/Search tests/); // watchdog: allow Playwright locator API, not data
   for (const [q, re] of [
     ["troponin", /^Order .*troponin/i],
     ["chest", /^Order .*(X-ray|radiograph|chest)/i],
@@ -190,7 +195,7 @@ if (need(...encounterScreens)) {
     // 4. Commit a diagnosis and open the feedback report.
     await tab(/Problem List/);
     await page
-      .getByPlaceholder("Search diagnoses or ICD/DSM code...")
+      .getByPlaceholder("Search diagnoses or ICD/DSM code...") // watchdog: allow Playwright locator API, not data
       .fill("myocardial infarction");
     await page
       .getByRole("button", { name: /^Add .* to the differential$/ })

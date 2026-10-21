@@ -62,11 +62,21 @@ const CHART: Pick = {
 const INTERVIEW: Pick = {
   chapter: "interview",
   title: "Interview",
-  text: "Interview the patient in free text",
+  text: "Type the question; the patient answers what you ask",
   from: /^Question 2$/,
   before: 0.2,
   after: 3.2,
   rate: 1.5,
+};
+const CHATORDER: Pick = {
+  chapter: "chatorder",
+  title: "Chat order",
+  text: "Order from the chat, confirm inside the chip",
+  from: /^Slash command: \/order lactate$/,
+  before: 0.2,
+  to: /^Place order$/,
+  after: 0.8,
+  rate: 1.6,
 };
 const CALL: Pick = { chapter: "call", title: "Video call", text: "Live patient video, lip-synced on the GPU worker", insert: "call", seconds: 4 };
 const ORDERS: Pick = {
@@ -102,12 +112,12 @@ const DIRECTOR: Pick = {
 const RESULTS: Pick = {
   chapter: "results",
   title: "Results",
-  text: "Results with provenance and the 12-lead ECG",
-  from: /^Result summary$/,
+  text: "Results on clinical turnaround, called in on the chat",
+  from: /^Nurse calls the results in$/,
   before: 0.3,
-  to: /^12-lead ECG strip$/,
-  after: 1.4,
-  rate: 1.5,
+  to: /^Result summary$/,
+  after: 1.2,
+  rate: 1.4,
 };
 const FEEDBACK: Pick = {
   chapter: "feedback",
@@ -138,8 +148,8 @@ const DEAN: Pick = {
   rate: 1.2,
 };
 
-/** 15 s teaser: generation, the live call, the Director, telemetry (10.6 s between the mark and the end card). */
-export const TEASER_CUT = cut([GENERATE, CALL, DIRECTOR, ADMIN], 6.6);
+/** 15 s teaser: generation, the chat order, the live call, the results called in (10.6 s between the mark and the end card). */
+export const TEASER_CUT = cut([GENERATE, CHATORDER, CALL, RESULTS], 6.6);
 
 /** Square social cut: the whole loop in short beats. */
-export const SQUARE_CUT = cut([GENERATE, CHART, INTERVIEW, CALL, ORDERS, TREAT, DIRECTOR, RESULTS, FEEDBACK, ADMIN, DEAN], 24);
+export const SQUARE_CUT = cut([GENERATE, CHART, INTERVIEW, CALL, CHATORDER, ORDERS, TREAT, DIRECTOR, RESULTS, FEEDBACK, ADMIN, DEAN], 24);

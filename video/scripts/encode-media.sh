@@ -27,11 +27,11 @@ case "${1:-}" in
       -g 10 -pix_fmt yuv420p -movflags +faststart -an public/recording/walkthrough.mp4
     # The live patient video chapter: two spans of the real live capture
     # (docs/media/live-avatar, MuseTalk on the GPU worker), silent, seek-friendly.
-    # call-page: the transcript and call tile of the encounter page while the patient answers
-    # (cropped below the banner, which in that capture shows its own case source); call-face: the stream.
-    "$FFMPEG" -v error -y -ss 78 -t 8.5 -i ../docs/media/live-avatar/encounter-page.mp4 -vf "crop=570:474:390:125,setpts=PTS-STARTPTS" -c:v libx264 -preset medium -crf 14 \
+    # call-page: the call tile and its caption of the encounter page while the patient answers
+    # (cropped to the tile: the rest of that capture shows the chat before the rebuild); call-face: the stream.
+    "$FFMPEG" -v error -y -ss 123 -t 8.5 -i ../docs/media/live-avatar/en/encounter-page.mp4 -vf "crop=290:610:960:185,setpts=PTS-STARTPTS" -c:v libx264 -preset medium -crf 14 \
       -g 10 -r 30 -pix_fmt yuv420p -movflags +faststart -an public/recording/call-page.mp4
-    "$FFMPEG" -v error -y -ss 9.5 -t 9 -i ../docs/media/live-avatar/patient-live.mp4 -c:v libx264 -preset medium -crf 14 \
+    "$FFMPEG" -v error -y -ss 9.5 -t 9 -i ../docs/media/live-avatar/en/patient-live.mp4 -c:v libx264 -preset medium -crf 14 \
       -g 10 -r 30 -pix_fmt yuv420p -movflags +faststart -an public/recording/call-face.mp4
     ls -la public/recording/*.mp4
     ;;
@@ -39,7 +39,7 @@ case "${1:-}" in
     # Screen content. A light temporal denoise removes the VP8 shimmer of the
     # source recording (most of the bitrate), adaptive quantisation keeps flat
     # UI ground cheap; CRF chosen so all committed media stays under 30 MB.
-    for pair in "walkthrough:32" "teaser-v2:30" "square:31"; do
+    for pair in "launch:32" "teaser:30"; do
       name="${pair%%:*}"; crf="${pair##*:}"
       "$FFMPEG" -v error -y -i "out/$name.raw.mp4" -vf "hqdn3d=2:2:6:6" -c:v libx264 -preset slower -crf "$crf" \
         -x264-params "aq-mode=3:psy-rd=0.6" -pix_fmt yuv420p -movflags +faststart -an "out/$name.mp4"

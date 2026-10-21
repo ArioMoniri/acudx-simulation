@@ -201,7 +201,14 @@ def _layer_reply(layer: str, text: str, sc: Scenario) -> dict[str, Any]:
                                     "abnormal": False}]}
     if kind == "treatments":
         rows = [{"code": t["code"], "label": t["label_en"], "appropriateness": t["appropriateness"],
-                 "effects": t["effects"], "narrative": t.get("narrative_en") or ""} for t in spec["treatments"]][:5]
+                 "effects": t["effects"], "narrative": t.get("narrative_en") or ""} for t in spec["treatments"]]
+        # Five rows, as a terse author writes, but always with the fixture's contraindicated
+        # distractor: a plain [:5] cut it for the conditions that list it sixth or later
+        # (septic_arthritis, sepsis, septic shock, CAP), and the safety gate then vetoed the table.
+        contra_rows = [r for r in rows if r["appropriateness"] == "contraindicated"]
+        if contra_rows and not any(r["appropriateness"] == "contraindicated" for r in rows[:5]):
+            rows = rows[:4] + contra_rows[:1]
+        rows = rows[:5]
         if sc.treatments_unsafe_first:
             sc.treatments_unsafe_first = False
             contra = {t[0] for t in (CONDITION_FIXTURES.get(cond["id"]) or {}).get("treatments", [])

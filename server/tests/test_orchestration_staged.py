@@ -9,12 +9,14 @@ import asyncio
 import httpx
 import pytest
 
+from server.condition_catalog import CATALOG
+from server.orchestration import judges as J
 from server.orchestration import staged as S
 from server.orchestration.partial_json import DeltaTracker, parse_partial
 from server.orchestration.routes import OrchestrationRuntime
 from server.orchestration.store import CaseSourceError, CaseStore
 from server.tests.conftest import make_settings
-from server.tests.openai_double import Scenario, build_double
+from server.tests.openai_double import Scenario, _layer_reply, build_double
 
 
 async def _rt(sc: Scenario, **kw) -> OrchestrationRuntime:
@@ -105,6 +107,20 @@ async def test_opening_streams_first_then_layers_continue_on_the_same_thread():
         S.validate_spec(spec)
     finally:
         await rt.aclose()
+
+
+@pytest.mark.parametrize("cond_id", [c["id"] for c in CATALOG])
+def test_double_treatment_table_keeps_a_contraindicated_distractor(cond_id):
+    """The opening test samples an unseeded condition, so the double must answer every catalogue
+    condition with a table the deterministic safety rules accept. Its old [:5] cut dropped the
+    distractor for conditions that list it sixth (septic_arthritis), the safety gate vetoed the
+    table, a retry added a ninth layer call and the test failed on roughly one draw in ten."""
+    out = _layer_reply("treatments", f'"id":"{cond_id}"', Scenario())
+    draft = {"treatments": [{"code": r["code"], "label_en": r["label"], "appropriateness": r["appropriateness"]}
+                            for r in out["treatments"]]}
+    cond = next(c for c in CATALOG if c["id"] == cond_id)
+    issues = J.check_safety_dosing(draft, cond)["issues"]
+    assert "no contraindicated distractor treatment" not in issues or not J.fixture_contraindicated_codes(cond_id)
 
 
 async def test_one_locale_per_call_and_turkish_on_request():
