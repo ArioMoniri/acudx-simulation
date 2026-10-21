@@ -13,6 +13,7 @@ import {
 } from "@phosphor-icons/react";
 
 import { PageContainer, PageHeader } from "@/components/shell";
+import { CourseClockCard } from "@/components/institution/CourseClockCard";
 import {
   Badge,
   Button,
@@ -52,7 +53,7 @@ import {
 } from "@/lib/panelsApi";
 import { useProfile } from "@/state/profileStore";
 
-const TABS = ["queue", "roster", "assignments"] as const;
+const TABS = ["queue", "roster", "assignments", "clock"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_KEY = "acudx-faculty-tab";
 
@@ -660,6 +661,10 @@ export function FacultyPage() {
               <AssignForm roster={roster} onAssigned={() => void load()} />
               <AssignmentsTable rows={assignments} roster={roster} />
             </div>
+          </TabsContent>
+
+          <TabsContent value="clock">
+            <CourseClockCard />
           </TabsContent>
           </div>
         </Tabs>

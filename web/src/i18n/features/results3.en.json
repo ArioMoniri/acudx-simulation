@@ -3,6 +3,7 @@
     "pending": "Pending",
     "preliminary": "Preliminary",
     "readyIn": "due in {{time}}",
+    "realWait": "next report in ~{{sec}} s real time",
     "advance": "Advance to next result (+{{time}})",
     "advanceHint": "Moves the simulation clock forward to the next result. The patient's course moves forward too.",
     "engineFailed": "The results engine could not produce this result.",
@@ -14,7 +15,7 @@
     "icdSearching": "Searching ICD-10-CM",
     "icd11Link": "Look up in ICD-11 (WHO)",
     "codeTagTitle": "{{system}} code",
-    "timeLegend": "ETA and countdowns are simulation time: stat chemistry about 50 min, troponin 60 min, CT about 4 h, cultures 2 to 5 days. Use Advance to move the clock to the next result.",
+    "timeLegend": "ETA and countdowns are simulation time: stat chemistry about 50 min, troponin 60 min, CT about 4 h, cultures 2 to 5 days. The simulated clock runs faster than real time, so a routine result arrives within about two real minutes; Advance skips the wait.",
     "section": {
       "haematology": "Haematology",
       "chemistry": "Chemistry",

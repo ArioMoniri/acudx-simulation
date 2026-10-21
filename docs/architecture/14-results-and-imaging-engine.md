@@ -247,3 +247,44 @@ LOINC full-table download needs a free loinc.org account: sign in at https://loi
 Routes: `GET /v1/results/catalog`, `GET /v1/terminology/status`, `/v1/terminology/icd10cm/search?q=` (code prefix, words, index synonyms, a small table of clinical abbreviations marked as an AcuDx addition), `/v1/terminology/icd10cm/{code}` (with ancestors), `/v1/terminology/icd10cm/relate` (exact, more_specific, less_specific, same_category, same_block), `/v1/terminology/icd11/search`. The diagnosis picker merges server ICD-10-CM hits when the gateway is reachable; the debrief credits a more specific descendant of the case code and gives a same-category near miss for codes outside the curated catalogue.
 
 CI: `python scripts/terminology/build_terminology.py check` (offline) fails when an output drifts from the manifest, the web catalogue is stale, or a LOINC code in use is unverified or inactive. Tests: `server/tests/test_terminology_catalog.py` (every orderable resolves with sourced observations, no orphan web orders, ranges sourced, turnaround, preliminary reports, the LDH live spec, ICD search, no "code:" labels).
+
+## 10. Compressed encounter clock (2026-10-21)
+
+### 10.1 The reported fault
+
+Live report: "Sonuç should be faster, not that much wait time, in a couple of minutes." Section 9 put results on the sim clock with their clinical turnaround, but the sim clock ran at wall-clock speed, so a stat chemistry took 50 real minutes and a culture a day unless the learner pressed "Advance to next result".
+
+### 10.2 Design
+
+Every time the learner reads stays clinical sim time (ordered 4 min, resulted 49 min). Two settings make the real wait short:
+
+| Setting | Default | Bounds | Meaning |
+|---|---|---|---|
+| `scale` | 6 | 1 to 60 | sim ms per real ms: one real minute is six sim minutes, so a ten-minute session covers the first hour of care (the usual bundle window) |
+| `wait_cap_s.poc` | 15 | 5 to 600 | longest real wait for a bedside test report |
+| `wait_cap_s.lab` | 45 | 5 to 600 | laboratory (chemistry, haematology, coagulation, troponin) |
+| `wait_cap_s.imaging` | 90 | 5 to 600 | XR, CT, US, MRI (first report; the final after a preliminary waits one more cap) |
+| `wait_cap_s.culture` | 120 | 5 to 600 | cultures (preliminary, then the final one more cap later) |
+
+A pending report lands after `min(sim time left / scale, cap)` real seconds, the cap counted from the order (or from the preliminary report for the final). When the cap comes first, the store jumps the sim clock to the report: the same step as "Advance to next result", logged as a `stage` event with `meta.advancedMs` and `meta.auto = true`, and in Live mode the Clinical Director steps to the new sim time, so the patient's course moves on by the same time (an untreated patient keeps deteriorating). The button stays; it skips the remaining wait at once.
+
+With the defaults: POC glucose 15 s, blood gas 15 s, stat chemistry 45 s, troponin 45 s, chest XR 90 s, NCCT head 90 s, CT with a preliminary read 90 s then the final at 180 s, blood culture preliminary 120 s and final 240 s. The pending row shows the sim ETA and "next report in ~N s real time".
+
+One clock: every Director step carries `sim_time_ms` (the browser's encounter clock; a learner action is stamped when it happens, an `elapsed` step when it runs). The server Director sets `t_ms = max(t_ms, sim_time_ms)` and ignores the per-kind defaults and `elapsed_ms` (`server/orchestration/director.py` `Action.sim_time_ms`), so the server course, the browser vitals mirror (`domain/clinicalCourse.ts`, which reads the same sim clock) and the results engine (`sim_time_ms` = order time) share one time axis. The cadence tick is about five sim minutes, between 15 s and 60 s of wall time (`directorTickWallMs`); a time jump is never coalesced with a cadence tick.
+
+### 10.3 Per-course setting (faculty)
+
+Faculty set the clock for their course (the faculty's org) in the faculty panel, tab "Encounter clock" (`web/src/components/institution/CourseClockCard.tsx`), which previews the real waits. Routes (`server/learning/routes.py`, stored in `course_settings`):
+
+| Route | Who | |
+|---|---|---|
+| `GET /v1/me/sim-clock` | any signed-in caller | the caller's course clock, the defaults, `source` (`course` or `default`), a preview of the real waits, the bounds |
+| `GET /v1/faculty/sim-clock` | faculty and above | the same for the faculty's course |
+| `PUT /v1/faculty/sim-clock` | faculty and above | `{ "scale": 12, "wait_cap_s": { "poc": 10, "lab": 30, "imaging": 60, "culture": 90 } }` (422 outside the bounds) |
+| `DELETE /v1/faculty/sim-clock` | faculty and above | back to the defaults |
+
+The encounter page reads `GET /v1/me/sim-clock` when the gateway is reachable and applies it (`setSimClockSettings`); a running encounter keeps its sim time and continues at the new scale. Offline, or when the answer fails, the defaults apply.
+
+### 10.4 Parity and tests
+
+`server/learning/sim_clock.py` and `web/src/domain/simClock.ts` implement the same rule; both read `server/tests/fixtures/sim_clock_parity.json` (defaults, bounds, wait classes, the real waits above, and a Director step sequence with the `sim_time_ms` each step must carry and the `t_ms` the server must reach). Tests: `server/tests/test_sim_clock.py` (defaults, waits, validation, Director follows the clock and never rewinds, routes and roles), `web/src/domain/simClock.test.ts`, `web/src/state/encounterSimClock.test.ts` (stat chemistry within 45 s stamped at 50 sim min, culture preliminary at 120 s and final at 240 s, Advance, real-time course setting), `web/src/state/encounterStoreLive.test.ts` (Director parity, engine turnaround with the cap), `server/tests/test_deploy_web_image.py` (the web image copies every fixture a web test imports).

@@ -1,0 +1,77 @@
+{
+  "diagnosis2": {
+    "differentialEmptyHint": "Search the catalogue or tap a suggested condition to start building your differential.",
+    "differentialEmptyTitle": "No candidates yet",
+    "loadMore": "Load more",
+    "searchSubhead": "Search the catalogue",
+    "showingCount": "Showing {{shown}} of {{total}}",
+    "stage": {
+      "differential": "Search the catalogue, add candidates, then rank each by likelihood and note your reasoning.",
+      "plan": "Add the immediate steps, then refine the free-text plan before saving.",
+      "working": "Commit the single most likely diagnosis to get instant, scored feedback."
+    },
+    "verdict2": {
+      "examinerHeading": "Examiner's read",
+      "grading": "Grading your reasoning against the rubric…",
+      "reasoningBand": "Clinical reasoning: {{band}}.",
+      "whyDifferential": "it's a reasonable alternative on your differential, but the findings point elsewhere.",
+      "whySameCategory": "it's in the same disease family, so the discriminators are subtle.",
+      "whySameSystem": "it affects the same body system.",
+      "whySystem": "It sits in a different area: a {{system}} problem."
+    },
+    "workingEmptyTitle": "No working diagnosis yet",
+    "yourDifferential": "Your differential"
+  },
+  "ehr": {
+    "careTeam": { "charge": "Charge nurse", "inRoom": "In room", "roleResus": "Resuscitation support" },
+    "generatingCase": "Generating a case…",
+    "interview": { "patient": { "presentation": "Presentation" } },
+    "results": { "interpretYourself": "Interpret this study. Turn on Guidance for the read." },
+    "storyboard": { "avatarAlt": "Synthetic patient portrait, not a real individual" }
+  },
+  "guidance3": {
+    "guide": {
+      "detail": "Full outline",
+      "detailAria": "Show the full work-up outline",
+      "pct": "{{pct}}% covered",
+      "progress": "Your work-up so far",
+      "progressSummary": "{{done}} of {{expected}} expected steps covered"
+    },
+    "panel": {
+      "disclaimer": "Education only: a guideline reference to structure the work-up, not medical advice or a diagnosis."
+    },
+    "unavailable": {
+      "processOnly": "Process step only: no verified guideline statement fits this step yet."
+    }
+  },
+  "home": {
+    "showDifferent": "Show different cases",
+    "welcomeNamed": "Welcome back, {{name}}"
+  },
+  "imaging2": {
+    "cineBadge": "Cine loop",
+    "cineLive": "Live loop",
+    "openAtlas": "Explore this anatomy in the atlas",
+    "stackAria": "Scrollable image series: use the slider or scroll to change slice",
+    "stackBadge": "Series",
+    "stackSlider": "Slice"
+  },
+  "labs2": {
+    "results": {
+      "change": "Change",
+      "latest": "Latest",
+      "serialDraws": "{{count}} serial draws",
+      "trend": "Trend",
+      "trendCaption": "serial trend"
+    }
+  },
+  "orders2": {
+    "mar": { "timeline": "MAR: {{name}} {{dose}} {{route}}, {{outcome}}" },
+    "order": {
+      "repeat": "Repeat",
+      "repeatAria": "Repeat {{name}}",
+      "timesOrdered": "×{{count}}",
+      "timesOrderedAria": "ordered {{count}} times"
+    }
+  }
+}

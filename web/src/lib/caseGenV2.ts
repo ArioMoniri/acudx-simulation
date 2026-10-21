@@ -186,6 +186,11 @@ export interface DirectorAction {
   ref?: string;
   /** Sim time this action consumes; server default per kind when omitted. */
   elapsed_ms?: number;
+  /**
+   * The encounter's sim clock when the action happened (compressed, domain/simClock.ts).
+   * The server Director's clock follows it (never backwards) and ignores elapsed_ms.
+   */
+  sim_time_ms?: number;
   utterance?: string;
   locale?: "en" | "tr";
 }

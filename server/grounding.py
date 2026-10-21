@@ -127,7 +127,8 @@ class GroundResult(BaseModel):
     passages: List[Passage] = Field(default_factory=list)
     grounded: bool = False               # true iff >=1 cited passage survived the gate
     degraded: bool = False               # true if we did not use the real embed+rerank path
-    mode: str = "embed+rerank"           # embed+rerank | embed-only | hashing-fallback
+    mode: str = "embed+rerank"           # embed+rerank | embed-only | hashing-fallback | condition-scope
+    scope: str = "corpus"                # corpus | condition (candidates limited to the case's tips)
     query: str = ""
     country: str = ""
     locale: str = "en"
@@ -453,6 +454,24 @@ def _statement_vectors_hash(statements: List[Dict[str, Any]], locale: str) -> Li
 # Verified corpus (projection of the SQLite GuidelineStatement store).
 # ---------------------------------------------------------------------------
 
+def condition_scope(condition: Optional[str], stages: Optional[Sequence[str]]) -> set:
+    """Ids of the verified statements the attending tips of ``condition`` cite at ``stages``
+    (every stage when None). Empty when the condition has no tips or the store is unavailable."""
+    try:
+        from server.guidelines import tips as tips_mod
+        from server.guidelines.store import get_store
+
+        store = get_store()
+        wanted = [s for s in (stages or tips_mod.STAGES) if s in tips_mod.STAGES]
+        ids: set = set()
+        for st in wanted:
+            ids |= tips_mod.statement_ids_for_stage(store, st, condition=condition)
+        return ids
+    except Exception as exc:  # pragma: no cover - defensive: a broken store must not 500 /v1/ground
+        logger.warning("condition scope unavailable: %s", exc)
+        return set()
+
+
 def verified_statements() -> List[Dict[str, Any]]:
     """Verified GuidelineStatements in the legacy dict shape the retrieval code consumes.
     Returns [] (never the unverified seed) when the store cannot be opened."""
@@ -475,6 +494,8 @@ async def ground(
     locale: str = "en",
     k: int = 4,
     gateway: Any = None,
+    condition: Optional[str] = None,
+    stages: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     """Ground `query` against the seed GuidelineStatement corpus.
 
@@ -491,6 +512,15 @@ async def ground(
     thin `EmbedClient`/`RerankClient` so it stays self-contained and standalone-testable.
 
     Never raises for an unreachable endpoint — it degrades to a local hashing cosine.
+
+    ``condition`` (the case's ICD-10 code or catalogue id) with ``stages`` (the attending-tip
+    stages the encounter has reached) limits the candidates to the verified statements the
+    curated tips of that condition cite at those stages (``scope = "condition"``). Their
+    relevance is established by curation, so without an embed endpoint (the production host
+    has none) the answer is ranked lexically inside that set and is NOT degraded
+    (``mode = "condition-scope"``). A condition without tips keeps the unscoped behaviour.
+    Live report 2026-10-21: every interview guidance card was "unavailable" in production
+    because each unscoped answer was degraded.
     """
     query = (query or "").strip()
     country = (country or "GLOBAL").strip() or "GLOBAL"
@@ -509,6 +539,11 @@ async def ground(
     if not candidates:
         result.detail = f"no verified statements in scope for country={country}"
         return result.model_dump()
+    scope_ids = condition_scope(condition, stages) if condition else set()
+    scoped = [s for s in candidates if s.get("id") in scope_ids]
+    if scoped:
+        candidates = scoped
+        result.scope = "condition"
 
     embedder_id, embed_fn = await _resolve_embed_fn(gateway)
 
@@ -523,9 +558,13 @@ async def ground(
         logger.warning("embed endpoint unavailable, using hashing fallback: %s", exc)
         q_vec = _hash_embed(query)
         stmt_vecs = _statement_vectors_hash(candidates, locale)
-        mode = "hashing-fallback"
-        degraded = True
-        detail = "embed endpoint unreachable; local hashing-cosine fallback"
+        if result.scope == "condition":
+            mode = "condition-scope"
+            detail = "no embed endpoint; ranked lexically within the case condition's tip statements"
+        else:
+            mode = "hashing-fallback"
+            degraded = True
+            detail = "embed endpoint unreachable; local hashing-cosine fallback"
 
     scored = sorted(
         ((_cosine(q_vec, sv), s) for sv, s in zip(stmt_vecs, candidates)),

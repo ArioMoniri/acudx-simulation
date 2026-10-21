@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import { groundingFromResponse } from "@/lib/guidanceEngine";
-import type { GroundPassage } from "@/lib/backend";
+import { ground, type GroundPassage } from "@/lib/backend";
 
 const passage: GroundPassage = {
   id: "gs_ssc21_antimicrobials_1h",
@@ -40,5 +40,30 @@ describe("groundingFromResponse", () => {
   it("drops a passage without a resolving source", () => {
     const r = groundingFromResponse({ grounded: true, degraded: false, passages: [{ ...passage, citation: {} }] });
     expect(r.unavailable).toBe(true);
+  });
+});
+
+describe("condition-scoped grounding (live report 2026-10-21)", () => {
+  it("serves a condition-scope answer: the gateway had no embed endpoint, relevance is by curation", () => {
+    const r = groundingFromResponse({ grounded: true, degraded: false, mode: "condition-scope", scope: "condition", passages: [passage] });
+    expect(r.unavailable).toBe(false);
+    expect(r.passages[0].statementId).toBe(passage.id);
+  });
+
+  it("sends the case condition and the reached tip stages to /v1/ground", async () => {
+    const seen: Record<string, unknown>[] = [];
+    const real = globalThis.fetch;
+    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify({ grounded: false, passages: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      await ground("chest pain", undefined, "tr", { condition: "J93.1", stages: ["triage", "history"] });
+      await ground("chest pain", undefined, "en");
+    } finally {
+      globalThis.fetch = real;
+    }
+    expect(seen[0]).toMatchObject({ query: "chest pain", locale: "tr", condition: "J93.1", stages: ["triage", "history"] });
+    expect(seen[1]).not.toHaveProperty("condition");
   });
 });

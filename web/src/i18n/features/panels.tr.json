@@ -107,7 +107,7 @@
       "pending": "{{count}} bekliyor",
       "forbidden": "Mevcut kimliğinizin öğretim üyesi çalışma alanını kullanma izni yok. Öğretim üyesi rolüne sahip bir hesapla giriş yapın.",
       "unavailable": "Öğretim üyesi API'si yanıt vermedi ({{error}}).",
-      "tabs": { "queue": "İnceleme kuyruğu", "roster": "Liste", "assignments": "Atamalar" },
+      "tabs": { "queue": "İnceleme kuyruğu", "roster": "Liste", "assignments": "Atamalar", "clock": "Görüşme saati" },
       "reasons": { "safety_miss": "Güvenlik kaçırması", "diagnosis_incorrect": "Yanlış tanı" },
       "cases": {
         "heading": "İnceleme bekleyen yazılmış vakalar ({{count}})",

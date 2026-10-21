@@ -1,0 +1,32 @@
+{
+  "simClock": {
+    "title": "Bu dersin görüşme saati",
+    "body": "Sonuçlar klinik sürelerini korur ve öğrencilerin gördüğü her zaman simülasyon zamanıdır. Ölçek, simülasyon saatini gerçek saatten hızlı işletir; her üst sınır bir rapor için en uzun gerçek beklemedir: önce o dolarsa saat rapora atlar ve hastanın seyri aynı simülasyon süresi kadar ilerler.",
+    "sourceCourse": "Ders ayarı",
+    "sourceDefault": "AcuDx varsayılanı",
+    "scale": "Saat ölçeği (gerçek dakika başına simülasyon dakikası)",
+    "scaleHint": "{{min}} gerçek zamandır, {{max}} en hızlısı. Şu an: 1 gerçek dakika {{sim}} simülasyon dakikası.",
+    "outOfRange": "{{min}} ile {{max}} arasında bir değer girin.",
+    "caps": "Bir rapor için en uzun gerçek bekleme (saniye)",
+    "class": {
+      "poc": "Yatak başı testler",
+      "lab": "Laboratuvar",
+      "imaging": "Görüntüleme",
+      "culture": "Kültürler"
+    },
+    "preview": "Öğrencilerin bekleyeceği süre",
+    "example": {
+      "poc": "Kapiller kan şekeri",
+      "lab": "Acil biyokimya",
+      "imaging": "BT (ön rapor, sonra kesin)",
+      "culture": "Kan kültürü (ön rapor, sonra kesin)"
+    },
+    "previewRow": "klinik {{clinical}}: ilk rapor {{first}} sn, kesin rapor {{final}} sn sonra",
+    "save": "Bu ders için kaydet",
+    "reset": "Varsayılana dön",
+    "saved": "Kaydedildi. Bu dersteki yeni görüşmeler bu saati kullanır.",
+    "resetDone": "Ders yeniden AcuDx varsayılan saatini kullanıyor.",
+    "loadFailed": "Ders saati yüklenemedi ({{error}}).",
+    "saveFailed": "Kaydedilmedi ({{error}})."
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "simClock": {
+    "title": "Encounter clock for this course",
+    "body": "Results keep their clinical turnaround and every time learners see is simulated time. The scale makes the simulated clock run faster than the real one, and each cap is the longest real wait for a report: when it is reached first, the clock jumps to the report and the patient's course moves on by the same simulated time.",
+    "sourceCourse": "Course setting",
+    "sourceDefault": "AcuDx default",
+    "scale": "Clock scale (simulated minutes per real minute)",
+    "scaleHint": "{{min}} is real time, {{max}} the fastest. Now: 1 real minute is {{sim}} simulated minutes.",
+    "outOfRange": "Enter a value from {{min}} to {{max}}.",
+    "caps": "Longest real wait for one report (seconds)",
+    "class": {
+      "poc": "Bedside tests",
+      "lab": "Laboratory",
+      "imaging": "Imaging",
+      "culture": "Cultures"
+    },
+    "preview": "What learners will wait",
+    "example": {
+      "poc": "Point-of-care glucose",
+      "lab": "Stat chemistry",
+      "imaging": "CT (preliminary, then final)",
+      "culture": "Blood culture (preliminary, then final)"
+    },
+    "previewRow": "clinical {{clinical}}: first report after {{first}} s, final after {{final}} s",
+    "save": "Save for this course",
+    "reset": "Back to the default",
+    "saved": "Saved. New encounters in this course use this clock.",
+    "resetDone": "The course uses the AcuDx default clock again.",
+    "loadFailed": "The course clock could not be loaded ({{error}}).",
+    "saveFailed": "Not saved ({{error}})."
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "diagnosis2": {
+    "differentialEmptyHint": "Ayırıcı tanınızı oluşturmaya başlamak için katalogda arayın ya da önerilen bir duruma dokunun.",
+    "differentialEmptyTitle": "Henüz aday yok",
+    "loadMore": "Daha fazla yükle",
+    "searchSubhead": "Katalogda ara",
+    "showingCount": "{{total}} sonucun {{shown}} tanesi gösteriliyor",
+    "stage": {
+      "differential": "Katalogda arayın, adayları ekleyin, sonra her birini olasılığa göre sıralayıp gerekçenizi yazın.",
+      "plan": "Acil adımları ekleyin, sonra kaydetmeden önce serbest metin planını düzenleyin.",
+      "working": "Anında puanlı geri bildirim almak için en olası tek tanıyı kesinleştirin."
+    },
+    "verdict2": {
+      "examinerHeading": "Değerlendiricinin yorumu",
+      "grading": "Gerekçeniz rubriğe göre değerlendiriliyor…",
+      "reasoningBand": "Klinik akıl yürütme: {{band}}.",
+      "whyDifferential": "ayırıcı tanınızda makul bir seçenek, ancak bulgular başka bir yeri gösteriyor.",
+      "whySameCategory": "aynı hastalık ailesinde, bu yüzden ayırt ettirici bulgular inceliklidir.",
+      "whySameSystem": "aynı vücut sistemini etkiliyor.",
+      "whySystem": "Farklı bir alanda yer alıyor: bir {{system}} sorunu."
+    },
+    "workingEmptyTitle": "Henüz çalışma tanısı yok",
+    "yourDifferential": "Ayırıcı tanınız"
+  },
+  "ehr": {
+    "careTeam": { "charge": "Sorumlu hemşire", "inRoom": "Odada", "roleResus": "Resüsitasyon desteği" },
+    "generatingCase": "Vaka oluşturuluyor…",
+    "interview": { "patient": { "presentation": "Başvuru" } },
+    "results": { "interpretYourself": "Bu tetkiki kendiniz yorumlayın. Rapor için Rehberliği açın." },
+    "storyboard": { "avatarAlt": "Sentetik hasta portresi, gerçek bir kişi değil" }
+  },
+  "guidance3": {
+    "guide": {
+      "detail": "Tam çerçeve",
+      "detailAria": "Tetkik sürecinin tam çerçevesini göster",
+      "pct": "%{{pct}} tamamlandı",
+      "progress": "Şu ana kadarki tetkik süreciniz",
+      "progressSummary": "Beklenen {{expected}} adımın {{done}} tanesi tamamlandı"
+    },
+    "panel": {
+      "disclaimer": "Yalnızca eğitim amaçlı: tetkik sürecini yapılandırmak için bir kılavuz referansıdır; tıbbi tavsiye ya da tanı değildir."
+    },
+    "unavailable": {
+      "processOnly": "Yalnızca süreç adımı: bu adıma uyan doğrulanmış bir kılavuz ifadesi henüz yok."
+    }
+  },
+  "home": {
+    "showDifferent": "Farklı vakalar göster",
+    "welcomeNamed": "Tekrar hoş geldiniz, {{name}}"
+  },
+  "imaging2": {
+    "cineBadge": "Sine döngü",
+    "cineLive": "Canlı döngü",
+    "openAtlas": "Bu anatomiyi atlasta inceleyin",
+    "stackAria": "Kaydırılabilir görüntü serisi: kesit değiştirmek için kaydırıcıyı kullanın ya da kaydırın",
+    "stackBadge": "Seri",
+    "stackSlider": "Kesit"
+  },
+  "labs2": {
+    "results": {
+      "change": "Değişim",
+      "latest": "Son değer",
+      "serialDraws": "{{count}} seri ölçüm",
+      "trend": "Eğilim",
+      "trendCaption": "seri eğilim"
+    }
+  },
+  "orders2": {
+    "mar": { "timeline": "İlaç uygulama kaydı: {{name}} {{dose}} {{route}}, {{outcome}}" },
+    "order": {
+      "repeat": "Tekrarla",
+      "repeatAria": "{{name}} tekrarla",
+      "timesOrdered": "×{{count}}",
+      "timesOrderedAria": "{{count}} kez istendi"
+    }
+  }
+}

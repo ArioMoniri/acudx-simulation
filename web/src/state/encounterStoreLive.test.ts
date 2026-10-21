@@ -6,9 +6,13 @@ import { createRoot, type Root } from "react-dom/client";
 import {
   __flushLive,
   __setClock,
+  advanceSimTime,
   askQuestion,
   administerTreatment,
+  requestExam,
+  setSimClockSettings,
   getCurrentVitals,
+  getEncounterClockMs,
   getPersonaLiveContext,
   placeOrder,
   resetEncounter,
@@ -22,6 +26,8 @@ import { currentVitals } from "@/domain/clinicalCourse";
 import type { CaseInstance } from "@/domain/case";
 import type { DirectorStepResult } from "@/lib/caseGenV2";
 import type { OrderResult } from "@/lib/resultsApi";
+import simClockParity from "../../../server/tests/fixtures/sim_clock_parity.json";
+import { SIM_CLOCK_DEFAULTS } from "@/domain/simClock";
 
 /**
  * Live-mode wiring of the encounter store against an in-test fetch double that
@@ -199,6 +205,7 @@ afterEach(() => {
   root = null;
   resetEncounter();
   setLiveEnabled(false);
+  setSimClockSettings(SIM_CLOCK_DEFAULTS);
   restoreClock();
   globalThis.fetch = realFetch;
   vi.useRealTimers();
@@ -215,7 +222,8 @@ describe("encounterStore Live mode: results engine", () => {
     expect(snapshot.liveEnabled).toBe(true);
     expect(snapshot.generation?.source).toBe("offline");
 
-    now = 90_000;
+    // 15 real seconds on the default compressed clock (x6) is 90 sim seconds.
+    now = 15_000;
     run(() => placeOrder("cbc", { en: "CBC", tr: "Hemogram" }));
     await flush();
 
@@ -234,12 +242,16 @@ describe("encounterStore Live mode: results engine", () => {
     expect(order.engineTurnaroundMs).toBe(2_400_000);
     expect(order.resolved).toBe(false);
 
-    const readyAt = order.resultsReadyAt;
+    // 40 sim minutes would be 400 real seconds at x6: the lab wait cap (45 s) comes first
+    // and the sim clock jumps to the report.
+    expect(order.resultsReadyAt).toBe(90_000 + 2_400_000);
     run(() => {
-      now = readyAt;
-      vi.advanceTimersByTime(readyAt - 90_000);
+      now = 15_000 + 45_000;
+      vi.advanceTimersByTime(45_000);
     });
     await flush();
+    expect(getEncounterClockMs(snapshot)).toBeGreaterThanOrEqual(90_000 + 2_400_000);
+    expect(snapshot.events.some((e) => e.meta?.auto === true && e.meta?.advancedMs != null)).toBe(true);
 
     const resolved = snapshot.orders.find((o) => o.code === "cbc")!;
     expect(resolved.resolved).toBe(true);
@@ -395,18 +407,51 @@ describe("encounterStore Live mode: Clinical Director", () => {
     expect(ctx.affect?.mood_en).toBe("frightened");
   });
 
-  it("steps the Director every 60 s of sim time with a coalesced elapsed action", async () => {
+  it("steps the Director about every 5 sim minutes, stamped with the encounter's sim clock", async () => {
     const c = makeCase(307);
     run(() => setLiveEnabled(true));
     run(() => startEncounter(c));
+    // x6 by default: one cadence tick every 50 real seconds carries sim time 300 000 ms.
     run(() => {
-      now = 60_000;
-      vi.advanceTimersByTime(60_000);
+      now = 50_000;
+      vi.advanceTimersByTime(50_000);
     });
     await flush();
     const ticks = directorCalls().filter((d) => (d.body.action as { kind: string }).kind === "elapsed");
     expect(ticks).toHaveLength(1);
-    expect(ticks[0].body.action).toMatchObject({ elapsed_ms: 60_000 });
+    expect(ticks[0].body.action).toMatchObject({ sim_time_ms: 300_000 });
+    expect((ticks[0].body.action as { elapsed_ms?: number }).elapsed_ms).toBeUndefined();
+  });
+});
+
+describe("encounterStore Live mode: the Director follows the compressed clock (parity fixture)", () => {
+  it("stamps every step with the encounter's sim time, as server/tests/test_sim_clock.py replays", async () => {
+    const fx = simClockParity.director;
+    run(() => setSimClockSettings({ scale: fx.scale, wait_cap_s: simClockParity.defaults.wait_cap_s }));
+    const c = makeCase(308);
+    run(() => setLiveEnabled(true));
+    run(() => startEncounter(c));
+    let wall = 0;
+    for (const step of fx.steps) {
+      if ("stale" in step) continue; // the browser never sends an older clock; the server test covers it
+      const dt = step.wall_s * 1000 - wall;
+      run(() => {
+        now = step.wall_s * 1000;
+        vi.advanceTimersByTime(dt);
+      });
+      wall = step.wall_s * 1000;
+      if (step.kind === "question") run(() => askQuestion(step.ref as Parameters<typeof askQuestion>[0]));
+      if (step.kind === "exam") run(() => requestExam(step.ref as Parameters<typeof requestExam>[0]));
+      if ("advance_ms" in step) run(() => advanceSimTime(step.advance_ms as number));
+      await flush();
+    }
+    const stamped = directorCalls().map((d) => {
+      const a = d.body.action as { kind: string; sim_time_ms?: number };
+      return { kind: a.kind, sim_time_ms: a.sim_time_ms };
+    });
+    expect(stamped).toEqual(
+      fx.steps.filter((s) => !("stale" in s)).map((s) => ({ kind: s.kind, sim_time_ms: s.sim_time_ms })),
+    );
   });
 });
 

@@ -55,6 +55,7 @@ import {
   advanceSimTime,
   getEncounterClockMs,
   nextResultInMs,
+  realWaitMs,
   placeOrder,
   treatmentsLocked,
   useEncounterState,
@@ -372,7 +373,7 @@ export function OrdersTab({ caseInstance, lang, guidanceOn = false }: OrdersTabP
               </THead>
               <TBody>
                 {pending.map((o, i) => (
-                  <TrackerRow key={`p-${o.code}-${i}`} order={o} lang={lang} nowMs={nowMs} />
+                  <TrackerRow key={`p-${o.code}-${i}`} order={o} lang={lang} nowMs={nowMs} realMs={realWaitMs(state, o)} />
                 ))}
                 {resulted.map((o, i) => (
                   <TrackerRow key={`r-${o.code}-${i}`} order={o} lang={lang} nowMs={nowMs} resultedAt={resultedAtById.get(o.id)} />
@@ -687,11 +688,14 @@ function TrackerRow({
   lang,
   nowMs,
   resultedAt,
+  realMs,
 }: {
   order: PlacedOrder;
   lang: Lang;
   nowMs: number;
   resultedAt?: number;
+  /** Real wait until the next report on the compressed clock (state/encounterStore realWaitMs). */
+  realMs?: number;
 }) {
   const { t } = useTranslation();
   const name = lang === "tr" ? order.labelTr : order.labelEn;
@@ -745,6 +749,7 @@ function TrackerRow({
             </div>
             <span className="font-mono text-[0.6875rem] text-subtle" aria-live="off">
               {leftMin > 0 ? t("results3.readyIn", { time: formatSimMinutes(leftMin, lang) }) : t("orders2.tracker.readyNow")}
+              {leftMin > 0 && realMs != null ? ` · ${t("results3.realWait", { sec: Math.max(1, Math.ceil(realMs / 1000)) })}` : null}
             </span>
           </div>
         )}

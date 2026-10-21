@@ -131,6 +131,14 @@ class LearningStore:
                 completed_at REAL
             );
             CREATE INDEX IF NOT EXISTS assignments_org_assignee ON assignments (org, assignee_sub);
+            CREATE TABLE IF NOT EXISTS course_settings (
+                org TEXT NOT NULL,
+                key TEXT NOT NULL,
+                value TEXT NOT NULL,
+                updated_by TEXT NOT NULL,
+                updated_at REAL NOT NULL,
+                PRIMARY KEY (org, key)
+            );
             """
         )
 
@@ -347,6 +355,24 @@ class LearningStore:
             sql += " AND completed_at IS NULL"
         sql += " ORDER BY created_at DESC"
         return [dict(r) for r in c.execute(sql, args).fetchall()]
+
+    def course_setting(self, org: str, key: str) -> dict[str, Any] | None:
+        """One per-course (org) setting: ``{"value", "updated_by", "updated_at"}`` or None."""
+        r = self._conn().execute("SELECT value, updated_by, updated_at FROM course_settings WHERE org = ? AND key = ?",
+                                 (org, key)).fetchone()
+        if r is None:
+            return None
+        return {"value": json.loads(r["value"]), "updated_by": r["updated_by"], "updated_at": r["updated_at"]}
+
+    def set_course_setting(self, org: str, key: str, value: Any, *, updated_by: str) -> None:
+        self._conn().execute(
+            "INSERT INTO course_settings (org, key, value, updated_by, updated_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT (org, key) DO UPDATE SET value = excluded.value, updated_by = excluded.updated_by, "
+            "updated_at = excluded.updated_at",
+            (org, key, json.dumps(value, sort_keys=True), updated_by, time.time()))
+
+    def clear_course_setting(self, org: str, key: str) -> None:
+        self._conn().execute("DELETE FROM course_settings WHERE org = ? AND key = ?", (org, key))
 
     def learner_subs(self, org: str) -> list[str]:
         c = self._conn()

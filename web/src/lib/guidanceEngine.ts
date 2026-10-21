@@ -21,6 +21,7 @@
  * only. No real patient data path.
  */
 
+import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";
 
 import {
@@ -398,6 +399,15 @@ export interface GroundingFocus {
   locale?: Lang;
   /** Country hint forwarded to the gateway (e.g. "TR"). */
   country?: string;
+  /**
+   * The case's condition code. With it the gateway retrieves only the verified
+   * statements the condition's attending tips cite at `stages`, which stays
+   * relevant (not degraded) on a host without an embed endpoint, as in
+   * production (live report 2026-10-21: every guidance card read "unavailable").
+   */
+  condition?: string;
+  /** Attending-tip stages the encounter has reached (visibleTipStages). */
+  stages?: readonly string[];
 }
 
 export interface GroundingResult {
@@ -499,6 +509,8 @@ export function useLiveGrounding(focus: GroundingFocus): GroundingResult {
   const lang: Lang = focus.locale ?? "en";
   const [result, setResult] = useState<GroundingResult>(UNAVAILABLE);
   const query = focus.query.trim();
+  const condition = focus.condition;
+  const stagesKey = (focus.stages ?? []).join(",");
 
   useEffect(() => {
     if (!enabled || query.length === 0) {
@@ -512,7 +524,10 @@ export function useLiveGrounding(focus: GroundingFocus): GroundingResult {
 
     const timer = setTimeout(() => {
       void (async () => {
-        const res = await ground(query, focus.country, lang, { signal: controller.signal });
+        const res = await ground(query, focus.country, lang, {
+          signal: controller.signal,
+          ...(condition ? { condition, stages: stagesKey ? stagesKey.split(",") : undefined } : {}),
+        });
         if (cancelled) return;
         setResult(res.ok ? groundingFromResponse(res.data) : UNAVAILABLE);
       })();
@@ -523,7 +538,25 @@ export function useLiveGrounding(focus: GroundingFocus): GroundingResult {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [enabled, query, focus.country, lang]);
+  }, [enabled, query, focus.country, lang, condition, stagesKey]);
 
   return result;
+}
+
+/** Compose the next-best-action sentence. Process only, never the diagnosis. */
+export function nextActionText(nba: NextBestAction, lang: Lang, t: TFunction): string {
+  switch (nba.kind) {
+    case "workup": {
+      const label = (lang === "tr" ? nba.labelTr : nba.labelEn) ?? nba.ref ?? "";
+      return t("guidance3.nba.order", { label });
+    }
+    case "history":
+      return t("guidance3.nba.askAbout", { topic: t(`guidance3.intent.${nba.ref}`, nba.ref ?? "") });
+    case "exam":
+      return t("guidance3.nba.examine", { system: t(`guidance3.maneuver.${nba.ref}`, nba.ref ?? "") });
+    case "redflag":
+      return t("guidance3.nba.screenRedFlags");
+    case "complete":
+      return t("guidance3.nba.complete");
+  }
 }

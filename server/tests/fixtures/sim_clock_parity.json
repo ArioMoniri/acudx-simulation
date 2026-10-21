@@ -1,0 +1,31 @@
+{
+  "_doc": "Encounter sim clock parity (docs/architecture/14 section 10). Read by server/tests/test_sim_clock.py and web/src/domain/simClock.test.ts: both sides must give the same defaults, real waits and Director clock.",
+  "defaults": {"scale": 6, "wait_cap_s": {"poc": 15, "lab": 45, "imaging": 90, "culture": 120}},
+  "bounds": {"scale": [1, 60], "wait_cap_s": [5, 600]},
+  "class_of": {
+    "poc": "poc", "lab": "lab", "coag": "lab", "cardiac": "lab", "other": "lab",
+    "imaging-xr": "imaging", "imaging-ct": "imaging", "imaging-us": "imaging", "imaging-mri": "imaging",
+    "micro-culture": "culture"
+  },
+  "waits": [
+    {"name": "glucose POC", "category": "poc", "turnaround_min": 5, "preliminary_min": null, "first_report_s": 15, "final_s": 15},
+    {"name": "blood gas", "category": "poc", "turnaround_min": 10, "preliminary_min": null, "first_report_s": 15, "final_s": 15},
+    {"name": "stat chemistry", "category": "lab", "turnaround_min": 50, "preliminary_min": null, "first_report_s": 45, "final_s": 45},
+    {"name": "troponin", "category": "cardiac", "turnaround_min": 60, "preliminary_min": null, "first_report_s": 45, "final_s": 45},
+    {"name": "chest XR", "category": "imaging-xr", "turnaround_min": 60, "preliminary_min": null, "first_report_s": 90, "final_s": 90},
+    {"name": "NCCT head", "category": "imaging-ct", "turnaround_min": 85, "preliminary_min": null, "first_report_s": 90, "final_s": 90},
+    {"name": "CT abdomen", "category": "imaging-ct", "turnaround_min": 250, "preliminary_min": 125, "first_report_s": 90, "final_s": 180},
+    {"name": "blood culture", "category": "micro-culture", "turnaround_min": 2880, "preliminary_min": 1440, "first_report_s": 120, "final_s": 240},
+    {"name": "short test, below the cap", "category": "poc", "turnaround_min": 1, "preliminary_min": null, "first_report_s": 10, "final_s": 10}
+  ],
+  "director": {
+    "scale": 6,
+    "steps": [
+      {"wall_s": 10, "kind": "question", "ref": "onset", "sim_time_ms": 60000, "t_ms": 60000},
+      {"wall_s": 30, "kind": "exam", "ref": "respiratory", "sim_time_ms": 180000, "t_ms": 180000},
+      {"wall_s": 30, "kind": "elapsed", "advance_ms": 600000, "sim_time_ms": 780000, "t_ms": 780000},
+      {"wall_s": 50, "kind": "elapsed", "cadence": true, "sim_time_ms": 900000, "t_ms": 900000},
+      {"wall_s": 50, "kind": "elapsed", "stale": true, "sim_time_ms": 500000, "t_ms": 900000}
+    ]
+  }
+}

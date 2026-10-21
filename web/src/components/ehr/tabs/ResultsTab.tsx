@@ -48,6 +48,7 @@ import {
   getDiscoveredLabs,
   getEncounterClockMs,
   nextResultInMs,
+  realWaitMs,
   retryEngineResult,
   useEncounterState,
 } from "@/state/encounterStore";
@@ -662,6 +663,7 @@ export function ResultsTab({ lang, guidanceOn }: ResultsTabProps) {
                       </Badge>
                       <span className="font-mono text-[11px] tabular-nums text-[color:var(--state-caution)]">
                         {t("results3.readyIn", { time: formatSimMinutes(leftMin, lang) })}
+                        {` · ${t("results3.realWait", { sec: Math.max(1, Math.ceil(realWaitMs(state, o) / 1000)) })}`}
                       </span>
                     </span>
                   </div>

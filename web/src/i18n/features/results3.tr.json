@@ -3,6 +3,7 @@
     "pending": "Bekliyor",
     "preliminary": "Ön rapor",
     "readyIn": "{{time}} sonra",
+    "realWait": "sonraki rapor gerçek zamanda ~{{sec}} sn",
     "advance": "Sonraki sonuca ilerle (+{{time}})",
     "advanceHint": "Simülasyon saatini sonraki sonuca ilerletir. Hastanın seyri de ilerler.",
     "engineFailed": "Sonuç motoru bu sonucu üretemedi.",
@@ -14,7 +15,7 @@
     "icdSearching": "ICD-10-CM aranıyor",
     "icd11Link": "ICD-11'de bak (DSÖ)",
     "codeTagTitle": "{{system}} kodu",
-    "timeLegend": "Tahmini süre ve geri sayımlar simülasyon zamanıdır: acil biyokimya yaklaşık 50 dk, troponin 60 dk, BT yaklaşık 4 sa, kültürler 2 ila 5 gün. Saati sonraki sonuca getirmek için İlerle düğmesini kullanın.",
+    "timeLegend": "Tahmini süre ve geri sayımlar simülasyon zamanıdır: acil biyokimya yaklaşık 50 dk, troponin 60 dk, BT yaklaşık 4 sa, kültürler 2 ila 5 gün. Simülasyon saati gerçek zamandan hızlı işler, bu yüzden rutin bir sonuç gerçek zamanda yaklaşık iki dakika içinde gelir; İlerle düğmesi beklemeyi atlar.",
     "section": {
       "haematology": "Hematoloji",
       "chemistry": "Biyokimya",

@@ -442,14 +442,20 @@ export function ground(
   query: string,
   country?: string,
   locale?: string,
-  opts: RequestOptions = {},
+  opts: RequestOptions & {
+    /** The case's condition code: limits retrieval to the statements its attending tips cite. */
+    condition?: string;
+    /** Attending-tip stages the encounter has reached (never a later stage's statements). */
+    stages?: readonly string[];
+  } = {},
 ): Promise<BackendResult<GroundResult>> {
+  const scope = opts.condition ? { condition: opts.condition, ...(opts.stages ? { stages: [...opts.stages] } : {}) } : {};
   return request<GroundResult>(
     "/v1/ground",
     {
       method: "POST",
       headers: JSON_HEADERS,
-      body: JSON.stringify({ query, country, locale }),
+      body: JSON.stringify({ query, country, locale, ...scope }),
     },
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.ground,
     opts.signal,

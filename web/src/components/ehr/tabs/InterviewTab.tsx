@@ -31,9 +31,11 @@ import {
 } from "@/state/encounterStore";
 import {
   computeCoverage,
+  nextActionText,
   useLiveGrounding,
   type NextBestAction,
 } from "@/lib/guidanceEngine";
+import { visibleTipStages } from "@/lib/guidelinesApi";
 import {
   classifyUtterance,
   inferQuestionIntent,
@@ -485,7 +487,12 @@ export function InterviewTab({
   const guidanceQuery = guidanceOn
     ? [caseInstance.chiefComplaint[lang], nbaPhrase(nba, lang, t)].filter(Boolean).join(" · ")
     : "";
-  const grounding = useLiveGrounding({ query: guidanceQuery, locale: lang });
+  const grounding = useLiveGrounding({
+    query: guidanceQuery,
+    locale: lang,
+    condition: caseInstance.correctDiagnosis?.code.coding[0]?.code,
+    stages: visibleTipStages(state.stage),
+  });
   const leadPassage = grounding.passages[0];
   const lastGuard = state.guardEvents[state.guardEvents.length - 1];
   const lastClinicalSeq = [...state.events]
@@ -769,7 +776,13 @@ export function InterviewTab({
             <span className="text-xs text-muted">{t(guidanceOn ? "encounter.guidance.on" : "encounter.guidance.off")}</span>
           </label>
           {guidanceOn ? (
-            <GuidanceCard hint={activeHint} lang={lang} abstained={guidanceAbstained} live={!grounding.unavailable} />
+            <GuidanceCard
+              hint={activeHint}
+              lang={lang}
+              abstained={guidanceAbstained}
+              live={!grounding.unavailable}
+              nextStep={nba ? nextActionText(nba, lang, t) : null}
+            />
           ) : null}
           <p className="mt-2 flex items-center gap-1 text-[11px] text-muted">
             <BookOpen weight="bold" className="h-3 w-3" aria-hidden />

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -16,11 +17,13 @@ import {
   pkceChallenge,
   primaryRole,
   randomString,
+  hasRestorableSession,
   refreshAccessToken,
   roleAtLeast,
   rolesFromClaims,
   type AuthConfig,
 } from "./auth";
+import { identityHeaders } from "./panelsApi";
 
 /* A tiny sessionStorage for the node environment. */
 function installSessionStorage() {
@@ -251,5 +254,27 @@ describe("session flow", () => {
     expect(await refreshAccessToken(bad as unknown as typeof fetch)).toBe(false);
     expect(storage.has("acudx-oidc-refresh")).toBe(false);
     expect(bearerHeader()).toEqual({});
+  });
+
+  it("after a reload, an API call waits for the silent refresh instead of going out unauthenticated", async () => {
+    // Only the tab-scoped refresh token survives a reload; the access token was in memory.
+    storage.set("acudx-oidc-refresh", "r-reload");
+    expect(hasRestorableSession()).toBe(true);
+    const token = jwt({ exp: Math.floor(Date.now() / 1000) + 300 });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input).endsWith("/v1/auth/config")
+          ? new Response(JSON.stringify(CFG))
+          : new Response(JSON.stringify({ access_token: token, refresh_token: "r-next" })),
+      ),
+    );
+    const headers = await identityHeaders();
+    expect(headers.Authorization).toBe(`Bearer ${token}`);
+    expect(headers["X-User-Id"]).toBeUndefined();
+  });
+
+  it("without any session the call keeps the local-profile headers", () => {
+    expect(hasRestorableSession()).toBe(false);
   });
 });

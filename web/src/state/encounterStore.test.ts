@@ -22,8 +22,10 @@ import {
   getTreatments,
   getGuardEventCount,
   getOffTaskCount,
+  setSimClockSettings,
   type EncounterState,
 } from "@/state/encounterStore";
+import { SIM_CLOCK_DEFAULTS } from "@/domain/simClock";
 import { generateCase } from "@/domain/caseGen";
 import type { CaseInstance } from "@/domain/case";
 
@@ -109,7 +111,19 @@ describe("encounterStore — startEncounter", () => {
     const c = makeCase(102);
     run(() => startEncounter(c));
     now = 5000;
-    expect(getEncounterClockMs(snapshot)).toBe(5000);
+    // The default course clock is compressed: 5 real seconds are 30 sim seconds.
+    expect(getEncounterClockMs(snapshot)).toBe(5000 * SIM_CLOCK_DEFAULTS.scale);
+  });
+
+  it("keeps the sim time when the course clock changes mid-encounter", () => {
+    const c = makeCase(104);
+    run(() => startEncounter(c));
+    now = 10_000;
+    run(() => setSimClockSettings({ scale: 1, wait_cap_s: SIM_CLOCK_DEFAULTS.wait_cap_s }));
+    expect(getEncounterClockMs(snapshot)).toBe(60_000);
+    now = 20_000;
+    expect(getEncounterClockMs(snapshot)).toBe(70_000);
+    run(() => setSimClockSettings(SIM_CLOCK_DEFAULTS));
   });
 });
 

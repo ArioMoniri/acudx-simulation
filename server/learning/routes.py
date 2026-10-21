@@ -3,6 +3,7 @@
 Learner (any authenticated principal)
   POST /v1/events/encounter           store one finished encounter (events + summary), hash-chained per org
   GET  /v1/me/assignments             the caller's open and completed assignments
+  GET  /v1/me/sim-clock               the encounter clock of the caller's course (defaults when unset)
 
 Dean (dean, admin, super_admin)
   GET  /v1/dean/cohort?org=&window=   competency bands by domain, calibration aggregates, at-risk learners, activity
@@ -17,6 +18,7 @@ Faculty (faculty, dean, admin, super_admin)
   POST /v1/faculty/assign             assign a case to a roster (explicit subs or every learner)
   GET  /v1/faculty/assignments
   GET  /v1/faculty/roster
+  GET/PUT/DELETE /v1/faculty/sim-clock  the course's encounter clock (scale, real wait caps)
 
 ``org`` defaults to the caller's org; only admin / super_admin may read another org.
 """
@@ -30,6 +32,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
 from server.auth.deps import Principal, current_user, require_role
+from server.learning import sim_clock as SC
 from server.learning.store import BANDS, DOMAINS, WINDOWS, LearningStore, aggregate_cohort, export_rows, window_since
 
 router = APIRouter(tags=["learning"])
@@ -267,3 +270,50 @@ async def faculty_roster(request: Request, user: Principal = Depends(require_rol
     auth = getattr(request.app.state, "auth", None)
     directory = auth.users.list(org=user.org) if auth is not None else []
     return {"org": user.org, "roster": _store(request).roster(user.org, directory)}
+
+
+# --------------------------------------------------------------------------- #
+# course encounter clock (docs/architecture/14 section 10)                    #
+# --------------------------------------------------------------------------- #
+SIM_CLOCK_KEY = "sim_clock"
+
+
+def _sim_clock_body(st: LearningStore | None, org: str | None) -> dict[str, Any]:
+    row = st.course_setting(org, SIM_CLOCK_KEY) if (st is not None and org) else None
+    settings = SC.DEFAULTS
+    if row is not None:
+        try:
+            settings = SC.SimClockSettings.model_validate(row["value"])
+        except ValueError:
+            row = None  # a stored value from an older shape: serve the defaults
+    return {"org": org, "settings": settings.model_dump(), "defaults": SC.DEFAULTS.model_dump(),
+            "source": "course" if row is not None else "default",
+            "updated_by": row["updated_by"] if row else None, "updated_at": row["updated_at"] if row else None,
+            "preview": SC.preview(settings),
+            "bounds": {"scale": [SC.SCALE_MIN, SC.SCALE_MAX], "wait_cap_s": [SC.WAIT_CAP_MIN_S, SC.WAIT_CAP_MAX_S]}}
+
+
+@router.get("/v1/me/sim-clock")
+async def my_sim_clock(request: Request, user: Principal = Depends(current_user)) -> dict[str, Any]:
+    """The encounter clock the caller's course uses (the defaults until faculty set one)."""
+    return _sim_clock_body(_store(request), user.org)
+
+
+@router.get("/v1/faculty/sim-clock")
+async def faculty_sim_clock(request: Request, user: Principal = Depends(require_role("faculty"))) -> dict[str, Any]:
+    return _sim_clock_body(_store(request), user.org)
+
+
+@router.put("/v1/faculty/sim-clock")
+async def set_faculty_sim_clock(request: Request, body: SC.SimClockSettings,
+                                user: Principal = Depends(require_role("faculty"))) -> dict[str, Any]:
+    st = _store(request)
+    st.set_course_setting(user.org, SIM_CLOCK_KEY, body.model_dump(), updated_by=user.sub)
+    return _sim_clock_body(st, user.org)
+
+
+@router.delete("/v1/faculty/sim-clock")
+async def reset_faculty_sim_clock(request: Request, user: Principal = Depends(require_role("faculty"))) -> dict[str, Any]:
+    st = _store(request)
+    st.clear_course_setting(user.org, SIM_CLOCK_KEY)
+    return _sim_clock_body(st, user.org)

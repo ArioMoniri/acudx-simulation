@@ -25,6 +25,7 @@ import {
   type Coverage,
   type CoverageGroup,
 } from "@/lib/guidanceEngine";
+import { visibleTipStages } from "@/lib/guidelinesApi";
 import type { CaseInstance } from "@/domain/case";
 import type { Lang } from "@/data/schema";
 
@@ -131,7 +132,12 @@ export function RealtimeGuidance({ className }: RealtimeGuidanceProps) {
   const chief = caseInstance ? caseInstance.chiefComplaint[lang] : "";
   const lastLabel = lastActionPhrase(state, caseInstance, lang, t);
   const query = [chief, lastLabel].filter(Boolean).join(" · ");
-  const grounding = useLiveGrounding({ query, locale: lang });
+  const grounding = useLiveGrounding({
+    query,
+    locale: lang,
+    condition: caseInstance?.correctDiagnosis?.code.coding[0]?.code,
+    stages: visibleTipStages(state.stage),
+  });
 
   // Number the citations in appearance order for the footnotes block.
   const noted = useMemo(() => {

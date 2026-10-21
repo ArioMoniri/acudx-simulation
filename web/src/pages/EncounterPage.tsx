@@ -42,12 +42,14 @@ import {
   getGeneration,
   resetEncounter,
   setLiveEnabled,
+  setSimClockSettings,
   useEncounterSelector,
   useEncounterState,
 } from "@/state/encounterStore";
 import type { EncounterStage as StoreStage } from "@/state/encounterStore";
 import type { EncounterStageMeta } from "@/data/schema";
 import { useLiveBackend } from "@/lib/liveBackend";
+import { panelsApi } from "@/lib/panelsApi";
 import type { CaseGenV2Request } from "@/lib/caseGenV2";
 import { caseMetaProvenanceKey } from "@/lib/liveEncounter";
 import { endCaseSession, requestCase } from "@/lib/caseSession";
@@ -138,6 +140,18 @@ export function EncounterPage() {
   // the results engine and steps the Clinical Director only while it is on.
   useEffect(() => {
     setLiveEnabled(backendAvailable);
+  }, [backendAvailable]);
+  // The course's compressed encounter clock (faculty set it per course); the
+  // defaults stay in force when the gateway is off or the answer fails.
+  useEffect(() => {
+    if (!backendAvailable) return;
+    let cancelled = false;
+    void panelsApi.mySimClock().then((res) => {
+      if (!cancelled && res.ok) setSimClockSettings(res.data.settings);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [backendAvailable]);
   // Command palette (⌘K) + the tab it steers, lifted here so the palette and
   // number hotkeys can drive ActivityTabs. Seeded from the store stage so the

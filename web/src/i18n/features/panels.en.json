@@ -107,7 +107,7 @@
       "pending": "{{count}} pending",
       "forbidden": "Your current identity is not allowed to use the faculty workspace. Sign in with an account that holds the faculty role.",
       "unavailable": "The faculty API did not answer ({{error}}).",
-      "tabs": { "queue": "Review queue", "roster": "Roster", "assignments": "Assignments" },
+      "tabs": { "queue": "Review queue", "roster": "Roster", "assignments": "Assignments", "clock": "Encounter clock" },
       "reasons": { "safety_miss": "Safety miss", "diagnosis_incorrect": "Wrong diagnosis" },
       "cases": {
         "heading": "Authored cases awaiting review ({{count}})",

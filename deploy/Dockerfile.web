@@ -3,8 +3,10 @@ WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web .
-# tsc (part of the build) also checks web/src/domain/clinicalCourseParity.test.ts, which imports this fixture.
+# tsc (part of the build) also checks the parity tests, which import these fixtures
+# (web/src/domain/clinicalCourseParity.test.ts, web/src/domain/simClock.test.ts).
 COPY server/tests/fixtures/course_parity.json /app/server/tests/fixtures/course_parity.json
+COPY server/tests/fixtures/sim_clock_parity.json /app/server/tests/fixtures/sim_clock_parity.json
 ARG VITE_BACKEND_URL=/api
 ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 RUN npm run build

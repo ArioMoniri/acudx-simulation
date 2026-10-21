@@ -149,3 +149,51 @@ def test_ground_uses_verified_store_only(client: TestClient):
         assert p["citation"]["verified_at"], p["id"]
         assert p["citation"]["url"].startswith("https://")
     assert os.environ.get("ACUDX_DB_PATH")  # sanity: isolated DB in use
+
+
+# --------------------------------------------------------------------------- #
+# Condition-scoped grounding (live report 2026-10-21: "Rehberlik is not working") #
+# --------------------------------------------------------------------------- #
+def test_ground_without_embed_endpoint_is_degraded_and_refused_by_the_client(client: TestClient):
+    """The production host has no embed / rerank side-car: an unscoped query degrades to the
+    lexical hashing cosine, which the web refuses (it served stroke aspirin for chest pain)."""
+    body = client.post("/v1/ground", json={"query": "Göğsümün sağ tarafına bıçak saplanmış gibi ağrı var. · Başlangıç",
+                                           "locale": "tr"}).json()
+    assert body["degraded"] is True and body["mode"] == "hashing-fallback"
+
+
+@pytest.mark.parametrize("locale", ["en", "tr"])
+def test_ground_scoped_to_the_case_condition_and_visible_stages(client: TestClient, locale: str):
+    from server.guidelines.store import get_store
+
+    stages = ["triage", "history"]
+    allowed: set[str] = set()
+    for st in stages:
+        allowed |= tips_mod.statement_ids_for_stage(get_store(), st, condition="J93.1")
+    assert allowed, "the pneumothorax family has triage / history tips"
+    r = client.post("/v1/ground", json={"query": "chest pain · onset", "locale": locale, "condition": "J93.1",
+                                        "stages": stages, "k": 3})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["grounded"] is True and body["degraded"] is False
+    assert body["mode"] == "condition-scope" and body["scope"] == "condition"
+    assert body["passages"] and {p["id"] for p in body["passages"]} <= allowed
+    for p in body["passages"]:
+        assert p["citation"]["url"].startswith("https://") and p["statement"]
+
+
+def test_ground_scope_never_reaches_a_later_stage(client: TestClient):
+    from server.guidelines.store import get_store
+
+    store = get_store()
+    later = tips_mod.statement_ids_for_stage(store, "treatment", condition="J93.1") - tips_mod.statement_ids_for_stage(
+        store, "triage", condition="J93.1")
+    body = client.post("/v1/ground", json={"query": "chest drain aspiration", "condition": "J93.1",
+                                           "stages": ["triage"], "k": 8}).json()
+    assert body["mode"] == "condition-scope"
+    assert not ({p["id"] for p in body["passages"]} & later)
+
+
+def test_ground_with_an_unknown_condition_keeps_the_unscoped_behaviour(client: TestClient):
+    body = client.post("/v1/ground", json={"query": "fever", "condition": "Z99.89", "stages": ["history"]}).json()
+    assert body["mode"] == "hashing-fallback" and body["degraded"] is True

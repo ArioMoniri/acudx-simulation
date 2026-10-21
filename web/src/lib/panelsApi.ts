@@ -10,8 +10,9 @@
 
 import { BACKEND_URL } from "@/lib/backend";
 import { getAdminToken } from "@/lib/adminApi";
-import { bearerHeader, ensureAccessToken, hasAccessToken, type AcuDxRole } from "@/lib/auth";
+import { bearerHeader, ensureAccessToken, hasRestorableSession, type AcuDxRole } from "@/lib/auth";
 import { getProfileState, localIdentityHeaders } from "@/state/profileStore";
+import type { SimClockSettings, WaitClass } from "@/domain/simClock";
 
 /* -------------------------------------------------------------------------- */
 /* Results                                                                     */
@@ -279,7 +280,7 @@ function reasonFor(err: unknown): PanelsErrorCode {
  * the faculty and dean panels open for the role the local profile declares.
  */
 export async function identityHeaders(): Promise<Record<string, string>> {
-  if (hasAccessToken()) {
+  if (hasRestorableSession()) {
     await ensureAccessToken();
     const bearer = bearerHeader();
     if (bearer.Authorization) return bearer;
@@ -362,7 +363,25 @@ export function createPanelsApi(opts: PanelsApiOptions = {}) {
     assignments: (openOnly = false) =>
       request<{ assignments: Assignment[] }>("/v1/faculty/assignments", { query: { open_only: openOnly } }),
     roster: () => request<{ org: string; roster: RosterEntry[] }>("/v1/faculty/roster"),
+    /* course encounter clock (docs/architecture/14 section 10) */
+    mySimClock: () => request<SimClockCourse>("/v1/me/sim-clock"),
+    facultySimClock: () => request<SimClockCourse>("/v1/faculty/sim-clock"),
+    setFacultySimClock: (body: SimClockSettings) =>
+      request<SimClockCourse>("/v1/faculty/sim-clock", { method: "PUT", body }),
+    resetFacultySimClock: () => request<SimClockCourse>("/v1/faculty/sim-clock", { method: "DELETE" }),
   };
+}
+
+/** GET /v1/me/sim-clock and /v1/faculty/sim-clock (server/learning/routes.py). */
+export interface SimClockCourse {
+  org: string | null;
+  settings: SimClockSettings;
+  defaults: SimClockSettings;
+  source: "course" | "default";
+  updated_by: string | null;
+  updated_at: number | null;
+  preview: { class: WaitClass; turnaround_min: number; preliminary_min: number | null; first_report_s: number; final_s: number }[];
+  bounds: { scale: [number, number]; wait_cap_s: [number, number] };
 }
 
 export type PanelsApi = ReturnType<typeof createPanelsApi>;

@@ -31,6 +31,7 @@ import type {
 } from "@/domain/case";
 import type { ServiceRequestKind } from "@/domain/fhir";
 import { orderTiming, simTurnaroundLabel, type OrderCategory } from "@/domain/orderCatalog";
+import { SIM_CLOCK_DEFAULTS, normalizeSimClock, waitCapMs, type SimClockSettings } from "@/domain/simClock";
 import {
   courseStatus,
   currentVitals,
@@ -209,6 +210,15 @@ export interface PlacedOrder {
   engineStatus?: "pending" | "ok" | "error";
   /** Why the engine request failed (http_500, timeout ...). */
   engineError?: string | null;
+  /**
+   * Wall-clock ms (store clock) from which the next report's real wait cap
+   * counts: the placement, then the moment the preliminary report came out
+   * (domain/simClock.ts). When the cap is reached before the sim clock, the
+   * clock jumps to the report.
+   */
+  reportWallBase?: number;
+  /** The preliminary report is out (the final still pending). */
+  preliminaryReached?: boolean;
 }
 
 export interface ResolvedResult {
@@ -296,10 +306,24 @@ export interface EncounterState {
   /** Live mode: the gateway is reachable, so results and the Director run server-side. */
   liveEnabled: boolean;
   /**
-   * Sim time the learner skipped forward ("advance time to the next result").
-   * The encounter clock is wall time since start plus this offset.
+   * Sim time the learner skipped forward ("advance time to the next result",
+   * or the automatic jump when a result's real wait cap is reached). The
+   * encounter clock is (wall time since start) x simScale plus this offset.
    */
   simOffsetMs: number;
+  /**
+   * The compressed clock of this encounter (domain/simClock.ts): sim ms per
+   * real ms and the real wait caps per turnaround class. Course setting
+   * (GET /v1/me/sim-clock), else the defaults.
+   */
+  simClock: SimClockSettings;
+  /**
+   * Wall ms from which the clock runs at the current scale (startTs, or the
+   * moment the course clock was applied mid-encounter); the sim time reached
+   * by then is folded into simOffsetMs. startTs itself never moves (it is the
+   * encounter's identity).
+   */
+  clockAnchorTs: number | null;
   /** How the running case was produced (banner SimBadge provenance). */
   generation: CaseGenerationMeta | null;
   director: DirectorSlice;
@@ -350,6 +374,8 @@ function initialState(): EncounterState {
     committedDiagnosis: null,
     liveEnabled,
     simOffsetMs: 0,
+    simClock: courseSimClock,
+    clockAnchorTs: null,
     generation: null,
     director: initialDirector(),
     caseLayers: {},
@@ -369,6 +395,9 @@ function initialDirector(): DirectorSlice {
 /** Module-level Live flag; survives resets so a new case starts in the right mode. */
 let liveEnabled = false;
 
+/** The course's encounter clock; survives resets so a new case starts with it. */
+let courseSimClock: SimClockSettings = SIM_CLOCK_DEFAULTS;
+
 let state: EncounterState = initialState();
 let seqCounter = 0;
 const listeners = new Set<() => void>();
@@ -381,8 +410,15 @@ let directorPending = 0;
 /** True while an "elapsed" tick is queued, so ticks never pile up. */
 let directorTickQueued = false;
 let directorClock: ReturnType<typeof setInterval> | null = null;
-/** Sim time the Director accounts for every cadence tick. */
-const DIRECTOR_TICK_MS = 60_000;
+/**
+ * Director cadence: about five sim minutes per tick on the compressed clock, between
+ * 15 s and 60 s of wall time (one tick a minute at real time, as before). Each tick
+ * steps the server Director to the encounter's sim time.
+ */
+const DIRECTOR_TICK_SIM_MS = 300_000;
+function directorTickWallMs(): number {
+  return Math.min(60_000, Math.max(15_000, Math.round(DIRECTOR_TICK_SIM_MS / state.simClock.scale)));
+}
 /** Off for a room member who is not the host: the host's cadence drives the shared course. */
 let directorClockEnabled = true;
 /** This browser tab, echoed on the thread's `director` events (a step is applied once). */
@@ -398,7 +434,33 @@ function setState(next: EncounterState): void {
 }
 
 function nowOffset(): number {
-  return state.startTs == null ? 0 : Math.max(0, clock() - state.startTs) + state.simOffsetMs;
+  return simNow(state);
+}
+
+/** Sim ms of an encounter at the store clock's current wall time. */
+function simNow(s: EncounterState): number {
+  if (s.startTs == null) return 0;
+  const anchor = s.clockAnchorTs ?? s.startTs;
+  const scale = s.simClock?.scale ?? 1;
+  return Math.round(Math.max(0, clock() - anchor) * scale) + (s.simOffsetMs ?? 0);
+}
+
+/**
+ * Apply the course's encounter clock (GET /v1/me/sim-clock). A running
+ * encounter keeps its sim time: the clock is re-anchored at the current sim
+ * time and runs at the new scale from now on; pending orders are rescheduled.
+ */
+export function setSimClockSettings(raw: unknown): void {
+  const next = normalizeSimClock(raw);
+  courseSimClock = next;
+  if (state.startTs == null) {
+    setState({ ...state, simClock: next });
+    return;
+  }
+  const simAt = nowOffset();
+  setState({ ...state, simClock: next, clockAnchorTs: clock(), simOffsetMs: simAt });
+  for (const o of state.orders) if (!o.resolved) scheduleOrder(o.id);
+  if (liveEnabled && directorClock != null) startDirectorClock();
 }
 
 function appendEvent(
@@ -633,6 +695,7 @@ export function startEncounter(caseInstance: CaseInstance, opts: StartEncounterO
     ...initialState(),
     caseInstance,
     startTs: clock(),
+    clockAnchorTs: null,
     stage: "interview",
     generation,
     director: { ...initialDirector(), threadId: generation.threadId },
@@ -836,6 +899,7 @@ export function placeOrder(
     clinicalLabelTr: timing.clinicalLabel.tr,
     category: timing.category,
     resolved: false,
+    reportWallBase: clock(),
     source: liveEnabled ? "engine" : hasGroundTruth ? "case" : "offline-synthetic-normal",
     ...(liveEnabled ? { engineStatus: "pending" as const } : {}),
   };
@@ -849,9 +913,22 @@ export function placeOrder(
   queueDirector({ kind: "order", ref: code });
 }
 
-/** One timer per unresolved order, set for the wall time left until its sim due time. */
+/** One timer per unresolved order, set for the wall time left until its next report. */
 const orderTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+/** Sim ms of an order's next report: the preliminary while it is still ahead, else the final. */
+function nextReportAt(o: PlacedOrder): number {
+  return o.preliminaryAt != null && !o.preliminaryReached && o.preliminaryAt < o.resultsReadyAt
+    ? o.preliminaryAt
+    : o.resultsReadyAt;
+}
+
+/**
+ * Wall ms until an order's next report: the sim time left at the encounter's
+ * scale, but never more than the class's real wait cap counted from the last
+ * report (domain/simClock.ts). The timer then either finds the report due or
+ * jumps the sim clock to it.
+ */
 function scheduleOrder(orderId: string): void {
   const prev = orderTimers.get(orderId);
   if (prev != null) {
@@ -860,22 +937,38 @@ function scheduleOrder(orderId: string): void {
   }
   const order = state.orders.find((o) => o.id === orderId && !o.resolved);
   if (!order) return;
-  const wait = Math.max(0, order.resultsReadyAt - nowOffset());
+  const scale = state.simClock.scale;
+  const atScale = Math.max(0, nextReportAt(order) - nowOffset()) / scale;
+  const capLeft = (order.reportWallBase ?? clock()) + waitCapMs(state.simClock, order.category) - clock();
+  const wait = Math.max(0, Math.ceil(Math.min(atScale, capLeft)));
   const timer = setTimeout(() => {
     pendingTimers.delete(timer);
     orderTimers.delete(orderId);
     const o = state.orders.find((x) => x.id === orderId && !x.resolved);
     if (!o) return;
-    if (nowOffset() + 1 < o.resultsReadyAt) scheduleOrder(orderId);
-    else resolveOrder(orderId);
+    const left = nextReportAt(o) - nowOffset();
+    // The real wait cap came first: the clock jumps to the report (the Director follows).
+    if (left > 0) advanceSimTime(left, { auto: true });
+    else releaseDueOrders();
   }, wait);
   orderTimers.set(orderId, timer);
   pendingTimers.add(timer);
 }
 
-/** Resolve every order that is due on the sim clock (after a time skip). */
+/** Resolve every order that is due on the sim clock and mark preliminary reports that came out. */
 function releaseDueOrders(): void {
   const now = nowOffset();
+  const prelimOut = state.orders.filter(
+    (o) => !o.resolved && !o.preliminaryReached && o.preliminaryAt != null && now >= o.preliminaryAt && now < o.resultsReadyAt,
+  );
+  if (prelimOut.length) {
+    const ids = new Set(prelimOut.map((o) => o.id));
+    const wall = clock();
+    setState({
+      ...state,
+      orders: state.orders.map((o) => (ids.has(o.id) ? { ...o, preliminaryReached: true, reportWallBase: wall } : o)),
+    });
+  }
   for (const o of state.orders) {
     if (o.resolved) continue;
     if (now >= o.resultsReadyAt) resolveOrder(o.id);
@@ -886,15 +979,16 @@ function releaseDueOrders(): void {
 /**
  * Advance the sim clock by `ms` (for example to the next pending result). The
  * patient's course advances with it: in Live mode the Clinical Director takes
- * an "elapsed" step of the same length, so an untreated patient keeps
- * deteriorating while the learner waits for a result.
+ * an "elapsed" step to the new sim time, so an untreated patient keeps
+ * deteriorating while the learner waits for a result. `auto` marks the jump
+ * the store makes itself when a result's real wait cap is reached.
  */
-export function advanceSimTime(ms: number): void {
+export function advanceSimTime(ms: number, opts: { auto?: boolean } = {}): void {
   if (!state.caseInstance || !(ms > 0)) return;
   const skip = Math.round(ms);
-  const ev = appendEvent("stage", state.stage, { advancedMs: skip });
+  const ev = appendEvent("stage", state.stage, { advancedMs: skip, ...(opts.auto ? { auto: true } : {}) });
   setState({ ...state, simOffsetMs: state.simOffsetMs + skip, events: [...state.events, ev] });
-  if (liveEnabled) queueDirector({ kind: "elapsed", elapsed_ms: skip });
+  if (liveEnabled) queueDirector({ kind: "elapsed" }, { force: true });
   releaseDueOrders();
 }
 
@@ -1299,15 +1393,22 @@ interface DirectorStepContext {
   seq?: number;
   /** The persona already voiced the reply to this action: do not add the narrator's line. */
   voiced?: boolean;
+  /** An "elapsed" step that must not be coalesced (a time jump, not a cadence tick). */
+  force?: boolean;
 }
 
 function queueDirector(action: DirectorAction, ctx: DirectorStepContext = {}): void {
   if (!liveEnabled || !state.caseInstance) return;
+  const tick = action.kind === "elapsed" && !ctx.force;
   if (action.kind === "elapsed") {
     if (!directorClockEnabled) return;
-    if (directorTickQueued) return;
-    directorTickQueued = true;
+    if (tick && directorTickQueued) return;
+    if (tick) directorTickQueued = true;
   }
+  // One clock (docs/architecture/14 section 10): every step carries the encounter's sim
+  // time, so the server Director's course follows the compressed clock the learner sees.
+  // A learner action is stamped when it happens; an "elapsed" step when it runs.
+  if (action.kind !== "elapsed" && action.sim_time_ms == null) action = { ...action, sim_time_ms: nowOffset() };
   const caseId = state.caseInstance.id;
   directorPending += 1;
   directorChain = directorChain
@@ -1317,7 +1418,7 @@ function queueDirector(action: DirectorAction, ctx: DirectorStepContext = {}): v
     })
     .finally(() => {
       directorPending -= 1;
-      if (action.kind === "elapsed") directorTickQueued = false;
+      if (tick) directorTickQueued = false;
     });
 }
 
@@ -1337,7 +1438,7 @@ async function runDirectorStep(action: DirectorAction, caseId: string, ctx: Dire
       : prevState
         ? { case_state: prevState }
         : { spec: caseInstanceToSpec(c) }),
-    action: { ...action, locale: c.locale },
+    action: { ...action, locale: c.locale, ...(action.kind === "elapsed" ? { sim_time_ms: nowOffset() } : {}) },
     use_model: true,
     client_id: DIRECTOR_CLIENT_ID,
   });
@@ -1494,12 +1595,12 @@ export function setDirectorClockEnabled(enabled: boolean): void {
 
 function startDirectorClock(): void {
   stopDirectorClock();
-  // Sim-time cadence: every 60 s the Director advances physiology and checks
-  // deadlines even when the learner does nothing. This schedules a real server
-  // call; it does not simulate one.
+  // Sim-time cadence: the Director advances physiology and checks deadlines even
+  // when the learner does nothing. This schedules a real server call; it does not
+  // simulate one.
   directorClock = setInterval(() => {
-    queueDirector({ kind: "elapsed", elapsed_ms: DIRECTOR_TICK_MS });
-  }, DIRECTOR_TICK_MS);
+    queueDirector({ kind: "elapsed" });
+  }, directorTickWallMs());
 }
 
 function stopDirectorClock(): void {
@@ -1604,7 +1705,18 @@ export function getDialogue(s: EncounterState): DialogueTurn[] {
 
 /** Current encounter-clock reading in ms (0 before start). */
 export function getEncounterClockMs(s: EncounterState): number {
-  return s.startTs == null ? 0 : Math.max(0, clock() - s.startTs) + (s.simOffsetMs ?? 0);
+  return simNow(s);
+}
+
+/**
+ * Real (wall) ms until an unresolved order's next report on the compressed clock: the sim
+ * time left at the encounter's scale, bounded by the class's real wait cap. 0 when resolved.
+ */
+export function realWaitMs(s: EncounterState, o: PlacedOrder): number {
+  if (o.resolved || s.startTs == null) return 0;
+  const atScale = Math.max(0, nextReportAt(o) - simNow(s)) / s.simClock.scale;
+  const capLeft = (o.reportWallBase ?? clock()) + waitCapMs(s.simClock, o.category) - clock();
+  return Math.max(0, Math.min(atScale, capLeft));
 }
 
 /** Sim ms until the next unresolved order reports (preliminary or final), or null. */

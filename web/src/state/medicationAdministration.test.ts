@@ -128,7 +128,8 @@ describe("encounterStore — administerMedication (five rights + allergy check +
     expect(high?.checks.failures.map((f) => f.code)).toContain("dose-above-max");
 
     run(() => administerMedication({ drug: "7052", dose: 2.5, unit: "mg", route: "IV", frequency: "", indication: "pain" }));
-    now = 2 * 60_000;
+    // 20 real seconds on the default compressed clock (x6) is 2 sim minutes.
+    now = 20_000;
     const second = capture(() => administerMedication({ drug: "7052", dose: 2.5, unit: "mg", route: "IV", frequency: "", indication: "pain" }));
     expect(second?.outcome).toBe("flagged");
     expect(second?.checks.failures.map((f) => f.code)).toContain("repeat-too-soon");

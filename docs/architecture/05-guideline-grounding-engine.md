@@ -438,6 +438,7 @@ Guidance turns land at **~$0.10 for ~15 turns** (cost doc §optimized) — RAG-n
 | Divergence hidden by silent US-default | `conflicts_with` links + `divergenceDetected` → show-both teaching surface. |
 | Model/prompt regression ships silently | Model Registry & Eval Gate: red-team suite (dose traps, 135/85 HTN country trap, pediatric weight-based calc) blocks release. |
 | Grounding stalls the conversation | Architecturally impossible: clock-2 isolation; patient turn never awaits grounding. |
+| No embed / rerank endpoint (the production host: Claude plus an on-demand GPU worker, no side-cars) | Every unscoped `/v1/ground` answer degrades to the lexical hashing cosine (`degraded: true`), which the web refuses, so every cited card read "unavailable" (live report 2026-10-21). The web now sends the case's `condition` and the attending-tip `stages` reached; the gateway limits candidates to the verified statements those tips cite (`scope: "condition"`) and ranks inside that set, `mode: "condition-scope"`, not degraded. A later stage's statements are never candidates. A condition without tips keeps the unscoped behaviour; the interview card then shows the next process step, labelled uncited (`GuidanceCard nextStep`). Tests: `server/tests/test_tips.py` (condition scope, stages, unknown condition), `web/src/lib/guidanceGrounding.test.ts`, `web/src/components/GuidanceCard.test.ts`. |
 
 ---
 

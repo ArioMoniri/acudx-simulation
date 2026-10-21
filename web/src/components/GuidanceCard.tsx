@@ -31,6 +31,12 @@ export interface GuidanceCardProps {
    * indicator entirely.
    */
   live?: boolean;
+  /**
+   * The next process step (computeCoverage next best action, e.g. "Ask about the
+   * onset"). Shown when no verified statement fits this step, so guidance still
+   * coaches the process; it is not a clinical fact and carries no citation.
+   */
+  nextStep?: string | null;
 }
 
 /**
@@ -41,8 +47,44 @@ export interface GuidanceCardProps {
  * source all arrive in the API payload (src/lib/guidelinesApi.ts). Without a
  * verified statement the card says guidance is unavailable; it never invents.
  */
-export function GuidanceCard({ hint, lang, className, abstained = false, live }: GuidanceCardProps) {
+export function GuidanceCard({ hint, lang, className, abstained = false, live, nextStep }: GuidanceCardProps) {
   const { t } = useTranslation();
+
+  if (!hint && !abstained && nextStep) {
+    // Live report 2026-10-21 ("Rehberlik is not working"): the card read "unavailable"
+    // whenever no verified statement fit the step. The process step still guides.
+    return (
+      <div
+        role="note"
+        aria-label={t("encounter.guidance.title")}
+        data-guidance="process"
+        className={cn(
+          "rounded-card border border-brand/30 bg-brand-tint/40 p-3.5",
+          "motion-safe:animate-[fade-up_var(--dur-base)_var(--ease-out)]",
+          className,
+        )}
+      >
+        <div className="flex items-start gap-2.5">
+          <span
+            aria-hidden="true"
+            className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand/15 text-brand"
+          >
+            <Lightbulb weight="fill" className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-brand">
+              {t("guidance3.nba.title")}
+            </span>
+            <p className="mt-1 text-sm font-medium leading-snug text-fg first-letter:uppercase">{nextStep}</p>
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-muted">
+              <CloudSlash weight="bold" className="h-3 w-3 shrink-0" aria-hidden />
+              {t("guidance3.unavailable.processOnly")}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (abstained || !hint) {
     const unavailable = !hint && !abstained;

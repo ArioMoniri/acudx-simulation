@@ -10,7 +10,7 @@ const auth = vi.hoisted(() => ({ token: null as string | null }));
 const profile = vi.hoisted(() => ({ headers: {} as Record<string, string> }));
 
 vi.mock("@/lib/auth", () => ({
-  hasAccessToken: () => auth.token !== null,
+  hasRestorableSession: () => auth.token !== null,
   ensureAccessToken: async () => auth.token,
   bearerHeader: () => (auth.token ? { Authorization: `Bearer ${auth.token}` } : {}),
 }));

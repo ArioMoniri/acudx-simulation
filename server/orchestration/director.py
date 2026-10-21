@@ -192,6 +192,11 @@ class Action(BaseModel):
     kind: ActionKind
     ref: str = ""                       # intent | maneuver | order code | treatment code | position
     elapsed_ms: Optional[int] = None    # sim time this action consumes (default per kind)
+    # The browser's encounter clock when the action happened (compressed sim time,
+    # server/learning/sim_clock.py). When present the Director's clock follows it (never
+    # backwards) and the per-kind defaults and elapsed_ms are ignored: one clock for the
+    # results, the browser's vitals mirror and the course.
+    sim_time_ms: Optional[int] = Field(default=None, ge=0)
     utterance: Optional[str] = None     # learner's words (for the narrator only)
     locale: str = "en"
 
@@ -685,8 +690,11 @@ def node_perceive(run: DirectorRun) -> dict[str, Any]:
         # Ordered oxygen or an antibiotic acts on the patient (live run 2026-10-21: an ordered
         # oxygen and antibiotic left o2 false and the course untreated).
         action = action.model_copy(update={"kind": "treatment"})
-    elapsed = action.elapsed_ms if action.elapsed_ms is not None else DEFAULT_ELAPSED_MS.get(action.kind, 0)
-    state.t_ms += max(0, int(elapsed))
+    if action.sim_time_ms is not None:
+        state.t_ms = max(state.t_ms, int(action.sim_time_ms))
+    else:
+        elapsed = action.elapsed_ms if action.elapsed_ms is not None else DEFAULT_ELAPSED_MS.get(action.kind, 0)
+        state.t_ms += max(0, int(elapsed))
     notes: list[dict[str, Any]] = []
     new_facts: list[str] = []
 

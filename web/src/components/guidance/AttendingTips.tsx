@@ -21,8 +21,8 @@ import { useLang } from "@/lib/useLang";
 import { useEncounterState, type EncounterStage } from "@/state/encounterStore";
 import {
   computeCoverage,
+  nextActionText,
   type Coverage,
-  type NextBestAction,
   type WorkupItem,
   type WorkupTiming,
 } from "@/lib/guidanceEngine";
@@ -71,24 +71,6 @@ function timingLabel(timing: WorkupTiming, ordered: boolean, t: TFunc): string {
 
 function minutesOf(ms: number): number {
   return Math.max(1, Math.round(ms / 60_000));
-}
-
-/** Compose the next-best-action sentence. Process only, never the diagnosis. */
-function nextActionText(nba: NextBestAction, lang: Lang, t: TFunc): string {
-  switch (nba.kind) {
-    case "workup": {
-      const label = (lang === "tr" ? nba.labelTr : nba.labelEn) ?? nba.ref ?? "";
-      return t("guidance3.nba.order", { label });
-    }
-    case "history":
-      return t("guidance3.nba.askAbout", { topic: t(`guidance3.intent.${nba.ref}`, nba.ref ?? "") });
-    case "exam":
-      return t("guidance3.nba.examine", { system: t(`guidance3.maneuver.${nba.ref}`, nba.ref ?? "") });
-    case "redflag":
-      return t("guidance3.nba.screenRedFlags");
-    case "complete":
-      return t("guidance3.nba.complete");
-  }
 }
 
 /* -------------------------------------------------------------------------- */

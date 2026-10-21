@@ -331,6 +331,23 @@ export function hasAccessToken(): boolean {
   return accessToken !== null;
 }
 
+/**
+ * True when this tab holds a session that a refresh can restore: an access token,
+ * a refresh in flight, or the tab-scoped refresh token after a reload (the access
+ * token lives in memory only). Callers then await {@link ensureAccessToken} instead of
+ * sending an unauthenticated request (live sweep 2026-10-21: a reload of /faculty
+ * under OIDC raced the silent refresh, every panel call answered 401 and the page
+ * said the account had no faculty access).
+ */
+export function hasRestorableSession(): boolean {
+  if (accessToken !== null || refreshInFlight !== null) return true;
+  try {
+    return Boolean(sessionStorage.getItem(REFRESH_KEY));
+  } catch {
+    return false;
+  }
+}
+
 /** Reset for tests. */
 export function __resetAuthForTests(): void {
   accessToken = null;
