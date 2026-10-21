@@ -5,14 +5,17 @@ POST /v1/voice/tts            {text, lang, sex, age, voice_id?, format?} -> chun
                                X-Voice-Id, X-Audio-Duration-Ms (when known), X-Voice-TTFB-Ms
 POST /v1/voice/stt            multipart file (+ lang) -> {text, language, confidence, provider, model, audio_seconds}
 GET  /v1/voice/capabilities   what is enabled now (provider, adapter, languages) for tts / stt / avatar
+POST /v1/voice/warm           signed in: the learner started the call; launch the on-demand GPU worker in
+                               the background and answer at once {ready, pending_launch, refusal}
 POST /v1/voice/room           {encounter_id, identity?, name?} -> {url, token, room, renderer} when a LiveKit
                                avatar row is configured, else 404. Signed in only (401 when anonymous): the
                                token is a room credential, so the participant identity is derived from the
                                caller's hashed subject and the metadata is JSON-encoded, never string-built
 GET  /admin/voice/agent-config resolved stt / tts / avatar / livekit config for the agent worker (admin token)
 
-503 ``{error: "<kind>_unavailable", airgapped, reasons[]}`` when no provider can serve
-(every hosted row refused under AIRGAPPED and the GPU worker refused or absent).
+503 ``{error: "<kind>_unavailable", airgapped, reasons[], pending_launch}`` when no provider can serve
+(every hosted row refused under AIRGAPPED and the GPU worker refused or absent). ``pending_launch``
+is true while the GPU worker boots (TTS answers this at once instead of waiting on the boot): retry.
 """
 
 from __future__ import annotations
@@ -56,7 +59,7 @@ class TtsBody(BaseModel):
 
 def _unavailable(exc: NoVoiceProvider) -> JSONResponse:
     return JSONResponse(status_code=503, content={"error": f"{exc.kind}_unavailable", "airgapped": exc.airgapped,
-                                                  "reasons": exc.reasons})
+                                                  "reasons": exc.reasons, "pending_launch": exc.pending_launch})
 
 
 @router.post("/tts")
@@ -103,6 +106,23 @@ async def stt(request: Request, file: UploadFile = File(...), lang: str | None =
 @router.get("/capabilities")
 async def capabilities(request: Request) -> dict[str, Any]:
     return await _service(request).capabilities(probe_worker=True)
+
+
+@router.post("/warm")
+async def warm(request: Request, user: Principal = Depends(current_user)) -> dict[str, Any]:
+    """The learner started the patient call: wake the on-demand GPU worker (voice, live video)
+    and return at once. Never waits on the boot; the call polls /capabilities for readiness."""
+    svc = _service(request)
+    wm = svc.resolver.worker_manager
+    if wm is None:
+        return {"ready": False, "pending_launch": False, "refusal": None}
+    if wm.llm_endpoint():
+        return {"ready": True, "pending_launch": False, "refusal": None}
+    status = await wm.status()
+    if not status.get("can_launch"):
+        return {"ready": False, "pending_launch": False, "refusal": status.get("refusal")}
+    svc.wake_worker()
+    return {"ready": False, "pending_launch": True, "refusal": None}
 
 
 class RoomBody(BaseModel):

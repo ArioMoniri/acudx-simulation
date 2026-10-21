@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 import httpx
 import pytest
 from cryptography.fernet import Fernet
@@ -14,7 +16,7 @@ from server.config import Settings
 from server.registry.store import ProviderIn, RegistryStore
 from server.registry.resolve import RegistryResolver
 from server.telemetry.events import TelemetryRecorder
-from server.tests.test_voice_service import FakeWorkerManager
+from server.tests.test_voice_service import BootingWorkerManager, FakeWorkerManager
 from server.tests.voice_double import WORKER_TOKEN, HostRouter, WorkerScenario, build_worker_double, wav_bytes
 from server.voice import livekit as lk
 from server.voice.routes import admin_router, router
@@ -199,3 +201,38 @@ def test_agent_config_falls_back_to_the_gpu_worker_with_its_bearer(tmp_path):
     j = TestClient(app).get("/admin/voice/agent-config", headers=HDR).json()
     assert j["tts"]["source"] == "gpu_worker" and j["tts"]["base_url"] == "http://worker.test/tts"
     assert j["tts"]["api_key"] == WORKER_TOKEN and j["tts"]["extra"] == {}
+
+
+def test_tts_answers_a_fast_503_pending_launch_while_the_worker_boots(tmp_path):
+    """No ready worker: /tts starts the launch in the background and answers at once (the browser
+    gives up after 30 s; a cold boot takes minutes), flagged pending so the client retries later."""
+    worker = BootingWorkerManager()
+    app, _, _ = _app(tmp_path, worker=worker)
+    c = TestClient(app)
+    t0 = time.monotonic()
+    r = c.post("/v1/voice/tts", json={"text": "hello", "lang": "en", "sex": "male", "age": 50})
+    assert time.monotonic() - t0 < 5.0
+    assert r.status_code == 503
+    body = r.json()
+    assert body["pending_launch"] is True and body["airgapped"] is False and worker.ensure_calls == 1
+
+
+def test_tts_503_without_a_launch_is_not_pending(tmp_path):
+    from server.providers.gpu_worker import NotConfigured
+    app, _, _ = _app(tmp_path, worker=FakeWorkerManager(ready=False, refuse=NotConfigured("x"), can_launch=False))
+    r = TestClient(app).post("/v1/voice/tts", json={"text": "hello", "lang": "en"})
+    assert r.status_code == 503 and r.json()["pending_launch"] is False
+
+
+def test_warm_is_signed_in_only_and_wakes_the_worker_without_waiting(tmp_path):
+    worker = BootingWorkerManager()
+    app, _, _ = _app(tmp_path, worker=worker)
+    c = TestClient(app)
+    assert c.post("/v1/voice/warm").status_code == 401
+    r = c.post("/v1/voice/warm", headers=LEARNER)
+    assert r.status_code == 200 and r.json() == {"ready": False, "pending_launch": True, "refusal": None}
+    for sub, wm, key, want in (("ready", FakeWorkerManager(ready=True), "ready", True),
+                               ("refused", FakeWorkerManager(ready=False, can_launch=False), "pending_launch", False)):
+        (tmp_path / sub).mkdir()
+        other, _, _ = _app(tmp_path / sub, worker=wm)
+        assert TestClient(other).post("/v1/voice/warm", headers=LEARNER).json()[key] is want
