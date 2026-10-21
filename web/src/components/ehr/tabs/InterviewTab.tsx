@@ -29,6 +29,7 @@ import {
   getCurrentVitals,
   getPersonaLiveContext,
   useEncounterState,
+  type GuardEventType,
 } from "@/state/encounterStore";
 import {
   computeCoverage,
@@ -42,6 +43,7 @@ import {
 } from "@/domain/scopeGuard";
 import type { QuestionIntent, ExamManeuver, CaseInstance } from "@/domain/case";
 import { useLiveBackend } from "@/lib/liveBackend";
+import { interviewTurn, showsGuardNote, type GuardLabel } from "@/lib/api/interview";
 import { personaFacts } from "@/lib/personaFacts";
 import {
   sttSupported,
@@ -112,6 +114,20 @@ const CLARIFY_REPLIES: ReadonlyArray<{ en: string; tr: string }> = [
     tr: "Tam takip edemedim — bana neyi sormak istersiniz?",
   },
 ];
+
+/** Server guard label -> the notice this tab already renders (off-topic, answer-seeking, ...). */
+const NOTICE_BY_LABEL: Partial<Record<GuardLabel, GuardNoticeClass>> = {
+  off_topic: "off-topic",
+  diagnosis_request: "answer-seeking",
+  meta_injection: "injection",
+  unsafe: "unsafe",
+};
+const GUARD_EVENT_BY_LABEL: Partial<Record<GuardLabel, GuardEventType>> = {
+  off_topic: "offtopic",
+  diagnosis_request: "answer-seeking",
+  meta_injection: "injection",
+  unsafe: "unsafe",
+};
 
 interface GuardNoticeState {
   cls: GuardNoticeClass;
@@ -648,6 +664,26 @@ export function InterviewTab({
     setTyping(true);
     let answered = false;
     try {
+      // Server-side interview (docs/architecture/20): the guard, the persona and the case all
+      // live on the server, so a typed question gets the same real answer a list click gets.
+      const threadId = state.generation?.threadId;
+      if (threadId) {
+        const ires = await interviewTurn(threadId, { message: text, guidance: guidanceOn, locale: lang });
+        if (ires.ok) {
+          const { reply, guard, intent: served } = ires.data;
+          appendExchange(text, { en: reply, tr: reply }, affectLabel, "live");
+          answered = true;
+          const noticeCls = NOTICE_BY_LABEL[guard.label];
+          if (noticeCls && showsGuardNote(guard)) {
+            logGuardOutcome({ type: GUARD_EVENT_BY_LABEL[guard.label] ?? "offtopic", utterance: text, score: 1,
+              rationale: `${guard.label}:${guard.reason}` });
+            setNotice({ cls: noticeCls, utterance: text });
+          }
+          if (served) askQuestion(served as QuestionIntent, { utterance: text, voiced: true });
+          return;
+        }
+        // model_unreachable or a network error: the older persona route, then the offline path.
+      }
       const intent = inferQuestionIntent(text, caseInstance);
       const tres = await backendPatientTurn(buildPatientTurnRequest(text, intent));
       // A 200 carrying the gateway's scripted deflection (model unreachable)
@@ -684,6 +720,12 @@ export function InterviewTab({
    */
   async function handleLiveSend(text: string) {
     setNotice(null);
+    // A server-held case: the server's guard labels every message (exact labels, model-backed),
+    // so the client heuristic no longer decides which typed questions reach the patient.
+    if (state.generation?.threadId) {
+      await sendToPatient(text);
+      return;
+    }
     const verdict = classifyUtterance(text, caseInstance);
     const { score, rationale } = verdict;
     switch (verdict.class) {

@@ -133,10 +133,24 @@ export interface ProviderInput {
   extra?: Record<string, unknown>;
 }
 
+/** The Claude route (docs/architecture/20 section 2.1). Never carries the key. */
+export interface AnthropicStatus {
+  configured: boolean;
+  usable: boolean;
+  /** Operator-facing reason when not usable, e.g. "Anthropic key not configured". */
+  reason: string | null;
+  key_source: "env" | "registry" | null;
+  provider_id: number | null;
+  enabled: boolean | null;
+  models: Record<string, string | string[]>;
+}
+
 export interface ProviderList {
   providers: Provider[];
   kinds: ProviderKind[];
   secrets_configured: boolean;
+  /** Absent on gateways older than the Claude route. */
+  anthropic?: AnthropicStatus;
 }
 
 export interface ProbeResult {

@@ -145,3 +145,7 @@ Charts are the evilcharts shadcn registry items `recharts-area-chart`, `recharts
 
 * Per-tenant budgets: the summary already groups by tenant-capable columns; the console shows global totals only.
 * Jobs run in-process per gateway instance; with several replicas each one probes and purges on its own schedule (harmless, but a leader election or a single jobs replica would avoid duplicate probes).
+
+## 13. Claude route
+
+The Anthropic provider is a registry row too (`name = anthropic`, `extra.api = "anthropic"`, priority 0), created on every start when missing. It is served by `server/providers/anthropic_provider.py`, not by `/chat/completions`, and is reported under `anthropic` in `/admin/providers` and `/admin/health` (`Anthropic key not configured` until `ANTHROPIC_KEY` is set). Model per role, request shape, fallback, cache-aware pricing and the `cache_write_tokens` telemetry column: document 20, section 2.
