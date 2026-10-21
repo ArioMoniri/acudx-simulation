@@ -76,6 +76,29 @@ Weights reflect the owner's requirement that "video should be reflecting symptom
 
 Sources: https://huggingface.co/black-forest-labs/FLUX.2-klein-4B ; https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev ; https://venturebeat.com/technology/black-forest-labs-launches-open-source-flux-2-klein-to-generate-ai-images-in ; https://huggingface.co/qwen/qwen-image-edit-2511 ; https://huggingface.co/stabilityai/stable-diffusion-3.5-large ; https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B ; https://huggingface.co/Lightricks/LTX-2 ; https://huggingface.co/tencent/HunyuanVideo-1.5 ; https://magichour.ai/blog/ltx-2-3-vs-wan-2-2 (read 2026-10-21).
 
+### 4.1 Visible clinical signs, on-prem only (owner decision 2026-10-21)
+
+Decision: the patient's appearance is made by open-weight models on our own GPU worker, never by a hosted generator (no Higgsfield, no hosted image or video API). Hosted generators apply their own content filters, which refuse or soften exactly the findings a clinical case needs (rashes, burns, wounds, cyanosis). The model has to show real visible signs: petechiae, purpura and the non-blanching meningococcal rash, urticaria, jaundice and scleral icterus, cyanosis, pallor, mottling, diaphoresis, flushing, facial droop, periorbital oedema, facial and lip swelling, wounds and burns when the case states them on the face or neck, dehydration signs, distress and accessory muscle use.
+
+What runs: FLUX.2 [klein] 4B (Apache-2.0) in our own image edit server on the worker (`/imagegen/edit`, infra/gpu-worker/cloud-init.yaml). The model card ships optional NSFW and protected-content inference filters; our server does not load them, and our own guardrails apply instead (server/voice/avatar/appearance.py):
+
+* a sign is drawn only when the server case thread states it (exam text, triage note, history answers, Director state), in EN or TR, with negation ("no petechiae", "siyanoz yok") honoured; wounds and burns only where a head-and-shoulders portrait shows them (face, scalp, neck);
+* every edit instruction says: a clinical teaching photo, fully clothed, head and shoulders only, no nudity, nothing sexual, and no blood or injury unless a wound or burn is listed; the clear-skin instruction ("no rash, no spots") is dropped only when a rash or lesion is listed;
+* the case portraits are synthetic adults for the sign set; the runner's portraits of minors never get anything but the case's own findings, and the framing instruction above applies to every patient;
+* the fever flush is an even tint added after the edit (tint.py), not drawn by the model (blotches in earlier tuning).
+
+Options weighed for the signs the 4B model may draw weakly (licences read 2026-10-21):
+
+| Model | Use | Licence | Verdict |
+|---|---|---|---|
+| FLUX.2 [klein] 4B | single-reference edit, 4 steps | Apache-2.0 (https://huggingface.co/black-forest-labs/FLUX.2-klein-4B) | Kept; fits a 40 GB card next to the voices and the runner |
+| Qwen-Image-Edit-2509 / 2511 (20B) | identity-preserving edit, multi-image input | Apache-2.0 (https://huggingface.co/Qwen/Qwen-Image-Edit-2509) | Best candidate for signs the 4B model misses; needs an 80 GB card or its own card on a multi-GPU worker (about 40 GB in bf16) |
+| SD 3.5 Large + an inpainting mask (and a clinical-signs LoRA or IP-Adapter for identity) | lesion placed exactly where the mask says | Stability Community Licence, free for research, noncommercial and under 1 M USD revenue (https://huggingface.co/stabilityai/stable-diffusion-3.5-large) | Fits our PolyForm Noncommercial licence; worth it for rashes if a LoRA is trained on licensed clinical photos (none is bundled); not implemented |
+| HunyuanImage 2.1 | text-to-image | Tencent Hunyuan Community Licence: does not apply in the EU, UK and South Korea, separate licence above 100 M MAU (https://huggingface.co/tencent/HunyuanImage-2.1/blob/main/LICENSE) | Excluded: a Turkish and EU audience |
+| Wan 2.2 TI2V-5B / I2V-A14B | image-to-video (tachypnoea, shivering, rigors as motion) | Apache-2.0 (https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B) | Candidate for short motion loops of a prepared look; a 5 s 720p clip takes minutes (vendor: under 9 minutes on one consumer GPU for TI2V-5B), so only as a background job, never on the call path; not implemented |
+
+The clinical-sign test set (scripts/clinical_sign_check.py, docs/media/live-avatar/signs/) edits one adult portrait per sign on the worker and scores each edit with a vision check; results are in section 5.1.
+
 ## 5. What was and was not tested live
 
 Everything below ran on 2026-10-21 through a private gateway on this branch (port 8897, its own database) talking to Lambda workers it launched itself. Captures, metrics and the frames are in docs/media/live-avatar/state-sync/ (en/, tr/, prompt-tuning/, pool-status-two-workers.json).
@@ -111,6 +134,19 @@ What the face shows comes only from the server case thread: the spec plus the Di
 * A real browser on a phone network: frames went through an SSH tunnel to a headless browser.
 
 Total GPU spend for this pass was 5 workers: three A100 (1.29 USD/h), one 4x H100 and one H100 (4.29 USD/h), all stopped and confirmed gone through the Lambda instances API.
+
+### 5.1 Clinical-sign test set (2026-10-21)
+
+One adult case portrait per sign, level 2 (marked), FLUX.2 [klein] 4B in offload mode on a Lambda A100 40 GB that also ran vLLM, the voices and the runner (about 10 to 12 s per edit), each edit scored by Claude (claude-opus-5-5) looking at the original and the edit: is the sign visible, is it realistic (would a clinician accept it as a photo of the finding, not paint or an exaggeration), is it the same person, what else was drawn. Sheets, pictures and scores: docs/media/live-avatar/signs/ (second round, with the phrases rewritten to keep natural skin tone) and signs/round1/.
+
+| | Round 1 (first phrases) | Round 2 (natural-tone phrases, realism scored) |
+|---|---|---|
+| Visible | 14 of 19 | 12 of 19 |
+| Visible and realistic | not scored | 1 of 19 (diaphoresis) |
+
+What the model did: rashes came out as painted dots and ringed blotches (petechiae, purpura read as erythema multiforme, urticaria as vesicles), jaundice and pallor as flat paint over the face, scleral icterus as yellow irises, cyanosis as blue lipstick, the burn as punched-out bleeding wounds, the forehead wound with a loose suture thread; facial droop, the flush tint at level 2, respiratory distress and accessory muscle use were not visible on a still, closed-mouth portrait. The same person was kept in 16 of 19 (round 1) and 15 of 19 (round 2). Rewriting the phrases changed little: the 4B model at 4 steps follows "yellow" or "pale" as a colour fill.
+
+Verdict: FLUX.2 [klein] 4B gives a visible cue for most signs but not a clinically realistic one, so it stays only for the mild, colour-light signs the live call uses most (sweat, mild distress, drowsiness, the tinted flush) and is not good enough for rashes, jaundice, cyanosis, burns or wounds. Next, in this order: run the same set with Qwen-Image-Edit-2509 (Apache-2.0, 20B) on an 80 GB worker card, and with FLUX.2 klein at more steps; for rashes and wounds, inpaint only a masked region of the face (SD 3.5 or Qwen inpainting) instead of editing the whole portrait; for motion signs (tachypnoea, shivering, accessory muscles), an image-to-video loop of the prepared look (Wan 2.2 TI2V-5B, Apache-2.0) as a background job. Until a model passes this set for a sign, the gateway should not draw that sign at level 2.
 
 ## 6. Open items
 

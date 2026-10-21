@@ -1,0 +1,279 @@
+{
+  "ok": true,
+  "captured_at": "2026-10-21T19:40:19.962Z",
+  "base_url": "https://acudx.localhost:18443",
+  "lang": "tr",
+  "turn_tls_only": true,
+  "sessions": [
+    {
+      "status": 200,
+      "ice_servers_from_gateway": [
+        {
+          "urls": [
+            "turn:137-23-59-226.sslip.io:3478?transport=udp",
+            "turn:137-23-59-226.sslip.io:3478?transport=tcp",
+            "turns:turn.137-23-59-226.sslip.io:443?transport=tcp"
+          ],
+          "username": "(redacted)",
+          "credential": "(redacted)"
+        }
+      ]
+    }
+  ],
+  "stages": [
+    {
+      "at_s": 22,
+      "stage": "preparing",
+      "progress": "96",
+      "text": "Canl\u0131 g\u00f6r\u00fcnt\u00fcl\u00fc g\u00f6r\u00fc\u015fme ba\u015flat\u0131l\u0131yor Ad\u0131m 3/3: hastan\u0131n y\u00fcz\u00fc haz\u0131rlan\u0131yor O zamana kadar hasta yaz\u0131yla ve taray\u0131c\u0131 sesiyle yan\u0131t verir. Bu resim g\u00f6r\u00fc\u015fme de\u011fildir."
+    },
+    {
+      "at_s": 108,
+      "stage": "connecting",
+      "progress": "98",
+      "text": "Canl\u0131 g\u00f6r\u00fcnt\u00fcl\u00fc g\u00f6r\u00fc\u015fme ba\u015flat\u0131l\u0131yor Ad\u0131m 3/3: g\u00f6r\u00fcnt\u00fc ba\u011flan\u0131yor O zamana kadar hasta yaz\u0131yla ve taray\u0131c\u0131 sesiyle yan\u0131t verir. Bu resim g\u00f6r\u00fc\u015fme de\u011fildir."
+    }
+  ],
+  "selected_pair": {
+    "localType": "relay",
+    "relayProtocol": "tls",
+    "url": "turns:turn.137-23-59-226.sslip.io:4443?transport=tcp",
+    "state": "succeeded"
+  },
+  "ice_stats": {
+    "audioPackets": 94,
+    "audioEnergy": 0,
+    "videoFrames": 47,
+    "videoFps": 26,
+    "rttMs": 271,
+    "audioJitterMs": 121,
+    "videoJitterMs": 35,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tls",
+      "url": "turns:turn.137-23-59-226.sslip.io:4443?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "track": {
+    "track": "4d0d5ee9-2ca2-4402-a46a-c00cb217f304",
+    "readyState": "live"
+  },
+  "turn1": {
+    "question": "\u015eu an nas\u0131l hissediyorsunuz? Ate\u015finizden bahseder misiniz?",
+    "caption": "Siz:\u015eu an nas\u0131l hissediyorsunuz? Ate\u015finizden bahseder misiniz? Hasta:Kalbim h\u00e2l\u00e2 k\u00fct k\u00fct at\u0131yor doktor bey, ama ba\u015f\u0131m\u0131n a\u011fr\u0131s\u0131 epey azald\u0131. Ate\u015fimi \u00f6l\u00e7medim, hafif var gibi. Bir \u00fc\u015f\u00fcyorum bir s\u0131r\u0131ls\u0131klam terliyorum, \u00f6yle gidip geliyor.",
+    "speak": {
+      "provider": "gpu-worker",
+      "model": "chatterbox-multilingual",
+      "first_chunk_ms": 3409.6,
+      "audio_duration_ms": 18520,
+      "runner": {
+        "frames": 926,
+        "first_frame_ms": 2621.5,
+        "elapsed_ms": 17723
+      },
+      "voice": {
+        "speed": 0.92
+      }
+    },
+    "audio_energy_delta": 0.5570806072071096,
+    "audio_packets_delta": 2030,
+    "video_frames_delta": 1012,
+    "video_fps": 25,
+    "samples": 936,
+    "voiced_frames": 169,
+    "quiet_frames": 685,
+    "mouth_motion_voiced": 4.858026688856014,
+    "mouth_motion_quiet": 1.1657694647201946,
+    "mouth_open_voiced": 150.08290957840234,
+    "mouth_open_quiet": 141.79527638381995,
+    "peak_rms": 0.15325982339198874,
+    "speech_start_ms": 4396,
+    "lip_lag_ms": 40
+  },
+  "turn2": {
+    "question": "\u015eimdi daha m\u0131 k\u00f6t\u00fcs\u00fcn\u00fcz? Nefesiniz nas\u0131l?",
+    "caption": "Siz:\u015eimdi daha m\u0131 k\u00f6t\u00fcs\u00fcn\u00fcz? Nefesiniz nas\u0131l? Hasta:Daha iyi de\u011filim doktor bey, kalbim h\u00e2l\u00e2 h\u0131zl\u0131 h\u0131zl\u0131 \u00e7arp\u0131yor. Nefesim biraz s\u0131k, ama g\u00f6\u011fs\u00fcmde a\u011fr\u0131 yok. Titreme de ge\u00e7medi, ne olur bir \u015fey yap\u0131n.",
+    "speak": {
+      "provider": "gpu-worker",
+      "model": "chatterbox-multilingual",
+      "first_chunk_ms": 3409.6,
+      "audio_duration_ms": 18520,
+      "runner": {
+        "frames": 926,
+        "first_frame_ms": 2621.5,
+        "elapsed_ms": 17723
+      },
+      "voice": {
+        "speed": 0.92
+      }
+    },
+    "audio_energy_delta": 0.34240185671083445,
+    "audio_packets_delta": 1143,
+    "video_frames_delta": 570,
+    "video_fps": 25,
+    "samples": 67,
+    "voiced_frames": 26,
+    "quiet_frames": 26,
+    "mouth_motion_voiced": 4.763997395833334,
+    "mouth_motion_quiet": 2.458082932692308,
+    "mouth_open_voiced": 150.6747045272436,
+    "mouth_open_quiet": 149.84845753205127,
+    "peak_rms": 0.11578361629486936,
+    "speech_start_ms": 5011,
+    "lip_lag_ms": 40
+  },
+  "director_step": {
+    "status": 200,
+    "phase": "deteriorating",
+    "vitals": {
+      "hr": 120,
+      "systolic": 163,
+      "diastolic": 96,
+      "rr": 23,
+      "spo2": 97,
+      "tempC": 37.9
+    }
+  },
+  "appearance_before": {
+    "current_key": "9cf11931ec",
+    "live": {
+      "key": "627f620f14",
+      "phase": "deteriorating",
+      "signs": {
+        "diaphoresis": 1,
+        "resp_distress": 1
+      },
+      "cough": false
+    },
+    "source": "generated",
+    "variants": [
+      {
+        "name": "presenting",
+        "key": "9cf11931ec",
+        "status": "ready",
+        "signs": {
+          "diaphoresis": 1
+        },
+        "gen_ms": 9757.9
+      },
+      {
+        "name": "critical",
+        "key": "8bb09cd303",
+        "status": "preparing",
+        "signs": {
+          "diaphoresis": 1,
+          "drowsy": 1
+        },
+        "gen_ms": 10851.5
+      },
+      {
+        "name": "improved",
+        "key": "e3b0c44298",
+        "status": "generated",
+        "signs": {},
+        "gen_ms": 9851
+      },
+      {
+        "name": "unresponsive",
+        "key": "03fc180247",
+        "status": "generated",
+        "signs": {
+          "unresponsive": 2
+        },
+        "gen_ms": 12425
+      },
+      {
+        "name": "live",
+        "key": "627f620f14",
+        "status": "preparing",
+        "signs": {
+          "diaphoresis": 1,
+          "resp_distress": 1
+        },
+        "gen_ms": 10021.3
+      }
+    ]
+  },
+  "appearance_after": {
+    "current_key": "627f620f14",
+    "live": {
+      "key": "627f620f14",
+      "phase": "deteriorating",
+      "signs": {
+        "diaphoresis": 1,
+        "resp_distress": 1
+      },
+      "cough": false
+    },
+    "switches": [
+      {
+        "at": 1792611481.330159,
+        "reason": "ladder_ready",
+        "from": null,
+        "to": "9cf11931ec",
+        "avatar_id": "acudx-p19-64bc2c37-9cf11931ec",
+        "live_key": "627f620f14",
+        "exact": false,
+        "phase": "deteriorating",
+        "switch_ms": 255.6,
+        "runner": {
+          "ok": true,
+          "avatar": "acudx-p19-64bc2c37-9cf11931ec",
+          "previous": "acudx-p19",
+          "crossfade_ms": 900,
+          "switch_ms": 0.4
+        }
+      },
+      {
+        "at": 1792611525.9549086,
+        "reason": "director:generated",
+        "from": "9cf11931ec",
+        "to": "627f620f14",
+        "avatar_id": "acudx-p19-64bc2c37-627f620f14",
+        "live_key": "627f620f14",
+        "exact": true,
+        "phase": "deteriorating",
+        "switch_ms": 258,
+        "runner": {
+          "ok": true,
+          "avatar": "acudx-p19-64bc2c37-627f620f14",
+          "previous": "acudx-p19-64bc2c37-9cf11931ec",
+          "crossfade_ms": 900,
+          "switch_ms": 0.4
+        }
+      }
+    ]
+  },
+  "chart_look": {
+    "state": "ready",
+    "has_image": true,
+    "live_key": "627f620f14",
+    "reason": "presenting look not ready yet; the call opens on the case portrait and switches when it lands",
+    "signs": {
+      "diaphoresis": 1,
+      "resp_distress": 1
+    },
+    "phase": "deteriorating",
+    "key": "627f620f14",
+    "exact": true,
+    "name": "live"
+  },
+  "banner_generated_look": 1,
+  "log": [
+    "9.7s signed in as acudx-student",
+    "16.4s case open",
+    "16.7s voice call started",
+    "21.8s panel preparing 96% | Canl\u0131 g\u00f6r\u00fcnt\u00fcl\u00fc g\u00f6r\u00fc\u015fme ba\u015flat\u0131l\u0131yor Ad\u0131m 3/3: hastan\u0131n y\u00fcz\u00fc haz\u0131rlan\u0131yor O zamana kadar hasta yaz\u0131yla ve taray\u0131c\u0131 sesiyle yan\u0131t verir. Bu resim g\u00f6r\u00fc\u015fme de\u011fildir.",
+    "107.7s panel connecting 98% | Canl\u0131 g\u00f6r\u00fcnt\u00fcl\u00fc g\u00f6r\u00fc\u015fme ba\u015flat\u0131l\u0131yor Ad\u0131m 3/3: g\u00f6r\u00fcnt\u00fc ba\u011flan\u0131yor O zamana kadar hasta yaz\u0131yla ve taray\u0131c\u0131 sesiyle yan\u0131t verir. Bu resim g\u00f6r\u00fc\u015fme de\u011fildir.",
+    "118.0s live video connected",
+    "120.1s appearance: current=9cf11931ec live=627f620f14 variants=presenting:ready,critical:preparing,improved:generated,unresponsive:generated,live:preparing",
+    "122.4s 05-before-step: question sent",
+    "176.4s turn1 {\"question\":\"\u015eu an nas\u0131l hissediyorsunuz? Ate\u015finizden bahseder misiniz?\",\"caption\":\"Siz:\u015eu an nas\u0131l hissediyorsunuz? Ate\u015finizden bahseder misiniz? Hasta:Kalbim h\u00e2l\u00e2 k\u00fct k\u00fct at\u0131yor doktor bey, ama ba\u015f\u0131m\u0131n a\u011fr\u0131s\u0131 epey azald\u0131. Ate\u015fimi \u00f6l\u00e7medim, hafif var gibi. Bir \u00fc\u015f\u00fcyorum bir s\u0131r\u0131ls\u0131klam terliyorum, \u00f6yle gidip geliyor.\",\"speak\":{\"provider\":\"gpu-worker\",\"model\":\"chatterbox-multilingual\",\"first_chunk_ms\":3409.6,\"audio_duration_ms\":18520,\"runner\":{\"frames\":926,\"first_frame_ms\":2621.5,\"elapsed_ms\":17723},\"voice\":{\"speed\":0.92}},\"audio_energy_delta\":0.5570806072071096,\"audio_packets_delta\":2030,\"video_frames_delta\":1012,\"video_fps\":25,\"samples\":936,\"voiced_frames\":169,\"quiet_frames\":685,\"mouth_motion_voiced\":4.858026688856014,\"mouth_motion_quiet\":1.1657694647201946,\"mouth_open_voiced\":150.08290957840234,\"mouth_open_quiet\":141.79527638381995,\"peak_rms\":0.15325982339198874,\"speech_start_ms\":4396,\"lip_lag_ms\":40}",
+    "176.5s director step 200 phase=deteriorating vitals={\"hr\":120,\"systolic\":163,\"diastolic\":96,\"rr\":23,\"spo2\":97,\"tempC\":37.9}",
+    "176.6s after step: current=627f620f14 live=627f620f14 switches=[[\"ladder_ready\",null,\"9cf11931ec\"],[\"director:generated\",\"9cf11931ec\",\"627f620f14\"]]",
+    "180.5s 07-after-step: question sent",
+    "210.3s turn2 {\"question\":\"\u015eimdi daha m\u0131 k\u00f6t\u00fcs\u00fcn\u00fcz? Nefesiniz nas\u0131l?\",\"caption\":\"Siz:\u015eimdi daha m\u0131 k\u00f6t\u00fcs\u00fcn\u00fcz? Nefesiniz nas\u0131l? Hasta:Daha iyi de\u011filim doktor bey, kalbim h\u00e2l\u00e2 h\u0131zl\u0131 h\u0131zl\u0131 \u00e7arp\u0131yor. Nefesim biraz s\u0131k, ama g\u00f6\u011fs\u00fcmde a\u011fr\u0131 yok. Titreme de ge\u00e7medi, ne olur bir \u015fey yap\u0131n.\",\"speak\":{\"provider\":\"gpu-worker\",\"model\":\"chatterbox-multilingual\",\"first_chunk_ms\":3409.6,\"audio_duration_ms\":18520,\"runner\":{\"frames\":926,\"first_frame_ms\":2621.5,\"elapsed_ms\":17723},\"voice\":{\"speed\":0.92}},\"audio_energy_delta\":0.34240185671083445,\"audio_packets_delta\":1143,\"video_frames_delta\":570,\"video_fps\":25,\"samples\":67,\"voiced_frames\":26,\"quiet_frames\":26,\"mouth_motion_voiced\":4.763997395833334,\"mouth_motion_quiet\":2.458082932692308,\"mouth_open_voiced\":150.6747045272436,\"mouth_open_quiet\":149.84845753205127,\"peak_rms\":0.11578361629486936,\"speech_start_ms\":5011,\"lip_lag_ms\":40}",
+    "210.7s selected pair {\"localType\":\"relay\",\"relayProtocol\":\"tls\",\"url\":\"turns:turn.137-23-59-226.sslip.io:4443?transport=tcp\",\"state\":\"succeeded\"}"
+  ]
+}

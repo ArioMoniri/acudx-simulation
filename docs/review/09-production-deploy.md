@@ -199,3 +199,14 @@ Defects the run found:
 
 Evidence: `docs/review/evidence/09-production-live/` (the anthropic drawer shot is not committed:
 it shows the key's last four characters).
+
+### Patient video on the production path (2026-10-21, after the launch)
+
+The live site showed a still portrait for the call (no voice, no lip sync, no case signs). The causes,
+found on a local copy of this stack with real Lambda workers and fixed on the branch, are in
+docs/architecture/18 section 6.7: a 24 GB A10 chosen as the cheapest card, no case portraits in the
+gateway image, no worker at case start, the ladder giving up before the edit server was up, the idle
+reaper stopping a worker the learner was waiting for, the voice image failing on a PPA outage, the first
+request after a reload going out without a bearer, and an orphan sweep that would stop another gateway's
+workers. A redeploy of the live host picks them up; `AVATAR_PREWARM_ON_CASE_START` is on in
+docker-compose.prod.yml. The live site itself was not signed in to for this work.
