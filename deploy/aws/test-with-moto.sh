@@ -16,10 +16,10 @@ WORK="$(mktemp -d)"
 MOTO=$!
 trap 'kill $MOTO; rm -rf "$WORK"' EXIT
 sleep 3
-unset HTTPS_PROXY https_proxy HTTP_PROXY http_proxy LAMBDA_KEY
+unset HTTPS_PROXY https_proxy HTTP_PROXY http_proxy
 export AWS_ENDPOINT_URL="http://127.0.0.1:$PORT" AWS_ACCESS_KEY_ID=testing AWS_SECRET_ACCESS_KEY=testing
 export AWS_REGION=eu-central-1 AWS_DEFAULT_REGION=eu-central-1
-export SSH_CIDR=203.0.113.4/32 KEY_DIR="$WORK/keys" SKIP_REMOTE=1 NAME=acudx-web-prod
+export SSH_CIDR=203.0.113.4/32 KEY_DIR="$WORK/keys" SKIP_REMOTE=1 NAME=acudx-web-prod LAMBDA_KEY=secret_lambda_should_not_leak_0000
 AMI_ID="$(aws ec2 describe-images --owners amazon --query 'Images[0].ImageId' --output text)"
 export AMI_ID
 fail() { echo "FAIL: $*"; exit 1; }
@@ -39,6 +39,13 @@ F=(--filters "Name=tag:Name,Values=acudx-web-prod" "Name=instance-state-name,Val
 SSH_SRC="$(q ec2 describe-security-groups --filters Name=group-name,Values=acudx-web-prod-sg \
   --query 'SecurityGroups[0].IpPermissions[?FromPort==`22`].IpRanges[].CidrIp')"
 [ "$SSH_SRC" = 203.0.113.4/32 ] || fail "ssh ingress $SSH_SRC"
+[ "$(stat -c %a "$WORK/keys/acudx-web-prod-provision.token")" = 600 ] || fail "provision token file mode"
+IID="$(q ec2 describe-instances "${F[@]}" --query 'Reservations[0].Instances[0].InstanceId')"
+UD="$(q ec2 describe-instance-attribute --instance-id "$IID" --attribute userData --query 'UserData.Value' | base64 -d)"
+grep -q "git clone --branch" <<<"$UD" || fail "user-data does not clone the repository"
+grep -q "DOMAIN=.*sslip.io" <<<"$UD" || fail "user-data has no sslip.io domain"
+grep -qF "$(cat "$WORK/keys/acudx-web-prod-provision.token")" <<<"$UD" || fail "user-data lacks the provision token"
+if grep -qiE 'lambda_key|anthropic_key|sk-ant|secret_' <<<"$UD"; then fail "user-data carries an API key"; fi
 DRY_RUN=1 "$HERE/rotate-code.sh" --reset-passwords > "$WORK/rotate.log" 2>&1 || fail "rotate dry run"
 aws ssm put-parameter --name /acudx/acudx-web-prod/admin_token --type SecureString --value x >/dev/null
 CONFIRM=acudx-web-prod "$HERE/teardown.sh" > "$WORK/down1.log" 2>&1 || { cat "$WORK/down1.log"; fail "teardown"; }

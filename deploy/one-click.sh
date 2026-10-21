@@ -34,6 +34,23 @@ COMPOSE=(docker compose --env-file "$ETC/compose.env" -f "$REPO/docker-compose.p
 [ -f "$ETC/compose.override.yml" ] && COMPOSE+=(-f "$ETC/compose.override.yml")
 
 log() { printf '[one-click] %s\n' "$*"; }
+# Deploy progress for operators without SSH: GET https://<domain>/bootstrap/status reads
+# status.json, and the EC2 console output (aws ec2 get-console-output) shows the ACUDX-STAGE lines.
+stage() {
+  local name="$1" detail="${2:-}"
+  install -d -m 700 "$STATE/bootstrap"
+  python3 - "$STATE/bootstrap/status.json" "$name" "$detail" "$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)" <<'PY'
+import json, os, sys, time
+path, name, detail, commit = sys.argv[1:5]
+fd = os.open(path + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+with os.fdopen(fd, "w") as fh:
+    json.dump({"stage": name, "detail": detail, "updated_at": time.time(), "commit": commit}, fh)
+os.replace(path + ".tmp", path)
+PY
+  log "stage: $name${detail:+ ($detail)}"
+  if [ -w /dev/console ]; then printf 'ACUDX-STAGE: %s %s\n' "$name" "$detail" > /dev/console 2>/dev/null || true; fi
+}
+trap 'stage failed "one-click.sh exited with an error near line $LINENO"' ERR
 rand_hex() { openssl rand -hex "$1"; }
 rand_pw() { openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c "$1"; }
 
@@ -48,6 +65,7 @@ fi
 
 # --- 2. Domain + secrets -------------------------------------------------------------------- #
 install -d -m 700 "$ETC" "$STATE" "$STATE/bootstrap"
+stage starting "docker ready"
 install -d -m 755 "$STATE/keycloak-import"
 if [ -z "${DOMAIN:-}" ] && [ -f "$ETC/compose.env" ]; then DOMAIN="$(sed -n 's/^DOMAIN=//p' "$ETC/compose.env")"; fi
 if [ -z "${DOMAIN:-}" ]; then
@@ -106,16 +124,16 @@ fi
 if grep -q '^LAMBDA_KEY=.' "$ETC/gateway.env"; then
   log "LAMBDA_KEY present: GPU workers launch on demand"
 else
-  log "LAMBDA_KEY missing: GPU workers cannot launch until it is added to $ETC/gateway.env"
+  log "LAMBDA_KEY not on the host: add it to $ETC/gateway.env or send it once to POST /bootstrap/provision"
 fi
 chmod 600 "$ETC"/*.env
 
 # --- 3. Realm + stack ----------------------------------------------------------------------- #
 python3 "$REPO/deploy/keycloak/render-prod-realm.py" --domain "$DOMAIN" --out "$STATE/keycloak-import/realm-acudx.json"
-log "building and starting the stack"
+stage building "docker compose build (several minutes on a fresh host)"
 "${COMPOSE[@]}" up -d --build
 
-log "waiting for Keycloak and the gateway"
+stage stack_starting "waiting for Keycloak and the gateway"
 for _ in $(seq 1 120); do
   if "${COMPOSE[@]}" exec -T server python -c "import urllib.request as u; u.urlopen('http://keycloak:8080/idp/realms/acudx', timeout=3); u.urlopen('http://127.0.0.1:8890/health', timeout=3)" >/dev/null 2>&1; then
     break
@@ -129,8 +147,8 @@ FIRST=0
 if [ ! -f "$STATE/bootstrap/credentials.json" ]; then
   ACCOUNTS=(--login-url "https://$DOMAIN/signin")
   FIRST=1
-  log "provisioning one account per role"
 fi
+stage provisioning "identity provider and accounts"
 sed -n 's/^KC_BOOTSTRAP_ADMIN_PASSWORD=//p' "$ETC/keycloak.env" | "${COMPOSE[@]}" exec -T server \
   python -m server.bootstrap.provision --keycloak http://keycloak:8080/idp --admin-password-stdin \
   --sync-client-origin "https://$DOMAIN" --register-idp "https://$DOMAIN/idp/realms/acudx" "${ACCOUNTS[@]}"
@@ -140,5 +158,13 @@ else
   log "accounts already provisioned; mint a new retrieval code with deploy/rotate-bootstrap-code.sh"
 fi
 
+# --- 5. SSH-free deploy: arm the one-time PROVISION_TOKEN from the EC2 user-data ------------- #
+if [ -f "$ETC/provision.token" ]; then
+  "${COMPOSE[@]}" exec -T server python -m server.bootstrap.mint --provision-token-stdin --actor one-click \
+    < "$ETC/provision.token"
+  shred -u "$ETC/provision.token" 2>/dev/null || rm -f "$ETC/provision.token"
+fi
+
+stage ready "https://$DOMAIN/"
 log "done: https://$DOMAIN/"
 log "admin token: $ETC/gateway.env (ADMIN_TOKEN); retrieval code: /root/acudx-retrieval-code.txt"

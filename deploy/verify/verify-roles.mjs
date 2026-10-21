@@ -1,18 +1,24 @@
 // Production verification of the role accounts (run from web/, which has Playwright):
 //
-//   BASE_URL=https://<domain> CREDENTIALS_FILE=/path/credentials.json SHOTS_DIR=../docs/review/production \
-//     node ../deploy/verify/verify-roles.mjs
+//   HTTPS only (no SSH):
+//   BASE_URL=https://<domain> OPERATOR_TOKEN_FILE=~/.ssh/acudx-web-prod-operator.token \
+//     SHOTS_DIR=../docs/review/evidence/09-production-live START_CASE=1 FINALIZE=1 node ../deploy/verify/verify-roles.mjs
 //
-// CREDENTIALS_FILE is /var/lib/acudx/bootstrap/credentials.json copied from the server over SSH
-// (keep it 0600 and delete it afterwards). For each account it signs in through Keycloak with the
+//   or with a credentials file copied from the server (CREDENTIALS_FILE=/path/credentials.json).
+//
+// With OPERATOR_TOKEN_FILE the script mints a single-use code (/bootstrap/operator/mint-code) and
+// reads the temporary passwords once through /bootstrap/credentials, in memory only. With START_CASE=1
+// it also waits for the on-demand GPU worker the case start launches (/bootstrap/operator/gpu), then
+// stops it (/bootstrap/operator/gpu/stop). With FINALIZE=1 it ends by giving every account a fresh
+// temporary password (/bootstrap/operator/reset-accounts) and minting the code to hand over, which it
+// prints (a code may be reported; a password never is). For each account it signs in through Keycloak with the
 // temporary password, completes the UPDATE_PASSWORD step with a random new password (kept in
 // memory only, never printed), checks the landing panel and the UI and API role gates, and saves
 // screenshots. With START_CASE=1 the learner account also starts a case, which answers
 // model_warming and launches the on-demand GPU worker when no model is serving.
 //
-// Afterwards the accounts are NOT temporary any more: run
-// `deploy/rotate-bootstrap-code.sh --reset-passwords` on the server (or deploy/aws/rotate-code.sh)
-// so the person receiving the handoff gets untouched accounts.
+// Without FINALIZE=1 the accounts are NOT temporary any more afterwards: run
+// deploy/aws/rotate-code.sh --reset-passwords so the person receiving the handoff gets untouched accounts.
 //
 // Never prints a password or a token. IGNORE_HTTPS_ERRORS=1 only for a local smoke stack.
 import { createRequire } from "node:module";
@@ -26,11 +32,49 @@ const { chromium } = createRequire(join(process.cwd(), "package.json"))("playwri
 const BASE = (process.env.BASE_URL || "").replace(/\/$/, "");
 const SHOTS = process.env.SHOTS_DIR || "verify-shots";
 const IGNORE_TLS = process.env.IGNORE_HTTPS_ERRORS === "1";
-if (!BASE || !process.env.CREDENTIALS_FILE) {
-  console.error("set BASE_URL and CREDENTIALS_FILE");
+const OP_FILE = process.env.OPERATOR_TOKEN_FILE;
+if (!BASE || (!process.env.CREDENTIALS_FILE && !OP_FILE)) {
+  console.error("set BASE_URL and OPERATOR_TOKEN_FILE (HTTPS only) or CREDENTIALS_FILE");
   process.exit(2);
 }
-const creds = JSON.parse(readFileSync(process.env.CREDENTIALS_FILE, "utf8"));
+const OP_TOKEN = OP_FILE ? readFileSync(OP_FILE, "utf8").trim() : null;
+
+async function operator(path, body = {}, method = "POST") {
+  const res = await fetch(BASE + path, {
+    method,
+    headers: { "X-Operator-Token": OP_TOKEN, "content-type": "application/json" },
+    body: method === "POST" ? JSON.stringify(body) : undefined,
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`${path}: HTTP ${res.status} ${json.error || ""}`);
+  return json;
+}
+
+async function credentialsOverHttps() {
+  const { code } = await operator("/bootstrap/operator/mint-code", { ttl_hours: 1 });
+  const res = await fetch(`${BASE}/bootstrap/credentials`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ code }).toString(),
+  });
+  if (res.status !== 200) throw new Error(`/bootstrap/credentials: HTTP ${res.status}`);
+  const html = await res.text();
+  const unescape = (t) => t.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&amp;/g, "&");
+  const users = [...html.matchAll(/<tr><td><code>([^<]+)<\/code><\/td><td>([^<]+)<\/td><td><code>([^<]+)<\/code><\/td><\/tr>/g)]
+    .map((m) => ({ username: unescape(m[1]), role: unescape(m[2]), password: unescape(m[3]) }));
+  if (users.length !== 8) throw new Error(`expected 8 accounts in the handoff table, read ${users.length}`);
+  const again = await fetch(`${BASE}/bootstrap/credentials`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ code }).toString(),
+  });
+  console.log(`handoff: code accepted once, second use answered ${again.status}`);
+  return { users };
+}
+
+const creds = OP_TOKEN && !process.env.CREDENTIALS_FILE
+  ? await credentialsOverHttps()
+  : JSON.parse(readFileSync(process.env.CREDENTIALS_FILE, "utf8"));
 mkdirSync(SHOTS, { recursive: true });
 
 const PANEL = { super_admin: "/admin", admin: "/admin", dean: "/dean", faculty: "/faculty" };
@@ -60,7 +104,10 @@ async function api(path, token, init = {}) {
   return { status: res.status, body };
 }
 
-const browser = await chromium.launch();
+// Behind an egress proxy (cloud sessions) the browser needs it explicitly; Node's fetch needs
+// NODE_USE_ENV_PROXY=1 (Node 22.21+).
+const proxy = process.env.HTTPS_PROXY || process.env.https_proxy;
+const browser = await chromium.launch(proxy && !IGNORE_TLS ? { proxy: { server: proxy } } : {});
 const results = [];
 let failures = 0;
 const check = (ok, what) => {
@@ -149,6 +196,17 @@ for (const u of creds.users) {
           body: JSON.stringify({ complaint: "fever", locale: "en" }),
         });
         lines.push(`info case start: HTTP ${r.status} ${r.body?.error || ""} ${JSON.stringify(r.body?.worker || "")}`);
+        if (OP_TOKEN && r.body?.error === "model_warming") {
+          // The case start launched the on-demand GPU worker: confirm it, then stop it.
+          let w = null;
+          for (let i = 0; i < 30 && !w?.instance_id; i += 1) {
+            w = (await operator("/bootstrap/operator/gpu", {}, "GET")).worker;
+            if (!w?.instance_id) await new Promise((ok) => setTimeout(ok, 10_000));
+          }
+          lines.push(check(Boolean(w?.instance_id), `GPU worker launched: ${w?.instance_id} ${w?.instance_type} ${w?.region} ${w?.status}`));
+          const stop = await operator("/bootstrap/operator/gpu/stop");
+          lines.push(check(stop.terminated?.instance_id === w?.instance_id, `GPU worker stop requested: ${stop.terminated?.instance_id} ${stop.terminated?.status}`));
+        }
       }
     } else {
       lines.push(check(false, "no access token observed"));
@@ -163,4 +221,10 @@ for (const u of creds.users) {
 }
 await browser.close();
 console.log(`\n${failures === 0 ? "PASS" : `FAIL (${failures})`}: ${results.length} accounts checked`);
+if (OP_TOKEN && process.env.FINALIZE === "1") {
+  const reset = await operator("/bootstrap/operator/reset-accounts");
+  console.log(`accounts reset to fresh temporary passwords: ${reset.accounts.map((a) => a.username).join(", ")}`);
+  const final = await operator("/bootstrap/operator/mint-code", { ttl_hours: 72 });
+  console.log(`final retrieval code (single use, 72 h): ${final.code}`);
+}
 process.exit(failures === 0 ? 0 : 1);

@@ -39,6 +39,12 @@ ROLE_ORDER: tuple[str, ...] = ("student", "resident", "nurse", "paramedic", "fac
 assert set(ROLE_ORDER) == set(ROLES)
 PASSWORD_CHARS = 24
 ORG = "acudx"
+SERVICE_CLIENT_ID = "acudx-provisioner"
+SERVICE_CLIENT_FILE = "kc-provisioner.json"
+
+
+class ProvisionError(RuntimeError):
+    """A Keycloak admin call failed (the message never carries a password)."""
 
 
 def username_for(role: str) -> str:
@@ -66,8 +72,41 @@ class KeycloakAdmin:
                         data={"grant_type": "password", "client_id": "admin-cli", "username": user,
                               "password": password})
         if r.status_code != 200:
-            raise SystemExit(f"keycloak admin login failed: HTTP {r.status_code}")
+            raise ProvisionError(f"keycloak admin login failed: HTTP {r.status_code}")
         self._token = r.json()["access_token"]
+
+    def login_client(self, client_id: str, secret: str) -> None:
+        """Client-credentials login of the realm's own service client (``acudx-provisioner``):
+        enough to manage this realm's users, nothing in ``master``."""
+        r = self.c.post(f"{self.base}/realms/{self.realm}/protocol/openid-connect/token",
+                        data={"grant_type": "client_credentials", "client_id": client_id, "client_secret": secret})
+        if r.status_code != 200:
+            raise ProvisionError(f"keycloak service client login failed: HTTP {r.status_code}")
+        self._token = r.json()["access_token"]
+
+    def ensure_service_client(self, client_id: str = SERVICE_CLIENT_ID) -> dict[str, str]:
+        """Confidential client with a service account holding only realm-management
+        ``manage-users`` + ``view-users`` + ``view-realm`` in this realm. Returns {client_id, secret}
+        (a fresh secret on every call; the caller stores it root-only)."""
+        found = self.req("GET", "/clients", params={"clientId": client_id}).json()
+        if not found:
+            self.req("POST", "/clients", json={
+                "clientId": client_id, "name": "AcuDx account provisioner", "enabled": True,
+                "publicClient": False, "serviceAccountsEnabled": True, "standardFlowEnabled": False,
+                "implicitFlowEnabled": False, "directAccessGrantsEnabled": False,
+                "clientAuthenticatorType": "client-secret", "protocol": "openid-connect",
+                "description": "Used by the gateway's /bootstrap/operator/reset-accounts (server/bootstrap)."})
+            found = self.req("GET", "/clients", params={"clientId": client_id}).json()
+        cid = found[0]["id"]
+        sa = self.req("GET", f"/clients/{cid}/service-account-user").json()["id"]
+        rm = self.req("GET", "/clients", params={"clientId": "realm-management"}).json()[0]["id"]
+        want = [self.req("GET", f"/clients/{rm}/roles/{n}").json() for n in ("manage-users", "view-users", "view-realm")]
+        have = {r["name"] for r in self.req("GET", f"/users/{sa}/role-mappings/clients/{rm}").json()}
+        missing = [r for r in want if r["name"] not in have]
+        if missing:
+            self.req("POST", f"/users/{sa}/role-mappings/clients/{rm}", json=missing)
+        secret = self.req("POST", f"/clients/{cid}/client-secret").json()["value"]
+        return {"client_id": client_id, "secret": secret}
 
     def _h(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self._token}"}
@@ -79,7 +118,7 @@ class KeycloakAdmin:
         r = self.c.request(method, self._url(path), headers=self._h(), **kw)
         if r.status_code >= 400:
             # Never echo a request body: it may carry a password.
-            raise SystemExit(f"keycloak {method} {path.split('?')[0]} failed: HTTP {r.status_code}")
+            raise ProvisionError(f"keycloak {method} {path.split('?')[0]} failed: HTTP {r.status_code}")
         return r
 
     def allow_admin_attributes(self) -> None:
@@ -126,7 +165,7 @@ class KeycloakAdmin:
         re-imported, so a domain change has to be applied through the admin API)."""
         found = self.req("GET", "/clients", params={"clientId": client_id}).json()
         if not found:
-            raise SystemExit(f"keycloak client {client_id} not found in realm {self.realm}")
+            raise ProvisionError(f"keycloak client {client_id} not found in realm {self.realm}")
         rep = found[0]
         origin = origin.rstrip("/")
         rep["rootUrl"] = origin
@@ -155,9 +194,12 @@ def write_credentials(directory: Path, payload: dict[str, Any]) -> Path:
     return path
 
 
-def provision(kc: KeycloakAdmin, *, login_url: str) -> dict[str, Any]:
-    kc.allow_admin_attributes()
-    kc.drop_default_acudx_roles()
+def provision(kc: KeycloakAdmin, *, login_url: str, realm_admin: bool = True) -> dict[str, Any]:
+    """One account per role with a fresh temporary password. ``realm_admin=False`` (the service
+    client of /bootstrap/operator/reset-accounts) skips the realm-level fixes it may not make."""
+    if realm_admin:
+        kc.allow_admin_attributes()
+        kc.drop_default_acudx_roles()
     users = []
     for role in ROLE_ORDER:
         uid = kc.ensure_user(role)
@@ -166,6 +208,17 @@ def provision(kc: KeycloakAdmin, *, login_url: str) -> dict[str, Any]:
         kc.set_temporary_password(uid, pw)
         users.append({"username": username_for(role), "role": role, "password": pw})
     return {"realm": kc.realm, "login_url": login_url, "created_at": time.time(), "users": users}
+
+
+def write_private_json(directory: Path, name: str, payload: dict[str, Any]) -> Path:
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    path = directory / name
+    tmp = directory / (name + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh)
+    os.replace(tmp, path)
+    return path
 
 
 def register_idp(issuer: str) -> None:
@@ -216,8 +269,15 @@ def main(argv: list[str] | None = None) -> int:
                 return 3
             time.sleep(3)
         kc = KeycloakAdmin(a.keycloak, a.realm, client)
-        kc.login(a.admin_user, admin_pw)
+        try:
+            kc.login(a.admin_user, admin_pw)
+        except ProvisionError as exc:
+            print(str(exc), file=sys.stderr)
+            return 4
         kc.drop_default_acudx_roles()
+        # The realm's own service client lets the gateway reset the accounts over HTTPS
+        # (/bootstrap/operator/reset-accounts) without ever holding the master admin password.
+        write_private_json(Path(a.bootstrap_dir), SERVICE_CLIENT_FILE, kc.ensure_service_client())
         if a.sync_client_origin:
             kc.sync_web_client(a.sync_client_origin)
             print(f"acudx-web client points at {a.sync_client_origin}")

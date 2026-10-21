@@ -41,6 +41,8 @@ from server.auth.routes import admin_router as auth_admin_router
 from server.auth.routes import router as auth_router
 from server.auth.store import UserRoleStore
 from server.bootstrap.handoff import BootstrapHandoff
+from server.bootstrap.operator import load_lambda_key
+from server.bootstrap.operator import router as bootstrap_operator_router
 from server.bootstrap.routes import router as bootstrap_router
 from server.condition_catalog import list_systems
 from server.config import EgressBlocked, get_settings
@@ -128,6 +130,8 @@ async def lifespan(app: FastAPI):
     registry.ensure_anthropic_row(settings)
     telemetry = TelemetryRecorder(settings.acudx_db_path)
     # On-demand GPU worker manager + idle reaper (never always-on; see providers/gpu_worker.py).
+    # A Lambda key delivered over HTTPS (/bootstrap/provision) on an SSH-free deploy.
+    load_lambda_key(settings, settings.bootstrap_dir)
     worker_manager = WorkerManager(settings, boot_timeout_s=settings.gpu_boot_timeout_s,
                                    ready_timeout_s=settings.gpu_ready_timeout_s)
     resolver = RegistryResolver(registry, settings, worker_manager=worker_manager)
@@ -204,6 +208,7 @@ app.include_router(guidelines_router)  # /v1/guidelines/* + /admin/guidelines/ve
 app.include_router(auth_router)        # /v1/auth/config, /v1/auth/me (server/auth/routes.py)
 app.include_router(auth_admin_router)  # /admin/users, /admin/users/{sub}/roles
 app.include_router(bootstrap_router)   # /bootstrap/credentials one-time handoff (server/bootstrap)
+app.include_router(bootstrap_operator_router)  # /bootstrap/status, /bootstrap/provision, /bootstrap/operator/*
 app.include_router(learning_router)    # /v1/events/encounter, /v1/dean/*, /v1/faculty/*, /v1/me/assignments
 
 

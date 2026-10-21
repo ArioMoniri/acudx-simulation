@@ -251,6 +251,8 @@ class Settings(BaseSettings):
     # BOOTSTRAP_REQUIRE_HTTPS=false (tests and a loopback-only operator check).
     bootstrap_dir: str | None = None
     bootstrap_require_https: bool = True
+    # Keycloak as the gateway reaches it on the Docker network, for /bootstrap/operator/reset-accounts.
+    bootstrap_keycloak_url: str = "http://keycloak:8080/idp"
 
     # --- Provider registry + telemetry (server/registry, server/telemetry) --- #
     # Fernet key sealing provider API keys at rest. Unset => keys cannot be stored

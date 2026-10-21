@@ -45,22 +45,37 @@ $C up -d                   # everything, without rebuilding
 
 ## Update / redeploy from a branch
 
-Operator, from a checkout of the branch (AWS host):
+AWS host without SSH: user-data only runs at first boot, so an update of a running instance
+is a new instance (`CONFIRM=acudx-web-prod deploy/aws/teardown.sh` then
+`deploy/aws/provision.sh` with the new `BRANCH`/`COMMIT`; the accounts are provisioned again), or,
+with SSH, the in-place update below.
 
-```bash
-BRANCH=claude/clever-mendel-dtbc1n SSH_CIDR=<your ip>/32 deploy/aws/provision.sh
-```
-
-It reuses the instance, copies `git archive` of the branch to `/opt/acudx`, and re-runs
-`one-click.sh`, which keeps every existing secret, rebuilds the images and recreates changed
-containers. Accounts and the retrieval code are left alone.
-
-Any other host:
+On the host (SSH):
 
 ```bash
 git -C /opt/acudx fetch origin <branch> && git -C /opt/acudx checkout -B <branch> origin/<branch>
 sudo /opt/acudx/deploy/one-click.sh
 ```
+
+## Without SSH: status and operator actions over HTTPS
+
+```bash
+curl -s https://<domain>/bootstrap/status            # deploy stage, handoff state, which keys are set
+H="X-Operator-Token: $(cat ~/.ssh/acudx-web-prod-operator.token)"   # operator side only
+curl -fsS -X POST -H "$H" https://<domain>/bootstrap/operator/reset-accounts   # fresh temporary passwords
+curl -fsS -X POST -H "$H" -d '{"ttl_hours":72}' https://<domain>/bootstrap/operator/mint-code
+curl -fsS -H "$H" https://<domain>/bootstrap/operator/gpu                  # GPU worker status
+curl -fsS -X POST -H "$H" https://<domain>/bootstrap/operator/gpu/stop     # stop it now
+```
+
+The operator token comes from the one-time `POST /bootstrap/provision` (see
+`deploy/aws/README.md`); a signed-in super_admin's bearer is accepted instead. Wrong tokens are
+rate limited and locked out like the retrieval code; every call is in
+`/var/lib/acudx/bootstrap/audit.log`. `deploy/aws/rotate-code.sh` wraps the two account calls.
+The account reset uses the realm's own service client `acudx-provisioner` (manage-users,
+view-users, view-realm in realm `acudx` only), whose secret `one-click.sh` writes root-only to
+`/var/lib/acudx/bootstrap/kc-provisioner.json`; the gateway never holds the Keycloak master
+admin password.
 
 ## Rotate the retrieval code / hand accounts over again
 

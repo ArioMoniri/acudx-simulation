@@ -124,3 +124,58 @@ def test_sync_web_client_follows_a_domain_change():
     assert c["webOrigins"] == ["https://1.2.3.4.sslip.io"]
     assert c["attributes"]["post.logout.redirect.uris"] == "https://1.2.3.4.sslip.io/*"
     assert c["attributes"]["pkce.code.challenge.method"] == "S256"
+
+
+class ServiceClientDouble:
+    """Keycloak admin API for the provisioner service client only."""
+
+    def __init__(self) -> None:
+        self.clients: list[dict] = [{"id": "rm1", "clientId": "realm-management"}]
+        self.sa_roles: set[str] = set()
+        self.secret_calls = 0
+        self.token_calls: list[tuple[str, str]] = []
+
+    def __call__(self, req: httpx.Request) -> httpx.Response:
+        p = req.url.path
+        if p.endswith("/protocol/openid-connect/token"):
+            self.token_calls.append((p, req.content.decode()))
+            return httpx.Response(200, json={"access_token": "adm"})
+        sub = p[len("/idp/admin/realms/acudx"):]
+        if sub == "/clients" and req.method == "GET":
+            want = req.url.params.get("clientId")
+            return httpx.Response(200, json=[c for c in self.clients if c["clientId"] == want])
+        if sub == "/clients" and req.method == "POST":
+            body = json.loads(req.content)
+            assert body["serviceAccountsEnabled"] is True and body["publicClient"] is False
+            assert body["directAccessGrantsEnabled"] is False and body["standardFlowEnabled"] is False
+            self.clients.append({"id": "svc1", "clientId": body["clientId"]})
+            return httpx.Response(201)
+        if sub == "/clients/svc1/service-account-user":
+            return httpx.Response(200, json={"id": "sa-user"})
+        if sub.startswith("/clients/rm1/roles/"):
+            return httpx.Response(200, json={"name": sub.rsplit("/", 1)[-1], "id": sub})
+        if sub == "/users/sa-user/role-mappings/clients/rm1":
+            if req.method == "GET":
+                return httpx.Response(200, json=[{"name": n} for n in self.sa_roles])
+            self.sa_roles |= {r["name"] for r in json.loads(req.content)}
+            return httpx.Response(204)
+        if sub == "/clients/svc1/client-secret" and req.method == "POST":
+            self.secret_calls += 1
+            return httpx.Response(200, json={"value": f"secret-{self.secret_calls}-" + "s" * 20})
+        return httpx.Response(404)
+
+
+def test_service_client_gets_only_user_management_in_this_realm():
+    d = ServiceClientDouble()
+    kc = KeycloakAdmin("http://kc/idp", "acudx", httpx.Client(transport=httpx.MockTransport(d)))
+    kc.login("admin", "pw")
+    first = kc.ensure_service_client()
+    assert first["client_id"] == "acudx-provisioner" and first["secret"].startswith("secret-1-")
+    assert d.sa_roles == {"manage-users", "view-users", "view-realm"}
+    again = kc.ensure_service_client()  # idempotent client, fresh secret
+    assert len([c for c in d.clients if c["clientId"] == "acudx-provisioner"]) == 1
+    assert again["secret"].startswith("secret-2-")
+    kc.login_client(again["client_id"], again["secret"])
+    path, form = d.token_calls[-1]
+    assert path == "/idp/realms/acudx/protocol/openid-connect/token"  # the realm's own endpoint, not master
+    assert "grant_type=client_credentials" in form

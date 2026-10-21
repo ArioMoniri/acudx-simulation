@@ -22,8 +22,25 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--ttl-hours", type=float, default=DEFAULT_TTL_HOURS)
     p.add_argument("--code-file", default=None)
     p.add_argument("--actor", default="cli")
+    p.add_argument("--provision-token-stdin", action="store_true",
+                   help="store the hash of the PROVISION_TOKEN read from stdin (SSH-free deploy) and exit")
     a = p.parse_args(argv)
     h = BootstrapHandoff(a.dir)
+    if a.provision_token_stdin:
+        from server.bootstrap.tokens import PROVISION_TTL_H, provision_secret  # noqa: PLC0415
+
+        tok = sys.stdin.read().strip()
+        if len(tok) < 24:
+            print("provision token on stdin is missing or too short", file=sys.stderr)
+            return 2
+        sec = provision_secret(h)
+        if sec.state() != "absent":
+            print(f"provision token already {sec.state()}; not replaced", file=sys.stderr)
+            return 0
+        _, expires = sec.store(tok, ttl_hours=PROVISION_TTL_H, actor=a.actor)
+        when = datetime.fromtimestamp(expires, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        print(f"provision token armed (single use, expires {when})")
+        return 0
     if not h.credentials_path.exists():
         print(f"no {h.credentials_path}: provision the accounts first", file=sys.stderr)
         return 2

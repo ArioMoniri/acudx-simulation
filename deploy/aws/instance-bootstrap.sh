@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Runs ON the EC2 instance as root (provision.sh calls it over SSH after copying the code):
+# Runs ON the EC2 instance as root (cloud-init calls it after cloning the repository):
 #
 #   sudo /opt/acudx/deploy/aws/instance-bootstrap.sh
 #
 # Reads /etc/acudx/aws.env (written by cloud-init) and runs deploy/one-click.sh with the stack's
-# DOMAIN. The Lambda key, when the operator sent one, is already in /etc/acudx/lambda.key (0600).
+# DOMAIN. API keys arrive later over HTTPS (POST /bootstrap/provision with the one-time token).
 # Every secret one-click.sh generates stays root-only on this host (/etc/acudx, /var/lib/acudx,
 # /root/acudx-retrieval-code.txt); the instance has no AWS credentials and writes nothing to AWS.
 set -euo pipefail

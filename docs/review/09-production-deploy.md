@@ -107,12 +107,39 @@ not captured on purpose: it holds passwords.
 - `shellcheck -x` on every deploy script: clean. `DRY_RUN=1` on provision and teardown: no
   secret value in the output.
 
-## 4. Live verification checklist (launch session)
+## 4. SSH-free deploy path (after the blocked launch, 2026-10-21)
 
-Follow `deploy/aws/README.md` steps 1 to 8. Record here: instance id, type, region, Elastic IP,
+Cloud sessions cannot open outbound TCP 22, so the AWS path no longer uses SSH:
+user-data clones the public repository and runs `one-click.sh`; the keys arrive once over
+HTTPS (`POST /bootstrap/provision` with the one-time PROVISION_TOKEN from the user-data, then
+burned); operator actions use `/bootstrap/operator/*` with the operator token that call returns
+(or a super_admin bearer); progress is on the EC2 console output and `/bootstrap/status`
+(`server/bootstrap/operator.py`, `server/bootstrap/tokens.py`, `deploy/aws/*`).
+
+Local rehearsal of exactly that flow on the production stack (token written to
+`/etc/acudx/provision.token` as cloud-init does, then HTTPS only):
+
+| Step | Result |
+|---|---|
+| one-click stages | starting, building, stack_starting, provisioning, ready; token armed, plaintext file removed |
+| `GET /bootstrap/status` | stage `ready`, `provision_token: active`, no secret in the body |
+| `POST /bootstrap/provision` (token) | 200, operator token returned; same token again 410 |
+| `POST /bootstrap/operator/reset-accounts` (operator token) | 200, 8 usernames and roles, no password |
+| `POST /bootstrap/operator/mint-code` without a token | 401 |
+| `verify-roles.mjs` with `OPERATOR_TOKEN_FILE`, `FINALIZE=1` | code minted and read once (second use 410), 8 accounts PASS, accounts reset, final code minted |
+| status afterwards | `provision_token: used` |
+
+Tests: `server/tests/test_bootstrap_operator.py` (single use, expiry, lockout, HTTPS only, no key
+or token echoed in responses or the audit log, operator token or super_admin only, admin refused,
+GPU stop gated), `test_bootstrap_provision.py::test_service_client_gets_only_user_management_in_this_realm`,
+`deploy/aws/test-with-moto.sh` (user-data clones the repo, carries the provision token and no API key).
+
+## 5. Live verification checklist (launch session)
+
+Follow `deploy/aws/README.md` steps 1 to 9. Record here: instance id, type, region, Elastic IP,
 URL, `verify-roles.mjs` output with `START_CASE=1`, the Lambda instance id of the GPU worker the
-case start launched, its stop through `/admin/gpu/stop` and the Lambda API answer showing it
-`terminated`, and the final `rotate-code.sh --reset-passwords` run. Screenshots go to
+case start launched, its stop through `/bootstrap/operator/gpu/stop` and the Lambda API answer
+showing it `terminated`, and the final code printed by `verify-roles.mjs` with `FINALIZE=1`. Screenshots go to
 `docs/review/evidence/09-production-live/`.
 
 ### Launch attempt 2026-10-21 (cloud session): stopped at step 3
@@ -128,5 +155,5 @@ case start launched, its stop through `/admin/gpu/stop` and the Lambda API answe
 - Step 3: `shellcheck -x` clean; `DRY_RUN=1 provision.sh` exit 0, no secret value in output.
 - Steps 4 to 8 not run. No AWS resource was created (no security group, key pair, Elastic IP
   or instance) and no Lambda worker was launched.
-- To finish: run steps 1 to 8 from a machine or environment that allows outbound SSH on
-  port 22.
+- Resolution: the AWS path is now SSH-free (section 4); the scripts drop a stray session token
+  when the access key is a long-term `AKIA` key. Re-run `deploy/aws/README.md` from step 1.
