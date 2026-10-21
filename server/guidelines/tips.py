@@ -736,3 +736,10 @@ def tips_by_stage(tips: Iterable[AttendingTip]) -> Dict[str, List[AttendingTip]]
     for t in tips:
         groups[t.stage].append(t)
     return groups
+
+
+# Catalogue coverage (2026-10-21): tips for the conditions that had none, grounded in
+# server/guidelines/seed_catalog.py. Imported last because it builds on ``_t`` above.
+from server.guidelines.tips_catalog import CATALOG_TIPS  # noqa: E402
+
+TIPS.extend(CATALOG_TIPS)

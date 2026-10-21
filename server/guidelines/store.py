@@ -58,6 +58,8 @@ class GuidelineStatement(BaseModel):
     fetch_url: str = ""
     doi: str = ""
     edition_or_version: str = ""
+    # The chapter / section / recommendation number the statement rests on (e.g. "1.8.2").
+    section: str = ""
     published_date: str = ""
     retrieved_at: str = ""
     verified_at: str = ""
@@ -70,6 +72,8 @@ class GuidelineStatement(BaseModel):
     scope: Dict[str, Any] = Field(default_factory=lambda: {"countries": ["GLOBAL"], "specialties": []})
     condition_codes: List[str] = Field(default_factory=list)
     topic: str = ""
+    # Encounter stages (``server.guidelines.tips.STAGES``) whose attending tips cite this statement.
+    stages: List[str] = Field(default_factory=list)
     status: str = "draft"
 
     def learner_view(self, locale: str = "en") -> Dict[str, Any]:
@@ -85,6 +89,7 @@ class GuidelineStatement(BaseModel):
             "source_url": self.source_url,
             "doi": self.doi,
             "edition_or_version": self.edition_or_version,
+            "section": self.section,
             "published_date": self.published_date,
             "verified_at": self.verified_at,
             "verification_method": self.verification_method,
@@ -93,12 +98,15 @@ class GuidelineStatement(BaseModel):
             "scope": self.scope,
             "condition_codes": list(self.condition_codes),
             "topic": self.topic,
+            "stages": list(self.stages),
             "status": self.status,
         }
 
 
 _COLUMNS: Sequence[str] = tuple(GuidelineStatement.model_fields.keys())
-_JSON_COLUMNS = {"scope", "condition_codes"}
+_JSON_COLUMNS = {"scope", "condition_codes", "stages"}
+# Descriptive fields a re-seed may refresh on an unchanged (same text, same source) row.
+_REFRESHABLE = ("section", "stages", "condition_codes", "edition_or_version", "published_date", "doi", "scope")
 
 _SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS guideline_statement (
@@ -161,6 +169,11 @@ class GuidelineStore:
     def init_schema(self) -> None:
         with self._conn:
             self._conn.executescript(_SCHEMA)
+            # Additive migration: a database created before a column existed gains it here.
+            have = {r[1] for r in self._conn.execute("PRAGMA table_info(guideline_statement)")}
+            for col in _COLUMNS:
+                if col not in have:
+                    self._conn.execute(f"ALTER TABLE guideline_statement ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
 
     def close(self) -> None:
         self._conn.close()
@@ -194,7 +207,12 @@ class GuidelineStore:
             unchanged = (existing.statement_en == stmt.statement_en and existing.statement_tr == stmt.statement_tr
                          and existing.source_url == stmt.source_url and existing.fetch_url == stmt.fetch_url)
             if unchanged and (existing.status != "verified" or not overwrite_verified):
-                return False  # same text, same source: keep the row (and its evidence or failure reason)
+                # Same text, same source: keep the row and its evidence or failure reason, but
+                # refresh descriptive metadata that does not change what was verified.
+                meta = {k: getattr(stmt, k) for k in _REFRESHABLE if getattr(stmt, k) and getattr(stmt, k) != getattr(existing, k)}
+                if meta:
+                    self.upsert(existing.model_copy(update=meta))
+                return False
         # Reset the evidence fields; keep the authored verification_note (e.g. a URL refinement).
         stmt = stmt.model_copy(update={"status": "draft", "verified_at": "", "verification_quote": "",
                                        "verification_method": "", "verification_url": "", "verified_by": ""})
@@ -315,10 +333,30 @@ class GuidelineStore:
                 if self.add_draft(stmt):
                     written += 1
         if include_open:
-            for stmt in seed_open.open_statements():
+            from server.guidelines import seed_catalog
+
+            stages = tip_stages_by_statement()
+            for stmt in [*seed_open.open_statements(), *seed_catalog.catalog_statements()]:
+                tagged = [st for st in _STAGE_ORDER if st in set(stmt.stages) | stages.get(stmt.id, set())]
+                if tagged != stmt.stages:
+                    stmt = stmt.model_copy(update={"stages": tagged})
                 if self.add_draft(stmt):
                     written += 1
         return written
+
+
+_STAGE_ORDER = ("triage", "history", "exam", "workup", "treatment", "disposition")
+
+
+def tip_stages_by_statement() -> Dict[str, set]:
+    """Stage tags for each statement: the stages of the attending tips that cite it."""
+    from server.guidelines.tips import all_tips  # local import: tips imports this module
+
+    out: Dict[str, set] = {}
+    for tip in all_tips():
+        for sid in tip.statement_ids:
+            out.setdefault(sid, set()).add(tip.stage)
+    return out
 
 
 # ---------------------------------------------------------------------------
