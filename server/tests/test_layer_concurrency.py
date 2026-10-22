@@ -90,13 +90,22 @@ async def test_gpu_route_keeps_one_layer_at_a_time(monkeypatch, capsys):
 
 async def test_claude_route_runs_each_wave_in_one_round(monkeypatch, capsys):
     spans, wall, names = await _run(monkeypatch, claude=True)
-    widest = max(len(w) for w in S.continuation_waves(names))
+    waves_at_once = S.continuation_waves(names, history_at_once=True)
+    widest = max(len(w) for w in waves_at_once)
     assert S.CLAUDE_LAYER_CONCURRENCY == 6
     assert _max_in_flight(spans) == min(S.CLAUDE_LAYER_CONCURRENCY, widest)
-    _assert_dependencies(spans)
+    # Every history layer at once (docs/architecture/18 6.3.11), then the exam layers, then treatments and
+    # results after all of them.
+    by = {s["layer"]: s for s in spans}
+    hist = [s for s in spans if S.layer_kind(s["layer"]) == "history"]
+    exam = [s for s in spans if S.layer_kind(s["layer"]) == "exam"]
+    late = [s for s in spans if S.layer_kind(s["layer"]) not in ("history", "exam")]
+    assert max(s["start"] for s in hist) < min(s["end"] for s in hist)          # overlapping
+    assert all(e["start"] >= max(h["end"] for h in hist) for e in exam)
+    assert all(x["start"] >= max(c["end"] for c in hist + exam) for x in late)
+    assert by["history.background"]["start"] < by["history.presenting"]["end"]
     sequential = DELAY * len(names)
-    # presenting, then every other history and exam layer at once, then treatments and results.
-    waves = len(S.continuation_waves(names))
+    waves = len(waves_at_once)
     assert waves == 3 and wall < sequential * 0.7 and wall < DELAY * (waves + 1.5)
     print(f"claude route: {len(names)} layers, wall {wall:.2f} s vs {sequential:.2f} s sequential, {waves} waves")
 
