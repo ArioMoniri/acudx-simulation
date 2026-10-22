@@ -1177,6 +1177,8 @@ write_files:
             - VOICE_LIBRARY_DIR=/voices
             - VOICE_SAMPLE_PATH=/app/voice-sample.mp3
             - MAX_CHUNK_LENGTH=280
+            - ACUDX_STREAM_SCHEDULE=${ACUDX_STREAM_SCHEDULE:-24,24,48,64}
+            - ACUDX_STREAM_FLOW_STEPS=${ACUDX_STREAM_FLOW_STEPS:-10}
             - NVIDIA_VISIBLE_DEVICES=all
             - NVIDIA_DRIVER_CAPABILITIES=compute,utility
           volumes:
@@ -1212,6 +1214,8 @@ write_files:
             - VOICE_LIBRARY_DIR=/voices
             - VOICE_SAMPLE_PATH=/app/voice-sample.mp3
             - MAX_CHUNK_LENGTH=280
+            - ACUDX_STREAM_SCHEDULE=${ACUDX_STREAM_SCHEDULE:-24,24,48,64}
+            - ACUDX_STREAM_FLOW_STEPS=${ACUDX_STREAM_FLOW_STEPS:-10}
             - NVIDIA_VISIBLE_DEVICES=all
             - NVIDIA_DRIVER_CAPABILITIES=compute,utility
           volumes:
@@ -4248,6 +4252,13 @@ runcmd:
       # image edit server needs for model offload, so it ran layer by layer at 154 s per picture.
       total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
       if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then echo 'VLLM_GPU_UTIL=0.45' >> /opt/acudx/.env; fi
+      # One 40 GB card (A100): Chatterbox's T3 runs at 26 ms a token and an S3Gen window at 490 ms, so the
+      # streamed voice is slower than real time. A first window of 16 tokens and 8 flow steps start the voice
+      # 0.2 s sooner and halve the longest pause (bench 2026-10-22, docs/architecture/18 6.3.13); both stay
+      # adjustable at run time (/tts/acudx/tuning stream_schedule, stream_flow_steps).
+      if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then
+        printf 'ACUDX_STREAM_SCHEDULE=16,32,48,64\nACUDX_STREAM_FLOW_STEPS=8\n' >> /opt/acudx/.env
+      fi
       # One 80 GB card serving live calls: vLLM takes 0.50 (40 GB, Qwen3-32B-AWQ weights about 18 GB plus
       # KV cache), so both Chatterbox replicas, the runner with its calls and the image edits in gpu mode
       # (20 GB) fit beside it with room to spare (at 0.60 the edits dropped to model offload).

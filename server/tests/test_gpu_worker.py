@@ -1060,7 +1060,8 @@ def test_chatterbox_runs_a_second_replica_on_large_cards_and_only_ready_replicas
     assert "reverse_proxy chatterbox:4123 chatterbox2:4123 {" in block and "lb_policy least_conn" in block
     assert "health_body initialization_state.{1,4}ready" in block
     runcmd = "\n".join(_cloud_init()["runcmd"])
-    assert "-ge 70000 ]; then docker compose up -d --no-build chatterbox2" in runcmd
+    assert "-ge 70000 ] || { [ \"${WORKER_LLM_MODEL:-}\" = none ] && [ \"${total:-0}\" -ge 38000 ]; }; then" in runcmd
+    assert "docker compose up -d --no-build chatterbox2" in runcmd
     assert runcmd.index("up -d --no-build chatterbox &&") < runcmd.index("up -d --no-build chatterbox2")
     seed = _written("/seed-voices.sh")
     assert "seed chatterbox\n" in seed and "&& seed chatterbox2" in seed
