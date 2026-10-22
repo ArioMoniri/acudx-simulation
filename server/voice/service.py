@@ -433,6 +433,24 @@ class VoiceService:
             status = await wm.status()
             out["gpu_worker"] = {"ready": worker_ready, "can_launch": bool(status.get("can_launch")),
                                  "refusal": status.get("refusal"), "wake": self._wake_state(status, worker_ready)}
+        # The runner and image edit probes run beside the voice probe below, not after it: the call tile
+        # reads this with a 6 s budget, and three probes with 4 s timeouts in a row could miss it on a busy
+        # worker (the tile then waits a whole poll interval before it starts the video).
+        avatar_task = asyncio.ensure_future(self._avatar_capabilities(out.get("gpu_worker"), probe_worker=probe_worker))
+        try:
+            await self._kind_capabilities(out, wm, probe_worker=probe_worker)
+        except BaseException:
+            avatar_task.cancel()
+            raise
+        out["avatar"] = await avatar_task
+        if wm is not None and out["avatar"].get("source") == "gpu_worker":
+            out["avatar"]["wake"] = self._video_wake(status, out["avatar"])
+            tier = self._gpu_tier(status)
+            if tier is not None:
+                out["avatar"]["gpu_tier"] = tier
+        return out
+
+    async def _kind_capabilities(self, out: dict[str, Any], wm: Any, *, probe_worker: bool) -> None:
         for kind in ("tts", "stt"):
             eps = self.resolver.endpoints(kind)
             reasons = [f"{r.name}: refused by AIRGAPPED" for r in self.resolver.refused(kind)]
@@ -459,13 +477,6 @@ class VoiceService:
                 elif out["gpu_worker"].get("refusal"):
                     reasons.append(f"gpu-worker: {out['gpu_worker']['refusal']['reason']}")
             out[kind] = self._describe(kind, ep, reasons, worker_launchable=launchable)
-        out["avatar"] = await self._avatar_capabilities(out.get("gpu_worker"), probe_worker=probe_worker)
-        if wm is not None and out["avatar"].get("source") == "gpu_worker":
-            out["avatar"]["wake"] = self._video_wake(status, out["avatar"])
-            tier = self._gpu_tier(status)
-            if tier is not None:
-                out["avatar"]["gpu_tier"] = tier
-        return out
 
     @staticmethod
     def _gpu_tier(status: dict[str, Any]) -> dict[str, Any] | None:
@@ -560,7 +571,8 @@ class VoiceService:
                 reasons.append(f"gpu-worker: {gpu['refusal']['reason']}")
             return {**base, "provider": "gpu-worker", "transport": "webrtc", "renderer": mt.RENDERER,
                     "source": "gpu_worker", "pending_launch": bool(probe_worker and can_launch), "reasons": reasons}
-        h = await mt.health(self.client, worker)
+        # Both probes at once (the edit server's answer is used only when the runner is up).
+        h, ig = await asyncio.gather(mt.health(self.client, worker), mt.imagegen_health(self.client, worker))
         block: dict[str, Any] = {"provider": "gpu-worker", "transport": "webrtc", "renderer": mt.RENDERER,
                                  "model": mt.MODEL, "source": "gpu_worker", "state": h.get("state")}
         if h.get("ok"):
@@ -570,7 +582,6 @@ class VoiceService:
                                    gateway_pending=pending)
             if cap["calls_available"] <= 0:
                 reasons.append(f"gpu-worker avatar: all {cap['max_calls']} live calls on this worker are in use")
-            ig = await mt.imagegen_health(self.client, worker)
             block["appearance"] = {"enabled": bool(ig.get("ok")), "model": ig.get("model"), "mode": ig.get("mode"),
                                    "licence": ig.get("licence"), "reason": None if ig.get("ok") else ig.get("reason")}
             return {**block, "enabled": True, "live_video": cap["calls_available"] > 0, "reasons": reasons,

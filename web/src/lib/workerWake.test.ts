@@ -117,6 +117,31 @@ describe("watchWorker", () => {
     stop();
   });
 
+  it("re-reads every few seconds once the machine answers, not every boot poll", async () => {
+    let n = 0;
+    const capabilities = vi.fn(async () => {
+      n += 1;
+      if (n === 1) return { ok: true as const, data: caps({}) };                                     // booting
+      if (n < 4) return { ok: true as const, data: caps({ ready: true, runner: "building" }) };      // machine up
+      return { ok: true as const, data: caps({ avatarEnabled: true, ready: true }) };
+    });
+    watchWorker({ api: { capabilities } as unknown as VoiceApi, isActive: () => true, onStatus: () => {} });
+    await flush();
+    await vi.advanceTimersByTimeAsync(14_000);
+    expect(capabilities).toHaveBeenCalledTimes(1);          // the boot poll is still 15 s
+    await vi.advanceTimersByTimeAsync(1_000);
+    await flush();
+    expect(capabilities).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await flush();
+    expect(capabilities).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(3_000);
+    await flush();
+    expect(capabilities).toHaveBeenCalledTimes(4);          // ready: the watch stops
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(capabilities).toHaveBeenCalledTimes(4);
+  });
+
   it("stops on a failed launch", async () => {
     const capabilities = vi.fn(async () => ({ ok: true as const, data: caps({ wake: { state: "failed", detail: "x" } }) }));
     const onStatus = vi.fn();

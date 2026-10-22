@@ -377,3 +377,35 @@ async def test_wake_worker_starts_one_background_launch(tmp_path):
     worker.boot.set()
     assert (await first) is not None
     assert VoiceService(_settings(), RegistryResolver(store, _settings(), worker_manager=None)).wake_worker() is None
+
+
+async def test_capabilities_probe_the_worker_side_cars_at_once_not_one_after_another(tmp_path, monkeypatch):
+    """The call tile reads /capabilities with a 6 s budget before it starts the video, and again every poll
+    while it waits. The voice, runner and image edit probes ran one after another (4 s timeouts each), so a
+    busy worker could push the read past the tile's budget and cost a whole poll interval."""
+    from server.voice.avatar import musetalk as mt
+
+    worker = FakeWorkerManager(ready=True)
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=worker)
+
+    async def slow_probe(url, token):
+        await asyncio.sleep(0.4)
+        return True, "ok"
+
+    async def slow_health(client, w, **kw):
+        await asyncio.sleep(0.4)
+        return {"ok": True, "state": "ready", "sessions": 0, "max_sessions": 2, "calls": []}
+
+    async def slow_imagegen(client, w, **kw):
+        await asyncio.sleep(0.4)
+        return {"ok": True, "mode": "gpu"}
+
+    monkeypatch.setattr(svc, "_probe_worker_path", slow_probe)
+    monkeypatch.setattr(mt, "health", slow_health)
+    monkeypatch.setattr(mt, "imagegen_health", slow_imagegen)
+    t = time.monotonic()
+    caps = await svc.capabilities(probe_worker=True)
+    took = time.monotonic() - t
+    assert caps["tts"]["enabled"] is True and caps["avatar"]["live_video"] is True
+    assert caps["avatar"]["appearance"]["enabled"] is True
+    assert took < 0.75, took

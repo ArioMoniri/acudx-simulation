@@ -20,6 +20,12 @@ export type WakeStatus =
 export const DEFAULT_BOOT_ESTIMATE_S = 600;
 /** How often the call re-reads the capabilities while the worker boots. */
 export const WAKE_POLL_MS = 15_000;
+/**
+ * How often once the GPU machine answers (its runner, voices or a call slot are what is left): seconds
+ * away from live video, so a 15 s poll alone could add most of the wait (production 2026-10-22: 54.9 s
+ * from the click to live video on a warm worker, against 10 to 13 s in the lab).
+ */
+export const WAKE_READY_POLL_MS = 3_000;
 
 /** Whole minutes left on the boot estimate (at least 1). */
 export function etaMinutes(wake: Pick<WorkerWake, "elapsed_s" | "estimate_s"> | null | undefined): number {
@@ -83,14 +89,23 @@ export interface WatchOptions {
   /** Every status read, including the final ready / failed one. */
   onStatus: (status: WakeStatus, caps: VoiceCapabilities) => void;
   intervalMs?: number;
+  /** The interval once the machine answers (`gpu_worker.ready`), and after a failed read while it did. */
+  readyIntervalMs?: number;
 }
 
 /**
  * Re-read the capabilities now and every `intervalMs` until the live video is ready or
  * the launch failed (no try limit while the call is active). Returns a stop function.
  */
-export function watchWorker({ api, isActive, onStatus, intervalMs = WAKE_POLL_MS }: WatchOptions): () => void {
+export function watchWorker({
+  api,
+  isActive,
+  onStatus,
+  intervalMs = WAKE_POLL_MS,
+  readyIntervalMs = WAKE_READY_POLL_MS,
+}: WatchOptions): () => void {
   let stopped = false;
+  let machineUp = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
   const stop = () => {
     stopped = true;
@@ -103,6 +118,7 @@ export function watchWorker({ api, isActive, onStatus, intervalMs = WAKE_POLL_MS
     const res = await api.capabilities({ timeoutMs: 6000 });
     if (stopped || !isActive()) return stop();
     if (res.ok) {
+      machineUp = !!res.data.gpu_worker?.ready;
       const status = wakeStatus(res.data);
       onStatus(status, res.data);
       if (status.kind !== "waking") return stop();
@@ -110,7 +126,7 @@ export function watchWorker({ api, isActive, onStatus, intervalMs = WAKE_POLL_MS
       // gateway's idle reaper stopped it while the learner watched the start-up panel (2026-10-21).
       void api.warm?.({ timeoutMs: 6000 });
     }
-    timer = setTimeout(() => void tick(), intervalMs);
+    timer = setTimeout(() => void tick(), machineUp ? Math.min(intervalMs, readyIntervalMs) : intervalMs);
   };
   void tick();
   return stop;
