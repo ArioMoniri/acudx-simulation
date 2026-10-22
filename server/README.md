@@ -156,6 +156,8 @@ asyncio task started in the app lifespan) terminates it after
 | `GPU_READY_TIMEOUT_S` | `2700` | how long a fresh worker may take to pass /healthz before it is terminated (cold boot pulls the vLLM image and the model weights) |
 | `GPU_FILE_SYSTEM_NAME` | unset | Lambda file system to attach at launch (pre-baked weights shorten the cold start) |
 | `GPU_BOOT_TIMEOUT_S` | `900` | how long the provider may take to report the instance active with an IP |
+| `GPU_BOOT_STUCK_S` | `480` | a boot Lambda keeps in `booting` with no progress (no IP, no status change) this long is terminated (`boot_stuck`) before `GPU_BOOT_TIMEOUT_S` |
+| `GPU_LAUNCH_COOLDOWN_MINUTES` | `60` | after a boot failure or a refused launch, that (type, region) is skipped this long and the launch tries the next offer; stored in SQLite, listed in the admin GPU section (policy `launch_cooldown_minutes`; 0 turns it off) |
 | `GPU_DAILY_BUDGET_USD` | unset | optional daily cap in USD; unset means no cap (idle workers still stop after `GPU_IDLE_MINUTES`) |
 | `GPU_MAX_LIFETIME_HOURS` | `6` | hard cap on one worker's life; the reaper stops it whatever its load |
 | `GPU_LLM_MODEL` | `Qwen/Qwen3-32B-AWQ` | model vLLM loads on the worker |
