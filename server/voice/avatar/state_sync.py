@@ -185,6 +185,25 @@ async def await_services(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: 
         await asyncio.sleep(poll)
 
 
+async def await_runner(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance, *,
+                       wait_s: float = DEFAULT_SERVICES_WAIT_S, poll_s: float | None = None,
+                       keepalive: Any = None) -> bool:
+    """Wait until the call's runner answers (the case portrait needs nothing else). False after ``wait_s``."""
+    poll = SERVICES_POLL_S if poll_s is None else poll_s
+    deadline = time.monotonic() + max(0.0, wait_s)
+    while True:
+        h = await mt.health(client, worker)
+        if h.get("ok"):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        a.reason = (f"avatar runner: {h.get('state')} {h.get('reason') or h.get('detail') or ''}".strip()
+                    + "; the face switches to the patient's look when the pictures are ready")
+        if keepalive is not None:
+            keepalive()
+        await asyncio.sleep(poll)
+
+
 async def _retrying(step: Any, v: Variant, retry_s: float | None) -> bool:
     for attempt in range(GEN_RETRIES + 1):
         ok = await step()
@@ -294,15 +313,21 @@ def run_ladder(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearance
 
     async def pipeline() -> None:
         try:
-            if not await await_services(client, worker, a, wait_s=services_wait_s, keepalive=keepalive):
+            deadline = time.monotonic() + max(0.0, services_wait_s)
+            # The case portrait first, as soon as the runner answers: a call can then open at once on it and
+            # crossfade into each look as it lands; the looks are registered onto it. It needs the runner
+            # only. Production 2026-10-22 (5a9d68b): it waited for the image edit server, which a 40 GB
+            # card has no room for (and a cold worker starts last), so the call prepared it on the click
+            # (54.9 s from the click to live video on a warm worker).
+            if await await_runner(client, worker, a, wait_s=services_wait_s, keepalive=keepalive):
+                try:
+                    await mt.ensure_avatar(client, worker, a.base_avatar_id, portrait)
+                except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
+                    log.info("base portrait for %s not prepared ahead: %s", a.thread_id[:8], type(exc).__name__)
+            if not await await_services(client, worker, a, wait_s=max(0.0, deadline - time.monotonic()),
+                                        keepalive=keepalive):
                 return
             a.reason = None
-            # The case portrait first (about 30 s on a fresh worker): a call can then open at once on it and
-            # crossfade into each look as it lands; the looks are registered onto it.
-            try:
-                await mt.ensure_avatar(client, worker, a.base_avatar_id, portrait)
-            except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
-                log.info("base portrait for %s not prepared ahead: %s", a.thread_id[:8], type(exc).__name__)
             for v in order:
                 if v.image is None and v.status != "ready":
                     await _gen(client, worker, a, v, portrait, seed=seed)

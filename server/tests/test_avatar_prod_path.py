@@ -163,6 +163,26 @@ def test_a_call_after_a_case_start_prepare_does_not_wait_for_an_edit_server_that
         assert s["avatar_id"] == "acudx-p04" and "image edit server" in s["appearance"]["reason"]
 
 
+def test_the_case_portrait_is_prepared_at_case_start_even_when_the_edit_server_is_not_up(tmp_path, monkeypatch):
+    """Production 2026-10-22 (5a9d68b): a call on a warm 40 GB worker took 54.9 s from the click to live
+    video, because the case portrait was prepared on demand. The case-start ladder waited for the image
+    edit server before preparing the portrait, and on a 40 GB card that server has no room (or is still
+    loading on a cold worker), so the portrait was never ready ahead. The portrait needs only the runner."""
+    monkeypatch.setattr(state_sync, "SERVICES_POLL_S", 0.05)
+    runner = SyncRunner(imagegen=False)
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_appearance_wait_s=30)
+    _case(app)
+    with TestClient(app) as c:
+        assert _prepare(c).status_code == 202
+        assert _wait(lambda: "acudx-p04" in runner.avatars, timeout=5)
+        assert runner.edits == []                                  # no pictures without the edit server
+        s = c.post("/v1/voice/avatar/session", json={**SESSION, "thread_id": THREAD}, headers=USER).json()
+        assert s["avatar_id"] == "acudx-p04"
+        assert s["prepare"]["prepared"] is False                   # ready ahead: no preparation on the click
+        runner.imagegen = True                                     # the looks still follow once it is up
+        assert _wait(lambda: len(runner.edits) >= 1, timeout=8)
+
+
 def test_a_call_does_not_wait_for_a_look_that_is_still_being_drawn(tmp_path, monkeypatch):
     """Live 2026-10-22 (prod-path-v3): 6 s of the 34 s from the voice click went to waiting for the
     presenting look while the case-start ladder was still drawing it. The call now opens on the portrait
