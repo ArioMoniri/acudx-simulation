@@ -2406,6 +2406,7 @@ write_files:
               orig_a(f, ev or carry.pop("ev", None))
               carry["ev"] = None
 
+          st["retarget"] = _retarget     # POST /tuning applies a new bias at once, not at the next second
           out.push_video_frame = push_video_frame
           out.push_audio_frame = push_audio_frame
 
@@ -3532,6 +3533,10 @@ write_files:
                   cap = 240.0 if sure else 120.0
                   step = max(-cap, min(cap, (0.75 if sure else 0.5) * float(lag)))
                   st["bias_ms"] = max(-300.0, min(300.0, float(st["bias_ms"]) + step))
+                  try:
+                      st["retarget"]()
+                  except Exception:  # noqa: BLE001 - the next second's retarget applies it
+                      pass
           sess._acudx_shift_ms = int(st["n"]) * 40
           if isinstance(getattr(sess, "_acudx_tuning", None), dict):
               sess._acudx_tuning["av_shift_ms"] = sess._acudx_shift_ms

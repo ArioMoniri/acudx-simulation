@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { crossCorrelation, crossCorrelationLag, mouthRegion, resample, selectedIcePath, sessionBody, utteranceSpan, waitForIce, playoutSample, receiverLagMs } from "@/lib/avatarCall";
+import { crossCorrelation, crossCorrelationLag, mouthRegion, resample, selectedIcePath, sessionBody, utteranceSpan, waitForIce, playoutSample, receiverLagMs, probeLag } from "@/lib/avatarCall";
 import { createVoiceApi } from "@/lib/voiceApi";
 
 describe("selectedIcePath", () => {
@@ -258,4 +258,20 @@ describe("the lip meter on any portrait", () => {
     expect(cc!.score).toBeGreaterThan(0.6);
   });
 
+});
+
+describe("probeLag (the runner's sync probe)", () => {
+  it("reads the end-to-end offset from the probe block over a stretch of voice", () => {
+    const samples = [] as { t: number; rms: number; motion: number; open: number; probe?: number }[];
+    const loud = (t: number) => Math.max(0, Math.sin(t / 90)) * (0.5 + 0.5 * Math.sin(t / 700));
+    for (let t = 0; t < 5000; t += 40) {
+      // the block shows the loudness of its frame's audio; the picture plays 240 ms before the sound
+      samples.push({ t, rms: loud(t), motion: 0, open: 128, probe: 16 + 200 * loud(t + 240) });
+    }
+    const p = probeLag(samples, 0, 5000);
+    expect(p?.lagMs).toBe(-240);
+    expect(p!.score).toBeGreaterThan(0.9);
+    expect(probeLag(samples, 0, 1500)).toBeNull();                                    // under 2 s
+    expect(probeLag(samples.map((x) => ({ ...x, probe: 16 })), 0, 5000)).toBeNull();  // no probe signal
+  });
 });

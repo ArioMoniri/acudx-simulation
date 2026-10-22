@@ -48,9 +48,14 @@ export interface AvatarLineMeasure {
   lipLagMs: number | null;
   lipScore: number | null;
   voiceMs: number | null;
-  /** From the runner's sync probe (test harnesses): the offset end to end, whatever the portrait. */
+  /** From the runner's sync probe: the offset end to end over the whole line, whatever the portrait. */
   probeLagMs?: number | null;
   probeScore?: number | null;
+  /** The probe's offset over the first stretch of voice (before any correction during the line). */
+  probeFirstLagMs?: number | null;
+  /** Corrections sent during the line, and the offset left after the last one. */
+  probeCorrections?: number;
+  probeTailLagMs?: number | null;
 }
 
 export interface AvatarSample {
@@ -217,6 +222,8 @@ export function lowLatencyReceiver(receiver: RTCRtpReceiver | undefined, targetM
 }
 
 const MAX_SAMPLES = 1500;
+/** After a lip correction: the runner moves its delay one frame per frame, then the jitter buffers play it out. */
+const SETTLE_MS = 1200;
 
 /** Body for POST /v1/voice/avatar/session. */
 export function sessionBody(args: {
@@ -347,6 +354,19 @@ export function resample(samples: AvatarSample[], stepMs: number):
     probe.push(samples[k].probe ?? 0);
   }
   return { rms, motion, open, probe };
+}
+
+/**
+ * The end-to-end lip offset from the runner's sync probe over [from, to] (page clock ms): the probe block's
+ * brightness follows the loudness of the audio each frame was rendered from, so its lag against what is
+ * heard is the offset whatever the face. Null without a probe signal or with less than 2 s of samples.
+ */
+export function probeLag(samples: AvatarSample[], from: number, to: number): { lagMs: number; score: number } | null {
+  const win = samples.filter((x) => x.t >= from && x.t <= to);
+  if (win.length < 2 || win[win.length - 1].t - win[0].t < 2000) return null;
+  const { rms, probe } = resample(win, 40);
+  if (Math.max(...probe) - Math.min(...probe) <= 20) return null;
+  return crossCorrelation(rms, probe, 40);
 }
 
 /**
@@ -580,6 +600,12 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
     lines.push(line);
     if (lines.length > 50) lines.splice(0, lines.length - 50);
     const started = performance.now();
+    // Corrections during the line, from the sync probe: the first seconds of a call play the lips early on the
+    // receive side (live 2026-10-22, A100 pass: -240 ms on line 1 while the browser's A/V sync converged), and
+    // a correction only after the line came one line late. Every second, once 2.8 s of voice have played since
+    // the last correction took effect, the probe's lag over that stretch goes to the gateway.
+    let corrected = -Infinity;
+    let checked = -Infinity;
     const poll = () => {
       if (ended || seq !== measureSeq) return;
       const t = performance.now();
@@ -588,6 +614,21 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
         line.speechStartMs = Math.round(span.first - startAt);
         metrics.speechStartMs = line.speechStartMs;
         emit();
+      }
+      if (span.first != null && !span.done && t - checked >= 1000) {
+        const from = Math.max(span.first, corrected + SETTLE_MS) - 400;
+        if (t - from >= 2800) {
+          checked = t;
+          const p = probeLag(samples, from, t);
+          if (p && p.score >= 0.6) {
+            if (line.probeFirstLagMs == null) line.probeFirstLagMs = p.lagMs;
+            if (Math.abs(p.lagMs) > 40) {
+              corrected = t;
+              line.probeCorrections = (line.probeCorrections ?? 0) + 1;
+              void api.avatarLipsync(session.session_id, p.lagMs, p.score).catch(() => undefined);
+            }
+          }
+        }
       }
       if (!span.done) {
         if (t - started < 120_000) setTimeout(poll, 300);
@@ -606,7 +647,12 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
         line.probeLagMs = probed.lagMs;
         line.probeScore = probed.score;
       }
-      const use = probed && probed.score >= 0.5 ? probed : cc;
+      // After corrections during the line, only the stretch since the last one says what is left to correct.
+      const tail = Number.isFinite(corrected)
+        ? probeLag(samples, Math.max(span.first ?? startAt, corrected + SETTLE_MS) - 400, (span.last ?? t) + 800) : null;
+      if (tail) line.probeTailLagMs = tail.lagMs;
+      const use = Number.isFinite(corrected) ? (tail && tail.score >= 0.5 ? tail : null)
+        : probed && probed.score >= 0.5 ? probed : cc;
       if (cc) {
         line.lipLagMs = cc.lagMs;
         line.lipScore = cc.score;

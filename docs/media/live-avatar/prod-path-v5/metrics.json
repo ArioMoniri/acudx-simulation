@@ -1,0 +1,1190 @@
+{
+ "note": "Private gateway (this worktree, Claude as the model, REGISTRY_SEED_ENV=false, AVATAR_PREWARM_ON_CASE_START=true) and Lambda gpu_1x_a100_sxm4 (40 GB) workers it launched, 2026-10-22. Browser: Playwright Chromium with no proxy; TURN over TCP through scripts/turn_ws_tunnel.py (TURN over TLS on 443 could not be carried from this sandbox: Chromium's WebRTC resolves the TURN name with its own DNS, ignoring /etc/hosts and --host-resolver-rules, and the sandbox re-terminates outbound TLS). Voice click at case open (the worst case for the call's portrait) unless noted. Speech start = question sent to first audible patient sample in the page. Lip lag: positive = mouth after the voice; meter offsets with a score under 0.3 are not counted. probe_lag_ms: the runner's sync probe (corner block carrying each frame's audio loudness), end to end and independent of the portrait. Sender skew = video minus audio send-time offset measured by the runner per encoded frame.",
+ "workers": [
+  {
+   "id": 1,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "asia-south-1",
+   "use": "launched in the wrong region, stopped after 2.5 min, unused"
+  },
+  {
+   "id": 2,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "production code; found the TLS TURN limit of this sandbox and the stale sessions"
+  },
+  {
+   "id": 3,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "baseline (production code plus the sender measure)"
+  },
+  {
+   "id": 4,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "vLLM off, auto sync; Chatterbox stream benches; preparation phases"
+  },
+  {
+   "id": 5,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "hold, chatterbox2, 40 GB stream schedule, batched VAE"
+  },
+  {
+   "id": 6,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-west-2",
+   "use": "final code (sync probe, edit hold between steps, warm-up)"
+  }
+ ],
+ "runs": {
+  "tr-a100-baseline": {
+   "what": "production code (454192b) on A100 40 GB with vLLM (0.45) and the image edits in model offload; fixed 160 ms video delay and the per-line closed loop",
+   "live_after_voice_click_ms": 14271,
+   "first_frame_ms": 3892,
+   "click_timeline": [
+    {
+     "url": "/v1/voice/warm",
+     "method": "POST",
+     "start_ms": 96,
+     "end_ms": 133
+    },
+    {
+     "url": "/v1/voice/capabilities",
+     "method": "GET",
+     "start_ms": 133,
+     "end_ms": 1077
+    },
+    {
+     "url": "/v1/voice/avatar/session",
+     "method": "POST",
+     "start_ms": 954,
+     "end_ms": 6223
+    },
+    {
+     "url": "/v1/voice/avatar/offer",
+     "method": "POST",
+     "start_ms": 10255,
+     "end_ms": 10478
+    }
+   ],
+   "session_prepare_ms": 4758.7,
+   "portrait_queue_ms": 4573.6,
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 4239,
+     "lip_lag_ms": -40,
+     "lip_score": 0.415,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 160,
+     "sender_skew_ms_median": -14.3,
+     "video_delay_ms_while_speaking": [
+      160,
+      160
+     ],
+     "receiver_lag_ms": null,
+     "audio_sender_queue_frames": [
+      5,
+      13
+     ],
+     "runner_infer_fps_min": 10.6,
+     "rtc_jitter_ms": {
+      "audio": 262,
+      "video": 155
+     },
+     "hops_ms": {
+      "released_ms": 3539.4,
+      "first_clause_ms": 2377.9,
+      "tts_first_chunk_ms": 3539.4,
+      "runner_first_chunk_ms": 3539.7
+     },
+     "tts_first_chunk_ms": 1161.5,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 3236,
+     "lip_lag_ms": 120,
+     "lip_score": 0.682,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 80,
+     "sender_skew_ms_median": -13.0,
+     "video_delay_ms_while_speaking": [
+      80,
+      160
+     ],
+     "receiver_lag_ms": null,
+     "audio_sender_queue_frames": [
+      3,
+      12
+     ],
+     "runner_infer_fps_min": 33.7,
+     "rtc_jitter_ms": {
+      "audio": 279,
+      "video": 245
+     },
+     "hops_ms": {
+      "released_ms": 2396.4,
+      "first_clause_ms": 1113.3,
+      "tts_first_chunk_ms": 2396.4,
+      "runner_first_chunk_ms": 2397.1
+     },
+     "tts_first_chunk_ms": 1283.1,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 3169,
+     "lip_lag_ms": 80,
+     "lip_score": 0.64,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 40,
+     "sender_skew_ms_median": -12.9,
+     "video_delay_ms_while_speaking": [
+      80,
+      80
+     ],
+     "receiver_lag_ms": null,
+     "audio_sender_queue_frames": [
+      4,
+      12
+     ],
+     "runner_infer_fps_min": 38.1,
+     "rtc_jitter_ms": {
+      "audio": 245,
+      "video": 244
+     },
+     "hops_ms": {
+      "released_ms": 2347.8,
+      "first_clause_ms": 1184.6,
+      "tts_first_chunk_ms": 2347.7,
+      "runner_first_chunk_ms": 2348.1
+     },
+     "tts_first_chunk_ms": 1163.1,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 3086,
+     "lip_lag_ms": 0,
+     "lip_score": 0.606,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 40,
+     "sender_skew_ms_median": -13,
+     "video_delay_ms_while_speaking": [
+      40,
+      40
+     ],
+     "receiver_lag_ms": null,
+     "audio_sender_queue_frames": [
+      6,
+      12
+     ],
+     "runner_infer_fps_min": 40.2,
+     "rtc_jitter_ms": {
+      "audio": 230,
+      "video": 232
+     },
+     "hops_ms": {
+      "released_ms": 2392.6,
+      "first_clause_ms": 1213.7,
+      "tts_first_chunk_ms": 2392.6,
+      "runner_first_chunk_ms": 2393.8
+     },
+     "tts_first_chunk_ms": 1178.8,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 3738,
+     "lip_lag_ms": 40,
+     "lip_score": 0.645,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 40,
+     "sender_skew_ms_median": -13,
+     "video_delay_ms_while_speaking": [
+      40,
+      40
+     ],
+     "receiver_lag_ms": null,
+     "audio_sender_queue_frames": [
+      5,
+      13
+     ],
+     "runner_infer_fps_min": 41.1,
+     "rtc_jitter_ms": {
+      "audio": 367,
+      "video": 256
+     },
+     "hops_ms": {
+      "released_ms": 3025,
+      "first_clause_ms": 1847.8,
+      "tts_first_chunk_ms": 3025,
+      "runner_first_chunk_ms": 3025.5
+     },
+     "tts_first_chunk_ms": 1177.1,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 99,
+     "lip_lag_ms": 480,
+     "lip_score": 0.371,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 0,
+     "sender_skew_ms_median": -12.9,
+     "video_delay_ms_while_speaking": [
+      40,
+      40
+     ],
+     "receiver_lag_ms": null,
+     "audio_sender_queue_frames": [
+      7,
+      13
+     ],
+     "runner_infer_fps_min": 41.8,
+     "rtc_jitter_ms": {
+      "audio": 400,
+      "video": 341
+     },
+     "hops_ms": {
+      "released_ms": 2506.2,
+      "first_clause_ms": 1313.1,
+      "tts_first_chunk_ms": 2506.2,
+      "runner_first_chunk_ms": 2506.7
+     },
+     "tts_first_chunk_ms": 1193,
+     "tts_provider": "gpu-worker"
+    }
+   ]
+  },
+  "tr-a100-final-run1": {
+   "what": "plus hold, chatterbox2, 20/24/48/64 stream window with 8 flow steps; first preparation on a fresh runner; the meter could not lock on this portrait (scores -0.24 to 0.32)",
+   "live_after_voice_click_ms": 17268,
+   "first_frame_ms": 5510,
+   "click_timeline": [
+    {
+     "url": "/v1/voice/warm",
+     "method": "POST",
+     "start_ms": 88,
+     "end_ms": 116
+    },
+    {
+     "url": "/v1/voice/capabilities",
+     "method": "GET",
+     "start_ms": 122,
+     "end_ms": 1283
+    },
+    {
+     "url": "/v1/voice/avatar/session",
+     "method": "POST",
+     "start_ms": 1157,
+     "end_ms": 10760
+    },
+    {
+     "url": "/v1/voice/avatar/offer",
+     "method": "POST",
+     "start_ms": 11654,
+     "end_ms": 11953
+    },
+    {
+     "url": "/v1/voice/avatar/look?thread_id=d2373194-e81e-4f86-bf3c-1f19c9264b70&photo_id=p1",
+     "method": "GET",
+     "start_ms": 14659,
+     "end_ms": 14673
+    },
+    {
+     "url": "/v1/voice/avatar/look/image?thread_id=d2373194-e81e-4f86-bf3c-1f19c9264b70&photo",
+     "method": "GET",
+     "start_ms": 14675,
+     "end_ms": 14690
+    }
+   ],
+   "session_prepare_ms": 9104.7,
+   "portrait_queue_ms": 8700.7,
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 2778,
+     "lip_lag_ms": -600,
+     "lip_score": -0.052,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 160,
+     "sender_skew_ms_median": -13.0,
+     "video_delay_ms_while_speaking": [
+      40,
+      40
+     ],
+     "receiver_lag_ms": 29,
+     "audio_sender_queue_frames": [
+      1,
+      13
+     ],
+     "runner_infer_fps_min": 7.3,
+     "rtc_jitter_ms": {
+      "audio": 257,
+      "video": 192
+     },
+     "hops_ms": {
+      "released_ms": 1855.1,
+      "first_clause_ms": 834.7,
+      "tts_first_chunk_ms": 1855.1,
+      "runner_first_chunk_ms": 1855.5
+     },
+     "tts_first_chunk_ms": 1020.3,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 2973,
+     "lip_lag_ms": 560,
+     "lip_score": -0.155,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 160,
+     "sender_skew_ms_median": -12.1,
+     "video_delay_ms_while_speaking": [
+      0,
+      0
+     ],
+     "receiver_lag_ms": 12,
+     "audio_sender_queue_frames": [
+      3,
+      11
+     ],
+     "runner_infer_fps_min": 32,
+     "rtc_jitter_ms": {
+      "audio": 235,
+      "video": 208
+     },
+     "hops_ms": {
+      "released_ms": 2160.8,
+      "first_clause_ms": 1195,
+      "tts_first_chunk_ms": 2160.8,
+      "runner_first_chunk_ms": 2161.3
+     },
+     "tts_first_chunk_ms": 965.8,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 3477,
+     "lip_lag_ms": 600,
+     "lip_score": -0.236,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 160,
+     "sender_skew_ms_median": -11.8,
+     "video_delay_ms_while_speaking": [
+      0,
+      0
+     ],
+     "receiver_lag_ms": 84,
+     "audio_sender_queue_frames": [
+      4,
+      13
+     ],
+     "runner_infer_fps_min": 33.8,
+     "rtc_jitter_ms": {
+      "audio": 270,
+      "video": 236
+     },
+     "hops_ms": {
+      "released_ms": 2649.6,
+      "first_clause_ms": 1663.9,
+      "tts_first_chunk_ms": 2649.6,
+      "runner_first_chunk_ms": 2650
+     },
+     "tts_first_chunk_ms": 985.6,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 3153,
+     "lip_lag_ms": 600,
+     "lip_score": 0.024,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 160,
+     "sender_skew_ms_median": -12,
+     "video_delay_ms_while_speaking": [
+      0,
+      0
+     ],
+     "receiver_lag_ms": 11,
+     "audio_sender_queue_frames": [
+      4,
+      13
+     ],
+     "runner_infer_fps_min": 35.9,
+     "rtc_jitter_ms": {
+      "audio": 256,
+      "video": 244
+     },
+     "hops_ms": {
+      "released_ms": 2322.7,
+      "first_clause_ms": 1282,
+      "tts_first_chunk_ms": 2322.7,
+      "runner_first_chunk_ms": 2323.1
+     },
+     "tts_first_chunk_ms": 1040.7,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 3174,
+     "lip_lag_ms": 600,
+     "lip_score": -0.103,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 160,
+     "sender_skew_ms_median": -11.4,
+     "video_delay_ms_while_speaking": [
+      0,
+      0
+     ],
+     "receiver_lag_ms": 49,
+     "audio_sender_queue_frames": [
+      6,
+      11
+     ],
+     "runner_infer_fps_min": 36.9,
+     "rtc_jitter_ms": {
+      "audio": 254,
+      "video": 248
+     },
+     "hops_ms": {
+      "released_ms": 2278.6,
+      "first_clause_ms": 1271.8,
+      "tts_first_chunk_ms": 2278.6,
+      "runner_first_chunk_ms": 2279
+     },
+     "tts_first_chunk_ms": 1006.7,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 3959,
+     "lip_lag_ms": 600,
+     "lip_score": 0.315,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 0,
+     "sender_skew_ms_median": -11.55,
+     "video_delay_ms_while_speaking": [
+      -280,
+      0
+     ],
+     "receiver_lag_ms": 43,
+     "audio_sender_queue_frames": [
+      4,
+      11
+     ],
+     "runner_infer_fps_min": 37.6,
+     "rtc_jitter_ms": {
+      "audio": 241,
+      "video": 245
+     },
+     "hops_ms": {
+      "released_ms": 3199.2,
+      "first_clause_ms": 2188.8,
+      "tts_first_chunk_ms": 3199.2,
+      "runner_first_chunk_ms": 3199.5
+     },
+     "tts_first_chunk_ms": 1010.4,
+     "tts_provider": "gpu-worker"
+    }
+   ]
+  },
+  "tr-a100-final-run2": {
+   "what": "same worker, second case (warm runner); line 1 waited for history.presenting (stall line); the meter could not lock on this portrait either",
+   "live_after_voice_click_ms": 9233,
+   "first_frame_ms": 962,
+   "click_timeline": [
+    {
+     "url": "/v1/voice/warm",
+     "method": "POST",
+     "start_ms": 78,
+     "end_ms": 103
+    },
+    {
+     "url": "/v1/voice/capabilities",
+     "method": "GET",
+     "start_ms": 103,
+     "end_ms": 1058
+    },
+    {
+     "url": "/v1/voice/avatar/session",
+     "method": "POST",
+     "start_ms": 994,
+     "end_ms": 6662
+    },
+    {
+     "url": "/v1/voice/avatar/offer",
+     "method": "POST",
+     "start_ms": 7717,
+     "end_ms": 7930
+    }
+   ],
+   "session_prepare_ms": 5007.5,
+   "portrait_queue_ms": 4804.1,
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 12143,
+     "lip_lag_ms": -600,
+     "lip_score": 0.237,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 160,
+     "sender_skew_ms_median": 385.3,
+     "video_delay_ms_while_speaking": [
+      -360,
+      -360
+     ],
+     "receiver_lag_ms": -95,
+     "audio_sender_queue_frames": [
+      2,
+      2
+     ],
+     "runner_infer_fps_min": 6.2,
+     "rtc_jitter_ms": {
+      "audio": 2074,
+      "video": 590
+     },
+     "hops_ms": {
+      "released_ms": null,
+      "first_clause_ms": 806.2,
+      "tts_first_chunk_ms": 2065.7,
+      "runner_first_chunk_ms": null
+     },
+     "tts_first_chunk_ms": 1259.4,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 564,
+     "lip_lag_ms": -320,
+     "lip_score": 0.31,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 0,
+     "sender_skew_ms_median": -13.1,
+     "video_delay_ms_while_speaking": [
+      0,
+      160
+     ],
+     "receiver_lag_ms": 207,
+     "audio_sender_queue_frames": [
+      5,
+      10
+     ],
+     "runner_infer_fps_min": 17.3,
+     "rtc_jitter_ms": {
+      "audio": 1720,
+      "video": 811
+     },
+     "hops_ms": {
+      "released_ms": 7308.4,
+      "first_clause_ms": 806.2,
+      "tts_first_chunk_ms": 2065.7,
+      "runner_first_chunk_ms": 7308.7
+     },
+     "tts_first_chunk_ms": 5184.7,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 1064,
+     "lip_lag_ms": 160,
+     "lip_score": 0.2,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 0,
+     "sender_skew_ms_median": -12.6,
+     "video_delay_ms_while_speaking": [
+      160,
+      160
+     ],
+     "receiver_lag_ms": -18,
+     "audio_sender_queue_frames": [
+      3,
+      13
+     ],
+     "runner_infer_fps_min": 24.8,
+     "rtc_jitter_ms": {
+      "audio": 921,
+      "video": 543
+     },
+     "hops_ms": {
+      "released_ms": 3376,
+      "first_clause_ms": 750.6,
+      "tts_first_chunk_ms": 3376,
+      "runner_first_chunk_ms": 3386.3
+     },
+     "tts_first_chunk_ms": 2625.4,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 2447,
+     "lip_lag_ms": 400,
+     "lip_score": 0.142,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 0,
+     "sender_skew_ms_median": -12.75,
+     "video_delay_ms_while_speaking": [
+      160,
+      160
+     ],
+     "receiver_lag_ms": -15,
+     "audio_sender_queue_frames": [
+      5,
+      13
+     ],
+     "runner_infer_fps_min": 32.3,
+     "rtc_jitter_ms": {
+      "audio": 689,
+      "video": 399
+     },
+     "hops_ms": {
+      "released_ms": 1740.9,
+      "first_clause_ms": 792.3,
+      "tts_first_chunk_ms": 1740.9,
+      "runner_first_chunk_ms": 1741.3
+     },
+     "tts_first_chunk_ms": 948.6,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 2673,
+     "lip_lag_ms": 120,
+     "lip_score": 0.197,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 0,
+     "sender_skew_ms_median": -12.9,
+     "video_delay_ms_while_speaking": [
+      160,
+      160
+     ],
+     "receiver_lag_ms": -43,
+     "audio_sender_queue_frames": [
+      5,
+      14
+     ],
+     "runner_infer_fps_min": 35,
+     "rtc_jitter_ms": {
+      "audio": 548,
+      "video": 315
+     },
+     "hops_ms": {
+      "released_ms": 1895.3,
+      "first_clause_ms": 961,
+      "tts_first_chunk_ms": 1895.3,
+      "runner_first_chunk_ms": 1895.7
+     },
+     "tts_first_chunk_ms": 934.2,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 2518,
+     "lip_lag_ms": 200,
+     "lip_score": 0.141,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 0,
+     "sender_skew_ms_median": -12.8,
+     "video_delay_ms_while_speaking": [
+      160,
+      160
+     ],
+     "receiver_lag_ms": -96,
+     "audio_sender_queue_frames": [
+      5,
+      13
+     ],
+     "runner_infer_fps_min": 36.4,
+     "rtc_jitter_ms": {
+      "audio": 472,
+      "video": 278
+     },
+     "hops_ms": {
+      "released_ms": 1811.2,
+      "first_clause_ms": 866.4,
+      "tts_first_chunk_ms": 1811.2,
+      "runner_first_chunk_ms": 1811.6
+     },
+     "tts_first_chunk_ms": 944.8,
+     "tts_provider": "gpu-worker"
+    }
+   ]
+  },
+  "tr-a100-final-run3": {
+   "what": "",
+   "live_after_voice_click_ms": 12207,
+   "first_frame_ms": 1296,
+   "click_timeline": [
+    {
+     "url": "/v1/voice/warm",
+     "method": "POST",
+     "start_ms": 89,
+     "end_ms": 127
+    },
+    {
+     "url": "/v1/voice/capabilities",
+     "method": "GET",
+     "start_ms": 134,
+     "end_ms": 1084
+    },
+    {
+     "url": "/v1/voice/avatar/session",
+     "method": "POST",
+     "start_ms": 969,
+     "end_ms": 9374
+    },
+    {
+     "url": "/v1/voice/avatar/offer",
+     "method": "POST",
+     "start_ms": 10544,
+     "end_ms": 10890
+    }
+   ],
+   "session_prepare_ms": 7865.7,
+   "portrait_queue_ms": 7343.2,
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 7955,
+     "lip_lag_ms": 240,
+     "lip_score": 0.133,
+     "probe_lag_ms": -360,
+     "probe_score": 0.413,
+     "video_delay_ms_after": 160,
+     "sender_skew_ms_median": -12.9,
+     "video_delay_ms_while_speaking": [
+      -440,
+      0
+     ],
+     "receiver_lag_ms": -221,
+     "audio_sender_queue_frames": [
+      0,
+      14
+     ],
+     "runner_infer_fps_min": 5.9,
+     "rtc_jitter_ms": {
+      "audio": 795,
+      "video": 374
+     },
+     "hops_ms": {
+      "released_ms": 4729.7,
+      "first_clause_ms": 1222,
+      "tts_first_chunk_ms": 4729.7,
+      "runner_first_chunk_ms": 4730.1
+     },
+     "tts_first_chunk_ms": 983.9,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 3033,
+     "lip_lag_ms": -360,
+     "lip_score": 0.106,
+     "probe_lag_ms": -160,
+     "probe_score": 0.777,
+     "video_delay_ms_after": 40,
+     "sender_skew_ms_median": -12.5,
+     "video_delay_ms_while_speaking": [
+      0,
+      0
+     ],
+     "receiver_lag_ms": -11,
+     "audio_sender_queue_frames": [
+      5,
+      14
+     ],
+     "runner_infer_fps_min": 28.5,
+     "rtc_jitter_ms": {
+      "audio": 541,
+      "video": 276
+     },
+     "hops_ms": {
+      "released_ms": 2088.4,
+      "first_clause_ms": 1012.3,
+      "tts_first_chunk_ms": 2088.4,
+      "runner_first_chunk_ms": 2088.9
+     },
+     "tts_first_chunk_ms": 1076.1,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 3153,
+     "lip_lag_ms": -400,
+     "lip_score": 0.091,
+     "probe_lag_ms": -80,
+     "probe_score": 0.905,
+     "video_delay_ms_after": 80,
+     "sender_skew_ms_median": -11.55,
+     "video_delay_ms_while_speaking": [
+      80,
+      320
+     ],
+     "receiver_lag_ms": -31,
+     "audio_sender_queue_frames": [
+      0,
+      11
+     ],
+     "runner_infer_fps_min": 33,
+     "rtc_jitter_ms": {
+      "audio": 460,
+      "video": 244
+     },
+     "hops_ms": {
+      "released_ms": 2144.3,
+      "first_clause_ms": 1157.8,
+      "tts_first_chunk_ms": 2144.3,
+      "runner_first_chunk_ms": 2144.8
+     },
+     "tts_first_chunk_ms": 986.5,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 28,
+     "lip_lag_ms": -320,
+     "lip_score": 0.109,
+     "probe_lag_ms": 120,
+     "probe_score": 0.656,
+     "video_delay_ms_after": 120,
+     "sender_skew_ms_median": -12.25,
+     "video_delay_ms_while_speaking": [
+      120,
+      120
+     ],
+     "receiver_lag_ms": 22,
+     "audio_sender_queue_frames": [
+      0,
+      13
+     ],
+     "runner_infer_fps_min": 34.3,
+     "rtc_jitter_ms": {
+      "audio": 459,
+      "video": 308
+     },
+     "hops_ms": {
+      "released_ms": 2265.3,
+      "first_clause_ms": 1074.3,
+      "tts_first_chunk_ms": 2265.3,
+      "runner_first_chunk_ms": 2265.7
+     },
+     "tts_first_chunk_ms": 1191,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 3321,
+     "lip_lag_ms": 480,
+     "lip_score": 0.171,
+     "probe_lag_ms": 80,
+     "probe_score": 0.842,
+     "video_delay_ms_after": 80,
+     "sender_skew_ms_median": -12.8,
+     "video_delay_ms_while_speaking": [
+      80,
+      80
+     ],
+     "receiver_lag_ms": 2,
+     "audio_sender_queue_frames": [
+      5,
+      13
+     ],
+     "runner_infer_fps_min": 36.2,
+     "rtc_jitter_ms": {
+      "audio": 413,
+      "video": 294
+     },
+     "hops_ms": {
+      "released_ms": 2305.6,
+      "first_clause_ms": 1291.2,
+      "tts_first_chunk_ms": 2305.5,
+      "runner_first_chunk_ms": 2306.6
+     },
+     "tts_first_chunk_ms": 1014.2,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 3132,
+     "lip_lag_ms": 40,
+     "lip_score": 0.128,
+     "probe_lag_ms": 0,
+     "probe_score": 0.841,
+     "video_delay_ms_after": 40,
+     "sender_skew_ms_median": -12.7,
+     "video_delay_ms_while_speaking": [
+      40,
+      40
+     ],
+     "receiver_lag_ms": -34,
+     "audio_sender_queue_frames": [
+      5,
+      13
+     ],
+     "runner_infer_fps_min": 37.2,
+     "rtc_jitter_ms": {
+      "audio": 387,
+      "video": 283
+     },
+     "hops_ms": {
+      "released_ms": 2225.2,
+      "first_clause_ms": 1219.2,
+      "tts_first_chunk_ms": 2225.2,
+      "runner_first_chunk_ms": 2225.6
+     },
+     "tts_first_chunk_ms": 1006,
+     "tts_provider": "gpu-worker"
+    }
+   ]
+  },
+  "tr-a100-nollm-autosync": {
+   "what": "vLLM off (Claude serves the text), image edits in gpu mode, auto sync from the sender clock with the receive-side reading in the delay (later switched off); no hold yet: a look prepared during line 1 stalled the runner",
+   "live_after_voice_click_ms": 12851,
+   "first_frame_ms": 1284,
+   "click_timeline": [
+    {
+     "url": "/v1/voice/warm",
+     "method": "POST",
+     "start_ms": 129,
+     "end_ms": 181
+    },
+    {
+     "url": "/v1/voice/capabilities",
+     "method": "GET",
+     "start_ms": 189,
+     "end_ms": 1337
+    },
+    {
+     "url": "/v1/voice/avatar/session",
+     "method": "POST",
+     "start_ms": 1218,
+     "end_ms": 10111
+    },
+    {
+     "url": "/v1/voice/avatar/offer",
+     "method": "POST",
+     "start_ms": 11055,
+     "end_ms": 11343
+    }
+   ],
+   "session_prepare_ms": 8149.3,
+   "portrait_queue_ms": 7998.8,
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 7795,
+     "lip_lag_ms": 560,
+     "lip_score": 0.153,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 280,
+     "sender_skew_ms_median": -13.9,
+     "video_delay_ms_while_speaking": [
+      -280,
+      1000
+     ],
+     "receiver_lag_ms": -166,
+     "audio_sender_queue_frames": [
+      0,
+      12
+     ],
+     "runner_infer_fps_min": 3.9,
+     "rtc_jitter_ms": {
+      "audio": 1444,
+      "video": 569
+     },
+     "hops_ms": {
+      "released_ms": null,
+      "first_clause_ms": 1125,
+      "tts_first_chunk_ms": null,
+      "runner_first_chunk_ms": null
+     },
+     "tts_first_chunk_ms": null,
+     "tts_provider": null
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 87,
+     "lip_lag_ms": 80,
+     "lip_score": 0.342,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 80,
+     "sender_skew_ms_median": -13.4,
+     "video_delay_ms_while_speaking": [
+      -440,
+      200
+     ],
+     "receiver_lag_ms": -12,
+     "audio_sender_queue_frames": [
+      6,
+      13
+     ],
+     "runner_infer_fps_min": 29.9,
+     "rtc_jitter_ms": {
+      "audio": 871,
+      "video": 530
+     },
+     "hops_ms": {
+      "released_ms": 6048.1,
+      "first_clause_ms": 790,
+      "tts_first_chunk_ms": 6048.1,
+      "runner_first_chunk_ms": 6048.4
+     },
+     "tts_first_chunk_ms": 5258,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 3592,
+     "lip_lag_ms": -120,
+     "lip_score": 0.53,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": -40,
+     "sender_skew_ms_median": -13.4,
+     "video_delay_ms_while_speaking": [
+      -40,
+      -40
+     ],
+     "receiver_lag_ms": 36,
+     "audio_sender_queue_frames": [
+      6,
+      14
+     ],
+     "runner_infer_fps_min": 38.8,
+     "rtc_jitter_ms": {
+      "audio": 683,
+      "video": 461
+     },
+     "hops_ms": {
+      "released_ms": 2674.6,
+      "first_clause_ms": 1467.1,
+      "tts_first_chunk_ms": 2674.6,
+      "runner_first_chunk_ms": 2675
+     },
+     "tts_first_chunk_ms": 1207.5,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 2920,
+     "lip_lag_ms": 0,
+     "lip_score": 0.525,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 0,
+     "sender_skew_ms_median": -13.7,
+     "video_delay_ms_while_speaking": [
+      0,
+      40
+     ],
+     "receiver_lag_ms": 14,
+     "audio_sender_queue_frames": [
+      5,
+      14
+     ],
+     "runner_infer_fps_min": 40.4,
+     "rtc_jitter_ms": {
+      "audio": 574,
+      "video": 409
+     },
+     "hops_ms": {
+      "released_ms": 2082.5,
+      "first_clause_ms": 877.3,
+      "tts_first_chunk_ms": 2082.5,
+      "runner_first_chunk_ms": 2082.8
+     },
+     "tts_first_chunk_ms": 1205.1,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 3284,
+     "lip_lag_ms": 0,
+     "lip_score": 0.506,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 0,
+     "sender_skew_ms_median": -13.6,
+     "video_delay_ms_while_speaking": [
+      0,
+      200
+     ],
+     "receiver_lag_ms": 61,
+     "audio_sender_queue_frames": [
+      3,
+      12
+     ],
+     "runner_infer_fps_min": 41.1,
+     "rtc_jitter_ms": {
+      "audio": 520,
+      "video": 382
+     },
+     "hops_ms": {
+      "released_ms": 2214.8,
+      "first_clause_ms": 1046.1,
+      "tts_first_chunk_ms": 2214.7,
+      "runner_first_chunk_ms": 2215.3
+     },
+     "tts_first_chunk_ms": 1168.6,
+     "tts_provider": "gpu-worker"
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 3149,
+     "lip_lag_ms": 0,
+     "lip_score": 0.507,
+     "probe_lag_ms": null,
+     "probe_score": null,
+     "video_delay_ms_after": 40,
+     "sender_skew_ms_median": -13.4,
+     "video_delay_ms_while_speaking": [
+      0,
+      80
+     ],
+     "receiver_lag_ms": 16,
+     "audio_sender_queue_frames": [
+      6,
+      11
+     ],
+     "runner_infer_fps_min": 41.7,
+     "rtc_jitter_ms": {
+      "audio": 445,
+      "video": 342
+     },
+     "hops_ms": {
+      "released_ms": 2394.1,
+      "first_clause_ms": 1199,
+      "tts_first_chunk_ms": 2394.1,
+      "runner_first_chunk_ms": 2394.5
+     },
+     "tts_first_chunk_ms": 1195.1,
+     "tts_provider": "gpu-worker"
+    }
+   ]
+  }
+ }
+}

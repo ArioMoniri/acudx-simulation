@@ -233,6 +233,8 @@ for (let i = 0; i < Math.min(LINES, UI.questions.length); i++) {
   const row = { line: i + 1, question: q, reply: reply?.reply, via: measure?.via, speech_start_ms: measure?.speechStartMs,
     lip_lag_ms: measure?.lipLagMs, lip_score: measure?.lipScore, voice_ms: measure?.voiceMs,
     probe_lag_ms: measure?.probeLagMs ?? null, probe_score: measure?.probeScore ?? null,
+    probe_first_lag_ms: measure?.probeFirstLagMs ?? null, probe_corrections: measure?.probeCorrections ?? 0,
+    probe_tail_lag_ms: measure?.probeTailLagMs ?? null,
     av_shift_ms_after: m.av_shift_ms, reply_http_ms: reply ? reply.at - sentAt : null,
     speculative: reply?.meta?.speculative ?? null, gateway_timings: reply?.meta?.timings ?? null,
     history: reply?.meta?.history ?? null,
