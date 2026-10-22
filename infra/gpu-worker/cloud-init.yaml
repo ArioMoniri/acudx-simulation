@@ -30,7 +30,9 @@
 #
 # Image pins (verified against the registries on 2026-10-19 and 2026-10-20):
 #   vllm/vllm-openai:v0.11.0                      (Docker Hub)
-#   ghcr.io/speaches-ai/speaches:0.8.3-cuda       (GHCR tags list; 0.9.0 is still rc)
+#   ghcr.io/speaches-ai/speaches:0.8.3-cuda-12.4.1 by digest (GHCR, 2025-09-18; 0.9.0 is still rc.3).
+#     0.8 has no PRELOAD_MODELS any more (deprecated in 0.7) and runs as uid 1000; the Whisper model is
+#     fetched by stt.sh as root into the shared cache, pinned by revision (docs/architecture/18 6.3.12).
 #   ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4      (GHCR tags list)
 #   caddy:2.9.1                                   (Docker Hub; Caddyfile validated with 2.9.1)
 #   nginx:1.30.6-alpine                           (Docker Hub stable; stream + ssl_preread built in,
@@ -79,6 +81,9 @@ write_files:
       AVATAR_MAX_SESSIONS=2
       ACUDX_IMAGE_REGISTRY=ghcr.io/ariomoniri
       CHATTERBOX_CACHE=/opt/acudx/chatterbox-cache
+      STT_MODEL=deepdml/faster-whisper-large-v3-turbo-ct2
+      STT_MODEL_REV=4df90f75321148c3a29a9e2351b7ddf8f5b115a8
+      SPEACHES_IMAGE=ghcr.io/speaches-ai/speaches:0.8.3-cuda-12.4.1@sha256:6a64b1dfe7fe650c72ff01027048858d51c5851993d0f76ba6046f4ca94545c7
       AVATAR_CACHE=/opt/acudx/avatar-cache
   - path: /opt/acudx/Caddyfile
     content: |
@@ -1237,7 +1242,8 @@ write_files:
                     capabilities: [gpu]
           environment: [ "NVIDIA_VISIBLE_DEVICES=all" ]
         speaches:
-          image: ghcr.io/speaches-ai/speaches:0.8.3-cuda
+          image: ${SPEACHES_IMAGE:-ghcr.io/speaches-ai/speaches:0.8.3-cuda-12.4.1@sha256:6a64b1dfe7fe650c72ff01027048858d51c5851993d0f76ba6046f4ca94545c7}
+          restart: unless-stopped
           deploy:
             resources:
               reservations:
@@ -1246,13 +1252,26 @@ write_files:
                     count: all
                     capabilities: [gpu]
           environment:
-            # Whisper large-v3-turbo in CTranslate2 form (https://huggingface.co/deepdml/faster-whisper-large-v3-turbo-ct2);
-            # preloaded at start and never unloaded so the first dictation does not pay the load.
-            - PRELOAD_MODELS=["deepdml/faster-whisper-large-v3-turbo-ct2"]
-            - STT_MODEL_TTL=-1
+            # Whisper large-v3-turbo in CTranslate2 form (https://huggingface.co/deepdml/faster-whisper-large-v3-turbo-ct2).
+            # speaches 0.8 reads neither PRELOAD_MODELS nor STT_MODEL_TTL (both were set here before and
+            # silently ignored: every worker answered 404 "model not installed", live 2026-10-22). The
+            # model is fetched by stt.sh (pinned revision, refs/main written) and loaded by its first
+            # transcription; WHISPER__TTL=-1 keeps it loaded. Offline: speaches never writes or reaches
+            # the Hub at run time (its own POST /v1/models download failed with 500: uid 1000 cannot
+            # write the root-owned shared cache).
+            - WHISPER__TTL=-1
             - WHISPER__COMPUTE_TYPE=float16
             - HF_HOME=/hf
-          volumes: [ "/opt/acudx/hf:/hf" ]
+            - HF_HUB_OFFLINE=1
+            - ENABLE_UI=false
+          volumes: [ "/opt/acudx/hf:/hf", "/opt/acudx/stt-check.py:/opt/stt-check.py:ro" ]
+          # Healthy only when the served model transcribes (a 0.5 s silent clip), not when uvicorn is up.
+          healthcheck:
+            test: [ "CMD", "python", "/opt/stt-check.py" ]
+            interval: 30s
+            timeout: 20s
+            retries: 3
+            start_period: 60s
         # Public 443 (SNI router, edge.conf); host network so it reaches coturn's loopback TLS port.
         edge:
           image: nginx:1.30.6-alpine
@@ -1429,6 +1448,93 @@ write_files:
         fi
         sleep 30
       done
+  - path: /opt/acudx/stt-check.py
+    permissions: "0644"
+    content: |
+      """speaches health: transcribe a 0.5 s silent WAV with the served model (stdlib only).
+
+      Exit 0 when speaches answers 200; 2 when it answers 404 (model not in its cache); 1 otherwise.
+      Run inside the speaches container (compose healthcheck) or by stt.sh through docker compose exec."""
+      import json, os, struct, sys, time, urllib.error, urllib.request
+
+      model = os.environ.get("STT_MODEL") or (sys.argv[1] if len(sys.argv) > 1 else "deepdml/faster-whisper-large-v3-turbo-ct2")
+      rate = 16000
+      pcm = b"\x00\x00" * (rate // 2)
+      wav = (b"RIFF" + struct.pack("<I", 36 + len(pcm)) + b"WAVE" + b"fmt " +
+             struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16) + b"data" + struct.pack("<I", len(pcm)) + pcm)
+      b = "acudxsttcheck"
+      body = (f"--{b}\r\nContent-Disposition: form-data; name=\"model\"\r\n\r\n{model}\r\n"
+              f"--{b}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"probe.wav\"\r\n"
+              f"Content-Type: audio/wav\r\n\r\n").encode() + wav + f"\r\n--{b}--\r\n".encode()
+      req = urllib.request.Request(os.environ.get("STT_CHECK_URL") or "http://localhost:8000/v1/audio/transcriptions",
+                                   data=body, method="POST",
+                                   headers={"Content-Type": f"multipart/form-data; boundary={b}"})
+      t0 = time.monotonic()
+      try:
+          with urllib.request.urlopen(req, timeout=18) as r:
+              code, text = r.status, r.read().decode("utf-8", "replace")
+      except urllib.error.HTTPError as e:
+          code, text = e.code, e.read().decode("utf-8", "replace")
+      except OSError as e:
+          print(json.dumps({"ok": False, "detail": f"unreachable: {type(e).__name__}"}))
+          sys.exit(1)
+      print(json.dumps({"ok": code == 200, "http": code, "ms": round((time.monotonic() - t0) * 1000), "body": text[:200]}))
+      sys.exit(0 if code == 200 else (2 if code == 404 else 1))
+  - path: /opt/acudx/stt.sh
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      # The worker's STT model (docs/architecture/18 6.3.12). speaches 0.8 runs as uid 1000 and only
+      # serves a model already in its Hugging Face cache; the shared cache (/opt/acudx/hf, on the Lambda
+      # filesystem when there is one) is root-owned, so its own download (POST /v1/models) failed with 500
+      # and every transcription answered 404 "model not installed" (live 2026-10-22). Here, as root:
+      #   1. fetch STT_MODEL at STT_MODEL_REV (the files faster-whisper loads plus the model card speaches
+      #      reads) with the speaches image's own huggingface_hub, unless the filesystem has it already;
+      #   2. write refs/main to that revision so the offline loader resolves it, make it world-readable;
+      #   3. wait until speaches transcribes with it (this also loads it onto the GPU before any learner).
+      # The state goes to /avatar-status/stt.json: fetching | loading | ready | missing (with a detail).
+      set -u
+      . /opt/acudx/images.sh
+      set -a; . /opt/acudx/.env; set +a
+      ST=/opt/acudx/public/avatar-status/stt.json
+      repo="/opt/acudx/hf/hub/models--$(printf '%s' "$STT_MODEL" | sed 's|/|--|g')"
+      snap="$repo/snapshots/$STT_MODEL_REV"
+      t0=$(date +%s)
+      status() {
+        printf '{"state":"%s","model":"%s","revision":"%s","detail":"%s","elapsed_s":%s}\n' \
+          "$1" "$STT_MODEL" "$STT_MODEL_REV" "${2:-}" "$(( $(date +%s) - t0 ))" > "$ST.tmp" && chmod 0644 "$ST.tmp" && mv "$ST.tmp" "$ST"
+      }
+      have() { [ -s "$snap/model.bin" ] && [ -s "$snap/README.md" ] && [ -s "$snap/tokenizer.json" ] && [ -s "$snap/preprocessor_config.json" ]; }
+      mkdir -p /opt/acudx/hf/hub
+      if have; then
+        mark "stt: model on the filesystem"
+      else
+        status fetching
+        mark "stt: fetching $STT_MODEL@${STT_MODEL_REV:0:8}"
+        for i in 1 2 3; do
+          docker run --rm --user 0:0 -e HF_HOME=/hf -e HF_HUB_ENABLE_HF_TRANSFER=0 -e HF_HUB_DISABLE_TELEMETRY=1 \
+            -v /opt/acudx/hf:/hf --entrypoint python "$SPEACHES_IMAGE" -c "
+      from huggingface_hub import snapshot_download
+      snapshot_download('$STT_MODEL', revision='$STT_MODEL_REV', repo_type='model',
+                        allow_patterns=['config.json', 'preprocessor_config.json', 'model.bin', 'tokenizer.json',
+                                        'vocabulary.*', 'README.md'])" && have && break
+          echo "acudx: stt model fetch attempt $i failed" >&2; sleep 15
+        done
+      fi
+      if ! have; then status missing "download failed"; mark "stt: model missing"; exit 1; fi
+      mkdir -p "$repo/refs" && printf '%s' "$STT_MODEL_REV" > "$repo/refs/main"
+      chmod -R a+rX "$repo"
+      mark "stt: model in cache ($(( $(date +%s) - t0 )) s)"
+      status loading
+      for _ in $(seq 1 180); do
+        out=$(docker compose -f /opt/acudx/docker-compose.yml exec -T -e STT_MODEL="$STT_MODEL" speaches python /opt/stt-check.py 2>/dev/null)
+        rc=$?
+        if [ "$rc" = 0 ]; then status ready; mark "stt: ready (first transcription $(printf '%s' "$out" | sed -n 's/.*"ms": \([0-9]*\).*/\1/p') ms)"; exit 0; fi
+        sleep 5
+      done
+      status missing "speaches did not transcribe within 15 min: $(printf '%s' "$out" | tr -d '"\\' | head -c 160)"
+      mark "stt: not ready"
+      exit 1
   - path: /opt/acudx/seed-voices.sh
     permissions: "0755"
     content: |
@@ -3939,7 +4045,7 @@ runcmd:
   - |
     cd /opt/acudx && set -a && . ./.env && set +a && . ./images.sh
     mark "images: fetching"
-    for img in vllm/vllm-openai:v0.11.0 ghcr.io/speaches-ai/speaches:0.8.3-cuda ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4 \
+    for img in vllm/vllm-openai:v0.11.0 "$SPEACHES_IMAGE" ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4 \
                caddy:2.9.1 nginx:1.30.6-alpine ghcr.io/coturn/coturn:4.18.0-debian; do
       ( for i in 1 2 3; do docker pull -q "$img" >/dev/null 2>&1 && break; sleep 10; done; mark "image pulled $img" ) &
     done
@@ -3959,6 +4065,7 @@ runcmd:
   - |
     cd /opt/acudx && set -a && . ./.env && set +a && . ./images.sh
     docker compose up -d speaches kokoro kokoro2 && mark "speaches and kokoro started"
+    nohup /opt/acudx/stt.sh >/var/log/acudx-stt.log 2>&1 &
     for _ in $(seq 1 720); do
       docker image inspect acudx/chatterbox-tts-api:a5f4661-cu124 >/dev/null 2>&1 && break
       [ -f /opt/acudx/public/avatar-status/chatterbox-failed ] && break
