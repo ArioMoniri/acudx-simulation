@@ -83,3 +83,43 @@ async def test_a_layer_asked_for_before_the_kernel_waits_for_it():
         await rt.staged.wait(tid)
     finally:
         await rt.aclose()
+
+
+def test_a_calls_voice_is_resolved_on_the_calls_own_worker():
+    # Live 2026-10-22: a call rendered on the two-card worker got its Turkish voice from another worker of the
+    # pool (the least-loaded pick), so the voice lost the card of its own and paid a second worker's network.
+    from server.registry.resolve import RegistryResolver
+
+    class WM:
+        def endpoint_by_origin(self, origin):
+            if origin == "https://w2.test":
+                return {"base_url": "https://w2.test/v1", "api_key": "t2", "model": "acudx-llm"}
+            return None
+
+        def llm_endpoint(self):
+            return {"base_url": "https://w1.test/v1", "api_key": "t1", "model": "acudx-llm"}
+
+    r = RegistryResolver.__new__(RegistryResolver)
+    r.worker_manager = WM()
+    ep = r.worker_at("tts", "https://w2.test")
+    assert ep.base_url == "https://w2.test/tts" and ep.api_key == "t2" and ep.source == "gpu_worker"
+    assert r.worker_at("tts", "https://gone.test") is None and r.worker_at("tts", None) is None
+
+
+async def test_the_call_speaker_asks_for_the_voice_on_its_worker():
+    from types import SimpleNamespace
+
+    from server.voice.avatar.turn_speech import CallSpeaker, TurnTimings
+
+    seen = {}
+
+    class Svc:
+        settings = SimpleNamespace(avatar_fast_en_tts=False)
+
+        def tts(self, text, **kw):
+            seen.update(kw)
+            return "pending"
+
+    sp = CallSpeaker(svc=Svc(), session=SimpleNamespace(worker_origin="https://w2.test"), worker=None, lang="tr",
+                     sex="female", age=40, speed=1.0, gate=lambda t: t, timings=TurnTimings())
+    assert sp._tts("Merhaba") == "pending" and seen["origin"] == "https://w2.test"

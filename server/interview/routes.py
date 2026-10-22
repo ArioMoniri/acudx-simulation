@@ -238,7 +238,7 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
         # Open the TTS connection while the guard and the persona run (about 1 s), so the first clause
         # does not pay a TLS handshake: live 2026-10-22 an idle connection was gone by the next question
         # (0.45 s through the sandbox's proxy; httpx drops idle connections after 5 s anywhere).
-        _bg = asyncio.get_running_loop().create_task(svc.prewarm_tts(call.lang))
+        _bg = asyncio.get_running_loop().create_task(svc.prewarm_tts(call.lang, getattr(call, "worker_origin", None)))
         _PREWARMS.add(_bg)
         _bg.add_done_callback(_PREWARMS.discard)
     if call is not None and gateway is not None:

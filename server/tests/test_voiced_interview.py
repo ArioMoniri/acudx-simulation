@@ -197,7 +197,7 @@ async def test_the_tts_connection_is_opened_while_the_guard_runs(voiced, runtime
     state, _scenario, _sockets = voiced
     warmed: list[str] = []
 
-    async def prewarm(lang: str) -> str:
+    async def prewarm(lang: str, origin: str | None = None) -> str:
         warmed.append(lang)
         return "gpu-worker"
 
