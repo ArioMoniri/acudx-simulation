@@ -188,6 +188,12 @@ class WorkerPolicy(BaseModel):
     # each, and the gateway picked the same offer again). Stored in SQLite; 0 turns the cooldown off (a
     # launch still moves on from the offer that just failed).
     launch_cooldown_minutes: int = Field(default=60, ge=0, le=7 * 24 * 60)
+    # The worker's own LLM (vLLM). ``auto``: left off when Claude serves the text (a usable
+    # ANTHROPIC_KEY route), so the card goes to the voice, the runner and the image edits; ``on`` keeps
+    # it (the text fallback when Claude is unreachable); ``off`` never starts it. Live 2026-10-22 on an
+    # A100 40 GB: vLLM held 18 GB it never used on a Claude deployment, which left the image edits 9 GB
+    # (model offload, 15.7 s an edit) and no room for a second Chatterbox (docs/architecture/18 6.3.13).
+    worker_llm: str = Field(default="auto", pattern="^(auto|on|off)$")
 
     @field_validator("allowlist")
     @classmethod
@@ -306,6 +312,23 @@ def llm_model_for(model: str, gpu_gb: int | None) -> str:
     if gpu_gb is not None and gpu_gb < LARGE_CARD_GB:
         return SMALL_CARD_MODEL.get(model, model)
     return model
+
+
+NO_WORKER_LLM = "none"   # WORKER_LLM_MODEL value that tells cloud-init to leave vLLM off
+
+
+def worker_llm_wanted(policy: "WorkerPolicy", settings: Any) -> bool:
+    """Whether a new worker starts its own LLM: ``on`` / ``off`` as set; ``auto`` only when Claude does
+    not serve the text (no usable Anthropic route), since every text role then needs the worker."""
+    mode = getattr(policy, "worker_llm", "auto") or "auto"
+    if mode in ("on", "off"):
+        return mode == "on"
+    status = getattr(settings, "anthropic_status", None)
+    try:
+        usable = bool(status()["usable"]) if callable(status) else False
+    except Exception:  # noqa: BLE001 - an unreadable status keeps the worker LLM (the safe side)
+        usable = False
+    return not usable
 
 
 def sslip_domain(ip: str) -> str:
@@ -603,6 +626,7 @@ class WorkerManager:
             min_gpu_memory_gb=int(getattr(settings, "gpu_min_gpu_memory_gb", 40)),
             preferred_gpu_memory_gb=int(getattr(settings, "gpu_preferred_gpu_memory_gb", 80)),
             launch_cooldown_minutes=int(getattr(settings, "gpu_launch_cooldown_minutes", 60)),
+            worker_llm=str(getattr(settings, "gpu_worker_llm", "auto") or "auto"),
         )
 
     # -- policy -------------------------------------------------------------- #
@@ -1275,6 +1299,8 @@ class WorkerManager:
                              + (f" outside the cooled-down offers {sorted(skip)}" if skip else ""))
         offer = offers.get(choice.instance_type_name)
         llm_model = llm_model_for(self.policy.llm_model, gpu_memory_gb(offer.instance_type) if offer else None)
+        if not worker_llm_wanted(self.policy, self.settings):
+            llm_model = NO_WORKER_LLM
         self._check_budget(choice.price_cents_per_hour)
         await self._ensure_firewall()
 

@@ -217,6 +217,8 @@ class Settings(BaseSettings):
     gpu_boot_stuck_s: float = 480.0
     # After a boot failure or a refused launch, that (type, region) is skipped this long (0: off).
     gpu_launch_cooldown_minutes: int = Field(default=60, ge=0, le=7 * 24 * 60)
+    # The worker's own vLLM: auto (off when Claude serves the text), on, off (WorkerPolicy.worker_llm).
+    gpu_worker_llm: str = Field(default="auto", pattern="^(auto|on|off)$")
     gpu_daily_budget_usd: float | None = None  # None = no cap; set a number to cap daily GPU spend
     gpu_llm_model: str = "Qwen/Qwen3-32B-AWQ"
     gpu_instance_allowlist: CsvList = Field(default_factory=lambda: [
