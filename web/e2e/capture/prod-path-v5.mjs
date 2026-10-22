@@ -154,6 +154,20 @@ async function callInfo() {
 async function callMetrics() {
   return (await callInfo()).metrics ?? {};
 }
+// The runner's sync probe (SYNC_PROBE=1, default on): a corner block carries each frame's audio loudness,
+// so the end-to-end lip offset is measured whatever the portrait.
+const PROBE = process.env.SYNC_PROBE !== "0";
+let probeOn = null;
+if (PROBE && WORKER && WTOKEN) {
+  const ws = (await callInfo()).worker_session ?? null;
+  if (ws) {
+    const r = await fetch(`${WORKER}/avatar/tuning`, { method: "POST",
+      headers: { Authorization: `Bearer ${WTOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionid: ws, probe: true }) }).catch(() => null);
+    probeOn = r ? r.status : null;
+  }
+  t(`sync probe: ${probeOn}`);
+}
 
 async function runnerHealth() {
   const r = await fetch(`${WORKER}/avatar/health`, { headers: { Authorization: `Bearer ${WTOKEN}` } });
@@ -218,6 +232,7 @@ for (let i = 0; i < Math.min(LINES, UI.questions.length); i++) {
   const turn = (m.voiced_turns ?? []).at(-1) ?? null;
   const row = { line: i + 1, question: q, reply: reply?.reply, via: measure?.via, speech_start_ms: measure?.speechStartMs,
     lip_lag_ms: measure?.lipLagMs, lip_score: measure?.lipScore, voice_ms: measure?.voiceMs,
+    probe_lag_ms: measure?.probeLagMs ?? null, probe_score: measure?.probeScore ?? null,
     av_shift_ms_after: m.av_shift_ms, reply_http_ms: reply ? reply.at - sentAt : null,
     speculative: reply?.meta?.speculative ?? null, gateway_timings: reply?.meta?.timings ?? null,
     history: reply?.meta?.history ?? null,

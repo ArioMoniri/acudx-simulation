@@ -48,6 +48,9 @@ export interface AvatarLineMeasure {
   lipLagMs: number | null;
   lipScore: number | null;
   voiceMs: number | null;
+  /** From the runner's sync probe (test harnesses): the offset end to end, whatever the portrait. */
+  probeLagMs?: number | null;
+  probeScore?: number | null;
 }
 
 export interface AvatarSample {
@@ -56,6 +59,9 @@ export interface AvatarSample {
   motion: number;
   /** Mouth openness: mean darkness of the mouth box (an open mouth shows the dark oral cavity). */
   open: number;
+  /** The runner's sync probe block (bottom-right corner), when a harness turned it on: the loudness of the
+   * audio each frame was rendered from. */
+  probe?: number;
 }
 
 export interface AvatarCallHandle {
@@ -341,21 +347,24 @@ export function utteranceSpan(samples: AvatarSample[], startAt: number, now: num
 }
 
 /** Resample irregular samples onto a fixed grid (nearest previous sample). */
-export function resample(samples: AvatarSample[], stepMs: number): { rms: number[]; motion: number[]; open: number[] } {
-  if (samples.length < 2) return { rms: [], motion: [], open: [] };
+export function resample(samples: AvatarSample[], stepMs: number):
+  { rms: number[]; motion: number[]; open: number[]; probe: number[] } {
+  if (samples.length < 2) return { rms: [], motion: [], open: [], probe: [] };
   const t0 = samples[0].t;
   const t1 = samples[samples.length - 1].t;
   const rms: number[] = [];
   const motion: number[] = [];
   const open: number[] = [];
+  const probe: number[] = [];
   let k = 0;
   for (let t = t0; t <= t1; t += stepMs) {
     while (k + 1 < samples.length && samples[k + 1].t <= t) k++;
     rms.push(samples[k].rms);
     motion.push(samples[k].motion);
     open.push(samples[k].open ?? 0);
+    probe.push(samples[k].probe ?? 0);
   }
-  return { rms, motion, open };
+  return { rms, motion, open, probe };
 }
 
 /**
@@ -493,6 +502,10 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
     canvas.width = 48;
     canvas.height = 32;
     const g = canvas.getContext("2d", { willReadFrequently: true });
+    const probeCanvas = document.createElement("canvas");
+    probeCanvas.width = 4;
+    probeCanvas.height = 4;
+    const pg = probeCanvas.getContext("2d", { willReadFrequently: true });
     let prev: Uint8ClampedArray | null = null;
     let stopped = false;
     const r = mouthRegion((session as { prepare?: { face_box?: number[]; width?: number; height?: number } }).prepare);
@@ -519,7 +532,16 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
         }
         prev = px.slice();
       }
-      samples.push({ t: now, rms, motion, open });
+      let probe: number | undefined;
+      if (pg && video.videoWidth > 8) {
+        // The centre 4 x 4 of the runner's 8 x 8 probe block (the edge pixels blur in the encoder).
+        pg.drawImage(video, video.videoWidth - 6, video.videoHeight - 6, 4, 4, 0, 0, 4, 4);
+        const pp = pg.getImageData(0, 0, 4, 4).data;
+        let l = 0;
+        for (let i = 0; i < pp.length; i += 4) l += pp[i + 1];
+        probe = l / (pp.length / 4);
+      }
+      samples.push({ t: now, rms, motion, open, probe });
       if (samples.length > MAX_SAMPLES) samples.splice(0, samples.length - MAX_SAMPLES);
       if (typeof v.requestVideoFrameCallback === "function") v.requestVideoFrameCallback(tick);
       else requestAnimationFrame(tick);
@@ -594,16 +616,23 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
       // whole face moves a little all the time, while the mouth box's darkness changes only when the
       // mouth opens. The window is the whole voice plus 0.8 s either side.
       const win = samples.filter((s) => s.t >= (span.first ?? startAt) - 800 && s.t <= (span.last ?? t) + 800);
-      const { rms, open } = resample(win, 40);
+      const { rms, open, probe } = resample(win, 40);
       const cc = crossCorrelation(highPass(rms), highPass(open), 40, 600, true);
+      // The runner's sync probe, when on: louder audio = a brighter block, so a plain correlation.
+      const probed = Math.max(...probe) - Math.min(...probe) > 20 ? crossCorrelation(rms, probe, 40) : null;
+      if (probed) {
+        line.probeLagMs = probed.lagMs;
+        line.probeScore = probed.score;
+      }
+      const use = probed && probed.score >= 0.5 ? probed : cc;
       if (cc) {
         line.lipLagMs = cc.lagMs;
         line.lipScore = cc.score;
         metrics.lipLagMs = cc.lagMs;
         metrics.lipScore = cc.score;
         emit();
-        void api.avatarLipsync(session.session_id, cc.lagMs, cc.score).catch(() => undefined);
       }
+      if (use) void api.avatarLipsync(session.session_id, use.lagMs, use.score).catch(() => undefined);
     };
     setTimeout(poll, 300);
   };

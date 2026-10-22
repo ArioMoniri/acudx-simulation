@@ -166,6 +166,29 @@ def test_a_held_runner_pauses_its_preparations_before_any_audio_arrives():
     assert 'app.router.add_post("/hold", hold)' in RUNNER
 
 
+def test_the_sync_probe_marks_each_frame_with_its_own_audio_before_the_delay_line():
+    ns = _pieces({"probe_rms", "_install_probe"}, {"np": np, "PROBE_PX": 8})
+    shown: list = []
+    sess = SimpleNamespace(output=SimpleNamespace(push_video_frame=shown.append), _acudx_probe=True,
+                           _acudx_probe_rms=0.0)
+    ns["_install_probe"](sess)
+    quiet = np.zeros((32, 32, 3), dtype=np.uint8)
+    sess._acudx_probe_rms = ns["probe_rms"]([SimpleNamespace(data=np.full(320, 0.1, dtype=np.float32))] * 2)
+    assert abs(sess._acudx_probe_rms - 0.1) < 1e-6
+    sess.output.push_video_frame(quiet)
+    assert int(shown[-1][-1, -1, 0]) == 176 and int(quiet[-1, -1, 0]) == 0   # marked on a copy, never in place
+    sess._acudx_probe = False
+    sess.output.push_video_frame(quiet)
+    assert shown[-1] is quiet
+
+
+def test_an_image_edit_pauses_between_its_steps_while_a_reply_is_on_its_way():
+    imagegen = worker_images.written_files()["/opt/acudx/imagegen/acudx_imagegen.py"]
+    assert "callback_on_step_end=_pause_while_held" in imagegen and 'app.router.add_post("/hold", hold)' in imagegen
+    gw = (Path(__file__).resolve().parents[1] / "voice" / "avatar" / "musetalk.py").read_text(encoding="utf-8")
+    assert 'for path in ("/avatar/hold", "/imagegen/hold")' in gw
+
+
 def test_the_sender_offsets_are_taken_per_encoded_frame_and_the_tuning_route_reports_them():
     assert "_aiortc_sender.RTCRtpSender._next_encoded_frame = _next_encoded" in RUNNER
     assert '"browser_lag_ms"' in RUNNER and '"sync": sender_sync(sess)' in RUNNER

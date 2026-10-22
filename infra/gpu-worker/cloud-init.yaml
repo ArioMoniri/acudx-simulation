@@ -3139,6 +3139,8 @@ write_files:
           sess._acudx_avatar = avatar_id
           _install_crossfade(sess)
           _install_av_shift(sess, sess._acudx_shift_ms)
+          sess._acudx_probe = bool(tuning.get("probe"))
+          _install_probe(sess)   # outermost: it marks each frame's own content before the delay line
           return sess
 
 
@@ -3156,7 +3158,39 @@ write_files:
                   self._sess._acudx_idx = int(item[2])
               except (TypeError, ValueError, IndexError):
                   pass
+              if getattr(self._sess, "_acudx_probe", False):
+                  self._sess._acudx_probe_rms = probe_rms(item[1])
               return item
+
+
+      def probe_rms(audio_frames) -> float:
+          """RMS of the audio frames that leave with this video frame (their content, before any delay line)."""
+          try:
+              data = np.concatenate([np.asarray(getattr(a, "data", a), dtype=np.float32).ravel() for a in audio_frames])
+              return float(np.sqrt(np.mean(data * data))) if data.size else 0.0
+          except (TypeError, ValueError):
+              return 0.0
+
+
+      PROBE_PX = 8
+
+
+      def _install_probe(sess) -> None:
+          """Sync probe (test harnesses only, POST /tuning {probe: true}): an 8 x 8 block in the bottom-right
+          corner of every frame carries the loudness of the audio that frame was rendered from, before the delay
+          line. The browser correlates it with what it hears: the lip offset end to end, whatever the portrait
+          (the mouth-box meter does not lock on every face; live 2026-10-22, scores under 0.3 on two portraits)."""
+          out = sess.output
+          orig = out.push_video_frame
+
+          def push_video_frame(frame) -> None:
+              if getattr(sess, "_acudx_probe", False):
+                  v = int(max(16, min(240, 16 + 1600.0 * float(getattr(sess, "_acudx_probe_rms", 0.0)))))
+                  frame = frame.copy()
+                  frame[-PROBE_PX:, -PROBE_PX:, :] = v
+              orig(frame)
+
+          out.push_video_frame = push_video_frame
 
 
       # A switch waits until the patient has been silent this many frames (0.48 s): never mid-word.
@@ -3473,6 +3507,8 @@ write_files:
               st["auto"] = False
           if params.get("auto") is True:
               st["auto"] = AUTO_SYNC
+          if isinstance(params.get("probe"), bool):
+              sess._acudx_probe = params["probe"]
           recv = params.get("receiver_lag_ms")
           if isinstance(recv, (int, float)) and abs(float(recv)) <= 2000:
               st["recv_ms"], st["recv_at"] = float(recv), time.time()
@@ -3899,15 +3935,33 @@ write_files:
               log.exception("imagegen load failed")
 
 
+      HOLD = {"until": 0.0, "paused_ms": 0.0}
+
+
+      def _pause_while_held(_pipe, _step, _timestep, callback_kwargs):
+          """Between denoising steps: wait while a live call's reply is on its way (POST /hold from the gateway),
+          at most 20 s. Live 2026-10-22 (A100 40 GB, gpu mode): an edit beside the first reply stalled the
+          call's runner for about 2.5 s."""
+          t = time.monotonic()
+          while time.monotonic() < HOLD["until"] and time.monotonic() - t < 20.0:
+              time.sleep(0.05)
+          HOLD["paused_ms"] += (time.monotonic() - t) * 1000.0
+          return callback_kwargs
+
+
       def _edit(image: Image.Image, prompt: str, seed: int, steps: int, width: int, height: int) -> Image.Image:
           gen = torch.Generator(device="cuda").manual_seed(seed)
           with LOCK, torch.inference_mode():
               try:
+                  kw = dict(image=image, prompt=prompt, width=width, height=height, num_inference_steps=steps,
+                            guidance_scale=1.0, generator=gen)
                   try:
-                      out = PIPE(image=image, prompt=prompt, width=width, height=height, num_inference_steps=steps,
-                                 guidance_scale=1.0, generator=gen)
+                      out = PIPE(**kw, callback_on_step_end=_pause_while_held)
                   except TypeError:
-                      out = PIPE(image=image, prompt=prompt, num_inference_steps=steps, generator=gen)
+                      try:
+                          out = PIPE(**kw)
+                      except TypeError:
+                          out = PIPE(image=image, prompt=prompt, num_inference_steps=steps, generator=gen)
               finally:
                   # Give the card back after every edit. Live 2026-10-21 on an A100 40 GB: after eight
                   # edits this process held 8.8 GB in torch's cache with 82 MB left on the card, so the
@@ -3996,11 +4050,22 @@ write_files:
               "X-Gen-Ms": str(ms), "X-Mode": str(STATE["mode"]), "X-Steps": str(steps), "X-Seed": str(seed)})
 
 
+      async def hold(request: web.Request) -> web.Response:
+          """{seconds}: a running edit pauses between its denoising steps for that long (at most 20 s; 0 ends it)."""
+          try:
+              secs = max(0.0, min(20.0, float((await request.json()).get("seconds", 0))))
+          except (ValueError, TypeError, AttributeError):
+              return web.json_response({"error": "bad_seconds"}, status=400)
+          HOLD["until"] = time.monotonic() + secs
+          return web.json_response({"ok": True, "seconds": secs, "paused_ms": round(HOLD["paused_ms"], 1)})
+
+
       def main() -> None:
           threading.Thread(target=load, daemon=True).start()
           app = web.Application(client_max_size=16 * 1024 * 1024)
           app.router.add_get("/health", health)
           app.router.add_post("/edit", edit)
+          app.router.add_post("/hold", hold)
           web.run_app(app, host="0.0.0.0", port=PORT, access_log=None)
 
 
