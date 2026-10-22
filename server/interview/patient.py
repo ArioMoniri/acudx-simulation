@@ -114,11 +114,53 @@ def _history_lines(state: dict[str, Any]) -> tuple[list[str], list[str]]:
     return lines, ready
 
 
+# The kernel's structured allergies in the patient's words, while history.background is still being written
+# (docs/architecture/18 6.3.11): the patient knows their own allergies, and the background layer's gate makes
+# its allergy line name the same class, so the early answer and the later layer agree.
+_ALLERGY_WORDS = {
+    "en": {"penicillin": "penicillin", "cephalosporin": "cephalosporin antibiotics",
+           "nsaid": "anti-inflammatory painkillers", "opioid": "opioid painkillers",
+           "contrast": "the contrast dye they use for scans", "sulfonamide": "sulfa drugs"},
+    "tr": {"penicillin": "penisilin", "cephalosporin": "sefalosporin grubu antibiyotikler",
+           "nsaid": "iltihap giderici ağrı kesiciler", "opioid": "opioid ağrı kesiciler",
+           "contrast": "tomografide verilen kontrast madde", "sulfonamide": "sülfa ilaçları"},
+}
+_REACTION_WORDS = {
+    "en": {"rash": "a rash", "angioedema": "swelling of my face and lips", "bronchospasm": "wheezing and trouble breathing",
+           "anaphylaxis": "a severe allergic reaction", "pruritus": "itching"},
+    "tr": {"rash": "döküntü", "angioedema": "yüzümde ve dudaklarımda şişlik", "bronchospasm": "hırıltı ve nefes darlığı",
+           "anaphylaxis": "ağır bir alerjik reaksiyon", "pruritus": "kaşıntı"},
+}
+
+
+def kernel_allergy_line(state: dict[str, Any], locale: str) -> Optional[str]:
+    """The allergy line from the kernel while history.background is not written yet, else None."""
+    if ((state.get("layers") or {}).get("history.background") or {}).get("status") == "ready":
+        return None
+    kernel = state.get("kernel")
+    if not isinstance(kernel, dict) or not isinstance(kernel.get("allergies"), list):
+        return None
+    loc = "tr" if str(locale or "").lower().startswith("tr") else "en"
+    items = [a for a in kernel["allergies"] if isinstance(a, dict) and a.get("agent_class") in _ALLERGY_WORDS[loc]]
+    if not items:
+        return "(allergies) " + ("Bildiğim bir ilaç alerjim yok." if loc == "tr" else "No drug allergies that I know of.")
+    parts = []
+    for a in items[:2]:
+        what = _ALLERGY_WORDS[loc][a["agent_class"]]
+        how = _REACTION_WORDS[loc].get(str(a.get("reaction") or ""), _REACTION_WORDS[loc]["rash"])
+        parts.append(f"{what} ({how})")
+    lead = "Şunlara alerjim var: " if loc == "tr" else "I am allergic to "
+    return "(allergies) " + lead + "; ".join(parts) + "."
+
+
 def patient_view(state: dict[str, Any], *, locale: Optional[str] = None) -> PatientView:
     opening = state.get("opening") or {}
     demo = opening.get("demographics") or {}
     persona = opening.get("persona") or {}
     story, ready = _history_lines(state)
+    early = kernel_allergy_line(state, locale or _s(state.get("locale")) or "en")
+    if early:
+        story.append(early)
     view = PatientView(
         name=_s(demo.get("name")) or "the patient",
         age=demo.get("age") if isinstance(demo.get("age"), int) else None,
@@ -273,6 +315,7 @@ def persona_turn(view: PatientView, transcript: list[dict[str, str]], message: s
 
 
 __all__ = [
-    "PERSONA_CHARTER", "PatientView", "adjectives", "derangement", "forbidden_terms", "leaks", "patient_view",
+    "PERSONA_CHARTER", "PatientView", "adjectives", "derangement", "forbidden_terms", "kernel_allergy_line", "leaks",
+    "patient_view",
     "persona_system", "persona_turn", "window_start",
 ]
