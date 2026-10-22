@@ -156,6 +156,10 @@ class WorkerPolicy(BaseModel):
     # region first), and only when none has capacity the cheapest with ``min_gpu_memory_gb``; such a
     # worker is marked ``video_tier: fallback`` in the status, and the call tile says so. 0 turns it off.
     preferred_gpu_memory_gb: int = Field(default=80, ge=0, le=1024)
+    # Inside the 80 GB tier these types go first (cheapest of them), then the rest of the tier. Measured
+    # 2026-10-22 on Lambda: Chatterbox T3 13.4 to 16 ms a token on gpu_1x_h100_sxm5 against 24 to 35 ms
+    # on two gpu_1x_h100_pcie hosts, where the runner also fell to 19 to 23 fps (docs/architecture/18 6.3.10).
+    video_preferred_types: list[str] = Field(default_factory=lambda: ["gpu_1x_h100_sxm5"])
 
     @field_validator("allowlist")
     @classmethod
@@ -222,6 +226,7 @@ def choose_offer(offers: dict[str, Any], policy: "WorkerPolicy", fs_region_pref:
                  fs_names: list[str]) -> tuple[Any, list[str]]:
     """The type to launch and the filesystems to attach. Tiers, first match wins:
 
+    0. tiers 1 and 2 are tried with ``video_preferred_types`` (H100 SXM5) first, then the whole allowlist;
     1. ``preferred_gpu_memory_gb`` (80) in the filesystem's region, with the filesystem;
     2. ``preferred_gpu_memory_gb`` in any region of ``policy.region_preference`` (any region when
        empty), without the filesystem (a Lambda filesystem attaches only in its own region);
@@ -229,13 +234,15 @@ def choose_offer(offers: dict[str, Any], policy: "WorkerPolicy", fs_region_pref:
     """
     pref_gb, min_gb = policy.preferred_gpu_memory_gb, policy.min_gpu_memory_gb
     if pref_gb and pref_gb >= min_gb:
-        c = pick_cheapest(offers, policy.allowlist, fs_region_pref, min_gpu_memory_gb=pref_gb)
-        if c is not None:
-            return c, fs_names
-        if fs_names:
-            c = pick_cheapest(offers, policy.allowlist, list(policy.region_preference), min_gpu_memory_gb=pref_gb)
+        first = [t for t in policy.allowlist if t in set(policy.video_preferred_types)]
+        for types in ([first] if first else []) + [policy.allowlist]:
+            c = pick_cheapest(offers, types, fs_region_pref, min_gpu_memory_gb=pref_gb)
             if c is not None:
-                return c, []
+                return c, fs_names
+            if fs_names:
+                c = pick_cheapest(offers, types, list(policy.region_preference), min_gpu_memory_gb=pref_gb)
+                if c is not None:
+                    return c, []
     return pick_cheapest(offers, policy.allowlist, fs_region_pref, min_gpu_memory_gb=min_gb), fs_names
 
 

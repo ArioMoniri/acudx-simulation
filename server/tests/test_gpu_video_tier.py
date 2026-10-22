@@ -102,6 +102,22 @@ def test_a_policy_that_asks_for_80_gb_only_still_looks_outside_the_filesystem_re
     assert choice.instance_type_name == "gpu_1x_h100_sxm5" and fs == []
 
 
+def test_h100_sxm5_goes_before_a_cheaper_h100_pcie():
+    # Live 2026-10-22: two H100 PCIe hosts ran Chatterbox's T3 at 24 to 35 ms a token (SXM5 13 to 16).
+    offers = _offers()
+    offers["gpu_1x_h100_pcie"].regions_with_capacity_available.extend(
+        offers["gpu_1x_h100_sxm5"].regions_with_capacity_available)
+    pol = WorkerPolicy(allowlist=["gpu_1x_h100_pcie", "gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4"])
+    assert choose_offer(offers, pol, [], [])[0].instance_type_name == "gpu_1x_h100_sxm5"
+    offers["gpu_1x_h100_sxm5"].regions_with_capacity_available.clear()
+    assert choose_offer(offers, pol, [], [])[0].instance_type_name == "gpu_1x_h100_pcie"   # still 80 GB
+    pol2 = WorkerPolicy(allowlist=pol.allowlist, video_preferred_types=[])
+    offers = _offers()
+    offers["gpu_1x_h100_pcie"].regions_with_capacity_available.extend(
+        offers["gpu_1x_h100_sxm5"].regions_with_capacity_available)
+    assert choose_offer(offers, pol2, [], [])[0].instance_type_name == "gpu_1x_h100_pcie"  # cheapest again
+
+
 def test_video_tier_names_the_fallback():
     pol = WorkerPolicy()
     assert video_tier("gpu_1x_h100_pcie", pol) == {"tier": "preferred", "gpu_memory_gb": 80, "notice": None}
