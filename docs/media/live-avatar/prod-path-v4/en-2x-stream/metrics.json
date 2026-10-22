@@ -1,0 +1,610 @@
+{
+  "captured_at": "2026-10-22T05:41:52.660Z",
+  "base_url": "http://127.0.0.1:4191",
+  "lang": "en",
+  "voice_delay_ms": 0,
+  "live_after_voice_click_ms": 12003,
+  "session": {
+    "at": 1792647608185,
+    "prepare_ms": 2798.9,
+    "prepare": {
+      "avatar_id": "acudx-p23",
+      "face_box": [
+        204,
+        126,
+        518,
+        597
+      ],
+      "width": 720,
+      "height": 720,
+      "idle_frames": 75,
+      "extended_px": 165,
+      "ref": null,
+      "registration": null,
+      "content_key": "16a78465eb9feda7b01fe237",
+      "prepared": false,
+      "cached": "local",
+      "queue_ms": 2536,
+      "prepare_ms": 2536.6
+    },
+    "appearance": {
+      "source": "portrait",
+      "reason": "presenting look not ready yet; the call opens on the case portrait and switches when it lands",
+      "current_key": null
+    },
+    "worker": {
+      "infer_fps": 97.7,
+      "sessions": 0,
+      "max_sessions": 4,
+      "gpu": {
+        "cuda": true,
+        "name": "NVIDIA H100 80GB HBM3",
+        "total_mb": 81079,
+        "free_mb": 60498,
+        "process_reserved_mb": 2990,
+        "process_allocated_mb": 2462
+      },
+      "domain": "68-209-72-252.sslip.io",
+      "max_calls": 4,
+      "active_calls": 1
+    }
+  },
+  "overlap": [],
+  "first_frame_ms": 3463,
+  "lines": [
+    {
+      "line": 1,
+      "question": "When did this start, and where exactly do you feel it?",
+      "reply": "It started yesterday while I was moving. I lifted a couch and some heavy boxes and felt a pull. It's across my lower back, more in the muscles on both sides, not right on the spine.",
+      "via": "server",
+      "speech_start_ms": 8564,
+      "lip_lag_ms": 440,
+      "lip_score": 0.2,
+      "voice_ms": 12333,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 10329,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 849.3,
+        "first_clause_ms": 1027.3,
+        "tts_first_chunk_ms": 1193.3,
+        "guard_ms": 7932.5,
+        "history_ms": 7934.4,
+        "persona_done_ms": 7935,
+        "released_ms": 7937.7,
+        "runner_first_chunk_ms": 7937.9
+      },
+      "history": {
+        "layer": "history.presenting",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 849.3,
+          "first_clause_ms": 1027.3,
+          "tts_first_chunk_ms": 1193.3,
+          "guard_ms": 7932.5,
+          "history_ms": 7934.4,
+          "persona_done_ms": 7935,
+          "released_ms": 7937.7,
+          "runner_first_chunk_ms": 7937.9,
+          "runner_done_ms": 19772.6
+        },
+        "requests": [
+          {
+            "chars": 28,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 166,
+            "bytes": 101184
+          },
+          {
+            "chars": 11,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 7797.3,
+            "bytes": 53638
+          },
+          {
+            "chars": 140,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 1168.7,
+            "bytes": 462110
+          }
+        ],
+        "runner": {
+          "frames": 643,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 11787.7
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 2,
+      "question": "What does it feel like, sharp, dull or pressing?",
+      "reply": "It's more tight and achy, like a cramp or a knot in the muscle. Sometimes it grabs me if I move the wrong way.",
+      "via": "server",
+      "speech_start_ms": 2608,
+      "lip_lag_ms": 160,
+      "lip_score": 0.314,
+      "voice_ms": 6267,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 5331,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 785.3,
+        "history_ms": 789.6,
+        "persona_first_text_ms": 1552.4,
+        "first_clause_ms": 1792.5,
+        "persona_done_ms": 1867.4,
+        "tts_first_chunk_ms": 1951.4,
+        "released_ms": 1951.4,
+        "runner_first_chunk_ms": 1951.7
+      },
+      "history": {
+        "layer": "history.presenting",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 785.3,
+          "history_ms": 789.6,
+          "persona_first_text_ms": 1552.4,
+          "first_clause_ms": 1792.5,
+          "persona_done_ms": 1867.4,
+          "tts_first_chunk_ms": 1951.4,
+          "released_ms": 1951.4,
+          "runner_first_chunk_ms": 1951.7,
+          "runner_done_ms": 7774.6
+        },
+        "requests": [
+          {
+            "chars": 25,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 158.9,
+            "bytes": 81982
+          },
+          {
+            "chars": 37,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 452,
+            "bytes": 107918
+          },
+          {
+            "chars": 46,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 2396.2,
+            "bytes": 140386
+          }
+        ],
+        "runner": {
+          "frames": 345,
+          "first_frame_ms": 0.4,
+          "elapsed_ms": 5774.5
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 3,
+      "question": "Does anything make it better or worse?",
+      "reply": "Bending forward, twisting, and getting up from a chair make it worse. Resting and lying still help, and moving slowly kind of helps too.",
+      "via": "server",
+      "speech_start_ms": 1817,
+      "lip_lag_ms": 0,
+      "lip_score": 0.479,
+      "voice_ms": 7783,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 5647,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 879.3,
+        "history_ms": 882,
+        "persona_first_text_ms": 930.6,
+        "first_clause_ms": 1056.2,
+        "persona_done_ms": 1101.1,
+        "tts_first_chunk_ms": 1173.1,
+        "released_ms": 1173.1,
+        "runner_first_chunk_ms": 1173.4
+      },
+      "history": {
+        "layer": "history.presenting",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 879.3,
+          "history_ms": 882,
+          "persona_first_text_ms": 930.6,
+          "first_clause_ms": 1056.2,
+          "persona_done_ms": 1101.1,
+          "tts_first_chunk_ms": 1173.1,
+          "released_ms": 1173.1,
+          "runner_first_chunk_ms": 1173.4,
+          "runner_done_ms": 8510.2
+        },
+        "requests": [
+          {
+            "chars": 26,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 116.9,
+            "bytes": 82938
+          },
+          {
+            "chars": 42,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 453.4,
+            "bytes": 114084
+          },
+          {
+            "chars": 66,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 2409.9,
+            "bytes": 202948
+          }
+        ],
+        "runner": {
+          "frames": 417,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 7288.4
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 4,
+      "question": "Have you had anything like this before?",
+      "reply": "Just once, years ago. I tweaked my back and it got better in about a week. Nothing since then.",
+      "via": "server",
+      "speech_start_ms": 1713,
+      "lip_lag_ms": 80,
+      "lip_score": 0.246,
+      "voice_ms": 6200,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 3239,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 781.1,
+        "guard_ms": 794.2,
+        "history_ms": 797,
+        "first_clause_ms": 958.2,
+        "persona_done_ms": 981.5,
+        "tts_first_chunk_ms": 1114.6,
+        "released_ms": 1114.6,
+        "runner_first_chunk_ms": 1114.9
+      },
+      "history": {
+        "layer": "history.background",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 781.1,
+          "guard_ms": 794.2,
+          "history_ms": 797,
+          "first_clause_ms": 958.2,
+          "persona_done_ms": 981.5,
+          "tts_first_chunk_ms": 1114.6,
+          "released_ms": 1114.6,
+          "runner_first_chunk_ms": 1114.9,
+          "runner_done_ms": 6689
+        },
+        "requests": [
+          {
+            "chars": 21,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 156.4,
+            "bytes": 86656
+          },
+          {
+            "chars": 52,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 794.6,
+            "bytes": 152486
+          },
+          {
+            "chars": 19,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 3170.6,
+            "bytes": 71986
+          }
+        ],
+        "runner": {
+          "frames": 325,
+          "first_frame_ms": 0.1,
+          "elapsed_ms": 5512.3
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 5,
+      "question": "Do you take any medicines regularly, and do you have allergies?",
+      "reply": "No, nothing regular. I took some ibuprofen last night and it helped a little. And no allergies to any medicines that I know of.",
+      "via": "server",
+      "speech_start_ms": 1988,
+      "lip_lag_ms": -40,
+      "lip_score": 0.288,
+      "voice_ms": 7766,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 3540,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 832.6,
+        "guard_ms": 905.2,
+        "history_ms": 908,
+        "first_clause_ms": 1064.5,
+        "persona_done_ms": 1117.5,
+        "tts_first_chunk_ms": 1183.5,
+        "released_ms": 1183.5,
+        "runner_first_chunk_ms": 1183.8
+      },
+      "history": {
+        "layer": "history.background",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 832.6,
+          "guard_ms": 905.2,
+          "history_ms": 908,
+          "first_clause_ms": 1064.5,
+          "persona_done_ms": 1117.5,
+          "tts_first_chunk_ms": 1183.5,
+          "released_ms": 1183.5,
+          "runner_first_chunk_ms": 1183.8,
+          "runner_done_ms": 8776.3
+        },
+        "requests": [
+          {
+            "chars": 20,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 118.9,
+            "bytes": 80852
+          },
+          {
+            "chars": 56,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 456.9,
+            "bytes": 177070
+          },
+          {
+            "chars": 49,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 3729,
+            "bytes": 153152
+          }
+        ],
+        "runner": {
+          "frames": 429,
+          "first_frame_ms": 0.4,
+          "elapsed_ms": 7537.9
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 6,
+      "question": "How are you feeling right now, compared to when you arrived?",
+      "reply": "About the same, honestly. It's that tight, achy feeling in my lower back, and it's okay as long as I stay still. I'm just hoping it's nothing serious.",
+      "via": "server",
+      "speech_start_ms": 1986,
+      "lip_lag_ms": 0,
+      "lip_score": 0.323,
+      "voice_ms": 9583,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 4274,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 761.2,
+        "history_ms": 764.5,
+        "persona_first_text_ms": 780.1,
+        "first_clause_ms": 1122.2,
+        "persona_done_ms": 1274.7,
+        "tts_first_chunk_ms": 1279.7,
+        "released_ms": 1279.7,
+        "runner_first_chunk_ms": 1280
+      },
+      "history": {
+        "layer": "history.presenting",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 761.2,
+          "history_ms": 764.5,
+          "persona_first_text_ms": 780.1,
+          "first_clause_ms": 1122.2,
+          "persona_done_ms": 1274.7,
+          "tts_first_chunk_ms": 1279.7,
+          "released_ms": 1279.7,
+          "runner_first_chunk_ms": 1280,
+          "runner_done_ms": 10365.9
+        },
+        "requests": [
+          {
+            "chars": 15,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 157.5,
+            "bytes": 58096
+          },
+          {
+            "chars": 96,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 185.1,
+            "bytes": 314582
+          },
+          {
+            "chars": 37,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 6334.2,
+            "bytes": 108610
+          }
+        ],
+        "runner": {
+          "frames": 502,
+          "first_frame_ms": 0.9,
+          "elapsed_ms": 9039.6
+        },
+        "error": null
+      }
+    }
+  ],
+  "fades": [],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p23-f2b09fdb-e3b0c44298",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 62,
+        "residual_before": 53.44,
+        "residual_after": 53.44
+      }
+    },
+    {
+      "name": "critical",
+      "avatar_id": "acudx-p23-f2b09fdb-be4a95a56a",
+      "registration": {
+        "method": "ecc",
+        "scale": 1.1562,
+        "rotation_deg": 1.923,
+        "shift_px": [
+          -50.9,
+          -9.7
+        ],
+        "inliers": 81,
+        "residual_before": 40.06,
+        "residual_after": 16.33
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 80,
+    "lip_lags": [
+      {
+        "lip_lag_ms": 440,
+        "score": 0.2,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 160,
+        "score": 0.314,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 0,
+        "score": 0.479,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": 80,
+        "score": 0.246,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": -40,
+        "score": 0.288,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": 0,
+        "score": 0.323,
+        "av_shift_ms": 80
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 52.3
+    },
+    "answer_ms": 215.8,
+    "prepare_ms": 2798.9
+  },
+  "runner_call": [
+    {
+      "id": "7da4bde5",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 80
+      },
+      "avatar": "acudx-p23-f2b09fdb-e3b0c44298",
+      "speaking": false,
+      "warm_up_ms": 47.3,
+      "switches_applied": 1,
+      "switch_pending": false,
+      "infer_fps": 82.2,
+      "inferred_frames": 1380,
+      "sender_queue": {
+        "audio_frames": 11,
+        "video_frames": 5
+      },
+      "sent_frames": 2426,
+      "underruns": 0,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 4836,
+    "audioEnergy": 0.9919350920023879,
+    "videoFrames": 2416,
+    "videoFps": 25,
+    "rttMs": 43,
+    "audioJitterMs": 101,
+    "videoJitterMs": 103,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3486?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-22T05:40:02.845Z case open",
+    "2026-10-22T05:40:15.839Z live video connected 12003 ms after the voice click; session {\"at\":1792647608185,\"prepare_ms\":2798.9,\"prepare\":{\"avatar_id\":\"acudx-p23\",\"face_box\":[204,126,518,597],\"width\":720,\"height\":720,\"idle_frames\":75,\"extended_px\":165,\"ref\":null,\"registration\":null,\"content_key\":\"16a78465eb9feda7b01fe237\",\"prepared\":false,\"cached\":\"local\",\"queue_ms\":2536,\"prepare_ms\":2536.6},\"appearance\":{\"source\":\"portrait\",\"reason\":\"presenting look not ready yet; the call opens on the case portrait and switches when it lands\",\"current_key\":null},\"worker\":{\"infer_fps\":97.7,\"sessions\":0,\"max_sessions\":4,\"gpu\":{\"cuda\":true,\"name\":\"NVIDIA H100 80GB HBM3\",\"total_mb\":81079,\"free_mb\":60498,\"process_reserved_mb\":2990,\"process_allocated_mb\":2462},\"domain\":\"68-209-72-252.sslip.io\",\"max_calls\":4,\"active_calls\":1}}",
+    "2026-10-22T05:40:18.028Z line 1 sent",
+    "2026-10-22T05:40:41.697Z line 1: {\"s\":8564,\"lag\":440,\"score\":0.2,\"via\":\"server\"}",
+    "2026-10-22T05:40:43.264Z line 2 sent",
+    "2026-10-22T05:40:54.899Z line 2: {\"s\":2608,\"lag\":160,\"score\":0.314,\"via\":\"server\"}",
+    "2026-10-22T05:40:56.449Z line 3 sent",
+    "2026-10-22T05:41:08.721Z line 3: {\"s\":1817,\"lag\":0,\"score\":0.479,\"via\":\"server\"}",
+    "2026-10-22T05:41:10.298Z line 4 sent",
+    "2026-10-22T05:41:20.863Z line 4: {\"s\":1713,\"lag\":80,\"score\":0.246,\"via\":\"server\"}",
+    "2026-10-22T05:41:22.446Z line 5 sent",
+    "2026-10-22T05:41:34.976Z line 5: {\"s\":1988,\"lag\":-40,\"score\":0.288,\"via\":\"server\"}",
+    "2026-10-22T05:41:36.557Z line 6 sent",
+    "2026-10-22T05:41:50.842Z line 6: {\"s\":1986,\"lag\":0,\"score\":0.323,\"via\":\"server\"}",
+    "2026-10-22T05:41:52.357Z variants ready: 2"
+  ]
+}

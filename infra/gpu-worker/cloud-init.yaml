@@ -2633,7 +2633,9 @@ write_files:
 
 
       def _yield_to_speech() -> None:
-          if DEDICATED_GPU or not PREP_YIELDS["on"]:
+          # Also on a card of its own: the image edits and the ladder's preparations share it with the runner
+          # (live 2026-10-22, 2x H100: 68 fps and 31 underruns while six looks were prepared during the lines).
+          if not PREP_YIELDS["on"]:
               return
           t0 = time.monotonic()
           while time.monotonic() - t0 < PREP_YIELD_MAX_S:
