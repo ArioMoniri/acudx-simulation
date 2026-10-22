@@ -268,3 +268,39 @@ docs/media/live-avatar/prod-path-v2/. The live site was not touched; a redeploy 
 | Cold start 17 min 20 s | three images built on every boot, serial start | content-keyed images from the registry or the Lambda filesystem, parallel start: 8 min 5 s to a ready worker from the cache; the call then still takes about 90 s |
 | Mojibake | the narrator model returned mood_tr already mis-decoded (found by 7ef1701); no decode of ours gives Windows-1251 | the Director repairs or drops such text (7ef1701); in addition every gateway text reply names `charset=utf-8` and worker replies are decoded as UTF-8; tests with ı ş ğ ü ö ç İ |
 
+
+### Redeploy 2026-10-22 to 7a3ce14 (instance replaced, EIP kept)
+
+The user asked for all fixes and enhancements on production. The requested `bc200d9` was an older
+merge (an ancestor of the live `7bbd84c`), so the deploy went to the branch head instead. That head
+includes the narrator mojibake repair (7ef1701), the look-to-base alignment with a cut instead of a
+blend (9f843ed, merged with the registration of f006e9d in 0afed76), streamed voiced replies, the
+faster worker cold start, the attending tips, and the updated `verify-roles.mjs` (7a3ce14).
+
+Steps:
+- Lambda first: this gateway had no worker. One `acudx-worker-*-gca3bcc5c-*` belongs to another
+  gateway and was left alone.
+- `i-05722e5305a69cc12` terminated. The EIP 63.178.127.100, security group and key pair kept.
+- The stale operator token file and the SSM `operator_token` / `retrieval_code` parameters cleared.
+- `provision.sh` launched `i-0941e2e64a9ff39bc` (t3.large, eu-central-1) at 7a3ce14. Launch to
+  ready took about 7 min (23:54 to 00:01 UTC). Both keys were sent.
+
+| Check | Result |
+|---|---|
+| `verify-roles.mjs` `START_CASE=1 FINALIZE=1` | PASS, 8 accounts, 80 checks; accounts reset; final code minted |
+| 8 roles land on their panels; UI and API gates | PASS |
+| `/idp/admin/` 404, `http://` 308 to https, anonymous case start 401, anonymous mint-code 401, reused provision token 410 | PASS |
+| Student fever case (EN, API) | PASS: playable (`opening.ready`) after 5.6 s; first reply 13.1 s after the question, in character (anthropic, claude-opus-5-5) |
+| GPU worker launch and stop (verify-roles) | PASS: woken by `POST /v1/voice/warm` (`pending_launch`), gpu_1x_a100_sxm4 in asia-south-1, then stopped by `/bootstrap/operator/gpu/stop` |
+| Patient video call (TR, migraine, UI) | PASS: live WebRTC 857 s after the call click, 871 s after case start (prewarm at case start). Spoken in-character replies; speech start 33 ms after the reply began, audio-to-lip +320 ms, first frame 4638 ms |
+| Ghosting fix | PASS: the base portrait switched to the generated look (`cut: false`, 900 ms fade). The frames around the switch show one face, same head position, size and background, with only the expression changing (`tr-video-switch-no-ghosting.png`) |
+| No `acudx-worker-*` of this gateway left | PASS: both workers this run launched were terminated; Lambda listed only the other gateway's worker (terminating) |
+
+Observations:
+- Video cold start was about 14 min from click to live video, not the 8 min measured by the other
+  session on its cache. The first generated look took about 4 more minutes on the warm worker
+  before the call switched to it.
+- The migraine guidance card cites NICE CG150 (`tr-migraine-guidance-cg150.png`).
+- `verify-roles.mjs` now times the fever case and wakes a worker through `/v1/voice/warm` when
+  Claude serves the case start. Accounts must be reset before it runs if any were signed in to
+  after the last reset (it reads the passwords stored at the last reset).
