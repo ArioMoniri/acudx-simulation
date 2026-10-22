@@ -651,8 +651,11 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
       const tail = Number.isFinite(corrected)
         ? probeLag(samples, Math.max(span.first ?? startAt, corrected + SETTLE_MS) - 400, (span.last ?? t) + 800) : null;
       if (tail) line.probeTailLagMs = tail.lagMs;
+      // With the probe on, a weak probe reading sends nothing: the face meter is the fallback only without a probe
+      // (live 2026-10-22, A100: a line under 300 ms of network jitter scored the probe 0.36 at +120 ms and the face
+      // meter 0.27 at -400 ms; the meter's reading moved the bias the wrong way and the next line opened 320 ms late).
       const use = Number.isFinite(corrected) ? (tail && tail.score >= 0.5 ? tail : null)
-        : probed && probed.score >= 0.5 ? probed : cc;
+        : probed ? (probed.score >= 0.5 ? probed : null) : cc;
       if (cc) {
         line.lipLagMs = cc.lagMs;
         line.lipScore = cc.score;
