@@ -29,6 +29,8 @@ export interface AvatarCallMetrics {
   firstFrameMs: number | null;
   speechStartMs: number | null;
   lipLagMs: number | null;
+  /** Receive-side desync now (receiverLagMs, median of the last readings), reported to the gateway. */
+  receiverLagMs?: number | null;
   ttsMs: number | null;
   /** Gateway: speak request -> first PCM chunk forwarded to the runner (streamed TTS). */
   firstAudioMs: number | null;
@@ -114,6 +116,60 @@ export function selectedIcePath(report: { forEach: (cb: (r: Record<string, unkno
 }
 
 /** Mean jitter-buffer delay in ms from an inbound-rtp report (jitterBufferDelay is seconds summed per emitted unit). */
+/** One reading of the two receivers' playout state (getStats inbound-rtp). */
+export interface PlayoutSample {
+  /** estimatedPlayoutTimestamp (sender NTP ms of what plays now), when the browser reports it. */
+  audioEpt: number | null;
+  videoEpt: number | null;
+  /** Cumulative jitter-buffer delay (s) and emitted count, for the fallback. */
+  audioDelay: number;
+  audioCount: number;
+  videoDelay: number;
+  videoCount: number;
+}
+
+export function playoutSample(report: { forEach: (cb: (r: Record<string, unknown>) => void) => void }): PlayoutSample {
+  const out: PlayoutSample = { audioEpt: null, videoEpt: null, audioDelay: 0, audioCount: 0, videoDelay: 0, videoCount: 0 };
+  report.forEach((r) => {
+    if (r.type !== "inbound-rtp" || (r.kind !== "audio" && r.kind !== "video")) return;
+    const ept = Number(r.estimatedPlayoutTimestamp);
+    const delay = Number(r.jitterBufferDelay ?? 0);
+    const count = Number(r.jitterBufferEmittedCount ?? 0);
+    if (r.kind === "audio") {
+      out.audioEpt = Number.isFinite(ept) && ept > 0 ? ept : null;
+      out.audioDelay = Number.isFinite(delay) ? delay : 0;
+      out.audioCount = Number.isFinite(count) ? count : 0;
+    } else {
+      out.videoEpt = Number.isFinite(ept) && ept > 0 ? ept : null;
+      out.videoDelay = Number.isFinite(delay) ? delay : 0;
+      out.videoCount = Number.isFinite(count) ? count : 0;
+    }
+  });
+  return out;
+}
+
+/**
+ * How far the browser's playout puts the mouth after the voice (ms; negative = lips early), from what
+ * plays now: the audio's estimated playout timestamp minus the video's (both in the sender's clock, so
+ * the difference is the receive-side desync: jitter buffers, decoders and Chrome's own A/V sync while
+ * it converges). Without playout timestamps, the difference of the two jitter-buffer delays over the
+ * last interval (video held longer = lips late). Null when neither can be read.
+ *
+ * Live 2026-10-22 (A100 40 GB): on the first line of a call the browser's sync had not converged yet
+ * (audio jitter buffer 262 ms against 155 ms for video) and the lips were 185 ms early on top of the
+ * sender's offset; production saw -520 and -320 ms on the first two lines.
+ */
+export function receiverLagMs(prev: PlayoutSample | null, cur: PlayoutSample): number | null {
+  if (cur.audioEpt != null && cur.videoEpt != null) return Math.round(cur.audioEpt - cur.videoEpt);
+  if (!prev) return null;
+  const da = cur.audioCount - prev.audioCount;
+  const dv = cur.videoCount - prev.videoCount;
+  if (da <= 0 || dv <= 0) return null;
+  const a = ((cur.audioDelay - prev.audioDelay) / da) * 1000;
+  const v = ((cur.videoDelay - prev.videoDelay) / dv) * 1000;
+  return Number.isFinite(a) && Number.isFinite(v) ? Math.round(v - a) : null;
+}
+
 export function jitterBufferMs(r: Record<string, unknown>): number | null {
   const delay = Number(r.jitterBufferDelay);
   const count = Number(r.jitterBufferEmittedCount);
@@ -129,6 +185,8 @@ export interface StartAvatarCallOptions {
   onState?: (s: AvatarCallState) => void;
   onMetrics?: (m: AvatarCallMetrics) => void;
   iceGatherTimeoutMs?: number;
+  /** How often the receive-side desync is read (ms, 1000). */
+  syncIntervalMs?: number;
   firstFrameTimeoutMs?: number;
   /** Receiver playout target in ms (default 0: play as soon as decodable). */
   playoutDelayMs?: number;
@@ -276,18 +334,41 @@ export function resample(samples: AvatarSample[], stepMs: number): { rms: number
   return { rms, motion, open };
 }
 
-function waitForIce(pc: RTCPeerConnection, timeoutMs: number): Promise<void> {
+/**
+ * Resolve once ICE gathering is complete, or `settleMs` after the first relay candidate (the offer is
+ * not trickled, and the call is relay only, so one relay candidate is enough to connect), or after
+ * `timeoutMs`. Gathering itself only completes once every TURN URL has answered or timed out: with UDP
+ * blocked that was the whole 4 s timeout before every call's offer (live 2026-10-22, A100 pass).
+ */
+export function waitForIce(pc: Pick<RTCPeerConnection, "iceGatheringState" | "addEventListener" | "removeEventListener">,
+  timeoutMs: number, settleMs = 300): Promise<void> {
   return new Promise((resolve) => {
     if (pc.iceGatheringState === "complete") return resolve();
+    let finished = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
     const done = () => {
+      if (finished) return;
+      finished = true;
+      timers.forEach(clearTimeout);
       pc.removeEventListener("icegatheringstatechange", check);
+      pc.removeEventListener("icecandidate", onCandidate as EventListener);
       resolve();
     };
     const check = () => {
       if (pc.iceGatheringState === "complete") done();
     };
+    let settling = false;
+    const onCandidate = (e: RTCPeerConnectionIceEvent) => {
+      const c = e.candidate;
+      if (!c || settling) return;
+      if (c.type === "relay" || / typ relay/.test(c.candidate ?? "")) {
+        settling = true;
+        timers.push(setTimeout(done, settleMs));
+      }
+    };
     pc.addEventListener("icegatheringstatechange", check);
-    setTimeout(done, timeoutMs);
+    pc.addEventListener("icecandidate", onCandidate as EventListener);
+    timers.push(setTimeout(done, timeoutMs));
   });
 }
 
@@ -326,11 +407,13 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
   };
   let ended = false;
   let stopSampler = () => {};
+  let stopSync = () => {};
 
   const end = () => {
     if (ended) return;
     ended = true;
     stopSampler();
+    stopSync();
     pc.close();
     void api.avatarEnd(session.session_id);
     opts.onState?.("ended");
@@ -425,6 +508,35 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
     };
   } catch {
     /* metrics are best effort; the call itself does not depend on them */
+  }
+
+  // Receive-side desync, read once a second; its median goes to the gateway, whose runner adds it to the
+  // sender's own skew when it sets the video (or audio) delay (docs/architecture/18 6.3.13).
+  {
+    let prev: PlayoutSample | null = null;
+    const recent: number[] = [];
+    let sent: number | null = null;
+    let sentAt = 0;
+    const timer = setInterval(() => {
+      if (ended) return;
+      void pc.getStats().then((report) => {
+        const cur = playoutSample(report as unknown as Parameters<typeof playoutSample>[0]);
+        const lag = receiverLagMs(prev, cur);
+        prev = cur;
+        if (lag == null || Math.abs(lag) > 2000) return;
+        recent.push(lag);
+        if (recent.length > 5) recent.shift();
+        const med = [...recent].sort((x, y) => x - y)[Math.floor(recent.length / 2)];
+        metrics.receiverLagMs = med;
+        const now = performance.now();
+        if (recent.length >= 3 && (sent == null || Math.abs(med - sent) >= 20 || now - sentAt > 10_000)) {
+          sent = med;
+          sentAt = now;
+          void api.avatarSync?.(session.session_id, med).catch(() => undefined);
+        }
+      }).catch(() => undefined);
+    }, opts.syncIntervalMs ?? 1000);
+    stopSync = () => clearInterval(timer);
   }
 
   const lines: AvatarLineMeasure[] = [];

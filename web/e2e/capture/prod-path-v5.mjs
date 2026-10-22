@@ -218,7 +218,8 @@ for (let i = 0; i < Math.min(LINES, UI.questions.length); i++) {
     runner_while_speaking: { min_infer_fps: minOf("infer_fps"), min_out_fps: minOf("out_fps"),
       underruns: runnerRows.length ? [runnerRows[0].underruns, runnerRows.at(-1).underruns] : null, samples: runnerRows },
     rtc_jitter_ms: lineRtc ? { audio: lineRtc.audioJitterMs, video: lineRtc.videoJitterMs, path: lineRtc.path } : null,
-    lip_lags: (m.lip_lags ?? []).slice(-1) };
+    lip_lags: (m.lip_lags ?? []).slice(-1), receiver_lags: (m.receiver_lags ?? []).slice(-8), lip_bias_ms: m.lip_bias_ms ?? null,
+    receiver_lag_now_ms: await page.evaluate(() => window.__acudxAvatarCall.metrics.receiverLagMs ?? null) };
   lines.push(row);
   t(`line ${i + 1}: ${JSON.stringify({ s: row.speech_start_ms, lag: row.lip_lag_ms, score: row.lip_score, shift: row.av_shift_ms_after,
     fps: row.runner_while_speaking.min_out_fps, inf: row.runner_while_speaking.min_infer_fps, jit: row.rtc_jitter_ms })}`);

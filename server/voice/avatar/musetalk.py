@@ -264,13 +264,16 @@ async def switch(client: httpx.AsyncClient, worker: WorkerAvatar, worker_session
 
 
 async def tune(client: httpx.AsyncClient, worker: WorkerAvatar, worker_session: str, *, av_shift_ms: int | None = None,
-               browser_lag_ms: float | None = None, score: float | None = None) -> dict[str, Any]:
+               browser_lag_ms: float | None = None, score: float | None = None,
+               receiver_lag_ms: float | None = None) -> dict[str, Any]:
     """Lip sync of a live call. ``av_shift_ms``: a fixed delay (the runner changes its delay line one frame per
     frame). ``browser_lag_ms``: the offset the browser measured, for a runner with auto sync, which keeps the
     delay on its own measured sender skew and takes this as the residual (docs/architecture/18 6.3.13)."""
     payload: dict[str, Any] = {"sessionid": worker_session}
     if av_shift_ms is not None:
         payload["av_shift_ms"] = int(av_shift_ms)
+    if receiver_lag_ms is not None:
+        payload["receiver_lag_ms"] = float(receiver_lag_ms)
     if browser_lag_ms is not None:
         payload["browser_lag_ms"] = float(browser_lag_ms)
         if score is not None:

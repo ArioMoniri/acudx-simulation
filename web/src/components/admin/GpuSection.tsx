@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
   Field,
+  Select,
   Skeleton,
   Stat,
   Table,
@@ -21,7 +22,7 @@ import {
   Tr,
 } from "@/components/ui";
 import { EvilBarChart, type ChartConfig } from "@/components/charts";
-import type { WorkerPolicy } from "@/lib/adminApi";
+import type { WorkerLlmMode, WorkerPolicy } from "@/lib/adminApi";
 import { cooldownRows, formatUsd, ledgerByDay, poolRows } from "@/lib/adminCharts";
 import { ChartFrame, SERIES_COLORS, themed } from "./ChartFrame";
 import { formatDateTime, useAdminQuery, useAdminSession, useLocaleTag } from "./adminSession";
@@ -38,6 +39,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
   const [regions, setRegions] = useState(policy.region_preference.join("\n"));
   const [maxWorkers, setMaxWorkers] = useState(String(policy.max_workers ?? 3));
   const [cooldown, setCooldown] = useState(String(policy.launch_cooldown_minutes ?? 60));
+  const [workerLlm, setWorkerLlm] = useState(policy.worker_llm ?? "auto");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -49,6 +51,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
     setRegions(policy.region_preference.join("\n"));
     setMaxWorkers(String(policy.max_workers ?? 3));
     setCooldown(String(policy.launch_cooldown_minutes ?? 60));
+    setWorkerLlm(policy.worker_llm ?? "auto");
   }, [policy]);
 
   async function submit(e: FormEvent) {
@@ -66,6 +69,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
       region_preference: lines(regions),
       max_workers: Number.parseInt(maxWorkers, 10),
       launch_cooldown_minutes: Number.parseInt(cooldown, 10),
+      worker_llm: workerLlm,
     });
     setBusy(false);
     if (r.ok) {
@@ -88,6 +92,15 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
         </Field>
         <Field label={t("admin.gpu.cooldownMinutes")} hint={t("admin.gpu.cooldownMinutesHint")}>
           {(aria) => <TextInput {...aria} type="number" inputMode="numeric" min={0} max={10080} value={cooldown} onChange={(e) => setCooldown(e.target.value)} />}
+        </Field>
+        <Field label={t("admin.gpu.workerLlm")} hint={t("admin.gpu.workerLlmHint")}>
+          {(aria) => (
+            <Select {...aria} value={workerLlm} onChange={(e) => setWorkerLlm(e.target.value as WorkerLlmMode)}>
+              <option value="auto">{t("admin.gpu.workerLlmAuto")}</option>
+              <option value="on">{t("admin.gpu.workerLlmOn")}</option>
+              <option value="off">{t("admin.gpu.workerLlmOff")}</option>
+            </Select>
+          )}
         </Field>
       </div>
       <Field label={t("admin.gpu.model")}>

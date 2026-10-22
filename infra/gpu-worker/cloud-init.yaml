@@ -2201,7 +2201,7 @@ write_files:
           skew = (ov - oa) * 1000.0
           return {"video_minus_audio_ms": round(skew, 1), "delay_ms": delay, "lag_ms": round(skew + delay, 1),
                   "auto": bool(st.get("auto")), "bias_ms": round(float(st.get("bias_ms") or 0.0), 1),
-                  "changes": st.get("changes", 0)}
+                  "receiver_lag_ms": round(float(st.get("recv_ms") or 0.0), 1), "changes": st.get("changes", 0)}
 
       t0 = time.monotonic()
       MODEL = mt.load_model()
@@ -2327,7 +2327,7 @@ write_files:
           out = sess.output
           orig_v, orig_a = out.push_video_frame, out.push_audio_frame
           st = {"n": int(round(shift_ms / 40.0)), "auto": AUTO_SYNC, "bias_ms": 0.0, "frames": 0, "skew_ms": None,
-                "changes": 0}
+                "changes": 0, "recv_ms": 0.0, "recv_at": 0.0}
           sess._acudx_shift = st
           vline: collections.deque = collections.deque()
           aline: collections.deque = collections.deque()
@@ -2339,10 +2339,14 @@ write_files:
                   return
               skew = float(sync["video_minus_audio_ms"])
               st["skew_ms"] = skew
-              want = int(round(-(skew + float(st["bias_ms"])) / 40.0))
+              # The browser's receive-side desync (POST /tuning receiver_lag_ms, about once a second while it
+              # changes); a reading older than 15 s no longer counts.
+              recv = float(st["recv_ms"]) if time.time() - float(st["recv_at"]) < 15.0 else 0.0
+              total = skew + recv + float(st["bias_ms"])
+              want = int(round(-total / 40.0))
               want = max(-MAX_SHIFT_FRAMES, min(MAX_SHIFT_FRAMES, want))
               # One frame of hysteresis: inside 30 ms of the current delay nothing moves (meter noise is 40 ms).
-              if want != st["n"] and abs(-(skew + float(st["bias_ms"])) - 40.0 * st["n"]) > 30.0:
+              if want != st["n"] and abs(-total - 40.0 * st["n"]) > 30.0:
                   st["n"] = want
                   st["changes"] += 1
 
@@ -3436,6 +3440,9 @@ write_files:
               st["auto"] = False
           if params.get("auto") is True:
               st["auto"] = AUTO_SYNC
+          recv = params.get("receiver_lag_ms")
+          if isinstance(recv, (int, float)) and abs(float(recv)) <= 2000:
+              st["recv_ms"], st["recv_at"] = float(recv), time.time()
           lag = params.get("browser_lag_ms")
           if isinstance(lag, (int, float)) and st["auto"]:
               # Inside 40 ms nothing moves (the meter's own noise); half the residual per line otherwise.

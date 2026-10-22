@@ -637,6 +637,35 @@ async def lipsync(request: Request, body: LipLagBody, user: Principal = Depends(
     return {"av_shift_ms": want, "changed": True, "previous": current}
 
 
+class ReceiverLagBody(SessionRef):
+    # The browser's receive-side desync now (positive: the picture plays after the voice), from its playout
+    # timestamps or jitter buffers (web/src/lib/avatarCall.ts receiverLagMs).
+    receiver_lag_ms: float = Field(ge=-2000, le=2000)
+
+
+@router.post("/sync")
+async def receiver_sync(request: Request, body: ReceiverLagBody, user: Principal = Depends(current_user)):
+    """Auto lip sync, the browser's half (docs/architecture/18 6.3.13): a runner with auto sync adds this to its
+    own measured sender skew when it sets the call's delay line. Live 2026-10-22 (A100 40 GB) the first line
+    of a call played 185 ms early on the receive side while the browser's own A/V sync was still converging."""
+    svc = _svc(request)
+    s = _session(request, body, user)
+    if s.provider != "musetalk" or not s.worker_session:
+        raise HTTPException(status_code=409, detail={"error": "call_not_connected"})
+    hist = s.metrics.setdefault("receiver_lags", [])
+    hist.append(round(body.receiver_lag_ms, 1))
+    del hist[:-60]
+    if not s.metrics.get("auto_sync"):
+        return {"forwarded": False, "why": "runner_without_auto_sync"}
+    worker = _require_worker(svc, s)
+    try:
+        got = await mt.tune(svc.client, worker, s.worker_session, receiver_lag_ms=body.receiver_lag_ms)
+    except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
+        return {"forwarded": False, "why": str(getattr(exc, "detail", None) or exc)[:120]}
+    s.metrics["av_shift_ms"] = int(got.get("av_shift_ms", s.metrics.get("av_shift_ms", 0)))
+    return {"forwarded": True, "av_shift_ms": s.metrics["av_shift_ms"], "sync": got.get("sync")}
+
+
 @router.get("/metrics")
 async def call_metrics(request: Request, session_id: str, user: Principal = Depends(current_user)):
     """The call's measurements: each voiced turn's hop timings, the lip offsets reported, the pre-roll."""

@@ -222,7 +222,12 @@
       },
       "clearCooldowns": "Try them again",
       "cooldownMinutes": "Skip a failed offer for (min)",
-      "cooldownMinutesHint": "A card type and region that did not boot, or that Lambda refused, is skipped this long. 0 turns it off."
+      "cooldownMinutesHint": "A card type and region that did not boot, or that Lambda refused, is skipped this long. 0 turns it off.",
+      "workerLlm": "Worker LLM",
+      "workerLlmHint": "Auto leaves the worker's own model off while Claude serves the text, so the card goes to the voice and the video. On keeps it as the text fallback.",
+      "workerLlmAuto": "Auto (off while Claude serves the text)",
+      "workerLlmOn": "On",
+      "workerLlmOff": "Off"
     },
     "telemetry": {
       "title": "Model telemetry",

@@ -222,7 +222,12 @@
       },
       "clearCooldowns": "Yeniden dene",
       "cooldownMinutes": "Başarısız seçeneği atlama süresi (dk)",
-      "cooldownMinutesHint": "Açılmayan ya da Lambda'nın reddettiği bir kart türü ve bölge bu süre atlanır. 0 kapatır."
+      "cooldownMinutesHint": "Açılmayan ya da Lambda'nın reddettiği bir kart türü ve bölge bu süre atlanır. 0 kapatır.",
+      "workerLlm": "Sunucu dil modeli",
+      "workerLlmHint": "Otomatik: metni Claude yanıtlarken sunucunun kendi modeli başlatılmaz, kart ses ve videoya kalır. Açık: metin için yedek olarak çalışır.",
+      "workerLlmAuto": "Otomatik (Claude metni yanıtlarken kapalı)",
+      "workerLlmOn": "Açık",
+      "workerLlmOff": "Kapalı"
     },
     "telemetry": {
       "title": "Model telemetrisi",

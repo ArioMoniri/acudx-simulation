@@ -114,6 +114,9 @@ class Runner:
             auth(authorization)
             body = await request.json()
             self.tunings.append(body)
+            if "receiver_lag_ms" in body:     # the browser's receive-side desync, added to the sender skew
+                return {"ok": True, "auto": True, "av_shift_ms": 360, "bias_ms": self.bias,
+                        "sync": {"receiver_lag_ms": body["receiver_lag_ms"]}}
             if "browser_lag_ms" in body:      # a runner with auto sync: the measure moves its bias
                 self.bias += 0.5 * body["browser_lag_ms"] if abs(body["browser_lag_ms"]) > 40 else 0.0
                 return {"ok": True, "auto": True, "av_shift_ms": 400, "bias_ms": self.bias,
@@ -798,6 +801,26 @@ def test_a_runner_with_auto_sync_gets_the_browser_measure_as_its_residual(tmp_pa
         assert weak["why"] == "weak_correlation" and len(runner.tunings) == 1
         m = c.get("/v1/voice/avatar/metrics", params={"session_id": sid}, headers=USER).json()["metrics"]
         assert m["auto_sync"] is True and m["av_shift_ms"] == 400 and m["lip_lags"][0]["sync"]["lag_ms"] == 0.0
+
+
+def test_the_browsers_receive_side_desync_reaches_a_runner_with_auto_sync(tmp_path, runner_sockets):
+    for auto in (True, False):
+        runner = Runner()
+        runner.auto_sync = auto
+        app, _ = _app(tmp_path / str(auto), runner=runner, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+        with TestClient(app) as c:
+            sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+            assert c.post("/v1/voice/avatar/sync", json={"session_id": sid, "receiver_lag_ms": -185},
+                          headers=USER).status_code == 409          # no call yet
+            c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"}, headers=USER)
+            r = c.post("/v1/voice/avatar/sync", json={"session_id": sid, "receiver_lag_ms": -185}, headers=USER).json()
+            m = c.get("/v1/voice/avatar/metrics", params={"session_id": sid}, headers=USER).json()["metrics"]
+        if auto:
+            assert r["forwarded"] is True and r["av_shift_ms"] == 360
+            assert runner.tunings == [{"sessionid": "lt-1", "receiver_lag_ms": -185.0}]
+        else:
+            assert r == {"forwarded": False, "why": "runner_without_auto_sync"} and runner.tunings == []
+        assert m["receiver_lags"] == [-185.0]
 
 
 def test_the_calls_portrait_is_prepared_with_call_priority(tmp_path, runner_sockets):

@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import collections
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -46,7 +47,7 @@ def _session(audio_offsets: list[float], video_offsets: list[float]):
 
 
 def _ns(tracks, auto: bool = True) -> dict:
-    ns = {"collections": collections, "np": np, "AUTO_SYNC": auto, "MAX_SHIFT_FRAMES": 25,
+    ns = {"collections": collections, "np": np, "time": time, "AUTO_SYNC": auto, "MAX_SHIFT_FRAMES": 25,
           "_tracks": lambda sess: tracks}
     return _pieces({"_median", "sender_sync", "_install_av_shift"}, ns)
 
@@ -113,6 +114,23 @@ def test_without_auto_sync_the_delay_stays_where_the_gateway_put_it():
         sess.output.push_video_frame(k)
     assert sess._acudx_shift["n"] == 4
     assert shown[-1] == 99 - 4
+
+
+def test_the_browsers_receive_side_desync_adds_to_the_sender_skew():
+    # Sender in step (skew 0), but the browser plays the picture 185 ms early (its A/V sync still converging
+    # on the first line of a call): the video waits about 185 ms; a reading 15 s old no longer counts.
+    sess, tracks, _, _ = _session([100.0] * 10, [100.0] * 10)
+    ns = _ns(tracks)
+    ns["_install_av_shift"](sess, 0)
+    st = sess._acudx_shift
+    st["recv_ms"], st["recv_at"] = -185.0, time.time()
+    for k in range(25):
+        sess.output.push_video_frame(k)
+    assert st["n"] == 5
+    st["recv_at"] = time.time() - 20
+    for k in range(25):
+        sess.output.push_video_frame(k)
+    assert st["n"] == 0
 
 
 def test_the_sender_offsets_are_taken_per_encoded_frame_and_the_tuning_route_reports_them():

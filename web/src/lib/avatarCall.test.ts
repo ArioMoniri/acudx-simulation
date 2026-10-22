@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { crossCorrelation, crossCorrelationLag, mouthRegion, resample, selectedIcePath, sessionBody, utteranceSpan } from "@/lib/avatarCall";
+import { crossCorrelation, crossCorrelationLag, mouthRegion, resample, selectedIcePath, sessionBody, utteranceSpan, waitForIce, playoutSample, receiverLagMs } from "@/lib/avatarCall";
 import { createVoiceApi } from "@/lib/voiceApi";
 
 describe("selectedIcePath", () => {
@@ -168,5 +168,79 @@ describe("avatarPrepare", () => {
     expect(url).toBe("/api/v1/voice/avatar/prepare");
     expect(JSON.parse(String(init.body))).toEqual({ thread_id: "thr-1", photo_id: "p04" });
     expect((init.headers as Record<string, string>)["X-User-Id"]).toBe("u1");
+  });
+});
+
+describe("waitForIce", () => {
+  function fakePc() {
+    const listeners: Record<string, ((e: unknown) => void)[]> = {};
+    return {
+      iceGatheringState: "gathering" as RTCIceGatheringState,
+      addEventListener: (k: string, f: (e: unknown) => void) => { (listeners[k] ??= []).push(f); },
+      removeEventListener: (k: string, f: (e: unknown) => void) => { listeners[k] = (listeners[k] ?? []).filter((x) => x !== f); },
+      emit: (k: string, e: unknown) => (listeners[k] ?? []).forEach((f) => f(e)),
+      count: (k: string) => (listeners[k] ?? []).length,
+    };
+  }
+
+  it("goes on shortly after the first relay candidate instead of waiting for every TURN URL", async () => {
+    vi.useFakeTimers();
+    const pc = fakePc();
+    let done = false;
+    void waitForIce(pc as unknown as RTCPeerConnection, 4000, 300).then(() => { done = true; });
+    pc.emit("icecandidate", { candidate: { type: "host", candidate: "candidate:1 1 udp 1 10.0.0.1 5000 typ host" } });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(done).toBe(false); // a host candidate is not enough for a relay-only call
+    pc.emit("icecandidate", { candidate: { type: "relay", candidate: "candidate:2 1 udp 1 1.2.3.4 49160 typ relay" } });
+    await vi.advanceTimersByTimeAsync(299);
+    expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(2);
+    expect(done).toBe(true); // 1.3 s instead of the 4 s timeout
+    expect(pc.count("icecandidate")).toBe(0);
+    vi.useRealTimers();
+  });
+
+  it("still resolves on complete gathering or on the timeout", async () => {
+    vi.useFakeTimers();
+    const pc = fakePc();
+    let done = false;
+    void waitForIce(pc as unknown as RTCPeerConnection, 4000).then(() => { done = true; });
+    pc.iceGatheringState = "complete";
+    pc.emit("icegatheringstatechange", {});
+    await vi.advanceTimersByTimeAsync(0);
+    expect(done).toBe(true);
+    const pc2 = fakePc();
+    let done2 = false;
+    void waitForIce(pc2 as unknown as RTCPeerConnection, 4000).then(() => { done2 = true; });
+    await vi.advanceTimersByTimeAsync(4001);
+    expect(done2).toBe(true);
+    vi.useRealTimers();
+  });
+});
+
+describe("receiverLagMs", () => {
+  const stats = (rows: Record<string, unknown>[]) => ({ forEach: (cb: (r: Record<string, unknown>) => void) => rows.forEach(cb) });
+
+  it("reads the receive-side desync from the playout timestamps (picture newer than the voice = lips early)", () => {
+    const cur = playoutSample(stats([
+      { type: "inbound-rtp", kind: "audio", estimatedPlayoutTimestamp: 3_900_000_000_000, jitterBufferDelay: 2.6, jitterBufferEmittedCount: 10 },
+      { type: "inbound-rtp", kind: "video", estimatedPlayoutTimestamp: 3_900_000_000_185, jitterBufferDelay: 1.5, jitterBufferEmittedCount: 10 },
+      { type: "candidate-pair", nominated: true },
+    ]));
+    expect(receiverLagMs(null, cur)).toBe(-185);
+  });
+
+  it("falls back to the jitter-buffer delays over the last interval (video held longer = lips late)", () => {
+    const prev = playoutSample(stats([
+      { type: "inbound-rtp", kind: "audio", jitterBufferDelay: 10, jitterBufferEmittedCount: 100 },
+      { type: "inbound-rtp", kind: "video", jitterBufferDelay: 5, jitterBufferEmittedCount: 50 },
+    ]));
+    const cur = playoutSample(stats([
+      { type: "inbound-rtp", kind: "audio", jitterBufferDelay: 10 + 50 * 0.1, jitterBufferEmittedCount: 150 },
+      { type: "inbound-rtp", kind: "video", jitterBufferDelay: 5 + 25 * 0.25, jitterBufferEmittedCount: 75 },
+    ]));
+    expect(receiverLagMs(prev, cur)).toBe(150);
+    expect(receiverLagMs(null, cur)).toBeNull();
+    expect(receiverLagMs(cur, cur)).toBeNull();
   });
 });

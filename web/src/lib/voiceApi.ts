@@ -509,6 +509,14 @@ export function createVoiceApi(options: VoiceApiOptions = {}) {
      * Closed-loop lip sync: the measured audio-to-lip offset of the last line (positive = the mouth
      * moves after the voice). The gateway moves the call's video delay when it is outside the tolerance.
      */
+    /**
+     * The browser's receive-side desync (ms, positive = the picture plays after the voice), once a second
+     * while it changes: the runner adds it to its own sender skew when it sets the call's delay line.
+     */
+    avatarSync(sessionId: string, receiverLagMs: number, opts: RequestOptions = {}):
+      Promise<BackendResult<{ forwarded: boolean }>> {
+      return signedJson("/v1/voice/avatar/sync", { session_id: sessionId, receiver_lag_ms: receiverLagMs }, opts);
+    },
     avatarLipsync(
       sessionId: string,
       lipLagMs: number,

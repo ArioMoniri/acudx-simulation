@@ -217,7 +217,11 @@ export interface WorkerPolicy {
   preferred_gpu_memory_gb?: number;
   /** Minutes a (type, region) that failed to boot or was refused is skipped (60; 0 off). */
   launch_cooldown_minutes?: number;
+  /** The worker's own LLM: auto (off while Claude serves the text), on, off. */
+  worker_llm?: WorkerLlmMode;
 }
+
+export type WorkerLlmMode = "auto" | "on" | "off";
 
 /** A worker's live-video tier: `preferred` on an 80 GB card, `fallback` when only a smaller card was free. */
 export interface VideoTier {
