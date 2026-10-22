@@ -93,6 +93,15 @@ def test_preference_off_is_the_old_cheapest_rule():
     assert choice.instance_type_name == "gpu_1x_a100_sxm4"
 
 
+def test_a_policy_that_asks_for_80_gb_only_still_looks_outside_the_filesystem_region():
+    # Live 2026-10-22: min 80 = preferred 80 skipped the preferred tier, so only the filesystem's region
+    # (no 80 GB capacity there) was tried while another region had an H100 free.
+    pol = WorkerPolicy(allowlist=["gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4"], file_system_name="fs",
+                       min_gpu_memory_gb=80)
+    choice, fs = choose_offer(_offers(), pol, ["us-east-1"], ["fs"])
+    assert choice.instance_type_name == "gpu_1x_h100_sxm5" and fs == []
+
+
 def test_video_tier_names_the_fallback():
     pol = WorkerPolicy()
     assert video_tier("gpu_1x_h100_pcie", pol) == {"tier": "preferred", "gpu_memory_gb": 80, "notice": None}

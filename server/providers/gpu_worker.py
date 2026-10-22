@@ -228,7 +228,7 @@ def choose_offer(offers: dict[str, Any], policy: "WorkerPolicy", fs_region_pref:
     3. ``min_gpu_memory_gb`` (40) in the filesystem's region (or ``region_preference``), as before.
     """
     pref_gb, min_gb = policy.preferred_gpu_memory_gb, policy.min_gpu_memory_gb
-    if pref_gb and pref_gb > min_gb:
+    if pref_gb and pref_gb >= min_gb:
         c = pick_cheapest(offers, policy.allowlist, fs_region_pref, min_gpu_memory_gb=pref_gb)
         if c is not None:
             return c, fs_names
