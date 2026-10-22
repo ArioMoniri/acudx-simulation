@@ -158,3 +158,11 @@ def test_a_ladder_preparation_pauses_while_a_call_speaks_but_a_calls_own_does_no
     assert src.count("_yield_to_speech()") >= 2
     assert 'PREP_YIELDS["on"] = priority != PREP_PRIORITY_CALL' in src
     assert "raw_box = _detect_fixed(img" in src and "get_landmark_and_bbox([frame_path]" not in src
+
+
+def test_the_idle_loops_latents_are_encoded_in_batches():
+    # 2.5 s of a 6.1 s preparation on an idle A100 40 GB went to one VAE pass per frame (live 2026-10-22).
+    src = RUNNER
+    assert "latents.extend(vae_latents(crops[i:i + VAE_BATCH]))" in src
+    assert "VAE.get_latents_for_unet(crop))" not in src
+    assert "lm, lf = VAE.encode_latents(masked), VAE.encode_latents(full)" in src

@@ -153,9 +153,9 @@ def test_without_a_worker_llm_the_worker_skips_vllm_and_its_image():
 
 def test_a_40_gb_card_streams_the_voice_with_a_shorter_first_window():
     # Bench 2026-10-22 (A100 40 GB, idle): T3 26 ms a token, S3Gen 490 ms a window; first audio 1.16 s with
-    # 24 tokens and 10 flow steps, 0.96 s with 16, and the longest pause 2.1 s -> 0.9 s with 8 flow steps.
+    # 24 tokens and 10 flow steps, 0.98 s with 20 and 8 flow steps, and the longest pause 2.08 s -> 1.07 s.
     text = CLOUD_INIT.read_text(encoding="utf-8")
-    assert "printf 'ACUDX_STREAM_SCHEDULE=16,32,48,64\\nACUDX_STREAM_FLOW_STEPS=8\\n' >> /opt/acudx/.env" in text
+    assert "printf 'ACUDX_STREAM_SCHEDULE=20,24,48,64\\nACUDX_STREAM_FLOW_STEPS=8\\n' >> /opt/acudx/.env" in text
     assert text.count("- ACUDX_STREAM_SCHEDULE=${ACUDX_STREAM_SCHEDULE:-24,24,48,64}") == 2   # both replicas
     assert text.count("- ACUDX_STREAM_FLOW_STEPS=${ACUDX_STREAM_FLOW_STEPS:-10}") == 2
 

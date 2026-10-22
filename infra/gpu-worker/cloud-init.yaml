@@ -2821,12 +2821,14 @@ write_files:
 
           t2 = time.monotonic()
           parsed = PARSERS.map(_parse, frames_boxes)
-          for i, (fr, box) in enumerate(frames_boxes):
-              _yield_to_speech()
+          crops = []
+          for fr, box in frames_boxes:
               bx1, by1, bx2, by2 = box
+              crops.append(cv2.resize(fr[by1:by2, bx1:bx2], (256, 256), interpolation=cv2.INTER_LANCZOS4))
+          for i in range(0, len(crops), VAE_BATCH):
+              _yield_to_speech()
               t1 = time.monotonic()
-              crop = cv2.resize(fr[by1:by2, bx1:bx2], (256, 256), interpolation=cv2.INTER_LANCZOS4)
-              latents.append(VAE.get_latents_for_unet(crop))
+              latents.extend(vae_latents(crops[i:i + VAE_BATCH]))
               phases["vae_ms"] = phases.get("vae_ms", 0.0) + (time.monotonic() - t1) * 1000.0
           for i, ((fr, box), (fmask, crop_box)) in enumerate(zip(frames_boxes, parsed)):
               name = f"{i:08d}.png"
@@ -2884,6 +2886,23 @@ write_files:
       # False while the picture a learner's call is waiting for is prepared (priority call): that one never
       # pauses. PREP_QUEUE runs one preparation at a time, so one flag is enough.
       PREP_YIELDS = {"on": True}
+
+
+      # The idle loop's latents in batches: one VAE pass per frame (twice: masked and full) took 2.5 s of a 6.1 s
+      # preparation on an idle A100 40 GB (33 ms a frame, live 2026-10-22).
+      VAE_BATCH = int(os.environ.get("AVATAR_VAE_BATCH", "16"))
+
+
+      @torch.no_grad()
+      def vae_latents(crops: list) -> list:
+          """MuseTalk's VAE.get_latents_for_unet for several 256 x 256 crops at once: the masked and the full
+          crop of every frame through one encode each, then [masked, full] per frame as upstream returns it."""
+          if len(crops) == 1 or VAE_BATCH <= 1:
+              return [VAE.get_latents_for_unet(c) for c in crops]
+          masked = torch.cat([VAE.preprocess_img(c, half_mask=True) for c in crops])
+          full = torch.cat([VAE.preprocess_img(c, half_mask=False) for c in crops])
+          lm, lf = VAE.encode_latents(masked), VAE.encode_latents(full)
+          return [torch.cat([lm[i:i + 1], lf[i:i + 1]], dim=1) for i in range(len(crops))]
 
 
       def _yield_to_speech() -> None:
@@ -4253,11 +4272,12 @@ runcmd:
       total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
       if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then echo 'VLLM_GPU_UTIL=0.45' >> /opt/acudx/.env; fi
       # One 40 GB card (A100): Chatterbox's T3 runs at 26 ms a token and an S3Gen window at 490 ms, so the
-      # streamed voice is slower than real time. A first window of 16 tokens and 8 flow steps start the voice
-      # 0.2 s sooner and halve the longest pause (bench 2026-10-22, docs/architecture/18 6.3.13); both stay
+      # streamed voice is slower than real time. A first window of 20 tokens and 8 flow steps start the voice
+      # 0.18 s sooner (0.98 s against 1.16 s) and halve the longest pause (1.07 s against 2.08 s; bench
+      # 2026-10-22, docs/architecture/18 6.3.13); both stay
       # adjustable at run time (/tts/acudx/tuning stream_schedule, stream_flow_steps).
       if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then
-        printf 'ACUDX_STREAM_SCHEDULE=16,32,48,64\nACUDX_STREAM_FLOW_STEPS=8\n' >> /opt/acudx/.env
+        printf 'ACUDX_STREAM_SCHEDULE=20,24,48,64\nACUDX_STREAM_FLOW_STEPS=8\n' >> /opt/acudx/.env
       fi
       # One 80 GB card serving live calls: vLLM takes 0.50 (40 GB, Qwen3-32B-AWQ weights about 18 GB plus
       # KV cache), so both Chatterbox replicas, the runner with its calls and the image edits in gpu mode
