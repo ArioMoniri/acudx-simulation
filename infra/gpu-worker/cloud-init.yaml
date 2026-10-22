@@ -2370,6 +2370,12 @@ write_files:
                   raise RefNotPrepared(ref)
               n = int(_base_info(ref).get("idle_frames") or n)
           key = content_key(image_bytes, ref, n)
+          # Already prepared on this worker: answered at once, not behind the preparation in progress (live
+          # 2026-10-22 a call's portrait, prepared before, waited 14.7 s in the queue behind a look of the ladder).
+          if _prepared_key(avatar_id) == key:
+              _load(avatar_id)
+              return _info_reply(avatar_id, False, cached="local", queue_ms=0.0,
+                                 prepare_ms=round((time.monotonic() - started) * 1000.0, 1))
           queued = time.monotonic()
           PREP_QUEUE.acquire(priority)
           try:
