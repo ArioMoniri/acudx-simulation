@@ -571,7 +571,10 @@ class LipLagBody(SessionRef):
 
 
 LIP_TOLERANCE_MS = 40
-LIP_MIN_SCORE = 0.4
+# 0.25 since 2026-10-22: Turkish lines on the worker's Chatterbox score 0.2 to 0.4 (breathy, paused speech),
+# so at 0.4 a steady +120 to +240 ms offset was never corrected; the lines that misled the loop before were
+# overlapping replies, which are skipped now (lip_overlap).
+LIP_MIN_SCORE = 0.25
 LIP_GAIN = 0.5
 
 

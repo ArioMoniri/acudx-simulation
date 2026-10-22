@@ -1,0 +1,586 @@
+{
+  "captured_at": "2026-10-22T02:47:15.550Z",
+  "base_url": "http://127.0.0.1:4189",
+  "lang": "en",
+  "voice_delay_ms": 0,
+  "live_after_voice_click_ms": 27722,
+  "session": {
+    "at": 1792637129439,
+    "prepare_ms": 18443.4,
+    "prepare": {
+      "avatar_id": "acudx-p36",
+      "face_box": [
+        185,
+        144,
+        517,
+        596
+      ],
+      "width": 700,
+      "height": 720,
+      "idle_frames": 75,
+      "extended_px": 101,
+      "ref": null,
+      "registration": null,
+      "content_key": "4f9b7e76a4866a3b86351637",
+      "prepared": false,
+      "cached": "local",
+      "queue_ms": 17999.2,
+      "prepare_ms": 18000.3
+    },
+    "appearance": {
+      "source": "portrait",
+      "reason": "presenting look not ready yet; the call opens on the case portrait and switches when it lands",
+      "current_key": null
+    },
+    "worker": {
+      "infer_fps": 88.4,
+      "sessions": 0,
+      "max_sessions": 2,
+      "gpu": {
+        "cuda": true,
+        "name": "NVIDIA H100 80GB HBM3",
+        "total_mb": 81079,
+        "free_mb": 7244,
+        "process_reserved_mb": 2736,
+        "process_allocated_mb": 2190
+      },
+      "domain": "192-222-53-172.sslip.io",
+      "max_calls": 2,
+      "active_calls": 1
+    }
+  },
+  "overlap": [],
+  "first_frame_ms": 3925,
+  "lines": [
+    {
+      "line": 1,
+      "question": "When did this start, and where exactly do you feel it?",
+      "reply": "It started about a week ago, I've been so tired and a bit dizzy. Today I passed out twice. It's not a pain anywhere, it's my head... it goes light and gray, and I'm weak all over.",
+      "via": "server",
+      "speech_start_ms": 1897,
+      "lip_lag_ms": 200,
+      "lip_score": 0.254,
+      "voice_ms": 9916,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3566,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 534.7,
+        "first_clause_ms": 535,
+        "tts_first_chunk_ms": 783.5,
+        "guard_ms": 1066,
+        "history_ms": 1070.1,
+        "released_ms": 1071.2,
+        "runner_first_chunk_ms": 1071.7,
+        "persona_done_ms": 1227.2
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 534.7,
+          "first_clause_ms": 535,
+          "tts_first_chunk_ms": 783.5,
+          "guard_ms": 1066,
+          "history_ms": 1070.1,
+          "released_ms": 1071.2,
+          "runner_first_chunk_ms": 1071.7,
+          "persona_done_ms": 1227.2,
+          "runner_done_ms": 10515.8
+        },
+        "requests": [
+          {
+            "chars": 28,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 248.4,
+            "bytes": 84226
+          },
+          {
+            "chars": 150,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 252.9,
+            "bytes": 421626
+          }
+        ],
+        "runner": {
+          "frames": 527,
+          "first_frame_ms": 21.5,
+          "elapsed_ms": 9366.7
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 2,
+      "question": "What does it feel like, sharp, dull or pressing?",
+      "reply": "It's not sharp or pressing, doctor, there's no pain at all. It's just... everything goes gray and light, and I feel so weak. Even lifting my head makes me dizzy.",
+      "via": "server",
+      "speech_start_ms": 2165,
+      "lip_lag_ms": 240,
+      "lip_score": 0.29,
+      "voice_ms": 8433,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3845,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 682.1,
+        "first_clause_ms": 727.2,
+        "tts_first_chunk_ms": 985.2,
+        "guard_ms": 1120.3,
+        "history_ms": 1124,
+        "persona_done_ms": 1124.8,
+        "released_ms": 1127.8,
+        "runner_first_chunk_ms": 1128.1
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 682.1,
+          "first_clause_ms": 727.2,
+          "tts_first_chunk_ms": 985.2,
+          "guard_ms": 1120.3,
+          "history_ms": 1124,
+          "persona_done_ms": 1124.8,
+          "released_ms": 1127.8,
+          "runner_first_chunk_ms": 1128.1,
+          "runner_done_ms": 9444.5
+        },
+        "requests": [
+          {
+            "chars": 27,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 257.9,
+            "bytes": 79226
+          },
+          {
+            "chars": 133,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 235.4,
+            "bytes": 368632
+          }
+        ],
+        "runner": {
+          "frames": 467,
+          "first_frame_ms": 6.9,
+          "elapsed_ms": 8242.7
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 3,
+      "question": "Does anything make it better or worse?",
+      "reply": "Lying down helps a bit, and sitting still is better than standing. Walking even a little makes it worse, I get dizzy and short of puff. Right now it feels like I might go again.",
+      "via": "server",
+      "speech_start_ms": 2065,
+      "lip_lag_ms": 120,
+      "lip_score": 0.43,
+      "voice_ms": 10050,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4845,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 770.2,
+        "first_clause_ms": 1082.7,
+        "tts_first_chunk_ms": 1315.7,
+        "guard_ms": 1416.6,
+        "history_ms": 1419.5,
+        "persona_done_ms": 1420.3,
+        "released_ms": 1422.8,
+        "runner_first_chunk_ms": 1423
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 770.2,
+          "first_clause_ms": 1082.7,
+          "tts_first_chunk_ms": 1315.7,
+          "guard_ms": 1416.6,
+          "history_ms": 1419.5,
+          "persona_done_ms": 1420.3,
+          "released_ms": 1422.8,
+          "runner_first_chunk_ms": 1423,
+          "runner_done_ms": 10965
+        },
+        "requests": [
+          {
+            "chars": 23,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 232.9,
+            "bytes": 76578
+          },
+          {
+            "chars": 153,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 285.4,
+            "bytes": 428422
+          }
+        ],
+        "runner": {
+          "frames": 527,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 9472.2
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 4,
+      "question": "Have you had anything like this before?",
+      "reply": "No, never like this before. I've never fainted in my life, just this week with the tiredness and now today. I'm so frightened, doctor.",
+      "via": "server",
+      "speech_start_ms": 2154,
+      "lip_lag_ms": 40,
+      "lip_score": 0.472,
+      "voice_ms": 7383,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 4009,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 691.1,
+        "history_ms": 698.9,
+        "persona_first_text_ms": 900.9,
+        "first_clause_ms": 1252.9,
+        "persona_done_ms": 1307.6,
+        "tts_first_chunk_ms": 1476.8,
+        "released_ms": 1476.8,
+        "runner_first_chunk_ms": 1477.1
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 691.1,
+          "history_ms": 698.9,
+          "persona_first_text_ms": 900.9,
+          "first_clause_ms": 1252.9,
+          "persona_done_ms": 1307.6,
+          "tts_first_chunk_ms": 1476.8,
+          "released_ms": 1476.8,
+          "runner_first_chunk_ms": 1477.1,
+          "runner_done_ms": 8389.5
+        },
+        "requests": [
+          {
+            "chars": 27,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 223.8,
+            "bytes": 93502
+          },
+          {
+            "chars": 106,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 236.8,
+            "bytes": 283198
+          }
+        ],
+        "runner": {
+          "frames": 393,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 6841.6
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 5,
+      "question": "Do you take any medicines regularly, and do you have allergies?",
+      "reply": "Yes, I take a water tablet and a blood pressure pill, the ramipril one. Paracetamol for my knees sometimes. No heart rate pills, nothing new lately. And I'm allergic to sulfa antibiotics, they gave me a rash all over.",
+      "via": "server",
+      "speech_start_ms": 1958,
+      "lip_lag_ms": 40,
+      "lip_score": 0.454,
+      "voice_ms": 13116,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 3786,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 719.5,
+        "guard_ms": 946,
+        "history_ms": 948.6,
+        "first_clause_ms": 1039.2,
+        "persona_done_ms": 1106.7,
+        "tts_first_chunk_ms": 1238.1,
+        "released_ms": 1238.1,
+        "runner_first_chunk_ms": 1238.5
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 719.5,
+          "guard_ms": 946,
+          "history_ms": 948.6,
+          "first_clause_ms": 1039.2,
+          "persona_done_ms": 1106.7,
+          "tts_first_chunk_ms": 1238.1,
+          "released_ms": 1238.1,
+          "runner_first_chunk_ms": 1238.5,
+          "runner_done_ms": 13834.9
+        },
+        "requests": [
+          {
+            "chars": 26,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 198.8,
+            "bytes": 92146
+          },
+          {
+            "chars": 190,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 241.9,
+            "bytes": 561000
+          }
+        ],
+        "runner": {
+          "frames": 681,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 12527.8
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 6,
+      "question": "How are you feeling right now, compared to when you arrived?",
+      "reply": "A bit better, I think... but I'm still so weak, doctor. If I lift my head up it all goes light again. I'm still worried I might go off again.",
+      "via": "server",
+      "speech_start_ms": 2431,
+      "lip_lag_ms": 40,
+      "lip_score": 0.372,
+      "voice_ms": 8050,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 4856,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 975.2,
+        "history_ms": 978.3,
+        "persona_first_text_ms": 1223.1,
+        "first_clause_ms": 1556.9,
+        "persona_done_ms": 1718.7,
+        "tts_first_chunk_ms": 1758.1,
+        "released_ms": 1758.1,
+        "runner_first_chunk_ms": 1758.4
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 975.2,
+          "history_ms": 978.3,
+          "persona_first_text_ms": 1223.1,
+          "first_clause_ms": 1556.9,
+          "persona_done_ms": 1718.7,
+          "tts_first_chunk_ms": 1758.1,
+          "released_ms": 1758.1,
+          "runner_first_chunk_ms": 1758.4,
+          "runner_done_ms": 9215.8
+        },
+        "requests": [
+          {
+            "chars": 13,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 201.2,
+            "bytes": 54270
+          },
+          {
+            "chars": 127,
+            "provider": "gpu-worker-kokoro",
+            "model": "kokoro",
+            "first_chunk_ms": 222.8,
+            "bytes": 354166
+          }
+        ],
+        "runner": {
+          "frames": 426,
+          "first_frame_ms": 1.3,
+          "elapsed_ms": 7384.8
+        },
+        "error": null
+      }
+    }
+  ],
+  "fades": [],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p36-3be25fce-05caf47968",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 1.0052,
+        "rotation_deg": -0.584,
+        "shift_px": [
+          -7,
+          12.6
+        ],
+        "inliers": 416,
+        "residual_before": 28,
+        "residual_after": 25.09
+      }
+    },
+    {
+      "name": "worse",
+      "avatar_id": "acudx-p36-3be25fce-df0de5e99c",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 0.9996,
+        "rotation_deg": -0.138,
+        "shift_px": [
+          -1.5,
+          8.7
+        ],
+        "inliers": 599,
+        "residual_before": 22.33,
+        "residual_after": 22.44
+      }
+    },
+    {
+      "name": "critical",
+      "avatar_id": "acudx-p36-3be25fce-779a55509c",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 0.9995,
+        "rotation_deg": -0.118,
+        "shift_px": [
+          -1.7,
+          9.4
+        ],
+        "inliers": 473,
+        "residual_before": 19.39,
+        "residual_after": 19.04
+      }
+    },
+    {
+      "name": "improved",
+      "avatar_id": "acudx-p36-3be25fce-e3b0c44298",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 1.0438,
+        "rotation_deg": -0.398,
+        "shift_px": [
+          -27.2,
+          5.5
+        ],
+        "inliers": 132,
+        "residual_before": 49.24,
+        "residual_after": 38.23
+      }
+    },
+    {
+      "name": "unresponsive",
+      "avatar_id": "acudx-p36-3be25fce-504e555336",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 1.0042,
+        "rotation_deg": -0.121,
+        "shift_px": [
+          -4.8,
+          10.7
+        ],
+        "inliers": 462,
+        "residual_before": 16.35,
+        "residual_after": 15.45
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 80,
+    "lip_lags": [
+      {
+        "lip_lag_ms": 200,
+        "score": 0.254,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 240,
+        "score": 0.29,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 120,
+        "score": 0.43,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.472,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.454,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.372,
+        "av_shift_ms": 80
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 69.9
+    },
+    "answer_ms": 223.1,
+    "prepare_ms": 18443.4
+  },
+  "runner_call": [
+    {
+      "id": "5a61b57e",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 80
+      },
+      "avatar": "acudx-p36-3be25fce-05caf47968",
+      "speaking": false,
+      "warm_up_ms": 55.7,
+      "switches_applied": 1,
+      "switch_pending": false,
+      "infer_fps": 74,
+      "inferred_frames": 1564,
+      "sender_queue": {
+        "audio_frames": 8,
+        "video_frames": 3
+      },
+      "sent_frames": 2456,
+      "underruns": 4,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 4894,
+    "audioEnergy": 2.2473001775211765,
+    "videoFrames": 2446,
+    "videoFps": 26,
+    "rttMs": 69,
+    "audioJitterMs": 113,
+    "videoJitterMs": 122,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3484?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-22T02:45:10.013Z case open",
+    "2026-10-22T02:45:37.887Z live video connected 27722 ms after the voice click; session {\"at\":1792637129439,\"prepare_ms\":18443.4,\"prepare\":{\"avatar_id\":\"acudx-p36\",\"face_box\":[185,144,517,596],\"width\":700,\"height\":720,\"idle_frames\":75,\"extended_px\":101,\"ref\":null,\"registration\":null,\"content_key\":\"4f9b7e76a4866a3b86351637\",\"prepared\":false,\"cached\":\"local\",\"queue_ms\":17999.2,\"prepare_ms\":18000.3},\"appearance\":{\"source\":\"portrait\",\"reason\":\"presenting look not ready yet; the call opens on the case portrait and switches when it lands\",\"current_key\":null},\"worker\":{\"infer_fps\":88.4,\"sessions\":0,\"max_sessions\":2,\"gpu\":{\"cuda\":true,\"name\":\"NVIDIA H100 80GB HBM3\",\"total_mb\":81079,\"free_mb\":7244,\"process_reserved_mb\":2736,\"process_allocated_mb\":2190},\"domain\":\"192-222-53-172.sslip.io\",\"max_calls\":2,\"active_calls\":1}}",
+    "2026-10-22T02:45:40.073Z line 1 sent",
+    "2026-10-22T02:45:54.574Z line 1: {\"s\":1897,\"lag\":200,\"score\":0.254,\"via\":\"server\"}",
+    "2026-10-22T02:45:56.171Z line 2 sent",
+    "2026-10-22T02:46:09.328Z line 2: {\"s\":2165,\"lag\":240,\"score\":0.29,\"via\":\"server\"}",
+    "2026-10-22T02:46:10.907Z line 3 sent",
+    "2026-10-22T02:46:25.666Z line 3: {\"s\":2065,\"lag\":120,\"score\":0.43,\"via\":\"server\"}",
+    "2026-10-22T02:46:27.274Z line 4 sent",
+    "2026-10-22T02:46:39.372Z line 4: {\"s\":2154,\"lag\":40,\"score\":0.472,\"via\":\"server\"}",
+    "2026-10-22T02:46:40.958Z line 5 sent",
+    "2026-10-22T02:46:58.857Z line 5: {\"s\":1958,\"lag\":40,\"score\":0.454,\"via\":\"server\"}",
+    "2026-10-22T02:47:00.442Z line 6 sent",
+    "2026-10-22T02:47:13.722Z line 6: {\"s\":2431,\"lag\":40,\"score\":0.372,\"via\":\"server\"}",
+    "2026-10-22T02:47:15.237Z variants ready: 5"
+  ]
+}

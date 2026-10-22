@@ -2023,7 +2023,9 @@ write_files:
               # (H100): each detection took 3 to 4 s and a close-up portrait needed two or three.
               raw = list(raw_box)
               phases["detections"] = 1
-              for _attempt in range(3):
+              # Each pass only moves the box (no detection), so a close-up can take several small passes.
+              for _attempt in range(8):
+                  phases["extend_passes"] = _attempt
                   frame = img
                   x1, y1, x2, y2 = (int(round(v)) for v in raw)
                   x1, y1 = max(0, x1), max(0, y1)
@@ -2138,7 +2140,9 @@ write_files:
           pass
 
 
-      DETECT_CANVAS = (MAX_FRAME_H, 768)   # (h, w) every detection runs on
+      # (h, w) every detection runs on: half the frame. A portrait's face fills a third of it or more, and
+      # the box is scaled back (about 2 px of rounding at 720 px).
+      DETECT_CANVAS = (MAX_FRAME_H // 2, 384)
       # A preparation pauses between frames while a call on this GPU speaks (at most this long per pause):
       # live 2026-10-22 (H100 SXM5) the case's look ladder, prepared during the first lines of a call that
       # opened on the portrait, cut the runner to 64.7 fps with 88 underruns and slowed the voice.
@@ -2161,10 +2165,12 @@ write_files:
 
 
       def _detect_fixed(img: np.ndarray, path: str) -> list | None:
-          """The face box of ``img`` from MuseTalk's get_landmark_and_bbox, run on a canvas of one fixed size.
-          Its S3FD detector turns cudnn.benchmark on, so every new input size was autotuned first: live
-          2026-10-22 (H100 SXM5) 11.9 to 15.3 s for a portrait of a new width, 0.37 s for a width seen
-          before. The picture is pasted top-left (scaled down only when larger), so the box maps back."""
+          """The face box of ``img`` from MuseTalk's get_landmark_and_bbox, run on a canvas of one fixed size at
+          half resolution. Live 2026-10-22 (H100 SXM5) one detection at full size took 0.37 s for one
+          portrait and 11.9 to 15.3 s for others, also after a warm-up on that canvas size (S3FD scores every
+          anchor in Python and dlib's HOG runs on the upsampled picture, both per pixel); the S3FD side also
+          turns cudnn.benchmark on, so one size is autotuned once. The picture is scaled to fit and pasted
+          top-left, so the box maps back by the scale."""
           ch, cw = DETECT_CANVAS
           h, w = img.shape[:2]
           s = min(1.0, ch / float(h), cw / float(w))

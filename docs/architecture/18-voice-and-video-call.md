@@ -261,6 +261,27 @@ Measured (A100 40 GB, sandbox browser through the WebSocket-tunnelled TURN):
 
 Against the 3 s target: English meets it (1.8 to 2.5 s in the sandbox, which itself adds about 0.45 s TLS reconnect and the tunnelled TURN). Turkish does not on this card: everything up to the TTS is now about 1 s, and the worker's Chatterbox needs 2.6 to 4.9 s for a 16 to 28 character clause on an A100 40 GB that also runs vLLM, the runner and the edits, and runs below real time while a call renders, so long replies overlap the next question. The paths that meet it for Turkish are an ElevenLabs Turkish row (about 75 ms to first audio, section 6.3.7) or an 80 GB / multi-GPU worker. Lips: inside ±80 ms on every English line and on five of six Turkish lines.
 
+#### 6.3.10 80 GB cards, the call's portrait first, overlapping replies (2026-10-22, third production pass)
+
+Owner decisions: Turkish speech start under 3 s on-prem, no GPU cost cap, prefer 80 GB cards for workers that serve live calls. Measured on a private gateway (Claude as the model) with Lambda workers it launched; evidence in docs/media/live-avatar/prod-path-v3/ (metrics.json is the summary).
+
+**Card choice** (`server/providers/gpu_worker.py` `choose_offer`, `video_tier`):
+
+* `WorkerPolicy.preferred_gpu_memory_gb` (80, `GPU_PREFERRED_GPU_MEMORY_GB`): a launch takes an 80 GB card in the filesystem's region, else an 80 GB card in any region (`region_preference` when set) without the filesystem (a Lambda filesystem attaches only in its own region; the registry images make that cheap, 6.8), and only when no 80 GB card has capacity the cheapest 40 GB card as before. The default allowlist lists `gpu_1x_h100_pcie` and `gpu_1x_h100_sxm5` first. A policy with `min_gpu_memory_gb` 80 also looks outside the filesystem's region (it did not, live).
+* Inside the 80 GB tier `video_preferred_types` (`gpu_1x_h100_sxm5`) goes first, then the rest. Measured: Chatterbox's T3 decoder ran at 13.4 to 17.6 ms a token on three H100 SXM5 workers and at 24 to 35 ms on two H100 PCIe workers (us-west-3), idle or not; on the PCIe hosts the runner also fell to 19 to 23 fps (`h100-pcie/`). The cheaper card is the slower one for this workload, so cheapest-first inside the tier was wrong.
+* Every worker in `/admin/gpu/status` carries `gpu_memory_gb` and `video_tier` (`preferred`, or `fallback` with a notice); the admin GPU pool table has a Card column with a Fallback badge and the notice under the table; `/v1/voice/capabilities` `avatar.gpu_tier` lets the call tile say "On a 40 GB GPU (no 80 GB card was free): the Turkish voice starts later." (`voice2.tile.gpuFallback`, EN and TR).
+* cloud-init on one 80 GB card: vLLM takes 0.50 (was 0.60), so both Chatterbox replicas, the runner with its calls and the image edits in `gpu` mode (about 0.6 s an edit instead of 9.5 s in `offload`) fit beside it. The second Chatterbox replica already started on cards of 70 GB or more.
+
+**Chatterbox run-ons.** Short Turkish clauses often ran on: "Hayır doktor bey," (18 characters) came back as 122 speech tokens, 4.8 s of audio, against 1.8 to 2.6 tokens a character for normal clauses (`tr-run3-before-token-cap/chatterbox-stats.json`). The first audio of a clause waits for its whole generation, so a run-on cost 1 to 2 s of speech start and left a silent tail that the lip meter then correlated against. The patch now caps T3 per request at 25 + 3 tokens a character (`token_cap`, `TUNING` `t3_tokens_per_char` / `t3_tokens_base`, runtime-adjustable through `/tts/acudx/tuning`, 0 turns it off; `token_cap` and `capped` per generate in `/tts/acudx/stats`).
+
+**A new reply while the previous one still plays** (`turn_speech.CallSpeaker`): when a reply is released while the call's previous reply is still being synthesised, the previous one is cut (its TTS stream closed, its runner line ended) and the new line begins with `interrupt` (the runner flushes the queued audio at a frame boundary), so the new reply starts at once on a fresh timeline instead of queueing behind a Turkish reply that runs slower than real time. A reply whose synthesis has finished is not cut; its last second plays out and the next line follows on the same timeline. The lip-sync loop skips the measurement that spans a cut (`lip_overlap`, `"why": "overlapping_lines"`), because a window holding two lines moved the runner's delay the wrong way live (+280 ms on the line after an overlap in v2). A line cancelled after its `end` was sent drops the runner socket, so a later line never reads the old `done`. Voiced turns report `cut` and `cut_previous`.
+
+**Background work yields to the voice.** Since the call now opens within seconds (6.8.1), the case's look ladder (edits and preparations) runs during the first lines. Live on an H100 SXM5 it cut the runner to 64.7 fps with 88 sender underruns and the lips to scores near 0 (`tr-run1-ladder-during-lines/`). Now each ladder preparation waits until no voiced turn is in progress on that worker (like the edits), and inside the runner a ladder preparation pauses between frames while any call speaks (`_yield_to_speech`, at most 20 s; never for the picture a call waits for). With that the runner held 81 to 90 fps with 1 to 25 underruns over a call.
+
+**The TTS connection per turn.** The interview route opens the call's TTS connection (`VoiceService.prewarm_tts`) next to the guard, and the voice client keeps idle connections 60 s instead of httpx's 5 s, so the first clause does not pay a TLS handshake (0.45 s through this sandbox's proxy).
+
+@@MEASURED_6310@@
+
 ### 6.5 Hosted live video: Tavus CVI (optional adapter; runs only when asked for or marked default)
 
 `server/voice/avatar/tavus.py`, request shapes read from docs.tavus.io on 2026-10-20 (create PAL https://docs.tavus.io/api-reference/pals/create-pal, custom LLM https://docs.tavus.io/sections/conversational-video-interface/pal/llm, TTS layer https://docs.tavus.io/sections/conversational-video-interface/pal/tts, create conversation https://docs.tavus.io/api-reference/conversations/create-conversation, end conversation https://docs.tavus.io/api-reference/conversations/end-conversation, PAL-per-session strategy https://docs.tavus.io/sections/onboarding-guide/pal-strategies). Tavus renamed personas to PALs and replicas to faces; `/v2/personas` remains an alias.
@@ -350,7 +371,26 @@ Production took 17 min 20 s from a cold launch to live video: Chatterbox, the av
 | first boot of a new image key (builds, saves to the filesystem) | 17 min (1019 s) |
 | cold machine with the filesystem cache | 8 min 5 s (485 s; runcmd at +232 s, images loaded by +440 s, runner ready +481 s) |
 
-The registry path is written and tested against the keys but was not exercised: this session cannot push, so the workflow has not run and the packages do not exist yet (a pull of a missing image fails in under a second and the filesystem is used). After the first workflow run, set each `acudx-*` package public. Not yet under 8 min to live video: on the warm worker the call still took 90 to 95 s from the voice click to the first frame (`prepare_ms` 84 to 89 s), most of it the session waiting for the runner while it prepared the case's pictures; the runner prepares one picture at a time.
+The registry path is exercised now: the workflow ran on the push of 0afed76 (run 39694781382, 2026-10-21 23:39 to 23:47 UTC, all three builds green) and the packages pull without credentials. Every worker of 2026-10-22 pulled all three images from `ghcr.io/ariomoniri` with no filesystem attached (the 80 GB cards were outside its region); the filesystem cache stays as the fallback when a pull fails. Measured from the launch (`boot-timeline-*.txt`):
+
+| | runcmd starts | images there | runner ready | vLLM healthy |
+|---|---|---|---|---|
+| H100 SXM5, us-south-3, registry, no filesystem | +251 s | +396 s | +457 s (7.6 min) | +522 s |
+| H100 SXM5, us-south-2, registry, no filesystem | @@BOOT2@@ |
+| H100 PCIe, us-west-3, registry (the machine itself took 9.8 min to boot) | +588 s | +859 s | +1010 s | +1137 s |
+
+So a cold machine reaches live video in 6 to 8 minutes once the provider has booted it; the provider's own boot varied from about 4 to 10 minutes, and two us-southeast-1 launches never left `booting` in 15 minutes (the boot timeout stopped them).
+
+#### 6.8.1 Voice click to first frame (2026-10-22)
+
+Before: 85 to 95 s on a warm worker. Cause, from the v2 gateway log: the case-start ladder's PUT of the portrait and the call's own PUT of the same portrait were prepared one after the other behind the runner's single lock (about 42 s each on the A100, the second a full repeat), after the session's 10 s wait for a look that could not be ready yet.
+
+* **Priority queue on the runner** (`PrepQueue`): one preparation at a time, the picture a call waits for (`PUT ...?priority=call`) before the ladder's looks. `/health` reports `prep_queue`.
+* **Prepared once per picture**: each preparation is keyed by its content (sha256 of the image bytes, the base's own key for an edit, `PREP_VERSION`, the idle loop length). A second PUT of the same picture answers from disk (`"cached": "local"`, 1 ms), and a preparation saved in `AVATAR_CACHE_DIR` (the Lambda filesystem's `acudx-avatars/` when one is attached, else the worker's disk) is copied instead of prepared (`"cached": "filesystem"`, 0.1 s).
+* **Faster preparation**: one face detection instead of two or three (the box is moved with the picture after a resize or extension), the detection on a fixed 720 x 768 canvas (MuseTalk's S3FD turns `cudnn.benchmark` on, so each new portrait width was autotuned first: 11.9 to 15.3 s, against 0.37 s for a width seen before), a detector warm-up when the runner starts (22.6 s, paid before any case), face parsing on six threads beside the VAE, PNG level 1. A new portrait on a warm H100 SXM5: 3.2 to 3.7 s (was 20 to 41 s). `phases_ms` in each PUT reply.
+* **The session does not wait for a look still being drawn**: with a case-start ladder it opens on the portrait at once unless the presenting look is already being prepared, and crossfades into the look when it lands (registered onto the portrait, 6.6.1); `AVATAR_APPEARANCE_WAIT_S` is 6 s.
+
+@@MEASURED_681@@
 
 ## 7. The browser tile
 

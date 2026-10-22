@@ -801,3 +801,20 @@ def test_a_lip_offset_measured_across_a_cut_reply_is_ignored(tmp_path, runner_so
         assert r["changed"] is True                   # the next clean line closes the loop again
         m = c.get("/v1/voice/avatar/metrics", params={"session_id": sid}, headers=USER).json()["metrics"]
         assert m["lip_lags"][0]["ignored"] == "overlap" and "ignored" not in m["lip_lags"][1]
+
+
+def test_a_turkish_line_with_a_modest_correlation_still_closes_the_loop(tmp_path, runner_sockets):
+    # Live 2026-10-22 (prod-path-v3 TR): +120 to +240 ms on every line at scores 0.27 to 0.37 was never
+    # corrected while the threshold was 0.4.
+    runner = Runner()
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+        assert c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"},
+                      headers=USER).status_code == 200
+        r = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 160, "score": 0.3},
+                   headers=USER).json()
+        assert r == {"av_shift_ms": 80, "changed": True, "previous": 160}
+        weak = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 600, "score": 0.1},
+                      headers=USER).json()
+        assert weak["changed"] is False and weak["why"] == "weak_correlation"
