@@ -276,11 +276,25 @@ Owner decisions: Turkish speech start under 3 s on-prem, no GPU cost cap, prefer
 
 **A new reply while the previous one still plays** (`turn_speech.CallSpeaker`): when a reply is released while the call's previous reply is still being synthesised, the previous one is cut (its TTS stream closed, its runner line ended) and the new line begins with `interrupt` (the runner flushes the queued audio at a frame boundary), so the new reply starts at once on a fresh timeline instead of queueing behind a Turkish reply that runs slower than real time. A reply whose synthesis has finished is not cut; its last second plays out and the next line follows on the same timeline. The lip-sync loop skips the measurement that spans a cut (`lip_overlap`, `"why": "overlapping_lines"`), because a window holding two lines moved the runner's delay the wrong way live (+280 ms on the line after an overlap in v2). A line cancelled after its `end` was sent drops the runner socket, so a later line never reads the old `done`. Voiced turns report `cut` and `cut_previous`.
 
-**Background work yields to the voice.** Since the call now opens within seconds (6.8.1), the case's look ladder (edits and preparations) runs during the first lines. Live on an H100 SXM5 it cut the runner to 64.7 fps with 88 sender underruns and the lips to scores near 0 (`tr-run1-ladder-during-lines/`). Now each ladder preparation waits until no voiced turn is in progress on that worker (like the edits), and inside the runner a ladder preparation pauses between frames while any call speaks (`_yield_to_speech`, at most 20 s; never for the picture a call waits for). With that the runner held 81 to 90 fps with 1 to 25 underruns over a call.
+**Background work yields to the voice.** Since the call now opens within seconds (6.8.1), the case's look ladder (edits and preparations) runs during the first lines. Live on an H100 SXM5 it cut the runner to 64.7 fps with 88 sender underruns and the lips to scores near 0 (`tr-run1-ladder-during-lines/`). Now each ladder preparation waits until no voiced turn is in progress on that worker (like the edits), and inside the runner a ladder preparation pauses between frames while any call speaks (`_yield_to_speech`, at most 20 s; never for the picture a call waits for). With that the runner held 72 to 90 fps with 0 to 30 underruns over a call.
+
+**Numbers in Turkish replies** (`server/persona.py` FactAssertionGate): the gate missed the decimal comma, a percent written first and Turkish blood pressures, so "39,4 derece", "%92", "140'a 90" reached the voice. It now reads numbers with a decimal comma or a thousands dot ("39,4" = "39.4", "1.200" = "1200"), Turkish units and case suffixes ("dereceydi", "39.4'tü", "miligram", "atım"), "%92" and "yüzde 88", "140/90", "140 over 90", "140'a 90", "14'e 9", "140 bölü 90", and a number up to 32 characters after a vital or lab word in either language ("nabzım dakikada 120", "şekerim 250"); only the number is replaced, by a deflection in the reply's language ("tam sayıyı bilmiyorum" / "I'm not sure of the exact number", no dashes), and Turkish verdicts ("bende zatürre var", "kalp krizi geçiriyorum") are flagged like the English ones. Numbers the staff gave the patient this turn still pass, in either notation. `server/tests/test_fact_gate.py` (43 cases, EN and TR).
 
 **The TTS connection per turn.** The interview route opens the call's TTS connection (`VoiceService.prewarm_tts`) next to the guard, and the voice client keeps idle connections 60 s instead of httpx's 5 s, so the first clause does not pay a TLS handshake (0.45 s through this sandbox's proxy).
 
-@@MEASURED_6310@@
+**Measured** (H100 SXM5 80 GB unless noted, sandbox browser through the WebSocket-tunnelled TURN, six Turkish lines per run, Claude Sonnet 5.5 as the live persona; per run in `prod-path-v3/<run>/metrics.json`, the rows below from `tr/`, `tr-run5-all-runner-fixes/`, `en-run1-sxm5/`):
+
+| | v2 (A100 40 GB) | now |
+|---|---|---|
+| TR speech start, lines without a new history layer | 5.5 s first line, later lines overlapped | 3.32 to 3.50 s (run 5), 3.43 to 4.72 s (final run) |
+| TR hops on those lines | | guard 0.73 to 1.33 s (in parallel); first clause 0.97 to 1.88 s; Chatterbox first audio 1.45 to 2.1 s (12 to 41 characters); first PCM at the runner 2.64 to 3.79 s; then 0.6 to 0.9 s to audible (runner, tunnel, jitter buffer 59 to 164 ms) |
+| TR lines that needed a new history layer | | 5.8, 8.4, 26.3 s: the reply waits for the Director to write the layer (`history_ms` 2.6 to 23 s, a Claude call); the voice cannot start before the facts exist |
+| TR lips, six lines | +40, +280, +40, +40, -120, 0 ms | run 5: +160, -40, 0, +80, +40, +40 ms; final: -40, 0, +120, +40, +40, 0 ms (scores 0.43 to 0.65) |
+| a question while the reply plays | queued, +280 ms on the next line | the reply still being synthesised is cut, the next line starts at once; the clean line after it: +40 ms (score 0.38 to 0.46) |
+| EN speech start, six lines (worker Kokoro) | 1.8 to 2.5 s | 1.90 to 2.43 s; lips +200, +240, +120, +40, +40, +40 ms (the loop corrected from the third line) |
+| runner during the call | 49 fps (A100) | 72 to 90 fps, 0 to 30 underruns (64.7 fps and 88 before the ladder yielded) |
+
+Against the targets: lips are inside ±80 ms on five of six Turkish lines in both final runs and from the third English line. Turkish speech start under 3 s is **not** met on one shared 80 GB card: the worker-side part (question to first PCM at the runner) is 2.6 to 3.8 s, of which Chatterbox's first clause is 1.45 to 2.1 s while the same GPU renders the call (T3 15 to 24 ms a token), plus about 1.0 to 1.9 s of guard, persona and clause; the sandbox adds 0.6 to 0.9 s on top. A browser on an ordinary network would see about 3.0 to 4.2 s. What is left to try: a 2x H100 worker (the runner gets card 1 to itself, `AVATAR_DEDICATED_GPU`; not exercised, no capacity during this pass), an ElevenLabs Turkish row (about 75 ms to first audio, 6.3.7), or token-level streaming out of Chatterbox (today the first audio waits for the whole clause). One English run (`en/`) measured lip scores under 0.21 on every line (the meter could not lock on; runner 75 fps, 0 underruns), so its offsets are not counted.
 
 ### 6.5 Hosted live video: Tavus CVI (optional adapter; runs only when asked for or marked default)
 
@@ -362,7 +376,7 @@ Production took 17 min 20 s from a cold launch to live video: Chatterbox, the av
 
 * **Prebuilt images.** `/opt/acudx/images.sh` keys each built image by the sha256 of its inputs (Dockerfile, constraint file, pinned upstream commit) and takes it from the local store, the registry (`ACUDX_IMAGE_REGISTRY`, default `ghcr.io/ariomoniri`, filled by `.github/workflows/gpu-worker-images.yml`), the Lambda filesystem (`$FS/acudx-images/<name>-<key>.tar`, saved after a build), else builds it. The AcuDx Python files are mounted at run time, never part of a key, so a code change needs no rebuild. `infra/gpu-worker/worker_images.py` computes the same keys (on the live worker the shell keys matched it: chatterbox `2d1ad1f79a05c36a`, avatar `9b05e6479cd7a483`, imagegen `e46737d70012f434`).
 * **Weights on the filesystem.** `HF_HOME` was already there; Chatterbox's model cache now is too.
-* **Parallel start-up.** All images at once; the voices and the runner start as soon as their images are there (the runner no longer waits for vLLM or the voice); vLLM starts last, after the runner and Chatterbox have their memory, so its own free-memory check still sees them. `/healthz` answers once vLLM or the runner answers `/health`, so the call does not wait for the LLM the Claude route does not use (LLM requests to the worker answer 502 for the minute or two vLLM still loads). A call after a case-start prepare no longer waits for an edit server that is not up, and `AVATAR_APPEARANCE_WAIT_S` is 10 s.
+* **Parallel start-up.** All images at once; the voices and the runner start as soon as their images are there (the runner no longer waits for vLLM or the voice); vLLM starts last, after the runner and Chatterbox have their memory, so its own free-memory check still sees them. `/healthz` answers once vLLM or the runner answers `/health`, so the call does not wait for the LLM the Claude route does not use (LLM requests to the worker answer 502 for the minute or two vLLM still loads). A call after a case-start prepare no longer waits for an edit server that is not up, and `AVATAR_APPEARANCE_WAIT_S` was 10 s (6 s since 6.8.1).
 * `timeline.txt` next to the avatar status (behind the bearer) logs every step with a timestamp.
 
 | | launch -> gateway ready |
@@ -376,7 +390,7 @@ The registry path is exercised now: the workflow ran on the push of 0afed76 (run
 | | runcmd starts | images there | runner ready | vLLM healthy |
 |---|---|---|---|---|
 | H100 SXM5, us-south-3, registry, no filesystem | +251 s | +396 s | +457 s (7.6 min) | +522 s |
-| H100 SXM5, us-south-2, registry, no filesystem | @@BOOT2@@ |
+| H100 SXM5, us-south-2, registry, no filesystem | +224 s | +378 s | +436 s (7.3 min) | +502 s |
 | H100 PCIe, us-west-3, registry (the machine itself took 9.8 min to boot) | +588 s | +859 s | +1010 s | +1137 s |
 
 So a cold machine reaches live video in 6 to 8 minutes once the provider has booted it; the provider's own boot varied from about 4 to 10 minutes, and two us-southeast-1 launches never left `booting` in 15 minutes (the boot timeout stopped them).
@@ -390,7 +404,17 @@ Before: 85 to 95 s on a warm worker. Cause, from the v2 gateway log: the case-st
 * **Faster preparation**: one face detection instead of two or three (the box is moved with the picture after a resize or extension), the detection on a fixed 720 x 768 canvas (MuseTalk's S3FD turns `cudnn.benchmark` on, so each new portrait width was autotuned first: 11.9 to 15.3 s, against 0.37 s for a width seen before), a detector warm-up when the runner starts (22.6 s, paid before any case), face parsing on six threads beside the VAE, PNG level 1. A new portrait on a warm H100 SXM5: 3.2 to 3.7 s (was 20 to 41 s). `phases_ms` in each PUT reply.
 * **The session does not wait for a look still being drawn**: with a case-start ladder it opens on the portrait at once unless the presenting look is already being prepared, and crossfades into the look when it lands (registered onto the portrait, 6.6.1); `AVATAR_APPEARANCE_WAIT_S` is 6 s.
 
-@@MEASURED_681@@
+Measured, voice click at case open (the worst case; `live_after_voice_click_ms` in each run):
+
+| | voice click -> first frame |
+|---|---|
+| v2, A100 40 GB | 90 to 95 s (`prepare_ms` 84 to 89 s) |
+| H100 SXM5, portrait new to the worker, detection fast | 13.05 s (`prepare_ms` 3.6 s, the call's PUT queued 3.2 s behind the ladder's) |
+| H100 SXM5, portrait prepared before on that worker | 10.1 s (`prepare_ms` 0.19 s) |
+| H100 SXM5, portrait new and its detection slow | 16.0 s to 29.7 s (`prepare_ms` 6.4 to 19.9 s) |
+| H100 PCIe | 33.7 to 40.8 s |
+
+The target (under 15 s on a warm worker) is met when the portrait is cached or its face detection is fast. Not solved: for some portraits MuseTalk's `get_landmark_and_bbox` takes 15 to 20 s on the first preparation even after the start-up warm-up and at half resolution (p08, p19, p29, p30 slow; p06, p07, p31 0.3 to 0.4 s); it is image-dependent, not a first-call cost. The content cache makes it a one-time cost per portrait and filesystem (with a Lambda filesystem every worker in that region reuses it). Next: time `face_recognition.face_landmarks` and the S3FD candidate loop separately inside the runner, or prepare every case portrait once into the filesystem cache.
 
 ## 7. The browser tile
 
@@ -435,6 +459,7 @@ Before: 85 to 95 s on a warm worker. Cause, from the v2 gateway log: the case-st
 * The lip meter has about 40 to 60 ms of run-to-run noise; the pre-roll results (0 to +60 ms on every line) are inside it.
 * Two Turkish calls at once still share one GPU: with two Chatterbox replicas the gaps are 0 to 0.9 s and one second line started at 5.6 s; a third call or a 40 GB card (no second replica) needs ElevenLabs for Turkish.
 * Second production pass (2026-10-21, sections 6.3.9, 6.6.1, 6.8): closed the serial reply chain, the lip offset (meter, switch timing, closed loop, pacing), the cross-fade ghost and the image builds on every boot. Open: Turkish speech start is 5.5 s on the worker's Chatterbox on a 40 GB card (an ElevenLabs Turkish row or a larger card is needed for 3 s); a call on a fresh worker waits 85 to 90 s for the runner's picture preparation (one at a time behind the ladder); the registry images are not published yet. The status-line mojibake came from the narrator model's own output (repaired or dropped by `clean_model_text`, 7ef1701); every byte decode on our side is explicit UTF-8 too and every text reply names its charset.
+* Third production pass (2026-10-22, sections 6.3.10, 6.8, 6.8.1): closed the 85 to 95 s call preparation (priority queue, content cache, one-size half-resolution detection, no wait for a look still drawn: 10 to 16 s from the voice click on a warm H100 SXM5), the registry images (published, pulled by every worker; 6 to 8 min from boot to live video), the overlapping-reply lip error (cut and skip), Chatterbox run-ons (token cap) and the Turkish numbers in the fact gate. Open: Turkish speech start is 3.3 to 4.7 s in the sandbox on one shared H100 SXM5 (about 3.0 to 4.2 s on an ordinary network), not under 3 s; next a 2x H100 worker with the runner on its own card (not exercised), an ElevenLabs Turkish row, or token-level streaming from Chatterbox. Some portraits still take 15 to 20 s in MuseTalk's face detection on their first preparation (image-dependent; cached afterwards). A question that needs a new history layer waits 2.6 to 23 s for the Director to write it before any voice (for the Director owner: write likely layers ahead). H100 PCIe hosts in us-west-3 ran the voice and runner about 2x slower than SXM5 (now ordered after SXM5). Two us-southeast-1 launches never left `booting` in 15 min.
 * After two failed launches and a stop, the gateway's readiness wait for the third worker never saw `/healthz` 200 (logged PoolTimeout) until the gateway restarted; not reproduced in tests yet.
 * SoulX-FlashHead Lite comparison (head motion and expression, not only lips); the idle loop is a rigid head motion without blinks.
 * Tavus has not been exercised against the live API (no key in this environment); the request shapes are tested with respx against the documented contract.

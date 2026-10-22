@@ -61,14 +61,14 @@ def test_turkish_numbers_are_flagged(text: str) -> None:
 def test_turkish_scrub_is_turkish_and_has_no_dash() -> None:
     r = gate("Ateşim 39,4 derece çıktı, çok üşüyorum.")
     assert "tam sayıyı bilmiyorum" in r.utterance
-    assert "—" not in r.utterance and "–" not in r.utterance
+    assert "\u2014" not in r.utterance and "\u2013" not in r.utterance
     assert "çok üşüyorum" in r.utterance
 
 
 def test_english_scrub_has_no_dash() -> None:
     r = gate("My temperature was 39.4 degrees, I feel awful.")
     assert "not sure of the exact number" in r.utterance
-    assert "—" not in r.utterance and "–" not in r.utterance
+    assert "\u2014" not in r.utterance and "\u2013" not in r.utterance
 
 
 @pytest.mark.parametrize("text,facts", [

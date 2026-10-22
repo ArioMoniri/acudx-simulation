@@ -1,31 +1,24 @@
 {
-  "captured_at": "2026-10-22T03:20:13.674Z",
+  "captured_at": "2026-10-22T03:29:02.938Z",
   "base_url": "http://127.0.0.1:4189",
   "lang": "tr",
   "voice_delay_ms": 0,
-  "live_after_voice_click_ms": 27157,
+  "live_after_voice_click_ms": 10135,
   "session": {
-    "at": 1792639029859,
-    "prepare_ms": 17893.2,
+    "at": 1792639569300,
+    "prepare_ms": 188.8,
     "prepare": {
-      "avatar_id": "acudx-p19",
-      "face_box": [
-        208,
-        128,
-        512,
-        594
-      ],
-      "width": 720,
-      "height": 720,
-      "idle_frames": 75,
-      "extended_px": 116,
-      "ref": null,
-      "registration": null,
-      "content_key": "719b7192cfb656bf6a19b3fc",
+      "avatar_id": "acudx-p31",
       "prepared": false,
-      "cached": "local",
-      "queue_ms": 17473.3,
-      "prepare_ms": 17473.9
+      "face_box": [
+        197,
+        130,
+        519,
+        593
+      ],
+      "width": 716,
+      "height": 720,
+      "idle_frames": 75
     },
     "appearance": {
       "source": "portrait",
@@ -33,16 +26,16 @@
       "current_key": null
     },
     "worker": {
-      "infer_fps": 90.28,
+      "infer_fps": 87.88,
       "sessions": 0,
       "max_sessions": 2,
       "gpu": {
         "cuda": true,
         "name": "NVIDIA H100 80GB HBM3",
         "total_mb": 81079,
-        "free_mb": 5828,
-        "process_reserved_mb": 3988,
-        "process_allocated_mb": 2366
+        "free_mb": 5034,
+        "process_reserved_mb": 4032,
+        "process_allocated_mb": 2433
       },
       "domain": "192-222-53-33.sslip.io",
       "max_calls": 2,
@@ -57,8 +50,8 @@
           "cut": false,
           "cut_previous": false,
           "timings": {
-            "guard_ms": 724.6,
-            "history_ms": 729.3
+            "guard_ms": 858.9,
+            "history_ms": 862.9
           },
           "spoken_text": ""
         },
@@ -66,109 +59,109 @@
           "cut": true,
           "cut_previous": false,
           "timings": {
-            "persona_first_text_ms": 658.1,
-            "guard_ms": 979.2,
-            "history_ms": 985.1,
-            "first_clause_ms": 1011,
-            "persona_done_ms": 1186.6,
-            "tts_first_chunk_ms": 3179.9,
-            "released_ms": 3179.9,
-            "runner_first_chunk_ms": 3180.3
+            "persona_first_text_ms": 800.5,
+            "first_clause_ms": 1059.5,
+            "guard_ms": 1111.1,
+            "history_ms": 1118.2,
+            "persona_done_ms": 1341.6,
+            "tts_first_chunk_ms": 2156.6,
+            "released_ms": 2156.6,
+            "runner_first_chunk_ms": 2156.9
           },
-          "spoken_text": "Hayır doktor bey, ağrı sadece belimde, kola ya da sırtımın üst tarafına yayılmıyor."
+          "spoken_text": "Ağrı bir yere yayılmıyor, zaten her yerim ağrıyor, en çok sırtım ve kollarım."
         }
       ],
       "lip_lags_after": [
         {
           "lip_lag_ms": 40,
-          "score": 0.457,
-          "av_shift_ms": 160
+          "score": 0.439,
+          "av_shift_ms": 80
         },
         {
           "lip_lag_ms": 40,
-          "score": 0.355,
-          "av_shift_ms": 160
+          "score": 0.492,
+          "av_shift_ms": 80
         },
         {
-          "lip_lag_ms": 40,
-          "score": 0.39,
-          "av_shift_ms": 160
+          "lip_lag_ms": 0,
+          "score": 0.653,
+          "av_shift_ms": 80
         }
       ],
-      "av_shift_ms": 160,
-      "second_reply_http_ms": 4598
+      "av_shift_ms": 80,
+      "second_reply_http_ms": 7252
     },
     {
       "clean_line_after_cut": {
-        "speech_start_ms": 22,
+        "speech_start_ms": 38,
         "lip_lag_ms": 40,
-        "lip_score": 0.456
+        "lip_score": 0.375
       }
     }
   ],
-  "first_frame_ms": 4027,
+  "first_frame_ms": 3973,
   "lines": [
     {
       "line": 1,
       "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
-      "reply": "Dün öğleden sonra başladı doktor bey. Depoda ağır bir koliyi eğilip kaldırırken belime bir şey saplandı. Belimin alt tarafında, iki yanda, kemer hizasında ağrıyor.",
+      "reply": "İki gün önce, pazartesi öğleden sonra işteyken birden üşüyüp titremeye başladım. Ağrı her yerimde, en çok sırtımda, bacaklarımda ve kollarımda; bir de alnımda baş ağrım var.",
       "via": "server",
-      "speech_start_ms": 4455,
-      "lip_lag_ms": 40,
-      "lip_score": 0.49,
-      "voice_ms": 17749,
+      "speech_start_ms": 8350,
+      "lip_lag_ms": -40,
+      "lip_score": 0.479,
+      "voice_ms": 17183,
       "av_shift_ms_after": 160,
-      "reply_http_ms": 6584,
-      "speculative": "kept",
+      "reply_http_ms": 9441,
+      "speculative": "restarted",
       "gateway_timings": {
-        "guard_ms": 1167,
-        "history_ms": 1169.8,
-        "persona_first_text_ms": 1373.1,
-        "first_clause_ms": 1721.9,
-        "persona_done_ms": 1870.8,
-        "tts_first_chunk_ms": 3796.1,
-        "released_ms": 3796.1,
-        "runner_first_chunk_ms": 3796.4
+        "persona_first_text_ms": 833.4,
+        "first_clause_ms": 1127.4,
+        "guard_ms": 1259,
+        "tts_first_chunk_ms": 2556.3,
+        "history_ms": 4948.6,
+        "persona_done_ms": 6129.6,
+        "released_ms": 7384.1,
+        "runner_first_chunk_ms": 7384.4
       },
       "voiced_turn": {
         "timings": {
-          "guard_ms": 1167,
-          "history_ms": 1169.8,
-          "persona_first_text_ms": 1373.1,
-          "first_clause_ms": 1721.9,
-          "persona_done_ms": 1870.8,
-          "tts_first_chunk_ms": 3796.1,
-          "released_ms": 3796.1,
-          "runner_first_chunk_ms": 3796.4,
-          "runner_done_ms": 22426.8
+          "persona_first_text_ms": 833.4,
+          "first_clause_ms": 1127.4,
+          "guard_ms": 1259,
+          "tts_first_chunk_ms": 2556.3,
+          "history_ms": 4948.6,
+          "persona_done_ms": 6129.6,
+          "released_ms": 7384.1,
+          "runner_first_chunk_ms": 7384.4,
+          "runner_done_ms": 22265.2
         },
         "requests": [
           {
-            "chars": 17,
+            "chars": 13,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 2074.2,
-            "bytes": 144960
+            "first_chunk_ms": 1513.5,
+            "bytes": 93120
           },
           {
-            "chars": 86,
+            "chars": 66,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 3897.2,
-            "bytes": 468480
+            "first_chunk_ms": 3793.5,
+            "bytes": 223680
           },
           {
-            "chars": 58,
+            "chars": 92,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 13450.7,
-            "bytes": 336000
+            "first_chunk_ms": 4668,
+            "bytes": 444480
           }
         ],
         "runner": {
-          "frames": 989,
-          "first_frame_ms": 0.4,
-          "elapsed_ms": 18566.5
+          "frames": 793,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 14812.9
         },
         "error": null
       }
@@ -176,64 +169,64 @@
     {
       "line": 2,
       "question": "Ağrınız nasıl bir ağrı, batıcı mı, sıkıştırıcı mı?",
-      "reply": "Sıkıştırıcı gibi, kasılma tarzında bir ağrı doktor bey. Belim kaskatı kesilmiş gibi hissediyorum. Batma gibi değil, daha çok kaslarım tutulmuş gibi.",
+      "reply": "Ne batıcı ne sıkıştırıcı, kaslarım dayak yemiş gibi sızlıyor. Her yerim kırılıyor gibi, hareket edince daha çok ağrıyor. Şu an da üşüyorum, ateşim var galiba.",
       "via": "server",
-      "speech_start_ms": 4762,
+      "speech_start_ms": 3918,
       "lip_lag_ms": 0,
-      "lip_score": 0.406,
-      "voice_ms": 13250,
+      "lip_score": 0.427,
+      "voice_ms": 17399,
       "av_shift_ms_after": 160,
-      "reply_http_ms": 5299,
+      "reply_http_ms": 5190,
       "speculative": "kept",
       "gateway_timings": {
-        "guard_ms": 982.5,
-        "history_ms": 985.2,
-        "persona_first_text_ms": 1320.3,
-        "first_clause_ms": 1655.4,
-        "persona_done_ms": 1925.7,
-        "tts_first_chunk_ms": 4041.9,
-        "released_ms": 4041.9,
-        "runner_first_chunk_ms": 4042.2
+        "persona_first_text_ms": 727.2,
+        "first_clause_ms": 970.7,
+        "guard_ms": 1331.1,
+        "history_ms": 1334.2,
+        "persona_done_ms": 1388.6,
+        "tts_first_chunk_ms": 3061.5,
+        "released_ms": 3061.5,
+        "runner_first_chunk_ms": 3061.8
       },
       "voiced_turn": {
         "timings": {
-          "guard_ms": 982.5,
-          "history_ms": 985.2,
-          "persona_first_text_ms": 1320.3,
-          "first_clause_ms": 1655.4,
-          "persona_done_ms": 1925.7,
-          "tts_first_chunk_ms": 4041.9,
-          "released_ms": 4041.9,
-          "runner_first_chunk_ms": 4042.2,
-          "runner_done_ms": 16333.3
+          "persona_first_text_ms": 727.2,
+          "first_clause_ms": 970.7,
+          "guard_ms": 1331.1,
+          "history_ms": 1334.2,
+          "persona_done_ms": 1388.6,
+          "tts_first_chunk_ms": 3061.5,
+          "released_ms": 3061.5,
+          "runner_first_chunk_ms": 3061.8,
+          "runner_done_ms": 19319.7
         },
         "requests": [
           {
-            "chars": 55,
+            "chars": 12,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 2386.5,
-            "bytes": 173760
+            "first_chunk_ms": 2090.8,
+            "bytes": 116160
           },
           {
-            "chars": 41,
+            "chars": 48,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 4880.8,
-            "bytes": 131520
+            "first_chunk_ms": 2981.5,
+            "bytes": 150720
           },
           {
-            "chars": 50,
+            "chars": 96,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 7504.3,
-            "bytes": 337920
+            "first_chunk_ms": 3101.8,
+            "bytes": 563520
           }
         ],
         "runner": {
-          "frames": 670,
-          "first_frame_ms": 0.7,
-          "elapsed_ms": 12226.4
+          "frames": 865,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 16199.5
         },
         "error": null
       }
@@ -241,71 +234,64 @@
     {
       "line": 3,
       "question": "Ağrınızı artıran ya da azaltan bir şey var mı?",
-      "reply": "Eğilince, yerden bir şey alırken, oturduğum yerden kalkarken ya da yatakta dönerken artıyor. Dinlenince ve sırtüstü yatınca azalıyor. Dün akşam sıcak duş da iyi geldi, bir de evde bir ağrı kesici içmiştim, biraz rahatlattı.",
+      "reply": "Hareket edince kaslarım daha çok ağrıyor, konuşunca da öksürüğüm tutuyor. Parasetamol alınca ateşim düşüyor, ağrı biraz hafifliyor; ılık su ve dinlenmek de iyi geliyor.",
       "via": "server",
-      "speech_start_ms": 4101,
-      "lip_lag_ms": 0,
-      "lip_score": 0.464,
-      "voice_ms": 18533,
+      "speech_start_ms": 4724,
+      "lip_lag_ms": 120,
+      "lip_score": 0.443,
+      "voice_ms": 11266,
       "av_shift_ms_after": 160,
-      "reply_http_ms": 4554,
+      "reply_http_ms": 5060,
       "speculative": "kept",
       "gateway_timings": {
-        "persona_first_text_ms": 800.2,
-        "guard_ms": 1140.1,
-        "history_ms": 1143.2,
-        "first_clause_ms": 1145.8,
-        "persona_done_ms": 1490.1,
-        "tts_first_chunk_ms": 3439.6,
-        "released_ms": 3439.6,
-        "runner_first_chunk_ms": 3440
+        "guard_ms": 733.5,
+        "history_ms": 736.9,
+        "persona_first_text_ms": 1522,
+        "first_clause_ms": 1782.1,
+        "persona_done_ms": 2067.6,
+        "tts_first_chunk_ms": 3792.6,
+        "released_ms": 3792.6,
+        "runner_first_chunk_ms": 3792.9
       },
       "voiced_turn": {
         "timings": {
-          "persona_first_text_ms": 800.2,
-          "guard_ms": 1140.1,
-          "history_ms": 1143.2,
-          "first_clause_ms": 1145.8,
-          "persona_done_ms": 1490.1,
-          "tts_first_chunk_ms": 3439.6,
-          "released_ms": 3439.6,
-          "runner_first_chunk_ms": 3440,
-          "runner_done_ms": 21686.3
+          "guard_ms": 733.5,
+          "history_ms": 736.9,
+          "persona_first_text_ms": 1522,
+          "first_clause_ms": 1782.1,
+          "persona_done_ms": 2067.6,
+          "tts_first_chunk_ms": 3792.6,
+          "released_ms": 3792.6,
+          "runner_first_chunk_ms": 3792.9,
+          "runner_done_ms": 14697.9
         },
         "requests": [
           {
-            "chars": 20,
+            "chars": 41,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 2293.8,
-            "bytes": 162240
+            "first_chunk_ms": 2010.5,
+            "bytes": 144960
           },
           {
-            "chars": 71,
+            "chars": 31,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 4456.6,
-            "bytes": 273600
+            "first_chunk_ms": 1871.8,
+            "bytes": 108480
           },
           {
-            "chars": 40,
+            "chars": 94,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 10208.3,
-            "bytes": 141120
-          },
-          {
-            "chars": 89,
-            "provider": "gpu-worker",
-            "model": "chatterbox-multilingual",
-            "first_chunk_ms": 8747,
-            "bytes": 334080
+            "first_chunk_ms": 2353.9,
+            "bytes": 314880
           }
         ],
         "runner": {
-          "frames": 949,
-          "first_frame_ms": 0.8,
-          "elapsed_ms": 17956.5
+          "frames": 592,
+          "first_frame_ms": 0.6,
+          "elapsed_ms": 10846.9
         },
         "error": null
       }
@@ -313,64 +299,64 @@
     {
       "line": 4,
       "question": "Daha önce böyle bir şey yaşadınız mı?",
-      "reply": "Birkaç yıl önce belim hafifçe tutulmuştu ama birkaç günde kendiliğinden geçmişti. Bu kadar ağrılı değildi, bu sefer daha fazla.",
+      "reply": "Hayır, daha önce böyle bir şey yaşamadım. Zaman zaman nezle olurum ama bu kadar ağır, bu kadar kırgın hiç olmadı.",
       "via": "server",
-      "speech_start_ms": 3525,
+      "speech_start_ms": 3425,
       "lip_lag_ms": 40,
-      "lip_score": 0.457,
-      "voice_ms": 8883,
-      "av_shift_ms_after": 160,
-      "reply_http_ms": 5365,
+      "lip_score": 0.439,
+      "voice_ms": 7816,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 5163,
       "speculative": "kept",
       "gateway_timings": {
-        "guard_ms": 919.2,
-        "history_ms": 921.9,
-        "persona_first_text_ms": 1030.4,
-        "first_clause_ms": 1374.1,
-        "persona_done_ms": 1518.8,
-        "tts_first_chunk_ms": 2849.5,
-        "released_ms": 2849.5,
-        "runner_first_chunk_ms": 2849.8
+        "persona_first_text_ms": 904.5,
+        "guard_ms": 926.3,
+        "history_ms": 929.4,
+        "first_clause_ms": 1188.6,
+        "persona_done_ms": 1399.2,
+        "tts_first_chunk_ms": 2636.2,
+        "released_ms": 2636.2,
+        "runner_first_chunk_ms": 2636.5
       },
       "voiced_turn": {
         "timings": {
-          "guard_ms": 919.2,
-          "history_ms": 921.9,
-          "persona_first_text_ms": 1030.4,
-          "first_clause_ms": 1374.1,
-          "persona_done_ms": 1518.8,
-          "tts_first_chunk_ms": 2849.5,
-          "released_ms": 2849.5,
-          "runner_first_chunk_ms": 2849.8,
-          "runner_done_ms": 11110
+          "persona_first_text_ms": 904.5,
+          "guard_ms": 926.3,
+          "history_ms": 929.4,
+          "first_clause_ms": 1188.6,
+          "persona_done_ms": 1399.2,
+          "tts_first_chunk_ms": 2636.2,
+          "released_ms": 2636.2,
+          "runner_first_chunk_ms": 2636.5,
+          "runner_done_ms": 9993
         },
         "requests": [
           {
-            "chars": 21,
+            "chars": 22,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 1475.4,
-            "bytes": 85440
+            "first_chunk_ms": 1447.5,
+            "bytes": 91200
           },
           {
-            "chars": 59,
+            "chars": 18,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 2617,
-            "bytes": 192960
+            "first_chunk_ms": 1680.3,
+            "bytes": 81600
           },
           {
-            "chars": 45,
+            "chars": 71,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 5962.1,
-            "bytes": 176640
+            "first_chunk_ms": 2304.1,
+            "bytes": 230400
           }
         ],
         "runner": {
-          "frames": 474,
-          "first_frame_ms": 0.2,
-          "elapsed_ms": 8194.1
+          "frames": 420,
+          "first_frame_ms": 0.6,
+          "elapsed_ms": 7297
         },
         "error": null
       }
@@ -378,64 +364,64 @@
     {
       "line": 5,
       "question": "Düzenli kullandığınız ilaç ya da alerjiniz var mı?",
-      "reply": "Düzenli kullandığım bir ilaç yok doktor bey. Sadece dün akşam evde bulduğum bir ağrı kesiciden bir tane içtim. Bildiğim bir ilaç alerjim de yok.",
+      "reply": "Düzenli kullandığım bir ilacım yok, sadece ateş için parasetamol alıyorum, günde üç kez beşyüzlük. İlaç alerjim de yok, bildiğim kadarıyla.",
       "via": "server",
-      "speech_start_ms": 3919,
+      "speech_start_ms": 4244,
       "lip_lag_ms": 40,
-      "lip_score": 0.355,
-      "voice_ms": 10950,
-      "av_shift_ms_after": 160,
-      "reply_http_ms": 4353,
+      "lip_score": 0.492,
+      "voice_ms": 12466,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 5450,
       "speculative": "kept",
       "gateway_timings": {
-        "persona_first_text_ms": 757.5,
-        "guard_ms": 973.2,
-        "history_ms": 976.7,
-        "first_clause_ms": 1090.9,
-        "persona_done_ms": 1115.3,
-        "tts_first_chunk_ms": 3177.5,
-        "released_ms": 3177.5,
-        "runner_first_chunk_ms": 3177.9
+        "guard_ms": 789.1,
+        "history_ms": 792.1,
+        "persona_first_text_ms": 1490.4,
+        "first_clause_ms": 1752.7,
+        "persona_done_ms": 1940.3,
+        "tts_first_chunk_ms": 3560.3,
+        "released_ms": 3560.3,
+        "runner_first_chunk_ms": 3560.7
       },
       "voiced_turn": {
         "timings": {
-          "persona_first_text_ms": 757.5,
-          "guard_ms": 973.2,
-          "history_ms": 976.7,
-          "first_clause_ms": 1090.9,
-          "persona_done_ms": 1115.3,
-          "tts_first_chunk_ms": 3177.5,
-          "released_ms": 3177.5,
-          "runner_first_chunk_ms": 3177.9,
-          "runner_done_ms": 14628.1
+          "guard_ms": 789.1,
+          "history_ms": 792.1,
+          "persona_first_text_ms": 1490.4,
+          "first_clause_ms": 1752.7,
+          "persona_done_ms": 1940.3,
+          "tts_first_chunk_ms": 3560.3,
+          "released_ms": 3560.3,
+          "runner_first_chunk_ms": 3560.7,
+          "runner_done_ms": 15288.9
         },
         "requests": [
           {
-            "chars": 44,
+            "chars": 35,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 2086.6,
-            "bytes": 143040
+            "first_chunk_ms": 1807.6,
+            "bytes": 118080
           },
           {
-            "chars": 65,
+            "chars": 62,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 3907.7,
-            "bytes": 299520
+            "first_chunk_ms": 2297.3,
+            "bytes": 272640
           },
           {
-            "chars": 33,
+            "chars": 40,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 10246.3,
-            "bytes": 158400
+            "first_chunk_ms": 5859.5,
+            "bytes": 221760
           }
         ],
         "runner": {
-          "frames": 626,
+          "frames": 638,
           "first_frame_ms": 0.3,
-          "elapsed_ms": 11383.6
+          "elapsed_ms": 11664.6
         },
         "error": null
       }
@@ -443,71 +429,64 @@
     {
       "line": 6,
       "question": "Şu an kendinizi nasıl hissediyorsunuz, geldiğiniz zamana göre?",
-      "reply": "İyiyim doktor bey, sakinim. Belim hâlâ ağrıyor, kıpırdamazsam çok değil ama hareket edince artıyor. Pek bir değişiklik yok yani, sadece biraz içim rahatladı burada olunca.",
+      "reply": "Ağrılarım epey azaldı, daha rahatım. Ama hâlâ ateşli gibiyim, üşüyüp titriyorum, halsizlik de duruyor.",
       "via": "server",
-      "speech_start_ms": 5523,
-      "lip_lag_ms": 40,
-      "lip_score": 0.39,
-      "voice_ms": 15599,
-      "av_shift_ms_after": 160,
-      "reply_http_ms": 5845,
+      "speech_start_ms": 4083,
+      "lip_lag_ms": 0,
+      "lip_score": 0.653,
+      "voice_ms": 7750,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 4588,
       "speculative": "kept",
       "gateway_timings": {
-        "guard_ms": 1347,
-        "history_ms": 1347,
-        "persona_first_text_ms": 2246.3,
-        "first_clause_ms": 2599.6,
-        "persona_done_ms": 3237.8,
-        "tts_first_chunk_ms": 4786.7,
-        "released_ms": 4786.7,
-        "runner_first_chunk_ms": 4787.2
+        "guard_ms": 958.6,
+        "history_ms": 958.6,
+        "persona_first_text_ms": 1596,
+        "first_clause_ms": 1881.1,
+        "persona_done_ms": 2216.8,
+        "tts_first_chunk_ms": 3416.4,
+        "released_ms": 3416.4,
+        "runner_first_chunk_ms": 3416.7
       },
       "voiced_turn": {
         "timings": {
-          "guard_ms": 1347,
-          "history_ms": 1347,
-          "persona_first_text_ms": 2246.3,
-          "first_clause_ms": 2599.6,
-          "persona_done_ms": 3237.8,
-          "tts_first_chunk_ms": 4786.7,
-          "released_ms": 4786.7,
-          "runner_first_chunk_ms": 4787.2,
-          "runner_done_ms": 19739.8
+          "guard_ms": 958.6,
+          "history_ms": 958.6,
+          "persona_first_text_ms": 1596,
+          "first_clause_ms": 1881.1,
+          "persona_done_ms": 2216.8,
+          "tts_first_chunk_ms": 3416.4,
+          "released_ms": 3416.4,
+          "runner_first_chunk_ms": 3416.7,
+          "runner_done_ms": 11963.5
         },
         "requests": [
           {
-            "chars": 18,
+            "chars": 22,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 2187.1,
-            "bytes": 150720
+            "first_chunk_ms": 1535.3,
+            "bytes": 98880
           },
           {
-            "chars": 8,
+            "chars": 13,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 4009.7,
-            "bytes": 93120
+            "first_chunk_ms": 1274.5,
+            "bytes": 58560
           },
           {
-            "chars": 71,
+            "chars": 65,
             "provider": "gpu-worker",
             "model": "chatterbox-multilingual",
-            "first_chunk_ms": 5764.5,
-            "bytes": 230400
-          },
-          {
-            "chars": 71,
-            "provider": "gpu-worker",
-            "model": "chatterbox-multilingual",
-            "first_chunk_ms": 6739.2,
-            "bytes": 295680
+            "first_chunk_ms": 1677.7,
+            "bytes": 301440
           }
         ],
         "runner": {
-          "frames": 802,
-          "first_frame_ms": 1,
-          "elapsed_ms": 14885.1
+          "frames": 478,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 8488.2
         },
         "error": null
       }
@@ -517,118 +496,150 @@
   "registration": [
     {
       "name": "presenting",
-      "avatar_id": "acudx-p19-08617e89-e3b0c44298",
+      "avatar_id": "acudx-p31-c50bdd1f-dab7ce5ef3",
       "registration": {
         "method": "orb+ecc",
-        "scale": 1.0825,
-        "rotation_deg": -1.125,
+        "scale": 1.034,
+        "rotation_deg": 1.259,
         "shift_px": [
-          -39.2,
-          8.8
+          -11.5,
+          -7.6
         ],
-        "inliers": 225,
-        "residual_before": 41.65,
-        "residual_after": 19.27
+        "inliers": 162,
+        "residual_before": 27,
+        "residual_after": 16.87
+      }
+    },
+    {
+      "name": "worse",
+      "avatar_id": "acudx-p31-c50bdd1f-ca1cb2a112",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 1.0015,
+        "rotation_deg": 0.693,
+        "shift_px": [
+          0.1,
+          -3.2
+        ],
+        "inliers": 293,
+        "residual_before": 21.33,
+        "residual_after": 16.76
       }
     },
     {
       "name": "critical",
-      "avatar_id": "acudx-p19-08617e89-be4a95a56a",
+      "avatar_id": "acudx-p31-c50bdd1f-c74b2cba53",
       "registration": {
         "method": "orb+ecc",
-        "scale": 1.0451,
-        "rotation_deg": -0.677,
+        "scale": 1.0005,
+        "rotation_deg": 0.448,
         "shift_px": [
-          -22.8,
-          9.8
+          -1.1,
+          -0.8
         ],
-        "inliers": 108,
-        "residual_before": 25.41,
-        "residual_after": 6.19
+        "inliers": 375,
+        "residual_before": 19.86,
+        "residual_after": 16.02
+      }
+    },
+    {
+      "name": "improved",
+      "avatar_id": "acudx-p31-c50bdd1f-e3b0c44298",
+      "registration": {
+        "method": "ecc",
+        "scale": 1.1597,
+        "rotation_deg": 1.41,
+        "shift_px": [
+          -71.4,
+          -18.1
+        ],
+        "inliers": 194,
+        "residual_before": 46.24,
+        "residual_after": 21
       }
     }
   ],
   "call_metrics": {
-    "av_shift_ms": 160,
+    "av_shift_ms": 80,
     "lip_lags": [
       {
-        "lip_lag_ms": 40,
-        "score": 0.49,
+        "lip_lag_ms": -40,
+        "score": 0.479,
         "av_shift_ms": 160
       },
       {
         "lip_lag_ms": 0,
-        "score": 0.406,
+        "score": 0.427,
         "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 120,
+        "score": 0.443,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.439,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.492,
+        "av_shift_ms": 80
       },
       {
         "lip_lag_ms": 0,
-        "score": 0.464,
-        "av_shift_ms": 160
+        "score": 0.653,
+        "av_shift_ms": 80
       },
       {
         "lip_lag_ms": 40,
-        "score": 0.457,
-        "av_shift_ms": 160
-      },
-      {
-        "lip_lag_ms": 40,
-        "score": 0.355,
-        "av_shift_ms": 160
-      },
-      {
-        "lip_lag_ms": 40,
-        "score": 0.39,
-        "av_shift_ms": 160
-      },
-      {
-        "lip_lag_ms": 40,
-        "score": 0.456,
-        "av_shift_ms": 160,
+        "score": 0.375,
+        "av_shift_ms": 80,
         "ignored": "overlap"
       }
     ],
     "preroll": {
       "ms": 800,
       "frames": 40,
-      "sent_ms": 68.9
+      "sent_ms": 58.7
     },
-    "answer_ms": 273,
-    "prepare_ms": 17893.2
+    "answer_ms": 215.3,
+    "prepare_ms": 188.8
   },
   "runner_call": [
     {
-      "id": "76c020e5",
+      "id": "00821ec9",
       "tuning": {
         "batch_size": 4,
         "lookahead_frames": 4,
         "ahead_frames": 6,
-        "av_shift_ms": 160
+        "av_shift_ms": 80
       },
-      "avatar": "acudx-p19-08617e89-e3b0c44298",
+      "avatar": "acudx-p31-c50bdd1f-dab7ce5ef3",
       "speaking": false,
-      "warm_up_ms": 55.1,
+      "warm_up_ms": 57.2,
       "switches_applied": 1,
       "switch_pending": false,
-      "infer_fps": 75.1,
-      "inferred_frames": 3056,
+      "infer_fps": 74.3,
+      "inferred_frames": 2652,
       "sender_queue": {
-        "audio_frames": 7,
-        "video_frames": 3
+        "audio_frames": 10,
+        "video_frames": 4
       },
-      "sent_frames": 4396,
-      "underruns": 0,
+      "sent_frames": 4143,
+      "underruns": 7,
       "out_fps": 25
     }
   ],
   "rtc": {
-    "audioPackets": 8774,
-    "audioEnergy": 4.580825671293263,
-    "videoFrames": 4386,
+    "audioPackets": 8266,
+    "audioEnergy": 4.324113968926442,
+    "videoFrames": 4131,
     "videoFps": 25,
-    "rttMs": 74,
-    "audioJitterMs": 59,
-    "videoJitterMs": 41,
+    "rttMs": 64,
+    "audioJitterMs": 164,
+    "videoJitterMs": 180,
     "path": {
       "localType": "relay",
       "relayProtocol": "tcp",
@@ -637,24 +648,24 @@
     }
   },
   "log": [
-    "2026-10-22T03:16:50.703Z case open",
-    "2026-10-22T03:17:18.010Z live video connected 27157 ms after the voice click; session {\"at\":1792639029859,\"prepare_ms\":17893.2,\"prepare\":{\"avatar_id\":\"acudx-p19\",\"face_box\":[208,128,512,594],\"width\":720,\"height\":720,\"idle_frames\":75,\"extended_px\":116,\"ref\":null,\"registration\":null,\"content_key\":\"719b7192cfb656bf6a19b3fc\",\"prepared\":false,\"cached\":\"local\",\"queue_ms\":17473.3,\"prepare_ms\":17473.9},\"appearance\":{\"source\":\"portrait\",\"reason\":\"presenting look not ready yet; the call opens on the case portrait and switches when it lands\",\"current_key\":null},\"worker\":{\"infer_fps\":90.28,\"sessions\":0,\"max_sessions\":2,\"gpu\":{\"cuda\":true,\"name\":\"NVIDIA H100 80GB HBM3\",\"total_mb\":81079,\"free_mb\":5828,\"process_reserved_mb\":3988,\"process_allocated_mb\":2366},\"domain\":\"192-222-53-33.sslip.io\",\"max_calls\":2,\"active_calls\":1}}",
-    "2026-10-22T03:17:20.186Z line 1 sent",
-    "2026-10-22T03:17:45.098Z line 1: {\"s\":4455,\"lag\":40,\"score\":0.49,\"via\":\"server\"}",
-    "2026-10-22T03:17:46.679Z line 2 sent",
-    "2026-10-22T03:18:07.290Z line 2: {\"s\":4762,\"lag\":0,\"score\":0.406,\"via\":\"server\"}",
-    "2026-10-22T03:18:08.918Z line 3 sent",
-    "2026-10-22T03:18:34.148Z line 3: {\"s\":4101,\"lag\":0,\"score\":0.464,\"via\":\"server\"}",
-    "2026-10-22T03:18:35.709Z line 4 sent",
-    "2026-10-22T03:18:50.691Z line 4: {\"s\":3525,\"lag\":40,\"score\":0.457,\"via\":\"server\"}",
-    "2026-10-22T03:18:52.288Z line 5 sent",
-    "2026-10-22T03:19:09.863Z line 5: {\"s\":3919,\"lag\":40,\"score\":0.355,\"via\":\"server\"}",
-    "2026-10-22T03:19:11.430Z line 6 sent",
-    "2026-10-22T03:19:35.323Z line 6: {\"s\":5523,\"lag\":40,\"score\":0.39,\"via\":\"server\"}",
-    "2026-10-22T03:19:36.894Z overlap: first question sent",
-    "2026-10-22T03:19:42.671Z overlap: second question sent while the first reply plays",
-    "2026-10-22T03:19:50.807Z overlap: [[false,false],[true,false]]",
-    "2026-10-22T03:20:13.341Z overlap: clean line after the cut {\"clean_line_after_cut\":{\"speech_start_ms\":22,\"lip_lag_ms\":40,\"lip_score\":0.456}}",
-    "2026-10-22T03:20:13.356Z variants ready: 2"
+    "2026-10-22T03:26:06.710Z case open",
+    "2026-10-22T03:26:17.411Z live video connected 10135 ms after the voice click; session {\"at\":1792639569300,\"prepare_ms\":188.8,\"prepare\":{\"avatar_id\":\"acudx-p31\",\"prepared\":false,\"face_box\":[197,130,519,593],\"width\":716,\"height\":720,\"idle_frames\":75},\"appearance\":{\"source\":\"portrait\",\"reason\":\"presenting look not ready yet; the call opens on the case portrait and switches when it lands\",\"current_key\":null},\"worker\":{\"infer_fps\":87.88,\"sessions\":0,\"max_sessions\":2,\"gpu\":{\"cuda\":true,\"name\":\"NVIDIA H100 80GB HBM3\",\"total_mb\":81079,\"free_mb\":5034,\"process_reserved_mb\":4032,\"process_allocated_mb\":2433},\"domain\":\"192-222-53-33.sslip.io\",\"max_calls\":2,\"active_calls\":1}}",
+    "2026-10-22T03:26:19.771Z line 1 sent",
+    "2026-10-22T03:26:47.877Z line 1: {\"s\":8350,\"lag\":-40,\"score\":0.479,\"via\":\"server\"}",
+    "2026-10-22T03:26:49.455Z line 2 sent",
+    "2026-10-22T03:27:13.387Z line 2: {\"s\":3918,\"lag\":0,\"score\":0.427,\"via\":\"server\"}",
+    "2026-10-22T03:27:14.966Z line 3 sent",
+    "2026-10-22T03:27:33.542Z line 3: {\"s\":4724,\"lag\":120,\"score\":0.443,\"via\":\"server\"}",
+    "2026-10-22T03:27:35.104Z line 4 sent",
+    "2026-10-22T03:27:48.984Z line 4: {\"s\":3425,\"lag\":40,\"score\":0.439,\"via\":\"server\"}",
+    "2026-10-22T03:27:50.551Z line 5 sent",
+    "2026-10-22T03:28:09.890Z line 5: {\"s\":4244,\"lag\":40,\"score\":0.492,\"via\":\"server\"}",
+    "2026-10-22T03:28:11.476Z line 6 sent",
+    "2026-10-22T03:28:25.977Z line 6: {\"s\":4083,\"lag\":0,\"score\":0.653,\"via\":\"server\"}",
+    "2026-10-22T03:28:27.559Z overlap: first question sent",
+    "2026-10-22T03:28:33.795Z overlap: second question sent while the first reply plays",
+    "2026-10-22T03:28:42.955Z overlap: [[false,false],[true,false]]",
+    "2026-10-22T03:29:02.537Z overlap: clean line after the cut {\"clean_line_after_cut\":{\"speech_start_ms\":38,\"lip_lag_ms\":40,\"lip_score\":0.375}}",
+    "2026-10-22T03:29:02.567Z variants ready: 4"
   ]
 }

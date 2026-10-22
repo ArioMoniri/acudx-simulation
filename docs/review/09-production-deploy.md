@@ -268,3 +268,17 @@ docs/media/live-avatar/prod-path-v2/. The live site was not touched; a redeploy 
 | Cold start 17 min 20 s | three images built on every boot, serial start | content-keyed images from the registry or the Lambda filesystem, parallel start: 8 min 5 s to a ready worker from the cache; the call then still takes about 90 s |
 | Mojibake | the narrator model returned mood_tr already mis-decoded (found by 7ef1701); no decode of ours gives Windows-1251 | the Director repairs or drops such text (7ef1701); in addition every gateway text reply names `charset=utf-8` and worker replies are decoded as UTF-8; tests with ı ş ğ ü ö ç İ |
 
+### Third pass (2026-10-22, private gateway and Lambda workers, not the live site)
+
+Owner decisions: on-prem, 80 GB cards for live calls, no GPU cost cap. Eight workers through a private gateway
+(12.36 USD); details in docs/architecture/18 sections 6.3.10, 6.8 and 6.8.1, evidence in
+docs/media/live-avatar/prod-path-v3/. The live site was not touched.
+
+| Finding | Cause | Now |
+|---|---|---|
+| Call takes 85 to 95 s from the voice click | the call's portrait queued behind the case's look ladder on one lock and was prepared a second time; 10 s wait for a look | priority queue, content-keyed cache, faster preparation, no wait for a look still drawn: 10 to 16 s on a warm H100 SXM5; 16 to 30 s when a new portrait's face detection is slow (image-dependent, open) |
+| TR speech start 5.5 s (40 GB) | Chatterbox shares one card with the runner and the edits; short clauses ran on | 80 GB preferred (SXM5 before PCIe), Chatterbox token cap, ladder yields to the voice, TTS connection per turn, shorter TR opening clause: 3.3 to 4.7 s in the sandbox; under 3 s not reached on one shared card (open: dedicated runner card or ElevenLabs TR) |
+| Lips off on a line asked while the previous reply played | the two lines were measured as one and moved the runner delay | the reply still being synthesised is cut, the loop skips that measurement; TR lips inside ±80 ms on five of six lines |
+| Turkish numbers spoken despite the gate | decimal comma, "%92", "140'a 90" not recognised | TR and EN numbers, units, suffixes and BP forms gated (43 tests) |
+| Registry images not published | the workflow never ran | run 39694781382 succeeded; every worker pulled all three images without a filesystem |
+

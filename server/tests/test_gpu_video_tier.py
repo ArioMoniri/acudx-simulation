@@ -123,7 +123,7 @@ def test_video_tier_names_the_fallback():
     assert video_tier("gpu_1x_h100_pcie", pol) == {"tier": "preferred", "gpu_memory_gb": 80, "notice": None}
     t = video_tier("gpu_1x_a100_sxm4", pol)
     assert t["tier"] == "fallback" and t["gpu_memory_gb"] == 40
-    assert "80 GB" in t["notice"] and "Turkish" in t["notice"] and "—" not in t["notice"]
+    assert "80 GB" in t["notice"] and "Turkish" in t["notice"] and "\u2014" not in t["notice"]
 
 
 def _mock_launch(instance_id: str, drop_80: bool = False):
