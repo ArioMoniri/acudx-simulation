@@ -1402,7 +1402,7 @@ write_files:
       snapshot() {
         { date -u
           echo "--- docker ps"; docker ps --format '{{.Names}} {{.Status}}' 2>&1
-          for svc in vllm caddy edge avatar turn chatterbox chatterbox2 kokoro kokoro2; do
+          for svc in vllm caddy edge avatar turn chatterbox chatterbox2 kokoro kokoro2 speaches; do
             echo "--- $svc logs (last 40 lines, redacted)"
             $compose logs --no-color --tail 40 "$svc" 2>&1 | redact
           done
@@ -1411,6 +1411,7 @@ write_files:
           $compose logs --no-color vllm 2>&1 | grep -E 'Error|error|Exception|CUDA|memory|Memory|OOM|insufficient|ValueError|Traceback|raise ' | tail -60 | redact
           echo "--- chatterbox torch check"; redact < /var/log/acudx-chatterbox-gpu.log 2>/dev/null
           echo "--- chatterbox voice seeding"; tail -8 /var/log/acudx-seed-voices.log 2>/dev/null
+          echo "--- stt model"; cat /opt/acudx/public/avatar-status/stt.json 2>/dev/null; tail -8 /var/log/acudx-stt.log 2>/dev/null | redact
           echo "--- avatar status"; cat /opt/acudx/public/avatar-status/status.json 2>/dev/null
           echo "--- avatar bring-up (last 20 lines)"; tail -20 /var/log/acudx-avatar.log 2>/dev/null | redact
           echo "--- avatar image build (last 15 lines)"; tail -15 /var/log/acudx-avatar-build.log 2>/dev/null | redact
@@ -1525,16 +1526,36 @@ write_files:
       mkdir -p "$repo/refs" && printf '%s' "$STT_MODEL_REV" > "$repo/refs/main"
       chmod -R a+rX "$repo"
       mark "stt: model in cache ($(( $(date +%s) - t0 )) s)"
-      status loading
-      for _ in $(seq 1 180); do
-        out=$(docker compose -f /opt/acudx/docker-compose.yml exec -T -e STT_MODEL="$STT_MODEL" speaches python /opt/stt-check.py 2>/dev/null)
-        rc=$?
-        if [ "$rc" = 0 ]; then status ready; mark "stt: ready (first transcription $(printf '%s' "$out" | sed -n 's/.*"ms": \([0-9]*\).*/\1/p') ms)"; exit 0; fi
-        sleep 5
+      check() { docker compose -f /opt/acudx/docker-compose.yml exec -T -e STT_MODEL="$STT_MODEL" speaches python /opt/stt-check.py 2>/dev/null; }
+      # speaches' own log next to the state (it carries no credential; header-shaped lines are dropped anyway).
+      logs() {
+        docker compose -f /opt/acudx/docker-compose.yml logs --no-color --tail 150 speaches 2>&1 \
+          | grep -viE 'authorization|bearer' > /opt/acudx/public/avatar-status/stt-log.txt.tmp
+        chmod 0644 /opt/acudx/public/avatar-status/stt-log.txt.tmp && mv /opt/acudx/public/avatar-status/stt-log.txt.tmp /opt/acudx/public/avatar-status/stt-log.txt
+      }
+      short() { printf '%s' "$1" | tr -d '"\\' | head -c 160; }
+      # Then a watchdog for the worker's whole life (every 30 s): stt.json follows speaches when it crashes
+      # or loses its model, and the gateway's own probe (server/voice/service.py) reads the same truth.
+      state=loading; status loading; since=$(date +%s); fails=0
+      while true; do
+        out=$(check); rc=$?
+        if [ "$rc" = 0 ]; then
+          if [ "$state" != ready ]; then
+            mark "stt: ready (transcription $(printf '%s' "$out" | sed -n 's/.*"ms": \([0-9]*\).*/\1/p') ms)"
+            state=ready; status ready
+          fi
+          fails=0
+        else
+          fails=$((fails + 1))
+          [ "$fails" = 6 ] && logs
+          if [ "$state" = ready ] && [ "$fails" -ge 2 ]; then
+            state=failing; status failing "$(short "$out")"; logs; mark "stt: failing"
+          elif [ "$state" = loading ] && [ $(( $(date +%s) - since )) -ge 900 ]; then
+            state=missing; status missing "speaches did not transcribe within 15 min: $(short "$out")"; logs; mark "stt: not ready"
+          fi
+        fi
+        if [ "$state" = loading ]; then sleep 5; else sleep 30; fi
       done
-      status missing "speaches did not transcribe within 15 min: $(printf '%s' "$out" | tr -d '"\\' | head -c 160)"
-      mark "stt: not ready"
-      exit 1
   - path: /opt/acudx/seed-voices.sh
     permissions: "0755"
     content: |
