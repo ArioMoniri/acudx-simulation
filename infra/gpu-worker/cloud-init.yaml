@@ -1536,7 +1536,15 @@ write_files:
       short() { printf '%s' "$1" | tr -d '"\\' | head -c 160; }
       # Then a watchdog for the worker's whole life (every 30 s): stt.json follows speaches when it crashes
       # or loses its model, and the gateway's own probe (server/voice/service.py) reads the same truth.
-      state=loading; status loading; since=$(date +%s); fails=0
+      # A speaches that keeps failing with the model in place is restarted (at most 3 times): live
+      # 2026-10-22 one worker's speaches answered 500 to every request for 20 min while the next worker's,
+      # same image and files, transcribed 16 s after boot.
+      state=loading; status loading; since=$(date +%s); fails=0; restarts=0
+      restart() {
+        [ "$restarts" -ge 3 ] && return
+        restarts=$((restarts + 1)); logs; mark "stt: restarting speaches ($restarts)"
+        docker compose -f /opt/acudx/docker-compose.yml restart speaches >/dev/null 2>&1; fails=0
+      }
       while true; do
         out=$(check); rc=$?
         if [ "$rc" = 0 ]; then
@@ -1548,6 +1556,9 @@ write_files:
         else
           fails=$((fails + 1))
           [ "$fails" = 6 ] && logs
+          # Loading: 2 min of failures (24 checks 5 s apart). Ready: 4 failed checks in a row (2 min).
+          if [ "$state" = loading ] && [ "$fails" -ge 24 ]; then restart; fi
+          if [ "$state" = failing ] && [ "$fails" -ge 4 ]; then restart; fi
           if [ "$state" = ready ] && [ "$fails" -ge 2 ]; then
             state=failing; status failing "$(short "$out")"; logs; mark "stt: failing"
           elif [ "$state" = loading ] && [ $(( $(date +%s) - since )) -ge 900 ]; then

@@ -57,6 +57,8 @@ def test_stt_model_is_fetched_as_root_at_the_pinned_revision_and_checked():
     assert "revision='$STT_MODEL_REV'" in sh and "'README.md'" in sh and "'model.bin'" in sh
     assert 'printf \'%s\' "$STT_MODEL_REV" > "$repo/refs/main"' in sh
     assert "chmod -R a+rX" in sh and "stt-check.py" in sh and "stt.json" in sh
+    # a watchdog for the worker's life: publishes the speaches log and restarts a speaches that keeps failing
+    assert "while true; do" in sh and "stt-log.txt" in sh and "restart speaches" in sh and "restarts\" -ge 3" in sh
     subprocess.run(["bash", "-n"], input=sh, text=True, check=True)
     rc = "\n".join(c if isinstance(c, str) else " ".join(c) for c in _doc()["runcmd"])
     up = rc.index("docker compose up -d speaches kokoro kokoro2")
