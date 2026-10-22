@@ -12,6 +12,7 @@ the cache breakpoints, the structured-output schema and the effort that were sen
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
@@ -30,6 +31,7 @@ class Scripted:
     cache_write: int = 0
     status: int = 200
     model: Optional[str] = None        # served model; default = requested model
+    delay_s: float = 0.0               # answer after this long (a slow model; the handler turns async)
 
 
 @dataclass
@@ -63,6 +65,14 @@ class AnthropicDouble:
         body = json.loads(request.content.decode("utf-8") or "{}")
         self.calls.append(body)
         s = self._next(body)
+        if s.delay_s > 0:
+            async def later() -> httpx2.Response:
+                await asyncio.sleep(s.delay_s)
+                return self._reply(body, s)
+            return later()  # type: ignore[return-value]
+        return self._reply(body, s)
+
+    def _reply(self, body: dict[str, Any], s: Scripted) -> httpx2.Response:
         model = s.model or body.get("model") or "claude-opus-5-5"
         if s.status != 200:
             err = {"type": "error", "error": {"type": "api_error" if s.status >= 500 else "invalid_request_error",

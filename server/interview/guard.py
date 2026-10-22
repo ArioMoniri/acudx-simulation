@@ -24,8 +24,10 @@ to the client as ``guard = {label, reason, note}``, a neutral note per label and
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
+import time
 import unicodedata
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal, Optional
@@ -399,6 +401,10 @@ async def classify_message(gateway: Any, text: str, *, case_context: Optional[di
     rules = rule_classify(text, case_context)
     if gateway is None:
         return rules
+    return await _with_model(gateway, text, rules, chief_complaint)
+
+
+async def _with_model(gateway: Any, text: str, rules: GuardDecision, chief_complaint: Optional[str]) -> GuardDecision:
     try:
         data, res = await gateway.chat_json(model_messages(text, chief_complaint), schema=CLASSIFIER_SCHEMA,
                                             schema_name="interview_guard", task="guard", max_tokens=200)
@@ -409,7 +415,96 @@ async def classify_message(gateway: Any, text: str, *, case_context: Optional[di
     return combine(rules, parse_model(data, getattr(res, "model", None)))
 
 
+# --------------------------------------------------------------------------- #
+# Deadline (docs/architecture/18 6.3.12)                                      #
+# --------------------------------------------------------------------------- #
+# Live 2026-10-22 the classifier model sometimes took 3 to 8 s, and the patient's voice waits for the guard.
+# When the model has not answered by this deadline the reply starts on the rules' decision, but only when
+# the rules are confident (see rules_confident); hard and firm rules, and every other message, still wait.
+GUARD_DEADLINE_S = 0.7
+# A late model decision with one of these labels, different from the early one, stops the reply.
+SAFETY_LABELS: tuple[str, ...] = ("unsafe", "meta_injection")
+
+# Words and shapes after which only the model may clear a message: talk about the simulation or the AI,
+# instructions, self-harm or violence vocabulary (including a clinician's own risk screening), abuse,
+# diagnosis or answer requests and disease names, code-like or encoded text. Over-matching only costs
+# the wait the message had before; under-matching would start a reply the model may stop.
+_RISK_MARKERS: list[re.Pattern[str]] = [
+    re.compile(r"\b(system|prompt|instruct\w*|rules?|model|ai|a\.i\.|bot|chatbot|gpt|claude|llm|debug\w*|json|"
+               r"output|developer|admin|simulat\w*|role\s?-?play\w*|character|pretend|act\s+as|ignore|override|"
+               r"mode|token|api|code|script|base64|translate|repeat|reveal|secret|password|jailbreak)\b", re.I),
+    re.compile(r"\b(sistem|talimat\w*|kural\w*|model\w*|yapay|zek[aâ]|sim[üu]lasyon\w*|rol\w*|karakter\w*|"
+               r"davran\w*|unut\w*|geli[şs]tirici|y[öo]netici|komut\w*|[şs]ifre\w*|gizli|kod\w*|"
+               r"tercüme|[çc]evir\w*)\b", re.I),
+    re.compile(r"\b(harm\w*|hurt(ing)?\s+(myself|yourself|you|him|her|them|someone|others|people)|kill\w*|suicid\w*|die|dying|death|dead|end\s+it|overdose|cut(ting)?\s+"
+               r"(myself|yourself)|abus\w*|hit|beat\w*|rape\w*|assault\w*|threat\w*|weapon|gun|knife|hate|"
+               r"shut|stupid|idiot|kidnap\w*)\b", re.I),
+    re.compile(r"\b(zarar\w*|[öo]ld[üu]r\w*|intihar\w*|[öo]lmek|[öo]l[üu]m\w*|d[öo]v\w*|vurur(um|sun)|vuraca\w*|istismar\w*|"
+               r"[şs]iddet\w*|taciz\w*|tecav[üu]z\w*|tehdit\w*|silah\w*|b[ıi][çc]ak\w*|nefret)\b", re.I),
+    re.compile(r"\b(diagnos\w*|dx|answer|yes\s+or\s+no|between\s+us|(doctors?|they|nurses?)\s+(told|tell|said)|"
+               r"pneumonia|embol\w*|infarct\w*|heart\s+attack|clot|cancer|tumou?r|stroke|covid\w*|tubercul\w*|"
+               r"sepsis|meningit\w*|\w+itis)\b", re.I),
+    re.compile(r"\b(tan[ıi]\w*|te[şs]his\w*|cevap\w*|yan[ıi]t\w*|evet\s+ya\s+da\s+hay[ıi]r|aram[ıi]zda|"
+               r"zat[üu]rre|pn[öo]moni|emboli\w*|enfarkt\w*|kalp\s+krizi|p[ıi]ht[ıi]\w*|kanser\w*|"
+               r"t[üu]m[öo]r\w*|inme|fel[çc]|verem|t[üu]berk[üu]loz|menenjit)\b", re.I),
+]
+_CODE_LIKE = re.compile(r"[{}<>\[\]`#|\\]|https?://|\w{24,}|^\s*\w+\s*:", re.I)
+RULES_CONFIDENT_MAX_CHARS = 200
+
+
+def rules_confident(text: str, rules: GuardDecision) -> bool:
+    """True when the reply may start on ``rules`` before the model answers: a soft clinical label from the
+    rules, English or Turkish, short, in Latin script, and none of the risk markers above."""
+    raw = (text or "").strip()
+    if rules.label != "clinical" or rules.hard or rules.firm or rules.language not in ("en", "tr"):
+        return False
+    if not raw or len(raw) > RULES_CONFIDENT_MAX_CHARS or _CODE_LIKE.search(raw):
+        return False
+    if detect_language(raw) not in ("en", "tr"):
+        return False
+    return not any(p.search(raw) for p in _RISK_MARKERS)
+
+
+@dataclass
+class GuardRace:
+    """What the reply starts on (``decision``) and, when that came from the rules at the deadline, the
+    model's decision still on its way (``late``, a task yielding the full rules + model decision)."""
+
+    decision: GuardDecision
+    late: "Optional[asyncio.Task[GuardDecision]]" = None
+    waited_ms: float = 0.0
+
+
+def overrules(early: GuardDecision, final: GuardDecision) -> bool:
+    """The late decision must stop a reply started on ``early``: a safety label the early one did not have."""
+    return final.label in SAFETY_LABELS and final.label != early.label
+
+
+async def classify_with_deadline(gateway: Any, text: str, *, case_context: Optional[dict[str, Any]] = None,
+                                 chief_complaint: Optional[str] = None, deadline_s: Optional[float] = None,
+                                 may_release: bool = True) -> GuardRace:
+    """As :func:`classify_message`, but a confident rules decision is released after ``deadline_s`` when
+    the model is slower; the model's decision then arrives in ``late``. ``may_release=False`` (or a
+    deadline of 0 or less) waits for the model like :func:`classify_message`."""
+    t0 = time.monotonic()
+    rules = rule_classify(text, case_context)
+    if gateway is None:
+        return GuardRace(rules)
+    deadline = GUARD_DEADLINE_S if deadline_s is None else deadline_s
+    task = asyncio.ensure_future(_with_model(gateway, text, rules, chief_complaint))
+    if not may_release or deadline <= 0 or not rules_confident(text, rules):
+        out = await task
+        return GuardRace(out, waited_ms=round((time.monotonic() - t0) * 1000.0, 1))
+    done, _pending = await asyncio.wait({task}, timeout=deadline)
+    if done:
+        return GuardRace(task.result(), waited_ms=round((time.monotonic() - t0) * 1000.0, 1))
+    early = GuardDecision(**{**rules.dump(), "source": "rules_deadline"})
+    early.extras["deadline_ms"] = round(deadline * 1000.0)
+    return GuardRace(early, late=task, waited_ms=round((time.monotonic() - t0) * 1000.0, 1))
+
+
 __all__ = [
+    "GUARD_DEADLINE_S", "GuardRace", "SAFETY_LABELS", "classify_with_deadline", "overrules", "rules_confident",
     "CLASSIFIER_SCHEMA", "CLASSIFIER_SYSTEM", "GuardDecision", "HISTORY_INTENTS", "LABELS", "NOTES", "REASONS",
     "classify_message", "combine", "detect_language", "model_messages", "note_for", "parse_model", "rule_classify",
 ]
