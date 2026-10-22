@@ -1198,6 +1198,7 @@ def test_stream_windows_grow_after_a_short_first_one():
     g = p.window_targets([2])                      # never below 4 tokens
     assert [next(g) for _ in range(3)] == [4, 8, 12]
     assert p.TUNING["stream_tokens"] is True and p.TUNING["stream_watermark"] is True
+    assert p.TUNING["stream_schedule"] == [24, 24, 48, 64]
 
 
 def test_the_vocoder_seams_add_up_to_the_whole_clause():
@@ -1246,12 +1247,32 @@ def test_streaming_route_and_switches_are_installed():
     patch = _written("/chatterbox-acudx-patch.py")
     assert "patch_streaming_route(speech)" in patch and "def stream_generate(" in patch
     # The upstream T3 loop is copied with its attribution, each token handed over as sampled, hooks dropped.
-    assert "chatterbox-multilingual c33cc02, MIT License, Resemble AI" in patch and "put(tok)" in patch
-    assert "drop_alignment_hooks(t3)" in patch and "torch.cuda.Stream()" in patch
+    assert "chatterbox-multilingual c33cc02, MIT License, Resemble AI" in patch and "yield tok" in patch
+    # One thread, one CUDA stream: a T3 thread next to S3Gen on a side stream crashed a replica live.
+    assert "drop_alignment_hooks(t3)" in patch and "torch.cuda.Stream()" not in patch and "threading.Thread(" not in patch
     # A cut reply (client gone) stops the clause in flight and frees the lock; a failure falls back upstream.
     assert "stop.set()" in patch and "model.generate(" in patch
-    for key in ("stream_tokens", "stream_watermark", "stream_side_stream", "stream_schedule"):
+    for key in ("stream_tokens", "stream_watermark", "stream_schedule"):
         assert f'"{key}"' in patch
+    # A broken CUDA context exits the replica, which compose restarts.
+    assert "exit_on_fatal_cuda(exc)" in patch and "os._exit(70)" in patch
+    for svc in ("chatterbox", "chatterbox2"):
+        assert _compose()["services"][svc]["restart"] == "unless-stopped"
+
+
+def test_a_cuda_fatal_error_is_recognised():
+    p = _chatterbox_patch()
+    import threading as th
+
+    started = []
+    orig = th.Timer
+    try:
+        p.threading.Timer = lambda *_a, **_k: type("T", (), {"start": lambda self: started.append(1)})()
+        assert p.exit_on_fatal_cuda(RuntimeError("CUDA error: an illegal memory access was encountered"))
+        assert not p.exit_on_fatal_cuda(ValueError("Unsupported language_id 'xx'"))
+    finally:
+        p.threading.Timer = orig
+    assert started == [1]
 
 
 def test_alignment_hooks_are_dropped_after_each_t3_pass():

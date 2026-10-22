@@ -505,6 +505,19 @@ write_files:
           return store
 
 
+      def exit_on_fatal_cuda(exc: BaseException) -> bool:
+          """A CUDA error such as "an illegal memory access" leaves the process's CUDA context unusable: every later
+          request failed while /health still said ready (live 2026-10-22). Exit so the container restarts (compose
+          restart: unless-stopped) and Caddy sends the calls to the other replica meanwhile."""
+          msg = f"{type(exc).__name__}: {exc}"
+          if "CUDA error" not in msg and "CUBLAS_STATUS" not in msg and "cuDNN error" not in msg:
+              return False
+          STATS["fatal_cuda"] = msg[:200]
+          print("acudx: fatal CUDA error, exiting for a restart:", msg[:200], flush=True)
+          threading.Timer(0.5, lambda: os._exit(70)).start()
+          return True
+
+
       def patch_model_class(cls: Any, cache: ConditionalsCache = CACHE, lock: Any = GENERATE_LOCK) -> None:
           if getattr(cls, "_acudx_patched", False):
               return
@@ -524,7 +537,11 @@ write_files:
                   store.clear()
                   text = kwargs.get("text", args[0] if args else "")
                   store["_cap"] = token_cap(str(text))
-                  out = orig_generate(self, *args, **kwargs)
+                  try:
+                      out = orig_generate(self, *args, **kwargs)
+                  except Exception as exc:
+                      exit_on_fatal_cuda(exc)
+                      raise
                   store.pop("_cap", None)
                   row = {k: round(v, 1) if isinstance(v, float) else v for k, v in store.items()}
                   row.update(chars=len(str(text)), words=len(str(text).split()), lock_wait_ms=round((t0 - t_wait) * 1000.0, 1),
@@ -580,8 +597,10 @@ write_files:
       # --------------------------------------------------------------------------------------------------------
       # Token-level streaming (docs/architecture/18 6.3.11). Upstream speaks a chunk only after T3 has written
       # every speech token of it and S3Gen has rendered the whole chunk, so the first audio of a Turkish clause
-      # waited 1.45 to 2.1 s on a shared H100. Here T3 runs in its own thread and hands each token over as it is
-      # sampled; S3Gen renders a window as soon as enough tokens are there, on its own CUDA stream, the way
+      # waited 1.45 to 2.1 s on a shared H100. Here T3 hands each token over as it is sampled and S3Gen renders a
+      # window as soon as enough tokens are there, in the same thread and on the same CUDA stream (a T3 thread
+      # beside S3Gen on a side stream ran T3 at 30 ms a token instead of 13 and once ended in "CUDA error: an
+      # illegal memory access", live 2026-10-22), the way
       # CosyVoice2 streams the same decoder: the flow re-runs on every token so far (its fixed noise keeps the
       # rendered prefix stable) and only the new mel frames are vocoded, with the last 8 mel frames and the
       # source signal carried into the next window and the 160 ms seam cross-faded (raised cosine, gains sum to one).
@@ -594,10 +613,10 @@ write_files:
 
       TUNING.update({
           "stream_tokens": os.getenv("ACUDX_STREAM_TOKENS", "1") != "0",
-          # Tokens before the first window, then the growth of each later window (the last value repeats).
-          "stream_schedule": [int(v) for v in os.getenv("ACUDX_STREAM_SCHEDULE", "20,16,32,48").split(",") if v.strip()],
+          # Tokens before the first window, then the growth of each later window (the last value repeats). T3 waits
+          # while a window renders, so each window must arrive before the audio already sent has played out.
+          "stream_schedule": [int(v) for v in os.getenv("ACUDX_STREAM_SCHEDULE", "24,24,48,64").split(",") if v.strip()],
           "stream_watermark": os.getenv("ACUDX_STREAM_WATERMARK", "1") != "0",
-          "stream_side_stream": os.getenv("ACUDX_STREAM_SIDE_STREAM", "1") != "0",
       })
       STREAM_TIMINGS: deque = deque(maxlen=40)
 
@@ -667,10 +686,10 @@ write_files:
               return wav
 
 
-      def _t3_token_loop(model, t3_cond, text_tokens, *, max_new_tokens, temperature, cfg_weight, repetition_penalty,
-                         min_p, top_p, put, stop):
-          """Upstream T3.inference (chatterbox-multilingual c33cc02, MIT License, Resemble AI) with each sampled
-          token handed to ``put`` as soon as it exists; ``stop()`` returning True ends it early."""
+      def _t3_tokens(model, t3_cond, text_tokens, *, max_new_tokens, temperature, cfg_weight, repetition_penalty,
+                     min_p, top_p, stop):
+          """Upstream T3.inference (chatterbox-multilingual c33cc02, MIT License, Resemble AI) as a generator that
+          yields each sampled speech token as soon as it exists; ``stop()`` returning True ends it early."""
           import torch
           from transformers.generation.logits_process import (MinPLogitsWarper, RepetitionPenaltyLogitsProcessor,
                                                               TopPLogitsWarper)
@@ -701,7 +720,6 @@ write_files:
                   top_p_w = TopPLogitsWarper(top_p=top_p)
                   min_p_w = MinPLogitsWarper(min_p=min_p)
                   rep = RepetitionPenaltyLogitsProcessor(penalty=float(repetition_penalty))
-                  n = 0
                   for i in range(max_new_tokens):
                       if stop():
                           break
@@ -723,13 +741,11 @@ write_files:
                       tok = int(next_token.view(-1)[0].item())
                       if tok == t3.hp.stop_speech_token:
                           break
-                      n += 1
-                      put(tok)
+                      yield tok
                       emb = t3.speech_emb(next_token) + t3.speech_pos_emb.get_fixed_embedding(i + 1)
                       output = patched(inputs_embeds=torch.cat([emb, emb]), past_key_values=past, output_attentions=True,
                                        output_hidden_states=True, return_dict=True)
                       past = output.past_key_values
-                  return n
               finally:
                   drop_alignment_hooks(t3)
 
@@ -738,14 +754,11 @@ write_files:
                           temperature=0.8, repetition_penalty=2.0, min_p=0.05, top_p=1.0, emit, stop=None) -> dict:
           """Speak ``text`` piece by piece: ``emit(float32 numpy array at model.sr)`` is called for every piece as
           soon as it is rendered. Holds the generate lock for the whole clause. Returns its timings."""
-          import queue as _queue
-
           import torch
           import torch.nn.functional as F
           from chatterbox.mtl_tts import SUPPORTED_LANGUAGES, punc_norm
 
           stop = stop or threading.Event()
-          halt = threading.Event()          # this clause only (stop is the whole request's)
           t_wait = time.perf_counter()
           with GENERATE_LOCK:
               t0 = time.perf_counter()
@@ -769,90 +782,63 @@ write_files:
               cap = token_cap(str(text)) or 1000
               row["token_cap"] = cap
               tokens: list = []
-              q: _queue.Queue = _queue.Queue()
-              err: dict = {}
-
-              def produce() -> None:
-                  try:
-                      t3s = time.perf_counter()
-                      row["tokens"] = _t3_token_loop(model, model.conds.t3, tt, max_new_tokens=min(1000, int(cap)),
-                                                     temperature=temperature, cfg_weight=cfg_weight,
-                                                     repetition_penalty=repetition_penalty, min_p=min_p, top_p=top_p,
-                                                     put=q.put, stop=lambda: halt.is_set() or stop.is_set())
-                      row["t3_ms"] = round((time.perf_counter() - t3s) * 1000.0, 1)
-                  except BaseException as exc:  # noqa: BLE001 - reported to the consumer
-                      err["exc"] = exc
-                  finally:
-                      q.put(None)
-
-              producer = threading.Thread(target=produce, name="acudx-t3", daemon=True)
-              producer.start()
               s3 = model.s3gen
-              side = torch.cuda.Stream() if (TUNING.get("stream_side_stream") and torch.cuda.is_available()) else None
               ref = model.conds.gen
-              targets = window_targets(TUNING.get("stream_schedule") or [20, 16, 32, 48])
+              targets = window_targets(TUNING.get("stream_schedule") or [24, 24, 48, 64])
               next_at = next(targets)
               mel_done = 0
-              done = False
               empty = torch.zeros(1, 1, 0, device=model.device)
               voc = Vocoder(lambda m, c: s3.hift_inference(m, c), to_numpy=lambda w: w.squeeze(0).detach().float().cpu().numpy(),
                             cat=lambda a, b: torch.cat([a, b], dim=2),
                             trim_fade=s3.trim_fade.detach().float().cpu().numpy() if hasattr(s3, "trim_fade") else None)
+              gen = _t3_tokens(model, model.conds.t3, tt, max_new_tokens=min(1000, int(cap)), temperature=temperature,
+                               cfg_weight=cfg_weight, repetition_penalty=repetition_penalty, min_p=min_p, top_p=top_p,
+                               stop=stop.is_set)
+              t3_ms = 0.0
+
+              def render(final: bool) -> None:
+                  nonlocal mel_done
+                  tp = time.perf_counter()
+                  with torch.inference_mode():
+                      toks = torch.tensor([tokens], dtype=torch.long, device=model.device)
+                      mel = s3.flow_inference(toks, ref_dict=ref, finalize=final)
+                      new = mel[:, :, mel_done:]
+                      mel_done = int(mel.shape[2])
+                      if new.shape[2] == 0 and not final:
+                          return
+                      wav = voc.piece(new, final, empty)
+                  row["passes"] += 1
+                  row["s3gen_ms"] += (time.perf_counter() - tp) * 1000.0
+                  if wav.shape[-1] == 0:
+                      return
+                  if TUNING.get("stream_watermark", True):
+                      tw = time.perf_counter()
+                      wav = model.watermarker.apply_watermark(wav, sample_rate=model.sr)
+                      row["watermark_ms"] += (time.perf_counter() - tw) * 1000.0
+                  if row["pieces"] == 0:
+                      row["first_audio_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
+                      row["first_tokens"] = len(tokens)
+                  row["pieces"] += 1
+                  emit(wav)
+
               try:
-                  while not done:
-                      item = q.get()
-                      if item is None:
-                          done = True
-                      else:
-                          tokens.append(item)
-                          while True:          # take every token already there without waiting
-                              try:
-                                  more = q.get_nowait()
-                              except _queue.Empty:
-                                  break
-                              if more is None:
-                                  done = True
-                                  break
-                              tokens.append(more)
-                      if stop.is_set():
-                          break
-                      if not done and len(tokens) < next_at:
-                          continue
-                      if not done:
+                  ts = time.perf_counter()
+                  for tok in gen:
+                      tokens.append(tok)
+                      if len(tokens) >= next_at:
+                          t3_ms += (time.perf_counter() - ts) * 1000.0
                           while next_at <= len(tokens):
                               next_at = next(targets)
-                      if not tokens or (not done and len(tokens) <= LOOKAHEAD_TOKENS):
-                          continue
-                      tp = time.perf_counter()
-                      ctx = torch.cuda.stream(side) if side is not None else _nullctx()
-                      with torch.inference_mode(), ctx:
-                          toks = torch.tensor([tokens], dtype=torch.long, device=model.device)
-                          mel = s3.flow_inference(toks, ref_dict=ref, finalize=done)
-                          new = mel[:, :, mel_done:]
-                          mel_done = int(mel.shape[2])
-                          if new.shape[2] == 0 and not done:
-                              continue
-                          wav = voc.piece(new, done, empty)
-                      if side is not None:
-                          side.synchronize()
-                      row["passes"] += 1
-                      row["s3gen_ms"] += (time.perf_counter() - tp) * 1000.0
-                      if wav.shape[-1] == 0:
-                          continue
-                      if TUNING.get("stream_watermark", True):
-                          tw = time.perf_counter()
-                          wav = model.watermarker.apply_watermark(wav, sample_rate=model.sr)
-                          row["watermark_ms"] += (time.perf_counter() - tw) * 1000.0
-                      if row["pieces"] == 0:
-                          row["first_audio_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
-                          row["first_tokens"] = len(tokens)
-                      row["pieces"] += 1
-                      emit(wav)
+                          if len(tokens) > LOOKAHEAD_TOKENS:
+                              render(False)
+                          ts = time.perf_counter()
+                  t3_ms += (time.perf_counter() - ts) * 1000.0
+                  if tokens and not stop.is_set():
+                      render(True)
               finally:
-                  halt.set()
-                  producer.join(timeout=30)
-              if "exc" in err:
-                  raise err["exc"]
+                  gen.close()
+              row["tokens"] = len(tokens)
+              row["t3_ms"] = round(t3_ms, 1)
               row["audio_ms"] = round(len(tokens) * SPEECH_TOKEN_SAMPLES / 24.0)
               row["total_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
               row["s3gen_ms"] = round(row["s3gen_ms"], 1)
@@ -862,14 +848,6 @@ write_files:
               STREAM_TIMINGS.append(row)
               STATS["streamed_clauses"] = STATS.get("streamed_clauses", 0) + 1
               return row
-
-
-      class _nullctx:
-          def __enter__(self):
-              return self
-
-          def __exit__(self, *a):
-              return False
 
 
       def patch_streaming_route(speech_module: Any) -> None:
@@ -932,7 +910,7 @@ write_files:
                       except Exception as exc:  # noqa: BLE001 - this clause again the upstream way, if nothing went out
                           STATS["stream_failures"] = STATS.get("stream_failures", 0) + 1
                           STATS["stream_last_error"] = f"{type(exc).__name__}: {exc}"[:200]
-                          if sent["n"]:
+                          if sent["n"] or exit_on_fatal_cuda(exc):
                               raise
                           wav = await loop.run_in_executor(None, lambda _c=chunk: model.generate(
                               text=_c, audio_prompt_path=voice_sample_path, exaggeration=exaggeration, cfg_weight=cfg_weight,
@@ -987,7 +965,7 @@ write_files:
                   TUNING["t3_autocast"] = v
               if "first_clause" in body:
                   TUNING["first_clause"] = bool(body["first_clause"])
-              for key in ("stream_tokens", "stream_watermark", "stream_side_stream"):
+              for key in ("stream_tokens", "stream_watermark"):
                   if key in body:
                       TUNING[key] = bool(body[key])
               if "stream_schedule" in body:
@@ -1117,6 +1095,8 @@ write_files:
             context: /opt/acudx/chatterbox-tts-api
             dockerfile: docker/Dockerfile.acudx.gpu
           image: acudx/chatterbox-tts-api:a5f4661-cu124
+          # A replica whose CUDA context broke exits (acudx_patch exit_on_fatal_cuda) and comes back by itself.
+          restart: unless-stopped
           # The NVIDIA runtime is registered by runcmd (nvidia-ctk) before any container starts;
           # naming it here makes the toolkit inject /dev/nvidia* from NVIDIA_VISIBLE_DEVICES in
           # addition to the device reservation (task 24: the container saw no GPU).
@@ -1150,6 +1130,8 @@ write_files:
         chatterbox2:
           # Second replica from the same image (started by runcmd on 80 GB cards only).
           image: acudx/chatterbox-tts-api:a5f4661-cu124
+          # A replica whose CUDA context broke exits (acudx_patch exit_on_fatal_cuda) and comes back by itself.
+          restart: unless-stopped
           # The NVIDIA runtime is registered by runcmd (nvidia-ctk) before any container starts;
           # naming it here makes the toolkit inject /dev/nvidia* from NVIDIA_VISIBLE_DEVICES in
           # addition to the device reservation (task 24: the container saw no GPU).
@@ -2607,10 +2589,11 @@ write_files:
 
 
       DETECT_MODE = os.environ.get("AVATAR_DETECT_MODE", "fast")   # fast | legacy (MuseTalk's get_landmark_and_bbox steps)
-      # dlib HOG upsampling for the landmarks' face location in fast mode (legacy: 1). A portrait's face spans a
-      # third of the 360 px canvas or more, far above HOG's 80 px window, so 0 finds it on a quarter of the pixels;
-      # 1 is tried when 0 finds nothing, and the S3FD box is used when HOG never finds the face.
-      HOG_UPSAMPLE = int(os.environ.get("AVATAR_HOG_UPSAMPLE", "0"))
+      # dlib HOG upsampling for the landmarks' face location in fast mode. 1 is upstream's (face_recognition's
+      # default), so the box is MuseTalk's to the pixel; it costs about 60 ms on the 360 px canvas (0: 16 ms, but
+      # the landmark box moved 2 to 8 px, live 2026-10-22). 1 is also tried when 0 finds nothing, and the S3FD box
+      # is used when HOG never finds the face.
+      HOG_UPSAMPLE = int(os.environ.get("AVATAR_HOG_UPSAMPLE", "1"))
       S3FD_MIN_SCORE = 0.05
 
 
