@@ -56,6 +56,8 @@ export interface AvatarCapabilities {
   vram?: { name?: string; total_mb?: number; free_mb?: number; required_mb?: number; process_reserved_mb?: number };
   /** How far the GPU worker's live video is from ready (server/voice/service.py `_video_wake`). */
   wake?: VideoWake;
+  /** The worker's card: `fallback` when no 80 GB card had capacity (the Turkish voice starts later). */
+  gpu_tier?: { tier: "preferred" | "fallback"; gpu_memory_gb: number | null; notice: string | null };
 }
 
 /** Stage of the live video launch: the machine boots, then the runner, voices and image edits load. */

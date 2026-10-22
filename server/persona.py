@@ -326,84 +326,144 @@ def build_patient_turn(
 # --------------------------------------------------------------------------- #
 # FactAssertionGate (deterministic, post-generation)                          #
 # --------------------------------------------------------------------------- #
-# A clinical numeric assertion: a number optionally glued to a clinical unit, or
-# a number sitting next to a vital/lab keyword. Deliberately broad; false
-# positives only cost a deflection, a false negative leaks a fabricated number.
-_UNIT_RE = re.compile(
-    r"\b\d+(?:[.,]\d+)?\s*"
-    r"(?:mmhg|mg\/kg|mg\/dl|mmol\/l|mmol|mcg|µg|mg|ml|kg|bpm|/min|%|°?c|°?f|units?|iu|meq|mm|cm|bpm)\b",
+# A clinical numeric assertion, in English or Turkish: a number glued to a clinical unit ("39,4
+# derece", "500 mg", "92%"), a percent written first ("%92", "yüzde 88"), a blood pressure ("140/90",
+# "140 over 90", "140'a 90", "140 bölü 90"), or a number shortly after a vital or lab word ("ateşim
+# 39,4", "nabzım dakikada 120", "my sats were 88"). Deliberately broad; a false positive only costs a
+# deflection, a false negative lets the patient voice a number nobody gave them. Turkish writes the
+# decimal comma ("39,4") and the thousands dot ("1.200"); both are normalised before comparing.
+_NUM = r"(?<![\w.,])\d+(?:[.,]\d+)*"
+_SUFFIX = r"(?:['’][^\W\d_]+)?"          # Turkish case suffix: 39,4'tü, 140'a
+_UNITS = (
+    r"mm\s*hg|mg\s*/\s*kg|mg\s*/\s*dl|mmol\s*/\s*l|mmol|meq|mcg|µg|mg|ml|kg|bpm|iu|"
+    r"/\s*min|/\s*dk|%|°\s*[cf]?|°|degrees?|percent|per\s*cent|milligrams?|micrograms?|grams?|"
+    r"millilit(?:er|re)s?|units?|beats?|breaths?|"
+    r"derece\w*|miligram\w*|mikrogram\w*|gram\w*|mililitre\w*|ünite\w*|birim\w*|atım\w*|"
+    r"soluk\w*|nefes\w*"
+)
+_UNIT_RE = re.compile(rf"{_NUM}{_SUFFIX}\s*(?:{_UNITS})(?![^\W\d_])", re.I)
+_PCT_FIRST_RE = re.compile(rf"(?:%|\byüzde)\s*{_NUM}{_SUFFIX}", re.I)
+_BP_RE = re.compile(
+    rf"(?<![\w.,])\d{{2,3}}{_SUFFIX}\s*(?:/|\bover\b|\bbölü\b|üzerine)\s*\d{{2,3}}(?![\d])"
+    rf"|(?<![\w.,])\d{{2,3}}['’](?:a|e|ya|ye)\s+\d{{1,3}}(?![\d])",
     re.I,
 )
-_BP_RE = re.compile(r"\b\d{2,3}\s*/\s*\d{2,3}\b")  # e.g. 120/80
 _VITAL_KW_RE = re.compile(
-    r"\b(?:spo2|sat|saturation|bp|blood\s+pressure|heart\s+rate|pulse|hr|"
-    r"resp(?:iratory)?\s*rate|rr|temp(?:erature)?|troponin|glucose|potassium|"
-    r"sodium|creatinine|lactate|wbc|hemoglobin|h[ae]moglobin)\b",
+    r"\b(?:spo2|o2|sats?|saturation|bp|blood\s+pressure|heart\s+rate|pulse|hr|"
+    r"resp(?:iratory)?\s*rate|rr|temp(?:erature)?|fever|oxygen|sugar|troponin|glucose|potassium|"
+    r"sodium|creatinine|lactate|wbc|h[ae]moglobin|"
+    r"ateş\w*|tansiyon\w*|kan\s+basınc\w*|nab[ıi]z\w*|nabz\w*|kalp\s+atış\w*|"
+    r"şeker\w*|oksijen\w*|satür\w*|solunum\w*|potasyum\w*|sodyum\w*|kreatinin\w*|laktat\w*|"
+    r"hemoglobin\w*|troponin\w*|glukoz\w*|glikoz\w*|derece\w*)",
     re.I,
 )
-_NUM_NEAR = re.compile(r"\d{1,3}(?:[.,]\d+)?")
+_NUM_TOKEN_RE = re.compile(rf"{_NUM}{_SUFFIX}(?:\s*(?:{_UNITS})(?![^\W\d_]))?", re.I)
+_KW_WINDOW = 32
 
-# A diagnosis verdict framed as certainty ("you have X", "it's a heart attack").
+# A diagnosis verdict framed as certainty ("you have X", "it's a heart attack", "bende zatürre var").
 _DIAGNOSIS_RE = re.compile(
     r"\b(?:you\s+have|you'?ve\s+got|it'?s|this\s+is|the\s+diagnosis\s+is|"
     r"you\s+are\s+having)\b[^.?!]{0,40}\b(?:attack|infarction|infarct|embolism|"
     r"pneumonia|sepsis|stroke|failure|cancer|appendicitis|fracture)\b",
     re.I,
 )
+_DX_TR = (r"(?:zatürre\w*|pnömoni\w*|kalp\s+kriz\w*|enfarktüs\w*|emboli\w*|inme\w*|"
+          r"felç\w*|sepsis\w*|kanser\w*|apandisit\w*|kırık\w*|yetmezli\w*)")
+_DIAGNOSIS_TR_RE = re.compile(
+    rf"\b(?:bende|sende|sizde|onda)\s+(?:[^\W\d_]+\s+){{0,4}}?{_DX_TR}\s+var\b"
+    rf"|\b{_DX_TR}\s+geçiriyor\w*"
+    rf"|\b(?:teşhis|tanı)\w*\s+(?:[^\W\d_]+\s+){{0,3}}?{_DX_TR}",
+    re.I,
+)
+# Case-sensitive on purpose: with re.I the dotted capital I matches every English "I".
+_TR_MARK_RE = re.compile(r"[çğıöşüÇĞİÖŞÜ]"
+                         r"|\b(?:ve|bir|bu|ama|benim|oldu|var|idi|imi\u015f|tansiyon\w*)\b")
+_SCRUB = {
+    "en": {"numeric_assertion": "I'm not sure of the exact number", "diagnosis_assertion": "I don't know what it is"},
+    "tr": {"numeric_assertion": "tam sayıyı bilmiyorum", "diagnosis_assertion": "ne olduğunu bilmiyorum"},
+}
+
+
+def _norm_number(tok: str) -> str:
+    """'39,4' and '39.4' -> '39.4'; '1.200' and '1,200' (thousands) -> '1200'; '120' -> '120'."""
+    t = tok.strip()
+    if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+", t):
+        return re.sub(r"[.,]", "", t)
+    return t.replace(",", ".")
 
 
 def _digits(text: str) -> set[str]:
-    """The set of numeric literals appearing in text (normalised commas)."""
-    return {m.replace(",", ".") for m in _NUM_NEAR.findall(text)}
+    """The numbers appearing in text, normalised (decimal comma, thousands separators)."""
+    return {_norm_number(m) for m in re.findall(_NUM, text)}
 
 
-def fact_assertion_gate(utterance: str, case_state: dict[str, Any]) -> FactGateResult:
+def _gate_lang(text: str, lang: str | None) -> str:
+    if lang:
+        return "tr" if lang.lower().startswith("tr") else "en"
+    return "tr" if _TR_MARK_RE.search(text or "") else "en"
+
+
+def fact_assertion_gate(utterance: str, case_state: dict[str, Any], *, lang: str | None = None) -> FactGateResult:
     """Flag/strip clinical assertions not backed by this turn's sanctioned facts.
 
     Sanctioned digits = every number appearing in the KNOWN CASE FACTS block. A
     numeric assertion whose digits are all sanctioned passes (the patient is
     relaying something staff told them); anything else is flagged and its span is
-    neutralised in the returned ``utterance``.
+    replaced in the returned ``utterance`` by a short deflection in the reply's
+    language (``lang``, else detected from the text).
     """
     original = utterance or ""
-    allowed_text = " ".join(_sanctioned_facts(case_state))
-    allowed_digits = _digits(allowed_text)
+    allowed_digits = _digits(" ".join(_sanctioned_facts(case_state)))
+    spans: list[tuple[int, int, str, str]] = []
 
-    flags: list[FactFlag] = []
-    sanitized = original
+    def _check(start: int, end: int, reason: str) -> None:
+        nums = _digits(original[start:end])
+        if nums and not nums.issubset(allowed_digits):
+            spans.append((start, end, "numeric_assertion", reason))
 
-    def _flag_and_scrub(span: str, ftype: str, reason: str) -> None:
-        nonlocal sanitized
-        flags.append(FactFlag(type=ftype, span=span.strip(), reason=reason))
-        sanitized = sanitized.replace(span, "— I'm not sure of the exact number —")
+    for rx in (_UNIT_RE, _PCT_FIRST_RE, _BP_RE):
+        for m in rx.finditer(original):
+            _check(m.start(), m.end(), "clinical number not present in this turn's sanctioned facts")
 
-    # Numeric vital/lab/dose assertions.
-    candidates = list(_UNIT_RE.finditer(original)) + list(_BP_RE.finditer(original))
-    for m in candidates:
-        span = m.group(0)
-        span_digits = _digits(span)
-        if span_digits and not span_digits.issubset(allowed_digits):
-            _flag_and_scrub(span, "numeric_assertion",
-                            "clinical number not present in this turn's sanctioned facts")
-
-    # A number sitting right next to a vital keyword (e.g. "my sat is 88").
+    # A number shortly after a vital or lab word ("my sat is 88", "nabzım dakikada 120"): only the
+    # number (with its suffix and unit) is replaced, the words around it stay.
     for m in _VITAL_KW_RE.finditer(original):
-        window = original[m.start(): m.end() + 24]
-        nums = _digits(window)
-        stray = nums - allowed_digits
-        if stray:
-            span = window.strip()
-            _flag_and_scrub(span, "numeric_assertion",
-                            f"vital/lab value near '{m.group(0)}' not sanctioned")
+        window_end = min(len(original), m.end() + _KW_WINDOW)
+        for n in _NUM_TOKEN_RE.finditer(original, m.end(), window_end):
+            _check(n.start(), n.end(), f"vital/lab value near '{m.group(0)}' not sanctioned")
 
-    # Confident diagnosis verdict from the patient's mouth.
-    for m in _DIAGNOSIS_RE.finditer(original):
-        _flag_and_scrub(m.group(0), "diagnosis_assertion",
-                        "patient asserted a diagnosis (roleplay layer cannot diagnose)")
+    for rx in (_DIAGNOSIS_RE, _DIAGNOSIS_TR_RE):
+        for m in rx.finditer(original):
+            spans.append((m.start(), m.end(), "diagnosis_assertion",
+                          "patient asserted a diagnosis (roleplay layer cannot diagnose)"))
 
-    return FactGateResult(
-        utterance=sanitized.strip() or original.strip(),
-        original=original,
-        flags=flags,
-        passed=len(flags) == 0,
-    )
+    if not spans:
+        return FactGateResult(utterance=original.strip(), original=original, flags=[], passed=True)
+
+    words = _SCRUB[_gate_lang(original, lang)]
+    spans.sort(key=lambda s: (s[0], -s[1]))
+    merged: list[list[Any]] = []
+    for s in spans:
+        if merged and s[0] < merged[-1][1]:
+            last = merged[-1]
+            last[1] = max(last[1], s[1])
+            if s[2] == "diagnosis_assertion":
+                last[2] = s[2]
+            continue
+        merged.append(list(s))
+    flags = [FactFlag(type=t, span=original[a:b].strip(), reason=r) for a, b, t, r in merged]
+    out, pos = [], 0
+    for a, b, t, _r in merged:
+        out.append(original[pos:a])
+        out.append(f", {words[t]},")
+        pos = b
+    out.append(original[pos:])
+    sanitized = "".join(out)
+    sanitized = re.sub(r"\s+,", ",", sanitized)
+    sanitized = re.sub(r",\s*([.?!;:])", r"\1", sanitized)
+    sanitized = re.sub(r",(\s*,)+", ",", sanitized)
+    sanitized = re.sub(r"^\s*,\s*", "", sanitized)
+    sanitized = re.sub(r",\s*$", "", sanitized)
+    sanitized = re.sub(r",(?=\S)", ", ", sanitized)
+    sanitized = re.sub(r"[ \t]{2,}", " ", sanitized).strip()
+    return FactGateResult(utterance=sanitized or original.strip(), original=original, flags=flags, passed=False)

@@ -46,7 +46,7 @@ def _settings(tmp_path, **over) -> Settings:
         admin_token="adm", _env_file=None,
         # Launch mechanics on the fixture's cheapest card (A10); the 40 GB video minimum is covered by
         # test_gpu_video_capacity.py.
-        gpu_min_gpu_memory_gb=0,
+        gpu_min_gpu_memory_gb=0, gpu_preferred_gpu_memory_gb=0,
     )
     base.update(over)
     return Settings(**base)
@@ -121,7 +121,7 @@ def test_policy_defaults_and_persist(tmp_path):
     again = WorkerStore(str(tmp_path / "acudx.db")).get_policy()
     assert again.idle_minutes == 5 and again.daily_budget_usd == 3.5
     assert again.llm_model == "Qwen/Qwen3-14B-AWQ"
-    assert again.allowlist[0] == "gpu_1x_a100_sxm4"
+    assert again.allowlist[0] == "gpu_1x_h100_pcie"           # 80 GB first (the live-video tier)
 
 
 # --- launch path ----------------------------------------------------------- #

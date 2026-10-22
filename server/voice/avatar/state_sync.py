@@ -341,6 +341,12 @@ async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id
                 a.reason = (f"image edit server: {ig.get('reason') or 'not ready'}; the face switches to the "
                             "patient's look when the pictures are ready")
                 return a, base
+            first = a.variants.get(a.live.key) if a.live is not None else None
+            if first is None or first.status != "preparing":
+                # The case-start ladder has not reached the runner with the presenting look yet (it is being
+                # drawn, or queued behind the portrait): waiting would only delay the first frame (live
+                # 2026-10-22: 6 s of the 34 s from the voice click). Open on the portrait, crossfade later.
+                wait_s = 0.0
     else:
         a = new_appearance(thread_id=thread_id, photo_id=photo_id, spec=spec, director=director, worker=worker,
                            gen_worker=gen_worker)
@@ -354,6 +360,9 @@ async def start(client: httpx.AsyncClient, worker: mt.WorkerAvatar, *, thread_id
             a.reason = (f"image edit server: {ig.get('reason') or 'not ready'}; the face switches to the "
                         "patient's look when the pictures are ready")
             return a, base
+    # At most ``wait_s`` (AVATAR_APPEARANCE_WAIT_S, 6 s) for the presenting look; after that the call
+    # opens on the case portrait and crossfades into the look when it lands, so the voice click reaches
+    # a first frame within about 10 s on a warm worker (docs/architecture/18 6.8.1).
     try:
         await asyncio.wait_for(first_done.wait(), timeout=wait_s)
     except asyncio.TimeoutError:

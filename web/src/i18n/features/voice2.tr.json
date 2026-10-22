@@ -68,7 +68,8 @@
         "progress": "Canlı video hazırlığı",
         "meanwhile": "O zamana kadar hasta yazıyla ve tarayıcı sesiyle yanıt verir. Bu resim görüşme değildir.",
         "reason": "Neden: {{reason}}"
-      }
+      },
+      "gpuFallback": "{{gb}} GB GPU kullanılıyor (boşta 80 GB kart yoktu): Türkçe ses daha geç başlar."
     }
   }
 }

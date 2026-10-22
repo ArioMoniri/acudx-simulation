@@ -163,6 +163,31 @@ def test_a_call_after_a_case_start_prepare_does_not_wait_for_an_edit_server_that
         assert s["avatar_id"] == "acudx-p04" and "image edit server" in s["appearance"]["reason"]
 
 
+def test_a_call_does_not_wait_for_a_look_that_is_still_being_drawn(tmp_path, monkeypatch):
+    """Live 2026-10-22 (prod-path-v3): 6 s of the 34 s from the voice click went to waiting for the
+    presenting look while the case-start ladder was still drawing it. The call now opens on the portrait
+    at once unless the look is already being prepared on the runner, and crossfades into it later."""
+    gate = asyncio.Event()
+    real_gen = state_sync._gen
+
+    async def slow_gen(*a, **kw):
+        a[3].status = "generating"
+        await gate.wait()
+        return await real_gen(*a, **kw)
+
+    monkeypatch.setattr(state_sync, "_gen", slow_gen)
+    runner = SyncRunner()
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_appearance_wait_s=30)
+    _case(app)
+    with TestClient(app) as c:
+        assert _prepare(c).status_code == 202
+        assert _wait(lambda: "acudx-p04" in runner.avatars)
+        t = time.monotonic()
+        s = c.post("/v1/voice/avatar/session", json={**SESSION, "thread_id": THREAD}, headers=USER).json()
+        assert time.monotonic() - t < 5
+        assert s["avatar_id"] == "acudx-p04" and s["appearance"]["source"] == "portrait"
+
+
 def test_services_wait_gives_up_after_its_budget_and_says_so():
     class Client:
         pass

@@ -112,12 +112,12 @@ def _live_call(request: Request, body: InterviewRequest, thread_id: str, user: O
     return s
 
 
-def _scrubber(st: dict[str, Any], view: Any) -> Any:
+def _scrubber(st: dict[str, Any], view: Any, lang: str | None = None) -> Any:
     """The reply's gates for one spoken piece: FactAssertionGate, then the diagnosis scrub."""
     terms = forbidden_terms(st)
 
     def scrub(text: str) -> str:
-        out = fact_assertion_gate(text, {"sanctioned_facts": view.told}).utterance
+        out = fact_assertion_gate(text, {"sanctioned_facts": view.told}, lang=lang).utterance
         for term in leaks(out, terms):
             out = out.replace(term, "...")
         return out
@@ -171,7 +171,7 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
                                         speculative=True)
             # Its TTS starts too (held back from the call until the guard confirms the prompt).
             spec_speaker = _call_speaker(request, call, persona=speculative, timings=timings,
-                                         gate=_scrubber(st, patient_view(st, locale=loc0)))
+                                         gate=_scrubber(st, patient_view(st, locale=loc0), loc0))
 
     decision = await classify_message(gateway, message, case_context={"scope_terms": [complaint]},
                                       chief_complaint=complaint)
@@ -201,7 +201,7 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
             return _error(503, "model_unreachable", "no patient model is configured", retryable=True)
         msgs = persona_turn(view, transcript, message, decision.label)
         terms = forbidden_terms(st)
-        scrub = _scrubber(st, view)
+        scrub = _scrubber(st, view, locale)
 
         persona = None
         if speculative is not None:
@@ -235,7 +235,7 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
             if speaker is not None:
                 speaker.cancel()
             return _error(502, "model_output_invalid", "the patient model returned an empty reply", retryable=True)
-        gate = fact_assertion_gate(reply, {"sanctioned_facts": view.told})
+        gate = fact_assertion_gate(reply, {"sanctioned_facts": view.told}, lang=locale)
         reply = gate.utterance
         flags += [f.model_dump() for f in gate.flags]
         leaked = leaks(reply, terms)

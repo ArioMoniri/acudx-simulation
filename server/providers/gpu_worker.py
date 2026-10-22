@@ -48,11 +48,14 @@ from server.providers.lambda_cloud import (
     gpu_memory_gb,
     merge_firewall_rules,
     pick_cheapest,
+    type_memory_gb,
 )
 
 log = logging.getLogger("acudx.gpu_worker")
 
-DEFAULT_ALLOWLIST = ["gpu_1x_a100_sxm4", "gpu_1x_a10", "gpu_1x_a100", "gpu_1x_h100_pcie"]
+# 80 GB cards first in the list (the preferred tier for live video calls, WorkerPolicy.preferred_gpu_memory_gb),
+# then 40 GB; the A10 stays listed for a policy that lowers min_gpu_memory_gb.
+DEFAULT_ALLOWLIST = ["gpu_1x_h100_pcie", "gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4", "gpu_1x_a100", "gpu_1x_a10"]
 DEFAULT_TEMPLATE = Path(__file__).resolve().parents[2] / "infra" / "gpu-worker" / "cloud-init.yaml"
 SERVED_MODEL_NAME = "acudx-llm"   # --served-model-name in the worker's vLLM
 
@@ -148,6 +151,11 @@ class WorkerPolicy(BaseModel):
     # (MuseTalk runner and FLUX.2 image edits) beside vLLM and the voices, which a 24 GB card cannot
     # hold (production 2026-10-21: the cheapest rule picked an A10 and the call never got video).
     min_gpu_memory_gb: int = Field(default=40, ge=0, le=1024)
+    # Card size tried first (owner decision 2026-10-21: Turkish speech start under 3 s on-prem). A launch
+    # takes the cheapest allow-listed type with at least this much per GPU in any region (the filesystem
+    # region first), and only when none has capacity the cheapest with ``min_gpu_memory_gb``; such a
+    # worker is marked ``video_tier: fallback`` in the status, and the call tile says so. 0 turns it off.
+    preferred_gpu_memory_gb: int = Field(default=80, ge=0, le=1024)
 
     @field_validator("allowlist")
     @classmethod
@@ -177,6 +185,7 @@ class WorkerRecord(BaseModel):
         """Status view without the bearer token."""
         d = self.model_dump(exclude={"token"})
         d["gpus"] = gpus_for(self.instance_type)
+        d["gpu_memory_gb"] = type_memory_gb(self.instance_type)
         if self.domain:
             d["endpoints"] = {
                 "healthz": f"https://{self.domain}/healthz",
@@ -207,6 +216,39 @@ class LedgerEntry(BaseModel):
 # smaller one (Qwen3-32B-AWQ left too little KV cache on a 40 GB card; cloud-init header).
 SMALL_CARD_MODEL = {"Qwen/Qwen3-32B-AWQ": "Qwen/Qwen3-14B-AWQ"}
 LARGE_CARD_GB = 70
+
+
+def choose_offer(offers: dict[str, Any], policy: "WorkerPolicy", fs_region_pref: list[str],
+                 fs_names: list[str]) -> tuple[Any, list[str]]:
+    """The type to launch and the filesystems to attach. Tiers, first match wins:
+
+    1. ``preferred_gpu_memory_gb`` (80) in the filesystem's region, with the filesystem;
+    2. ``preferred_gpu_memory_gb`` in any region of ``policy.region_preference`` (any region when
+       empty), without the filesystem (a Lambda filesystem attaches only in its own region);
+    3. ``min_gpu_memory_gb`` (40) in the filesystem's region (or ``region_preference``), as before.
+    """
+    pref_gb, min_gb = policy.preferred_gpu_memory_gb, policy.min_gpu_memory_gb
+    if pref_gb and pref_gb > min_gb:
+        c = pick_cheapest(offers, policy.allowlist, fs_region_pref, min_gpu_memory_gb=pref_gb)
+        if c is not None:
+            return c, fs_names
+        if fs_names:
+            c = pick_cheapest(offers, policy.allowlist, list(policy.region_preference), min_gpu_memory_gb=pref_gb)
+            if c is not None:
+                return c, []
+    return pick_cheapest(offers, policy.allowlist, fs_region_pref, min_gpu_memory_gb=min_gb), fs_names
+
+
+def video_tier(instance_type: str, policy: "WorkerPolicy") -> dict[str, Any]:
+    """``preferred`` on a card with ``preferred_gpu_memory_gb`` per GPU, else ``fallback`` with the reason
+    shown in the admin GPU section and the call tile."""
+    gb = type_memory_gb(instance_type)
+    pref = policy.preferred_gpu_memory_gb
+    if not pref or (gb is not None and gb >= pref):
+        return {"tier": "preferred", "gpu_memory_gb": gb, "notice": None}
+    return {"tier": "fallback", "gpu_memory_gb": gb,
+            "notice": f"{gb or '?'} GB card: no {pref} GB card had capacity at launch; the Turkish voice "
+                      "starts later (about 5 s) on this card"}
 
 
 def llm_model_for(model: str, gpu_gb: int | None) -> str:
@@ -480,6 +522,7 @@ class WorkerManager:
             max_workers=int(getattr(settings, "gpu_max_workers", 3)),
             max_lifetime_hours=float(getattr(settings, "gpu_max_lifetime_hours", 6.0)),
             min_gpu_memory_gb=int(getattr(settings, "gpu_min_gpu_memory_gb", 40)),
+            preferred_gpu_memory_gb=int(getattr(settings, "gpu_preferred_gpu_memory_gb", 80)),
         )
 
     # -- policy -------------------------------------------------------------- #
@@ -715,6 +758,7 @@ class WorkerManager:
         for w in active:
             d = w.public()
             d["load"] = self.load_of(w)
+            d["video_tier"] = video_tier(w.instance_type, self.policy)
             workers.append(d)
         return {
             "configured": self.configured,
@@ -1111,7 +1155,7 @@ class WorkerManager:
                         fs_names = [self.policy.file_system_name]
                     break
         min_gb = self.policy.min_gpu_memory_gb
-        choice = pick_cheapest(offers, self.policy.allowlist, region_pref, min_gpu_memory_gb=min_gb)
+        choice, fs_names = choose_offer(offers, self.policy, region_pref, fs_names)
         if choice is None:
             raise NoCapacity(f"no capacity for any allow-listed type {self.policy.allowlist}"
                              + (f" with {min_gb} GB or more per GPU" if min_gb else "")

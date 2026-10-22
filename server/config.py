@@ -215,7 +215,7 @@ class Settings(BaseSettings):
     gpu_daily_budget_usd: float | None = None  # None = no cap; set a number to cap daily GPU spend
     gpu_llm_model: str = "Qwen/Qwen3-32B-AWQ"
     gpu_instance_allowlist: CsvList = Field(default_factory=lambda: [
-        "gpu_1x_a100_sxm4", "gpu_1x_a10", "gpu_1x_a100", "gpu_1x_h100_pcie",
+        "gpu_1x_h100_pcie", "gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4", "gpu_1x_a100", "gpu_1x_a10",
     ])
     gpu_region_preference: CsvList = Field(default_factory=list)
     # Most workers the pool runs at once (launched on demand, each reaped when idle).
@@ -226,6 +226,11 @@ class Settings(BaseSettings):
     # (MuseTalk runner, FLUX.2 image edits) next to vLLM and the voices; a 24 GB A10 cannot hold
     # them, so the cheapest-card rule picked a worker that never served video (docs/architecture/18 6.7).
     gpu_min_gpu_memory_gb: int = Field(default=40, ge=0, le=1024)
+    # Card size (GB per GPU) tried first for workers that serve live video calls: on an 80 GB card the
+    # Turkish voice (Chatterbox, two replicas) has room and compute beside the call; a 40 GB card is taken
+    # only when no 80 GB card has capacity, and the admin GPU section and the call tile say so
+    # (docs/architecture/18 6.3.10).
+    gpu_preferred_gpu_memory_gb: int = Field(default=80, ge=0, le=1024)
     # Orphan sweep: only workers this gateway launched (its id is in the instance name and tags)
     # are swept. True also sweeps acudx-worker-* instances that carry no gateway id (launched by a
     # gateway before 2026-10-21); leave False when another gateway shares the Lambda account.
@@ -260,7 +265,9 @@ class Settings(BaseSettings):
     # before it opens on the case portrait and crossfades into the look once it is ready.
     # 10 s since the pictures are registered onto the portrait (a later crossfade shows no double image,
     # docs/architecture/18 6.6.1); live 2026-10-21 the 45 s wait was most of the 98 s to live video.
-    avatar_appearance_wait_s: float = Field(default=10.0, ge=0, le=300)
+    # 6 s since the call's portrait goes ahead of the look ladder on the runner (6.8.1): the voice click
+    # then reaches a first frame within the 15 s target even when the look is not ready.
+    avatar_appearance_wait_s: float = Field(default=6.0, ge=0, le=300)
     # Case start with live video enabled: a case open wakes the on-demand GPU worker in the
     # background and makes the patient's pictures (presenting, worse, critical, improved) as soon
     # as it is up, so a later call opens on the symptoms. The idle reaper still stops the worker

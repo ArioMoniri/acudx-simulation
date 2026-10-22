@@ -211,6 +211,17 @@ export interface WorkerPolicy {
   max_workers?: number;
   /** Requests in flight per GPU before another worker is launched. */
   llm_queue_per_worker?: number;
+  /** Smallest card (GB per GPU) a worker is launched on (40). */
+  min_gpu_memory_gb?: number;
+  /** Card size tried first for live video calls (80); a smaller card only when none has capacity. */
+  preferred_gpu_memory_gb?: number;
+}
+
+/** A worker's live-video tier: `preferred` on an 80 GB card, `fallback` when only a smaller card was free. */
+export interface VideoTier {
+  tier: "preferred" | "fallback";
+  gpu_memory_gb: number | null;
+  notice: string | null;
 }
 
 export interface WorkerLoad {
@@ -235,6 +246,8 @@ export interface WorkerPublic {
   terminated_at: number | null;
   endpoints?: Record<string, string>;
   gpus?: number;
+  gpu_memory_gb?: number | null;
+  video_tier?: VideoTier;
   load?: WorkerLoad;
 }
 

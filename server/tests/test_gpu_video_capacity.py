@@ -98,7 +98,7 @@ def _mock_launch(instance_id: str = "i-new"):
 @respx.mock
 async def test_a_launch_picks_a_card_that_holds_the_video_and_a_model_that_fits_it(tmp_path):
     launch = _mock_launch()
-    m = _manager(tmp_path, gpu_llm_model="Qwen/Qwen3-32B-AWQ")
+    m = _manager(tmp_path, gpu_llm_model="Qwen/Qwen3-32B-AWQ", gpu_preferred_gpu_memory_gb=0)
     try:
         w = await m.ensure_worker()
     finally:

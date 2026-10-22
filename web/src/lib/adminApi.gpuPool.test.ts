@@ -35,6 +35,23 @@ describe("GPU pool admin calls", () => {
 });
 
 describe("poolRows", () => {
+  it("marks a worker on a smaller card than the live-video preference as a fallback", () => {
+    const base = {
+      instance_id: "i", region: "us-east-1", ip: null, domain: "d", status: "ready", price_cents_per_hour: 199,
+      launched_at: 1, ready_at: 1, last_used_at: 1, terminated_at: null,
+    };
+    const rows = poolRows({
+      configured: true, spent_today_usd: 0, worker: null,
+      workers: [
+        { ...base, id: 1, instance_type: "gpu_1x_a100_sxm4", gpu_memory_gb: 40,
+          video_tier: { tier: "fallback", gpu_memory_gb: 40, notice: "40 GB card" } },
+        { ...base, id: 2, instance_type: "gpu_1x_h100_pcie", gpu_memory_gb: 80,
+          video_tier: { tier: "preferred", gpu_memory_gb: 80, notice: null } },
+      ],
+    });
+    expect(rows.map((r) => [r.id, r.gpu_memory_gb, r.fallback])).toEqual([[2, 80, false], [1, 40, true]]);
+  });
+
   it("lists every worker with its load, newest first, and falls back to the single worker", () => {
     const w = (id: number, extra: Record<string, unknown> = {}) => ({
       id, instance_id: `i-${id}`, instance_type: "gpu_1x_h100_sxm5", region: "us-east-1", ip: null, domain: `d${id}`,
@@ -49,6 +66,7 @@ describe("poolRows", () => {
     expect(rows[1]).toMatchObject({ inflight: 2, calls: 1, gpus: 1 });
     expect(rows[0]).toMatchObject({ inflight: 0, calls: 0, gpus: 8 });
     expect(poolRows({ configured: true, spent_today_usd: 0, worker: w(3) }).map((r) => r.id)).toEqual([3]);
+    expect(rows[0]).toMatchObject({ gpu_memory_gb: null, fallback: false });
     expect(poolRows({ configured: true, spent_today_usd: 0, worker: null })).toEqual([]);
   });
 });

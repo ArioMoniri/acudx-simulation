@@ -68,7 +68,8 @@
         "progress": "Live video start-up",
         "meanwhile": "Until then the patient answers in text and with the browser voice. This picture is not the call.",
         "reason": "Reason: {{reason}}"
-      }
+      },
+      "gpuFallback": "On a {{gb}} GB GPU (no 80 GB card was free): the Turkish voice starts later."
     }
   }
 }

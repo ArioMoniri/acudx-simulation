@@ -237,6 +237,10 @@ export interface PoolRow {
   price_cents_per_hour: number;
   launched_at: number;
   domain: string | null;
+  /** GB per GPU (null when the type is not known). */
+  gpu_memory_gb: number | null;
+  /** True when the worker runs on a smaller card than the live-video preference (no 80 GB capacity). */
+  fallback: boolean;
 }
 
 /** Every worker of the pool, newest first (older gateways report one `worker`). */
@@ -255,5 +259,7 @@ export function poolRows(status: GpuStatus | null | undefined): PoolRow[] {
       price_cents_per_hour: w.price_cents_per_hour,
       launched_at: w.launched_at,
       domain: w.domain,
+      gpu_memory_gb: w.video_tier?.gpu_memory_gb ?? w.gpu_memory_gb ?? null,
+      fallback: w.video_tier?.tier === "fallback",
     }));
 }

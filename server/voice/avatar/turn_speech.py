@@ -13,7 +13,11 @@ chunk, the runner, WebRTC. This module removes the serial hops (docs/architectur
   before it is spoken, and nothing is spoken before the guard has labelled the message;
 * the gateway speaks into the call's runner socket itself (one utterance, so lips stay on one
   timeline), and tells the browser so it does not speak the line a second time;
-* every hop is timed (:class:`TurnTimings`) and kept on the call's metrics.
+* every hop is timed (:class:`TurnTimings`) and kept on the call's metrics;
+* a reply released while the previous one is still being synthesised cuts it (the old TTS stops and
+  the runner's queued audio is flushed at a frame boundary), so the new reply starts at once on a
+  fresh timeline instead of queueing behind a Turkish reply that runs slower than real time, and the
+  lip-sync loop ignores the lines around the cut (docs/architecture/18 6.3.10).
 """
 
 from __future__ import annotations
@@ -191,6 +195,8 @@ class CallSpeaker:
     error: str | None = None
     runner: dict[str, Any] | None = None
     task: asyncio.Task[Any] | None = None
+    cut: bool = False                 # this reply was cut by the next one
+    cut_previous: bool = False        # this reply cut the one before it
 
     def start(self, persona: PersonaStream) -> "CallSpeaker":
         self.task = asyncio.get_running_loop().create_task(self._run(persona))
@@ -202,6 +208,25 @@ class CallSpeaker:
     def cancel(self) -> None:
         if self.task is not None:
             self.task.cancel()
+
+    def speaking(self) -> bool:
+        return self.task is not None and not self.task.done() and self.released.is_set()
+
+    def cut_by_next(self) -> None:
+        """The next reply was released while this one still speaks: stop it (TTS and runner audio)."""
+        self.cut = True
+        self.cancel()
+
+    def _take_call(self) -> bool:
+        """Become the call's speaker; True when a reply still speaking was cut for this one."""
+        prev = getattr(self.session, "active_speaker", None)
+        cut = prev is not None and prev is not self and prev.speaking()
+        if cut:
+            prev.cut_by_next()
+            self.cut_previous = True
+            self.session.metrics["lip_overlap"] = True   # the lip-sync loop skips the lines around a cut
+        self.session.active_speaker = self
+        return cut
 
     async def _pieces(self, persona: PersonaStream) -> AsyncIterator[str]:
         """Pieces as the reply grows: the first clause alone, then everything complete when asked."""
@@ -305,6 +330,7 @@ class CallSpeaker:
                 break
             await self.released.wait()
             self.timings.mark("released_ms")
+            interrupt = self._take_call()
             if first is None:
                 return
 
@@ -328,16 +354,19 @@ class CallSpeaker:
             link = self.session.audio_link or mt.RunnerAudioLink(worker=self.worker,
                                                                  worker_session=str(self.session.worker_session))
             self.session.audio_link = link
-            self.runner = await link.utterance(rest(), rate,
+            self.runner = await link.utterance(rest(), rate, interrupt=interrupt,
                                                on_first_chunk=lambda: self.timings.mark("runner_first_chunk_ms"))
             self.timings.mark("runner_done_ms")
         except asyncio.CancelledError:
-            raise
+            if not self.cut:
+                raise
         except Exception as exc:  # noqa: BLE001 - reported on the call's metrics; the text reply stands
             self.error = f"{type(exc).__name__}: {getattr(exc, 'detail', None) or exc}"[:200]
             log.warning("voiced turn for call %s failed: %s", str(getattr(self.session, "id", ""))[:8], self.error)
         finally:
             await gen.aclose()
+            if getattr(self.session, "active_speaker", None) is self:
+                self.session.active_speaker = None
             self.session.metrics["turns"] = int(self.session.metrics.get("turns", 0)) + 1
             turns = self.session.metrics.setdefault("voiced_turns", [])
             turns.append(self.public())
@@ -345,5 +374,5 @@ class CallSpeaker:
 
     def public(self) -> dict[str, Any]:
         return {"timings": self.timings.public(), "requests": self.requests, "spoken_text": " ".join(self.spoken),
-                "error": self.error, "runner": {k: (self.runner or {}).get(k) for k in ("frames", "first_frame_ms",
+                "error": self.error, "cut": self.cut, "cut_previous": self.cut_previous, "runner": {k: (self.runner or {}).get(k) for k in ("frames", "first_frame_ms",
                                                                                        "elapsed_ms")}}
