@@ -1182,7 +1182,7 @@ def test_avatar_runner_cuts_instead_of_blending_two_framings():
     runner = _written("/acudx_avatar_server.py")
     switch = runner.split("async def switch(")[1].split("\n      async def ")[0]
     assert "framing_differs(" in switch and "ms = 0" in switch and '"cut": cut' in switch
-    fade = runner.split("def _install_crossfade(")[1].split("\n      class ")[0].split("\n      async def ")[0]
+    fade = runner.split("def _install_crossfade(")[1].split("\n      class ")[0].split("\nasync def ")[0]
     assert "cv2.resize(" not in fade
     prep = runner.split("def prepare_avatar(")[1].split("\n      class ")[0]
     assert "acudx_register.align_to(" in prep and '"ref": ref' in prep and "replay_steps(" in prep
