@@ -57,3 +57,34 @@ async def test_a_failed_worker_transcription_flips_the_capability_at_once(tmp_pa
         raise AssertionError("expected NoVoiceProvider")
     caps = await svc.capabilities(probe_worker=True)
     assert caps["stt"]["enabled"] is False and caps["gpu_worker"]["stt"]["ok"] is False
+
+
+async def test_worker_dictation_carries_a_clinical_prompt_in_the_spoken_language(tmp_path):
+    """Live 2026-10-22 on the synthetic Turkish clips the worker's Whisper scored 45 % WER without a prompt and
+    29 % with a short clinical one (docs/media/live-avatar/stt-guard/); English stayed at 0 either way."""
+    from server.voice.adapters.openai_compatible import DEFAULT_STT_PROMPTS
+
+    sc = WorkerScenario()
+    store, telemetry, svc = _build(tmp_path, settings=_settings(), worker=FakeWorkerManager(ready=True), scenario=sc)
+    await svc.stt(b"\x1aE\xdf\xa3", content_type="audio/webm", lang="tr")
+    assert sc.stt_calls[-1]["language"] == "tr" and sc.stt_calls[-1]["prompt"] == DEFAULT_STT_PROMPTS["tr"]
+    await svc.stt(b"\x1aE\xdf\xa3", content_type="audio/webm", lang="en")
+    assert sc.stt_calls[-1]["prompt"] == DEFAULT_STT_PROMPTS["en"]
+    await svc.stt(b"\x1aE\xdf\xa3", content_type="audio/webm")
+    assert sc.stt_calls[-1]["prompt"] is None          # no language, no prompt (it would bias detection)
+
+
+def test_a_row_can_set_or_switch_off_the_prompt():
+    from server.registry.resolve import ProviderEndpoint
+    from server.voice.adapters.openai_compatible import DEFAULT_STT_PROMPTS, OpenAiCompatibleStt
+
+    def ep(extra, source="registry"):
+        return ProviderEndpoint(kind="stt", name="x", base_url="https://stt.example", model="m", api_key="",
+                                source=source, extra=extra)
+
+    assert OpenAiCompatibleStt.prompt_for(ep({}), "tr") is None                       # hosted rows: off by default
+    assert OpenAiCompatibleStt.prompt_for(ep({}, "gpu_worker"), "tr") == DEFAULT_STT_PROMPTS["tr"]
+    assert OpenAiCompatibleStt.prompt_for(ep({"stt_prompt": False}, "gpu_worker"), "tr") is None
+    assert OpenAiCompatibleStt.prompt_for(ep({"stt_prompt": "Kardiyoloji"}), "tr") == "Kardiyoloji"
+    assert OpenAiCompatibleStt.prompt_for(ep({"stt_prompt": {"en": "Cardiology"}}), "en") == "Cardiology"
+    assert OpenAiCompatibleStt.prompt_for(ep({"stt_prompt": {"en": "Cardiology"}}), "tr") is None

@@ -28,6 +28,16 @@ from server.voice.base import SttRequest, SttResult, TtsRequest, TtsStream, Voic
 
 DEFAULT_TTS_MODEL = "tts-1"
 DEFAULT_STT_MODEL = "deepdml/faster-whisper-large-v3-turbo-ct2"
+# Whisper's ``prompt`` (initial prompt): the setting and its vocabulary in the spoken language. Live 2026-10-22
+# on synthetic Turkish clinical clips the worker's large-v3-turbo scored 45 % WER without it and 29 % with it;
+# English stayed at 0 (docs/media/live-avatar/stt-guard/). Sent for the worker by default, for a registry row
+# only when its ``extra.stt_prompt`` sets one (a string, or one per language); ``false`` switches it off.
+DEFAULT_STT_PROMPTS: dict[str, str] = {
+    "tr": "Acil serviste doktor hastaya soruyor: göğüs ağrısı, nefes darlığı, ateş, öksürük, alerji, ilaç, "
+          "oksijen, EKG.",
+    "en": "In the emergency department the doctor asks the patient: chest pain, shortness of breath, fever, "
+          "cough, allergies, medicines, oxygen, ECG.",
+}
 _CONTENT_TYPES = {"mp3": "audio/mpeg", "wav": "audio/wav", "opus": "audio/ogg", "flac": "audio/flac"}
 
 
@@ -128,11 +138,29 @@ class OpenAiCompatibleStt:
     def model_for(ep: ProviderEndpoint) -> str:
         return str(ep.extra.get("stt_model") or ep.model or DEFAULT_STT_MODEL)
 
+    @staticmethod
+    def prompt_for(ep: ProviderEndpoint, lang: str | None) -> str | None:
+        """The initial prompt for ``lang`` (see DEFAULT_STT_PROMPTS); None without a language."""
+        if not lang:
+            return None
+        cfg = ep.extra.get("stt_prompt")
+        if cfg is False:
+            return None
+        if isinstance(cfg, str):
+            return cfg.strip() or None
+        if isinstance(cfg, dict):
+            val = cfg.get(lang)
+            return (str(val).strip() or None) if val else None
+        return DEFAULT_STT_PROMPTS.get(lang) if ep.source == "gpu_worker" else None
+
     async def transcribe(self, client: httpx.AsyncClient, ep: ProviderEndpoint, req: SttRequest) -> SttResult:
         model = req.model or self.model_for(ep)
         data: dict[str, str] = {"model": model, "response_format": "verbose_json"}
         if req.lang:
             data["language"] = req.lang
+        prompt = self.prompt_for(ep, req.lang)
+        if prompt:
+            data["prompt"] = prompt
         headers = {"Authorization": f"Bearer {ep.api_key}"} if ep.api_key else {}
         resp = await client.post(f"{_audio_base(ep)}/transcriptions", data=data,
                                  files={"file": (req.filename, req.audio, req.content_type)}, headers=headers)
