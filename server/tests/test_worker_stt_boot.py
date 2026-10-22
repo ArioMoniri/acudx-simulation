@@ -54,8 +54,9 @@ def test_speaches_is_pinned_by_digest_and_runs_offline_without_dead_settings():
 def test_stt_model_is_fetched_as_root_at_the_pinned_revision_and_checked():
     sh = _files()["/opt/acudx/stt.sh"]
     assert "--user 0:0" in sh and "$SPEACHES_IMAGE" in sh
-    assert "revision='$STT_MODEL_REV'" in sh and "'README.md'" in sh and "'model.bin'" in sh
-    assert 'printf \'%s\' "$STT_MODEL_REV" > "$repo/refs/main"' in sh
+    assert "revision='$rev'" in sh and "'README.md'" in sh and "'model.bin'" in sh
+    assert 'fetch "$STT_MODEL" "$STT_MODEL_REV"' in sh and 'STT_EXTRA_MODELS' in sh
+    assert 'printf \'%s\' "$rev" > "$repo/refs/main"' in sh
     assert "chmod -R a+rX" in sh and "stt-check.py" in sh and "stt.json" in sh
     # a watchdog for the worker's life: publishes the speaches log and restarts a speaches that keeps failing
     assert "while true; do" in sh and "stt-log.txt" in sh and "restart speaches" in sh and "restarts\" -ge 3" in sh

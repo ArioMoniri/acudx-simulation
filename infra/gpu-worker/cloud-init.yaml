@@ -83,6 +83,7 @@ write_files:
       CHATTERBOX_CACHE=/opt/acudx/chatterbox-cache
       STT_MODEL=deepdml/faster-whisper-large-v3-turbo-ct2
       STT_MODEL_REV=4df90f75321148c3a29a9e2351b7ddf8f5b115a8
+      STT_EXTRA_MODELS=
       SPEACHES_IMAGE=ghcr.io/speaches-ai/speaches:0.8.3-cuda-12.4.1@sha256:6a64b1dfe7fe650c72ff01027048858d51c5851993d0f76ba6046f4ca94545c7
       AVATAR_CACHE=/opt/acudx/avatar-cache
   - path: /opt/acudx/Caddyfile
@@ -1498,34 +1499,42 @@ write_files:
       . /opt/acudx/images.sh
       set -a; . /opt/acudx/.env; set +a
       ST=/opt/acudx/public/avatar-status/stt.json
-      repo="/opt/acudx/hf/hub/models--$(printf '%s' "$STT_MODEL" | sed 's|/|--|g')"
-      snap="$repo/snapshots/$STT_MODEL_REV"
       t0=$(date +%s)
       status() {
         printf '{"state":"%s","model":"%s","revision":"%s","detail":"%s","elapsed_s":%s}\n' \
           "$1" "$STT_MODEL" "$STT_MODEL_REV" "${2:-}" "$(( $(date +%s) - t0 ))" > "$ST.tmp" && chmod 0644 "$ST.tmp" && mv "$ST.tmp" "$ST"
       }
-      have() { [ -s "$snap/model.bin" ] && [ -s "$snap/README.md" ] && [ -s "$snap/tokenizer.json" ] && [ -s "$snap/preprocessor_config.json" ]; }
-      mkdir -p /opt/acudx/hf/hub
-      if have; then
-        mark "stt: model on the filesystem"
-      else
-        status fetching
-        mark "stt: fetching $STT_MODEL@${STT_MODEL_REV:0:8}"
-        for i in 1 2 3; do
-          docker run --rm --user 0:0 -e HF_HOME=/hf -e HF_HUB_ENABLE_HF_TRANSFER=0 -e HF_HUB_DISABLE_TELEMETRY=1 \
-            -v /opt/acudx/hf:/hf --entrypoint python "$SPEACHES_IMAGE" -c "
+      # fetch <repo id> <revision>: the model files into the shared cache, refs/main at that revision.
+      fetch() {
+        local model=$1 rev=$2 repo snap
+        repo="/opt/acudx/hf/hub/models--$(printf '%s' "$model" | sed 's|/|--|g')"
+        snap="$repo/snapshots/$rev"
+        have() { [ -s "$snap/model.bin" ] && [ -s "$snap/README.md" ] && [ -s "$snap/tokenizer.json" ] && [ -s "$snap/preprocessor_config.json" ]; }
+        if have; then
+          mark "stt: $model on the filesystem"
+        else
+          mark "stt: fetching $model@${rev:0:8}"
+          for i in 1 2 3; do
+            docker run --rm --user 0:0 -e HF_HOME=/hf -e HF_HUB_ENABLE_HF_TRANSFER=0 -e HF_HUB_DISABLE_TELEMETRY=1 \
+              -v /opt/acudx/hf:/hf --entrypoint python "$SPEACHES_IMAGE" -c "
       from huggingface_hub import snapshot_download
-      snapshot_download('$STT_MODEL', revision='$STT_MODEL_REV', repo_type='model',
+      snapshot_download('$model', revision='$rev', repo_type='model',
                         allow_patterns=['config.json', 'preprocessor_config.json', 'model.bin', 'tokenizer.json',
                                         'vocabulary.*', 'README.md'])" && have && break
-          echo "acudx: stt model fetch attempt $i failed" >&2; sleep 15
-        done
-      fi
-      if ! have; then status missing "download failed"; mark "stt: model missing"; exit 1; fi
-      mkdir -p "$repo/refs" && printf '%s' "$STT_MODEL_REV" > "$repo/refs/main"
-      chmod -R a+rX "$repo"
+            echo "acudx: stt model fetch attempt $i failed ($model)" >&2; sleep 15
+          done
+        fi
+        have || return 1
+        mkdir -p "$repo/refs" && printf '%s' "$rev" > "$repo/refs/main"
+        chmod -R a+rX "$repo"
+      }
+      mkdir -p /opt/acudx/hf/hub
+      status fetching
+      if ! fetch "$STT_MODEL" "$STT_MODEL_REV"; then status missing "download failed"; mark "stt: model missing"; exit 1; fi
       mark "stt: model in cache ($(( $(date +%s) - t0 )) s)"
+      # More models beside it for an A/B through the worker's /stt route (STT_EXTRA_MODELS="repo@revision ...",
+      # none by default); in the background and never fatal. The gateway serves STT_MODEL only.
+      ( for spec in ${STT_EXTRA_MODELS:-}; do fetch "${spec%@*}" "${spec#*@}" || mark "stt: extra $spec failed"; done ) &
       check() { docker compose -f /opt/acudx/docker-compose.yml exec -T -e STT_MODEL="$STT_MODEL" speaches python /opt/stt-check.py 2>/dev/null; }
       # speaches' own log next to the state (it carries no credential; header-shaped lines are dropped anyway).
       logs() {
