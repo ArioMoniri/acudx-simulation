@@ -1202,6 +1202,28 @@ def test_stream_windows_grow_after_a_short_first_one():
     assert p.TUNING["stream_schedule"] == [24, 24, 48, 64]
 
 
+def test_a_slow_t3_moves_a_default_window_to_the_fast_start_one():
+    """Live 2026-10-22: an H100 PCIe ran T3 at 35 ms a token (A100 26, H100 SXM5 13 to 17); after three
+    streamed clauses above 20 ms a token the replica takes the fast-start window, once; a fast card keeps the
+    default; a window set by the operator is never replaced."""
+    def run(rate, schedule=(24, 24, 48, 64), steps=10, n=3):
+        p = _chatterbox_patch()
+        p.TUNING.update({"stream_schedule": list(schedule), "stream_flow_steps": steps})
+        for _ in range(n):
+            p.STREAM_TIMINGS.append({"tokens": 60, "t3_ms": 60 * rate})
+            p.adapt_stream()
+        return p.TUNING
+
+    t = run(35.0)
+    assert t["stream_schedule"] == [20, 24, 48, 64] and t["stream_flow_steps"] == 8
+    assert t["stream_adapted"]["t3_ms_per_token"] == 35.0
+    assert run(35.0, n=2).get("stream_adapted") is None                # not before three clauses
+    t = run(15.0)
+    assert t["stream_schedule"] == [24, 24, 48, 64] and t["stream_adapted"] is False
+    t = run(35.0, schedule=(16, 32, 48, 64))
+    assert t["stream_schedule"] == [16, 32, 48, 64] and t["stream_adapted"] is False
+
+
 def test_the_vocoder_seams_add_up_to_the_whole_clause():
     """Windows of mel frames through a stand-in vocoder (480 samples a frame, the source a ramp): every
     sample of the clause comes out exactly once, the withheld 160 ms tail is cross-faded into the next

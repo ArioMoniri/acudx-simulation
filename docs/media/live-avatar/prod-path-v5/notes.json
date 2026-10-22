@@ -1,15 +1,75 @@
 {
  "_note": "Private gateway (this worktree, Claude as the model, REGISTRY_SEED_ENV=false, AVATAR_PREWARM_ON_CASE_START=true) and Lambda gpu_1x_a100_sxm4 (40 GB) workers it launched, 2026-10-22. Browser: Playwright Chromium with no proxy; TURN over TCP through scripts/turn_ws_tunnel.py (TURN over TLS on 443 could not be carried from this sandbox: Chromium's WebRTC resolves the TURN name with its own DNS, ignoring /etc/hosts and --host-resolver-rules, and the sandbox re-terminates outbound TLS). Voice click at case open (the worst case for the call's portrait) unless noted. Speech start = question sent to first audible patient sample in the page. Lip lag: positive = mouth after the voice; meter offsets with a score under 0.3 are not counted. probe_lag_ms: the runner's sync probe (corner block carrying each frame's audio loudness), end to end and independent of the portrait. Sender skew = video minus audio send-time offset measured by the runner per encoded frame.",
  "_workers": [
-  {"id": 1, "type": "gpu_1x_a100_sxm4", "region": "asia-south-1", "use": "launched in the wrong region, stopped after 2.5 min, unused"},
-  {"id": 2, "type": "gpu_1x_a100_sxm4", "region": "us-east-1", "use": "production code; found the TLS TURN limit of this sandbox and the stale sessions"},
-  {"id": 3, "type": "gpu_1x_a100_sxm4", "region": "us-east-1", "use": "baseline (production code plus the sender measure)"},
-  {"id": 4, "type": "gpu_1x_a100_sxm4", "region": "us-east-1", "use": "vLLM off, auto sync; Chatterbox stream benches; preparation phases"},
-  {"id": 5, "type": "gpu_1x_a100_sxm4", "region": "us-east-1", "use": "hold, chatterbox2, 40 GB stream schedule, batched VAE"},
-  {"id": 6, "type": "gpu_1x_a100_sxm4", "region": "us-west-2", "use": "final code (sync probe, edit hold between steps, warm-up)"}
+  {
+   "id": 1,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "asia-south-1",
+   "use": "launched in the wrong region, stopped after 2.5 min, unused"
+  },
+  {
+   "id": 2,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "production code; found the TLS TURN limit of this sandbox and the stale sessions"
+  },
+  {
+   "id": 3,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "baseline (production code plus the sender measure)"
+  },
+  {
+   "id": 4,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "vLLM off, auto sync; Chatterbox stream benches; preparation phases"
+  },
+  {
+   "id": 5,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "hold, chatterbox2, 40 GB stream schedule, batched VAE"
+  },
+  {
+   "id": 6,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-west-2",
+   "use": "final code (sync probe, edit hold between steps, warm-up)"
+  },
+  {
+   "id": 7,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "20 s 10th-percentile sender window, probe on in production settings"
+  },
+  {
+   "id": 8,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1",
+   "use": "final code: corrections during a line from the probe, the bias applied at once; first preparation phases"
+  },
+  {
+   "id": 9,
+   "type": "gpu_1x_h100_pcie",
+   "region": "us-west-3",
+   "use": "H100 check; Lambda kept it in booting for 15 min and the gateway's boot budget terminated it (boot_timeout), never reachable"
+  },
+  {
+   "id": 10,
+   "type": "gpu_1x_h100_pcie",
+   "region": "us-west-3",
+   "use": "H100 check (13.5 min to ready); runs tr-h100-final-run1/run2, Chatterbox benches bench/h100-pcie-*.json"
+  }
  ],
  "tr-a100-baseline": "production code (454192b) on A100 40 GB with vLLM (0.45) and the image edits in model offload; fixed 160 ms video delay and the per-line closed loop",
  "tr-a100-nollm-autosync": "vLLM off (Claude serves the text), image edits in gpu mode, auto sync from the sender clock with the receive-side reading in the delay (later switched off); no hold yet: a look prepared during line 1 stalled the runner",
  "tr-a100-final-run1": "plus hold, chatterbox2, 20/24/48/64 stream window with 8 flow steps; first preparation on a fresh runner; the meter could not lock on this portrait (scores -0.24 to 0.32)",
- "tr-a100-final-run2": "same worker, second case (warm runner); line 1 waited for history.presenting (stall line); the meter could not lock on this portrait either"
+ "tr-a100-final-run2": "same worker, second case (warm runner); line 1 waited for history.presenting (stall line); the meter could not lock on this portrait either",
+ "tr-a100-final-run3": "sync probe on: line 1 -360 ms from following a transient 400 ms video sender lag second by second (fixed with the 20 s 10th-percentile window)",
+ "tr-a100-final-run4": "20 s 10th-percentile window, probe in the loop after each line: probe -240 ms on line 1 (receive side converging), then +120, +80, +40, +80, +40 ms",
+ "tr-a100-final-run5": "final runner code, corrections during the line; first case on a fresh runner. Line 4 ran under 300 ms of network jitter: the probe scored 0.36 and the tile fell back to the face meter (0.27, -400 ms), which moved the bias the wrong way and line 5 opened 320 ms late until two corrections brought it to 0 (the fallback is removed: with the probe on, a weak probe reading sends nothing)",
+ "tr-a100-final-run6": "same worker, second case, with the tile fix: whole-line probe 0, +40, 0, -80, +40, +40 ms; after corrections +40, +40 ms",
+ "tr-h100-final-run1": "H100 PCIe 80 GB, us-west-3, first case: runner on time (32 to 35 fps, skew -6 to -12 ms) but 400 to 740 ms jitter buffers on the sandbox path; probe readings swing, several under score 0.5; Chatterbox T3 35 ms a token on the default window",
+ "tr-h100-final-run2": "same worker, second case, fast-start window set by /acudx/tuning: first chunk 0.78 to 1.42 s; probe -400 to +240 ms at line starts, the last two lines +40 and 0 ms"
 }

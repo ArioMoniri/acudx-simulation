@@ -906,7 +906,35 @@ write_files:
               row["at"] = round(time.time(), 3)
               STREAM_TIMINGS.append(row)
               STATS["streamed_clauses"] = STATS.get("streamed_clauses", 0) + 1
+              adapt_stream()
               return row
+
+
+      # The window follows the measured T3 speed, not the card's memory (live 2026-10-22: an H100 PCIe ran T3 at
+      # 35 ms a token, slower than the A100's 26, and the default window started its voice at 1.5 s). Once three
+      # streamed clauses show more than SLOW_T3_MS a token, a replica on the default window moves to the
+      # fast-start one (20 tokens first, 8 flow steps: 1.24 s against 1.55 s on that card). A window set by the
+      # environment or by POST /acudx/tuning is left alone.
+      SLOW_T3_MS = float(os.getenv("ACUDX_SLOW_T3_MS", "20"))
+      FAST_START = {"stream_schedule": [20, 24, 48, 64], "stream_flow_steps": 8}
+
+
+      def adapt_stream() -> None:
+          if TUNING.get("stream_adapted") is not None or SLOW_T3_MS <= 0:
+              return
+          if TUNING.get("stream_schedule") != [24, 24, 48, 64] or TUNING.get("stream_flow_steps") != 10:
+              TUNING["stream_adapted"] = False
+              return
+          rates = [r["t3_ms"] / r["tokens"] for r in list(STREAM_TIMINGS)[-6:] if r.get("tokens", 0) >= 24]
+          if len(rates) < 3:
+              return
+          rate = sorted(rates)[len(rates) // 2]
+          if rate > SLOW_T3_MS:
+              TUNING.update(FAST_START)
+              TUNING["stream_adapted"] = {"t3_ms_per_token": round(rate, 1), **FAST_START}
+              print(f"acudx: T3 at {rate:.1f} ms a token, fast-start stream window {FAST_START}", flush=True)
+          else:
+              TUNING["stream_adapted"] = False
 
 
       def patch_streaming_route(speech_module: Any) -> None:
@@ -1027,6 +1055,8 @@ write_files:
               for key in ("stream_tokens", "stream_watermark"):
                   if key in body:
                       TUNING[key] = bool(body[key])
+              if "stream_schedule" in body or "stream_flow_steps" in body:
+                  TUNING["stream_adapted"] = False   # an operator's window is kept
               if "stream_schedule" in body:
                   try:
                       sched = [max(4, min(200, int(v))) for v in list(body["stream_schedule"])[:8]]
