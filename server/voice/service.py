@@ -109,8 +109,11 @@ class VoiceService:
     @property
     def client(self) -> httpx.AsyncClient:
         if self._client is None:
+            # Idle connections kept 60 s (httpx default 5 s): a patient line every 10 to 30 s then reuses the
+            # TLS connection to the worker instead of opening a new one on the first clause.
             self._client = httpx.AsyncClient(timeout=httpx.Timeout(self.settings.request_timeout_s,
-                                                                   connect=self.settings.connect_timeout_s))
+                                                                   connect=self.settings.connect_timeout_s),
+                                             limits=httpx.Limits(keepalive_expiry=60.0))
         return self._client
 
     async def aclose(self) -> None:

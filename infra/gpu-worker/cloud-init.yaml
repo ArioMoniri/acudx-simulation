@@ -1924,8 +1924,10 @@ write_files:
                   ms = round((time.monotonic() - started) * 1000.0, 1)
                   STATE["prepare_ms"][avatar_id] = ms
                   return _info_reply(avatar_id, True, cached="filesystem", queue_ms=waited, prepare_ms=ms)
+              PREP_YIELDS["on"] = priority != PREP_PRIORITY_CALL
               info = _prepare_locked(avatar_id, image_bytes, n, ref, key)
           finally:
+              PREP_YIELDS["on"] = True
               PREP_QUEUE.release()
           threading.Thread(target=_to_cache, args=(avatar_id, key), daemon=True).start()
           info.update({"prepared": True, "cached": None, "queue_ms": waited, "content_key": key,
@@ -1984,15 +1986,13 @@ write_files:
               # H.264 and VP8 encoders want even dimensions.
               img = img[: h - h % 2, : w - w % 2]
               steps.append(["crop", img.shape[1], img.shape[0]])
-              frame_path = os.path.join(full_dir, "00000000.png")
-              cv2.imwrite(frame_path, img)
-              coord_list, _frames = get_landmark_and_bbox([frame_path], 0)
-              if not coord_list or tuple(coord_list[0]) == tuple(coord_placeholder):
+              raw_box = _detect_fixed(img, os.path.join(root, "detect.png"))
+              if raw_box is None:
                   raise NoFace("no face found in the portrait")
               # One detection: after a resize or an extension the box is moved with the picture (scaled,
               # then shifted by the added top and left borders) instead of detected again. Live 2026-10-22
               # (H100): each detection took 3 to 4 s and a close-up portrait needed two or three.
-              raw = [float(v) for v in coord_list[0]]
+              raw = list(raw_box)
               phases["detections"] = 1
               for _attempt in range(3):
                   frame = img
@@ -2053,12 +2053,14 @@ write_files:
           def _parse(item):
               # Face parsing is mostly CPU work around a small GPU forward: PARSERS threads run it side by
               # side (live 2026-10-22, H100: 92 ms a frame, 6.9 s of a 20 s preparation, one at a time).
+              _yield_to_speech()
               with torch.no_grad():
                   return get_image_prepare_material(item[0], item[1], fp=FACE_PARSER, mode="jaw")
 
           t2 = time.monotonic()
           parsed = PARSERS.map(_parse, frames_boxes)
           for i, (fr, box) in enumerate(frames_boxes):
+              _yield_to_speech()
               bx1, by1, bx2, by2 = box
               t1 = time.monotonic()
               crop = cv2.resize(fr[by1:by2, bx1:bx2], (256, 256), interpolation=cv2.INTER_LANCZOS4)
@@ -2105,6 +2107,52 @@ write_files:
 
       class RefNotPrepared(ValueError):
           pass
+
+
+      DETECT_CANVAS = (MAX_FRAME_H, 768)   # (h, w) every detection runs on
+      # A preparation pauses between frames while a call on this GPU speaks (at most this long per pause):
+      # live 2026-10-22 (H100 SXM5) the case's look ladder, prepared during the first lines of a call that
+      # opened on the portrait, cut the runner to 64.7 fps with 88 underruns and slowed the voice.
+      PREP_YIELD_MAX_S = float(os.environ.get("AVATAR_PREP_YIELD_MAX_S", "20"))
+
+
+      # False while the picture a learner's call is waiting for is prepared (priority call): that one never
+      # pauses. PREP_QUEUE runs one preparation at a time, so one flag is enough.
+      PREP_YIELDS = {"on": True}
+
+
+      def _yield_to_speech() -> None:
+          if DEDICATED_GPU or not PREP_YIELDS["on"]:
+              return
+          t0 = time.monotonic()
+          while time.monotonic() - t0 < PREP_YIELD_MAX_S:
+              if not any(getattr(v, "speaking", False) for v in list(session_manager.sessions.values()) if v is not None):
+                  return
+              time.sleep(0.05)
+
+
+      def _detect_fixed(img: np.ndarray, path: str) -> list | None:
+          """The face box of ``img`` from MuseTalk's get_landmark_and_bbox, run on a canvas of one fixed size.
+          Its S3FD detector turns cudnn.benchmark on, so every new input size was autotuned first: live
+          2026-10-22 (H100 SXM5) 11.9 to 15.3 s for a portrait of a new width, 0.37 s for a width seen
+          before. The picture is pasted top-left (scaled down only when larger), so the box maps back."""
+          ch, cw = DETECT_CANVAS
+          h, w = img.shape[:2]
+          s = min(1.0, ch / float(h), cw / float(w))
+          src = img if s == 1.0 else cv2.resize(img, (int(w * s), int(h * s)), interpolation=cv2.INTER_AREA)
+          canvas = np.zeros((ch, cw, 3), dtype=np.uint8)
+          canvas[: src.shape[0], : src.shape[1]] = src
+          cv2.imwrite(path, canvas)
+          try:
+              coord_list, _frames = get_landmark_and_bbox([path], 0)
+          finally:
+              try:
+                  os.remove(path)
+              except OSError:
+                  pass
+          if not coord_list or tuple(coord_list[0]) == tuple(coord_placeholder):
+              return None
+          return [float(v) / s for v in coord_list[0]]
 
 
       class _WarmingFeatQueue(queue.Queue):

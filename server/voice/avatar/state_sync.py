@@ -226,6 +226,12 @@ async def _prep(client: httpx.AsyncClient, worker: mt.WorkerAvatar, a: Appearanc
     """Prepare the generated picture as a MuseTalk avatar on the call's worker, registered onto the
     base portrait (prepared first when ``portrait`` is given), so base and variant share one frame."""
     async def once() -> bool:
+        from server.voice.avatar.turn_speech import wait_until_quiet  # noqa: PLC0415
+
+        # A patient line being spoken on that GPU goes first, as for the edits: since the call opens on
+        # the portrait within seconds (6.8.1) the ladder's preparations run during the first lines, and
+        # live 2026-10-22 (H100 SXM5) they starved the runner (64.7 fps, 88 underruns) and the voice.
+        await wait_until_quiet(getattr(worker, "origin", ""))
         v.status, v.retryable = "preparing", False
         t = time.monotonic()
         try:

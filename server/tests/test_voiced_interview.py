@@ -190,6 +190,29 @@ async def test_a_voiced_turn_streams_the_reply_into_the_call_clause_by_clause(vo
     await gw.aclose()
 
 
+async def test_the_tts_connection_is_opened_while_the_guard_runs(voiced, runtime, monkeypatch):
+    # Live 2026-10-22: the first clause's TTS request paid a new TLS connection to the worker (the idle one
+    # was gone by the next question). It is opened at the start of the turn now, next to the guard.
+    state, _scenario, _sockets = voiced
+    warmed: list[str] = []
+
+    async def prewarm(lang: str) -> str:
+        warmed.append(lang)
+        return "gpu-worker"
+
+    monkeypatch.setattr(state.voice, "prewarm_tts", prewarm)
+    calls: list[str] = []
+    gw, tid, call, _dbl = await _start(state, runtime, calls, REPLY_TR)
+    transport = httpx.ASGITransport(app=app_module.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        r = await c.post(f"/v2/case/{tid}/interview", headers=ME, json={
+            "message": "Ağrınız nasıl?", "locale": "tr", "call_session_id": call.id})
+        r2 = await c.post(f"/v2/case/{tid}/interview", headers=ME, json={"message": "Ateşiniz var mı?", "locale": "tr"})
+    assert r.status_code == 200 and r2.status_code == 200
+    assert warmed == ["tr"]                     # only a turn with a live call warms the voice
+    await gw.aclose()
+
+
 async def test_nothing_is_spoken_when_the_guard_overrules_the_speculative_prompt(voiced, runtime):
     state, scenario, sockets = voiced
     calls: list[str] = []

@@ -114,3 +114,32 @@ def test_the_cache_copy_round_trips(tmp_path, monkeypatch):
     assert json.loads((root / "a2" / "avator_info.json").read_text())["avatar_id"] == "a2"
     assert ns["_from_cache"]("a3", "other") is False
     shutil.rmtree(cache)
+
+
+def test_detection_runs_on_one_canvas_size_and_maps_the_box_back(tmp_path):
+    # MuseTalk's S3FD turns cudnn.benchmark on, so each new input size was autotuned (11.9 to 15.3 s live).
+    import cv2
+    import numpy as np
+
+    seen: list[tuple[int, int]] = []
+
+    def get_landmark_and_bbox(paths, _shift):
+        im = cv2.imread(paths[0])
+        seen.append(im.shape[:2])
+        return [(100.0, 50.0, 300.0, 400.0)], [im]
+
+    ns = {"np": np, "cv2": cv2, "os": os, "DETECT_CANVAS": (720, 768), "coord_placeholder": (0.0, 0.0, 0.0, 0.0),
+          "get_landmark_and_bbox": get_landmark_and_bbox}
+    _pieces({"_detect_fixed"}, ns)
+    box = ns["_detect_fixed"](np.zeros((720, 702, 3), np.uint8), str(tmp_path / "d.png"))
+    assert box == [100.0, 50.0, 300.0, 400.0]
+    big = ns["_detect_fixed"](np.zeros((1440, 1404, 3), np.uint8), str(tmp_path / "d.png"))
+    assert big == [200.0, 100.0, 600.0, 800.0]                  # scaled down for detection, mapped back
+    assert seen == [(720, 768), (720, 768)] and not (tmp_path / "d.png").exists()
+
+
+def test_a_ladder_preparation_pauses_while_a_call_speaks_but_a_calls_own_does_not():
+    src = RUNNER
+    assert src.count("_yield_to_speech()") >= 2
+    assert 'PREP_YIELDS["on"] = priority != PREP_PRIORITY_CALL' in src
+    assert "raw_box = _detect_fixed(img" in src and "get_landmark_and_bbox([frame_path]" not in src

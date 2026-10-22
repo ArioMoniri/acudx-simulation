@@ -101,6 +101,10 @@ async def _ensure_history(rt: Any, thread_id: str, intent: Optional[str]) -> Opt
     return layer
 
 
+# TTS connection warm-ups in flight (kept referenced until done).
+_PREWARMS: set[asyncio.Task[Any]] = set()
+
+
 def _live_call(request: Request, body: InterviewRequest, thread_id: str, user: Optional[Principal]) -> Any:
     """The caller's connected live video call on this thread (MuseTalk runner), else None."""
     if not body.call_session_id or user is None:
@@ -160,6 +164,14 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
     timings = TurnTimings(t0=t0)
     speculative = None
     spec_speaker = None
+    svc = getattr(request.app.state, "voice", None)
+    if call is not None and svc is not None and hasattr(svc, "prewarm_tts"):
+        # Open the TTS connection while the guard and the persona run (about 1 s), so the first clause
+        # does not pay a TLS handshake: live 2026-10-22 an idle connection was gone by the next question
+        # (0.45 s through the sandbox's proxy; httpx drops idle connections after 5 s anywhere).
+        _bg = asyncio.get_running_loop().create_task(svc.prewarm_tts(call.lang))
+        _PREWARMS.add(_bg)
+        _bg.add_done_callback(_PREWARMS.discard)
     if call is not None and gateway is not None:
         # Speculative persona next to the guard: the rules' label and language give the prompt; it is
         # kept only if the guard's decision produces exactly the same prompt (and spoken only after it).
