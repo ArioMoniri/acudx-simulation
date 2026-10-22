@@ -303,18 +303,25 @@ class CallSpeaker:
                             speed=self.speed, prefer_fast=bool(getattr(self.svc.settings, "avatar_fast_en_tts", False)))
 
     async def _requests(self, persona: PersonaStream) -> AsyncIterator[tuple[str, float, Any]]:
-        """Each TTS request as soon as its text is ready, one ahead of the one being spoken: the next
-        piece is synthesised (on the worker's second Chatterbox replica) while the current one plays, so
-        a short opening clause is not followed by a gap."""
+        """Each TTS request one ahead of the one being spoken: the next piece is synthesised (on the
+        worker's second Chatterbox replica) while the current one plays, so a short opening clause is not
+        followed by a gap. The next request starts only once the current one has sent its first audio:
+        started at once, both replicas generated side by side on one GPU and the opening clause took 1.5
+        to 2.4 s instead of 1.0 to 1.5 s (T3 20 to 24 ms a token against 15, live 2026-10-22)."""
         q: asyncio.Queue[tuple[str, float, Any] | None] = asyncio.Queue(maxsize=1)
+        self._first_audio = asyncio.Event()
 
         async def produce() -> None:
             try:
                 async for text in self._batches(persona):
                     self.timings.mark("first_clause_ms")
+                    await self._first_audio.wait()
+                    self._first_audio.clear()
                     await q.put((text, time.monotonic(), asyncio.ensure_future(self._tts(text))))
             finally:
                 await q.put(None)
+
+        self._first_audio.set()
 
         producer = asyncio.get_running_loop().create_task(produce())
         try:
@@ -354,8 +361,10 @@ class CallSpeaker:
                     if "first_chunk_ms" not in req:
                         req["first_chunk_ms"] = round((time.monotonic() - t) * 1000.0, 1)
                         self.timings.mark("tts_first_chunk_ms")
+                        self._first_audio.set()      # the next piece may start synthesising now
                     req["bytes"] = req.get("bytes", 0) + len(data)
                     yield data
+            self._first_audio.set()                  # also after a request that gave no audio
             self.spoken.append(text)
 
     async def _run(self, persona: PersonaStream) -> None:
