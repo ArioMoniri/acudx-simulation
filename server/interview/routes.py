@@ -173,6 +173,11 @@ class StalledPersona:
 
 
 
+def _guard_deadline_s(request: Request) -> Optional[float]:
+    ms = getattr(getattr(request.app.state, "settings", None), "guard_deadline_ms", None)
+    return None if ms is None else float(ms) / 1000.0
+
+
 def _history_ready(st: dict[str, Any]) -> bool:
     return all(_layer_ready(st, f"history.{c}") for c in ("presenting", "associated", "background"))
 
@@ -294,7 +299,8 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
     # safety label there stops the reply mid-stream and answers again. Only when every history layer is
     # ready: the model's history intent then cannot change what the patient knows.
     race = await classify_with_deadline(gateway, message, case_context={"scope_terms": [complaint]},
-                                        chief_complaint=complaint, may_release=_history_ready(st))
+                                        chief_complaint=complaint, may_release=_history_ready(st),
+                                        deadline_s=_guard_deadline_s(request))
     decision = race.decision
     late = race.late
     timings.mark("guard_ms")

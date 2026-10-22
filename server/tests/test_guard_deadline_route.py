@@ -14,7 +14,6 @@ import httpx
 import pytest
 
 from server import app as app_module
-from server.interview import guard as Gd
 from server.interview.patient import _DIRECTIVE
 from server.model_gateway import ModelGateway
 from server.providers.anthropic_provider import AnthropicProvider
@@ -50,14 +49,14 @@ async def _swap(state, calls, **kw):
 
 
 @pytest.fixture
-def interrupts(monkeypatch):
+def interrupts(voiced, monkeypatch):  # noqa: F811 - the voiced fixture first (it sets the app settings)
     seen: list[str] = []
 
     async def interrupt(client, worker, worker_session):
         seen.append(worker_session)
 
     monkeypatch.setattr(mt, "interrupt", interrupt)
-    monkeypatch.setattr(Gd, "GUARD_DEADLINE_S", 0.1)
+    monkeypatch.setattr(voiced[0].settings, "guard_deadline_ms", 100)
     return seen
 
 
@@ -156,4 +155,17 @@ async def test_a_typed_question_uses_the_deadline_too_and_reports_the_models_lab
     # A late non-safety label does not stop a reply; it is recorded.
     assert g["released"] == "deadline" and g["late_label"] == "off_topic" and g["stopped"] is False
     assert body["guard"]["label"] == "clinical"
+    await gw.aclose()
+
+
+async def test_a_zero_deadline_setting_waits_for_the_model(voiced, runtime, interrupts):
+    state, scenario, sockets = voiced
+    state.settings.guard_deadline_ms = 0
+    calls: list[str] = []
+    gw, tid, call, _ = await _start(state, runtime, calls, REPLY_TR)
+    gw, _ = await _swap(state, calls, label="clinical", reason="in_scope", guard_s=0.4)
+    r = await _ask(tid, call)
+    assert r.status_code == 200, r.text
+    g = r.json()["meta"]["guard"]
+    assert g["released"] == "decided" and g["waited_ms"] >= 380
     await gw.aclose()
