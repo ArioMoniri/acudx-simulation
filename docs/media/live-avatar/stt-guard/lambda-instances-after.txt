@@ -1,0 +1,5 @@
+Lambda instances at 2026-10-22T07:39:43Z after stopping this pass's workers
+this pass (gateway ledger, acudx-worker-*): 650ef5932b664507951b58b8f9a9d725, 8cec0176d73d469da51b7ae955541681, beeec24c6e5c46d39b1a6a9d863dafa1
+still listed from this pass: none
+all instances on the account (others are not this gateway's and were not touched):
+2893456e159a4ad9a8912593787b9169 acudx-wm-wp0-pilot-20261022-v11-retry active gpu_1x_h100_sxm5
