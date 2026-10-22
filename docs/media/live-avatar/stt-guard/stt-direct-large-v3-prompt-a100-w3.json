@@ -1,0 +1,308 @@
+{
+ "model": "Systran/faster-whisper-large-v3",
+ "prompt": "tr",
+ "summary": {
+  "tr": {
+   "n": 16,
+   "wer": 0.216,
+   "exact": 2,
+   "ms_median": 404
+  },
+  "en": {
+   "n": 16,
+   "wer": 0.0,
+   "exact": 16,
+   "ms_median": 349
+  }
+ },
+ "rows": [
+  {
+   "file": "synthetic-tts-01-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Göğüs ağrınız ne zaman başladı?",
+   "hyp": "Göğüs ağrınız ne zaman bağladı?",
+   "wer": 0.2,
+   "ms": 839.8
+  },
+  {
+   "file": "synthetic-tts-01-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Göğüs ağrınız ne zaman başladı?",
+   "hyp": "Göğüs ağrınız ne zaman bağladı?",
+   "wer": 0.2,
+   "ms": 379.9
+  },
+  {
+   "file": "synthetic-tts-02-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Ağrı kolunuza ya da çenenize yayılıyor mu?",
+   "hyp": "Ayrı kolunuzda ya da senenizde yayılıyor mu?",
+   "wer": 0.429,
+   "ms": 399.0
+  },
+  {
+   "file": "synthetic-tts-02-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Ağrı kolunuza ya da çenenize yayılıyor mu?",
+   "hyp": "Ayrı kolunuzda ya da senenizde yayılıyor mu?",
+   "wer": 0.429,
+   "ms": 397.7
+  },
+  {
+   "file": "synthetic-tts-03-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Düzenli kullandığınız ilaçlar var mı?",
+   "hyp": "Düzenli kullandığınız ilaçlar var mı?",
+   "wer": 0.0,
+   "ms": 377.2
+  },
+  {
+   "file": "synthetic-tts-03-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Düzenli kullandığınız ilaçlar var mı?",
+   "hyp": "Düzenli kullandığınız ilaçlar var mı?",
+   "wer": 0.0,
+   "ms": 385.0
+  },
+  {
+   "file": "synthetic-tts-04-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Herhangi bir ilaca alerjiniz var mı?",
+   "hyp": "Herhangi bir ilaka alerjiniz var mı?",
+   "wer": 0.167,
+   "ms": 389.9
+  },
+  {
+   "file": "synthetic-tts-04-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Herhangi bir ilaca alerjiniz var mı?",
+   "hyp": "Herhangi bir ilaka alerjiniz var mı?",
+   "wer": 0.167,
+   "ms": 408.2
+  },
+  {
+   "file": "synthetic-tts-05-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Ailenizde kalp hastalığı olan var mı?",
+   "hyp": "Ailenizde kalp hastalığıcı olan var mı?",
+   "wer": 0.167,
+   "ms": 394.9
+  },
+  {
+   "file": "synthetic-tts-05-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Ailenizde kalp hastalığı olan var mı?",
+   "hyp": "Ailenizde kalp hastalığıcı olan var mı?",
+   "wer": 0.167,
+   "ms": 394.3
+  },
+  {
+   "file": "synthetic-tts-06-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Hastaya beş litre oksijen başlayalım ve EKG çekelim.",
+   "hyp": "Hastaya bet litre oksijen bağlayalım ve EKG şeklim.",
+   "wer": 0.375,
+   "ms": 470.0
+  },
+  {
+   "file": "synthetic-tts-06-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Hastaya beş litre oksijen başlayalım ve EKG çekelim.",
+   "hyp": "Hastaya bet litre oksijen bağlayalım ve EKG şeklim.",
+   "wer": 0.375,
+   "ms": 458.3
+  },
+  {
+   "file": "synthetic-tts-07-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Nefes darlığınız merdiven çıkarken artıyor mu?",
+   "hyp": "Nefes darlığınız merdiven sıkarken artıyor mu?",
+   "wer": 0.167,
+   "ms": 421.9
+  },
+  {
+   "file": "synthetic-tts-07-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Nefes darlığınız merdiven çıkarken artıyor mu?",
+   "hyp": "Nefes darlığınız merdiven sıkarken artıyor mu?",
+   "wer": 0.167,
+   "ms": 418.8
+  },
+  {
+   "file": "synthetic-tts-08-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Son zamanlarda ateşiniz ya da öksürüğünüz oldu mu?",
+   "hyp": "Son zamanlarda ateğiniz ya da öksürüğünüz oldu mu?",
+   "wer": 0.125,
+   "ms": 423.8
+  },
+  {
+   "file": "synthetic-tts-08-tr-chatterbox.wav",
+   "lang": "tr",
+   "status": 200,
+   "ref": "Son zamanlarda ateşiniz ya da öksürüğünüz oldu mu?",
+   "hyp": "Son zamanlarda ateğiniz ya da öksürüğünüz oldu mu?",
+   "wer": 0.125,
+   "ms": 422.8
+  },
+  {
+   "file": "synthetic-tts-09-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "When did the chest pain start?",
+   "hyp": "When did the chest pain start?",
+   "wer": 0.0,
+   "ms": 312.0
+  },
+  {
+   "file": "synthetic-tts-09-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "When did the chest pain start?",
+   "hyp": "When did the chest pain start?",
+   "wer": 0.0,
+   "ms": 345.8
+  },
+  {
+   "file": "synthetic-tts-10-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Does the pain spread to your arm or your jaw?",
+   "hyp": "Does the pain spread to your arm or your jaw?",
+   "wer": 0.0,
+   "ms": 460.9
+  },
+  {
+   "file": "synthetic-tts-10-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Does the pain spread to your arm or your jaw?",
+   "hyp": "Does the pain spread to your arm or your jaw?",
+   "wer": 0.0,
+   "ms": 352.1
+  },
+  {
+   "file": "synthetic-tts-11-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Do you take any medicines regularly?",
+   "hyp": "Do you take any medicines regularly?",
+   "wer": 0.0,
+   "ms": 308.1
+  },
+  {
+   "file": "synthetic-tts-11-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Do you take any medicines regularly?",
+   "hyp": "Do you take any medicines regularly?",
+   "wer": 0.0,
+   "ms": 308.0
+  },
+  {
+   "file": "synthetic-tts-12-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Are you allergic to any medication?",
+   "hyp": "Are you allergic to any medication?",
+   "wer": 0.0,
+   "ms": 305.6
+  },
+  {
+   "file": "synthetic-tts-12-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Are you allergic to any medication?",
+   "hyp": "Are you allergic to any medication?",
+   "wer": 0.0,
+   "ms": 306.1
+  },
+  {
+   "file": "synthetic-tts-13-en-chatterbox.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Let's start five liters of oxygen and get an ECG.",
+   "hyp": "Let's start five liters of oxygen and get an ECG.",
+   "wer": 0.0,
+   "ms": 377.7
+  },
+  {
+   "file": "synthetic-tts-13-en-chatterbox.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Let's start five liters of oxygen and get an ECG.",
+   "hyp": "Let's start five liters of oxygen and get an ECG.",
+   "wer": 0.0,
+   "ms": 369.9
+  },
+  {
+   "file": "synthetic-tts-14-en-chatterbox.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Have you had any fever or cough recently?",
+   "hyp": "Have you had any fever or cough recently?",
+   "wer": 0.0,
+   "ms": 331.6
+  },
+  {
+   "file": "synthetic-tts-14-en-chatterbox.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Have you had any fever or cough recently?",
+   "hyp": "Have you had any fever or cough recently?",
+   "wer": 0.0,
+   "ms": 359.3
+  },
+  {
+   "file": "synthetic-tts-15-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Does anyone in your family have heart problems?",
+   "hyp": "Does anyone in your family have heart problems?",
+   "wer": 0.0,
+   "ms": 385.7
+  },
+  {
+   "file": "synthetic-tts-15-en-kokoro.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Does anyone in your family have heart problems?",
+   "hyp": "Does anyone in your family have heart problems?",
+   "wer": 0.0,
+   "ms": 342.1
+  },
+  {
+   "file": "synthetic-tts-16-en-chatterbox.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Is your breathing worse when you climb the stairs?",
+   "hyp": "Is your breathing worse when you climb the stairs?",
+   "wer": 0.0,
+   "ms": 372.0
+  },
+  {
+   "file": "synthetic-tts-16-en-chatterbox.wav",
+   "lang": "en",
+   "status": 200,
+   "ref": "Is your breathing worse when you climb the stairs?",
+   "hyp": "Is your breathing worse when you climb the stairs?",
+   "wer": 0.0,
+   "ms": 354.7
+  }
+ ]
+}

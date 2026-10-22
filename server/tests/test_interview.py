@@ -240,13 +240,13 @@ async def test_typed_persona_starts_next_to_the_guard(runtime, client, monkeypat
     from server.interview import routes as R
 
     gw, tid = await _setup(runtime, key=ANT, dbl=AnthropicDouble(responder=responder([])))
-    real = R.classify_message
+    real = R.classify_with_deadline
 
     async def slow_guard(*a, **kw):
         await asyncio.sleep(0.6)
         return await real(*a, **kw)
 
-    monkeypatch.setattr(R, "classify_message", slow_guard)
+    monkeypatch.setattr(R, "classify_with_deadline", slow_guard)
     r = await client.post(f"/v2/case/{tid}/interview", json={"message": "Do you take any medicine at home?"},
                           headers=ME)
     body = r.json()

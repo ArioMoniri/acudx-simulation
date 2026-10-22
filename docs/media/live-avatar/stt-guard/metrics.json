@@ -1,0 +1,618 @@
+{
+ "captured": "2026-10-22, private gateway (this worktree, Claude as the model) and Lambda workers it launched",
+ "workers": [
+  {
+   "id": 1,
+   "type": "gpu_2x_h100_sxm5",
+   "region": "us-southeast-1",
+   "stt": "speaches answered 500 to every transcription for 20 min with the model in place (no log captured on that worker; the watchdog and the published speaches log came after it)",
+   "cost_usd": 2.76
+  },
+  {
+   "id": 2,
+   "type": "gpu_2x_h100_sxm5",
+   "region": "us-southeast-1",
+   "stt": "ready 16 s after speaches started (model fetched in 4 s, first transcription 12.0 s including the load)",
+   "cost_usd": 4.43
+  },
+  {
+   "id": 3,
+   "type": "gpu_1x_a100_sxm4",
+   "region": "us-east-1 (acudx-wm filesystem)",
+   "stt": "ready 149 s after the fetch began (47 s to the network filesystem, first transcription 8.9 s); large-v3 fetched beside it for the A/B (STT_EXTRA_MODELS, this launch only)",
+   "cost_usd": 0.41
+  }
+ ],
+ "stt": [
+  {
+   "file": "stt-accuracy-large-v3-turbo-w2.json",
+   "model": "deepdml/faster-whisper-large-v3-turbo-ct2",
+   "prompt": "default (gateway)",
+   "summary": {
+    "tr_hint": {
+     "n": 24,
+     "wer": 0.451,
+     "exact": 3,
+     "lang_detected_right": 24,
+     "gateway_ms_median": 214,
+     "gateway_ms_p90": 237,
+     "worker_ms_median": 198,
+     "audio_s_median": 3.28
+    },
+    "tr_auto": {
+     "n": 24,
+     "wer": 0.49,
+     "exact": 3,
+     "lang_detected_right": 18,
+     "gateway_ms_median": 237,
+     "gateway_ms_p90": 263,
+     "worker_ms_median": 224,
+     "audio_s_median": 3.28
+    },
+    "en_hint": {
+     "n": 24,
+     "wer": 0.0,
+     "exact": 24,
+     "lang_detected_right": 24,
+     "gateway_ms_median": 193,
+     "gateway_ms_p90": 208,
+     "worker_ms_median": 178,
+     "audio_s_median": 2.75
+    },
+    "en_auto": {
+     "n": 24,
+     "wer": 0.0,
+     "exact": 24,
+     "lang_detected_right": 24,
+     "gateway_ms_median": 222,
+     "gateway_ms_p90": 232,
+     "worker_ms_median": 209,
+     "audio_s_median": 2.75
+    }
+   }
+  },
+  {
+   "file": "stt-direct-turbo-prompt-w2.json",
+   "model": "deepdml/faster-whisper-large-v3-turbo-ct2",
+   "prompt": "tr",
+   "summary": {
+    "tr": {
+     "n": 16,
+     "wer": 0.294,
+     "exact": 4,
+     "ms_median": 204
+    },
+    "en": {
+     "n": 16,
+     "wer": 0.0,
+     "exact": 16,
+     "ms_median": 186
+    }
+   }
+  },
+  {
+   "file": "stt-accuracy-large-v3-turbo-prompt-gateway-a100-w3.json",
+   "model": "deepdml/faster-whisper-large-v3-turbo-ct2",
+   "prompt": "default (gateway)",
+   "summary": {
+    "tr_hint": {
+     "n": 24,
+     "wer": 0.294,
+     "exact": 6,
+     "lang_detected_right": 24,
+     "gateway_ms_median": 296,
+     "gateway_ms_p90": 328,
+     "worker_ms_median": 282,
+     "audio_s_median": 3.28
+    },
+    "tr_auto": {
+     "n": 24,
+     "wer": 0.49,
+     "exact": 3,
+     "lang_detected_right": 18,
+     "gateway_ms_median": 348,
+     "gateway_ms_p90": 362,
+     "worker_ms_median": 334,
+     "audio_s_median": 3.28
+    },
+    "en_hint": {
+     "n": 24,
+     "wer": 0.0,
+     "exact": 24,
+     "lang_detected_right": 24,
+     "gateway_ms_median": 265,
+     "gateway_ms_p90": 291,
+     "worker_ms_median": 253,
+     "audio_s_median": 2.75
+    },
+    "en_auto": {
+     "n": 24,
+     "wer": 0.0,
+     "exact": 24,
+     "lang_detected_right": 24,
+     "gateway_ms_median": 327,
+     "gateway_ms_p90": 356,
+     "worker_ms_median": 309,
+     "audio_s_median": 2.75
+    }
+   }
+  },
+  {
+   "file": "stt-direct-turbo-noprompt-a100-w3.json",
+   "model": "deepdml/faster-whisper-large-v3-turbo-ct2",
+   "prompt": "none",
+   "summary": {
+    "tr": {
+     "n": 16,
+     "wer": 0.451,
+     "exact": 2,
+     "ms_median": 282
+    },
+    "en": {
+     "n": 16,
+     "wer": 0.0,
+     "exact": 16,
+     "ms_median": 234
+    }
+   }
+  },
+  {
+   "file": "stt-direct-large-v3-noprompt-a100-w3.json",
+   "model": "Systran/faster-whisper-large-v3",
+   "prompt": "none",
+   "summary": {
+    "tr": {
+     "n": 16,
+     "wer": 0.275,
+     "exact": 2,
+     "ms_median": 417
+    },
+    "en": {
+     "n": 16,
+     "wer": 0.0,
+     "exact": 16,
+     "ms_median": 343
+    }
+   }
+  },
+  {
+   "file": "stt-direct-large-v3-prompt-a100-w3.json",
+   "model": "Systran/faster-whisper-large-v3",
+   "prompt": "tr",
+   "summary": {
+    "tr": {
+     "n": 16,
+     "wer": 0.216,
+     "exact": 2,
+     "ms_median": 404
+    },
+    "en": {
+     "n": 16,
+     "wer": 0.0,
+     "exact": 16,
+     "ms_median": 349
+    }
+   }
+  }
+ ],
+ "guard": [
+  {
+   "run": "tr-deadline-off",
+   "lines": [
+    {
+     "line": 1,
+     "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
+     "speech_start_ms": 3344,
+     "guard_released": "decided",
+     "guard_waited_ms": 934.7,
+     "guard_model_label_at_ms": 934.7,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "stalled",
+     "voice_released_ms": 2536.8,
+     "tts_first_chunk_ms": 2536.8,
+     "history": "stalled_then_answered",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 2,
+     "question": "Ağrınız nasıl bir ağrı, batıcı mı, sıkıştırıcı mı?",
+     "speech_start_ms": 2143,
+     "guard_released": "decided",
+     "guard_waited_ms": 793,
+     "guard_model_label_at_ms": 793,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 1494.7,
+     "tts_first_chunk_ms": 1494.7,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 3,
+     "question": "Ağrınızı artıran ya da azaltan bir şey var mı?",
+     "speech_start_ms": 2483,
+     "guard_released": "decided",
+     "guard_waited_ms": 903.6,
+     "guard_model_label_at_ms": 903.6,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 1773.6,
+     "tts_first_chunk_ms": 1773.6,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 4,
+     "question": "Daha önce böyle bir şey yaşadınız mı?",
+     "speech_start_ms": 2262,
+     "guard_released": "decided",
+     "guard_waited_ms": 746.4,
+     "guard_model_label_at_ms": 746.4,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 1588.5,
+     "tts_first_chunk_ms": 1588.5,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 5,
+     "question": "Düzenli kullandığınız ilaç ya da alerjiniz var mı?",
+     "speech_start_ms": 2956,
+     "guard_released": "decided",
+     "guard_waited_ms": 849.5,
+     "guard_model_label_at_ms": 849.5,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "restarted",
+     "voice_released_ms": 2368.2,
+     "tts_first_chunk_ms": 2368.2,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 6,
+     "question": "Şu an kendinizi nasıl hissediyorsunuz, geldiğiniz zamana göre?",
+     "speech_start_ms": 2236,
+     "guard_released": "decided",
+     "guard_waited_ms": 764.6,
+     "guard_model_label_at_ms": 764.6,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 1612.6,
+     "tts_first_chunk_ms": 1612.6,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    }
+   ],
+   "speech_start_ms_median_lines_2_on": 2262,
+   "speech_start_ms_max_lines_2_on": 2956
+  },
+  {
+   "run": "tr-deadline-700",
+   "lines": [
+    {
+     "line": 1,
+     "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
+     "speech_start_ms": 5120,
+     "guard_released": "decided",
+     "guard_waited_ms": 1343.3,
+     "guard_model_label_at_ms": 1343.3,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "restarted",
+     "voice_released_ms": 3998.8,
+     "tts_first_chunk_ms": 3998.8,
+     "history": "written_in_time",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 2,
+     "question": "Ağrınız nasıl bir ağrı, batıcı mı, sıkıştırıcı mı?",
+     "speech_start_ms": 2554,
+     "guard_released": "deadline",
+     "guard_waited_ms": 701.7,
+     "guard_model_label_at_ms": 1382,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 1959.9,
+     "tts_first_chunk_ms": 1959.9,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": 2554
+    },
+    {
+     "line": 3,
+     "question": "Ağrınızı artıran ya da azaltan bir şey var mı?",
+     "speech_start_ms": 2369,
+     "guard_released": "deadline",
+     "guard_waited_ms": 701.5,
+     "guard_model_label_at_ms": 1250.4,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 1739,
+     "tts_first_chunk_ms": 1739,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": 2369
+    },
+    {
+     "line": 4,
+     "question": "Daha önce böyle bir şey yaşadınız mı?",
+     "speech_start_ms": 2718,
+     "guard_released": "deadline",
+     "guard_waited_ms": 701.3,
+     "guard_model_label_at_ms": 1275.6,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 1766,
+     "tts_first_chunk_ms": 1766,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": 2718
+    },
+    {
+     "line": 5,
+     "question": "Düzenli kullandığınız ilaç ya da alerjiniz var mı?",
+     "speech_start_ms": 2507,
+     "guard_released": "deadline",
+     "guard_waited_ms": 700.9,
+     "guard_model_label_at_ms": 1249.2,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 1858.2,
+     "tts_first_chunk_ms": 1858.1,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": 2507
+    },
+    {
+     "line": 6,
+     "question": "Şu an kendinizi nasıl hissediyorsunuz, geldiğiniz zamana göre?",
+     "speech_start_ms": 3571,
+     "guard_released": "deadline",
+     "guard_waited_ms": 700.1,
+     "guard_model_label_at_ms": 2866,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 2926.5,
+     "tts_first_chunk_ms": 2926.5,
+     "history": null,
+     "speech_start_without_deadline_ms_estimate": 3571
+    }
+   ],
+   "speech_start_ms_median_lines_2_on": 2554,
+   "speech_start_ms_max_lines_2_on": 3571
+  },
+  {
+   "run": "tr-slowguard-deadline-off",
+   "lines": [
+    {
+     "line": 1,
+     "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
+     "speech_start_ms": 9619,
+     "guard_released": "decided",
+     "guard_waited_ms": 6534,
+     "guard_model_label_at_ms": 6534,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "restarted",
+     "voice_released_ms": 8874.9,
+     "tts_first_chunk_ms": 1629.6,
+     "history": "written_in_time",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 2,
+     "question": "Ağrınız nasıl bir ağrı, batıcı mı, sıkıştırıcı mı?",
+     "speech_start_ms": 3059,
+     "guard_released": "decided",
+     "guard_waited_ms": 1943.2,
+     "guard_model_label_at_ms": 1943.2,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 2335.7,
+     "tts_first_chunk_ms": 2335.7,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 3,
+     "question": "Ağrınızı artıran ya da azaltan bir şey var mı?",
+     "speech_start_ms": 2662,
+     "guard_released": "decided",
+     "guard_waited_ms": 1419.3,
+     "guard_model_label_at_ms": 1419.3,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 1978.7,
+     "tts_first_chunk_ms": 1978.7,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 4,
+     "question": "Daha önce böyle bir şey yaşadınız mı?",
+     "speech_start_ms": 3190,
+     "guard_released": "decided",
+     "guard_waited_ms": 1762.8,
+     "guard_model_label_at_ms": 1762.8,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 2559.1,
+     "tts_first_chunk_ms": 2559.1,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 5,
+     "question": "Düzenli kullandığınız ilaç ya da alerjiniz var mı?",
+     "speech_start_ms": 2960,
+     "guard_released": "decided",
+     "guard_waited_ms": 1511.8,
+     "guard_model_label_at_ms": 1511.8,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 2039.4,
+     "tts_first_chunk_ms": 2039.4,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 6,
+     "question": "Şu an kendinizi nasıl hissediyorsunuz, geldiğiniz zamana göre?",
+     "speech_start_ms": 2436,
+     "guard_released": "decided",
+     "guard_waited_ms": 1696.8,
+     "guard_model_label_at_ms": 1696.8,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 1792.2,
+     "tts_first_chunk_ms": 1792.2,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    }
+   ],
+   "speech_start_ms_median_lines_2_on": 2960,
+   "speech_start_ms_max_lines_2_on": 3190
+  },
+  {
+   "run": "tr-slowguard-deadline-700",
+   "lines": [
+    {
+     "line": 1,
+     "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
+     "speech_start_ms": 4422,
+     "guard_released": "decided",
+     "guard_waited_ms": 2027.1,
+     "guard_model_label_at_ms": 2027.1,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "restarted",
+     "voice_released_ms": 3795.1,
+     "tts_first_chunk_ms": 1762.2,
+     "history": "written_in_time",
+     "speech_start_without_deadline_ms_estimate": null
+    },
+    {
+     "line": 2,
+     "question": "Ağrınız nasıl bir ağrı, batıcı mı, sıkıştırıcı mı?",
+     "speech_start_ms": 2873,
+     "guard_released": "deadline",
+     "guard_waited_ms": 700.5,
+     "guard_model_label_at_ms": 4812.2,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 2038.1,
+     "tts_first_chunk_ms": 2038.1,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": 5647
+    },
+    {
+     "line": 3,
+     "question": "Ağrınızı artıran ya da azaltan bir şey var mı?",
+     "speech_start_ms": 2737,
+     "guard_released": "deadline",
+     "guard_waited_ms": 701.3,
+     "guard_model_label_at_ms": 1554.3,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 1968,
+     "tts_first_chunk_ms": 1968,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": 2737
+    },
+    {
+     "line": 4,
+     "question": "Daha önce böyle bir şey yaşadınız mı?",
+     "speech_start_ms": 2605,
+     "guard_released": "deadline",
+     "guard_waited_ms": 699.9,
+     "guard_model_label_at_ms": 1707,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 1928.2,
+     "tts_first_chunk_ms": 1928.2,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": 2605
+    },
+    {
+     "line": 5,
+     "question": "Düzenli kullandığınız ilaç ya da alerjiniz var mı?",
+     "speech_start_ms": 2536,
+     "guard_released": "deadline",
+     "guard_waited_ms": 701.1,
+     "guard_model_label_at_ms": 1613.8,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 1828.2,
+     "tts_first_chunk_ms": 1828.2,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": 2536
+    },
+    {
+     "line": 6,
+     "question": "Şu an kendinizi nasıl hissediyorsunuz, geldiğiniz zamana göre?",
+     "speech_start_ms": 2709,
+     "guard_released": "deadline",
+     "guard_waited_ms": 701.9,
+     "guard_model_label_at_ms": 1817.5,
+     "late_label": "clinical",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 1880.4,
+     "tts_first_chunk_ms": 1880.4,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": 2709
+    },
+    {
+     "line": 7,
+     "question": "Avustralyanın başkenti neresi?",
+     "speech_start_ms": 2401,
+     "guard_released": "deadline",
+     "guard_waited_ms": 700.5,
+     "guard_model_label_at_ms": 1813.9,
+     "late_label": "off_topic",
+     "stopped": false,
+     "speculative": "kept",
+     "voice_released_ms": 1746.1,
+     "tts_first_chunk_ms": 1746.1,
+     "history": null,
+     "speech_start_without_deadline_ms_estimate": 2469
+    },
+    {
+     "line": 8,
+     "question": "Kendinize zarar vermeyi düşündüğünüz oldu mu?",
+     "speech_start_ms": 2503,
+     "guard_released": "decided",
+     "guard_waited_ms": 1831.2,
+     "guard_model_label_at_ms": 1831.2,
+     "late_label": null,
+     "stopped": null,
+     "speculative": "kept",
+     "voice_released_ms": 1840,
+     "tts_first_chunk_ms": 1775.8,
+     "history": "ready",
+     "speech_start_without_deadline_ms_estimate": null
+    }
+   ],
+   "speech_start_ms_median_lines_2_on": 2605,
+   "speech_start_ms_max_lines_2_on": 2873
+  }
+ ]
+}

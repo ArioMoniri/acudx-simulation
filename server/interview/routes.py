@@ -19,7 +19,7 @@ Latency (production 2026-10-22: 12.3 s to the first typed reply on a fever case)
 next to the guard on every question (kept only when the guard's label gives the same prompt), a typed
 question waits at most ``HISTORY_TYPED_WAIT_S`` for a history layer still being written (the patient then
 answers from what is known, unsure of details, and the layer is written to agree with that answer and is
-marked seen once ready), and the tutor runs beside the persona.
+marked seen once ready), and the tutor starts right after the guard.
 
 With a live patient video call on the thread (``call_session_id``, the caller's own call), the reply
 is spoken into the call while it is written (server/voice/avatar/turn_speech.py,
@@ -47,7 +47,7 @@ from pydantic import AliasChoices, BaseModel, Field
 from server.auth.deps import Principal, optional_user
 from server.config import EgressBlocked
 from server.interview import tutor as T
-from server.interview.guard import GuardDecision, classify_message, rule_classify
+from server.interview.guard import GuardDecision, classify_with_deadline, overrules, rule_classify
 from server.interview.patient import forbidden_terms, leaks, patient_view, persona_turn
 from server.model_gateway import GatewayError
 from server.orchestration.routes import _error, _mark_seen, _thread_for, get_runtime
@@ -84,6 +84,8 @@ def stall_line(locale: str, message: str) -> str:
     lines = STALL_LINES["tr" if str(locale or "").startswith("tr") else "en"]
     return lines[sum(map(ord, message)) % len(lines)]
 TRANSCRIPT_CAP = 80
+# How long a reply released at the guard's deadline waits, once written, for the model's own label.
+LATE_GUARD_CAP_S = 20.0
 PERSONA_MAX_TOKENS = 300
 
 
@@ -184,6 +186,44 @@ class StalledPersona:
             self.inner.cancel()
 
 
+
+def _guard_deadline_s(request: Request) -> Optional[float]:
+    ms = getattr(getattr(request.app.state, "settings", None), "guard_deadline_ms", None)
+    return None if ms is None else float(ms) / 1000.0
+
+
+def _history_ready(st: dict[str, Any]) -> bool:
+    return all(_layer_ready(st, f"history.{c}") for c in ("presenting", "associated", "background"))
+
+
+async def _late_decision(late: "asyncio.Task[GuardDecision]", reply_task: "Optional[asyncio.Future[Any]]",
+                         cap_s: float = LATE_GUARD_CAP_S) -> Optional[GuardDecision]:
+    """The model's late decision: as soon as it lands while ``reply_task`` runs (None if the reply finishes
+    first), or, with no ``reply_task``, within ``cap_s`` (None after that: the rules' decision stands)."""
+    if reply_task is not None:
+        await asyncio.wait({late, reply_task}, return_when=asyncio.FIRST_COMPLETED)
+        return late.result() if late.done() and not late.cancelled() else None
+    try:
+        return await asyncio.wait_for(asyncio.shield(late), cap_s)
+    except asyncio.TimeoutError:
+        late.cancel()
+        return None
+
+
+def _stop_reply(reply_task: "asyncio.Future[Any]", persona: Any, speaker: Any, *, reason: str) -> None:
+    reply_task.cancel()
+    if persona is not None:
+        persona.cancel()
+    if speaker is not None:
+        speaker.stop(f"guard_{reason}")
+
+
+def _late_meta(final: GuardDecision, timings: Any, *, stopped: bool) -> dict[str, Any]:
+    timings.mark("guard_late_ms")
+    return {"late_label": final.label, "late_source": final.source, "late_model": final.model,
+            "late_ms": timings.public().get("guard_late_ms"), "stopped": stopped}
+
+
 # TTS connection warm-ups in flight (kept referenced until done).
 _PREWARMS: set[asyncio.Task[Any]] = set()
 
@@ -270,150 +310,198 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
                 spec_speaker = _call_speaker(request, call, persona=speculative, timings=timings,
                                              gate=_scrubber(st, patient_view(st, locale=loc0), loc0))
 
-    decision = await classify_message(gateway, message, case_context={"scope_terms": [complaint]},
-                                      chief_complaint=complaint)
+    # The guard with its deadline (docs/architecture/18 6.3.12): a confident clinical rules label starts the
+    # reply after GUARD_DEADLINE_S when the model is slower; the model's own label arrives in ``late`` and a
+    # safety label there stops the reply mid-stream and answers again. Only when every history layer is
+    # ready: the model's history intent then cannot change what the patient knows.
+    race = await classify_with_deadline(gateway, message, case_context={"scope_terms": [complaint]},
+                                        chief_complaint=complaint, may_release=_history_ready(st),
+                                        deadline_s=_guard_deadline_s(request))
+    decision = race.decision
+    late = race.late
     timings.mark("guard_ms")
-    locale = _locale(body, st, decision)
+    guard_meta: dict[str, Any] = {"released": "deadline" if late is not None else "decided",
+                                  "waited_ms": race.waited_ms}
     tutor_task: Optional[asyncio.Future[Any]] = None
-    if body.guidance and gateway is not None and not (
-            decision.label == "unsafe" and decision.reason in ("self_harm_disclosure", "abuse_disclosure")):
-        # Beside the history wait and the persona, not after them: it reads the question (the reply adds
-        # little to what to do next), so the attending's actions no longer add 2 s to the reply.
-        _tr = _transcript(st)
-        asked = {t.get("intent") for t in _tr if t.get("intent")}
-        if decision.intent:
-            asked.add(decision.intent)
-        tutor_task = asyncio.ensure_future(T.suggest(gateway, st, patient_view(st, locale=locale), _tr + [
-            {"role": "doctor", "text": message}], asked=asked, locale=locale))
-    history_task = None
-    history_meta: dict[str, Any] = {}
-    cluster = intent_cluster(decision.intent) if decision.label == "clinical" and decision.intent else None
-    if cluster and not _layer_ready(st, f"history.{cluster}"):
-        # A live call does not wait in silence for a layer still being written (see StalledPersona), and a
-        # typed question does not wait for it beyond HISTORY_TYPED_WAIT_S.
-        history_task = asyncio.ensure_future(_ensure_history(rt, thread_id, decision.intent))
-        waits: set[Any] = {history_task}
-        if call is None and speculative is not None:
-            # A typed reply already written from what is known does not idle for the rest of the budget.
-            waits.add(speculative.task)
-        await asyncio.wait(waits, timeout=HISTORY_STALL_AFTER_S if call is not None else HISTORY_TYPED_WAIT_S,
-                           return_when=asyncio.FIRST_COMPLETED)
-        done = history_task.done()
-        layer = history_task.result() if done else None
-        history_meta = {"layer": f"history.{cluster}", "at_ask": "writing",
-                        "outcome": "written_in_time" if done else ("stalled" if call is not None
-                                                                   else "answered_before_layer")}
-        if done:
-            history_task = None
-        elif call is None:
-            # Answered from what is known; the layer goes on being written (and marks itself seen).
-            _LATE_LAYERS.add(history_task)
-            history_task.add_done_callback(_LATE_LAYERS.discard)
-            history_task = None
-    else:
-        layer = await _ensure_history(rt, thread_id, decision.intent) if decision.label == "clinical" else None
-        if cluster:
-            history_meta = {"layer": f"history.{cluster}", "at_ask": "ready" if _layer_ready(st, f"history.{cluster}")
-                            else "writing", "outcome": "ready" if layer else "not_written"}
-    timings.mark("history_ms")
-    st = rt.cases.get(thread_id) or st
-    view = patient_view(st, locale=locale)
-    transcript = _transcript(st)
+    tutor_locale = ""
+    while True:
+        locale = _locale(body, st, decision)
+        crisis = decision.label == "unsafe" and decision.reason in ("self_harm_disclosure", "abuse_disclosure")
+        if tutor_task is not None and (crisis or tutor_locale != locale):
+            tutor_task.cancel()
+            tutor_task = None
+        if body.guidance and gateway is not None and not crisis and tutor_task is None:
+            # Right after the guard, beside the history wait and the persona: it reads the question (the reply
+            # adds little to what to do next), so the attending's actions no longer add 2 s to the reply.
+            _tr = _transcript(st)
+            _asked = {t.get("intent") for t in _tr if t.get("intent")}
+            if decision.intent:
+                _asked.add(decision.intent)
+            tutor_task = asyncio.ensure_future(T.suggest(gateway, st, patient_view(st, locale=locale), _tr + [
+                {"role": "doctor", "text": message}], asked=_asked, locale=locale))
+            tutor_locale = locale
+        history_task = None
+        history_meta: dict[str, Any] = {}
+        cluster = intent_cluster(decision.intent) if decision.label == "clinical" and decision.intent else None
+        if cluster and not _layer_ready(st, f"history.{cluster}"):
+            # A live call does not wait in silence for a layer still being written (see StalledPersona), and a
+            # typed question does not wait for it beyond HISTORY_TYPED_WAIT_S (nor once its reply is written).
+            history_task = asyncio.ensure_future(_ensure_history(rt, thread_id, decision.intent))
+            waits: set[Any] = {history_task}
+            if call is None and speculative is not None:
+                waits.add(speculative.task)
+            await asyncio.wait(waits, timeout=HISTORY_STALL_AFTER_S if call is not None else HISTORY_TYPED_WAIT_S,
+                               return_when=asyncio.FIRST_COMPLETED)
+            done = history_task.done()
+            layer = history_task.result() if done else None
+            history_meta = {"layer": f"history.{cluster}", "at_ask": "writing",
+                            "outcome": "written_in_time" if done else ("stalled" if call is not None
+                                                                       else "answered_before_layer")}
+            if done:
+                history_task = None
+            elif call is None:
+                # Answered from what is known; the layer goes on being written (and marks itself seen).
+                _LATE_LAYERS.add(history_task)
+                history_task.add_done_callback(_LATE_LAYERS.discard)
+                history_task = None
+        else:
+            layer = await _ensure_history(rt, thread_id, decision.intent) if decision.label == "clinical" else None
+            if cluster:
+                history_meta = {"layer": f"history.{cluster}", "at_ask": "ready" if _layer_ready(st, f"history.{cluster}")
+                                else "writing", "outcome": "ready" if layer else "not_written"}
+        timings.mark("history_ms")
+        st = rt.cases.get(thread_id) or st
+        view = patient_view(st, locale=locale)
+        transcript = _transcript(st)
 
-    flags: list[dict[str, Any]] = []
-    meta: dict[str, Any] = {"guard_source": decision.source, "guard_model": decision.model,
-                            "guard_rule": decision.rule}
-    speaker = None
-    if decision.label == "unsafe" and decision.reason in ("self_harm_disclosure", "abuse_disclosure"):
-        # The Safety Interceptor breaks character with real support resources; no model call.
-        if speculative is not None:
-            speculative.cancel()
-        if spec_speaker is not None:
-            spec_speaker.cancel()
-        reply = crisis_resources(locale)
-        flags.append({"type": "safety_trigger", "reason": decision.reason, "locale": locale})
-        meta.update(source="safety")
-    else:
-        if gateway is None:
-            return _error(503, "model_unreachable", "no patient model is configured", retryable=True)
-        msgs = persona_turn(view, transcript, message, decision.label)
-        terms = forbidden_terms(st)
-        scrub = _scrubber(st, view, locale)
-
-        persona = None
-        stall = None
-        if history_task is not None and call is not None:
-            # The layer is still being written: a stall line now, the answer once the facts exist.
-            stall = stall_line(locale, message)
+        flags: list[dict[str, Any]] = []
+        meta: dict[str, Any] = {"guard_source": decision.source, "guard_model": decision.model,
+                                "guard_rule": decision.rule, "guard": guard_meta}
+        speaker = None
+        if decision.label == "unsafe" and decision.reason in ("self_harm_disclosure", "abuse_disclosure"):
+            # The Safety Interceptor breaks character with real support resources; no model call.
             if speculative is not None:
                 speculative.cancel()
             if spec_speaker is not None:
                 spec_speaker.cancel()
-            speculative = None
+            reply = crisis_resources(locale)
+            flags.append({"type": "safety_trigger", "reason": decision.reason, "locale": locale})
+            meta.update(source="safety")
+        else:
+            if gateway is None:
+                return _error(503, "model_unreachable", "no patient model is configured", retryable=True)
+            msgs = persona_turn(view, transcript, message, decision.label)
+            terms = forbidden_terms(st)
+            scrub = _scrubber(st, view, locale)
 
-            def build_answer() -> Any:
-                st2 = rt.cases.get(thread_id) or st
-                v2 = patient_view(st2, locale=locale)
-                return PersonaStream(gateway, persona_turn(v2, _transcript(st2), message, decision.label),
-                                     max_tokens=PERSONA_MAX_TOKENS, timings=timings)
-
-            persona = StalledPersona(stall, history_task, build_answer, timings=timings)
-            speaker = _call_speaker(request, call, persona=persona, timings=timings, gate=scrub)
-            meta["speculative"] = "stalled"
-        if speculative is not None:
-            if speculative.messages == msgs:
-                persona, speaker = speculative, spec_speaker
-                meta["speculative"] = "kept"
-            else:
-                speculative.cancel()
+            persona = None
+            stall = None
+            if history_task is not None and call is not None:
+                # The layer is still being written: a stall line now, the answer once the facts exist.
+                stall = stall_line(locale, message)
+                if speculative is not None:
+                    speculative.cancel()
                 if spec_speaker is not None:
                     spec_speaker.cancel()
-                meta["speculative"] = "restarted"
-        if call is not None:
-            if persona is None:
-                persona = PersonaStream(gateway, msgs, max_tokens=PERSONA_MAX_TOKENS, timings=timings)
+                speculative = None
+
+                def build_answer() -> Any:
+                    st2 = rt.cases.get(thread_id) or st
+                    v2 = patient_view(st2, locale=locale)
+                    return PersonaStream(gateway, persona_turn(v2, _transcript(st2), message, decision.label),
+                                         max_tokens=PERSONA_MAX_TOKENS, timings=timings)
+
+                persona = StalledPersona(stall, history_task, build_answer, timings=timings)
                 speaker = _call_speaker(request, call, persona=persona, timings=timings, gate=scrub)
-            if speaker is not None:
-                speaker.release()
-        try:
-            res = await persona.result() if persona is not None else await gateway.chat(
-                msgs, task="patient", max_tokens=PERSONA_MAX_TOKENS)
-        except (GatewayError, EgressBlocked) as exc:
-            if speaker is not None:
-                speaker.cancel()
-            if tutor_task is not None:
-                tutor_task.cancel()
-            return _error(503, "model_unreachable",
-                          "The patient model could not be reached; no reply was generated.",
-                          cause=f"{type(exc).__name__}: {str(exc)[:200]}", retryable=True,
-                          guard=decision.wire(locale))
-        timings.mark("persona_done_ms")
-        reply = (res.text or "").strip()
-        if stall is not None:
-            # The facts the answer used: the layer now written (or what was there after the wait).
-            st = rt.cases.get(thread_id) or st
-            view = patient_view(st, locale=locale)
-            layer = history_meta["layer"] if _layer_ready(st, history_meta["layer"]) else None
-            if layer:
-                _mark_seen(rt, thread_id, [layer])
-            history_meta["outcome"] = "stalled_then_answered" if layer else "stalled_without_layer"
-            reply = f"{stall} {reply}".strip() if reply else ""
-        if not reply:
-            if speaker is not None:
-                speaker.cancel()
-            if tutor_task is not None:
-                tutor_task.cancel()
-            return _error(502, "model_output_invalid", "the patient model returned an empty reply", retryable=True)
-        gate = fact_assertion_gate(reply, {"sanctioned_facts": view.told}, lang=locale)
-        reply = gate.utterance
-        flags += [f.model_dump() for f in gate.flags]
-        leaked = leaks(reply, terms)
-        if leaked:
-            for term in leaked:
-                reply = reply.replace(term, "...")
-            flags.append({"type": "diagnosis_leak", "span": leaked[0][:60]})
-        meta.update(source="model", model=res.model, provider=res.provider, latency_ms=round(res.latency_ms, 1),
-                    usage=res.usage)
+                meta["speculative"] = "stalled"
+            if speculative is not None:
+                if speculative.messages == msgs:
+                    persona, speaker = speculative, spec_speaker
+                    meta["speculative"] = "kept"
+                else:
+                    speculative.cancel()
+                    if spec_speaker is not None:
+                        spec_speaker.cancel()
+                    meta["speculative"] = "restarted"
+            if call is not None:
+                if persona is None:
+                    persona = PersonaStream(gateway, msgs, max_tokens=PERSONA_MAX_TOKENS, timings=timings)
+                    speaker = _call_speaker(request, call, persona=persona, timings=timings, gate=scrub)
+                if speaker is not None:
+                    speaker.release()
+            reply_task = asyncio.ensure_future(persona.result() if persona is not None else gateway.chat(
+                msgs, task="patient", max_tokens=PERSONA_MAX_TOKENS))
+            final = None
+            if late is not None:
+                # The model's label may land while the reply is written or spoken.
+                final = await _late_decision(late, reply_task)
+                if final is not None and overrules(decision, final):
+                    _stop_reply(reply_task, persona, speaker, reason=final.label)
+                    guard_meta.update(_late_meta(final, timings, stopped=True))
+                    decision, late = final, None
+                    speculative = spec_speaker = None
+                    continue
+            try:
+                res = await reply_task
+            except (GatewayError, EgressBlocked) as exc:
+                if speaker is not None:
+                    speaker.cancel()
+                if tutor_task is not None:
+                    tutor_task.cancel()
+                return _error(503, "model_unreachable",
+                              "The patient model could not be reached; no reply was generated.",
+                              cause=f"{type(exc).__name__}: {str(exc)[:200]}", retryable=True,
+                              guard=decision.wire(locale))
+            timings.mark("persona_done_ms")
+            if late is not None:
+                final = final or await _late_decision(late, None)
+                if final is not None and overrules(decision, final):
+                    # Written already (and maybe still being spoken): stop the voice, answer on the model's label.
+                    _stop_reply(reply_task, persona, speaker, reason=final.label)
+                    guard_meta.update(_late_meta(final, timings, stopped=True))
+                    decision, late = final, None
+                    speculative = spec_speaker = None
+                    continue
+                if final is not None:
+                    guard_meta.update(_late_meta(final, timings, stopped=False))
+                    if final.label == decision.label:
+                        # Agreed: the model's decision (its history intent, the seen layer) is the record.
+                        decision = final
+                        late_cluster = intent_cluster(final.intent) if final.intent else None
+                        lyr = f"history.{late_cluster}" if late_cluster else None
+                        if lyr and _layer_ready(rt.cases.get(thread_id) or st, lyr):
+                            _mark_seen(rt, thread_id, [lyr])
+                            layer = lyr
+                            history_meta = {"layer": lyr, "at_ask": "ready", "outcome": "ready"}
+                late = None
+            reply = (res.text or "").strip()
+            if stall is not None:
+                # The facts the answer used: the layer now written (or what was there after the wait).
+                st = rt.cases.get(thread_id) or st
+                view = patient_view(st, locale=locale)
+                layer = history_meta["layer"] if _layer_ready(st, history_meta["layer"]) else None
+                if layer:
+                    _mark_seen(rt, thread_id, [layer])
+                history_meta["outcome"] = "stalled_then_answered" if layer else "stalled_without_layer"
+                reply = f"{stall} {reply}".strip() if reply else ""
+            if not reply:
+                if speaker is not None:
+                    speaker.cancel()
+                if tutor_task is not None:
+                    tutor_task.cancel()
+                return _error(502, "model_output_invalid", "the patient model returned an empty reply", retryable=True)
+            gate = fact_assertion_gate(reply, {"sanctioned_facts": view.told}, lang=locale)
+            reply = gate.utterance
+            flags += [f.model_dump() for f in gate.flags]
+            leaked = leaks(reply, terms)
+            if leaked:
+                for term in leaked:
+                    reply = reply.replace(term, "...")
+                flags.append({"type": "diagnosis_leak", "span": leaked[0][:60]})
+            meta.update(source="model", model=res.model, provider=res.provider, latency_ms=round(res.latency_ms, 1),
+                        usage=res.usage)
+        break
+    meta.update(guard_source=decision.source, guard_model=decision.model, guard_rule=decision.rule)
     if speaker is not None:
         meta["voice"] = {"spoken_by": "call", "session_id": call.id}
     if history_meta:

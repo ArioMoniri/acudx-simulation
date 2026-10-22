@@ -195,6 +195,8 @@ async def test_openai_compatible_stt_verbose_json_against_worker_double():
                                                                             filename="dictation.webm", lang="tr"))
     assert res.text == sc.transcript and res.language == "tr" and res.audio_seconds == pytest.approx(3.2)
     assert res.confidence == pytest.approx(0.9, abs=0.01)   # exp(-0.1054)
+    from server.voice.adapters.openai_compatible import DEFAULT_STT_PROMPTS
     assert sc.stt_calls == [{"model": "deepdml/faster-whisper-large-v3-turbo-ct2", "language": "tr",
+                             "prompt": DEFAULT_STT_PROMPTS["tr"],
                              "response_format": "verbose_json", "filename": "dictation.webm", "content_type": "audio/webm",
                              "size": 4}]

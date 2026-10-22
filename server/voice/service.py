@@ -44,6 +44,21 @@ log = logging.getLogger("acudx.voice")
 WORKER_TTS_HEALTH_PATH = "/tts/health"
 WORKER_KOKORO_PATH = "/tts-en"   # Kokoro FastAPI behind the worker's Caddy (English voices)
 WORKER_PROBE_TIMEOUT_S = 3.0
+# The worker's STT is real only when speaches has the served Whisper model in its cache: speaches 0.8
+# answers 404 "not installed" for every request otherwise (live 2026-10-22 on every worker). The probe
+# transcribes a short silent clip with that model (about 0.1 s on the GPU) and is cached per worker.
+WORKER_STT_PATH = "/stt/v1/audio/transcriptions"
+WORKER_STT_PROBE_TTL_S = 60.0
+WORKER_STT_PROBE_TIMEOUT_S = 8.0
+
+
+def _silent_wav(seconds: float = 0.5, rate: int = 16000) -> bytes:
+    import struct  # noqa: PLC0415
+
+    data = b"\x00\x00" * int(seconds * rate)
+    head = b"RIFF" + struct.pack("<I", 36 + len(data)) + b"WAVE"
+    head += b"fmt " + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16) + b"data" + struct.pack("<I", len(data))
+    return head + data
 
 # Languages the self-hosted worker serves (Chatterbox Multilingual list, research doc section 3.2).
 WORKER_TTS_LANGUAGES = ("ar", "da", "de", "el", "en", "es", "fi", "fr", "he", "hi", "it", "ja", "ko", "ms", "nl",
@@ -61,6 +76,12 @@ WORKER_BOOT_ESTIMATE_S = 600
 # Cold launch to live video: the worker above, then the MuseTalk runner build and its models, the
 # voices and the image edit server (measured on a Lambda A100 40 GB, docs/architecture/18 6.7).
 VIDEO_READY_ESTIMATE_S = 1200
+
+
+def _stt_missing(body: str) -> str:
+    """The probe detail for speaches' 404 (its message names the model and the download route)."""
+    text = " ".join(str(body or "").split())[:160]
+    return f"model not installed ({text})" if text else "model not installed"
 
 
 class NoVoiceProvider(RuntimeError):
@@ -104,6 +125,8 @@ class VoiceService:
         self._wake: asyncio.Task[ProviderEndpoint | None] | None = None
         self._wake_started_at: float | None = None
         self._wake_error: str | None = None
+        # Per worker origin: (checked at, ok, detail) of its speaches model (see WORKER_STT_PATH).
+        self._stt_probe: dict[str, tuple[float, bool, str]] = {}
 
     # -- lifecycle ------------------------------------------------------------ #
     @property
@@ -368,7 +391,11 @@ class VoiceService:
                 reasons.append(f"{ep.name}: {detail}")
                 self._record(ep, kind="stt", model=ep.model or name, latency_ms=(time.monotonic() - t0) * 1000.0,
                              ok=False, error=type(exc).__name__)
+                if ep.source == "gpu_worker" and getattr(exc, "status", None) == 404:
+                    self._stt_probe[self._worker_origin(ep)] = (time.monotonic(), False, _stt_missing(detail))
                 continue
+            if ep.source == "gpu_worker":
+                self._stt_probe[self._worker_origin(ep)] = (time.monotonic(), True, "ok")
             latency = (time.monotonic() - t0) * 1000.0
             self._record(ep, kind="stt", model=result.model, audio_seconds=result.audio_seconds or 0.0,
                          latency_ms=latency, ok=True)
@@ -422,6 +449,38 @@ class VoiceService:
             return False, f"model not loaded ({body.get('initialization_error') or body.get('status')})"
         return True, "ok"
 
+    @staticmethod
+    def _worker_origin(ep: ProviderEndpoint) -> str:
+        base = ep.base_url.rstrip("/")
+        return base[: -len(WORKER_PATHS["stt"])] if base.endswith(WORKER_PATHS["stt"]) else base
+
+    async def worker_stt_health(self, origin: str, token: str, *, model: str | None = None) -> tuple[bool, str]:
+        """Whether the worker at ``origin`` transcribes with its served model; cached WORKER_STT_PROBE_TTL_S.
+
+        One bearer POST of a 0.5 s silent WAV to speaches. 404 is speaches' "model not installed"; never raises."""
+        origin = origin.rstrip("/")
+        now = time.monotonic()
+        hit = self._stt_probe.get(origin)
+        if hit is not None and now - hit[0] < WORKER_STT_PROBE_TTL_S:
+            return hit[1], hit[2]
+        model = model or WORKER_MODELS["stt"]
+        try:
+            r = await self.client.post(origin + WORKER_STT_PATH, headers={"Authorization": f"Bearer {token}"},
+                                       data={"model": model, "response_format": "json"},
+                                       files={"file": ("probe.wav", _silent_wav(), "audio/wav")},
+                                       timeout=WORKER_STT_PROBE_TIMEOUT_S)
+        except httpx.HTTPError as exc:
+            ok, detail = False, f"unreachable ({type(exc).__name__})"
+        else:
+            if r.status_code == 200:
+                ok, detail = True, "ok"
+            elif r.status_code == 404:
+                ok, detail = False, _stt_missing(r.text)
+            else:
+                ok, detail = False, f"HTTP {r.status_code}"
+        self._stt_probe[origin] = (now, ok, detail)
+        return ok, detail
+
     async def capabilities(self, *, probe_worker: bool = False) -> dict[str, Any]:
         """What is enabled now. ``probe_worker`` also counts a launchable GPU worker (never launches one)."""
         out: dict[str, Any] = {"airgapped": self.settings.airgapped}
@@ -471,6 +530,14 @@ class VoiceService:
                         out["gpu_worker"]["tts"] = {"path": WORKER_TTS_HEALTH_PATH, "ok": ok, "detail": detail}
                         if not ok:
                             reasons.append(f"gpu-worker: {WORKER_TTS_HEALTH_PATH} {detail}")
+                            ep = None
+                    else:
+                        # /healthz is vLLM only: STT counts once speaches transcribes with its model.
+                        ok, detail = await self.worker_stt_health(origin, str(ready.get("api_key") or ""))
+                        out["gpu_worker"]["stt"] = {"path": WORKER_STT_PATH, "model": WORKER_MODELS["stt"],
+                                                    "ok": ok, "detail": detail}
+                        if not ok:
+                            reasons.append(f"gpu-worker: stt {detail}")
                             ep = None
                 elif probe_worker and out["gpu_worker"]["can_launch"]:
                     launchable = True

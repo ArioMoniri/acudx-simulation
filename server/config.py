@@ -266,6 +266,10 @@ class Settings(BaseSettings):
     # A live call's English lines take the worker's Kokoro before its Chatterbox (first audio 0.15 to
     # 0.6 s against 2 to 3 s on a shared A100, docs/architecture/18 6.3.9). Turkish always uses Chatterbox.
     avatar_fast_en_tts: bool = True
+    # The interview guard's deadline: after this long without the classifier model's label a confident
+    # clinical rules label starts the reply (docs/architecture/18 6.3.12; live 2026-10-22 the model took
+    # 3 to 8 s at times). 0 waits for the model on every message.
+    guard_deadline_ms: int = Field(default=700, ge=0, le=10000)
     # How long a call start waits for the patient's presenting look (image edit + MuseTalk preparation)
     # before it opens on the case portrait and crossfades into the look once it is ready.
     # 10 s since the pictures are registered onto the portrait (a later crossfade shows no double image,

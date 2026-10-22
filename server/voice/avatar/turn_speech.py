@@ -217,6 +217,8 @@ class CallSpeaker:
     task: asyncio.Task[Any] | None = None
     cut: bool = False                 # this reply was cut by the next one
     cut_previous: bool = False        # this reply cut the one before it
+    stopped: str | None = None        # why this reply was stopped midway (a late guard label)
+    _interrupt: asyncio.Task[Any] | None = None
 
     def start(self, persona: PersonaStream) -> "CallSpeaker":
         self.task = asyncio.get_running_loop().create_task(self._run(persona))
@@ -228,6 +230,23 @@ class CallSpeaker:
     def cancel(self) -> None:
         if self.task is not None:
             self.task.cancel()
+
+    def stop(self, reason: str) -> None:
+        """Stop this reply now, also the audio the runner already holds (up to PACE_LEAD_S of it): the
+        guard's model labelled the message after the reply had started on the rules' decision
+        (docs/architecture/18 6.3.12)."""
+        if self.stopped is not None:
+            return
+        self.stopped = reason
+        flush = self.released.is_set()
+        self.cancel()
+        if flush and self.session.worker_session:
+            async def interrupt() -> None:
+                try:
+                    await mt.interrupt(self.svc.client, self.worker, str(self.session.worker_session))
+                except Exception as exc:  # noqa: BLE001 - the cancelled stream already ended the line
+                    log.info("interrupt after a stopped reply failed: %s", type(exc).__name__)
+            self._interrupt = asyncio.get_running_loop().create_task(interrupt())
 
     def speaking(self) -> bool:
         return self.task is not None and not self.task.done() and self.released.is_set()
@@ -420,7 +439,7 @@ class CallSpeaker:
                                                on_first_chunk=lambda: self.timings.mark("runner_first_chunk_ms"))
             self.timings.mark("runner_done_ms")
         except asyncio.CancelledError:
-            if not self.cut:
+            if not (self.cut or self.stopped):
                 raise
         except Exception as exc:  # noqa: BLE001 - reported on the call's metrics; the text reply stands
             self.error = f"{type(exc).__name__}: {getattr(exc, 'detail', None) or exc}"[:200]
@@ -436,5 +455,5 @@ class CallSpeaker:
 
     def public(self) -> dict[str, Any]:
         return {"timings": self.timings.public(), "requests": self.requests, "spoken_text": " ".join(self.spoken),
-                "error": self.error, "cut": self.cut, "cut_previous": self.cut_previous, "runner": {k: (self.runner or {}).get(k) for k in ("frames", "first_frame_ms",
+                "error": self.error, "cut": self.cut, "cut_previous": self.cut_previous, "stopped": self.stopped, "runner": {k: (self.runner or {}).get(k) for k in ("frames", "first_frame_ms",
                                                                                        "elapsed_ms")}}

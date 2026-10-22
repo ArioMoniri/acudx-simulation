@@ -40,6 +40,8 @@ class WorkerScenario:
     stt_status: int = 200
     tts_health_status: int = 200     # Chatterbox GET /health behind Caddy's /tts prefix
     tts_health_hits: int = 0
+    # speaches 0.8 answers 404 "Model '<id>' is not installed locally" when the model is not in its HF cache.
+    stt_installed: bool = True
 
 
 def build_worker_double(sc: WorkerScenario) -> FastAPI:
@@ -107,12 +109,16 @@ def build_worker_double(sc: WorkerScenario) -> FastAPI:
     @app.post("/stt/v1/audio/transcriptions")
     async def transcriptions(file: UploadFile = File(...), model: str = Form(...),
                              language: str | None = Form(default=None),
+                             prompt: str | None = Form(default=None),
                              response_format: str = Form(default="json"),
                              authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
         data = await file.read()
-        sc.stt_calls.append({"model": model, "language": language, "response_format": response_format,
+        sc.stt_calls.append({"model": model, "language": language, "prompt": prompt, "response_format": response_format,
                              "filename": file.filename, "content_type": file.content_type, "size": len(data)})
+        if not sc.stt_installed:
+            raise HTTPException(status_code=404, detail=f"Model '{model}' is not installed locally. "
+                                                        "You can download the model using `POST /v1/models`")
         if sc.stt_status != 200:
             raise HTTPException(status_code=sc.stt_status, detail="stt failed")
         return {"task": "transcribe", "language": sc.language, "duration": sc.duration_s, "text": sc.transcript,

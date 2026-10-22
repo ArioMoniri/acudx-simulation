@@ -177,7 +177,7 @@ def test_start_up_is_parallel_and_vllm_starts_last():
     assert fetch < voices < vllm
     assert at("nohup /opt/acudx/avatar.sh") < vllm and at("nohup /opt/acudx/imagegen.sh") < vllm
     # every image at once, in the background
-    assert "vllm/vllm-openai:v0.11.0 ghcr.io/speaches-ai/speaches:0.8.3-cuda" in rc[fetch]
+    assert "vllm/vllm-openai:v0.11.0 \"$SPEACHES_IMAGE\"" in rc[fetch]
     assert 'docker pull -q "$img"' in rc[fetch] and ") &" in rc[fetch]
     assert "ensure_image chatterbox" in rc[fetch]
     # no build on the critical path when an image exists

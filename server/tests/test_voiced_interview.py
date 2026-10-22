@@ -232,7 +232,8 @@ async def test_nothing_is_spoken_when_the_guard_overrules_the_speculative_prompt
 
     persona = [b for b in _dbl.calls if "role-playing ONE patient" in (b.get("system") or [{}])[0].get("text", "")]
     assert persona and _DIRECTIVE["off_topic"] in persona[-1]["messages"][-1]["content"]
-    assert await _wait(lambda: bool(call.metrics.get("voiced_turns")))
+    # The cancelled speculative speaker records its (silent) turn too: wait for the line that was spoken.
+    assert await _wait(lambda: any(t["spoken_text"] for t in call.metrics.get("voiced_turns") or []))
     assert len(_lines(sockets[0].sent)) == 1
     await gw.aclose()
 
