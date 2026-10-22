@@ -529,7 +529,7 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
         const med = [...recent].sort((x, y) => x - y)[Math.floor(recent.length / 2)];
         metrics.receiverLagMs = med;
         const now = performance.now();
-        if (recent.length >= 3 && (sent == null || Math.abs(med - sent) >= 20 || now - sentAt > 10_000)) {
+        if (recent.length >= 3 && now - sentAt >= 3000 && (sent == null || Math.abs(med - sent) >= 40 || now - sentAt > 10_000)) {
           sent = med;
           sentAt = now;
           void api.avatarSync?.(session.session_id, med).catch(() => undefined);

@@ -122,6 +122,9 @@ class _Out:
     def push_video_frame(self, frame) -> None:
         self.sent.append(frame)
 
+    def push_audio_frame(self, frame, eventpoint=None) -> None:
+        pass
+
 
 def _session(cycle):
     s = types.SimpleNamespace(output=_Out(), speaking=False, _acudx_idx=0)
@@ -176,6 +179,7 @@ def test_a_switch_waits_for_silence_and_fades_on_matched_loop_frames():
 
 def test_the_video_delay_can_change_during_a_call_one_frame_at_a_time():
     ns = _runner_defs("_install_av_shift")
+    ns.update(AUTO_SYNC=False, RECEIVER_SYNC=False, MAX_SHIFT_FRAMES=25)   # the fixed delay (auto sync: test_avatar_auto_sync.py)
     sess = types.SimpleNamespace(output=_Out())
     ns["_install_av_shift"](sess, 160)  # 4 frames
     frames = list(range(40))

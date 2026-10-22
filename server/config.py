@@ -261,6 +261,10 @@ class Settings(BaseSettings):
     avatar_ahead_frames: int | None = Field(default=None, ge=4, le=40)
     avatar_lookahead_frames: int | None = Field(default=None, ge=4, le=10)
     avatar_av_shift_ms: int | None = Field(default=160, ge=-1000, le=1000)
+    # Forward the browser's receive-side desync (POST /v1/voice/avatar/sync) to a runner with auto sync, which
+    # then adds it to its sender skew (docs/architecture/18 6.3.13). Off: on healthy lines it read +14 to +63 ms
+    # while the lip meter read 0, and -1837 ms while the runner stalled; it is kept as telemetry.
+    avatar_receiver_sync: bool = False
     # Silence streamed into a call right after the offer, before the first patient line, so the
     # runner's speech path and the browser's jitter buffer have settled when the first real line
     # plays (the first two lines swung up to 420 ms either way; docs/architecture/18 6.3.8). 0 = off.

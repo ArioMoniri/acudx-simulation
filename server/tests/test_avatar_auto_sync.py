@@ -46,8 +46,8 @@ def _session(audio_offsets: list[float], video_offsets: list[float]):
     return sess, tracks, shown_v, sent_a
 
 
-def _ns(tracks, auto: bool = True) -> dict:
-    ns = {"collections": collections, "np": np, "time": time, "AUTO_SYNC": auto, "MAX_SHIFT_FRAMES": 25,
+def _ns(tracks, auto: bool = True, receiver: bool = False) -> dict:
+    ns = {"collections": collections, "np": np, "time": time, "AUTO_SYNC": auto, "MAX_SHIFT_FRAMES": 25, "RECEIVER_SYNC": receiver,
           "_tracks": lambda sess: tracks}
     return _pieces({"_median", "sender_sync", "_install_av_shift"}, ns)
 
@@ -120,7 +120,7 @@ def test_the_browsers_receive_side_desync_adds_to_the_sender_skew():
     # Sender in step (skew 0), but the browser plays the picture 185 ms early (its A/V sync still converging
     # on the first line of a call): the video waits about 185 ms; a reading 15 s old no longer counts.
     sess, tracks, _, _ = _session([100.0] * 10, [100.0] * 10)
-    ns = _ns(tracks)
+    ns = _ns(tracks, receiver=True)
     ns["_install_av_shift"](sess, 0)
     st = sess._acudx_shift
     st["recv_ms"], st["recv_at"] = -185.0, time.time()
@@ -131,6 +131,39 @@ def test_the_browsers_receive_side_desync_adds_to_the_sender_skew():
     for k in range(25):
         sess.output.push_video_frame(k)
     assert st["n"] == 0
+    # A reading from a stalled runner (live: -1837 ms) never steers the delay.
+    st["recv_ms"], st["recv_at"] = -1837.0, time.time()
+    for k in range(25):
+        sess.output.push_video_frame(k)
+    assert st["n"] == 0
+
+
+def test_the_receive_side_reading_is_telemetry_unless_switched_on():
+    sess, tracks, _, _ = _session([100.0] * 10, [100.0] * 10)
+    ns = _ns(tracks)
+    ns["_install_av_shift"](sess, 0)
+    st = sess._acudx_shift
+    st["recv_ms"], st["recv_at"] = -185.0, time.time()
+    for k in range(50):
+        sess.output.push_video_frame(k)
+    assert st["n"] == 0
+
+
+def test_a_held_runner_pauses_its_preparations_before_any_audio_arrives():
+    # Live 2026-10-22 (A100 40 GB): a look prepared while the first reply was synthesised took the runner to
+    # 4 fps and the voice to 7.8 s; the gateway now holds the preparations when a voiced turn starts.
+    state = {"hold_until": time.monotonic() + 0.3}
+    ns = _pieces({"_yield_to_speech"}, {"time": time, "STATE": state, "PREP_YIELDS": {"on": True},
+                                        "PREP_YIELD_MAX_S": 5.0,
+                                        "session_manager": SimpleNamespace(sessions={"a": SimpleNamespace(speaking=False)})})
+    t0 = time.monotonic()
+    ns["_yield_to_speech"]()
+    assert 0.25 <= time.monotonic() - t0 < 1.0
+    state["hold_until"] = 0.0
+    t0 = time.monotonic()
+    ns["_yield_to_speech"]()
+    assert time.monotonic() - t0 < 0.05
+    assert 'app.router.add_post("/hold", hold)' in RUNNER
 
 
 def test_the_sender_offsets_are_taken_per_encoded_frame_and_the_tuning_route_reports_them():

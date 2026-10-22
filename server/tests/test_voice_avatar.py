@@ -807,7 +807,8 @@ def test_the_browsers_receive_side_desync_reaches_a_runner_with_auto_sync(tmp_pa
     for auto in (True, False):
         runner = Runner()
         runner.auto_sync = auto
-        app, _ = _app(tmp_path / str(auto), runner=runner, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+        app, _ = _app(tmp_path / str(auto), runner=runner, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0,
+                      avatar_receiver_sync=True)
         with TestClient(app) as c:
             sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
             assert c.post("/v1/voice/avatar/sync", json={"session_id": sid, "receiver_lag_ms": -185},
@@ -821,6 +822,17 @@ def test_the_browsers_receive_side_desync_reaches_a_runner_with_auto_sync(tmp_pa
         else:
             assert r == {"forwarded": False, "why": "runner_without_auto_sync"} and runner.tunings == []
         assert m["receiver_lags"] == [-185.0]
+
+
+def test_the_receive_side_desync_is_telemetry_by_default(tmp_path, runner_sockets):
+    runner = Runner()
+    runner.auto_sync = True
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+        c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"}, headers=USER)
+        r = c.post("/v1/voice/avatar/sync", json={"session_id": sid, "receiver_lag_ms": -1837}, headers=USER).json()
+    assert r == {"forwarded": False, "why": "receiver_sync_off"} and runner.tunings == []
 
 
 def test_the_calls_portrait_is_prepared_with_call_priority(tmp_path, runner_sockets):

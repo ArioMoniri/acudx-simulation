@@ -1971,7 +1971,8 @@ write_files:
         POST /close                  {sessionid}: stop the render threads and close the peer connection
         POST /switch                 {sessionid, avatar, crossfade_ms}: another prepared picture of the same
                                      patient; applied once the patient is silent, faded on matched frames
-        POST /tuning                 {sessionid, av_shift_ms}: move the call's video against its audio
+        POST /tuning                 lip sync: {sessionid, browser_lag_ms | receiver_lag_ms | av_shift_ms | auto}
+        POST /hold                   {seconds}: the ladder preparations pause while a reply is on its way
         GET  /turn                   WebSocket <-> TCP byte bridge to the worker's TURN server, for
                                      clients whose network only allows HTTPS (see docs/architecture/18 6.3)
         POST /detect_bench           body = portrait: face box and per-phase timings of each detection mode
@@ -2023,6 +2024,8 @@ write_files:
       IDLE_FRAMES = int(os.environ.get("AVATAR_IDLE_FRAMES", "75"))
       # Lip sync from the sender's clock (see _install_av_shift); 0 keeps the delay the gateway set.
       AUTO_SYNC = os.environ.get("AVATAR_AUTO_SYNC", "1") == "1"
+      # The browser's receive-side desync in the delay as well (off: see _install_av_shift's retarget).
+      RECEIVER_SYNC = os.environ.get("AVATAR_RECEIVER_SYNC", "0") == "1"
       MAX_SHIFT_FRAMES = 25   # 1 s either way
       # A call whose peer connection is not connected this long after its offer is closed (slot freed).
       CONNECT_DEADLINE_S = float(os.environ.get("AVATAR_CONNECT_DEADLINE_S", "60"))
@@ -2339,9 +2342,11 @@ write_files:
                   return
               skew = float(sync["video_minus_audio_ms"])
               st["skew_ms"] = skew
-              # The browser's receive-side desync (POST /tuning receiver_lag_ms, about once a second while it
-              # changes); a reading older than 15 s no longer counts.
-              recv = float(st["recv_ms"]) if time.time() - float(st["recv_at"]) < 15.0 else 0.0
+              # The browser's receive-side desync (POST /tuning receiver_lag_ms) counts only with RECEIVER_SYNC:
+              # live 2026-10-22 (A100) it read +14 to +63 ms on healthy lines while the meter read 0, and -1837 ms
+              # while the runner stalled, which sent the delay to its limit. A reading older than 15 s never counts.
+              recv = (float(st["recv_ms"]) if RECEIVER_SYNC and time.time() - float(st["recv_at"]) < 15.0
+                      and abs(float(st["recv_ms"])) <= 300.0 else 0.0)
               total = skew + recv + float(st["bias_ms"])
               want = int(round(-total / 40.0))
               want = max(-MAX_SHIFT_FRAMES, min(MAX_SHIFT_FRAMES, want))
@@ -2884,7 +2889,11 @@ write_files:
               return
           t0 = time.monotonic()
           while time.monotonic() - t0 < PREP_YIELD_MAX_S:
-              if not any(getattr(v, "speaking", False) for v in list(session_manager.sessions.values()) if v is not None):
+              # A reply on its way (POST /hold from the gateway when a voiced turn starts: its TTS and the first
+              # frames need the card before any audio reaches the runner), or a call speaking now.
+              held = time.monotonic() < float(STATE.get("hold_until", 0.0))
+              if not held and not any(getattr(v, "speaking", False)
+                                      for v in list(session_manager.sessions.values()) if v is not None):
                   return
               time.sleep(0.05)
 
@@ -3423,7 +3432,8 @@ write_files:
       async def tuning(request: web.Request) -> web.Response:
           """Lip sync of a live call. ``{sessionid, browser_lag_ms, score?}``: the offset the browser measured
           on the last line (positive: lips late); with auto sync it moves the call's bias by half of it
-          (``bias_ms``, bounded to 600 ms) and the next retarget applies it. ``{sessionid, av_shift_ms}``:
+          (``bias_ms``, bounded to 300 ms) and the next retarget applies it. ``{sessionid, receiver_lag_ms}``: the
+          browser's receive-side desync, kept for /health and used only with AVATAR_RECEIVER_SYNC=1. ``{sessionid, av_shift_ms}``:
           a fixed delay (-1000 to 1000 ms, positive = video later), which turns auto sync off for the call.
           ``{sessionid, auto: true}`` turns it back on. The reply carries the state (``auto``, ``av_shift_ms``,
           ``bias_ms``, ``sync``)."""
@@ -3447,12 +3457,26 @@ write_files:
           if isinstance(lag, (int, float)) and st["auto"]:
               # Inside 40 ms nothing moves (the meter's own noise); half the residual per line otherwise.
               if abs(float(lag)) > 40.0:
-                  st["bias_ms"] = max(-600.0, min(600.0, float(st["bias_ms"]) + 0.5 * float(lag)))
+                  st["bias_ms"] = max(-300.0, min(300.0, float(st["bias_ms"]) + 0.5 * float(lag)))
           sess._acudx_shift_ms = int(st["n"]) * 40
           if isinstance(getattr(sess, "_acudx_tuning", None), dict):
               sess._acudx_tuning["av_shift_ms"] = sess._acudx_shift_ms
           return web.json_response({"ok": True, "auto": bool(st["auto"]), "av_shift_ms": sess._acudx_shift_ms,
                                     "bias_ms": round(float(st["bias_ms"]), 1), "sync": sender_sync(sess)})
+
+
+      async def hold(request: web.Request) -> web.Response:
+          """{seconds}: the ladder's preparations pause (between frames) for that long, at most 20 s; 0 ends it.
+          The gateway holds when a voiced turn starts and lets go when it ends. Live 2026-10-22 (A100 40 GB): a
+          look prepared during the first question took the runner to 4 fps and the voice to 7.8 s."""
+          try:
+              params = await request.json()
+              secs = max(0.0, min(20.0, float(params.get("seconds", 0))))
+          except (ValueError, TypeError):
+              return web.json_response({"error": "bad_seconds"}, status=400)
+          STATE["hold_until"] = time.monotonic() + secs
+          STATE["holds"] = int(STATE.get("holds", 0)) + (1 if secs > 0 else 0)
+          return web.json_response({"ok": True, "seconds": secs})
 
 
       async def close(request: web.Request) -> web.Response:
@@ -3696,6 +3720,7 @@ write_files:
           app.router.add_post("/close", close)
           app.router.add_post("/switch", switch)
           app.router.add_post("/tuning", tuning)
+          app.router.add_post("/hold", hold)
           app.router.add_get("/turn", turn_bridge)
           app.router.add_get("/turn_check", turn_check)
           app.router.add_post("/detect_bench", detect_bench)
@@ -4270,7 +4295,11 @@ runcmd:
       # A second Chatterbox replica for two concurrent Turkish calls, only where the VRAM allows it (about
       # 4 GB; a 40 GB card keeps that room for the avatar runner).
       total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
-      if [ "${total:-0}" -ge 70000 ]; then docker compose up -d --no-build chatterbox2; else echo "acudx: chatterbox2 skipped (${total} MiB)"; fi
+      # A 40 GB card without a worker LLM has the room too (vLLM's 18 GB): two Turkish calls each get a voice,
+      # and the next piece of a reply is synthesised on the other replica while the first one plays.
+      if [ "${total:-0}" -ge 70000 ] || { [ "${WORKER_LLM_MODEL:-}" = none ] && [ "${total:-0}" -ge 38000 ]; }; then
+        docker compose up -d --no-build chatterbox2
+      else echo "acudx: chatterbox2 skipped (${total} MiB)"; fi
       # Voice library and the warm-up lines (conditionals cache) as soon as the voice is up, not after vLLM.
       nohup /opt/acudx/seed-voices.sh >/var/log/acudx-seed-voices.log 2>&1 &
     fi

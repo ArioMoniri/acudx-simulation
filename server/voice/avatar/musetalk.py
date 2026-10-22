@@ -263,6 +263,17 @@ async def switch(client: httpx.AsyncClient, worker: WorkerAvatar, worker_session
     return body
 
 
+async def hold(client: httpx.AsyncClient, worker: WorkerAvatar, seconds: float) -> None:
+    """Pause the runner's look preparations for ``seconds`` (0 ends it): a reply is on its way, and its TTS
+    and first frames need the card before any audio reaches the runner (docs/architecture/18 6.3.13). An older
+    runner without the route answers 404, which is ignored."""
+    try:
+        await client.post(worker.origin + "/avatar/hold", headers=worker.headers(), timeout=5.0,
+                          json={"seconds": float(seconds)})
+    except httpx.HTTPError:
+        pass
+
+
 async def tune(client: httpx.AsyncClient, worker: WorkerAvatar, worker_session: str, *, av_shift_ms: int | None = None,
                browser_lag_ms: float | None = None, score: float | None = None,
                receiver_lag_ms: float | None = None) -> dict[str, Any]:

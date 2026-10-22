@@ -657,6 +657,9 @@ async def receiver_sync(request: Request, body: ReceiverLagBody, user: Principal
     del hist[:-60]
     if not s.metrics.get("auto_sync"):
         return {"forwarded": False, "why": "runner_without_auto_sync"}
+    if not getattr(svc.settings, "avatar_receiver_sync", False):
+        # Kept as telemetry (the call's /metrics): the reading is not stable enough to steer the delay yet.
+        return {"forwarded": False, "why": "receiver_sync_off"}
     worker = _require_worker(svc, s)
     try:
         got = await mt.tune(svc.client, worker, s.worker_session, receiver_lag_ms=body.receiver_lag_ms)

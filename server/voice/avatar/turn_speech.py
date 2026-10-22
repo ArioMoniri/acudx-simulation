@@ -44,6 +44,8 @@ FIRST_MAX_CHARS = 28
 FIRST_MAX_CHARS_BY_LANG = {"tr": 22}
 # Audio forwarded to the runner at most this far ahead of real time.
 PACE_LEAD_S = 1.0
+# How long the runner's look preparations pause when a voiced turn starts (the turn lets go when it ends).
+HOLD_S = 15.0
 _FIRST_BREAK = re.compile(r"[,;:.!?…](?=\s|$)")
 _SENTENCE_END = re.compile(r"[.!?…]+[\"')\]]*(?=\s|$)")
 
@@ -394,10 +396,18 @@ class CallSpeaker:
     async def _run(self, persona: PersonaStream) -> None:
         origin = getattr(self.worker, "origin", "")
         SPEAKING[origin] = SPEAKING.get(origin, 0) + 1
+        client = getattr(self.svc, "client", None)
+        if client is not None and origin:
+            # The runner's look preparations pause from now (they also pause while a call speaks, but the
+            # TTS and the first frames come before that): live 2026-10-22 on an A100 40 GB a look prepared
+            # during the first question took the runner to 4 fps and the voice to 7.8 s.
+            asyncio.get_running_loop().create_task(mt.hold(client, self.worker, HOLD_S))
         try:
             await self._run_line(persona)
         finally:
             SPEAKING[origin] = max(0, SPEAKING.get(origin, 1) - 1)
+            if client is not None and origin and SPEAKING[origin] == 0:
+                asyncio.get_running_loop().create_task(mt.hold(client, self.worker, 0.0))
 
     async def _run_line(self, persona: PersonaStream) -> None:
         # The TTS may start on the speculative reply before the guard has labelled the message (synthesis
