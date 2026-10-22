@@ -251,6 +251,7 @@ export function GpuSection() {
                 <tr>
                   <Th>#</Th>
                   <Th>{t("admin.gpu.ledgerCol.type")}</Th>
+                  <Th>{t("admin.gpu.card")}</Th>
                   <Th numeric>{t("admin.gpu.gpus")}</Th>
                   <Th className="hidden sm:table-cell">{t("admin.gpu.ledgerCol.region")}</Th>
                   <Th>{t("admin.gpu.status")}</Th>
@@ -268,6 +269,12 @@ export function GpuSection() {
                   <Tr key={r.id}>
                     <Td numeric>{r.id}</Td>
                     <Td className="font-mono text-xs">{r.instance_type}</Td>
+                    <Td className="whitespace-nowrap text-xs">
+                      {r.gpu_memory_gb ? t("admin.gpu.cardGb", { gb: r.gpu_memory_gb }) : t("admin.common.none")}
+                      {r.fallback ? (
+                        <Badge tone="caution" className="ml-2">{t("admin.gpu.fallback")}</Badge>
+                      ) : null}
+                    </Td>
                     <Td numeric>{r.gpus}</Td>
                     <Td className="hidden sm:table-cell">{r.region}</Td>
                     <Td>
@@ -286,6 +293,13 @@ export function GpuSection() {
                 ))}
               </TBody>
             </Table>
+            {pool.filter((r) => r.fallback).map((r) => (
+              <p key={`fb-${r.id}`} className="px-5 pb-4 text-xs text-[color:var(--state-caution)]">
+                {t("admin.gpu.fallbackNotice", {
+                  id: r.id, gb: r.gpu_memory_gb ?? "?", pref: s?.policy?.preferred_gpu_memory_gb ?? 80,
+                })}
+              </p>
+            ))}
           </div>
         )}
       </Card>

@@ -255,6 +255,25 @@ def gpu_memory_gb(it: InstanceType) -> int | None:
     return int(m.group(1)) if m else None
 
 
+# Memory per GPU of Lambda types, for a worker row (the row stores only the type name; when the
+# offer is at hand its own gpu_description wins).
+KNOWN_GPU_MEMORY_GB = {
+    "gpu_1x_a10": 24, "gpu_1x_rtx6000": 24, "gpu_1x_a100": 40, "gpu_1x_a100_sxm4": 40, "gpu_1x_a6000": 48,
+    "gpu_1x_h100_pcie": 80, "gpu_1x_h100_sxm5": 80, "gpu_1x_gh200": 96, "gpu_1x_b200_sxm6": 180,
+    "gpu_2x_a100": 40, "gpu_2x_a6000": 48, "gpu_2x_h100_sxm5": 80, "gpu_4x_a100": 40, "gpu_4x_h100_sxm5": 80,
+    "gpu_8x_a100": 40, "gpu_8x_a100_80gb_sxm4": 80, "gpu_8x_h100_sxm5": 80, "gpu_8x_b200_sxm6": 180,
+    "gpu_8x_v100": 16,
+}
+
+
+def type_memory_gb(instance_type_name: str) -> int | None:
+    """Memory per GPU for a type name: the table above, else an ``_<n>gb`` mark in the name."""
+    if instance_type_name in KNOWN_GPU_MEMORY_GB:
+        return KNOWN_GPU_MEMORY_GB[instance_type_name]
+    m = re.search(r"_(\d+)gb", instance_type_name or "")
+    return int(m.group(1)) if m else None
+
+
 def pick_cheapest(offers: dict[str, InstanceTypeOffer], allowlist: Sequence[str],
                   region_preference: Sequence[str] = (), *, min_gpu_memory_gb: int = 0) -> Choice | None:
     """Cheapest allow-listed type that has capacity now.

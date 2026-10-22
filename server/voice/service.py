@@ -109,8 +109,11 @@ class VoiceService:
     @property
     def client(self) -> httpx.AsyncClient:
         if self._client is None:
+            # Idle connections kept 60 s (httpx default 5 s): a patient line every 10 to 30 s then reuses the
+            # TLS connection to the worker instead of opening a new one on the first clause.
             self._client = httpx.AsyncClient(timeout=httpx.Timeout(self.settings.request_timeout_s,
-                                                                   connect=self.settings.connect_timeout_s))
+                                                                   connect=self.settings.connect_timeout_s),
+                                             limits=httpx.Limits(keepalive_expiry=60.0))
         return self._client
 
     async def aclose(self) -> None:
@@ -448,7 +451,19 @@ class VoiceService:
         out["avatar"] = await self._avatar_capabilities(out.get("gpu_worker"), probe_worker=probe_worker)
         if wm is not None and out["avatar"].get("source") == "gpu_worker":
             out["avatar"]["wake"] = self._video_wake(status, out["avatar"])
+            tier = self._gpu_tier(status)
+            if tier is not None:
+                out["avatar"]["gpu_tier"] = tier
         return out
+
+    @staticmethod
+    def _gpu_tier(status: dict[str, Any]) -> dict[str, Any] | None:
+        """The video tier of the worker a call would use (a ready one first): ``preferred`` on an 80 GB
+        card, ``fallback`` with the reason when only a 40 GB card had capacity (the tile says so)."""
+        workers = [w for w in (status.get("workers") or []) if isinstance(w, dict) and w.get("video_tier")
+                   and w.get("status") in ("launching", "booting", "ready")]
+        workers.sort(key=lambda w: (w.get("status") != "ready", w.get("video_tier", {}).get("tier") != "preferred"))
+        return dict(workers[0]["video_tier"]) if workers else None
 
     def _video_wake(self, status: dict[str, Any], avatar: dict[str, Any]) -> dict[str, Any]:
         """How far the live video is from ready: stage ``idle`` (nothing launched), ``machine`` (the GPU

@@ -206,7 +206,11 @@
       "status": "Durum",
       "inflight": "İstekler",
       "calls": "Canlı görüşmeler",
-      "stopOne": "Durdur"
+      "stopOne": "Durdur",
+      "card": "Kart",
+      "cardGb": "{{gb}} GB",
+      "fallback": "Yedek",
+      "fallbackNotice": "{{id}} numaralı sunucu {{gb}} GB kartta çalışıyor, çünkü başlatıldığında boşta {{pref}} GB kart yoktu. Canlı görüntü çalışır, ama Türkçe ses bu kartta daha geç başlar (3 sn altı yerine yaklaşık 5 sn)."
     },
     "telemetry": {
       "title": "Model telemetrisi",

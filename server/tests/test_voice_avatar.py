@@ -49,6 +49,7 @@ class Runner:
         self.refs: dict[str, str | None] = {}
         self.tunings: list[dict] = []
         self.puts: list[tuple[str, str | None]] = []   # (avatar_id, ref) in preparation order
+        self.priorities: dict[str, str | None] = {}    # avatar_id -> ?priority= of its preparation
         self.offers: list[dict] = []
         self.audio: list[dict] = []
         self.closed: list[str] = []
@@ -86,6 +87,7 @@ class Runner:
             self.avatars[avatar_id] = await request.body()
             self.refs[avatar_id] = ref
             self.puts.append((avatar_id, ref))
+            self.priorities[avatar_id] = request.query_params.get("priority")
             return {"avatar_id": avatar_id, "width": 530, "height": 720, "prepare_ms": 812.0, "ref": ref}
 
         @app.post("/avatar/offer")
@@ -768,3 +770,51 @@ def test_the_tile_reported_lip_offset_moves_the_runner_delay_for_the_next_line(t
                       headers=OTHER).status_code == 404
         m = c.get("/v1/voice/avatar/metrics", params={"session_id": sid}, headers=USER).json()["metrics"]
         assert m["av_shift_ms"] == 320 and [x["lip_lag_ms"] for x in m["lip_lags"]] == [-300, 400, 20]
+
+
+def test_the_calls_portrait_is_prepared_with_call_priority(tmp_path, runner_sockets):
+    # Live 2026-10-21: the call's portrait queued behind the case's look ladder on the runner (85 to 90 s
+    # from the voice click). The session asks for it with priority=call, so the runner prepares it first.
+    runner = Runner()
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True))
+    with TestClient(app) as c:
+        r = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER)
+        assert r.status_code == 200, r.text
+    assert runner.priorities["acudx-p04"] == "call"
+    assert r.json()["prepare"]["prepared"] is True
+
+
+def test_a_lip_offset_measured_across_a_cut_reply_is_ignored(tmp_path, runner_sockets):
+    runner = Runner()
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+        assert c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"},
+                      headers=USER).status_code == 200
+        call = app.state.avatar_sessions.get(sid)
+        call.metrics["lip_overlap"] = True        # set by CallSpeaker when a reply cut the previous one
+        r = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 280, "score": 0.8},
+                   headers=USER).json()
+        assert r == {"av_shift_ms": 160, "changed": False, "why": "overlapping_lines"} and runner.tunings == []
+        r = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": -300, "score": 0.8},
+                   headers=USER).json()
+        assert r["changed"] is True                   # the next clean line closes the loop again
+        m = c.get("/v1/voice/avatar/metrics", params={"session_id": sid}, headers=USER).json()["metrics"]
+        assert m["lip_lags"][0]["ignored"] == "overlap" and "ignored" not in m["lip_lags"][1]
+
+
+def test_a_turkish_line_with_a_modest_correlation_still_closes_the_loop(tmp_path, runner_sockets):
+    # Live 2026-10-22 (prod-path-v3 TR): +120 to +240 ms on every line at scores 0.27 to 0.37 was never
+    # corrected while the threshold was 0.4.
+    runner = Runner()
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+        assert c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"},
+                      headers=USER).status_code == 200
+        r = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 160, "score": 0.3},
+                   headers=USER).json()
+        assert r == {"av_shift_ms": 80, "changed": True, "previous": 160}
+        weak = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 600, "score": 0.1},
+                      headers=USER).json()
+        assert weak["changed"] is False and weak["why"] == "weak_correlation"

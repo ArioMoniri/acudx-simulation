@@ -966,6 +966,11 @@ export function PatientCallTile({
         {engine === "browser" && voiceOn && !liveVideo ? <span>{t("voice2.tile.provenance.browserVoice")}</span> : null}
         {providerLabel && voiceOn ? <span>{t("voice2.tile.provenance.voice", { provider: providerLabel })}</span> : null}
         {liveVideo && caps ? <span>{t("voice2.tile.provenance.renderer", { renderer: caps.avatar.renderer })}</span> : null}
+        {caps?.avatar.gpu_tier?.tier === "fallback" && (liveVideo || livePhase) ? (
+          <span data-testid="gpu-fallback">
+            {t("voice2.tile.gpuFallback", { gb: caps.avatar.gpu_tier.gpu_memory_gb ?? "?" })}
+          </span>
+        ) : null}
         {showRealtimeVideo && liveMetrics?.firstFrameMs != null ? (
           <span className="font-mono tabular-nums" data-testid="first-frame-ms">
             {t("voice2.tile.provenance.firstFrame", { ms: liveMetrics.firstFrameMs })}

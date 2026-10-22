@@ -179,7 +179,8 @@ async def test_a_voiced_turn_streams_the_reply_into_the_call_clause_by_clause(vo
     assert turn["error"] is None, turn
     # First clause alone in the first TTS request, the rest in the next one(s); one runner utterance.
     tts = [x["input"] for x in scenario.tts_calls if x.get("_route") == "stream"]
-    assert tts[0] == "Dün öğleden sonra başladı" and len(tts) >= 2
+    # Turkish: the opening clause is capped at 22 characters (Chatterbox waits for the whole clause).
+    assert tts[0] == "Dün öğleden sonra" and len(tts) >= 2
     spoken = " ".join(tts)
     assert "150/90" not in spoken and "Işığa bakınca gözüm yanıyor" in spoken and "kafam karışık" in spoken
     lines = _lines(sockets[0].sent)
@@ -187,6 +188,29 @@ async def test_a_voiced_turn_streams_the_reply_into_the_call_clause_by_clause(vo
     assert json.loads(sockets[0].sent[-1]) == {"type": "end"}
     assert {"first_clause_ms", "tts_first_chunk_ms", "runner_first_chunk_ms", "runner_done_ms"} <= set(turn["timings"])
     assert turn["timings"]["released_ms"] >= t["guard_ms"]
+    await gw.aclose()
+
+
+async def test_the_tts_connection_is_opened_while_the_guard_runs(voiced, runtime, monkeypatch):
+    # Live 2026-10-22: the first clause's TTS request paid a new TLS connection to the worker (the idle one
+    # was gone by the next question). It is opened at the start of the turn now, next to the guard.
+    state, _scenario, _sockets = voiced
+    warmed: list[str] = []
+
+    async def prewarm(lang: str) -> str:
+        warmed.append(lang)
+        return "gpu-worker"
+
+    monkeypatch.setattr(state.voice, "prewarm_tts", prewarm)
+    calls: list[str] = []
+    gw, tid, call, _dbl = await _start(state, runtime, calls, REPLY_TR)
+    transport = httpx.ASGITransport(app=app_module.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        r = await c.post(f"/v2/case/{tid}/interview", headers=ME, json={
+            "message": "Ağrınız nasıl?", "locale": "tr", "call_session_id": call.id})
+        r2 = await c.post(f"/v2/case/{tid}/interview", headers=ME, json={"message": "Ateşiniz var mı?", "locale": "tr"})
+    assert r.status_code == 200 and r2.status_code == 200
+    assert warmed == ["tr"]                     # only a turn with a live call warms the voice
     await gw.aclose()
 
 

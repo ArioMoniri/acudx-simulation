@@ -1,0 +1,629 @@
+{
+  "captured_at": "2026-10-22T02:42:06.362Z",
+  "base_url": "http://127.0.0.1:4189",
+  "lang": "tr",
+  "voice_delay_ms": 0,
+  "live_after_voice_click_ms": 29693,
+  "session": {
+    "at": 1792636727657,
+    "prepare_ms": 19892.8,
+    "prepare": {
+      "avatar_id": "acudx-p29",
+      "face_box": [
+        201,
+        127,
+        520,
+        595
+      ],
+      "width": 720,
+      "height": 720,
+      "idle_frames": 75,
+      "extended_px": 144,
+      "ref": null,
+      "registration": null,
+      "content_key": "9c51ebd0672641ce60d178da",
+      "prepared": false,
+      "cached": "local",
+      "queue_ms": 19496.3,
+      "prepare_ms": 19497.3
+    },
+    "appearance": {
+      "source": "portrait",
+      "reason": "presenting look not ready yet; the call opens on the case portrait and switches when it lands",
+      "current_key": null
+    },
+    "worker": {
+      "infer_fps": null,
+      "sessions": 0,
+      "max_sessions": 2,
+      "gpu": {
+        "cuda": true,
+        "name": "NVIDIA H100 80GB HBM3",
+        "total_mb": 81079,
+        "free_mb": 7496,
+        "process_reserved_mb": 2802,
+        "process_allocated_mb": 2194
+      },
+      "domain": "192-222-53-172.sslip.io",
+      "max_calls": 2,
+      "active_calls": 1
+    }
+  },
+  "overlap": [
+    {
+      "second_sent_ms_after_first_speech": 1500,
+      "turns": [
+        {
+          "cut": false,
+          "cut_previous": false,
+          "timings": {
+            "persona_first_text_ms": 726.8,
+            "first_clause_ms": 780.1,
+            "guard_ms": 900.4,
+            "history_ms": 903.8,
+            "persona_done_ms": 1296.6,
+            "tts_first_chunk_ms": 1896.8,
+            "released_ms": 1896.8,
+            "runner_first_chunk_ms": 1897.1,
+            "runner_done_ms": 12791.8
+          },
+          "spoken_text": "Hayır doktor bey, ağrı hiçbir yere vurmuyor. Sırtıma da koluma da gitmiyor, hep sağ altta duruyor. Nefes darlığım da göğüs ağrım da yok."
+        },
+        {
+          "cut": false,
+          "cut_previous": false,
+          "timings": {
+            "guard_ms": 717.7,
+            "persona_first_text_ms": 789.2,
+            "first_clause_ms": 1168.3,
+            "tts_first_chunk_ms": 2845.1,
+            "history_ms": 22269
+          },
+          "spoken_text": ""
+        }
+      ],
+      "lip_lags_after": [
+        {
+          "lip_lag_ms": 160,
+          "score": 0.156,
+          "av_shift_ms": 160
+        },
+        {
+          "lip_lag_ms": 160,
+          "score": 0.319,
+          "av_shift_ms": 160
+        },
+        {
+          "lip_lag_ms": 80,
+          "score": 0.247,
+          "av_shift_ms": 160
+        }
+      ],
+      "av_shift_ms": 160,
+      "second_reply_http_ms": 25979
+    },
+    {
+      "clean_line_after_cut": {
+        "speech_start_ms": 22,
+        "lip_lag_ms": 160,
+        "lip_score": 0.372
+      }
+    }
+  ],
+  "first_frame_ms": 4469,
+  "lines": [
+    {
+      "line": 1,
+      "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
+      "reply": "Dün akşam yemekten sonra başladı doktor bey. Önce göbeğimin etrafındaydı, sabaha doğru sağ alt tarafa kaydı, şimdi tam burada.",
+      "via": "server",
+      "speech_start_ms": 4530,
+      "lip_lag_ms": 80,
+      "lip_score": 0.201,
+      "voice_ms": 11383,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4735,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 1212,
+        "history_ms": 1215,
+        "persona_first_text_ms": 1476.1,
+        "first_clause_ms": 1730.9,
+        "persona_done_ms": 1831.5,
+        "tts_first_chunk_ms": 3800,
+        "released_ms": 3800,
+        "runner_first_chunk_ms": 3800.3
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 1212,
+          "history_ms": 1215,
+          "persona_first_text_ms": 1476.1,
+          "first_clause_ms": 1730.9,
+          "persona_done_ms": 1831.5,
+          "tts_first_chunk_ms": 3800,
+          "released_ms": 3800,
+          "runner_first_chunk_ms": 3800.3,
+          "runner_done_ms": 14148.8
+        },
+        "requests": [
+          {
+            "chars": 24,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2069,
+            "bytes": 185280
+          },
+          {
+            "chars": 101,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1264.1,
+            "bytes": 369600
+          }
+        ],
+        "runner": {
+          "frames": 578,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 10285.6
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 2,
+      "question": "Ağrınız nasıl bir ağrı, batıcı mı, sıkıştırıcı mı?",
+      "reply": "Batar gibi bir ağrı doktor bey, sürekli var. Kramp gibi gelip gitmiyor, hep aynı yerde duruyor.",
+      "via": "server",
+      "speech_start_ms": 3115,
+      "lip_lag_ms": 120,
+      "lip_score": 0.199,
+      "voice_ms": 10700,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4143,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 743.6,
+        "guard_ms": 923,
+        "history_ms": 926.6,
+        "first_clause_ms": 1129.7,
+        "persona_done_ms": 1144.8,
+        "tts_first_chunk_ms": 2453.6,
+        "released_ms": 2453.6,
+        "runner_first_chunk_ms": 2453.9
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 743.6,
+          "guard_ms": 923,
+          "history_ms": 926.6,
+          "first_clause_ms": 1129.7,
+          "persona_done_ms": 1144.8,
+          "tts_first_chunk_ms": 2453.6,
+          "released_ms": 2453.6,
+          "runner_first_chunk_ms": 2453.9,
+          "runner_done_ms": 11353.5
+        },
+        "requests": [
+          {
+            "chars": 26,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1323.8,
+            "bytes": 93120
+          },
+          {
+            "chars": 68,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1922.4,
+            "bytes": 385920
+          }
+        ],
+        "runner": {
+          "frames": 499,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 8837.5
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 3,
+      "question": "Ağrınızı artıran ya da azaltan bir şey var mı?",
+      "reply": "Kıpırdayınca, yürüyünce, öksürünce çok artıyor. Arabada sarsılınca da çok kötü oldu. Kıpırdamadan dizlerimi karnıma çekip yatınca biraz hafifliyor.",
+      "via": "server",
+      "speech_start_ms": 3716,
+      "lip_lag_ms": 120,
+      "lip_score": 0.267,
+      "voice_ms": 10466,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4306,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 729.5,
+        "first_clause_ms": 1114.7,
+        "guard_ms": 1252.3,
+        "history_ms": 1255.1,
+        "persona_done_ms": 1338.1,
+        "tts_first_chunk_ms": 2995.1,
+        "released_ms": 2995.1,
+        "runner_first_chunk_ms": 2995.5
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 729.5,
+          "first_clause_ms": 1114.7,
+          "guard_ms": 1252.3,
+          "history_ms": 1255.1,
+          "persona_done_ms": 1338.1,
+          "tts_first_chunk_ms": 2995.1,
+          "released_ms": 2995.1,
+          "runner_first_chunk_ms": 2995.5,
+          "runner_done_ms": 11765.7
+        },
+        "requests": [
+          {
+            "chars": 47,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1880.3,
+            "bytes": 152640
+          },
+          {
+            "chars": 99,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1941.2,
+            "bytes": 328320
+          }
+        ],
+        "runner": {
+          "frames": 501,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 8706
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 4,
+      "question": "Daha önce böyle bir şey yaşadınız mı?",
+      "reply": "Hayır doktor bey, ilk kez oluyor. Daha önce hiç böyle bir ağrı çekmedim, karın ameliyatı da olmadım.",
+      "via": "server",
+      "speech_start_ms": 24900,
+      "lip_lag_ms": 120,
+      "lip_score": 0.3,
+      "voice_ms": 12150,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 25888,
+      "speculative": "restarted",
+      "gateway_timings": {
+        "guard_ms": 1036.6,
+        "persona_first_text_ms": 1385.7,
+        "first_clause_ms": 1666.8,
+        "tts_first_chunk_ms": 3076,
+        "history_ms": 20951.5,
+        "persona_done_ms": 22347.6,
+        "released_ms": 24187.2,
+        "runner_first_chunk_ms": 24187.5
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 1036.6,
+          "persona_first_text_ms": 1385.7,
+          "first_clause_ms": 1666.8,
+          "tts_first_chunk_ms": 3076,
+          "history_ms": 20951.5,
+          "persona_done_ms": 22347.6,
+          "released_ms": 24187.2,
+          "runner_first_chunk_ms": 24187.5,
+          "runner_done_ms": 35167.2
+        },
+        "requests": [
+          {
+            "chars": 17,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1836.7,
+            "bytes": 144960
+          },
+          {
+            "chars": 82,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1824.2,
+            "bytes": 431040
+          }
+        ],
+        "runner": {
+          "frames": 600,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 10915.3
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 5,
+      "question": "Düzenli kullandığınız ilaç ya da alerjiniz var mı?",
+      "reply": "Düzenli kullandığım bir ilaç yok. Ama penisiline alerjim var, eskiden kaşıntılı bir döküntü yapmıştı.",
+      "via": "server",
+      "speech_start_ms": 4134,
+      "lip_lag_ms": 160,
+      "lip_score": 0.156,
+      "voice_ms": 9950,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 6837,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 614.3,
+        "guard_ms": 716,
+        "first_clause_ms": 924.1,
+        "tts_first_chunk_ms": 2483.5,
+        "history_ms": 3466.1,
+        "persona_done_ms": 3467,
+        "released_ms": 3470.5,
+        "runner_first_chunk_ms": 3471.3
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 614.3,
+          "guard_ms": 716,
+          "first_clause_ms": 924.1,
+          "tts_first_chunk_ms": 2483.5,
+          "history_ms": 3466.1,
+          "persona_done_ms": 3467,
+          "released_ms": 3470.5,
+          "runner_first_chunk_ms": 3471.3,
+          "runner_done_ms": 11753.5
+        },
+        "requests": [
+          {
+            "chars": 28,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1559.3,
+            "bytes": 116160
+          },
+          {
+            "chars": 72,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2272.7,
+            "bytes": 334080
+          }
+        ],
+        "runner": {
+          "frames": 469,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 8220.3
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 6,
+      "question": "Şu an kendinizi nasıl hissediyorsunuz, geldiğiniz zamana göre?",
+      "reply": "Pek bir fark yok doktor bey, ağrı hâlâ aynı yerde, sağ altta. Biraz sakinleştim ama içim rahat değil, hâlâ midem bulanıyor.",
+      "via": "server",
+      "speech_start_ms": 2936,
+      "lip_lag_ms": 160,
+      "lip_score": 0.319,
+      "voice_ms": 8550,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4334,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 578.4,
+        "first_clause_ms": 947,
+        "guard_ms": 1027.5,
+        "history_ms": 1027.5,
+        "persona_done_ms": 1297.6,
+        "tts_first_chunk_ms": 2222.5,
+        "released_ms": 2222.5,
+        "runner_first_chunk_ms": 2222.8
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 578.4,
+          "first_clause_ms": 947,
+          "guard_ms": 1027.5,
+          "history_ms": 1027.5,
+          "persona_done_ms": 1297.6,
+          "tts_first_chunk_ms": 2222.5,
+          "released_ms": 2222.5,
+          "runner_first_chunk_ms": 2222.8,
+          "runner_done_ms": 9879.5
+        },
+        "requests": [
+          {
+            "chars": 28,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1275.4,
+            "bytes": 85440
+          },
+          {
+            "chars": 94,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1357.4,
+            "bytes": 331200
+          }
+        ],
+        "runner": {
+          "frames": 434,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 7595.3
+        },
+        "error": null
+      }
+    }
+  ],
+  "fades": [],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p29-15dcd2cf-e3b0c44298",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 175,
+        "residual_before": 68.01,
+        "residual_after": 68.01
+      }
+    },
+    {
+      "name": "critical",
+      "avatar_id": "acudx-p29-15dcd2cf-be4a95a56a",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 65,
+        "residual_before": 49.55,
+        "residual_after": 49.55
+      }
+    },
+    {
+      "name": "live",
+      "avatar_id": "acudx-p29-15dcd2cf-fdcec0a4a6",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 61,
+        "residual_before": 53.87,
+        "residual_after": 53.87
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 160,
+    "lip_lags": [
+      {
+        "lip_lag_ms": 80,
+        "score": 0.201,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 120,
+        "score": 0.199,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 120,
+        "score": 0.267,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 120,
+        "score": 0.3,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 160,
+        "score": 0.156,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 160,
+        "score": 0.319,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 80,
+        "score": 0.247,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 160,
+        "score": 0.372,
+        "av_shift_ms": 160,
+        "ignored": "overlap"
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 62.9
+    },
+    "answer_ms": 378.5,
+    "prepare_ms": 19892.8
+  },
+  "runner_call": [
+    {
+      "id": "e9658595",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 160
+      },
+      "avatar": "acudx-p29-15dcd2cf-e3b0c44298",
+      "speaking": false,
+      "warm_up_ms": 54,
+      "switches_applied": 3,
+      "switch_pending": false,
+      "infer_fps": 73.9,
+      "inferred_frames": 2432,
+      "sender_queue": {
+        "audio_frames": 13,
+        "video_frames": 6
+      },
+      "sent_frames": 4757,
+      "underruns": 6,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 9470,
+    "audioEnergy": 4.181309846062887,
+    "videoFrames": 4730,
+    "videoFps": 26,
+    "rttMs": 67,
+    "audioJitterMs": 80,
+    "videoJitterMs": 92,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3484?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-22T02:38:25.902Z case open",
+    "2026-10-22T02:38:56.638Z live video connected 29693 ms after the voice click; session {\"at\":1792636727657,\"prepare_ms\":19892.8,\"prepare\":{\"avatar_id\":\"acudx-p29\",\"face_box\":[201,127,520,595],\"width\":720,\"height\":720,\"idle_frames\":75,\"extended_px\":144,\"ref\":null,\"registration\":null,\"content_key\":\"9c51ebd0672641ce60d178da\",\"prepared\":false,\"cached\":\"local\",\"queue_ms\":19496.3,\"prepare_ms\":19497.3},\"appearance\":{\"source\":\"portrait\",\"reason\":\"presenting look not ready yet; the call opens on the case portrait and switches when it lands\",\"current_key\":null},\"worker\":{\"infer_fps\":null,\"sessions\":0,\"max_sessions\":2,\"gpu\":{\"cuda\":true,\"name\":\"NVIDIA H100 80GB HBM3\",\"total_mb\":81079,\"free_mb\":7496,\"process_reserved_mb\":2802,\"process_allocated_mb\":2194},\"domain\":\"192-222-53-172.sslip.io\",\"max_calls\":2,\"active_calls\":1}}",
+    "2026-10-22T02:38:58.844Z line 1 sent",
+    "2026-10-22T02:39:17.387Z line 1: {\"s\":4530,\"lag\":80,\"score\":0.201,\"via\":\"server\"}",
+    "2026-10-22T02:39:18.968Z line 2 sent",
+    "2026-10-22T02:39:35.423Z line 2: {\"s\":3115,\"lag\":120,\"score\":0.199,\"via\":\"server\"}",
+    "2026-10-22T02:39:36.999Z line 3 sent",
+    "2026-10-22T02:39:53.923Z line 3: {\"s\":3716,\"lag\":120,\"score\":0.267,\"via\":\"server\"}",
+    "2026-10-22T02:39:55.503Z line 4 sent",
+    "2026-10-22T02:40:35.191Z line 4: {\"s\":24900,\"lag\":120,\"score\":0.3,\"via\":\"server\"}",
+    "2026-10-22T02:40:36.769Z line 5 sent",
+    "2026-10-22T02:40:53.498Z line 5: {\"s\":4134,\"lag\":160,\"score\":0.156,\"via\":\"server\"}",
+    "2026-10-22T02:40:55.142Z line 6 sent",
+    "2026-10-22T02:41:09.395Z line 6: {\"s\":2936,\"lag\":160,\"score\":0.319,\"via\":\"server\"}",
+    "2026-10-22T02:41:11.006Z overlap: first question sent",
+    "2026-10-22T02:41:16.776Z overlap: second question sent while the first reply plays",
+    "2026-10-22T02:41:43.231Z overlap: [[false,false],[false,false]]",
+    "2026-10-22T02:42:05.493Z overlap: clean line after the cut {\"clean_line_after_cut\":{\"speech_start_ms\":22,\"lip_lag_ms\":160,\"lip_score\":0.372}}",
+    "2026-10-22T02:42:05.507Z variants ready: 3"
+  ]
+}

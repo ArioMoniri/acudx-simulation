@@ -270,7 +270,7 @@ async def create_session(request: Request, body: SessionBody, user: Principal = 
             s.metrics["appearance_reused"] = reuse is not None
             s.metrics["appearance_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
         if s.avatar_id == mt.avatar_id_for(body.photo_id or ""):
-            prep = await mt.ensure_avatar(svc.client, worker, s.avatar_id, portrait)
+            prep = await mt.ensure_avatar(svc.client, worker, s.avatar_id, portrait, priority="call")
         else:
             prep = await mt.ensure_avatar(svc.client, worker, s.avatar_id, b"")   # prepared: geometry only
             _spawn(mt.ensure_avatar(svc.client, worker, mt.avatar_id_for(body.photo_id or ""), portrait))
@@ -571,7 +571,10 @@ class LipLagBody(SessionRef):
 
 
 LIP_TOLERANCE_MS = 40
-LIP_MIN_SCORE = 0.4
+# 0.25 since 2026-10-22: Turkish lines on the worker's Chatterbox score 0.2 to 0.4 (breathy, paused speech),
+# so at 0.4 a steady +120 to +240 ms offset was never corrected; the lines that misled the loop before were
+# overlapping replies, which are skipped now (lip_overlap).
+LIP_MIN_SCORE = 0.25
 LIP_GAIN = 0.5
 
 
@@ -597,8 +600,13 @@ async def lipsync(request: Request, body: LipLagBody, user: Principal = Depends(
         raise HTTPException(status_code=409, detail={"error": "call_not_connected"})
     current = int(s.metrics.get("av_shift_ms", runner_tuning(svc.settings).get("av_shift_ms", 0)))
     lags = s.metrics.setdefault("lip_lags", [])
-    lags.append({"lip_lag_ms": body.lip_lag_ms, "score": body.score, "av_shift_ms": current})
+    overlap = bool(s.metrics.pop("lip_overlap", False))
+    lags.append({"lip_lag_ms": body.lip_lag_ms, "score": body.score, "av_shift_ms": current,
+                 **({"ignored": "overlap"} if overlap else {})})
     del lags[:-40]
+    if overlap:
+        # A reply cut by the next one: the measured window holds two lines, its offset is not the runner's.
+        return {"av_shift_ms": current, "changed": False, "why": "overlapping_lines"}
     if body.score is not None and body.score < LIP_MIN_SCORE:
         return {"av_shift_ms": current, "changed": False, "why": "weak_correlation"}
     want = next_av_shift(current, body.lip_lag_ms)

@@ -79,6 +79,7 @@ write_files:
       AVATAR_MAX_SESSIONS=2
       ACUDX_IMAGE_REGISTRY=ghcr.io/ariomoniri
       CHATTERBOX_CACHE=/opt/acudx/chatterbox-cache
+      AVATAR_CACHE=/opt/acudx/avatar-cache
   - path: /opt/acudx/Caddyfile
     content: |
       # Port 80 belongs to the boot-diagnostics server (python, see diag.sh) until vLLM is
@@ -404,14 +405,33 @@ write_files:
       TUNING: dict[str, Any] = {"t3_autocast": os.getenv("ACUDX_T3_AUTOCAST") or None,
                                 "first_clause": os.getenv("ACUDX_FIRST_CLAUSE", "1") != "0",
                                 "first_max_words": FIRST_CLAUSE_MAX_WORDS,
-                                "second_max_words": int(os.getenv("ACUDX_SECOND_CLAUSE_WORDS", "0"))}
+                                "second_max_words": int(os.getenv("ACUDX_SECOND_CLAUSE_WORDS", "0")),
+                                # T3 speech-token cap per request: base + per_char x characters (0 = upstream's 1000).
+                                "t3_tokens_per_char": float(os.getenv("ACUDX_T3_TOKENS_PER_CHAR", "3.0")),
+                                "t3_tokens_base": int(os.getenv("ACUDX_T3_TOKENS_BASE", "25"))}
       _AUTOCAST = {"bf16": "bfloat16", "fp16": "float16"}
+
+
+      def token_cap(text: str) -> int | None:
+          """Most speech tokens (25 a second) T3 may write for ``text``. Live 2026-10-22 (H100 SXM5, Turkish):
+          normal clauses took 1.8 to 2.6 tokens a character, but short ones ran on to 4 to 7 s of audio
+          ("Hayır doktor bey," 18 characters, 122 tokens, 4.8 s), and the first audio of a clause waits for its
+          whole generation, so a run-on cost 1 to 2 s of speech start. The cap leaves ample room (3 per
+          character plus 25, about 1 s) and cuts only such a tail."""
+          per = float(TUNING.get("t3_tokens_per_char") or 0)
+          if per <= 0:
+              return None
+          return int(int(TUNING.get("t3_tokens_base") or 0) + per * len(str(text or "").strip()))
 
 
       def _timed(store: dict, key: str, fn: Callable[..., Any], *, autocast: bool = False,
                  sync: bool = False) -> Callable[..., Any]:
           def run(*args, **kwargs):
               t0 = time.perf_counter()
+              cap = store.pop("_cap", None) if key == "t3_ms" else None
+              if cap:
+                  kwargs["max_new_tokens"] = min(int(kwargs.get("max_new_tokens") or 1000), int(cap))
+                  store["token_cap"] = kwargs["max_new_tokens"]
               dtype = _AUTOCAST.get(str(TUNING.get("t3_autocast"))) if autocast else None
               if dtype:
                   import torch
@@ -428,6 +448,9 @@ write_files:
               store[key] = store.get(key, 0.0) + (time.perf_counter() - t0) * 1000.0
               if key == "t3_ms" and hasattr(out, "shape"):
                   store["tokens"] = int(out.shape[-1])
+                  if cap and store["tokens"] >= int(store.get("token_cap") or 0):
+                      store["capped"] = True
+                      STATS["t3_capped"] = STATS.get("t3_capped", 0) + 1
               return out
 
           return run
@@ -465,8 +488,10 @@ write_files:
                   t0 = time.perf_counter()
                   store = _instrument(self)
                   store.clear()
-                  out = orig_generate(self, *args, **kwargs)
                   text = kwargs.get("text", args[0] if args else "")
+                  store["_cap"] = token_cap(str(text))
+                  out = orig_generate(self, *args, **kwargs)
+                  store.pop("_cap", None)
                   row = {k: round(v, 1) if isinstance(v, float) else v for k, v in store.items()}
                   row.update(chars=len(str(text)), words=len(str(text).split()), lock_wait_ms=round((t0 - t_wait) * 1000.0, 1),
                              total_ms=round((time.perf_counter() - t0) * 1000.0, 1),
@@ -542,12 +567,17 @@ write_files:
                   TUNING["t3_autocast"] = v
               if "first_clause" in body:
                   TUNING["first_clause"] = bool(body["first_clause"])
-              for key, lo, hi in (("first_max_words", 3, 20), ("second_max_words", 0, 30)):
+              for key, lo, hi in (("first_max_words", 3, 20), ("second_max_words", 0, 30), ("t3_tokens_base", 0, 200)):
                   if key in body:
                       try:
                           TUNING[key] = max(lo, min(hi, int(body[key])))
                       except (TypeError, ValueError):
                           return {"error": f"{key} must be an integer"}
+              if "t3_tokens_per_char" in body:
+                  try:
+                      TUNING["t3_tokens_per_char"] = max(0.0, min(10.0, float(body["t3_tokens_per_char"])))
+                  except (TypeError, ValueError):
+                      return {"error": "t3_tokens_per_char must be a number"}
               TIMINGS.clear()
               return dict(TUNING)
 
@@ -798,6 +828,7 @@ write_files:
             - AVATAR_LOOKAHEAD_FRAMES=4
             - AVATAR_IDLE_FRAMES=75
             - AVATAR_AV_SHIFT_MS=160
+            - AVATAR_CACHE_DIR=/avatar-cache
             - AVATAR_MAX_SESSIONS=${AVATAR_MAX_SESSIONS}
             - AVATAR_DEDICATED_GPU=${AVATAR_DEDICATED_GPU:-0}
             - AVATAR_TURN_TCP_HOST=host.docker.internal
@@ -811,6 +842,7 @@ write_files:
           volumes:
             - /opt/acudx/hf:/hf
             - /opt/acudx/avatars:/app/data/avatars
+            - ${AVATAR_CACHE:-/opt/acudx/avatar-cache}:/avatar-cache
             # The AcuDx runner code is mounted, not baked in: the image key covers only its dependencies.
             - /opt/acudx/avatar/acudx_avatar_server.py:/app/acudx_avatar_server.py:ro
             - /opt/acudx/avatar/acudx_fetch_models.py:/app/acudx_fetch_models.py:ro
@@ -1340,6 +1372,7 @@ write_files:
       import asyncio
       import base64
       import collections
+      import concurrent.futures
       import copy
       import hashlib
       import hmac
@@ -1385,6 +1418,13 @@ write_files:
       AVATAR_ID_RE = re.compile(r"^[a-z0-9_-]{1,64}$")
       MAX_FRAME_H = 720
       PREP_VERSION = 3  # 2: reflected + blurred extension, idle loop; 3: source.png + steps (variant registration)
+      # Prepared avatars keyed by the picture's content (sha256 of the image bytes, the base's key for an
+      # edit, PREP_VERSION and the idle frame count), copied here after each preparation and back on a
+      # later worker that mounts the same directory (the Lambda filesystem): a case portrait or look that
+      # any worker prepared before costs a copy (about 1 s) instead of a preparation (30 to 45 s).
+      AVATAR_CACHE_DIR = os.environ.get("AVATAR_CACHE_DIR", "")
+      # zlib level for the per-frame PNG files (lossless at any level; 1 writes fastest, OpenCV defaults to 3).
+      PNG_LEVEL = int(os.environ.get("AVATAR_PNG_LEVEL", "1"))
 
       # LiveTalking parses its own argv; set it before importing anything from the checkout.
       sys.argv = [sys.argv[0], "--config", "", "--model", "musetalk", "--avatar_id", "acudx_none",
@@ -1639,8 +1679,117 @@ write_files:
 
 
       AVATARS: dict[str, tuple] = {}
-      PREP_LOCK = threading.Lock()
       AVATAR_ROOT = "./data/avatars"
+
+
+      class PrepQueue:
+          """One preparation at a time on the GPU, lowest priority number first, then first come first
+          served. Live 2026-10-21: a learner who clicked the voice button while the case's look ladder was
+          being prepared waited 85 to 90 s, because the call's portrait queued behind every look on a
+          plain lock (and was then prepared a second time). Calls ask with priority 0, the ladder with 1."""
+
+          def __init__(self) -> None:
+              self._cv = threading.Condition()
+              self._busy = False
+              self._seq = 0
+              self._waiting: list = []
+
+          def acquire(self, priority: int) -> None:
+              import heapq  # noqa: PLC0415
+              with self._cv:
+                  self._seq += 1
+                  me = (int(priority), self._seq)
+                  heapq.heappush(self._waiting, me)
+                  while self._busy or self._waiting[0] != me:
+                      self._cv.wait()
+                  heapq.heappop(self._waiting)
+                  self._busy = True
+
+          def release(self) -> None:
+              with self._cv:
+                  self._busy = False
+                  self._cv.notify_all()
+
+          def depth(self) -> int:
+              with self._cv:
+                  return len(self._waiting) + (1 if self._busy else 0)
+
+
+      PREP_QUEUE = PrepQueue()
+      WRITER = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="prep-write")
+      PARSERS = concurrent.futures.ThreadPoolExecutor(max_workers=int(os.environ.get("AVATAR_PREP_THREADS", "6")),
+                                                      thread_name_prefix="prep-parse")
+      PREP_PRIORITY_CALL, PREP_PRIORITY_LADDER = 0, 1
+
+
+      def content_key(image_bytes: bytes, ref: str | None, idle_frames: int) -> str:
+          """The preparation's cache key: the picture's bytes, the base's own key for an edit (the edit is
+          registered onto that base), the preparation version and the idle loop length."""
+          h = hashlib.sha256()
+          h.update(image_bytes)
+          if ref:
+              try:
+                  h.update(str(_base_info(ref).get("content_key") or ref).encode())
+              except (OSError, ValueError):
+                  h.update(ref.encode())
+          h.update(f"|v{PREP_VERSION}|n{int(idle_frames)}".encode())
+          return h.hexdigest()[:24]
+
+
+      def _prepared_key(avatar_id: str) -> str | None:
+          if not _is_prepared(avatar_id):
+              return None
+          try:
+              return _base_info(avatar_id).get("content_key")
+          except (OSError, ValueError):
+              return None
+
+
+      def _from_cache(avatar_id: str, key: str) -> bool:
+          """Copy a preparation another worker (or this one, under another id) made from the same picture."""
+          if not AVATAR_CACHE_DIR:
+              return False
+          src = os.path.join(AVATAR_CACHE_DIR, key)
+          if not os.path.isfile(os.path.join(src, "avator_info.json")):
+              return False
+          import shutil  # noqa: PLC0415
+          dst = _avatar_dir(avatar_id)
+          tmp = dst + ".incoming"
+          shutil.rmtree(tmp, ignore_errors=True)
+          shutil.copytree(src, tmp)
+          with open(os.path.join(tmp, "avator_info.json")) as f:
+              info = json.load(f)
+          info["avatar_id"] = avatar_id
+          with open(os.path.join(tmp, "avator_info.json"), "w") as f:
+              json.dump(info, f)
+          shutil.rmtree(dst, ignore_errors=True)
+          os.replace(tmp, dst)
+          return _is_prepared(avatar_id)
+
+
+      def _to_cache(avatar_id: str, key: str) -> None:
+          if not AVATAR_CACHE_DIR:
+              return
+          import shutil  # noqa: PLC0415
+          dst = os.path.join(AVATAR_CACHE_DIR, key)
+          if os.path.isfile(os.path.join(dst, "avator_info.json")):
+              return
+          tmp = f"{dst}.{os.getpid()}.{threading.get_ident()}.tmp"
+          try:
+              os.makedirs(AVATAR_CACHE_DIR, exist_ok=True)
+              shutil.copytree(_avatar_dir(avatar_id), tmp)
+              os.replace(tmp, dst)
+          except OSError as exc:
+              log.info("avatar cache: %s not saved: %s", key, type(exc).__name__)
+              shutil.rmtree(tmp, ignore_errors=True)
+
+
+      def _info_reply(avatar_id: str, prepared: bool, **extra) -> dict:
+          info = _base_info(avatar_id)
+          out = {k: info.get(k) for k in ("avatar_id", "face_box", "width", "height", "idle_frames", "extended_px",
+                                          "ref", "registration", "content_key")}
+          out.update({"prepared": prepared, **extra})
+          return out
 
 
       def _avatar_dir(avatar_id: str) -> str:
@@ -1778,9 +1927,46 @@ write_files:
               return json.load(f)
 
 
-      @torch.no_grad()
       def prepare_avatar(avatar_id: str, image_bytes: bytes, idle_frames: int | None = None,
-                         ref: str | None = None) -> dict:
+                         ref: str | None = None, priority: int = PREP_PRIORITY_LADDER) -> dict:
+          """Prepare once per picture: a second request for the same picture (same content key) returns the
+          existing preparation, a picture another worker prepared is copied from AVATAR_CACHE_DIR, anything
+          else is prepared in PREP_QUEUE order (a call's picture before the case's look ladder)."""
+          started = time.monotonic()
+          n = max(1, min(int(idle_frames if idle_frames is not None else IDLE_FRAMES), 150))
+          if ref:
+              if not _is_prepared(ref) or not os.path.isfile(os.path.join(_avatar_dir(ref), "source.png")):
+                  raise RefNotPrepared(ref)
+              n = int(_base_info(ref).get("idle_frames") or n)
+          key = content_key(image_bytes, ref, n)
+          queued = time.monotonic()
+          PREP_QUEUE.acquire(priority)
+          try:
+              waited = round((time.monotonic() - queued) * 1000.0, 1)
+              if _prepared_key(avatar_id) == key:
+                  _load(avatar_id)
+                  return _info_reply(avatar_id, False, cached="local", queue_ms=waited,
+                                     prepare_ms=round((time.monotonic() - started) * 1000.0, 1))
+              if _from_cache(avatar_id, key):
+                  AVATARS.pop(avatar_id, None)
+                  _load(avatar_id)
+                  ms = round((time.monotonic() - started) * 1000.0, 1)
+                  STATE["prepare_ms"][avatar_id] = ms
+                  return _info_reply(avatar_id, True, cached="filesystem", queue_ms=waited, prepare_ms=ms)
+              PREP_YIELDS["on"] = priority != PREP_PRIORITY_CALL
+              info = _prepare_locked(avatar_id, image_bytes, n, ref, key)
+          finally:
+              PREP_YIELDS["on"] = True
+              PREP_QUEUE.release()
+          threading.Thread(target=_to_cache, args=(avatar_id, key), daemon=True).start()
+          info.update({"prepared": True, "cached": None, "queue_ms": waited, "content_key": key,
+                       "prepare_ms": round((time.monotonic() - started) * 1000.0, 1)})
+          STATE["prepare_ms"][avatar_id] = info["prepare_ms"]
+          return info
+
+
+      @torch.no_grad()
+      def _prepare_locked(avatar_id: str, image_bytes: bytes, n: int, ref: str | None, key: str) -> dict:
           """Portrait -> MuseTalk avatar: an idle loop of ``idle_frames`` frames (latents, face boxes,
           blend masks per frame). 1 frame = the still portrait.
 
@@ -1789,7 +1975,7 @@ write_files:
           base's own preparation steps and face box, so base and variant share one frame, crop and
           landmarks and a cross-fade between them shows one face, never two."""
           started = time.monotonic()
-          n = max(1, min(int(idle_frames if idle_frames is not None else IDLE_FRAMES), 150))
+          phases: dict = {}
           img = cv2.imdecode(np.frombuffer(image_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
           if img is None:
               raise ValueError("image could not be decoded")
@@ -1798,111 +1984,147 @@ write_files:
           coords = None
           steps: list = []
           padded = 0
-          with PREP_LOCK:
-              root = _avatar_dir(avatar_id)
-              full_dir = os.path.join(root, "full_imgs")
-              mask_dir = os.path.join(root, "mask")
-              if ref:
-                  if not _is_prepared(ref) or not os.path.isfile(os.path.join(_avatar_dir(ref), "source.png")):
-                      raise RefNotPrepared(ref)
-                  info = _base_info(ref)
-                  src = cv2.imread(os.path.join(_avatar_dir(ref), "source.png"), cv2.IMREAD_COLOR)
-                  img, registration = acudx_register.align_to(src, img)
-                  steps = [list(s) for s in info.get("steps") or []]
-                  padded = int(info.get("extended_px") or 0)
-                  base = replay_steps(img, steps)
-                  coords = [int(v) for v in info["face_box"]]
-                  if base.shape[1] != int(info["width"]) or base.shape[0] != int(info["height"]):
-                      raise ValueError("registered picture does not match the base frame")
-                  n = int(info.get("idle_frames") or n)
-              for d in (full_dir, mask_dir):
-                  os.makedirs(d, exist_ok=True)
-                  for f in os.listdir(d):
-                      os.remove(os.path.join(d, f))
-              cv2.imwrite(os.path.join(root, "source.png"), img)
-              if base is None:
+          root = _avatar_dir(avatar_id)
+          full_dir = os.path.join(root, "full_imgs")
+          mask_dir = os.path.join(root, "mask")
+          if ref:
+              if not _is_prepared(ref) or not os.path.isfile(os.path.join(_avatar_dir(ref), "source.png")):
+                  raise RefNotPrepared(ref)
+              info = _base_info(ref)
+              src = cv2.imread(os.path.join(_avatar_dir(ref), "source.png"), cv2.IMREAD_COLOR)
+              img, registration = acudx_register.align_to(src, img)
+              steps = [list(s) for s in info.get("steps") or []]
+              padded = int(info.get("extended_px") or 0)
+              base = replay_steps(img, steps)
+              coords = [int(v) for v in info["face_box"]]
+              if base.shape[1] != int(info["width"]) or base.shape[0] != int(info["height"]):
+                  raise ValueError("registered picture does not match the base frame")
+              n = int(info.get("idle_frames") or n)
+          for d in (full_dir, mask_dir):
+              os.makedirs(d, exist_ok=True)
+              for f in os.listdir(d):
+                  os.remove(os.path.join(d, f))
+          cv2.imwrite(os.path.join(root, "source.png"), img)
+          if base is None:
+              h, w = img.shape[:2]
+              if h > MAX_FRAME_H:
+                  scale = MAX_FRAME_H / h
+                  img = cv2.resize(img, (int(w * scale), MAX_FRAME_H), interpolation=cv2.INTER_AREA)
+                  steps.append(["resize", img.shape[1], img.shape[0]])
                   h, w = img.shape[:2]
-                  if h > MAX_FRAME_H:
-                      scale = MAX_FRAME_H / h
-                      img = cv2.resize(img, (int(w * scale), MAX_FRAME_H), interpolation=cv2.INTER_AREA)
+              # H.264 and VP8 encoders want even dimensions.
+              img = img[: h - h % 2, : w - w % 2]
+              steps.append(["crop", img.shape[1], img.shape[0]])
+              raw_box = _detect_fixed(img, os.path.join(root, "detect.png"))
+              if raw_box is None:
+                  raise NoFace("no face found in the portrait")
+              # One detection: after a resize or an extension the box is moved with the picture (scaled,
+              # then shifted by the added top and left borders) instead of detected again. Live 2026-10-22
+              # (H100): each detection took 3 to 4 s and a close-up portrait needed two or three.
+              raw = list(raw_box)
+              phases["detections"] = 1
+              # Each pass only moves the box (no detection), so a close-up can take several small passes.
+              for _attempt in range(8):
+                  phases["extend_passes"] = _attempt
+                  frame = img
+                  x1, y1, x2, y2 = (int(round(v)) for v in raw)
+                  x1, y1 = max(0, x1), max(0, y1)
+                  x2, y2 = min(x2, frame.shape[1]), min(y2, frame.shape[0])
+                  y2 = min(y2 + 10, frame.shape[0])  # v1.5 extra_margin, as in genavatar.py
+                  coords = [x1, y1, x2, y2]
+                  # The blend step pastes into the face box expanded 1.5x (blending.get_crop_box). A
+                  # close-up portrait puts that box outside the frame, every speaking frame then fails
+                  # in paste_back_frame and is dropped together with its audio, so the call is silent.
+                  # Extend the portrait (mirrored, blurred; see extend_portrait) until the expanded box
+                  # fits with room for the idle motion, then detect again.
+                  (cx1, cy1, cx2, cy2), _s = get_crop_box(coords, 1.5)
+                  fh, fw = frame.shape[:2]
+                  margin = 12
+                  need = [max(0, -cy1), max(0, cy2 - fh), max(0, -cx1), max(0, cx2 - fw)]  # top, bottom, left, right
+                  if max(need) == 0:
+                      break
+                  sides = [k + margin if k else 0 for k in need]
+                  # Keep the result within MAX_FRAME_H by shrinking the portrait first (the face box and
+                  # so the needed border shrink with it), instead of padding and then shrinking again.
+                  grown_h = img.shape[0] + sides[0] + sides[1]
+                  if grown_h > MAX_FRAME_H:
+                      s = MAX_FRAME_H / float(grown_h)
+                      oh, ow = img.shape[:2]
+                      img = cv2.resize(img, (int(img.shape[1] * s), int(img.shape[0] * s)), interpolation=cv2.INTER_AREA)
                       steps.append(["resize", img.shape[1], img.shape[0]])
-                      h, w = img.shape[:2]
-                  # H.264 and VP8 encoders want even dimensions.
-                  img = img[: h - h % 2, : w - w % 2]
+                      sides = [int(math.ceil(k * s)) if k else 0 for k in sides]
+                      sx, sy = img.shape[1] / float(ow), img.shape[0] / float(oh)
+                      raw = [raw[0] * sx, raw[1] * sy, raw[2] * sx, raw[3] * sy]
+                  padded = max(padded, max(sides))
+                  img = extend_portrait(img, *sides)
+                  steps.append(["extend", *sides])
+                  raw = [raw[0] + sides[2], raw[1] + sides[0], raw[2] + sides[2], raw[3] + sides[0]]
+                  img = img[: img.shape[0] - img.shape[0] % 2, : img.shape[1] - img.shape[1] % 2]
                   steps.append(["crop", img.shape[1], img.shape[0]])
-                  frame_path = os.path.join(full_dir, "00000000.png")
-                  for _attempt in range(3):
-                      cv2.imwrite(frame_path, img)
-                      coord_list, frame_list = get_landmark_and_bbox([frame_path], 0)
-                      if not coord_list or tuple(coord_list[0]) == tuple(coord_placeholder):
-                          raise NoFace("no face found in the portrait")
-                      x1, y1, x2, y2 = (int(v) for v in coord_list[0])
-                      frame = frame_list[0]
-                      y2 = min(y2 + 10, frame.shape[0])  # v1.5 extra_margin, as in genavatar.py
-                      coords = [x1, y1, x2, y2]
-                      # The blend step pastes into the face box expanded 1.5x (blending.get_crop_box). A
-                      # close-up portrait puts that box outside the frame, every speaking frame then fails
-                      # in paste_back_frame and is dropped together with its audio, so the call is silent.
-                      # Extend the portrait (mirrored, blurred; see extend_portrait) until the expanded box
-                      # fits with room for the idle motion, then detect again.
-                      (cx1, cy1, cx2, cy2), _s = get_crop_box(coords, 1.5)
-                      fh, fw = frame.shape[:2]
-                      margin = 12
-                      need = [max(0, -cy1), max(0, cy2 - fh), max(0, -cx1), max(0, cx2 - fw)]  # top, bottom, left, right
-                      if max(need) == 0:
-                          break
-                      sides = [k + margin if k else 0 for k in need]
-                      # Keep the result within MAX_FRAME_H by shrinking the portrait first (the face box and
-                      # so the needed border shrink with it), instead of padding and then shrinking again.
-                      grown_h = img.shape[0] + sides[0] + sides[1]
-                      if grown_h > MAX_FRAME_H:
-                          s = MAX_FRAME_H / float(grown_h)
-                          img = cv2.resize(img, (int(img.shape[1] * s), int(img.shape[0] * s)), interpolation=cv2.INTER_AREA)
-                          steps.append(["resize", img.shape[1], img.shape[0]])
-                          sides = [int(math.ceil(k * s)) if k else 0 for k in sides]
-                      padded = max(padded, max(sides))
-                      img = extend_portrait(img, *sides)
-                      steps.append(["extend", *sides])
-                      img = img[: img.shape[0] - img.shape[0] % 2, : img.shape[1] - img.shape[1] % 2]
-                      steps.append(["crop", img.shape[1], img.shape[0]])
-                  else:
-                      raise NoFace("the face fills the portrait; no room for the blend box")
-                  base = frame
-              mask = head_mask(base.shape, coords) if n > 1 else None
-              coords_list, mask_coords, latents = [], [], []
-              for i, m in enumerate(idle_transforms(n, coords)):
-                  if mask is not None and i > 0:
-                      warped = cv2.warpAffine(base, m, (base.shape[1], base.shape[0]), flags=cv2.INTER_LINEAR,
-                                              borderMode=cv2.BORDER_REFLECT_101)
-                      fr = np.clip(mask * warped.astype(np.float32) + (1.0 - mask) * base.astype(np.float32),
-                                   0, 255).astype(np.uint8)
-                      box = _box_after(m, coords, base.shape)
-                  else:
-                      fr, box = base, list(coords)
-                  bx1, by1, bx2, by2 = box
-                  crop = cv2.resize(fr[by1:by2, bx1:bx2], (256, 256), interpolation=cv2.INTER_LANCZOS4)
-                  latents.append(VAE.get_latents_for_unet(crop))
-                  fmask, crop_box = get_image_prepare_material(fr, box, fp=FACE_PARSER, mode="jaw")
-                  name = f"{i:08d}.png"
-                  cv2.imwrite(os.path.join(full_dir, name), fr)
-                  cv2.imwrite(os.path.join(mask_dir, name), fmask)
-                  coords_list.append(box)
-                  mask_coords.append(crop_box)
-              with open(os.path.join(root, "mask_coords.pkl"), "wb") as f:
-                  pickle.dump(mask_coords, f)
-              with open(os.path.join(root, "coords.pkl"), "wb") as f:
-                  pickle.dump(coords_list, f)
-              torch.save(latents, os.path.join(root, "latents.pt"))
-              with open(os.path.join(root, "avator_info.json"), "w") as f:
-                  json.dump({"avatar_id": avatar_id, "video_path": "portrait", "bbox_shift": 0,
-                             "acudx_prep": PREP_VERSION, "idle_frames": n, "extended_px": padded,
-                             "face_box": [int(v) for v in coords], "width": int(base.shape[1]),
-                             "height": int(base.shape[0]), "steps": steps, "ref": ref,
-                             "registration": registration}, f)
-              AVATARS.pop(avatar_id, None)
-              _load(avatar_id)
+              else:
+                  raise NoFace("the face fills the portrait; no room for the blend box")
+              base = frame
+          phases["detect_ms"] = (time.monotonic() - started) * 1000.0
+          mask = head_mask(base.shape, coords) if n > 1 else None
+          coords_list, mask_coords, latents = [], [], []
+          writes: list = []
+          png = [int(cv2.IMWRITE_PNG_COMPRESSION), PNG_LEVEL]
+          frames_boxes = []
+          for i, m in enumerate(idle_transforms(n, coords)):
+              if mask is not None and i > 0:
+                  warped = cv2.warpAffine(base, m, (base.shape[1], base.shape[0]), flags=cv2.INTER_LINEAR,
+                                          borderMode=cv2.BORDER_REFLECT_101)
+                  fr = np.clip(mask * warped.astype(np.float32) + (1.0 - mask) * base.astype(np.float32),
+                               0, 255).astype(np.uint8)
+                  box = _box_after(m, coords, base.shape)
+              else:
+                  fr, box = base, list(coords)
+              frames_boxes.append((fr, box))
+
+          def _parse(item):
+              # Face parsing is mostly CPU work around a small GPU forward: PARSERS threads run it side by
+              # side (live 2026-10-22, H100: 92 ms a frame, 6.9 s of a 20 s preparation, one at a time).
+              _yield_to_speech()
+              with torch.no_grad():
+                  return get_image_prepare_material(item[0], item[1], fp=FACE_PARSER, mode="jaw")
+
+          t2 = time.monotonic()
+          parsed = PARSERS.map(_parse, frames_boxes)
+          for i, (fr, box) in enumerate(frames_boxes):
+              _yield_to_speech()
+              bx1, by1, bx2, by2 = box
+              t1 = time.monotonic()
+              crop = cv2.resize(fr[by1:by2, bx1:bx2], (256, 256), interpolation=cv2.INTER_LANCZOS4)
+              latents.append(VAE.get_latents_for_unet(crop))
+              phases["vae_ms"] = phases.get("vae_ms", 0.0) + (time.monotonic() - t1) * 1000.0
+          for i, ((fr, box), (fmask, crop_box)) in enumerate(zip(frames_boxes, parsed)):
+              name = f"{i:08d}.png"
+              # The PNG writes run beside the remaining parsing (cv2 releases the GIL).
+              writes.append(WRITER.submit(cv2.imwrite, os.path.join(full_dir, name), fr, png))
+              writes.append(WRITER.submit(cv2.imwrite, os.path.join(mask_dir, name), fmask, png))
+              coords_list.append(box)
+              mask_coords.append(crop_box)
+          phases["vae_parse_ms"] = (time.monotonic() - t2) * 1000.0
+          t4 = time.monotonic()
+          for w in writes:
+              w.result()
+          phases["write_wait_ms"] = (time.monotonic() - t4) * 1000.0
+          with open(os.path.join(root, "mask_coords.pkl"), "wb") as f:
+              pickle.dump(mask_coords, f)
+          with open(os.path.join(root, "coords.pkl"), "wb") as f:
+              pickle.dump(coords_list, f)
+          torch.save(latents, os.path.join(root, "latents.pt"))
+          with open(os.path.join(root, "avator_info.json"), "w") as f:
+              json.dump({"avatar_id": avatar_id, "video_path": "portrait", "bbox_shift": 0,
+                         "acudx_prep": PREP_VERSION, "idle_frames": n, "extended_px": padded,
+                         "face_box": [int(v) for v in coords], "width": int(base.shape[1]),
+                         "height": int(base.shape[0]), "steps": steps, "ref": ref,
+                         "registration": registration, "content_key": key}, f)
+          AVATARS.pop(avatar_id, None)
+          t5 = time.monotonic()
+          _load(avatar_id)
+          phases["load_ms"] = (time.monotonic() - t5) * 1000.0
           ms = round((time.monotonic() - started) * 1000.0, 1)
-          STATE["prepare_ms"][avatar_id] = ms
           # Hand the preparation's VAE and face-parser buffers back: on a shared 40 GB card the image edit
           # server needs them for the next picture (live 2026-10-21: every edit after the first ran out
           # of memory while a call was up).
@@ -1911,11 +2133,61 @@ write_files:
           return {"avatar_id": avatar_id, "width": int(base.shape[1]), "height": int(base.shape[0]),
                   "face_box": [int(v) for v in coords], "idle_frames": n, "extended_px": padded,
                   "extension": "mirrored+blurred" if padded else "none", "prepare_ms": ms, "ref": ref,
-                  "registration": registration}
+                  "registration": registration, "phases_ms": {k: round(v, 1) for k, v in phases.items()}}
 
 
       class RefNotPrepared(ValueError):
           pass
+
+
+      # (h, w) every detection runs on: half the frame. A portrait's face fills a third of it or more, and
+      # the box is scaled back (about 2 px of rounding at 720 px).
+      DETECT_CANVAS = (MAX_FRAME_H // 2, 384)
+      # A preparation pauses between frames while a call on this GPU speaks (at most this long per pause):
+      # live 2026-10-22 (H100 SXM5) the case's look ladder, prepared during the first lines of a call that
+      # opened on the portrait, cut the runner to 64.7 fps with 88 underruns and slowed the voice.
+      PREP_YIELD_MAX_S = float(os.environ.get("AVATAR_PREP_YIELD_MAX_S", "20"))
+
+
+      # False while the picture a learner's call is waiting for is prepared (priority call): that one never
+      # pauses. PREP_QUEUE runs one preparation at a time, so one flag is enough.
+      PREP_YIELDS = {"on": True}
+
+
+      def _yield_to_speech() -> None:
+          if DEDICATED_GPU or not PREP_YIELDS["on"]:
+              return
+          t0 = time.monotonic()
+          while time.monotonic() - t0 < PREP_YIELD_MAX_S:
+              if not any(getattr(v, "speaking", False) for v in list(session_manager.sessions.values()) if v is not None):
+                  return
+              time.sleep(0.05)
+
+
+      def _detect_fixed(img: np.ndarray, path: str) -> list | None:
+          """The face box of ``img`` from MuseTalk's get_landmark_and_bbox, run on a canvas of one fixed size at
+          half resolution. Live 2026-10-22 (H100 SXM5) one detection at full size took 0.37 s for one
+          portrait and 11.9 to 15.3 s for others, also after a warm-up on that canvas size (S3FD scores every
+          anchor in Python and dlib's HOG runs on the upsampled picture, both per pixel); the S3FD side also
+          turns cudnn.benchmark on, so one size is autotuned once. The picture is scaled to fit and pasted
+          top-left, so the box maps back by the scale."""
+          ch, cw = DETECT_CANVAS
+          h, w = img.shape[:2]
+          s = min(1.0, ch / float(h), cw / float(w))
+          src = img if s == 1.0 else cv2.resize(img, (int(w * s), int(h * s)), interpolation=cv2.INTER_AREA)
+          canvas = np.zeros((ch, cw, 3), dtype=np.uint8)
+          canvas[: src.shape[0], : src.shape[1]] = src
+          cv2.imwrite(path, canvas)
+          try:
+              coord_list, _frames = get_landmark_and_bbox([path], 0)
+          finally:
+              try:
+                  os.remove(path)
+              except OSError:
+                  pass
+          if not coord_list or tuple(coord_list[0]) == tuple(coord_placeholder):
+              return None
+          return [float(v) / s for v in coord_list[0]]
 
 
       class _WarmingFeatQueue(queue.Queue):
@@ -2120,7 +2392,7 @@ write_files:
               "ok": True, "model": "musetalk-1.5", "runner": "livetalking", "livetalking_ref": LIVETALKING_REF,
               "transport": "webrtc", "fps": opt.fps, "batch_size": BATCH_SIZE, "sessions": len(active),
               "max_sessions": MAX_SESSIONS, "dedicated_gpu": DEDICATED_GPU, "avatars": prepared,
-              "infer_fps": STATE["infer_fps"], "prepare_ms": STATE["prepare_ms"],
+              "infer_fps": STATE["infer_fps"], "prepare_ms": STATE["prepare_ms"], "prep_queue": PREP_QUEUE.depth(), "detector_warm_ms": STATE.get("detector_warm_ms"),
               "defaults": {"batch_size": BATCH_SIZE, "ahead_frames": AHEAD_FRAMES, "lookahead_frames": LOOKAHEAD_FRAMES,
                            "av_shift_ms": AV_SHIFT_MS, "idle_frames": IDLE_FRAMES},
               "calls": [_session_stats(k, v) for k, v in active.items()],
@@ -2160,8 +2432,11 @@ write_files:
           ref = request.query.get("ref") or None
           if ref is not None and (not AVATAR_ID_RE.match(ref) or ref == avatar_id):
               return web.json_response({"error": "bad ref"}, status=400)
+          # ?priority=call: the picture a learner's call opens on goes ahead of the case's look ladder.
+          prio = PREP_PRIORITY_CALL if request.query.get("priority") == "call" else PREP_PRIORITY_LADDER
           try:
-              info = await asyncio.get_running_loop().run_in_executor(None, prepare_avatar, avatar_id, body, n, ref)
+              info = await asyncio.get_running_loop().run_in_executor(None, prepare_avatar, avatar_id, body, n, ref,
+                                                                      prio)
           except RefNotPrepared as exc:
               return web.json_response({"error": "ref_not_prepared", "ref": str(exc)}, status=409)
           except NoFace as exc:
@@ -2494,6 +2769,20 @@ write_files:
           app.router.add_post("/tuning", tuning)
           app.router.add_get("/turn", turn_bridge)
           app.router.add_get("/turn_check", turn_check)
+          def _warm_detector() -> None:
+              # The first detection on a fresh runner paid 12 to 17 s (cuDNN autotune for the canvas size, live
+              # 2026-10-22); pay it here at start-up instead of on the first case's portrait.
+              t = time.monotonic()
+              PREP_QUEUE.acquire(PREP_PRIORITY_LADDER)
+              try:
+                  _detect_fixed(np.full((MAX_FRAME_H, 700, 3), 128, dtype=np.uint8), os.path.join(AVATAR_ROOT, ".warm.png"))
+              except Exception as exc:  # noqa: BLE001 - a failed warm-up only costs the first preparation
+                  log.warning("detector warm-up failed: %s", type(exc).__name__)
+              finally:
+                  PREP_QUEUE.release()
+              STATE["detector_warm_ms"] = round((time.monotonic() - t) * 1000.0, 1)
+
+          threading.Thread(target=_warm_detector, daemon=True).start()
           log.info("acudx avatar runner on :%d (batch %d, ahead %d frames, max sessions %d, model load %.0f ms)",
                    AVATAR_PORT, BATCH_SIZE, AHEAD_FRAMES, MAX_SESSIONS, STATE["model_load_ms"])
           web.run_app(app, host="0.0.0.0", port=AVATAR_PORT, access_log=None)
@@ -2899,7 +3188,7 @@ write_files:
       done
       status disabled start_timeout "$total" "$free"
 runcmd:
-  - mkdir -p /opt/acudx/caddy /opt/acudx/chatterbox-cache /opt/acudx/chatterbox-voices /opt/acudx/public/diag /opt/acudx/public/avatar-status /opt/acudx/avatars
+  - mkdir -p /opt/acudx/caddy /opt/acudx/chatterbox-cache /opt/acudx/chatterbox-voices /opt/acudx/public/diag /opt/acudx/public/avatar-status /opt/acudx/avatars /opt/acudx/avatar-cache
   # Diagnostics secret: HMAC-SHA256(key=WORKER_TOKEN, "acudx-diag-v1"), hex, 32 characters.
   # The gateway derives the same value (server/providers/gpu_worker.py diag_secret).
   - |
@@ -2925,6 +3214,8 @@ runcmd:
     if [ -n "$FS" ]; then mkdir -p "$FS/hf" && rm -rf /opt/acudx/hf && ln -s "$FS/hf" /opt/acudx/hf; else mkdir -p /opt/acudx/hf; fi
     # Chatterbox's model files on the filesystem too (about 3 GB, downloaded on every boot before).
     if [ -n "$FS" ]; then mkdir -p "$FS/chatterbox-cache" && sed -i "s|^CHATTERBOX_CACHE=.*|CHATTERBOX_CACHE=$FS/chatterbox-cache|" /opt/acudx/.env; fi
+    # Prepared avatars by content key (docs/architecture/18 6.8.1): kept on the filesystem when there is one.
+    if [ -n "$FS" ]; then mkdir -p "$FS/acudx-avatars" && sed -i "s|^AVATAR_CACHE=.*|AVATAR_CACHE=$FS/acudx-avatars|" /opt/acudx/.env; fi
     . /opt/acudx/images.sh && mark "cloud-init: runcmd started (filesystem ${FS:-none})"
   # The public IP is not known before launch, so the manager renders
   # WORKER_DOMAIN=auto and the worker derives <ip-with-dashes>.sslip.io itself
@@ -2988,6 +3279,10 @@ runcmd:
       # image edit server needs for model offload, so it ran layer by layer at 154 s per picture.
       total=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1 | tr -d ' ')
       if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -lt 70000 ]; then echo 'VLLM_GPU_UTIL=0.45' >> /opt/acudx/.env; fi
+      # One 80 GB card serving live calls: vLLM takes 0.50 (40 GB, Qwen3-32B-AWQ weights about 18 GB plus
+      # KV cache), so both Chatterbox replicas, the runner with its calls and the image edits in gpu mode
+      # (20 GB) fit beside it with room to spare (at 0.60 the edits dropped to model offload).
+      if [ "${n:-1}" -lt 2 ] && [ "${total:-0}" -ge 70000 ]; then echo 'VLLM_GPU_UTIL=0.50' >> /opt/acudx/.env; fi
     fi
   # Parallel start-up (docs/architecture/18 6.8, live 2026-10-21: 17 min 20 s from a cold launch to live
   # video, with vLLM, the Chatterbox build, the runner and the edit server one after another). Now every

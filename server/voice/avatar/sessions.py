@@ -48,6 +48,7 @@ class CallSession:
     worker_session: str | None = None
     worker_origin: str | None = None      # the worker this call runs on (per-worker call limit)
     audio_link: Any = None                # RunnerAudioLink: the call's audio WebSocket to the runner
+    active_speaker: Any = None            # turn_speech.CallSpeaker speaking into this call now, if any
     # Tavus
     conversation_id: str | None = None
     conversation_url: str | None = None

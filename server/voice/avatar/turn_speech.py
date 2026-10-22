@@ -13,7 +13,11 @@ chunk, the runner, WebRTC. This module removes the serial hops (docs/architectur
   before it is spoken, and nothing is spoken before the guard has labelled the message;
 * the gateway speaks into the call's runner socket itself (one utterance, so lips stay on one
   timeline), and tells the browser so it does not speak the line a second time;
-* every hop is timed (:class:`TurnTimings`) and kept on the call's metrics.
+* every hop is timed (:class:`TurnTimings`) and kept on the call's metrics;
+* a reply released while the previous one is still being synthesised cuts it (the old TTS stops and
+  the runner's queued audio is flushed at a frame boundary), so the new reply starts at once on a
+  fresh timeline instead of queueing behind a Turkish reply that runs slower than real time, and the
+  lip-sync loop ignores the lines around the cut (docs/architecture/18 6.3.10).
 """
 
 from __future__ import annotations
@@ -34,6 +38,10 @@ FIRST_MIN_WORDS = 3
 # 21-character clause and 3.0 to 3.7 s for 35 to 38 characters, so the opening clause is kept short.
 FIRST_MAX_WORDS = 6
 FIRST_MAX_CHARS = 28
+# Turkish goes to the worker's Chatterbox, whose first audio waits for the whole clause (about 2.5 speech
+# tokens a character at 15 ms a token on an H100 SXM5, live 2026-10-22): a shorter opening clause starts
+# the voice sooner, and the next request is already being synthesised while it plays (_requests).
+FIRST_MAX_CHARS_BY_LANG = {"tr": 22}
 # Audio forwarded to the runner at most this far ahead of real time.
 PACE_LEAD_S = 1.0
 _FIRST_BREAK = re.compile(r"[,;:.!?…](?=\s|$)")
@@ -51,9 +59,11 @@ class ClauseStream:
     clause (up to the first ``, ; : . ! ?`` after at least three words, else the first ten words once
     more text follows), then whole sentences. ``finish()`` returns what is left."""
 
-    def __init__(self, *, first_min_words: int = FIRST_MIN_WORDS, first_max_words: int = FIRST_MAX_WORDS):
+    def __init__(self, *, first_min_words: int = FIRST_MIN_WORDS, first_max_words: int = FIRST_MAX_WORDS,
+                 first_max_chars: int = FIRST_MAX_CHARS):
         self.first_min = first_min_words
         self.first_max = first_max_words
+        self.first_max_chars = first_max_chars
         self.pos = 0          # characters of the accumulated text already handed out
         self.first_done = False
 
@@ -69,8 +79,8 @@ class ClauseStream:
         if end is None:
             return None
         # Turkish words are long: cap the opening clause by characters too, at a word boundary.
-        if end > FIRST_MAX_CHARS:
-            fit = [w.end() for w in words if w.end() <= FIRST_MAX_CHARS]
+        if end > self.first_max_chars:
+            fit = [w.end() for w in words if w.end() <= self.first_max_chars]
             if len(fit) >= self.first_min:
                 end = fit[-1]
         return end
@@ -169,6 +179,20 @@ async def wait_until_quiet(origin: str, *, max_s: float = 60.0, poll_s: float = 
     return time.monotonic() - t
 
 
+async def _discard(pending: Any) -> None:
+    """Cancel a TTS request that will not be spoken (and close its stream if it already answered)."""
+    if not pending.done():
+        pending.cancel()
+        return
+    try:
+        out = pending.result()
+        close = getattr(getattr(out.stream, "chunks", None), "aclose", None)
+        if close is not None:
+            await close()
+    except BaseException:  # noqa: BLE001 - a failed request needs no cleanup
+        pass
+
+
 @dataclass
 class CallSpeaker:
     """Speaks a streaming reply into one live call: clauses -> gates -> TTS -> the runner socket.
@@ -191,6 +215,8 @@ class CallSpeaker:
     error: str | None = None
     runner: dict[str, Any] | None = None
     task: asyncio.Task[Any] | None = None
+    cut: bool = False                 # this reply was cut by the next one
+    cut_previous: bool = False        # this reply cut the one before it
 
     def start(self, persona: PersonaStream) -> "CallSpeaker":
         self.task = asyncio.get_running_loop().create_task(self._run(persona))
@@ -203,9 +229,28 @@ class CallSpeaker:
         if self.task is not None:
             self.task.cancel()
 
+    def speaking(self) -> bool:
+        return self.task is not None and not self.task.done() and self.released.is_set()
+
+    def cut_by_next(self) -> None:
+        """The next reply was released while this one still speaks: stop it (TTS and runner audio)."""
+        self.cut = True
+        self.cancel()
+
+    def _take_call(self) -> bool:
+        """Become the call's speaker; True when a reply still speaking was cut for this one."""
+        prev = getattr(self.session, "active_speaker", None)
+        cut = prev is not None and prev is not self and prev.speaking()
+        if cut:
+            prev.cut_by_next()
+            self.cut_previous = True
+            self.session.metrics["lip_overlap"] = True   # the lip-sync loop skips the lines around a cut
+        self.session.active_speaker = self
+        return cut
+
     async def _pieces(self, persona: PersonaStream) -> AsyncIterator[str]:
         """Pieces as the reply grows: the first clause alone, then everything complete when asked."""
-        cs = ClauseStream()
+        cs = ClauseStream(first_max_chars=FIRST_MAX_CHARS_BY_LANG.get(str(self.lang or "")[:2], FIRST_MAX_CHARS))
         ready: list[str] = []
         while True:
             persona.updated.clear()
@@ -253,14 +298,49 @@ class CallSpeaker:
         finally:
             pumper.cancel()
 
+    def _tts(self, text: str) -> Any:
+        return self.svc.tts(text, lang=self.lang, sex=self.sex, age=self.age, output_format="wav", stream=True,
+                            speed=self.speed, prefer_fast=bool(getattr(self.svc.settings, "avatar_fast_en_tts", False)))
+
+    async def _requests(self, persona: PersonaStream) -> AsyncIterator[tuple[str, float, Any]]:
+        """Each TTS request one ahead of the one being spoken: the next piece is synthesised (on the
+        worker's second Chatterbox replica) while the current one plays, so a short opening clause is not
+        followed by a gap. The next request starts only once the current one has sent its first audio:
+        started at once, both replicas generated side by side on one GPU and the opening clause took 1.5
+        to 2.4 s instead of 1.0 to 1.5 s (T3 20 to 24 ms a token against 15, live 2026-10-22)."""
+        q: asyncio.Queue[tuple[str, float, Any] | None] = asyncio.Queue(maxsize=1)
+        self._first_audio = asyncio.Event()
+
+        async def produce() -> None:
+            try:
+                async for text in self._batches(persona):
+                    self.timings.mark("first_clause_ms")
+                    await self._first_audio.wait()
+                    self._first_audio.clear()
+                    await q.put((text, time.monotonic(), asyncio.ensure_future(self._tts(text))))
+            finally:
+                await q.put(None)
+
+        self._first_audio.set()
+
+        producer = asyncio.get_running_loop().create_task(produce())
+        try:
+            while True:
+                item = await q.get()
+                if item is None:
+                    return
+                yield item
+        finally:
+            producer.cancel()
+            while not q.empty():
+                left = q.get_nowait()
+                if left is not None:
+                    await _discard(left[2])
+
     async def _pcm(self, persona: PersonaStream, rate_box: dict[str, int]) -> AsyncIterator[bytes]:
         """PCM of every TTS request in order (one runner utterance: lips stay on one timeline)."""
-        async for text in self._batches(persona):
-            self.timings.mark("first_clause_ms")
-            t = time.monotonic()
-            out = await self.svc.tts(text, lang=self.lang, sex=self.sex, age=self.age, output_format="wav",
-                                     stream=True, speed=self.speed,
-                                     prefer_fast=bool(getattr(self.svc.settings, "avatar_fast_en_tts", False)))
+        async for text, t, pending in self._requests(persona):
+            out = await pending
             parser = mt.PcmStream(out.stream.content_type, sample_rate=out.stream.sample_rate)
             req: dict[str, Any] = {"chars": len(text), "provider": out.endpoint.name, "model": out.stream.model}
             self.requests.append(req)
@@ -281,8 +361,10 @@ class CallSpeaker:
                     if "first_chunk_ms" not in req:
                         req["first_chunk_ms"] = round((time.monotonic() - t) * 1000.0, 1)
                         self.timings.mark("tts_first_chunk_ms")
+                        self._first_audio.set()      # the next piece may start synthesising now
                     req["bytes"] = req.get("bytes", 0) + len(data)
                     yield data
+            self._first_audio.set()                  # also after a request that gave no audio
             self.spoken.append(text)
 
     async def _run(self, persona: PersonaStream) -> None:
@@ -305,6 +387,7 @@ class CallSpeaker:
                 break
             await self.released.wait()
             self.timings.mark("released_ms")
+            interrupt = self._take_call()
             if first is None:
                 return
 
@@ -328,16 +411,19 @@ class CallSpeaker:
             link = self.session.audio_link or mt.RunnerAudioLink(worker=self.worker,
                                                                  worker_session=str(self.session.worker_session))
             self.session.audio_link = link
-            self.runner = await link.utterance(rest(), rate,
+            self.runner = await link.utterance(rest(), rate, interrupt=interrupt,
                                                on_first_chunk=lambda: self.timings.mark("runner_first_chunk_ms"))
             self.timings.mark("runner_done_ms")
         except asyncio.CancelledError:
-            raise
+            if not self.cut:
+                raise
         except Exception as exc:  # noqa: BLE001 - reported on the call's metrics; the text reply stands
             self.error = f"{type(exc).__name__}: {getattr(exc, 'detail', None) or exc}"[:200]
             log.warning("voiced turn for call %s failed: %s", str(getattr(self.session, "id", ""))[:8], self.error)
         finally:
             await gen.aclose()
+            if getattr(self.session, "active_speaker", None) is self:
+                self.session.active_speaker = None
             self.session.metrics["turns"] = int(self.session.metrics.get("turns", 0)) + 1
             turns = self.session.metrics.setdefault("voiced_turns", [])
             turns.append(self.public())
@@ -345,5 +431,5 @@ class CallSpeaker:
 
     def public(self) -> dict[str, Any]:
         return {"timings": self.timings.public(), "requests": self.requests, "spoken_text": " ".join(self.spoken),
-                "error": self.error, "runner": {k: (self.runner or {}).get(k) for k in ("frames", "first_frame_ms",
+                "error": self.error, "cut": self.cut, "cut_previous": self.cut_previous, "runner": {k: (self.runner or {}).get(k) for k in ("frames", "first_frame_ms",
                                                                                        "elapsed_ms")}}

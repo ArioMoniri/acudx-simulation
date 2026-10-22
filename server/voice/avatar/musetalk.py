@@ -183,12 +183,16 @@ async def health(client: httpx.AsyncClient, worker: WorkerAvatar, *, timeout_s: 
 
 
 async def ensure_avatar(client: httpx.AsyncClient, worker: WorkerAvatar, avatar_id: str,
-                        image: bytes, *, ref: str | None = None) -> dict[str, Any]:
+                        image: bytes, *, ref: str | None = None, priority: str | None = None) -> dict[str, Any]:
     """Prepare the reference face once per worker (the runner keeps it on disk).
 
     ``ref``: the base portrait this picture is an edit of (prepared first). The runner registers the
     edit onto that portrait's frame and reuses its crop and face box, so a cross-fade between them
-    never shows two faces (docs/architecture/18 6.6.1)."""
+    never shows two faces (docs/architecture/18 6.6.1).
+
+    ``priority="call"``: a learner's call waits for this picture, so the runner prepares it before the
+    case's look ladder (docs/architecture/18 6.8.1); the runner also answers at once when the same
+    picture is already prepared (or another worker's preparation of it is on the shared filesystem)."""
     r = await client.get(worker.origin + "/avatar/avatars", headers=worker.headers(), timeout=10.0)
     if r.status_code == 200 and avatar_id in (await _json(r)).get("avatars", []):
         out: dict[str, Any] = {"avatar_id": avatar_id, "prepared": False}
@@ -202,13 +206,14 @@ async def ensure_avatar(client: httpx.AsyncClient, worker: WorkerAvatar, avatar_
         except httpx.HTTPError:
             pass
         return out
+    params = {k: v for k, v in (("ref", ref), ("priority", priority)) if v}
     r = await client.put(worker.origin + f"/avatar/avatars/{avatar_id}", content=image,
-                         params={"ref": ref} if ref else None,
+                         params=params or None,
                          headers={**worker.headers(), "Content-Type": "image/jpeg"}, timeout=120.0)
     body = await _json(r)
     if r.status_code != 200:
         raise AvatarWorkerError(r.status_code, str(body.get("error") or body))
-    body["prepared"] = True
+    body.setdefault("prepared", True)
     return body
 
 
@@ -456,8 +461,14 @@ class RunnerAudioLink:
 
     async def utterance(self, pcm: AsyncIterator[bytes], sample_rate: int, *, interrupt: bool = False,
                         on_first_chunk: Callable[[], None] | None = None) -> dict[str, Any]:
-        """Send one line: begin, each PCM chunk as it arrives, end; return the runner's stats."""
+        """Send one line: begin, each PCM chunk as it arrives, end; return the runner's stats.
+
+        ``interrupt``: the runner flushes the audio still queued from the previous line first. A line
+        cancelled midway (cut by the next one) leaves the socket usable when its ``end`` was not sent yet;
+        after ``end`` the runner's ``done`` is still on its way, so the socket is dropped instead (a
+        later line must never read the previous line's ``done`` as its own)."""
         async with self._lock:
+            ended = False
             try:
                 if not self._open():
                     self._ws = await self._connect()
@@ -472,6 +483,7 @@ class RunnerAudioLink:
                         on_first_chunk()
                     await ws.send(chunk)
                     sent += len(chunk)
+                ended = True
                 await ws.send(json.dumps({"type": "end"}))
                 deadline = time.monotonic() + 30.0
                 while True:
@@ -483,6 +495,10 @@ class RunnerAudioLink:
                         return {**msg, "bytes_sent": sent}
                     if msg.get("type") == "error":
                         raise AvatarWorkerError(409, str(msg.get("error")))
+            except asyncio.CancelledError:
+                if ended:
+                    await asyncio.shield(self._drop())
+                raise
             except AvatarWorkerError:
                 raise
             except (OSError, asyncio.TimeoutError, ValueError) as exc:
