@@ -1187,3 +1187,109 @@ def test_avatar_runner_cuts_instead_of_blending_two_framings():
     prep = runner.split("def prepare_avatar(")[1].split("\n      class ")[0]
     assert "acudx_register.align_to(" in prep and '"ref": ref' in prep and "replay_steps(" in prep
     assert 'request.query.get("ref")' in runner
+
+
+# --- Token-level streaming out of Chatterbox (docs/architecture/18 6.3.11) ------------------------------ #
+
+def test_stream_windows_grow_after_a_short_first_one():
+    p = _chatterbox_patch()
+    g = p.window_targets([20, 16, 32, 48])
+    assert [next(g) for _ in range(6)] == [20, 36, 68, 116, 164, 212]
+    g = p.window_targets([2])                      # never below 4 tokens
+    assert [next(g) for _ in range(3)] == [4, 8, 12]
+    assert p.TUNING["stream_tokens"] is True and p.TUNING["stream_watermark"] is True
+
+
+def test_the_vocoder_seams_add_up_to_the_whole_clause():
+    """Windows of mel frames through a stand-in vocoder (480 samples a frame, the source a ramp): every
+    sample of the clause comes out exactly once, the withheld 160 ms tail is cross-faded into the next
+    window, and the first piece gets the trim fade."""
+    import numpy as np
+
+    p = _chatterbox_patch()
+    frames = np.linspace(-1, 1, 200, dtype=np.float32)      # one value per mel frame
+
+    def hift(mel, cache_source):
+        wav = np.repeat(mel[0, 0], 480)[None]               # (1, T)
+        src = wav[None].copy()                              # (1, 1, T)
+        return wav, src
+
+    voc = p.Vocoder(hift, to_numpy=lambda w: w[0], cat=lambda a, b: np.concatenate([a, b], axis=2),
+                    trim_fade=np.zeros(960, np.float32))
+    out = []
+    bounds = [0, 34, 66, 130, 200]
+    for i in range(4):
+        mel = frames[bounds[i]:bounds[i + 1]][None, None, :]
+        out.append(voc.piece(mel, i == 3, np.zeros((1, 1, 0), np.float32)))
+    whole = np.concatenate(out)
+    assert whole.shape[0] == 200 * 480
+    assert not whole[:960].any()                              # trim fade on the first piece only
+    ref = np.repeat(frames, 480)
+    assert np.allclose(whole[960:], ref[960:], atol=1e-5)    # the seams reproduce the signal
+    assert out[0].shape[0] == 34 * 480 - p.SOURCE_CACHE_SAMPLES
+
+
+def test_crossfade_weights_sum_to_one_over_the_overlap():
+    import numpy as np
+
+    p = _chatterbox_patch()
+    w = p.fade_in(8)
+    new = np.ones(20, np.float32)
+    old = np.ones(20, np.float32)
+    out = p.crossfade(new, old, w)
+    assert out.shape == new.shape and np.allclose(out, 1.0)           # no gain bump over the seam
+    ramp = p.crossfade(np.ones(20, np.float32), np.zeros(20, np.float32), w)
+    assert np.all(np.diff(ramp[:8]) > 0) and ramp[0] < 0.05 and ramp[7] > 0.95
+
+
+def test_streaming_route_and_switches_are_installed():
+    patch = _written("/chatterbox-acudx-patch.py")
+    assert "patch_streaming_route(speech)" in patch and "def stream_generate(" in patch
+    # The upstream T3 loop is copied with its attribution, each token handed over as sampled, hooks dropped.
+    assert "chatterbox-multilingual c33cc02, MIT License, Resemble AI" in patch and "put(tok)" in patch
+    assert "drop_alignment_hooks(t3)" in patch and "torch.cuda.Stream()" in patch
+    # A cut reply (client gone) stops the clause in flight and frees the lock; a failure falls back upstream.
+    assert "stop.set()" in patch and "model.generate(" in patch
+    for key in ("stream_tokens", "stream_watermark", "stream_side_stream", "stream_schedule"):
+        assert f'"{key}"' in patch
+
+
+def test_alignment_hooks_are_dropped_after_each_t3_pass():
+    p = _chatterbox_patch()
+
+    class Attn:
+        def __init__(self):
+            def attention_forward_hook(m, i, o):
+                return None
+
+            def other_hook(m, i, o):
+                return None
+            self._forward_hooks = {1: attention_forward_hook, 2: other_hook, 3: attention_forward_hook}
+
+    class Layer:
+        def __init__(self):
+            self.self_attn = Attn()
+
+    class T3:
+        class tfmr:
+            layers = [Layer(), Layer()]
+
+    assert p.t3_hook_count(T3) == 6
+    assert p.drop_alignment_hooks(T3) == 4
+    assert p.t3_hook_count(T3) == 2                      # hooks that are not the analyzer's stay
+
+
+def test_face_detection_has_a_fast_vectorised_path_and_a_bench():
+    runner = _written("/acudx_avatar_server.py")
+    assert "def s3fd_boxes(" in runner and "(cls > S3FD_MIN_SCORE).nonzero()" in runner
+    assert 'DETECT_MODE = os.environ.get("AVATAR_DETECT_MODE", "fast")' in runner
+    assert 'app.router.add_post("/detect_bench", detect_bench)' in runner
+    assert '"detect": detect_info' in runner
+    # A picture prepared before answers without waiting behind the preparation in progress.
+    prep = runner.split("def prepare_avatar(")[1]
+    assert prep.index("_prepared_key(avatar_id) == key") < prep.index("PREP_QUEUE.acquire(priority)")
+
+
+def test_fabric_manager_only_on_nvswitch_hosts():
+    runcmd = "\n".join(c if isinstance(c, str) else " ".join(c) for c in _cloud_init()["runcmd"])
+    assert "nvidia-nvswitch" in runcmd and "timeout 90 systemctl enable --now nvidia-fabricmanager" in runcmd

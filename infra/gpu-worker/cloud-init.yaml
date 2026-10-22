@@ -584,7 +584,7 @@ write_files:
       # sampled; S3Gen renders a window as soon as enough tokens are there, on its own CUDA stream, the way
       # CosyVoice2 streams the same decoder: the flow re-runs on every token so far (its fixed noise keeps the
       # rendered prefix stable) and only the new mel frames are vocoded, with the last 8 mel frames and the
-      # source signal carried into the next window and the 160 ms seam cross-faded with a Hamming window.
+      # source signal carried into the next window and the 160 ms seam cross-faded (raised cosine, gains sum to one).
       # The watermark is applied to every piece. A failure before the first piece falls back to upstream.
       # --------------------------------------------------------------------------------------------------------
       SPEECH_TOKEN_SAMPLES = 960       # 24 kHz / 25 tokens a second
@@ -613,20 +613,22 @@ write_files:
               i += 1
 
 
-      def hamming(n: int):
+      def fade_in(n: int):
+          """Raised-cosine fade-in of n samples; with 1 - it as the fade-out the two always sum to one (CosyVoice2
+          cross-fades with the two halves of a Hamming window, which add up to 1.08 in the middle of the seam)."""
           import numpy as np
 
-          return np.hamming(n).astype("float32")
+          return (0.5 - 0.5 * np.cos(np.pi * (np.arange(n, dtype=np.float64) + 0.5) / max(1, n))).astype("float32")
 
 
       def crossfade(new_head, old_tail, window):
-          """CosyVoice2 fade_in_out: the first len(window)/2 samples of ``new_head`` faded in over ``old_tail``."""
-          k = len(window) // 2
-          k = min(k, new_head.shape[-1], old_tail.shape[-1])
+          """The first len(window) samples of ``new_head`` faded in over the last ones of ``old_tail``."""
+          k = min(len(window), new_head.shape[-1], old_tail.shape[-1])
           if k <= 0:
               return new_head
+          w = window[:k] if k == len(window) else fade_in(k)
           out = new_head.copy()
-          out[..., :k] = new_head[..., :k] * window[:k] + old_tail[..., -k:] * window[len(window) - k:]
+          out[..., :k] = new_head[..., :k] * w + old_tail[..., -k:] * (1.0 - w)
           return out
 
 
@@ -639,7 +641,7 @@ write_files:
               self.to_numpy = to_numpy
               self.cat = cat
               self.cache = None
-              self.window = hamming(2 * SOURCE_CACHE_SAMPLES)
+              self.window = fade_in(SOURCE_CACHE_SAMPLES)
               self.trim_fade = trim_fade
               self.first = True
 
