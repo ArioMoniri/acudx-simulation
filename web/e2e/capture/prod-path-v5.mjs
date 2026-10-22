@@ -137,7 +137,7 @@ await page.locator(`section[aria-label="${UI.tile}"][data-call-mode="webrtc"]`).
 await page.waitForFunction(() => window.__acudxAvatarCall?.metrics?.firstFrameMs != null, null, { timeout: 120_000 });
 const liveAfterMs = Date.now() - callStartClick;
 t(`live video connected ${liveAfterMs} ms after the voice click; session ${JSON.stringify(sessionReply)}`);
-const clickTimeline = voiceRequests.map(({ req, ...x }) => x);
+const clickTimeline = voiceRequests.map((x) => ({ url: x.url, method: x.method, start_ms: x.start_ms, end_ms: x.end_ms }));
 t(`click timeline ${JSON.stringify(clickTimeline)}`);
 clickAt = null;
 const sessionId = await page.evaluate(() => window.__acudxAvatarCall.session.session_id);

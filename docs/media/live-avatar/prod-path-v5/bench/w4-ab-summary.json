@@ -1,0 +1,90 @@
+{
+ "default": {
+  "config": {
+   "stream_schedule": [
+    24,
+    24,
+    48,
+    64
+   ],
+   "stream_flow_steps": 10
+  },
+  "first_audio_s": {
+   "min": 1.139,
+   "median": 1.1589999999999998,
+   "max": 1.189
+  },
+  "max_gap_s": 2.075,
+  "lines_with_gap_over_100ms": 15,
+  "s3gen_ms_per_pass": 488.0,
+  "t3_ms_per_token": 26.4,
+  "prompt_tokens": 75,
+  "n": 16
+ },
+ "s16": {
+  "config": {
+   "stream_schedule": [
+    16,
+    32,
+    48,
+    64
+   ],
+   "stream_flow_steps": 10
+  },
+  "first_audio_s": {
+   "min": 0.938,
+   "median": 0.957,
+   "max": 0.998
+  },
+  "max_gap_s": 1.779,
+  "lines_with_gap_over_100ms": 16,
+  "s3gen_ms_per_pass": 488.5,
+  "t3_ms_per_token": 26.4,
+  "prompt_tokens": 75,
+  "n": 16
+ },
+ "s20": {
+  "config": {
+   "stream_schedule": [
+    20,
+    28,
+    48,
+    64
+   ],
+   "stream_flow_steps": 10
+  },
+  "first_audio_s": {
+   "min": 1.047,
+   "median": 1.0575,
+   "max": 1.164
+  },
+  "max_gap_s": 2.205,
+  "lines_with_gap_over_100ms": 16,
+  "s3gen_ms_per_pass": 487.5,
+  "t3_ms_per_token": 26.4,
+  "prompt_tokens": 75,
+  "n": 16
+ },
+ "f8": {
+  "config": {
+   "stream_schedule": [
+    24,
+    24,
+    48,
+    64
+   ],
+   "stream_flow_steps": 8
+  },
+  "first_audio_s": {
+   "min": 1.058,
+   "median": 1.0775000000000001,
+   "max": 1.091
+  },
+  "max_gap_s": 0.91,
+  "lines_with_gap_over_100ms": 16,
+  "s3gen_ms_per_pass": 398.2,
+  "t3_ms_per_token": 26.6,
+  "prompt_tokens": 75,
+  "n": 16
+ }
+}

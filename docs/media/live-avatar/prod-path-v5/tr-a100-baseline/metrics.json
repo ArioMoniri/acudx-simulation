@@ -1,0 +1,3249 @@
+{
+  "captured_at": "2026-10-22T13:59:49.624Z",
+  "base_url": "http://127.0.0.1:4211",
+  "lang": "tr",
+  "voice_delay_ms": 0,
+  "live_after_voice_click_ms": 14271,
+  "click_timeline": [
+    {
+      "url": "/v1/voice/warm",
+      "method": "POST",
+      "start_ms": 96,
+      "end_ms": 133
+    },
+    {
+      "url": "/v1/voice/capabilities",
+      "method": "GET",
+      "start_ms": 133,
+      "end_ms": 1077
+    },
+    {
+      "url": "/v1/voice/avatar/session",
+      "method": "POST",
+      "start_ms": 954,
+      "end_ms": 6223
+    },
+    {
+      "url": "/v1/voice/avatar/offer",
+      "method": "POST",
+      "start_ms": 10255,
+      "end_ms": 10478
+    }
+  ],
+  "session": {
+    "at": 1792677428624,
+    "prepare_ms": 4758.7,
+    "prepare": {
+      "avatar_id": "acudx-p05",
+      "face_box": [
+        201,
+        127,
+        519,
+        594
+      ],
+      "width": 720,
+      "height": 720,
+      "idle_frames": 75,
+      "extended_px": 130,
+      "ref": null,
+      "registration": null,
+      "content_key": "d395a8020fcebf94a7809ebd",
+      "prepared": false,
+      "cached": "local",
+      "queue_ms": 4573.6,
+      "prepare_ms": 4574.7
+    },
+    "appearance": {
+      "source": "portrait",
+      "reason": "presenting look not ready yet; the call opens on the case portrait and switches when it lands",
+      "current_key": null
+    },
+    "worker": {
+      "infer_fps": 37.11,
+      "sessions": 0,
+      "max_sessions": 2,
+      "gpu": {
+        "cuda": true,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "total_mb": 40441,
+        "free_mb": 8811,
+        "process_reserved_mb": 2682,
+        "process_allocated_mb": 2080
+      },
+      "domain": "150-136-68-163.sslip.io",
+      "max_calls": 2,
+      "active_calls": 1
+    }
+  },
+  "overlap": [],
+  "first_frame_ms": 3892,
+  "lines": [
+    {
+      "line": 1,
+      "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
+      "reply": "Bu sabah kahvaltıdan hızlıca kalkınca birden gözüm karardı, yere düşmüşüm. Bir yerim ağrımadı doktor bey, sadece başımda bir boşluk, bir hafiflik hissettim.",
+      "via": "server",
+      "speech_start_ms": 4239,
+      "lip_lag_ms": -40,
+      "lip_score": 0.415,
+      "voice_ms": 17066,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3323,
+      "speculative": "restarted",
+      "gateway_timings": {
+        "guard_ms": 1006.3,
+        "history_ms": 1013.9,
+        "persona_first_text_ms": 2036.8,
+        "first_clause_ms": 2377.9,
+        "persona_done_ms": 2610.3,
+        "tutor_ms": 3180.9
+      },
+      "history": {
+        "layer": "history.presenting",
+        "at_ask": "writing",
+        "outcome": "written_in_time"
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 1006.3,
+          "history_ms": 1013.9,
+          "persona_first_text_ms": 2036.8,
+          "first_clause_ms": 2377.9,
+          "persona_done_ms": 2610.3,
+          "tutor_ms": 3180.9,
+          "tts_first_chunk_ms": 3539.4,
+          "released_ms": 3539.4,
+          "runner_first_chunk_ms": 3539.7,
+          "runner_done_ms": 18662.6
+        },
+        "requests": [
+          {
+            "chars": 20,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1161.5,
+            "bytes": 87360
+          },
+          {
+            "chars": 53,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2475.4,
+            "bytes": 254400
+          },
+          {
+            "chars": 81,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 7379.8,
+            "bytes": 274560
+          }
+        ],
+        "runner": {
+          "frames": 642,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 15083.2
+        },
+        "error": null
+      },
+      "runner_while_speaking": {
+        "min_infer_fps": 10.6,
+        "min_out_fps": 25,
+        "underruns": [
+          0,
+          8
+        ],
+        "samples": [
+          {
+            "t": 1792677439193,
+            "infer_fps": 7,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.2,
+              "delay_ms": 160,
+              "lag_ms": 145.8
+            },
+            "gpu_free_mb": 7509
+          },
+          {
+            "t": 1792677440229,
+            "infer_fps": 7,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.4,
+              "delay_ms": 160,
+              "lag_ms": 145.6
+            },
+            "gpu_free_mb": 7873
+          },
+          {
+            "t": 1792677441267,
+            "infer_fps": 7,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.3,
+              "delay_ms": 160,
+              "lag_ms": 145.7
+            },
+            "gpu_free_mb": 7873
+          },
+          {
+            "t": 1792677442304,
+            "infer_fps": 7,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.3,
+              "delay_ms": 160,
+              "lag_ms": 145.7
+            },
+            "gpu_free_mb": 7873
+          },
+          {
+            "t": 1792677443348,
+            "infer_fps": 10.6,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.3,
+              "delay_ms": 160,
+              "lag_ms": 145.7
+            },
+            "gpu_free_mb": 7873
+          },
+          {
+            "t": 1792677444384,
+            "infer_fps": 13.5,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.3,
+              "delay_ms": 160,
+              "lag_ms": 145.7
+            },
+            "gpu_free_mb": 7873
+          },
+          {
+            "t": 1792677445423,
+            "infer_fps": 17.1,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.4,
+              "delay_ms": 160,
+              "lag_ms": 145.6
+            },
+            "gpu_free_mb": 7873
+          },
+          {
+            "t": 1792677446462,
+            "infer_fps": 19.4,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.3,
+              "delay_ms": 160,
+              "lag_ms": 145.7
+            },
+            "gpu_free_mb": 7873
+          },
+          {
+            "t": 1792677447498,
+            "infer_fps": 21.7,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.2,
+              "delay_ms": 160,
+              "lag_ms": 145.8
+            },
+            "gpu_free_mb": 7853
+          },
+          {
+            "t": 1792677448537,
+            "infer_fps": 22.4,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14,
+              "delay_ms": 160,
+              "lag_ms": 146
+            },
+            "gpu_free_mb": 7815
+          },
+          {
+            "t": 1792677449571,
+            "infer_fps": 24.2,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.2,
+              "delay_ms": 160,
+              "lag_ms": 145.8
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677450606,
+            "infer_fps": 25.9,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.5,
+              "delay_ms": 160,
+              "lag_ms": 145.5
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677451642,
+            "infer_fps": 27.2,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.5,
+              "delay_ms": 160,
+              "lag_ms": 145.5
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677452677,
+            "infer_fps": 28.3,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 5,
+              "video_frames": 2
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.5,
+              "delay_ms": 160,
+              "lag_ms": 145.5
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677454098,
+            "infer_fps": 29.7,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.3,
+              "delay_ms": 160,
+              "lag_ms": 145.7
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677455153,
+            "infer_fps": 30.4,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.1,
+              "delay_ms": 160,
+              "lag_ms": 145.9
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677456189,
+            "infer_fps": 30.7,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 2
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -13.8,
+              "delay_ms": 160,
+              "lag_ms": 146.2
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677457405,
+            "infer_fps": 31.3,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -13.8,
+              "delay_ms": 160,
+              "lag_ms": 146.2
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677458457,
+            "infer_fps": 32,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 13,
+              "video_frames": 6
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.1,
+              "delay_ms": 160,
+              "lag_ms": 145.9
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677459507,
+            "infer_fps": 32.9,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.1,
+              "delay_ms": 160,
+              "lag_ms": 145.9
+            },
+            "gpu_free_mb": 7795
+          },
+          {
+            "t": 1792677460540,
+            "infer_fps": 33.3,
+            "out_fps": 25,
+            "underruns": 0,
+            "sender_queue": {
+              "audio_frames": 4,
+              "video_frames": 1
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -14.2,
+              "delay_ms": 160,
+              "lag_ms": 145.8
+            },
+            "gpu_free_mb": 8651
+          },
+          {
+            "t": 1792677461583,
+            "infer_fps": 33.3,
+            "out_fps": 25,
+            "underruns": 7,
+            "sender_queue": {
+              "audio_frames": 0,
+              "video_frames": 0
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -18.4,
+              "delay_ms": 160,
+              "lag_ms": 141.6
+            },
+            "gpu_free_mb": 8645
+          },
+          {
+            "t": 1792677462629,
+            "infer_fps": 33.3,
+            "out_fps": 25.2,
+            "underruns": 8,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -16,
+              "delay_ms": 160,
+              "lag_ms": 144
+            },
+            "gpu_free_mb": 8645
+          }
+        ]
+      },
+      "rtc_jitter_ms": {
+        "audio": 262,
+        "video": 155,
+        "path": {
+          "localType": "relay",
+          "relayProtocol": "tcp",
+          "url": "turn:127.0.0.1:3501?transport=tcp",
+          "state": "succeeded"
+        }
+      },
+      "lip_lags": [
+        {
+          "lip_lag_ms": -40,
+          "score": 0.415,
+          "av_shift_ms": 160
+        }
+      ]
+    },
+    {
+      "line": 2,
+      "question": "Ağrınız nasıl bir ağrı, batıcı mı, sıkıştırıcı mı?",
+      "reply": "Ağrı yoktu doktor bey, ne batma ne sıkışma. Önce gözümün önü karardı, kulağım uğuldadı, sonra bir şey hatırlamıyorum. Göğsümde de bir sıkışma olmadı.",
+      "via": "server",
+      "speech_start_ms": 3236,
+      "lip_lag_ms": 120,
+      "lip_score": 0.682,
+      "voice_ms": 2133,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 4270,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 703.3,
+        "history_ms": 703.5,
+        "persona_first_text_ms": 1071.4,
+        "first_clause_ms": 1113.3,
+        "persona_done_ms": 1637.8,
+        "guard_late_ms": 1637.8,
+        "tts_first_chunk_ms": 2396.4,
+        "released_ms": 2396.4,
+        "runner_first_chunk_ms": 2397.1,
+        "tutor_ms": 4179
+      },
+      "history": {
+        "layer": "history.presenting",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 703.3,
+          "history_ms": 703.5,
+          "persona_first_text_ms": 1071.4,
+          "first_clause_ms": 1113.3,
+          "persona_done_ms": 1637.8,
+          "guard_late_ms": 1637.8,
+          "tts_first_chunk_ms": 2396.4,
+          "released_ms": 2396.4,
+          "runner_first_chunk_ms": 2397.1,
+          "tutor_ms": 4179,
+          "runner_done_ms": 22883.2
+        },
+        "requests": [
+          {
+            "chars": 22,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1283.1,
+            "bytes": 173760
+          },
+          {
+            "chars": 20,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 4564.8,
+            "bytes": 160320
+          },
+          {
+            "chars": 105,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 5438.1,
+            "bytes": 465600
+          }
+        ],
+        "runner": {
+          "frames": 833,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 20453.4
+        },
+        "error": null
+      },
+      "runner_while_speaking": {
+        "min_infer_fps": 33.7,
+        "min_out_fps": 25,
+        "underruns": [
+          8,
+          17
+        ],
+        "samples": [
+          {
+            "t": 1792677465258,
+            "infer_fps": 33.3,
+            "out_fps": 25,
+            "underruns": 8,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -13.5,
+              "delay_ms": 160,
+              "lag_ms": 146.5
+            },
+            "gpu_free_mb": 8667
+          },
+          {
+            "t": 1792677466301,
+            "infer_fps": 33.3,
+            "out_fps": 25,
+            "underruns": 8,
+            "sender_queue": {
+              "audio_frames": 4,
+              "video_frames": 2
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -13.7,
+              "delay_ms": 160,
+              "lag_ms": 146.3
+            },
+            "gpu_free_mb": 8639
+          },
+          {
+            "t": 1792677467363,
+            "infer_fps": 33.3,
+            "out_fps": 23.8,
+            "underruns": 12,
+            "sender_queue": {
+              "audio_frames": 3,
+              "video_frames": 2
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -15.3,
+              "delay_ms": 160,
+              "lag_ms": 144.7
+            },
+            "gpu_free_mb": 8637
+          },
+          {
+            "t": 1792677468396,
+            "infer_fps": 33.6,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -15.7,
+              "delay_ms": 160,
+              "lag_ms": 144.3
+            },
+            "gpu_free_mb": 7553
+          },
+          {
+            "t": 1792677469433,
+            "infer_fps": 33.7,
+            "out_fps": 25.6,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -11.9,
+              "delay_ms": 160,
+              "lag_ms": 148.1
+            },
+            "gpu_free_mb": 7553
+          },
+          {
+            "t": 1792677470470,
+            "infer_fps": 34.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -12.7,
+              "delay_ms": 160,
+              "lag_ms": 147.3
+            },
+            "gpu_free_mb": 7553
+          },
+          {
+            "t": 1792677471510,
+            "infer_fps": 34.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 160,
+              "lag_ms": 147
+            },
+            "gpu_free_mb": 7553
+          },
+          {
+            "t": 1792677472546,
+            "infer_fps": 34.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 160,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 160,
+              "lag_ms": 147.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677473582,
+            "infer_fps": 34.7,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 80,
+              "lag_ms": 66.9
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677474618,
+            "infer_fps": 35.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 80,
+              "lag_ms": 66.9
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677475653,
+            "infer_fps": 35.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677476688,
+            "infer_fps": 35.6,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 80,
+              "lag_ms": 66.9
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677477720,
+            "infer_fps": 35.8,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.2,
+              "delay_ms": 80,
+              "lag_ms": 66.8
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677478757,
+            "infer_fps": 36,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 5,
+              "video_frames": 2
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 80,
+              "lag_ms": 66.9
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677479948,
+            "infer_fps": 36,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.7,
+              "delay_ms": 80,
+              "lag_ms": 67.3
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677480980,
+            "infer_fps": 36.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 2
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.7,
+              "delay_ms": 80,
+              "lag_ms": 67.3
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677482012,
+            "infer_fps": 36.5,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 80,
+              "lag_ms": 67
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677483045,
+            "infer_fps": 36.7,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 80,
+              "lag_ms": 67.2
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677484080,
+            "infer_fps": 37,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 3,
+              "video_frames": 1
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 80,
+              "lag_ms": 67.2
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677485111,
+            "infer_fps": 37,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 80,
+              "lag_ms": 67
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677486145,
+            "infer_fps": 37.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677487178,
+            "infer_fps": 37.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 80,
+              "lag_ms": 66.9
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677488213,
+            "infer_fps": 37.6,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 6
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 80,
+              "lag_ms": 67
+            },
+            "gpu_free_mb": 7645
+          }
+        ]
+      },
+      "rtc_jitter_ms": {
+        "audio": 279,
+        "video": 245,
+        "path": {
+          "localType": "relay",
+          "relayProtocol": "tcp",
+          "url": "turn:127.0.0.1:3501?transport=tcp",
+          "state": "succeeded"
+        }
+      },
+      "lip_lags": [
+        {
+          "lip_lag_ms": 120,
+          "score": 0.682,
+          "av_shift_ms": 160
+        }
+      ]
+    },
+    {
+      "line": 3,
+      "question": "Ağrınızı artıran ya da azaltan bir şey var mı?",
+      "reply": "Ağrım yok ama baş dönmesi, hızlı ayağa kalkınca oluyor. Oturunca ya da uzanınca geçiyor, şimdi yatarken iyiyim. Yatarken ya da yürürken hiç olmadı, hep ayağa kalkınca.",
+      "via": "server",
+      "speech_start_ms": 3169,
+      "lip_lag_ms": 80,
+      "lip_score": 0.64,
+      "voice_ms": 22116,
+      "av_shift_ms_after": 40,
+      "reply_http_ms": 4224,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 701.6,
+        "history_ms": 702.1,
+        "persona_first_text_ms": 861.5,
+        "first_clause_ms": 1184.6,
+        "persona_done_ms": 1608.1,
+        "guard_late_ms": 1608.1,
+        "tts_first_chunk_ms": 2347.7,
+        "released_ms": 2347.8,
+        "runner_first_chunk_ms": 2348.1,
+        "tutor_ms": 4036
+      },
+      "history": {
+        "layer": "history.presenting",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 701.6,
+          "history_ms": 702.1,
+          "persona_first_text_ms": 861.5,
+          "first_clause_ms": 1184.6,
+          "persona_done_ms": 1608.1,
+          "guard_late_ms": 1608.1,
+          "tts_first_chunk_ms": 2347.7,
+          "released_ms": 2347.8,
+          "runner_first_chunk_ms": 2348.1,
+          "tutor_ms": 4036,
+          "runner_done_ms": 23022.3
+        },
+        "requests": [
+          {
+            "chars": 17,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1163.1,
+            "bytes": 125760
+          },
+          {
+            "chars": 37,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3732.1,
+            "bytes": 252480
+          },
+          {
+            "chars": 111,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 7387.6,
+            "bytes": 442560
+          }
+        ],
+        "runner": {
+          "frames": 855,
+          "first_frame_ms": 1.5,
+          "elapsed_ms": 20641.1
+        },
+        "error": null
+      },
+      "runner_while_speaking": {
+        "min_infer_fps": 38.1,
+        "min_out_fps": 25,
+        "underruns": [
+          17,
+          17
+        ],
+        "samples": [
+          {
+            "t": 1792677490919,
+            "infer_fps": 38,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 14,
+              "video_frames": 6
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.6,
+              "delay_ms": 80,
+              "lag_ms": 67.4
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677491978,
+            "infer_fps": 38,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 80,
+              "lag_ms": 67.2
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677493011,
+            "infer_fps": 38,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 6
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677494044,
+            "infer_fps": 38.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 80,
+              "lag_ms": 66.9
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677495077,
+            "infer_fps": 38.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.4,
+              "delay_ms": 80,
+              "lag_ms": 66.6
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677496117,
+            "infer_fps": 38.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 80,
+              "lag_ms": 66.9
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677497151,
+            "infer_fps": 38.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 5,
+              "video_frames": 2
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677498184,
+            "infer_fps": 38.6,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 4
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 80,
+              "lag_ms": 67
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677499226,
+            "infer_fps": 38.7,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 5,
+              "video_frames": 2
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677500263,
+            "infer_fps": 38.7,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677501294,
+            "infer_fps": 38.9,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 2
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677502326,
+            "infer_fps": 38.9,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 80,
+              "lag_ms": 67
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677503362,
+            "infer_fps": 39.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677504396,
+            "infer_fps": 39.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 80,
+              "lag_ms": 67
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677505429,
+            "infer_fps": 39.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677506462,
+            "infer_fps": 39.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 80,
+              "lag_ms": 67.2
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677507504,
+            "infer_fps": 39.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 80,
+              "lag_ms": 67.2
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677508539,
+            "infer_fps": 39.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677509582,
+            "infer_fps": 39.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 80,
+              "lag_ms": 67
+            },
+            "gpu_free_mb": 7645
+          },
+          {
+            "t": 1792677510617,
+            "infer_fps": 39.5,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 4,
+              "video_frames": 1
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 80,
+              "lag_ms": 67.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677511651,
+            "infer_fps": 39.6,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 80,
+              "lag_ms": 67.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677512702,
+            "infer_fps": 39.6,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.6,
+              "delay_ms": 80,
+              "lag_ms": 67.4
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677513766,
+            "infer_fps": 39.7,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.6,
+              "delay_ms": 80,
+              "lag_ms": 67.4
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677514804,
+            "infer_fps": 39.8,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 80,
+              "lag_ms": 67
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677515842,
+            "infer_fps": 40.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677516875,
+            "infer_fps": 40.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 80,
+              "lag_ms": 66.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677517909,
+            "infer_fps": 40.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 80,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 80,
+              "lag_ms": 67.1
+            },
+            "gpu_free_mb": 7625
+          }
+        ]
+      },
+      "rtc_jitter_ms": {
+        "audio": 245,
+        "video": 244,
+        "path": {
+          "localType": "relay",
+          "relayProtocol": "tcp",
+          "url": "turn:127.0.0.1:3501?transport=tcp",
+          "state": "succeeded"
+        }
+      },
+      "lip_lags": [
+        {
+          "lip_lag_ms": 80,
+          "score": 0.64,
+          "av_shift_ms": 80
+        }
+      ]
+    },
+    {
+      "line": 4,
+      "question": "Daha önce böyle bir şey yaşadınız mı?",
+      "reply": "Hayır doktor bey, böyle bayılmak ilk kez oldu. Sadece son iki haftadır ayağa kalkınca hafif baş dönmesi oluyordu, o kadar.",
+      "via": "server",
+      "speech_start_ms": 3086,
+      "lip_lag_ms": 0,
+      "lip_score": 0.606,
+      "voice_ms": 14699,
+      "av_shift_ms_after": 40,
+      "reply_http_ms": 4015,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 703.6,
+        "history_ms": 703.9,
+        "persona_first_text_ms": 919.7,
+        "first_clause_ms": 1213.7,
+        "persona_done_ms": 1327.1,
+        "guard_late_ms": 1327.1,
+        "tts_first_chunk_ms": 2392.6,
+        "released_ms": 2392.6,
+        "runner_first_chunk_ms": 2393.8,
+        "tutor_ms": 3878.1
+      },
+      "history": {
+        "layer": "history.background",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 703.6,
+          "history_ms": 703.9,
+          "persona_first_text_ms": 919.7,
+          "first_clause_ms": 1213.7,
+          "persona_done_ms": 1327.1,
+          "guard_late_ms": 1327.1,
+          "tts_first_chunk_ms": 2392.6,
+          "released_ms": 2392.6,
+          "runner_first_chunk_ms": 2393.8,
+          "tutor_ms": 3878.1,
+          "runner_done_ms": 17785.4
+        },
+        "requests": [
+          {
+            "chars": 17,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1178.8,
+            "bytes": 144960
+          },
+          {
+            "chars": 28,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3923.5,
+            "bytes": 108480
+          },
+          {
+            "chars": 75,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 4551.8,
+            "bytes": 351360
+          }
+        ],
+        "runner": {
+          "frames": 630,
+          "first_frame_ms": 1.4,
+          "elapsed_ms": 15359.7
+        },
+        "error": null
+      },
+      "runner_while_speaking": {
+        "min_infer_fps": 40.2,
+        "min_out_fps": 25,
+        "underruns": [
+          17,
+          17
+        ],
+        "samples": [
+          {
+            "t": 1792677520568,
+            "infer_fps": 40.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677521604,
+            "infer_fps": 40.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677522644,
+            "infer_fps": 40.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677523681,
+            "infer_fps": 40.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677524747,
+            "infer_fps": 40.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677525780,
+            "infer_fps": 40.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 2
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.2,
+              "delay_ms": 40,
+              "lag_ms": 26.8
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677526817,
+            "infer_fps": 40.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677527853,
+            "infer_fps": 40.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 2
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677528892,
+            "infer_fps": 40.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677529925,
+            "infer_fps": 40.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677530962,
+            "infer_fps": 40.5,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677531997,
+            "infer_fps": 40.5,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677533043,
+            "infer_fps": 40.5,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677534076,
+            "infer_fps": 40.6,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677535116,
+            "infer_fps": 40.6,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677536152,
+            "infer_fps": 40.7,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.2,
+              "delay_ms": 40,
+              "lag_ms": 26.8
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677537185,
+            "infer_fps": 40.7,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677538221,
+            "infer_fps": 40.7,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7337
+          },
+          {
+            "t": 1792677539253,
+            "infer_fps": 40.9,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677540287,
+            "infer_fps": 41,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 4
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          }
+        ]
+      },
+      "rtc_jitter_ms": {
+        "audio": 230,
+        "video": 232,
+        "path": {
+          "localType": "relay",
+          "relayProtocol": "tcp",
+          "url": "turn:127.0.0.1:3501?transport=tcp",
+          "state": "succeeded"
+        }
+      },
+      "lip_lags": [
+        {
+          "lip_lag_ms": 0,
+          "score": 0.606,
+          "av_shift_ms": 40
+        }
+      ]
+    },
+    {
+      "line": 5,
+      "question": "Düzenli kullandığınız ilaç ya da alerjiniz var mı?",
+      "reply": "Tansiyon için iki üç hafta önce doktor amlodipin başladı, onu her gün alıyorum. Bir de bazen mide için ilaç içiyorum. Bildiğim bir ilaç alerjim yok.",
+      "via": "server",
+      "speech_start_ms": 3738,
+      "lip_lag_ms": 40,
+      "lip_score": 0.645,
+      "voice_ms": 2117,
+      "av_shift_ms_after": 40,
+      "reply_http_ms": 9630,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 703.1,
+        "history_ms": 703.4,
+        "persona_first_text_ms": 1534,
+        "first_clause_ms": 1847.8,
+        "persona_done_ms": 2012.6,
+        "tts_first_chunk_ms": 3025,
+        "released_ms": 3025,
+        "runner_first_chunk_ms": 3025.5,
+        "guard_late_ms": 3052.7,
+        "tutor_ms": 9532.2
+      },
+      "history": {
+        "layer": "history.background",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 703.1,
+          "history_ms": 703.4,
+          "persona_first_text_ms": 1534,
+          "first_clause_ms": 1847.8,
+          "persona_done_ms": 2012.6,
+          "tts_first_chunk_ms": 3025,
+          "released_ms": 3025,
+          "runner_first_chunk_ms": 3025.5,
+          "guard_late_ms": 3052.7,
+          "tutor_ms": 9532.2,
+          "runner_done_ms": 20846.9
+        },
+        "requests": [
+          {
+            "chars": 20,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1177.1,
+            "bytes": 98880
+          },
+          {
+            "chars": 58,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3190.1,
+            "bytes": 334080
+          },
+          {
+            "chars": 68,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 11827.9,
+            "bytes": 266880
+          }
+        ],
+        "runner": {
+          "frames": 729,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 17789.4
+        },
+        "error": null
+      },
+      "runner_while_speaking": {
+        "min_infer_fps": 41.1,
+        "min_out_fps": 25,
+        "underruns": [
+          17,
+          17
+        ],
+        "samples": [
+          {
+            "t": 1792677542897,
+            "infer_fps": 41,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 14,
+              "video_frames": 6
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677543930,
+            "infer_fps": 41,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 4
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677544967,
+            "infer_fps": 41,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677546007,
+            "infer_fps": 41,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677547042,
+            "infer_fps": 41.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677548075,
+            "infer_fps": 41.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.3,
+              "delay_ms": 40,
+              "lag_ms": 26.7
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677549108,
+            "infer_fps": 41.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677550140,
+            "infer_fps": 41.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677551172,
+            "infer_fps": 41.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677552206,
+            "infer_fps": 41.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 4,
+              "video_frames": 2
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677553249,
+            "infer_fps": 41.2,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677554283,
+            "infer_fps": 41.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 6
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677555316,
+            "infer_fps": 41.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.7,
+              "delay_ms": 40,
+              "lag_ms": 27.3
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677556356,
+            "infer_fps": 41.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 13,
+              "video_frames": 6
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677557390,
+            "infer_fps": 41.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677558424,
+            "infer_fps": 41.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 13,
+              "video_frames": 6
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.2,
+              "delay_ms": 40,
+              "lag_ms": 26.8
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677559471,
+            "infer_fps": 41.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.2,
+              "delay_ms": 40,
+              "lag_ms": 26.8
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677560506,
+            "infer_fps": 41.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 5,
+              "video_frames": 2
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677561543,
+            "infer_fps": 41.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677562583,
+            "infer_fps": 41.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 5,
+              "video_frames": 2
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677563642,
+            "infer_fps": 41.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7625
+          }
+        ]
+      },
+      "rtc_jitter_ms": {
+        "audio": 367,
+        "video": 256,
+        "path": {
+          "localType": "relay",
+          "relayProtocol": "tcp",
+          "url": "turn:127.0.0.1:3501?transport=tcp",
+          "state": "succeeded"
+        }
+      },
+      "lip_lags": [
+        {
+          "lip_lag_ms": 40,
+          "score": 0.645,
+          "av_shift_ms": 40
+        }
+      ]
+    },
+    {
+      "line": 6,
+      "question": "Şu an kendinizi nasıl hissediyorsunuz, geldiğiniz zamana göre?",
+      "reply": "Şu an yatarken gayet iyiyim doktor bey, başım dönmüyor. Yalnız yine ayağa kalkınca kararır mı diye biraz korkuyorum.",
+      "via": "server",
+      "speech_start_ms": 99,
+      "lip_lag_ms": 480,
+      "lip_score": 0.371,
+      "voice_ms": 18016,
+      "av_shift_ms_after": 0,
+      "reply_http_ms": 4054,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 703.4,
+        "history_ms": 703.8,
+        "persona_first_text_ms": 1016.9,
+        "first_clause_ms": 1313.1,
+        "persona_done_ms": 1429.8,
+        "guard_late_ms": 1429.8,
+        "tts_first_chunk_ms": 2506.2,
+        "released_ms": 2506.2,
+        "runner_first_chunk_ms": 2506.7,
+        "tutor_ms": 3950.3
+      },
+      "history": null,
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 703.4,
+          "history_ms": 703.8,
+          "persona_first_text_ms": 1016.9,
+          "first_clause_ms": 1313.1,
+          "persona_done_ms": 1429.8,
+          "guard_late_ms": 1429.8,
+          "tts_first_chunk_ms": 2506.2,
+          "released_ms": 2506.2,
+          "runner_first_chunk_ms": 2506.7,
+          "tutor_ms": 3950.3,
+          "runner_done_ms": 16024.8
+        },
+        "requests": [
+          {
+            "chars": 20,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1193,
+            "bytes": 81600
+          },
+          {
+            "chars": 34,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2422.6,
+            "bytes": 204480
+          },
+          {
+            "chars": 60,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 6573.8,
+            "bytes": 298560
+          }
+        ],
+        "runner": {
+          "frames": 609,
+          "first_frame_ms": 0.6,
+          "elapsed_ms": 13483.3
+        },
+        "error": null
+      },
+      "runner_while_speaking": {
+        "min_infer_fps": 41.8,
+        "min_out_fps": 25,
+        "underruns": [
+          17,
+          17
+        ],
+        "samples": [
+          {
+            "t": 1792677566278,
+            "infer_fps": 41.8,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 13,
+              "video_frames": 6
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677567315,
+            "infer_fps": 41.9,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677568349,
+            "infer_fps": 41.9,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 13,
+              "video_frames": 6
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677569384,
+            "infer_fps": 41.9,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.7,
+              "delay_ms": 40,
+              "lag_ms": 27.3
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677570421,
+            "infer_fps": 41.9,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 13,
+              "video_frames": 6
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.7,
+              "delay_ms": 40,
+              "lag_ms": 27.3
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677571458,
+            "infer_fps": 41.9,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.2,
+              "delay_ms": 40,
+              "lag_ms": 26.8
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677572491,
+            "infer_fps": 42,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 2
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677573526,
+            "infer_fps": 42,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 10,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677574561,
+            "infer_fps": 42,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 6,
+              "video_frames": 3
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7625
+          },
+          {
+            "t": 1792677575593,
+            "infer_fps": 42,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.7,
+              "delay_ms": 40,
+              "lag_ms": 27.3
+            },
+            "gpu_free_mb": 7605
+          },
+          {
+            "t": 1792677576627,
+            "infer_fps": 42,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7605
+          },
+          {
+            "t": 1792677577661,
+            "infer_fps": 42,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 11,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7605
+          },
+          {
+            "t": 1792677578697,
+            "infer_fps": 42,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 7,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7605
+          },
+          {
+            "t": 1792677579734,
+            "infer_fps": 42.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7605
+          },
+          {
+            "t": 1792677580774,
+            "infer_fps": 42.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 3
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7605
+          },
+          {
+            "t": 1792677581807,
+            "infer_fps": 42.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7565
+          },
+          {
+            "t": 1792677582842,
+            "infer_fps": 42.1,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13,
+              "delay_ms": 40,
+              "lag_ms": 27
+            },
+            "gpu_free_mb": 7565
+          },
+          {
+            "t": 1792677583883,
+            "infer_fps": 42.3,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 12,
+              "video_frames": 5
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.9,
+              "delay_ms": 40,
+              "lag_ms": 27.1
+            },
+            "gpu_free_mb": 7565
+          },
+          {
+            "t": 1792677584917,
+            "infer_fps": 42.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 8,
+              "video_frames": 4
+            },
+            "speaking": true,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7565
+          },
+          {
+            "t": 1792677585953,
+            "infer_fps": 42.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 13,
+              "video_frames": 6
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -13.1,
+              "delay_ms": 40,
+              "lag_ms": 26.9
+            },
+            "gpu_free_mb": 7565
+          },
+          {
+            "t": 1792677586986,
+            "infer_fps": 42.4,
+            "out_fps": 25,
+            "underruns": 17,
+            "sender_queue": {
+              "audio_frames": 9,
+              "video_frames": 4
+            },
+            "speaking": false,
+            "av_shift_ms": 40,
+            "sync": {
+              "video_minus_audio_ms": -12.8,
+              "delay_ms": 40,
+              "lag_ms": 27.2
+            },
+            "gpu_free_mb": 7565
+          }
+        ]
+      },
+      "rtc_jitter_ms": {
+        "audio": 400,
+        "video": 341,
+        "path": {
+          "localType": "relay",
+          "relayProtocol": "tcp",
+          "url": "turn:127.0.0.1:3501?transport=tcp",
+          "state": "succeeded"
+        }
+      },
+      "lip_lags": [
+        {
+          "lip_lag_ms": 480,
+          "score": 0.371,
+          "av_shift_ms": 40
+        }
+      ]
+    }
+  ],
+  "fades": [],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p05-49dd680d-e3b0c44298",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 1.0976,
+        "rotation_deg": 1.463,
+        "shift_px": [
+          -23.4,
+          -12.2
+        ],
+        "inliers": 205,
+        "residual_before": 34.67,
+        "residual_after": 18.18
+      }
+    },
+    {
+      "name": "critical",
+      "avatar_id": "acudx-p05-49dd680d-be4a95a56a",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 1.0191,
+        "rotation_deg": 0.645,
+        "shift_px": [
+          -5.5,
+          -6.9
+        ],
+        "inliers": 356,
+        "residual_before": 18.54,
+        "residual_after": 13.63
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 0,
+    "lip_lags": [
+      {
+        "lip_lag_ms": -40,
+        "score": 0.415,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 120,
+        "score": 0.682,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 80,
+        "score": 0.64,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": 0,
+        "score": 0.606,
+        "av_shift_ms": 40
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.645,
+        "av_shift_ms": 40
+      },
+      {
+        "lip_lag_ms": 480,
+        "score": 0.371,
+        "av_shift_ms": 40
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 34
+    },
+    "answer_ms": 197.8,
+    "prepare_ms": 4758.7
+  },
+  "runner_call": [
+    {
+      "id": "d7efc08f",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 0
+      },
+      "avatar": "acudx-p05-49dd680d-e3b0c44298",
+      "speaking": false,
+      "warm_up_ms": 89.2,
+      "switches_applied": 1,
+      "switch_pending": false,
+      "infer_fps": 42.4,
+      "inferred_frames": 2380,
+      "sender_queue": {
+        "audio_frames": 13,
+        "video_frames": 6
+      },
+      "sync": {
+        "video_minus_audio_ms": -12.9,
+        "delay_ms": 0,
+        "lag_ms": -12.9
+      },
+      "sent_frames": 3829,
+      "underruns": 17,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 7653,
+    "audioEnergy": 3.7093716930168923,
+    "videoFrames": 3698,
+    "videoFps": 24,
+    "rttMs": 41,
+    "audioJitterMs": 397,
+    "videoJitterMs": 340,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3501?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-22T13:57:01.827Z case open",
+    "2026-10-22T13:57:16.655Z live video connected 14271 ms after the voice click; session {\"at\":1792677428624,\"prepare_ms\":4758.7,\"prepare\":{\"avatar_id\":\"acudx-p05\",\"face_box\":[201,127,519,594],\"width\":720,\"height\":720,\"idle_frames\":75,\"extended_px\":130,\"ref\":null,\"registration\":null,\"content_key\":\"d395a8020fcebf94a7809ebd\",\"prepared\":false,\"cached\":\"local\",\"queue_ms\":4573.6,\"prepare_ms\":4574.7},\"appearance\":{\"source\":\"portrait\",\"reason\":\"presenting look not ready yet; the call opens on the case portrait and switches when it lands\",\"current_key\":null},\"worker\":{\"infer_fps\":37.11,\"sessions\":0,\"max_sessions\":2,\"gpu\":{\"cuda\":true,\"name\":\"NVIDIA A100-SXM4-40GB\",\"total_mb\":40441,\"free_mb\":8811,\"process_reserved_mb\":2682,\"process_allocated_mb\":2080},\"domain\":\"150-136-68-163.sslip.io\",\"max_calls\":2,\"active_calls\":1}}",
+    "2026-10-22T13:57:16.656Z click timeline [{\"url\":\"/v1/voice/warm\",\"method\":\"POST\",\"start_ms\":96,\"end_ms\":133},{\"url\":\"/v1/voice/capabilities\",\"method\":\"GET\",\"start_ms\":133,\"end_ms\":1077},{\"url\":\"/v1/voice/avatar/session\",\"method\":\"POST\",\"start_ms\":954,\"end_ms\":6223},{\"url\":\"/v1/voice/avatar/offer\",\"method\":\"POST\",\"start_ms\":10255,\"end_ms\":10478}]",
+    "2026-10-22T13:57:19.018Z line 1 sent",
+    "2026-10-22T13:57:43.669Z line 1: {\"s\":4239,\"lag\":-40,\"score\":0.415,\"shift\":160,\"fps\":25,\"inf\":10.6,\"jit\":{\"audio\":262,\"video\":155,\"path\":{\"localType\":\"relay\",\"relayProtocol\":\"tcp\",\"url\":\"turn:127.0.0.1:3501?transport=tcp\",\"state\":\"succeeded\"}}}",
+    "2026-10-22T13:57:45.285Z line 2 sent",
+    "2026-10-22T13:58:09.253Z line 2: {\"s\":3236,\"lag\":120,\"score\":0.682,\"shift\":80,\"fps\":25,\"inf\":33.7,\"jit\":{\"audio\":279,\"video\":245,\"path\":{\"localType\":\"relay\",\"relayProtocol\":\"tcp\",\"url\":\"turn:127.0.0.1:3501?transport=tcp\",\"state\":\"succeeded\"}}}",
+    "2026-10-22T13:58:10.964Z line 3 sent",
+    "2026-10-22T13:58:38.952Z line 3: {\"s\":3169,\"lag\":80,\"score\":0.64,\"shift\":40,\"fps\":25,\"inf\":38.1,\"jit\":{\"audio\":245,\"video\":244,\"path\":{\"localType\":\"relay\",\"relayProtocol\":\"tcp\",\"url\":\"turn:127.0.0.1:3501?transport=tcp\",\"state\":\"succeeded\"}}}",
+    "2026-10-22T13:58:40.592Z line 4 sent",
+    "2026-10-22T13:59:01.314Z line 4: {\"s\":3086,\"lag\":0,\"score\":0.606,\"shift\":40,\"fps\":25,\"inf\":40.2,\"jit\":{\"audio\":230,\"video\":232,\"path\":{\"localType\":\"relay\",\"relayProtocol\":\"tcp\",\"url\":\"turn:127.0.0.1:3501?transport=tcp\",\"state\":\"succeeded\"}}}",
+    "2026-10-22T13:59:02.934Z line 5 sent",
+    "2026-10-22T13:59:24.683Z line 5: {\"s\":3738,\"lag\":40,\"score\":0.645,\"shift\":40,\"fps\":25,\"inf\":41.1,\"jit\":{\"audio\":367,\"video\":256,\"path\":{\"localType\":\"relay\",\"relayProtocol\":\"tcp\",\"url\":\"turn:127.0.0.1:3501?transport=tcp\",\"state\":\"succeeded\"}}}",
+    "2026-10-22T13:59:26.317Z line 6 sent",
+    "2026-10-22T13:59:48.016Z line 6: {\"s\":99,\"lag\":480,\"score\":0.371,\"shift\":0,\"fps\":25,\"inf\":41.8,\"jit\":{\"audio\":400,\"video\":341,\"path\":{\"localType\":\"relay\",\"relayProtocol\":\"tcp\",\"url\":\"turn:127.0.0.1:3501?transport=tcp\",\"state\":\"succeeded\"}}}",
+    "2026-10-22T13:59:49.542Z variants ready: 2"
+  ]
+}
