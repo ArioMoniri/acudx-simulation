@@ -973,6 +973,50 @@ def test_generate_is_serialised_so_two_calls_never_share_conditionals():
     assert peak[0] == 1
 
 
+def test_t3_is_capped_by_the_text_length_so_a_short_clause_cannot_run_on():
+    # Live 2026-10-22 (H100 SXM5): "Hayır doktor bey," (18 characters) ran on to 122 tokens (4.8 s of audio),
+    # and the clause's first audio waits for its whole generation.
+    import threading
+
+    p = _chatterbox_patch()
+    asked: list[int] = []
+
+    class Out:
+        def __init__(self, n):
+            self.shape = (1, n)
+
+    class T3:
+        def inference(self, **kw):
+            asked.append(kw["max_new_tokens"])
+            return Out(min(kw["max_new_tokens"], 122))
+
+    class Model:
+        sr = 24000
+
+        def __init__(self):
+            self.t3, self.s3gen, self.watermarker = T3(), type("S", (), {"inference": lambda s, **k: None})(), \
+                type("W", (), {"apply_watermark": lambda s, w, **k: w})()
+
+        def prepare_conditionals(self, wav_fpath, exaggeration=0.5):
+            pass
+
+        def generate(self, text, **kw):
+            self.t3.inference(text_tokens=None, max_new_tokens=1000)
+            return Out(24000)
+
+    p.patch_model_class(Model, cache=p.ConditionalsCache(lambda c, e, d: c), lock=threading.RLock())
+    Model().generate("Hayır doktor bey,")
+    assert asked == [25 + 3 * 17]
+    row = p.TIMINGS[-1]
+    assert row["token_cap"] == 76 and row["capped"] is True and p.STATS["t3_capped"] >= 1
+    Model().generate("Göğsümün tam ortasında başladı, sonra sol koluma yayıldı ve terledim.")
+    assert asked[-1] == 25 + 3 * 69 and not p.TIMINGS[-1].get("capped")
+    p.TUNING["t3_tokens_per_char"] = 0                            # off: upstream's 1000
+    Model().generate("Hayır doktor bey,")
+    assert asked[-1] == 1000
+    p.TUNING["t3_tokens_per_char"] = 3.0
+
+
 def test_chatterbox_patch_is_installed_into_the_pinned_checkout_and_primed_at_boot():
     dockerfile = _written("/chatterbox.Dockerfile")
     assert "_acudx_patch.install()" in dockerfile and ">> app/main.py" in dockerfile

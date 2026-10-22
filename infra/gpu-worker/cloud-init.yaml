@@ -405,14 +405,33 @@ write_files:
       TUNING: dict[str, Any] = {"t3_autocast": os.getenv("ACUDX_T3_AUTOCAST") or None,
                                 "first_clause": os.getenv("ACUDX_FIRST_CLAUSE", "1") != "0",
                                 "first_max_words": FIRST_CLAUSE_MAX_WORDS,
-                                "second_max_words": int(os.getenv("ACUDX_SECOND_CLAUSE_WORDS", "0"))}
+                                "second_max_words": int(os.getenv("ACUDX_SECOND_CLAUSE_WORDS", "0")),
+                                # T3 speech-token cap per request: base + per_char x characters (0 = upstream's 1000).
+                                "t3_tokens_per_char": float(os.getenv("ACUDX_T3_TOKENS_PER_CHAR", "3.0")),
+                                "t3_tokens_base": int(os.getenv("ACUDX_T3_TOKENS_BASE", "25"))}
       _AUTOCAST = {"bf16": "bfloat16", "fp16": "float16"}
+
+
+      def token_cap(text: str) -> int | None:
+          """Most speech tokens (25 a second) T3 may write for ``text``. Live 2026-10-22 (H100 SXM5, Turkish):
+          normal clauses took 1.8 to 2.6 tokens a character, but short ones ran on to 4 to 7 s of audio
+          ("Hayır doktor bey," 18 characters, 122 tokens, 4.8 s), and the first audio of a clause waits for its
+          whole generation, so a run-on cost 1 to 2 s of speech start. The cap leaves ample room (3 per
+          character plus 25, about 1 s) and cuts only such a tail."""
+          per = float(TUNING.get("t3_tokens_per_char") or 0)
+          if per <= 0:
+              return None
+          return int(int(TUNING.get("t3_tokens_base") or 0) + per * len(str(text or "").strip()))
 
 
       def _timed(store: dict, key: str, fn: Callable[..., Any], *, autocast: bool = False,
                  sync: bool = False) -> Callable[..., Any]:
           def run(*args, **kwargs):
               t0 = time.perf_counter()
+              cap = store.pop("_cap", None) if key == "t3_ms" else None
+              if cap:
+                  kwargs["max_new_tokens"] = min(int(kwargs.get("max_new_tokens") or 1000), int(cap))
+                  store["token_cap"] = kwargs["max_new_tokens"]
               dtype = _AUTOCAST.get(str(TUNING.get("t3_autocast"))) if autocast else None
               if dtype:
                   import torch
@@ -429,6 +448,9 @@ write_files:
               store[key] = store.get(key, 0.0) + (time.perf_counter() - t0) * 1000.0
               if key == "t3_ms" and hasattr(out, "shape"):
                   store["tokens"] = int(out.shape[-1])
+                  if cap and store["tokens"] >= int(store.get("token_cap") or 0):
+                      store["capped"] = True
+                      STATS["t3_capped"] = STATS.get("t3_capped", 0) + 1
               return out
 
           return run
@@ -466,8 +488,10 @@ write_files:
                   t0 = time.perf_counter()
                   store = _instrument(self)
                   store.clear()
-                  out = orig_generate(self, *args, **kwargs)
                   text = kwargs.get("text", args[0] if args else "")
+                  store["_cap"] = token_cap(str(text))
+                  out = orig_generate(self, *args, **kwargs)
+                  store.pop("_cap", None)
                   row = {k: round(v, 1) if isinstance(v, float) else v for k, v in store.items()}
                   row.update(chars=len(str(text)), words=len(str(text).split()), lock_wait_ms=round((t0 - t_wait) * 1000.0, 1),
                              total_ms=round((time.perf_counter() - t0) * 1000.0, 1),
@@ -543,12 +567,17 @@ write_files:
                   TUNING["t3_autocast"] = v
               if "first_clause" in body:
                   TUNING["first_clause"] = bool(body["first_clause"])
-              for key, lo, hi in (("first_max_words", 3, 20), ("second_max_words", 0, 30)):
+              for key, lo, hi in (("first_max_words", 3, 20), ("second_max_words", 0, 30), ("t3_tokens_base", 0, 200)):
                   if key in body:
                       try:
                           TUNING[key] = max(lo, min(hi, int(body[key])))
                       except (TypeError, ValueError):
                           return {"error": f"{key} must be an integer"}
+              if "t3_tokens_per_char" in body:
+                  try:
+                      TUNING["t3_tokens_per_char"] = max(0.0, min(10.0, float(body["t3_tokens_per_char"])))
+                  except (TypeError, ValueError):
+                      return {"error": "t3_tokens_per_char must be a number"}
               TIMINGS.clear()
               return dict(TUNING)
 
@@ -2357,7 +2386,7 @@ write_files:
               "ok": True, "model": "musetalk-1.5", "runner": "livetalking", "livetalking_ref": LIVETALKING_REF,
               "transport": "webrtc", "fps": opt.fps, "batch_size": BATCH_SIZE, "sessions": len(active),
               "max_sessions": MAX_SESSIONS, "dedicated_gpu": DEDICATED_GPU, "avatars": prepared,
-              "infer_fps": STATE["infer_fps"], "prepare_ms": STATE["prepare_ms"], "prep_queue": PREP_QUEUE.depth(),
+              "infer_fps": STATE["infer_fps"], "prepare_ms": STATE["prepare_ms"], "prep_queue": PREP_QUEUE.depth(), "detector_warm_ms": STATE.get("detector_warm_ms"),
               "defaults": {"batch_size": BATCH_SIZE, "ahead_frames": AHEAD_FRAMES, "lookahead_frames": LOOKAHEAD_FRAMES,
                            "av_shift_ms": AV_SHIFT_MS, "idle_frames": IDLE_FRAMES},
               "calls": [_session_stats(k, v) for k, v in active.items()],
@@ -2734,6 +2763,20 @@ write_files:
           app.router.add_post("/tuning", tuning)
           app.router.add_get("/turn", turn_bridge)
           app.router.add_get("/turn_check", turn_check)
+          def _warm_detector() -> None:
+              # The first detection on a fresh runner paid 12 to 17 s (cuDNN autotune for the canvas size, live
+              # 2026-10-22); pay it here at start-up instead of on the first case's portrait.
+              t = time.monotonic()
+              PREP_QUEUE.acquire(PREP_PRIORITY_LADDER)
+              try:
+                  _detect_fixed(np.full((MAX_FRAME_H, 700, 3), 128, dtype=np.uint8), os.path.join(AVATAR_ROOT, ".warm.png"))
+              except Exception as exc:  # noqa: BLE001 - a failed warm-up only costs the first preparation
+                  log.warning("detector warm-up failed: %s", type(exc).__name__)
+              finally:
+                  PREP_QUEUE.release()
+              STATE["detector_warm_ms"] = round((time.monotonic() - t) * 1000.0, 1)
+
+          threading.Thread(target=_warm_detector, daemon=True).start()
           log.info("acudx avatar runner on :%d (batch %d, ahead %d frames, max sessions %d, model load %.0f ms)",
                    AVATAR_PORT, BATCH_SIZE, AHEAD_FRAMES, MAX_SESSIONS, STATE["model_load_ms"])
           web.run_app(app, host="0.0.0.0", port=AVATAR_PORT, access_log=None)

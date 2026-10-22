@@ -1,0 +1,22 @@
+1792631496 cloud-init: runcmd started (filesystem none)
+1792631498 images: fetching
+1792631498 image chatterbox pulling 2d1ad1f79a05c36a
+1792631498 image imagegen pulling e46737d70012f434
+1792631499 image avatar pulling 9b05e6479cd7a483
+1792631500 image pulled caddy:2.9.1
+1792631500 image pulled nginx:1.30.6-alpine
+1792631502 image pulled ghcr.io/coturn/coturn:4.18.0-debian
+1792631580 image pulled ghcr.io/speaches-ai/speaches:0.8.3-cuda
+1792631610 image chatterbox pulled 2d1ad1f79a05c36a
+1792631639 image pulled ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4
+1792631640 image imagegen pulled e46737d70012f434
+1792631645 image avatar pulled 9b05e6479cd7a483
+1792631645 avatar: image ready
+1792631645 speaches and kokoro started
+1792631645 avatar: container started
+1792631645 chatterbox started
+1792631653 image pulled vllm/vllm-openai:v0.11.0
+1792631700 avatar: ready
+1792631702 vllm: starting
+1792631760 imagegen: container started
+1792631763 vllm: healthy
