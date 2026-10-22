@@ -1431,7 +1431,9 @@ write_files:
       healthy_since=""
       while true; do
         snapshot
-        if $compose exec -T vllm curl -sf -o /dev/null http://localhost:8000/health >/dev/null 2>&1; then
+        # No worker LLM (WORKER_LLM_MODEL=none, Claude serves the text): the runner's health ends it instead.
+        if { [ "${WORKER_LLM_MODEL:-}" = none ] && grep -q '"state":"ready"' "$pub/avatar-status/status.json" 2>/dev/null; } || \
+           $compose exec -T vllm curl -sf -o /dev/null http://localhost:8000/health >/dev/null 2>&1; then
           now=$(date +%s)
           [ -n "$healthy_since" ] || healthy_since=$now
           if [ $((now - healthy_since)) -ge "$healthy_for_s" ]; then
@@ -2019,6 +2021,9 @@ write_files:
       # Positive: the video leaves this many ms after its audio (fixes lips leading the voice).
       AV_SHIFT_MS = int(os.environ.get("AVATAR_AV_SHIFT_MS", "0"))
       IDLE_FRAMES = int(os.environ.get("AVATAR_IDLE_FRAMES", "75"))
+      # Lip sync from the sender's clock (see _install_av_shift); 0 keeps the delay the gateway set.
+      AUTO_SYNC = os.environ.get("AVATAR_AUTO_SYNC", "1") == "1"
+      MAX_SHIFT_FRAMES = 25   # 1 s either way
       # A call whose peer connection is not connected this long after its offer is closed (slot freed).
       CONNECT_DEADLINE_S = float(os.environ.get("AVATAR_CONNECT_DEADLINE_S", "60"))
       TURN_TCP_HOST = os.environ.get("AVATAR_TURN_TCP_HOST", "host.docker.internal")
@@ -2194,7 +2199,9 @@ write_files:
           st = getattr(sess, "_acudx_shift", None) or {}
           delay = int(st.get("n", 0)) * 40
           skew = (ov - oa) * 1000.0
-          return {"video_minus_audio_ms": round(skew, 1), "delay_ms": delay, "lag_ms": round(skew + delay, 1)}
+          return {"video_minus_audio_ms": round(skew, 1), "delay_ms": delay, "lag_ms": round(skew + delay, 1),
+                  "auto": bool(st.get("auto")), "bias_ms": round(float(st.get("bias_ms") or 0.0), 1),
+                  "changes": st.get("changes", 0)}
 
       t0 = time.monotonic()
       MODEL = mt.load_model()
@@ -2303,45 +2310,82 @@ write_files:
 
 
       def _install_av_shift(sess, shift_ms: int) -> None:
-          """Re-pair audio and video by index: the WebRTC tracks emit frame k at start + k * 40 ms, so a
-          delay line only shifts lips against voice if it emits one frame per frame pushed (prefilled
-          with the first frame). Positive ``shift_ms`` shows video frame k - n with audio frame k.
+          """Re-pair audio and video by index, and keep the pair in sync from the sender's own clock.
 
-          A positive shift can be changed during the call (POST /tuning): the line then grows by
-          repeating one frame or shrinks by skipping one, one step per frame, so lips never jump."""
-          n = int(round(abs(shift_ms) / 40.0))
+          The WebRTC tracks emit frame k at start + k * 40 ms, so a delay line only shifts lips against
+          voice if it emits one frame per frame pushed. ``st["n"]`` frames (40 ms each): positive shows
+          video frame k - n with audio frame k (the video waits), negative delays the audio by 2 |n| 20 ms
+          frames. The video line grows by repeating one frame or shrinks by skipping one, one step per
+          frame, so lips never jump; the audio line changes only on a silent frame (a zero frame put in or
+          a silent frame left out), so the voice is never cut.
+
+          Auto sync (AVATAR_AUTO_SYNC, on by default): once a second the delay is set from the sender's
+          measured skew (``sender_sync``: video minus audio send-time offset) plus ``bias_ms``, the residual
+          the browser measured (POST /tuning ``browser_lag_ms``): n = -(skew + bias) / 40. The measurement
+          is of the send times, not of the content, so the delay does not feed back into it. Production
+          2026-10-22 (A100 40 GB) showed the lips 320 to 520 ms ahead of the voice with a fixed 160 ms."""
           out = sess.output
-          if shift_ms >= 0:
-              orig_v = out.push_video_frame
-              line: collections.deque = collections.deque()
-              st = {"n": n}
-              sess._acudx_shift = st
+          orig_v, orig_a = out.push_video_frame, out.push_audio_frame
+          st = {"n": int(round(shift_ms / 40.0)), "auto": AUTO_SYNC, "bias_ms": 0.0, "frames": 0, "skew_ms": None,
+                "changes": 0}
+          sess._acudx_shift = st
+          vline: collections.deque = collections.deque()
+          aline: collections.deque = collections.deque()
+          carry = {"ev": None}
 
-              def push_video_frame(frame) -> None:
-                  want = st["n"]
-                  if want <= 0 and not line:
-                      orig_v(frame)
-                      return
-                  if not line:
-                      line.extend(frame for _ in range(want))
-                  line.append(frame)
-                  if len(line) > want + 1:
-                      line.popleft()
-                  elif len(line) < want + 1:
-                      line.appendleft(line[0])
-                  orig_v(line.popleft())
+          def _retarget() -> None:
+              sync = sender_sync(sess)
+              if sync is None:
+                  return
+              skew = float(sync["video_minus_audio_ms"])
+              st["skew_ms"] = skew
+              want = int(round(-(skew + float(st["bias_ms"])) / 40.0))
+              want = max(-MAX_SHIFT_FRAMES, min(MAX_SHIFT_FRAMES, want))
+              # One frame of hysteresis: inside 30 ms of the current delay nothing moves (meter noise is 40 ms).
+              if want != st["n"] and abs(-(skew + float(st["bias_ms"])) - 40.0 * st["n"]) > 30.0:
+                  st["n"] = want
+                  st["changes"] += 1
 
-              out.push_video_frame = push_video_frame
-          else:
-              orig_a = out.push_audio_frame
-              aline: collections.deque = collections.deque((np.zeros(320, dtype=np.int16), None) for _ in range(2 * n))
+          def push_video_frame(frame) -> None:
+              st["frames"] += 1
+              if st["auto"] and st["frames"] % 25 == 0:
+                  try:
+                      _retarget()
+                  except Exception:  # noqa: BLE001 - a failed measurement keeps the current delay
+                      pass
+              want = max(0, int(st["n"]))
+              if want <= 0 and not vline:
+                  orig_v(frame)
+                  return
+              if not vline:
+                  vline.extend(frame for _ in range(want))
+              vline.append(frame)
+              if len(vline) > want + 1:
+                  vline.popleft()
+              elif len(vline) < want + 1:
+                  vline.appendleft(vline[0])
+              orig_v(vline.popleft())
 
-              def push_audio_frame(frame, eventpoint=None) -> None:
-                  aline.append((frame, eventpoint))
-                  f, ev = aline.popleft()
-                  orig_a(f, ev)
+          def push_audio_frame(frame, eventpoint=None) -> None:
+              want = 2 * max(0, -int(st["n"]))
+              if want <= 0 and not aline:
+                  orig_a(frame, eventpoint)
+                  return
+              silent = not getattr(sess, "speaking", False) and (frame.size == 0 or float(np.abs(frame).max()) < 0.002 * (32768.0 if frame.dtype == np.int16 else 1.0))
+              aline.append((frame, eventpoint))
+              if len(aline) > want + 1 and silent:
+                  f, ev = aline.popleft()          # leave one silent frame out: the line shrinks by one
+                  carry["ev"] = carry["ev"] or ev
+              if len(aline) < want + 1 and silent:
+                  orig_a(np.zeros_like(frame), carry.pop("ev", None))   # a zero frame in: the line grows
+                  carry["ev"] = None
+                  return
+              f, ev = aline.popleft()
+              orig_a(f, ev or carry.pop("ev", None))
+              carry["ev"] = None
 
-              out.push_audio_frame = push_audio_frame
+          out.push_video_frame = push_video_frame
+          out.push_audio_frame = push_audio_frame
 
 
       AVATARS: dict[str, tuple] = {}
@@ -3317,9 +3361,18 @@ write_files:
           if _active() >= MAX_SESSIONS:
               return web.json_response({"error": "max_sessions", "max_sessions": MAX_SESSIONS}, status=503)
           try:
-              return await RTC.handle_offer(request)
+              resp = await RTC.handle_offer(request)
           except MaxSessionError:
               return web.json_response({"error": "max_sessions", "max_sessions": MAX_SESSIONS}, status=503)
+          # The gateway reads this to send the browser's lip measure as a bias (auto sync) instead of a delay.
+          try:
+              body = json.loads(resp.text or "{}")
+              if isinstance(body, dict) and body.get("sessionid"):
+                  body["auto_sync"] = AUTO_SYNC
+                  return web.json_response(body, status=resp.status)
+          except (ValueError, AttributeError, TypeError):
+              pass
+          return resp
 
 
       async def switch(request: web.Request) -> web.Response:
@@ -3364,8 +3417,12 @@ write_files:
 
 
       async def tuning(request: web.Request) -> web.Response:
-          """{sessionid, av_shift_ms}: move a live call's video against its audio (0 to 1000 ms, video
-          later), one frame per frame; the gateway uses it to correct a lip offset the browser measured."""
+          """Lip sync of a live call. ``{sessionid, browser_lag_ms, score?}``: the offset the browser measured
+          on the last line (positive: lips late); with auto sync it moves the call's bias by half of it
+          (``bias_ms``, bounded to 600 ms) and the next retarget applies it. ``{sessionid, av_shift_ms}``:
+          a fixed delay (-1000 to 1000 ms, positive = video later), which turns auto sync off for the call.
+          ``{sessionid, auto: true}`` turns it back on. The reply carries the state (``auto``, ``av_shift_ms``,
+          ``bias_ms``, ``sync``)."""
           params = await request.json()
           sess = session_manager.get_session(str(params.get("sessionid") or ""))
           if sess is None:
@@ -3373,12 +3430,22 @@ write_files:
           st = getattr(sess, "_acudx_shift", None)
           if st is None:
               return web.json_response({"error": "shift_not_adjustable"}, status=409)
-          ms = _bounded(params, "av_shift_ms", int(st["n"]) * 40, 0, 1000)
-          st["n"] = int(round(ms / 40.0))
-          sess._acudx_shift_ms = st["n"] * 40
+          if "av_shift_ms" in params:
+              ms = _bounded(params, "av_shift_ms", int(st["n"]) * 40, -1000, 1000)
+              st["n"] = int(round(ms / 40.0))
+              st["auto"] = False
+          if params.get("auto") is True:
+              st["auto"] = AUTO_SYNC
+          lag = params.get("browser_lag_ms")
+          if isinstance(lag, (int, float)) and st["auto"]:
+              # Inside 40 ms nothing moves (the meter's own noise); half the residual per line otherwise.
+              if abs(float(lag)) > 40.0:
+                  st["bias_ms"] = max(-600.0, min(600.0, float(st["bias_ms"]) + 0.5 * float(lag)))
+          sess._acudx_shift_ms = int(st["n"]) * 40
           if isinstance(getattr(sess, "_acudx_tuning", None), dict):
               sess._acudx_tuning["av_shift_ms"] = sess._acudx_shift_ms
-          return web.json_response({"ok": True, "av_shift_ms": sess._acudx_shift_ms})
+          return web.json_response({"ok": True, "auto": bool(st["auto"]), "av_shift_ms": sess._acudx_shift_ms,
+                                    "bias_ms": round(float(st["bias_ms"]), 1), "sync": sender_sync(sess)})
 
 
       async def close(request: web.Request) -> web.Response:
@@ -3893,7 +3960,14 @@ write_files:
         sleep 5
       done
       # vLLM starts after the runner and reserves its share of the card; the edit server takes what is left.
+      # Without a worker LLM (WORKER_LLM_MODEL=none) it waits for Chatterbox to have loaded its model instead.
       for _ in $(seq 1 480); do
+        if [ "${WORKER_LLM_MODEL:-}" = none ]; then
+          $compose exec -T chatterbox curl -sf http://localhost:4123/health 2>/dev/null | grep -q '"initialization_state":"ready"' && break
+          [ -f /opt/acudx/public/avatar-status/chatterbox-failed ] && break
+          sleep 5
+          continue
+        fi
         $compose exec -T vllm curl -sf -o /dev/null http://localhost:8000/health >/dev/null 2>&1 && break
         cid=$($compose ps -aq vllm 2>/dev/null)
         [ -n "$cid" ] && [ "$(docker inspect -f '{{.State.Status}}' "$cid" 2>/dev/null)" = exited ] && break
@@ -4156,7 +4230,9 @@ runcmd:
   - |
     cd /opt/acudx && set -a && . ./.env && set +a && . ./images.sh
     mark "images: fetching"
-    for img in vllm/vllm-openai:v0.11.0 "$SPEACHES_IMAGE" ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4 \
+    # No worker LLM: the vLLM image (about 10 GB) is not pulled either, so the other pulls get the bandwidth.
+    vllm_img=vllm/vllm-openai:v0.11.0; [ "${WORKER_LLM_MODEL:-}" = none ] && vllm_img=""
+    for img in $vllm_img "$SPEACHES_IMAGE" ghcr.io/remsky/kokoro-fastapi-gpu:v0.2.4 \
                caddy:2.9.1 nginx:1.30.6-alpine ghcr.io/coturn/coturn:4.18.0-debian; do
       ( for i in 1 2 3; do docker pull -q "$img" >/dev/null 2>&1 && break; sleep 10; done; mark "image pulled $img" ) &
     done
@@ -4203,9 +4279,16 @@ runcmd:
       [ "$av" = 1 ] && [ "$cb" = 1 ] && break
       sleep 5
     done
-    mark "vllm: starting"
-    timeout 2400 docker compose up -d --wait vllm || echo "acudx - vllm did not become healthy within 40 min" >&2
-    mark "vllm: healthy"
+    # No worker LLM (WORKER_LLM_MODEL=none: the gateway serves the text with Claude, WorkerPolicy.worker_llm):
+    # vLLM never starts and its share of the card goes to the voice and the image edits (docs/architecture/18
+    # 6.3.13: on an A100 40 GB it held 18 GB that a Claude deployment never used).
+    if [ "${WORKER_LLM_MODEL:-}" = none ]; then
+      mark "vllm: off (the gateway serves the text with Claude)"
+    else
+      mark "vllm: starting"
+      timeout 2400 docker compose up -d --wait vllm || echo "acudx - vllm did not become healthy within 40 min" >&2
+      mark "vllm: healthy"
+    fi
   # Task 24 check: a fresh container from the same service definition reports what torch sees.
   - |
     cd /opt/acudx && set -a && . ./.env && set +a

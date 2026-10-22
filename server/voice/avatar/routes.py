@@ -388,6 +388,8 @@ async def offer(request: Request, body: OfferBody, user: Principal = Depends(cur
     s.worker_session = str(ans["sessionid"])
     s.metrics["answer_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
     s.metrics["av_shift_ms"] = int(runner_tuning(svc.settings).get("av_shift_ms", 0))
+    # A runner with auto sync keeps the delay on its own sender clock; the browser's measure is its residual.
+    s.metrics["auto_sync"] = bool(ans.get("auto_sync"))
     if s.appearance is not None:
         s.appearance.worker_session = s.worker_session
     # Open the audio WebSocket now, while the browser finishes ICE, so the first line does not pay it.
@@ -609,6 +611,20 @@ async def lipsync(request: Request, body: LipLagBody, user: Principal = Depends(
         return {"av_shift_ms": current, "changed": False, "why": "overlapping_lines"}
     if body.score is not None and body.score < LIP_MIN_SCORE:
         return {"av_shift_ms": current, "changed": False, "why": "weak_correlation"}
+    if s.metrics.get("auto_sync"):
+        # The runner sets the delay from its measured send-time skew once a second (the sign comes from the
+        # measurement); the browser's offset only trims the residual the sender cannot see (decode, render).
+        worker = _require_worker(svc, s)
+        try:
+            got = await mt.tune(svc.client, worker, s.worker_session, browser_lag_ms=body.lip_lag_ms, score=body.score)
+        except (mt.AvatarWorkerError, httpx.HTTPError) as exc:
+            return {"av_shift_ms": current, "changed": False, "why": str(getattr(exc, "detail", None) or exc)[:120]}
+        if got.get("auto"):
+            s.metrics["av_shift_ms"] = int(got.get("av_shift_ms", current))
+            s.metrics["lip_bias_ms"] = got.get("bias_ms")
+            lags[-1]["sync"] = got.get("sync")
+            return {"av_shift_ms": s.metrics["av_shift_ms"], "changed": False, "auto": True,
+                    "bias_ms": got.get("bias_ms"), "sync": got.get("sync")}
     want = next_av_shift(current, body.lip_lag_ms)
     if want == current:
         return {"av_shift_ms": current, "changed": False}

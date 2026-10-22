@@ -48,6 +48,8 @@ class Runner:
         self.avatars: dict[str, bytes] = {}
         self.refs: dict[str, str | None] = {}
         self.tunings: list[dict] = []
+        self.auto_sync = False
+        self.bias = 0.0
         self.puts: list[tuple[str, str | None]] = []   # (avatar_id, ref) in preparation order
         self.priorities: dict[str, str | None] = {}    # avatar_id -> ?priority= of its preparation
         self.offers: list[dict] = []
@@ -95,7 +97,8 @@ class Runner:
             auth(authorization)
             body = await request.json()
             self.offers.append(body)
-            return {"sdp": "v=0\r\nanswer", "type": "answer", "sessionid": f"lt-{len(self.offers)}"}
+            reply = {"sdp": "v=0\r\nanswer", "type": "answer", "sessionid": f"lt-{len(self.offers)}"}
+            return {**reply, "auto_sync": True} if self.auto_sync else reply
 
         @app.post("/avatar/humanaudio")
         async def humanaudio(sessionid: str = Form(...), file: UploadFile = File(...),
@@ -111,6 +114,10 @@ class Runner:
             auth(authorization)
             body = await request.json()
             self.tunings.append(body)
+            if "browser_lag_ms" in body:      # a runner with auto sync: the measure moves its bias
+                self.bias += 0.5 * body["browser_lag_ms"] if abs(body["browser_lag_ms"]) > 40 else 0.0
+                return {"ok": True, "auto": True, "av_shift_ms": 400, "bias_ms": self.bias,
+                        "sync": {"video_minus_audio_ms": -400.0, "delay_ms": 400, "lag_ms": 0.0}}
             return {"ok": True, "av_shift_ms": body["av_shift_ms"]}
 
         @app.post("/avatar/close")
@@ -770,6 +777,27 @@ def test_the_tile_reported_lip_offset_moves_the_runner_delay_for_the_next_line(t
                       headers=OTHER).status_code == 404
         m = c.get("/v1/voice/avatar/metrics", params={"session_id": sid}, headers=USER).json()["metrics"]
         assert m["av_shift_ms"] == 320 and [x["lip_lag_ms"] for x in m["lip_lags"]] == [-300, 400, 20]
+
+
+def test_a_runner_with_auto_sync_gets_the_browser_measure_as_its_residual(tmp_path, runner_sockets):
+    # docs/architecture/18 6.3.13: the runner sets the delay from its own send-time skew; the gateway passes
+    # the browser's offset on (its bias), and never fights it with a fixed delay.
+    runner = Runner()
+    runner.auto_sync = True
+    app, _ = _app(tmp_path, runner=runner, worker=FakeWorkerManager(ready=True), avatar_preroll_ms=0)
+    with TestClient(app) as c:
+        sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
+        assert c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"},
+                      headers=USER).status_code == 200
+        r = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 120, "score": 0.6},
+                   headers=USER).json()
+        assert r["auto"] is True and r["bias_ms"] == 60.0 and r["av_shift_ms"] == 400
+        assert runner.tunings == [{"sessionid": "lt-1", "browser_lag_ms": 120.0, "score": 0.6}]
+        weak = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 500, "score": 0.1},
+                      headers=USER).json()
+        assert weak["why"] == "weak_correlation" and len(runner.tunings) == 1
+        m = c.get("/v1/voice/avatar/metrics", params={"session_id": sid}, headers=USER).json()["metrics"]
+        assert m["auto_sync"] is True and m["av_shift_ms"] == 400 and m["lip_lags"][0]["sync"]["lag_ms"] == 0.0
 
 
 def test_the_calls_portrait_is_prepared_with_call_priority(tmp_path, runner_sockets):
