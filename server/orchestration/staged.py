@@ -99,6 +99,7 @@ LAYER_CONCURRENCY = max(1, int(os.environ.get("CASEGEN_LAYER_CONCURRENCY", "1") 
 # CASEGEN_LAYER_CONCURRENCY, when set, wins on every route (and is then one global limit).
 CLAUDE_LAYER_CONCURRENCY = max(1, int(os.environ.get("CASEGEN_CLAUDE_LAYER_CONCURRENCY", "6") or "6"))
 CONTINUATION_CAP_S = 420.0     # wall-clock cap of the background continuation
+KERNEL_WAIT_S = 30.0           # a layer asked for before the kernel exists waits this long for it
 DEFAULT_ETA_MS = {"s1": 15_000, "history": 10_000, "exam": 6_000, "treatments": 15_000, "results": 8_000}
 
 HISTORY_CLUSTERS: dict[str, tuple[str, ...]] = {
@@ -143,11 +144,22 @@ def layer_kind(layer: str) -> str:
     return layer.split(".", 1)[0]
 
 
-def continuation_waves(names: list[str]) -> list[list[str]]:
+def continuation_waves(names: list[str], *, history_at_once: bool = False) -> list[list[str]]:
     """The core layers in dependency order. ``history.presenting`` first (every later layer
     reads it in the ALREADY AUTHORED ledger), then the other history and exam layers (they only
     read the opening, the kernel and the presenting story), then the treatment table and the
-    results (they read history and exam). Layers inside a wave are independent."""
+    results (they read history and exam). Layers inside a wave are independent.
+
+    ``history_at_once`` (the Claude route, where calls do not share a decode budget): every history
+    layer in the first wave, so the whole history the patient can be asked about is written about 10 s
+    after the kernel instead of 20 s (live 2026-10-22: a question about medicines right after the call
+    opened waited for presenting and then for background). They read the kernel and the opening, which
+    already fix the facts a later layer must not contradict."""
+    if history_at_once:
+        first = [n for n in names if layer_kind(n) == "history"]
+        clinical = [n for n in names if layer_kind(n) == "exam"]
+        rest = [n for n in names if n not in first and n not in clinical]
+        return [w for w in (first, clinical, rest) if w]
     first = [n for n in names if n == "history.presenting"]
     clinical = [n for n in names if layer_kind(n) in ("history", "exam") and n not in first]
     rest = [n for n in names if n not in first and n not in clinical]
@@ -231,6 +243,32 @@ COURSE_FLAGS: tuple[str, ...] = ("heart_failure", "renal_failure", "copd", "beta
                                  "killip2", "hypercapnic_target")
 ALLERGY_CLASSES: tuple[str, ...] = ("penicillin", "cephalosporin", "nsaid", "opioid", "contrast", "sulfonamide")
 ALLERGY_REACTIONS: tuple[str, ...] = ("rash", "angioedema", "bronchospasm", "anaphylaxis", "pruritus")
+# How a chart line may name each allergy class, in English and Turkish (stems, matched case-folded). Live
+# 2026-10-22 a Turkish case wrote "Penisilin alerjisi (döküntü)" and the background gate, which looked for the
+# English word only, rejected the layer on every attempt: every question about medicines then waited 21 to 23 s.
+ALLERGY_NAMES: dict[str, tuple[str, ...]] = {
+    "penicillin": ("penicillin", "penisilin", "amoxicillin", "amoksisilin", "ampicillin", "ampisilin",
+                   "co-amoxiclav", "augmentin", "flucloxacillin"),
+    "cephalosporin": ("cephalosporin", "sefalosporin", "cephalexin", "sefaleksin", "ceftriaxone", "seftriakson",
+                      "cefuroxime", "sefuroksim", "cefazolin", "sefazolin"),
+    "nsaid": ("nsaid", "nsaii", "steroid olmayan", "anti-inflammator", "antiinflamatuvar", "aspirin", "ibuprofen",
+              "diclofenac", "diklofenak", "naproxen", "naproksen"),
+    "opioid": ("opioid", "opiat", "opiyat", "morphine", "morfin", "codeine", "kodein", "tramadol"),
+    "contrast": ("contrast", "kontrast", "iodine", "iyot", "iyotlu"),
+    "sulfonamide": ("sulfonamide", "sulfonamid", "sulfa", "sülfa", "sulpha", "co-trimoxazole", "kotrimoksazol",
+                    "trimethoprim", "trimetoprim"),
+}
+
+
+def _fold(text: str) -> str:
+    """Case-fold for both locales (Turkish dotted and dotless I)."""
+    return str(text or "").replace("İ", "i").replace("I", "ı").casefold().replace("ı", "i")
+
+
+def names_allergy(text: str, agent_class: str) -> bool:
+    """Does a chart line name an allergy of ``agent_class`` (English or Turkish)?"""
+    low = _fold(text)
+    return any(_fold(n) in low for n in ALLERGY_NAMES.get(agent_class, (agent_class,)))
 
 
 def course_library(cond_id: str) -> dict[str, Any]:
@@ -599,12 +637,11 @@ def gate_layer(layer: str, data: dict[str, Any], state: dict[str, Any]) -> tuple
             problems = []
             if not str(data.get("pmh") or "").strip():
                 problems.append("pmh is empty: write the past medical history (or 'No significant history')")
-            allergy_text = str(data.get("allergies") or "").lower()
+            allergy_text = str(data.get("allergies") or "")
             if not allergy_text.strip():
                 problems.append("allergies is empty: state the allergies or 'No known drug allergies'")
             for a in (state.get("kernel") or {}).get("allergies") or []:
-                if a.get("agent_class") and a["agent_class"] not in allergy_text and not (
-                        a["agent_class"] == "penicillin" and "amoxicillin" in allergy_text):
+                if a.get("agent_class") and not names_allergy(allergy_text, a["agent_class"]):
                     problems.append(f"allergies must state the {a['agent_class']} allergy ({a.get('reaction')})")
             if problems:
                 raise LayerRejected(problems)
@@ -1123,6 +1160,9 @@ class StagedRuntime:
         self._thread_limiters: dict[str, _Limiter] = {}  # per-thread limits (Claude route)
         # Queued background layers a learner is now waiting for: they skip the queue.
         self._urgent: set[tuple[str, str]] = set()
+        # Set once the thread's kernel stage is over (written or failed): a history or exam layer the learner
+        # asks for before then waits for it, so it is written against the kernel like the continuation's.
+        self._kernel_done: dict[str, asyncio.Event] = {}
         self._medians: dict[str, deque[float]] = {k: deque(maxlen=50) for k in DEFAULT_ETA_MS}
 
     # ------------------------------------------------------------- events
@@ -1226,10 +1266,16 @@ class StagedRuntime:
         self._tasks[thread_id] = asyncio.create_task(self._run(thread_id))
         return thread_id
 
+    def kernel_event(self, thread_id: str) -> asyncio.Event:
+        return self._kernel_done.setdefault(thread_id, asyncio.Event())
+
     async def _run(self, thread_id: str) -> None:
-        ok = await self._s1(thread_id)
-        if ok:
-            await self._kernel(thread_id)
+        try:
+            ok = await self._s1(thread_id)
+            if ok:
+                await self._kernel(thread_id)
+        finally:
+            self.kernel_event(thread_id).set()
         if ok and self.continuation:
             try:
                 await asyncio.wait_for(self._continue(thread_id), CONTINUATION_CAP_S)
@@ -1431,8 +1477,19 @@ class StagedRuntime:
         # Dependency order (continuation_waves); inside a wave the limiter decides how many run
         # at once (1 on the GPU worker, 3 on Claude), so the order on one call at a time is the
         # same as before: presenting, the other history and exam layers, treatments, results.
-        for wave in continuation_waves(names):
+        at_once = self._claude_route() and not os.environ.get("CASEGEN_LAYER_CONCURRENCY")
+        for wave in continuation_waves(names, history_at_once=at_once):
             await asyncio.gather(*(self.ensure_layer(thread_id, n, reason="continuation") for n in wave),
+                                 return_exceptions=True)
+        # One more background attempt for a history layer that failed its gate or its JSON: otherwise the first
+        # question that needs it waits for a fresh write (two attempts, 20 s or more on Claude). Safety vetoes
+        # and unreachable models are not retried here.
+        st = self.store.get(thread_id) or {}
+        failed = [n for n in names if layer_kind(n) == "history"
+                  and ((st.get("layers") or {}).get(n) or {}).get("status") == "failed"
+                  and ((st.get("layers") or {}).get(n) or {}).get("error") in ("layer_rejected", "model_output_invalid")]
+        if failed:
+            await asyncio.gather(*(self.ensure_layer(thread_id, n, reason="continuation") for n in failed),
                                  return_exceptions=True)
 
     def _mark_pending(self, thread_id: str, layer: str, reason: str) -> bool:
@@ -1465,6 +1522,16 @@ class StagedRuntime:
         if entry and entry.get("status") == "ready":
             return entry
         key = (thread_id, layer)
+        if (layer_kind(layer) in ("history", "exam") and state.get("kernel") is None and self.running(thread_id)
+                and not self.kernel_event(thread_id).is_set()):
+            try:
+                await asyncio.wait_for(asyncio.shield(self.kernel_event(thread_id).wait()), KERNEL_WAIT_S)
+            except asyncio.TimeoutError:
+                pass
+            state = self.store.get(thread_id) or state
+            entry = (state.get("layers") or {}).get(layer)
+            if entry and entry.get("status") == "ready":
+                return entry
         task = self._layer_tasks.get(key)
         if task is None or task.done():
             self._mark_pending(thread_id, layer, reason)
