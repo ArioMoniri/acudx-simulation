@@ -319,3 +319,53 @@ docs/media/live-avatar/prod-path-v3/. The live site was not touched.
 | Turkish numbers spoken despite the gate | decimal comma, "%92", "140'a 90" not recognised | TR and EN numbers, units, suffixes and BP forms gated (43 tests) |
 | Registry images not published | the workflow never ran | run 39694781382 succeeded; every worker pulled all three images without a filesystem |
 
+
+### Redeploy 2026-10-22 to 5a9d68b (instance replaced, EIP kept)
+
+The user approved the redeploy to the branch head `5a9d68b`, which carries the third video-call
+pass: streamed replies, lip loop, the 80 GB GPU tier, GHCR worker images, the Turkish number fact
+gate and attending tips. The server suite passed on it: 2631 passed, 3 skipped.
+
+Steps:
+- This gateway had no worker on Lambda.
+- `i-0941e2e64a9ff39bc` was terminated. The EIP 63.178.127.100, the security group and the key
+  pair were kept.
+- The stale operator token file and the SSM `operator_token` / `retrieval_code` were cleared.
+- `provision.sh` launched `i-0197847ad9f869851` (t3.large, eu-central-1). It was ready in about
+  6 min (04:05 to 04:11 UTC), with both keys sent.
+
+| Check | Result |
+|---|---|
+| `verify-roles.mjs` `START_CASE=1 FINALIZE=1` | PASS, 8 accounts, 80 checks |
+| 8 roles land on their panels; UI and API gates | PASS |
+| `/idp/admin/` 404, `http://` 308 to https, anonymous case start 401, anonymous mint-code 401, reused provision token 410 | PASS |
+| Student fever case (EN, API) | PASS: playable after 4.1 s; first in-character reply 12.3 s after the question (anthropic, claude-opus-5-5) |
+| TR stat lab (septic shock, UI) | PASS: Laktat landed in 45 s real time |
+| Rehberlik cited card (septic shock, TR) | PASS: SSC (SCCM/ESICM) 2021 and NICE NG253 citations |
+| GPU worker launch and stop (verify-roles) | PASS: woken by `/v1/voice/warm`, stopped by `/bootstrap/operator/gpu/stop` |
+| Video call EN (migraine, cold A100 SXM4 40 GB, us-east-1) | PASS: click to live video 387.7 s (worker launch to ready 321 s); first frame 4207 ms; speech start 2.7 s / 2.5 s; voice to lips 120 / 40 ms; replies in character |
+| Video call TR (same case type, warm worker) | PASS: click to live video 54.9 s; first frame 3943 ms; speech start 4.5 s / 5.5 s; voice to lips 40 / 40 ms; replies in character |
+| No `acudx-worker-*` of this gateway running | PASS: all three this run launched were terminating on Lambda; the other gateway's workers and `acudx-wm-*` were not touched |
+
+Defects and observations:
+- **Lambda boot failures in the 80 GB tier.** The first two cold starts landed on the only 80 GB
+  capacity Lambda offered (gpu_1x_h100_pcie, us-west-3). Both stayed in Lambda's `booting` state
+  until the gateway's `boot_timeout` terminated them, after about 16 min each (0.88 USD each).
+  - The learner saw "Canlı görüntülü görüşme başlatılamadı — Neden: worker_failed", the animated
+    portrait and "Videoyu yeniden dene". The text interview kept working, with a TR reply in
+    8.1 s (`v3-tr-video-worker-failed-fallback.png`).
+  - After a boot timeout the gateway chose the same type and region again; at that moment it was
+    the only 80 GB capacity listed. A later launch fell back to an A100 SXM4 (40 GB), which booted
+    normally.
+  - Suggested follow-up: after a `boot_timeout`, skip that type and region for the next launch.
+- **Warm call slower than claimed.** A warm-worker call took 54.9 s to live video, not 10 to 13 s:
+  the new case's portrait was prepared on demand.
+- **Turkish speech start is 4.5 to 5.5 s**, against 2.5 to 2.7 s in English. This is in line with
+  the other session's note that Turkish is bounded by Chatterbox on a 40 GB card.
+- **Slow Lambda terminate.** One terminated worker stayed in Lambda's `terminating` state for about
+  20 min.
+- **Session ended by a reset.** `reset-accounts` ends signed-in sessions: a student who was signed
+  in got HTTP 401 on the next case start and was asked to sign in again.
+- **GPU spend** that day was about 2.1 USD.
+- **Handover code.** The final code was minted after the video calls with
+  `rotate-code.sh --reset-passwords`, because the calls signed in as the student.
