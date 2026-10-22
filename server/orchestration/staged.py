@@ -459,7 +459,15 @@ def _ledger(state: dict[str, Any]) -> str:
     spec = source_spec(state) if state.get("opening") else {}
     hpi = "; ".join(str(h.get("answer_en") or "")[:80] for h in spec.get("hpi") or [])[:900]
     exam = "; ".join(f"{e.get('maneuver')}: {str(e.get('finding_en') or '')[:60]}" for e in spec.get("exam") or [])
-    return f"ALREADY AUTHORED\n- history: {hpi or '(none)'}\n- exam: {exam[:600] or '(none)'}\n"
+    out = f"ALREADY AUTHORED\n- history: {hpi or '(none)'}\n- exam: {exam[:600] or '(none)'}\n"
+    # A typed question does not wait for a history layer still being written (server/interview/routes.py): the
+    # patient may already have answered from the opening, and the layer must agree with those words.
+    said = [str(t.get("text") or "")[:160] for t in (state.get("interview") or [])
+            if isinstance(t, dict) and t.get("role") == "patient" and str(t.get("text") or "").strip()][-6:]
+    if said:
+        out += ("- the patient already said (the layer must agree with this): "
+                + " | ".join(said))[:1000] + "\n"
+    return out
 
 
 def layer_messages(state: dict[str, Any], layer: str, *, extra: str = "",

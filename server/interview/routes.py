@@ -15,6 +15,12 @@ Pipeline (docs/architecture/20-chat-contract.md):
 5. tutor: with ``guidance`` on, up to three suggested actions; with it off, none;
 6. the exchange is appended to the thread's interview log (server-held transcript).
 
+Latency (production 2026-10-22: 12.3 s to the first typed reply on a fever case): the persona call starts
+next to the guard on every question (kept only when the guard's label gives the same prompt), a typed
+question waits at most ``HISTORY_TYPED_WAIT_S`` for a history layer still being written (the patient then
+answers from what is known, unsure of details, and the layer is written to agree with that answer and is
+marked seen once ready), and the tutor runs beside the persona.
+
 With a live patient video call on the thread (``call_session_id``, the caller's own call), the reply
 is spoken into the call while it is written (server/voice/avatar/turn_speech.py,
 docs/architecture/18 section 6.3.9): the persona call starts speculatively next to the guard (its
@@ -64,6 +70,14 @@ STALL_LINES = {
     "en": ("Hmm, let me think.", "Give me a moment.", "Let me think about that."),
     "tr": ("Hmm, bir düşüneyim.", "Bir saniye, düşüneyim.", "Şöyle bir düşüneyim."),
 }
+
+
+# A typed question waits this long for a history layer that is still being written; after that the patient answers
+# from what is already known (the opening, the kernel's allergies, the layers already written). Production
+# 2026-10-22: the first typed question, asked as the case opened, waited 12 s for the kernel and the layer.
+HISTORY_TYPED_WAIT_S = 1.0
+# History layers a typed answer did not wait for: kept referenced until written (they mark themselves seen).
+_LATE_LAYERS: set[asyncio.Task[Any]] = set()
 
 
 def stall_line(locale: str, message: str) -> str:
@@ -241,18 +255,20 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
         _bg = asyncio.get_running_loop().create_task(svc.prewarm_tts(call.lang, getattr(call, "worker_origin", None)))
         _PREWARMS.add(_bg)
         _bg.add_done_callback(_PREWARMS.discard)
-    if call is not None and gateway is not None:
+    if gateway is not None:
         # Speculative persona next to the guard: the rules' label and language give the prompt; it is
-        # kept only if the guard's decision produces exactly the same prompt (and spoken only after it).
+        # kept only if the guard's decision produces exactly the same prompt (and, on a call, spoken only
+        # after it). Typed questions too: the guard (0.7 to 8 s on Claude Haiku) no longer adds to the reply.
         rules = rule_classify(message, {"scope_terms": [complaint]})
         if not (rules.label == "unsafe" and rules.reason in ("self_harm_disclosure", "abuse_disclosure")):
             loc0 = rules.language if rules.language in ("en", "tr") else _locale(body, st, rules)
             msgs0 = persona_turn(patient_view(st, locale=loc0), _transcript(st), message, rules.label)
             speculative = PersonaStream(gateway, msgs0, max_tokens=PERSONA_MAX_TOKENS, timings=timings,
-                                        speculative=True)
-            # Its TTS starts too (held back from the call until the guard confirms the prompt).
-            spec_speaker = _call_speaker(request, call, persona=speculative, timings=timings,
-                                         gate=_scrubber(st, patient_view(st, locale=loc0), loc0))
+                                        speculative=True, task="patient_live" if call is not None else "patient")
+            if call is not None:
+                # Its TTS starts too (held back from the call until the guard confirms the prompt).
+                spec_speaker = _call_speaker(request, call, persona=speculative, timings=timings,
+                                             gate=_scrubber(st, patient_view(st, locale=loc0), loc0))
 
     decision = await classify_message(gateway, message, case_context={"scope_terms": [complaint]},
                                       chief_complaint=complaint)
@@ -261,14 +277,27 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
     history_task = None
     history_meta: dict[str, Any] = {}
     cluster = intent_cluster(decision.intent) if decision.label == "clinical" and decision.intent else None
-    if cluster and call is not None and not _layer_ready(st, f"history.{cluster}"):
-        # A live call does not wait in silence for a layer still being written (see StalledPersona).
+    if cluster and not _layer_ready(st, f"history.{cluster}"):
+        # A live call does not wait in silence for a layer still being written (see StalledPersona), and a
+        # typed question does not wait for it beyond HISTORY_TYPED_WAIT_S.
         history_task = asyncio.ensure_future(_ensure_history(rt, thread_id, decision.intent))
-        done, _pending = await asyncio.wait({history_task}, timeout=HISTORY_STALL_AFTER_S)
+        waits: set[Any] = {history_task}
+        if call is None and speculative is not None:
+            # A typed reply already written from what is known does not idle for the rest of the budget.
+            waits.add(speculative.task)
+        await asyncio.wait(waits, timeout=HISTORY_STALL_AFTER_S if call is not None else HISTORY_TYPED_WAIT_S,
+                           return_when=asyncio.FIRST_COMPLETED)
+        done = history_task.done()
         layer = history_task.result() if done else None
         history_meta = {"layer": f"history.{cluster}", "at_ask": "writing",
-                        "outcome": "written_in_time" if done else "stalled"}
+                        "outcome": "written_in_time" if done else ("stalled" if call is not None
+                                                                   else "answered_before_layer")}
         if done:
+            history_task = None
+        elif call is None:
+            # Answered from what is known; the layer goes on being written (and marks itself seen).
+            _LATE_LAYERS.add(history_task)
+            history_task.add_done_callback(_LATE_LAYERS.discard)
             history_task = None
     else:
         layer = await _ensure_history(rt, thread_id, decision.intent) if decision.label == "clinical" else None
@@ -284,6 +313,7 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
     meta: dict[str, Any] = {"guard_source": decision.source, "guard_model": decision.model,
                             "guard_rule": decision.rule}
     speaker = None
+    tutor_task: Optional[asyncio.Future[Any]] = None
     if decision.label == "unsafe" and decision.reason in ("self_harm_disclosure", "abuse_disclosure"):
         # The Safety Interceptor breaks character with real support resources; no model call.
         if speculative is not None:
@@ -335,12 +365,21 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
                 speaker = _call_speaker(request, call, persona=persona, timings=timings, gate=scrub)
             if speaker is not None:
                 speaker.release()
+        if body.guidance:
+            # Beside the persona, not after it (it reads the question; the reply adds little to what to do next).
+            asked = {t.get("intent") for t in transcript if t.get("intent")}
+            if decision.intent:
+                asked.add(decision.intent)
+            tutor_task = asyncio.ensure_future(T.suggest(gateway, st, view, transcript + [
+                {"role": "doctor", "text": message}], asked=asked, locale=locale))
         try:
             res = await persona.result() if persona is not None else await gateway.chat(
                 msgs, task="patient", max_tokens=PERSONA_MAX_TOKENS)
         except (GatewayError, EgressBlocked) as exc:
             if speaker is not None:
                 speaker.cancel()
+            if tutor_task is not None:
+                tutor_task.cancel()
             return _error(503, "model_unreachable",
                           "The patient model could not be reached; no reply was generated.",
                           cause=f"{type(exc).__name__}: {str(exc)[:200]}", retryable=True,
@@ -359,6 +398,8 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
         if not reply:
             if speaker is not None:
                 speaker.cancel()
+            if tutor_task is not None:
+                tutor_task.cancel()
             return _error(502, "model_output_invalid", "the patient model returned an empty reply", retryable=True)
         gate = fact_assertion_gate(reply, {"sanctioned_facts": view.told}, lang=locale)
         reply = gate.utterance
@@ -377,11 +418,16 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
 
     actions: list[dict[str, Any]] = []
     if body.guidance:
-        asked = {t.get("intent") for t in transcript if t.get("intent")}
-        if decision.intent:
-            asked.add(decision.intent)
-        actions, meta["tutor_source"] = await T.suggest(gateway, st, view, transcript + [
-            {"role": "doctor", "text": message}, {"role": "patient", "text": reply}], asked=asked, locale=locale)
+        if tutor_task is not None:
+            actions, meta["tutor_source"] = await tutor_task
+        else:
+            # The safety reply (no persona call): the tutor reads the exchange as before.
+            asked = {t.get("intent") for t in transcript if t.get("intent")}
+            if decision.intent:
+                asked.add(decision.intent)
+            actions, meta["tutor_source"] = await T.suggest(gateway, st, view, transcript + [
+                {"role": "doctor", "text": message}, {"role": "patient", "text": reply}], asked=asked, locale=locale)
+        timings.mark("tutor_ms")
 
     now = time.time()
 

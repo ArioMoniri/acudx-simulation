@@ -45,6 +45,10 @@ class PatientView:
     trend: str = "same"                  # better | same | worse
     ready_history: list[str] = field(default_factory=list)
     locale: str = "en"
+    # A staged case whose history layers are still being written: a typed question no longer waits for them
+    # (server/interview/routes.py), so the patient keeps to what YOUR STORY says and is unsure of the rest,
+    # and the layer written afterwards agrees with what was said (staged._ledger).
+    recalling: bool = False
 
 
 def _s(v: Any) -> str:
@@ -88,6 +92,11 @@ def derangement(v: dict[str, Any]) -> float:
             + max(0.0, 94 - spo2) / 2 + max(0.0, t - 37.8) * 1.5 + max(0.0, 35.5 - t) * 1.5)
 
 
+HISTORY_LAYERS = ("history.presenting", "history.associated", "history.background")
+RECALLING_NOTE = ("Parts of your story are still coming back to you: for a detail YOUR STORY does not give "
+                  "(an exact time, an amount, a name), say you are not sure rather than guess.")
+
+
 def _history_lines(state: dict[str, Any]) -> tuple[list[str], list[str]]:
     lines: list[str] = []
     ready: list[str] = []
@@ -96,7 +105,7 @@ def _history_lines(state: dict[str, Any]) -> tuple[list[str], list[str]]:
         if _s(st.get("text")):
             lines.append(_s(st["text"]))
     layers = state.get("layers") or {}
-    for name in ("history.presenting", "history.associated", "history.background"):
+    for name in HISTORY_LAYERS:
         entry = layers.get(name) or {}
         if entry.get("status") != "ready":
             continue
@@ -170,6 +179,7 @@ def patient_view(state: dict[str, Any], *, locale: Optional[str] = None) -> Pati
         communication=_s(persona.get("communication")),
         health_literacy=_s(persona.get("health_literacy")) or "average",
         story=story, ready_history=ready, locale=locale or _s(state.get("locale")) or "en",
+        recalling=bool(state.get("condition") and opening) and len(ready) < len(HISTORY_LAYERS),
     )
     arrival = {k: (opening.get("triage_vitals") or {}).get(k) for k in _VITAL_KEYS}
     director = state.get("director") if isinstance(state.get("director"), dict) else {}
@@ -309,7 +319,10 @@ def persona_turn(view: PatientView, transcript: list[dict[str, str]], message: s
     told = view.told or ["(nothing: you know no numbers, results or diagnosis)"]
     user = ["[HOW YOU ARE RIGHT NOW]"] + [f"  - {n}" for n in now]
     user += ["[WHAT STAFF TOLD YOU]"] + [f"  - {t}" for t in told]
-    user += [f"[NOTE] {_DIRECTIVE.get(label, _DIRECTIVE['clinical'])}", "", f"[The doctor says]: {message}"]
+    user += [f"[NOTE] {_DIRECTIVE.get(label, _DIRECTIVE['clinical'])}"]
+    if view.recalling:
+        user += [f"[NOTE] {RECALLING_NOTE}"]
+    user += ["", f"[The doctor says]: {message}"]
     msgs.append({"role": "user", "content": "\n".join(user)})
     return msgs
 

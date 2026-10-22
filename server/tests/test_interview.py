@@ -100,7 +100,7 @@ async def test_free_text_question_gets_a_grounded_persona_reply(runtime, client)
     assert body["intent"] == "medications" and body["layer"] == "history.background"
     assert body["actions"] == [] and body["state_advance"] is True
     assert body["meta"]["provider"] == "anthropic" and body["meta"]["guard_source"] == "rules+model"
-    assert calls == ["guard", "persona"]
+    assert sorted(calls) == ["guard", "persona"]   # the persona starts next to the guard
     persona = next(c for c in dbl.calls if "role-playing ONE patient" in c["system"][0]["text"])
     system = persona["system"][0]["text"]
     st = runtime.cases.get(tid)
@@ -168,6 +168,91 @@ async def test_foreign_thread_is_404(runtime, client):
     gw, tid = await _setup(runtime, key=ANT, dbl=AnthropicDouble(responder=responder([])))
     r = await client.post(f"/v2/case/{tid}/interview", json={"message": "hi"}, headers={"X-User-Id": "L-other"})
     assert r.status_code == 404
+    await gw.aclose()
+
+
+async def test_a_typed_question_does_not_wait_for_a_history_layer_still_being_written(runtime, client, scenario):
+    """Production 2026-10-22 (5a9d68b): the first typed reply on a fever case took 12.3 s (15.3 s on a local
+    gateway with Claude: guard 1.3 s, then 12 s for the kernel and the history layer, then the persona). A
+    typed question now waits at most HISTORY_TYPED_WAIT_S for a layer still being written; the patient answers
+    from what is known, the layer is written to agree with that answer, and it is marked seen once ready."""
+    import asyncio
+    import time
+
+    from server.interview import routes as R
+
+    scenario.layer_delay_s = 3.0
+    calls: list[str] = []
+    s = make_settings(airgapped=False, anthropic_key=ANT)
+    gw = ModelGateway(s, anthropic=AnthropicProvider(s, http_client=AnthropicDouble(responder=responder(calls)).client(),
+                                                     max_retries=0))
+    await gw.start()
+    app_module.app.state.gateway = gw
+    app_module.app.state.orchestration = runtime
+    tid = runtime.staged.start({"system": "cardiovascular", "locale": "en", "learner_id": "L-int"}, "th-early")
+    for _ in range(500):
+        if (runtime.cases.get(tid) or {}).get("opening"):
+            break
+        await asyncio.sleep(0.01)
+    t = time.monotonic()
+    r = await client.post(f"/v2/case/{tid}/interview", json={"message": "Do you take any medicine at home?"},
+                          headers=ME)
+    took = time.monotonic() - t
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert took < R.HISTORY_TYPED_WAIT_S + 1.5, took
+    # The reply was already written from what is known: no idling for the rest of the layer budget.
+    tm = body["meta"]["timings"]
+    assert tm["history_ms"] - tm["guard_ms"] < R.HISTORY_TYPED_WAIT_S * 1000 * 0.5, tm
+    assert body["reply"] == "I don't take any regular medicines, doctor."
+    assert body["layer"] is None and body["state_advance"] is True
+    assert body["meta"]["history"] == {"layer": "history.background", "at_ask": "writing",
+                                       "outcome": "answered_before_layer"}
+    # The layer lands later and counts as drawn out by that question.
+    for _ in range(800):
+        entry = ((runtime.cases.get(tid) or {}).get("layers") or {}).get("history.background") or {}
+        if entry.get("status") == "ready" and entry.get("seen"):
+            break
+        await asyncio.sleep(0.01)
+    assert entry.get("status") == "ready" and entry.get("seen") is True
+    await runtime.staged.wait(tid)
+    await gw.aclose()
+
+
+def test_a_history_layer_is_written_to_agree_with_what_the_patient_already_said():
+    from server.orchestration import staged as S
+
+    state = {"condition": {"id": "cap", "label_en": "x", "system": "respiratory"}, "locale": "en",
+             "interview": [{"role": "doctor", "text": "When did the fever start?"},
+                           {"role": "patient", "text": "The fever started yesterday evening, I think."}]}
+    user = S._ledger(state)
+    assert "The fever started yesterday evening, I think." in user
+    assert "When did the fever start?" not in user          # the patient's words only
+    assert "patient already said" in user.lower()
+    assert "already said" not in S._ledger({"condition": state["condition"], "locale": "en"}).lower()
+
+
+async def test_typed_persona_starts_next_to_the_guard(runtime, client, monkeypatch):
+    """The persona call is started next to the guard on typed questions too (it was on live calls only), so a
+    slow guard does not add to the reply; it is kept only when the guard's label gives the same prompt."""
+    import asyncio
+
+    from server.interview import routes as R
+
+    gw, tid = await _setup(runtime, key=ANT, dbl=AnthropicDouble(responder=responder([])))
+    real = R.classify_message
+
+    async def slow_guard(*a, **kw):
+        await asyncio.sleep(0.6)
+        return await real(*a, **kw)
+
+    monkeypatch.setattr(R, "classify_message", slow_guard)
+    r = await client.post(f"/v2/case/{tid}/interview", json={"message": "Do you take any medicine at home?"},
+                          headers=ME)
+    body = r.json()
+    assert body["meta"]["speculative"] == "kept"
+    t = body["meta"]["timings"]
+    assert t["persona_done_ms"] - t["guard_ms"] < 300     # the persona did not start after the guard
     await gw.aclose()
 
 
