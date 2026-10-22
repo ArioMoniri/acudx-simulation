@@ -122,20 +122,35 @@ def test_detection_runs_on_one_canvas_size_and_maps_the_box_back(tmp_path):
     import numpy as np
 
     seen: list[tuple[int, int]] = []
+    ns = {"np": np, "cv2": cv2, "os": os, "DETECT_CANVAS": (720, 768), "STATE": {}}
+    _pieces({"_canvas_for", "_detect_fixed"}, ns)
 
-    def get_landmark_and_bbox(paths, _shift):
-        im = cv2.imread(paths[0])
-        seen.append(im.shape[:2])
-        return [(100.0, 50.0, 300.0, 400.0)], [im]
+    def detect_face(img, mode=None):
+        canvas, s = ns["_canvas_for"](img)
+        seen.append(canvas.shape[:2])
+        return [v / s for v in (100.0, 50.0, 300.0, 400.0)], {"mode": "fast"}
 
-    ns = {"np": np, "cv2": cv2, "os": os, "DETECT_CANVAS": (720, 768), "coord_placeholder": (0.0, 0.0, 0.0, 0.0),
-          "get_landmark_and_bbox": get_landmark_and_bbox}
-    _pieces({"_detect_fixed"}, ns)
+    ns["detect_face"] = detect_face
     box = ns["_detect_fixed"](np.zeros((720, 702, 3), np.uint8), str(tmp_path / "d.png"))
     assert box == [100.0, 50.0, 300.0, 400.0]
     big = ns["_detect_fixed"](np.zeros((1440, 1404, 3), np.uint8), str(tmp_path / "d.png"))
     assert big == [200.0, 100.0, 600.0, 800.0]                  # scaled down for detection, mapped back
     assert seen == [(720, 768), (720, 768)] and not (tmp_path / "d.png").exists()
+    assert ns["STATE"]["last_detect"] == {"mode": "fast"}
+
+
+def test_the_landmark_box_rule_is_musetalks():
+    import numpy as np
+
+    ns = {"np": np}
+    _pieces({"_landmark_box"}, ns)
+    lm = np.zeros((68, 2), np.int32)
+    lm[:, 0] = np.linspace(100, 300, 68)
+    lm[:, 1] = np.linspace(200, 400, 68)
+    lm[29] = (200, 300)
+    # nose bridge at y 300, chin at y 400: the box starts 100 px above the bridge
+    assert tuple(int(v) for v in ns["_landmark_box"](lm, (1, 2, 3, 4))) == (100, 200, 300, 400)
+    assert ns["_landmark_box"](np.zeros((68, 2), np.int32), (1, 2, 3, 4)) == (1, 2, 3, 4)   # unusable: S3FD box
 
 
 def test_a_ladder_preparation_pauses_while_a_call_speaks_but_a_calls_own_does_not():

@@ -132,12 +132,22 @@ class VoiceService:
         if worker is not None:
             yield worker
 
-    async def _tts_candidates(self, flags: dict[str, bool]) -> AsyncIterator[ProviderEndpoint]:
-        """As :meth:`_candidates`, but the GPU worker step never waits on a cold boot: with no
-        ready worker it starts one in the background and sets ``flags["pending"]``."""
+    async def _pinned_first(self, pinned: ProviderEndpoint) -> AsyncIterator[ProviderEndpoint]:
         for ep in self.resolver.endpoints("tts"):
             yield ep
-        worker = await self._worker_for_tts(flags)
+        yield pinned
+
+    async def _tts_candidates(self, flags: dict[str, bool], origin: str | None = None
+                              ) -> AsyncIterator[ProviderEndpoint]:
+        """As :meth:`_candidates`, but the GPU worker step never waits on a cold boot: with no
+        ready worker it starts one in the background and sets ``flags["pending"]``. ``origin``: the
+        worker of the caller's live call, used when it is ready (else the pool's pick)."""
+        for ep in self.resolver.endpoints("tts"):
+            yield ep
+        pinned = self.resolver.worker_at("tts", origin) if origin and hasattr(self.resolver, "worker_at") else None
+        if pinned is not None:
+            flags["worker"] = True
+        worker = pinned or await self._worker_for_tts(flags)
         if worker is not None:
             # The worker's Kokoro (English only, /tts-en): the patient keeps an English voice when the
             # worker's Chatterbox is down (live 2026-10-21: its image build failed on a PPA outage), and
@@ -248,7 +258,7 @@ class VoiceService:
     # -- TTS --------------------------------------------------------------------- #
     async def tts(self, text: str, *, lang: str, sex: str | None, age: int | float | None,
                   voice_id: str | None = None, output_format: str = "mp3", speed: float = 1.0,
-                  stream: bool = False, prefer_fast: bool = False) -> TtsOutcome:
+                  stream: bool = False, prefer_fast: bool = False, origin: str | None = None) -> TtsOutcome:
         text = text.strip()
         if not text:
             raise ValueError("text is empty")
@@ -256,7 +266,7 @@ class VoiceService:
         profile = profiles.profile_for(sex, age, lang)
         reasons: list[str] = []
         flags = {"pending": False, "worker": False, "prefer_fast": prefer_fast and lang == "en"}
-        async for ep in self._tts_candidates(flags):
+        async for ep in self._tts_candidates(flags, origin):
             name = adapter_name_for(ep)
             adapter = TTS_ADAPTERS[name]
             if adapter.languages is not None and lang not in adapter.languages:
@@ -297,14 +307,15 @@ class VoiceService:
         raise NoVoiceProvider("tts", self._refusal_reasons("tts") + reasons, airgapped=self.settings.airgapped,
                               pending_launch=flags["pending"])
 
-    async def prewarm_tts(self, lang: str) -> str | None:
+    async def prewarm_tts(self, lang: str, origin: str | None = None) -> str | None:
         """Open the connection the next ``tts(lang)`` call will use (TLS through any egress proxy, the
         worker's health TTL), so a call's first patient line does not pay it. The first row that would
         serve ``lang`` gets one cheap GET: the worker's ``/tts/health`` with its bearer, a registry row's
         base URL without credentials (any status is fine; only the connection matters). Never raises."""
         lang = profiles.normalize_lang(lang)
+        pinned = self.resolver.worker_at("tts", origin) if origin and hasattr(self.resolver, "worker_at") else None
         try:
-            async for ep in self._candidates("tts"):
+            async for ep in (self._pinned_first(pinned) if pinned is not None else self._candidates("tts")):
                 adapter = TTS_ADAPTERS[adapter_name_for(ep)]
                 if adapter.languages is not None and lang not in adapter.languages:
                     continue

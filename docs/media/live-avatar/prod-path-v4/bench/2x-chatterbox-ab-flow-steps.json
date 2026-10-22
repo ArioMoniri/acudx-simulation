@@ -1,0 +1,47 @@
+{
+ "steps6": {
+  "config": {
+   "stream_tokens": true,
+   "stream_prompt_tokens": 0,
+   "stream_flow_steps": 6,
+   "stream_schedule": [
+    24,
+    24,
+    48,
+    64
+   ]
+  },
+  "first_audio_s": {
+   "min": 0.657,
+   "median": 0.665,
+   "max": 0.681
+  },
+  "max_gap_s": 0.0,
+  "lines_with_gap_over_100ms": 0,
+  "s3gen_ms_per_pass": 266.8,
+  "t3_ms_per_token": 16.2,
+  "prompt_tokens": 75,
+  "n": 16
+ },
+ "steps6s16": {
+  "config": {
+   "stream_schedule": [
+    16,
+    24,
+    48,
+    64
+   ]
+  },
+  "first_audio_s": {
+   "min": 0.529,
+   "median": 0.5375000000000001,
+   "max": 0.568
+  },
+  "max_gap_s": 0.293,
+  "lines_with_gap_over_100ms": 16,
+  "s3gen_ms_per_pass": 211.2,
+  "t3_ms_per_token": 16.2,
+  "prompt_tokens": 75,
+  "n": 16
+ }
+}

@@ -152,6 +152,23 @@ class RegistryResolver:
     async def _gpu_endpoint(self, *, launch: bool = True) -> ProviderEndpoint | None:
         return await self.resolve_worker("llm", launch=launch)
 
+    def worker_at(self, kind: str, origin: str | None) -> ProviderEndpoint | None:
+        """The ready worker at ``origin`` (``https://<domain>``) as an endpoint for ``kind``, else None. A live
+        call's voice is synthesised on the worker that renders the call: on a two-card worker its voices have
+        a card without the runner, and the least-loaded pick sent a call's Turkish lines to another worker
+        (live 2026-10-22)."""
+        wm = self.worker_manager
+        if not origin or wm is None or kind not in WORKER_PATHS or not hasattr(wm, "endpoint_by_origin"):
+            return None
+        ep = wm.endpoint_by_origin(origin)
+        if not ep:
+            return None
+        base = ep["base_url"].rstrip("/")
+        base = base[: -len("/v1")] if base.endswith("/v1") else base
+        model = ep["model"] if kind == "llm" else WORKER_MODELS[kind]
+        return ProviderEndpoint(kind=kind, name="gpu-worker", base_url=base + WORKER_PATHS[kind], model=model,
+                                api_key=ep["api_key"], source="gpu_worker")
+
     async def resolve_worker(self, kind: str, *, launch: bool = True) -> ProviderEndpoint | None:
         """The on-demand GPU worker's endpoint for ``kind`` (llm | tts | stt), or None when refused.
 

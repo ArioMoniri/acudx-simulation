@@ -55,6 +55,20 @@ router = APIRouter(prefix="/v2", tags=["interview"])
 
 # How long a question waits for its history layer to be written (the patient then knows it).
 HISTORY_WAIT_S = 25.0
+# On a live call, how long the voice waits for a layer still being written before the patient says a short
+# stall line; the answer follows in the same breath once the layer is there (docs/architecture/18 6.3.11).
+# Live 2026-10-22 such a question waited 2.6 to 23 s in silence.
+HISTORY_STALL_AFTER_S = 0.8
+# Short and fact-free, in the reply's language; one is picked per question so they vary.
+STALL_LINES = {
+    "en": ("Hmm, let me think.", "Give me a moment.", "Let me think about that."),
+    "tr": ("Hmm, bir düşüneyim.", "Bir saniye, düşüneyim.", "Şöyle bir düşüneyim."),
+}
+
+
+def stall_line(locale: str, message: str) -> str:
+    lines = STALL_LINES["tr" if str(locale or "").startswith("tr") else "en"]
+    return lines[sum(map(ord, message)) % len(lines)]
 TRANSCRIPT_CAP = 80
 PERSONA_MAX_TOKENS = 300
 
@@ -99,6 +113,61 @@ async def _ensure_history(rt: Any, thread_id: str, intent: Optional[str]) -> Opt
         return None
     _mark_seen(rt, thread_id, [layer])
     return layer
+
+
+def _layer_ready(st: dict[str, Any], layer: str) -> bool:
+    return ((st.get("layers") or {}).get(layer) or {}).get("status") == "ready"
+
+
+class StalledPersona:
+    """A live call's reply while its history layer is still being written: a stall line at once, then the
+    persona's answer from the case with that layer once it is there (or without it after HISTORY_WAIT_S, as a
+    typed question would get it). Same surface as PersonaStream (``text``, ``done``, ``updated``,
+    ``result()``, ``cancel()``) so the CallSpeaker speaks both as one utterance."""
+
+    def __init__(self, stall: str, history: "asyncio.Task[Any]", build: Any, *, timings: Any) -> None:
+        self.stall = stall
+        self.text = stall
+        self.done = False
+        self.messages: list[dict[str, str]] = []
+        self.updated = asyncio.Event()
+        self.updated.set()
+        self.timings = timings
+        self._history = history
+        self._build = build
+        self.inner: Any = None
+        self.task: asyncio.Task[Any] = asyncio.get_running_loop().create_task(self._run())
+
+    async def _run(self) -> Any:
+        try:
+            try:
+                await asyncio.shield(self._history)
+            except Exception:  # noqa: BLE001 - the answer then comes from what is already written
+                pass
+            if self.timings is not None:
+                self.timings.mark("history_ready_ms")
+            self.inner = self._build()
+            self.messages = self.inner.messages
+            while True:
+                self.inner.updated.clear()
+                body = self.inner.text.strip()
+                self.text = f"{self.stall} {body}" if body else self.stall
+                self.updated.set()
+                if self.inner.done:
+                    break
+                await self.inner.updated.wait()
+            return await self.inner.result()
+        finally:
+            self.done = True
+            self.updated.set()
+
+    async def result(self) -> Any:
+        return await self.task
+
+    def cancel(self) -> None:
+        self.task.cancel()
+        if self.inner is not None:
+            self.inner.cancel()
 
 
 # TTS connection warm-ups in flight (kept referenced until done).
@@ -169,7 +238,7 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
         # Open the TTS connection while the guard and the persona run (about 1 s), so the first clause
         # does not pay a TLS handshake: live 2026-10-22 an idle connection was gone by the next question
         # (0.45 s through the sandbox's proxy; httpx drops idle connections after 5 s anywhere).
-        _bg = asyncio.get_running_loop().create_task(svc.prewarm_tts(call.lang))
+        _bg = asyncio.get_running_loop().create_task(svc.prewarm_tts(call.lang, getattr(call, "worker_origin", None)))
         _PREWARMS.add(_bg)
         _bg.add_done_callback(_PREWARMS.discard)
     if call is not None and gateway is not None:
@@ -189,7 +258,23 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
                                       chief_complaint=complaint)
     timings.mark("guard_ms")
     locale = _locale(body, st, decision)
-    layer = await _ensure_history(rt, thread_id, decision.intent) if decision.label == "clinical" else None
+    history_task = None
+    history_meta: dict[str, Any] = {}
+    cluster = intent_cluster(decision.intent) if decision.label == "clinical" and decision.intent else None
+    if cluster and call is not None and not _layer_ready(st, f"history.{cluster}"):
+        # A live call does not wait in silence for a layer still being written (see StalledPersona).
+        history_task = asyncio.ensure_future(_ensure_history(rt, thread_id, decision.intent))
+        done, _pending = await asyncio.wait({history_task}, timeout=HISTORY_STALL_AFTER_S)
+        layer = history_task.result() if done else None
+        history_meta = {"layer": f"history.{cluster}", "at_ask": "writing",
+                        "outcome": "written_in_time" if done else "stalled"}
+        if done:
+            history_task = None
+    else:
+        layer = await _ensure_history(rt, thread_id, decision.intent) if decision.label == "clinical" else None
+        if cluster:
+            history_meta = {"layer": f"history.{cluster}", "at_ask": "ready" if _layer_ready(st, f"history.{cluster}")
+                            else "writing", "outcome": "ready" if layer else "not_written"}
     timings.mark("history_ms")
     st = rt.cases.get(thread_id) or st
     view = patient_view(st, locale=locale)
@@ -216,6 +301,25 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
         scrub = _scrubber(st, view, locale)
 
         persona = None
+        stall = None
+        if history_task is not None and call is not None:
+            # The layer is still being written: a stall line now, the answer once the facts exist.
+            stall = stall_line(locale, message)
+            if speculative is not None:
+                speculative.cancel()
+            if spec_speaker is not None:
+                spec_speaker.cancel()
+            speculative = None
+
+            def build_answer() -> Any:
+                st2 = rt.cases.get(thread_id) or st
+                v2 = patient_view(st2, locale=locale)
+                return PersonaStream(gateway, persona_turn(v2, _transcript(st2), message, decision.label),
+                                     max_tokens=PERSONA_MAX_TOKENS, timings=timings)
+
+            persona = StalledPersona(stall, history_task, build_answer, timings=timings)
+            speaker = _call_speaker(request, call, persona=persona, timings=timings, gate=scrub)
+            meta["speculative"] = "stalled"
         if speculative is not None:
             if speculative.messages == msgs:
                 persona, speaker = speculative, spec_speaker
@@ -243,6 +347,15 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
                           guard=decision.wire(locale))
         timings.mark("persona_done_ms")
         reply = (res.text or "").strip()
+        if stall is not None:
+            # The facts the answer used: the layer now written (or what was there after the wait).
+            st = rt.cases.get(thread_id) or st
+            view = patient_view(st, locale=locale)
+            layer = history_meta["layer"] if _layer_ready(st, history_meta["layer"]) else None
+            if layer:
+                _mark_seen(rt, thread_id, [layer])
+            history_meta["outcome"] = "stalled_then_answered" if layer else "stalled_without_layer"
+            reply = f"{stall} {reply}".strip() if reply else ""
         if not reply:
             if speaker is not None:
                 speaker.cancel()
@@ -259,6 +372,8 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
                     usage=res.usage)
     if speaker is not None:
         meta["voice"] = {"spoken_by": "call", "session_id": call.id}
+    if history_meta:
+        meta["history"] = history_meta
 
     actions: list[dict[str, Any]] = []
     if body.guidance:

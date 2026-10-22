@@ -197,7 +197,7 @@ async def test_the_tts_connection_is_opened_while_the_guard_runs(voiced, runtime
     state, _scenario, _sockets = voiced
     warmed: list[str] = []
 
-    async def prewarm(lang: str) -> str:
+    async def prewarm(lang: str, origin: str | None = None) -> str:
         warmed.append(lang)
         return "gpu-worker"
 
@@ -267,3 +267,107 @@ async def test_the_image_edits_wait_while_the_patient_speaks_on_that_gpu():
     assert 0.25 <= waited < 2
     assert await ts.wait_until_quiet("https://other.test") < 0.05
     ts.SPEAKING.pop("https://w.test", None)
+
+
+def _guard_with_intent(calls: list[str], reply: str, intent: str):
+    def respond(body: dict) -> Scripted:
+        system = "".join(b.get("text", "") for b in body.get("system") or [])
+        if "You label one message" in system:
+            calls.append("guard")
+            return Scripted(text=json.dumps({"label": "clinical", "reason": "in_scope", "language": "tr",
+                                             "intent": intent}), model="claude-haiku-5-5")
+        calls.append("persona:" + ("stream" if body.get("stream") else "plain"))
+        return Scripted(text=reply)
+    return respond
+
+
+async def test_a_call_says_a_stall_line_while_the_history_layer_is_written(voiced, runtime, monkeypatch):
+    # Live 2026-10-22: a question that needed history.background waited 2.6 to 23 s in silence for the
+    # Director to write it. Now the call speaks a short fact-free stall line after 0.8 s and the answer
+    # follows in the same utterance once the layer is written (docs/architecture/18 6.3.11).
+    from server.interview import routes as IR
+
+    state, scenario, sockets = voiced
+    calls: list[str] = []
+    gw, tid, call, _dbl = await _start(state, runtime, calls, REPLY_TR)
+    dbl = AnthropicDouble(responder=_guard_with_intent(calls, "Tansiyon ilacı kullanıyorum, adını hatırlamıyorum.",
+                                                       "medications"))
+    await gw.aclose()
+    gw = ModelGateway(state.settings, anthropic=AnthropicProvider(state.settings, http_client=dbl.client(), max_retries=0))
+    await gw.start()
+    state.gateway = gw
+    runtime.cases.update(tid, lambda s: s["layers"]["history.background"].update(status="pending"))
+    monkeypatch.setattr(IR, "HISTORY_STALL_AFTER_S", 0.05)
+    written: list[float] = []
+
+    async def slow_layer(thread_id, layer, *, reason="access", **_kw):
+        await asyncio.sleep(0.4)
+        runtime.cases.update(thread_id, lambda s: s["layers"][layer].update(status="ready"))
+        written.append(asyncio.get_running_loop().time())
+        return (runtime.cases.get(thread_id) or {})["layers"][layer]
+
+    monkeypatch.setattr(runtime.staged, "ensure_layer", slow_layer)
+    transport = httpx.ASGITransport(app=app_module.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        r = await c.post(f"/v2/case/{tid}/interview", headers=ME, json={
+            "message": "Düzenli kullandığınız ilaç var mı?", "locale": "tr", "call_session_id": call.id})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["meta"]["speculative"] == "stalled"
+    assert body["meta"]["history"]["outcome"] == "stalled_then_answered"
+    assert body["layer"] == "history.background" and written
+    assert any(body["reply"].startswith(x) for x in IR.STALL_LINES["tr"]) and "Tansiyon ilacı" in body["reply"]
+    # The answer was written after the layer, from a prompt that holds it (persona started after the write).
+    assert body["meta"]["timings"]["history_ready_ms"] >= body["meta"]["timings"]["history_ms"]
+    # What reached the call: the stall line first, then the answer (the cancelled speculative reply may have
+    # been synthesised before the guard, but it was never sent to the runner).
+    assert await _wait(lambda: any(t["spoken_text"] for t in call.metrics.get("voiced_turns") or []))
+    spoken = next(t["spoken_text"] for t in call.metrics["voiced_turns"] if t["spoken_text"])
+    assert any(spoken.startswith(x) for x in IR.STALL_LINES["tr"]) and "Tansiyon ilacı" in spoken
+    assert len(_lines(sockets[0].sent)) == 1            # stall and answer are one utterance
+    await gw.aclose()
+
+
+async def test_typed_questions_still_wait_for_the_layer(voiced, runtime, monkeypatch):
+    from server.interview import routes as IR
+
+    state, _scenario, _sockets = voiced
+    calls: list[str] = []
+    gw, tid, _call, _dbl = await _start(state, runtime, calls, "Tansiyon ilacı kullanıyorum.")
+    await gw.aclose()
+    dbl = AnthropicDouble(responder=_guard_with_intent(calls, "Tansiyon ilacı kullanıyorum.", "medications"))
+    gw = ModelGateway(state.settings, anthropic=AnthropicProvider(state.settings, http_client=dbl.client(), max_retries=0))
+    await gw.start()
+    state.gateway = gw
+    runtime.cases.update(tid, lambda s: s["layers"]["history.background"].update(status="pending"))
+    monkeypatch.setattr(IR, "HISTORY_STALL_AFTER_S", 0.05)
+
+    async def slow_layer(thread_id, layer, *, reason="access", **_kw):
+        await asyncio.sleep(0.2)
+        runtime.cases.update(thread_id, lambda s: s["layers"][layer].update(status="ready"))
+        return (runtime.cases.get(thread_id) or {})["layers"][layer]
+
+    monkeypatch.setattr(runtime.staged, "ensure_layer", slow_layer)
+    transport = httpx.ASGITransport(app=app_module.app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        r = await c.post(f"/v2/case/{tid}/interview", headers=ME, json={"message": "İlaç kullanıyor musunuz?",
+                                                                       "locale": "tr"})
+    body = r.json()
+    assert r.status_code == 200 and body["layer"] == "history.background"
+    assert not any(body["reply"].startswith(x) for x in IR.STALL_LINES["tr"])
+    assert body["meta"]["history"]["outcome"] == "ready"
+    await gw.aclose()
+
+
+def test_the_kernel_allergies_answer_before_the_background_layer_exists():
+    from server.interview.patient import kernel_allergy_line
+
+    st = {"layers": {"history.background": {"status": "pending"}},
+          "kernel": {"allergies": [{"agent_class": "penicillin", "reaction": "rash"}]}}
+    assert kernel_allergy_line(st, "tr") == "(allergies) Şunlara alerjim var: penisilin (döküntü)."
+    assert kernel_allergy_line(st, "en") == "(allergies) I am allergic to penicillin (a rash)."
+    st["kernel"]["allergies"] = []
+    assert "No drug allergies" in kernel_allergy_line(st, "en")
+    st["layers"]["history.background"]["status"] = "ready"
+    assert kernel_allergy_line(st, "en") is None
+    assert kernel_allergy_line({"layers": {}, "kernel": None}, "en") is None

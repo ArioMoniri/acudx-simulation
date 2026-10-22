@@ -215,7 +215,7 @@ class Settings(BaseSettings):
     gpu_daily_budget_usd: float | None = None  # None = no cap; set a number to cap daily GPU spend
     gpu_llm_model: str = "Qwen/Qwen3-32B-AWQ"
     gpu_instance_allowlist: CsvList = Field(default_factory=lambda: [
-        "gpu_1x_h100_pcie", "gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4", "gpu_1x_a100", "gpu_1x_a10",
+        "gpu_2x_h100_sxm5", "gpu_1x_h100_pcie", "gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4", "gpu_1x_a100", "gpu_1x_a10",
     ])
     gpu_region_preference: CsvList = Field(default_factory=list)
     # Most workers the pool runs at once (launched on demand, each reaped when idle).

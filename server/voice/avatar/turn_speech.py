@@ -299,8 +299,13 @@ class CallSpeaker:
             pumper.cancel()
 
     def _tts(self, text: str) -> Any:
+        kw: dict[str, Any] = {}
+        origin = getattr(self.session, "worker_origin", None)
+        if origin:
+            kw["origin"] = origin            # the voice on the worker that renders this call
         return self.svc.tts(text, lang=self.lang, sex=self.sex, age=self.age, output_format="wav", stream=True,
-                            speed=self.speed, prefer_fast=bool(getattr(self.svc.settings, "avatar_fast_en_tts", False)))
+                            speed=self.speed, prefer_fast=bool(getattr(self.svc.settings, "avatar_fast_en_tts", False)),
+                            **kw)
 
     async def _requests(self, persona: PersonaStream) -> AsyncIterator[tuple[str, float, Any]]:
         """Each TTS request one ahead of the one being spoken: the next piece is synthesised (on the

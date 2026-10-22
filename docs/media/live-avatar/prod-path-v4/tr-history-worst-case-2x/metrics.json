@@ -1,0 +1,642 @@
+{
+  "captured_at": "2026-10-22T04:32:27.853Z",
+  "base_url": "http://127.0.0.1:4191",
+  "lang": "tr",
+  "voice_delay_ms": 0,
+  "live_after_voice_click_ms": 24130,
+  "session": {
+    "at": 1792643398236,
+    "prepare_ms": 14994.8,
+    "prepare": {
+      "avatar_id": "acudx-p15",
+      "face_box": [
+        201,
+        128,
+        519,
+        595
+      ],
+      "width": 720,
+      "height": 720,
+      "idle_frames": 75,
+      "extended_px": 130,
+      "ref": null,
+      "registration": null,
+      "content_key": "1e64aa8500b9700055e35e84",
+      "prepared": false,
+      "cached": "local",
+      "queue_ms": 14730.3,
+      "prepare_ms": 14730.7
+    },
+    "appearance": {
+      "source": "portrait",
+      "reason": "presenting look not ready yet; the call opens on the case portrait and switches when it lands",
+      "current_key": null
+    },
+    "worker": {
+      "infer_fps": 102.14,
+      "sessions": 0,
+      "max_sessions": 4,
+      "gpu": {
+        "cuda": true,
+        "name": "NVIDIA H100 80GB HBM3",
+        "total_mb": 81079,
+        "free_mb": 60000,
+        "process_reserved_mb": 3924,
+        "process_allocated_mb": 2239
+      },
+      "domain": "68-209-75-82.sslip.io",
+      "max_calls": 4,
+      "active_calls": 1
+    }
+  },
+  "overlap": [],
+  "first_frame_ms": 3700,
+  "lines": [
+    {
+      "line": 1,
+      "question": "Düzenli kullandığınız ilaç var mı, alerjiniz var mı?",
+      "reply": "Her sabah tansiyon için bir hap içiyorum, adı amlodipin galiba. Kemoterapiyle beraber bulantı ilacı da verdiler, bir de başka bir hap daha verdiler ama düzenli içemedim, unuttum. İlaç alerjim yok, bildiğim kadarıyla.",
+      "via": "server",
+      "speech_start_ms": 2570,
+      "lip_lag_ms": -600,
+      "lip_score": 0.146,
+      "voice_ms": 18666,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 4638,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 598,
+        "first_clause_ms": 930.3,
+        "guard_ms": 1173.2,
+        "history_ms": 1175.9,
+        "persona_done_ms": 1602.7,
+        "tts_first_chunk_ms": 1848.8,
+        "released_ms": 1848.8,
+        "runner_first_chunk_ms": 1849
+      },
+      "history": {
+        "layer": "history.background",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 598,
+          "first_clause_ms": 930.3,
+          "guard_ms": 1173.2,
+          "history_ms": 1175.9,
+          "persona_done_ms": 1602.7,
+          "tts_first_chunk_ms": 1848.8,
+          "released_ms": 1848.8,
+          "runner_first_chunk_ms": 1849,
+          "runner_done_ms": 19560.3
+        },
+        "requests": [
+          {
+            "chars": 18,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 918.4,
+            "bytes": 72000
+          },
+          {
+            "chars": 44,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1741.5,
+            "bytes": 312960
+          },
+          {
+            "chars": 152,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 6407.5,
+            "bytes": 521280
+          }
+        ],
+        "runner": {
+          "frames": 944,
+          "first_frame_ms": 0.1,
+          "elapsed_ms": 17662.2
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 2,
+      "question": "Ailenizde benzer hastalığı olan var mı?",
+      "reply": "Babam kalp krizinden öldü, annemde de şeker vardı. Ailede kanser olan var mı, bilmiyorum, bildiğim kadarıyla yok.",
+      "via": "server",
+      "speech_start_ms": 3001,
+      "lip_lag_ms": -600,
+      "lip_score": 0.002,
+      "voice_ms": 9766,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3538,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 507.3,
+        "first_clause_ms": 811.8,
+        "guard_ms": 962.9,
+        "history_ms": 966.5,
+        "persona_done_ms": 1294.9,
+        "tts_first_chunk_ms": 2310.7,
+        "released_ms": 2310.8,
+        "runner_first_chunk_ms": 2311
+      },
+      "history": {
+        "layer": "history.background",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 507.3,
+          "first_clause_ms": 811.8,
+          "guard_ms": 962.9,
+          "history_ms": 966.5,
+          "persona_done_ms": 1294.9,
+          "tts_first_chunk_ms": 2310.7,
+          "released_ms": 2310.8,
+          "runner_first_chunk_ms": 2311,
+          "runner_done_ms": 11575
+        },
+        "requests": [
+          {
+            "chars": 20,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1498.9,
+            "bytes": 162240
+          },
+          {
+            "chars": 29,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2164,
+            "bytes": 102720
+          },
+          {
+            "chars": 62,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2353.9,
+            "bytes": 230400
+          }
+        ],
+        "runner": {
+          "frames": 516,
+          "first_frame_ms": 0.4,
+          "elapsed_ms": 9220.4
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 3,
+      "question": "Sigara ya da alkol kullanıyor musunuz?",
+      "reply": "Sigarayı on yıl önce bıraktım doktor bey. Alkol hiç kullanmıyorum.",
+      "via": "server",
+      "speech_start_ms": 3838,
+      "lip_lag_ms": 600,
+      "lip_score": 0.203,
+      "voice_ms": 9283,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 5412,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 746.3,
+        "history_ms": 748.8,
+        "persona_first_text_ms": 1540.3,
+        "first_clause_ms": 1687.5,
+        "persona_done_ms": 1728.7,
+        "tts_first_chunk_ms": 3129.2,
+        "released_ms": 3129.2,
+        "runner_first_chunk_ms": 3129.7
+      },
+      "history": {
+        "layer": "history.background",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 746.3,
+          "history_ms": 748.8,
+          "persona_first_text_ms": 1540.3,
+          "first_clause_ms": 1687.5,
+          "persona_done_ms": 1728.7,
+          "tts_first_chunk_ms": 3129.2,
+          "released_ms": 3129.2,
+          "runner_first_chunk_ms": 3129.7,
+          "runner_done_ms": 12781.7
+        },
+        "requests": [
+          {
+            "chars": 20,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1441.6,
+            "bytes": 162240
+          },
+          {
+            "chars": 20,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2161.6,
+            "bytes": 162240
+          },
+          {
+            "chars": 24,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3380.8,
+            "bytes": 185280
+          }
+        ],
+        "runner": {
+          "frames": 531,
+          "first_frame_ms": 9.6,
+          "elapsed_ms": 9607.2
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 4,
+      "question": "Ateşiniz ya da başka bir şikayetiniz var mı?",
+      "reply": "Ateşim yok, üşüme titreme de olmadı. Ama kramplar, ellerimde dudağımda karıncalanma var, kalbim de arada tekliyor gibi. Bir de neredeyse hiç idrara çıkamıyorum, onu çok merak ediyorum doktor bey.",
+      "via": "server",
+      "speech_start_ms": 3003,
+      "lip_lag_ms": -600,
+      "lip_score": 0.24,
+      "voice_ms": 11916,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3469,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 800.6,
+        "first_clause_ms": 1165.7,
+        "guard_ms": 1510.7,
+        "history_ms": 1514.8,
+        "persona_done_ms": 1563.2,
+        "tts_first_chunk_ms": 2346.7,
+        "released_ms": 2346.7,
+        "runner_first_chunk_ms": 2347
+      },
+      "history": {
+        "layer": "history.associated",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 800.6,
+          "first_clause_ms": 1165.7,
+          "guard_ms": 1510.7,
+          "history_ms": 1514.8,
+          "persona_done_ms": 1563.2,
+          "tts_first_chunk_ms": 2346.7,
+          "released_ms": 2346.7,
+          "runner_first_chunk_ms": 2347,
+          "runner_done_ms": 18227.8
+        },
+        "requests": [
+          {
+            "chars": 17,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1181,
+            "bytes": 120000
+          },
+          {
+            "chars": 18,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1478.8,
+            "bytes": 66240
+          },
+          {
+            "chars": 158,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1564.5,
+            "bytes": 635520
+          }
+        ],
+        "runner": {
+          "frames": 856,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 15836.5
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 5,
+      "question": "Şikayetiniz ne zaman başladı?",
+      "reply": "İki gün önce ilk kemoterapimi aldım doktor bey. Ondan sonra yavaş yavaş kötüleştim, dün akşamdan beri iyice kötüyüm. Şimdi biraz rahatladım ama kramplar, idrar meselesi hâlâ içimi korkutuyor.",
+      "via": "server",
+      "speech_start_ms": 3136,
+      "lip_lag_ms": -600,
+      "lip_score": -0.075,
+      "voice_ms": 21016,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 3615,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 747.9,
+        "guard_ms": 977.9,
+        "history_ms": 981.1,
+        "first_clause_ms": 1093.4,
+        "persona_done_ms": 1656.9,
+        "tts_first_chunk_ms": 2485.7,
+        "released_ms": 2485.7,
+        "runner_first_chunk_ms": 2486
+      },
+      "history": {
+        "layer": "history.presenting",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 747.9,
+          "guard_ms": 977.9,
+          "history_ms": 981.1,
+          "first_clause_ms": 1093.4,
+          "persona_done_ms": 1656.9,
+          "tts_first_chunk_ms": 2485.7,
+          "released_ms": 2485.7,
+          "runner_first_chunk_ms": 2486,
+          "runner_done_ms": 22580
+        },
+        "requests": [
+          {
+            "chars": 16,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1392.3,
+            "bytes": 139200
+          },
+          {
+            "chars": 30,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1820.1,
+            "bytes": 196800
+          },
+          {
+            "chars": 143,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 4180.2,
+            "bytes": 685440
+          }
+        ],
+        "runner": {
+          "frames": 1064,
+          "first_frame_ms": 0.1,
+          "elapsed_ms": 20047.4
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 6,
+      "question": "Daha önce böyle bir şey yaşadınız mı?",
+      "reply": "Hayır doktor bey, böyle bir şey hiç yaşamadım. Kemoterapiden önce böbreklerimde de bir sorun yoktu. Bir ay önce lenfoma dediler, ondan başka ciddi bir hastalığım yok, bir de yıllardır tansiyonum var.",
+      "via": "server",
+      "speech_start_ms": 3210,
+      "lip_lag_ms": -400,
+      "lip_score": 0.082,
+      "voice_ms": 23049,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 5676,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 807.2,
+        "guard_ms": 1102.6,
+        "history_ms": 1111,
+        "first_clause_ms": 1158,
+        "persona_done_ms": 1654.4,
+        "tts_first_chunk_ms": 2548.3,
+        "released_ms": 2548.3,
+        "runner_first_chunk_ms": 2548.6
+      },
+      "history": {
+        "layer": "history.background",
+        "at_ask": "ready",
+        "outcome": "ready"
+      },
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 807.2,
+          "guard_ms": 1102.6,
+          "history_ms": 1111,
+          "first_clause_ms": 1158,
+          "persona_done_ms": 1654.4,
+          "tts_first_chunk_ms": 2548.3,
+          "released_ms": 2548.3,
+          "runner_first_chunk_ms": 2548.6,
+          "runner_done_ms": 25181.2
+        },
+        "requests": [
+          {
+            "chars": 17,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1390.4,
+            "bytes": 144960
+          },
+          {
+            "chars": 28,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1819.9,
+            "bytes": 200640
+          },
+          {
+            "chars": 152,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 4305.2,
+            "bytes": 792960
+          }
+        ],
+        "runner": {
+          "frames": 1186,
+          "first_frame_ms": 0.1,
+          "elapsed_ms": 22585.3
+        },
+        "error": null
+      }
+    }
+  ],
+  "fades": [],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p15-9b41a2e7-e3b0c44298",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 113,
+        "residual_before": 58.68,
+        "residual_after": 58.68
+      }
+    },
+    {
+      "name": "critical",
+      "avatar_id": "acudx-p15-9b41a2e7-be4a95a56a",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 49,
+        "residual_before": 54.88,
+        "residual_after": 54.88
+      }
+    },
+    {
+      "name": "unresponsive",
+      "avatar_id": "acudx-p15-9b41a2e7-03fc180247",
+      "registration": {
+        "method": "ecc",
+        "scale": 1.1729,
+        "rotation_deg": 0.889,
+        "shift_px": [
+          -76.3,
+          -15.7
+        ],
+        "inliers": 87,
+        "residual_before": 52.74,
+        "residual_after": 17.24
+      }
+    },
+    {
+      "name": "live",
+      "avatar_id": "acudx-p15-9b41a2e7-05caf47968",
+      "registration": {
+        "method": "identity",
+        "scale": 1,
+        "rotation_deg": 0,
+        "shift_px": [
+          0,
+          0
+        ],
+        "inliers": 116,
+        "residual_before": 58.01,
+        "residual_after": 58.01
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 160,
+    "lip_lags": [
+      {
+        "lip_lag_ms": -600,
+        "score": 0.146,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": -600,
+        "score": 0.002,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 600,
+        "score": 0.203,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": -600,
+        "score": 0.24,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": -600,
+        "score": -0.075,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": -400,
+        "score": 0.082,
+        "av_shift_ms": 160
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 47.2
+    },
+    "answer_ms": 198.3,
+    "prepare_ms": 14994.8
+  },
+  "runner_call": [
+    {
+      "id": "04ff80ff",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 160
+      },
+      "avatar": "acudx-p15-9b41a2e7-05caf47968",
+      "speaking": false,
+      "warm_up_ms": 44.3,
+      "switches_applied": 2,
+      "switch_pending": false,
+      "infer_fps": 91.2,
+      "inferred_frames": 2608,
+      "sender_queue": {
+        "audio_frames": 13,
+        "video_frames": 6
+      },
+      "sent_frames": 3549,
+      "underruns": 0,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 7078,
+    "audioEnergy": 3.7614449364914315,
+    "videoFrames": 3537,
+    "videoFps": 24,
+    "rttMs": 45,
+    "audioJitterMs": 58,
+    "videoJitterMs": 72,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3486?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-22T04:29:42.156Z case open",
+    "2026-10-22T04:30:06.418Z live video connected 24130 ms after the voice click; session {\"at\":1792643398236,\"prepare_ms\":14994.8,\"prepare\":{\"avatar_id\":\"acudx-p15\",\"face_box\":[201,128,519,595],\"width\":720,\"height\":720,\"idle_frames\":75,\"extended_px\":130,\"ref\":null,\"registration\":null,\"content_key\":\"1e64aa8500b9700055e35e84\",\"prepared\":false,\"cached\":\"local\",\"queue_ms\":14730.3,\"prepare_ms\":14730.7},\"appearance\":{\"source\":\"portrait\",\"reason\":\"presenting look not ready yet; the call opens on the case portrait and switches when it lands\",\"current_key\":null},\"worker\":{\"infer_fps\":102.14,\"sessions\":0,\"max_sessions\":4,\"gpu\":{\"cuda\":true,\"name\":\"NVIDIA H100 80GB HBM3\",\"total_mb\":81079,\"free_mb\":60000,\"process_reserved_mb\":3924,\"process_allocated_mb\":2239},\"domain\":\"68-209-75-82.sslip.io\",\"max_calls\":4,\"active_calls\":1}}",
+    "2026-10-22T04:30:08.586Z line 1 sent",
+    "2026-10-22T04:30:32.436Z line 1: {\"s\":2570,\"lag\":-600,\"score\":0.146,\"via\":\"server\"}",
+    "2026-10-22T04:30:34.020Z line 2 sent",
+    "2026-10-22T04:30:49.585Z line 2: {\"s\":3001,\"lag\":-600,\"score\":0.002,\"via\":\"server\"}",
+    "2026-10-22T04:30:51.151Z line 3 sent",
+    "2026-10-22T04:31:07.062Z line 3: {\"s\":3838,\"lag\":600,\"score\":0.203,\"via\":\"server\"}",
+    "2026-10-22T04:31:08.651Z line 4 sent",
+    "2026-10-22T04:31:27.256Z line 4: {\"s\":3003,\"lag\":-600,\"score\":0.24,\"via\":\"server\"}",
+    "2026-10-22T04:31:28.818Z line 5 sent",
+    "2026-10-22T04:31:55.596Z line 5: {\"s\":3136,\"lag\":-600,\"score\":-0.075,\"via\":\"server\"}",
+    "2026-10-22T04:31:57.156Z line 6 sent",
+    "2026-10-22T04:32:25.964Z line 6: {\"s\":3210,\"lag\":-400,\"score\":0.082,\"via\":\"server\"}",
+    "2026-10-22T04:32:27.478Z variants ready: 4"
+  ]
+}

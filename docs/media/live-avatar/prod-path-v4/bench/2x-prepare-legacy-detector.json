@@ -1,0 +1,134 @@
+[
+ {
+  "id": "p08",
+  "status": 200,
+  "prepare_ms": 15806.8,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 11819.3,
+   "vae_ms": 863.5,
+   "vae_parse_ms": 3332.5,
+   "write_wait_ms": 37.6,
+   "load_ms": 68.9
+  },
+  "detect": null,
+  "face_box": [
+   186,
+   144,
+   514,
+   597
+  ],
+  "wall_s": 16.26
+ },
+ {
+  "id": "p19",
+  "status": 200,
+  "prepare_ms": 3153.7,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 400.4,
+   "vae_ms": 1587.6,
+   "vae_parse_ms": 1589.2,
+   "write_wait_ms": 495.2,
+   "load_ms": 60.2
+  },
+  "detect": null,
+  "face_box": [
+   208,
+   128,
+   512,
+   594
+  ],
+  "wall_s": 3.28
+ },
+ {
+  "id": "p29",
+  "status": 200,
+  "prepare_ms": 3487.5,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 689.3,
+   "vae_ms": 1606.0,
+   "vae_parse_ms": 1607.7,
+   "write_wait_ms": 502.3,
+   "load_ms": 63.0
+  },
+  "detect": null,
+  "face_box": [
+   202,
+   126,
+   519,
+   595
+  ],
+  "wall_s": 3.56
+ },
+ {
+  "id": "p30",
+  "status": 200,
+  "prepare_ms": 3723.7,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 2,
+   "detect_ms": 909.9,
+   "vae_ms": 1640.9,
+   "vae_parse_ms": 1642.5,
+   "write_wait_ms": 496.2,
+   "load_ms": 63.5
+  },
+  "detect": null,
+  "face_box": [
+   201,
+   123,
+   525,
+   592
+  ],
+  "wall_s": 3.79
+ },
+ {
+  "id": "p06",
+  "status": 200,
+  "prepare_ms": 2971.0,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 233.5,
+   "vae_ms": 1586.0,
+   "vae_parse_ms": 1587.7,
+   "write_wait_ms": 500.0,
+   "load_ms": 62.9
+  },
+  "detect": null,
+  "face_box": [
+   179,
+   132,
+   525,
+   586
+  ],
+  "wall_s": 3.02
+ },
+ {
+  "id": "p31",
+  "status": 200,
+  "prepare_ms": 3072.2,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 344.3,
+   "vae_ms": 1604.8,
+   "vae_parse_ms": 1606.5,
+   "write_wait_ms": 497.1,
+   "load_ms": 62.1
+  },
+  "detect": null,
+  "face_box": [
+   197,
+   130,
+   519,
+   593
+  ],
+  "wall_s": 3.13
+ }
+]

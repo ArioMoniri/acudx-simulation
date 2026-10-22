@@ -1,0 +1,620 @@
+{
+  "captured_at": "2026-10-22T04:21:49.011Z",
+  "base_url": "http://127.0.0.1:4191",
+  "lang": "tr",
+  "voice_delay_ms": 0,
+  "live_after_voice_click_ms": 9682,
+  "session": {
+    "at": 1792642786034,
+    "prepare_ms": 133,
+    "prepare": {
+      "avatar_id": "acudx-p06",
+      "prepared": false,
+      "face_box": [
+        179,
+        132,
+        525,
+        586
+      ],
+      "width": 704,
+      "height": 720,
+      "idle_frames": 75
+    },
+    "appearance": {
+      "source": "portrait",
+      "reason": "presenting look not ready yet; the call opens on the case portrait and switches when it lands",
+      "current_key": null
+    },
+    "worker": {
+      "infer_fps": null,
+      "sessions": 0,
+      "max_sessions": 4,
+      "gpu": {
+        "cuda": true,
+        "name": "NVIDIA H100 80GB HBM3",
+        "total_mb": 81079,
+        "free_mb": 60608,
+        "process_reserved_mb": 2650,
+        "process_allocated_mb": 2101
+      },
+      "domain": "68-209-75-82.sslip.io",
+      "max_calls": 4,
+      "active_calls": 1
+    }
+  },
+  "overlap": [],
+  "first_frame_ms": 3345,
+  "lines": [
+    {
+      "line": 1,
+      "question": "Şikayetiniz ne zaman başladı ve nerenizde hissediyorsunuz?",
+      "reply": "Sabah mutfakta... birden gözüm karardı, yere düşmüşüm. Öğleden sonra yine oldu. Başım dönüyor hâlâ, bütün vücudum halsiz.",
+      "via": "server",
+      "speech_start_ms": 11020,
+      "lip_lag_ms": 120,
+      "lip_score": 0.367,
+      "voice_ms": 12633,
+      "av_shift_ms_after": 160,
+      "reply_http_ms": 11232,
+      "speculative": "restarted",
+      "gateway_timings": {
+        "persona_first_text_ms": 801.4,
+        "first_clause_ms": 1140.4,
+        "guard_ms": 1150.9,
+        "tts_first_chunk_ms": 2048.6,
+        "history_ms": 6726.2,
+        "persona_done_ms": 8081.6,
+        "released_ms": 10044.6,
+        "runner_first_chunk_ms": 10044.9
+      },
+      "history": null,
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 801.4,
+          "first_clause_ms": 1140.4,
+          "guard_ms": 1150.9,
+          "tts_first_chunk_ms": 2048.6,
+          "history_ms": 6726.2,
+          "persona_done_ms": 8081.6,
+          "released_ms": 10044.6,
+          "runner_first_chunk_ms": 10044.9,
+          "runner_done_ms": 22245.3
+        },
+        "requests": [
+          {
+            "chars": 39,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2230.3,
+            "bytes": 271680
+          },
+          {
+            "chars": 14,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 4553.3,
+            "bytes": 127680
+          },
+          {
+            "chars": 66,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2586.7,
+            "bytes": 240000
+          }
+        ],
+        "runner": {
+          "frames": 666,
+          "first_frame_ms": 0.2,
+          "elapsed_ms": 12151.8
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 2,
+      "question": "Ağrınız nasıl bir ağrı, batıcı mı, sıkıştırıcı mı?",
+      "reply": "Ağrı demem... Başım boşalıyor gibi, her an düşecekmişim gibi oluyor. Şimdi göğsümde de biraz sıkışma var, nefesim daralıyor.",
+      "via": "server",
+      "speech_start_ms": 3141,
+      "lip_lag_ms": 40,
+      "lip_score": 0.45,
+      "voice_ms": 10716,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 5220,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 684.4,
+        "history_ms": 687.6,
+        "persona_first_text_ms": 971.7,
+        "first_clause_ms": 1320.8,
+        "persona_done_ms": 1430.5,
+        "tts_first_chunk_ms": 2246.5,
+        "released_ms": 2246.5,
+        "runner_first_chunk_ms": 2246.7
+      },
+      "history": null,
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 684.4,
+          "history_ms": 687.6,
+          "persona_first_text_ms": 971.7,
+          "first_clause_ms": 1320.8,
+          "persona_done_ms": 1430.5,
+          "tts_first_chunk_ms": 2246.5,
+          "released_ms": 2246.5,
+          "runner_first_chunk_ms": 2246.7,
+          "runner_done_ms": 11967.6
+        },
+        "requests": [
+          {
+            "chars": 19,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 925.6,
+            "bytes": 79680
+          },
+          {
+            "chars": 48,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1738.1,
+            "bytes": 166080
+          },
+          {
+            "chars": 55,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3624.3,
+            "bytes": 273600
+          }
+        ],
+        "runner": {
+          "frames": 541,
+          "first_frame_ms": 0.1,
+          "elapsed_ms": 9670.1
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 3,
+      "question": "Ağrınızı artıran ya da azaltan bir şey var mı?",
+      "reply": "Ayağa kalkınca daha kötü oluyor... yürüyünce gözüm kararıyor. Yatınca biraz iyi geliyor ama tam geçmiyor.",
+      "via": "server",
+      "speech_start_ms": 3323,
+      "lip_lag_ms": 120,
+      "lip_score": 0.519,
+      "voice_ms": 9266,
+      "av_shift_ms_after": 80,
+      "reply_http_ms": 3185,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 756.3,
+        "guard_ms": 963,
+        "history_ms": 966.4,
+        "first_clause_ms": 1077.9,
+        "persona_done_ms": 1098,
+        "tts_first_chunk_ms": 2574.6,
+        "released_ms": 2574.6,
+        "runner_first_chunk_ms": 2575.4
+      },
+      "history": null,
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 756.3,
+          "guard_ms": 963,
+          "history_ms": 966.4,
+          "first_clause_ms": 1077.9,
+          "persona_done_ms": 1098,
+          "tts_first_chunk_ms": 2574.6,
+          "released_ms": 2574.6,
+          "runner_first_chunk_ms": 2575.4,
+          "runner_done_ms": 11046.2
+        },
+        "requests": [
+          {
+            "chars": 19,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1496.7,
+            "bytes": 156480
+          },
+          {
+            "chars": 41,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2164.3,
+            "bytes": 160320
+          },
+          {
+            "chars": 43,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3260.6,
+            "bytes": 146880
+          }
+        ],
+        "runner": {
+          "frames": 483,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 8422.2
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 4,
+      "question": "Daha önce böyle bir şey yaşadınız mı?",
+      "reply": "Hayır... hiç bayılmadım daha önce. Birkaç gündür biraz yorgundum ama bayılma ilk defa oldu.",
+      "via": "server",
+      "speech_start_ms": 3758,
+      "lip_lag_ms": 120,
+      "lip_score": 0.545,
+      "voice_ms": 7333,
+      "av_shift_ms_after": 0,
+      "reply_http_ms": 5217,
+      "speculative": "kept",
+      "gateway_timings": {
+        "guard_ms": 830.3,
+        "history_ms": 834.1,
+        "persona_first_text_ms": 909.5,
+        "first_clause_ms": 1214.6,
+        "persona_done_ms": 1284.3,
+        "tts_first_chunk_ms": 2938.2,
+        "released_ms": 2938.2,
+        "runner_first_chunk_ms": 2938.5
+      },
+      "history": null,
+      "voiced_turn": {
+        "timings": {
+          "guard_ms": 830.3,
+          "history_ms": 834.1,
+          "persona_first_text_ms": 909.5,
+          "first_clause_ms": 1214.6,
+          "persona_done_ms": 1284.3,
+          "tts_first_chunk_ms": 2938.2,
+          "released_ms": 2938.2,
+          "runner_first_chunk_ms": 2938.5,
+          "runner_done_ms": 9512.6
+        },
+        "requests": [
+          {
+            "chars": 34,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1723.6,
+            "bytes": 192960
+          },
+          {
+            "chars": 56,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2845.4,
+            "bytes": 183360
+          }
+        ],
+        "runner": {
+          "frames": 392,
+          "first_frame_ms": 0.1,
+          "elapsed_ms": 6524.5
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 5,
+      "question": "Düzenli kullandığınız ilaç ya da alerjiniz var mı?",
+      "reply": "Tansiyon için metoprolol içiyorum, sabahları bir tane. Bugün de her zamanki gibi içtim. Başka ilacım yok, alerjim de yok.",
+      "via": "server",
+      "speech_start_ms": 3281,
+      "lip_lag_ms": -40,
+      "lip_score": 0.341,
+      "voice_ms": 10666,
+      "av_shift_ms_after": 0,
+      "reply_http_ms": 4220,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 804.7,
+        "guard_ms": 812.5,
+        "history_ms": 817.5,
+        "first_clause_ms": 980.3,
+        "persona_done_ms": 1063.5,
+        "tts_first_chunk_ms": 2627.7,
+        "released_ms": 2627.7,
+        "runner_first_chunk_ms": 2628
+      },
+      "history": null,
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 804.7,
+          "guard_ms": 812.5,
+          "history_ms": 817.5,
+          "first_clause_ms": 980.3,
+          "persona_done_ms": 1063.5,
+          "tts_first_chunk_ms": 2627.7,
+          "released_ms": 2627.7,
+          "runner_first_chunk_ms": 2628,
+          "runner_done_ms": 13982.9
+        },
+        "requests": [
+          {
+            "chars": 34,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1647.3,
+            "bytes": 183360
+          },
+          {
+            "chars": 19,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 2505,
+            "bytes": 83520
+          },
+          {
+            "chars": 66,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1771.2,
+            "bytes": 328320
+          }
+        ],
+        "runner": {
+          "frames": 620,
+          "first_frame_ms": 0.8,
+          "elapsed_ms": 11306.4
+        },
+        "error": null
+      }
+    },
+    {
+      "line": 6,
+      "question": "Şu an kendinizi nasıl hissediyorsunuz, geldiğiniz zamana göre?",
+      "reply": "Biraz daha iyiyim sanki... göğsümdeki sıkışma çok azaldı. Ama hâlâ halsizim, başımı kaldırınca başım dönüyor.",
+      "via": "server",
+      "speech_start_ms": 2754,
+      "lip_lag_ms": 80,
+      "lip_score": 0.52,
+      "voice_ms": 8783,
+      "av_shift_ms_after": 0,
+      "reply_http_ms": 3911,
+      "speculative": "kept",
+      "gateway_timings": {
+        "persona_first_text_ms": 781.1,
+        "guard_ms": 1033.5,
+        "history_ms": 1033.5,
+        "first_clause_ms": 1182.4,
+        "persona_done_ms": 1317.9,
+        "tts_first_chunk_ms": 2058.8,
+        "released_ms": 2058.8,
+        "runner_first_chunk_ms": 2059.3
+      },
+      "history": null,
+      "voiced_turn": {
+        "timings": {
+          "persona_first_text_ms": 781.1,
+          "guard_ms": 1033.5,
+          "history_ms": 1033.5,
+          "first_clause_ms": 1182.4,
+          "persona_done_ms": 1317.9,
+          "tts_first_chunk_ms": 2058.8,
+          "released_ms": 2058.8,
+          "runner_first_chunk_ms": 2059.3,
+          "runner_done_ms": 9827.7
+        },
+        "requests": [
+          {
+            "chars": 17,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 876.3,
+            "bytes": 68160
+          },
+          {
+            "chars": 39,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 1734.3,
+            "bytes": 166080
+          },
+          {
+            "chars": 51,
+            "provider": "gpu-worker",
+            "model": "chatterbox-multilingual",
+            "first_chunk_ms": 3471.5,
+            "bytes": 190080
+          }
+        ],
+        "runner": {
+          "frames": 442,
+          "first_frame_ms": 0.3,
+          "elapsed_ms": 7719.9
+        },
+        "error": null
+      }
+    }
+  ],
+  "fades": [],
+  "registration": [
+    {
+      "name": "presenting",
+      "avatar_id": "acudx-p06-e79e384e-05caf47968",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 0.992,
+        "rotation_deg": -0.069,
+        "shift_px": [
+          0.9,
+          1.9
+        ],
+        "inliers": 809,
+        "residual_before": 16.16,
+        "residual_after": 17.78
+      }
+    },
+    {
+      "name": "worse",
+      "avatar_id": "acudx-p06-e79e384e-df0de5e99c",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 0.9893,
+        "rotation_deg": -0.041,
+        "shift_px": [
+          1.5,
+          1.9
+        ],
+        "inliers": 762,
+        "residual_before": 17.53,
+        "residual_after": 19.39
+      }
+    },
+    {
+      "name": "critical",
+      "avatar_id": "acudx-p06-e79e384e-779a55509c",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 0.9902,
+        "rotation_deg": -0.065,
+        "shift_px": [
+          1,
+          0.9
+        ],
+        "inliers": 773,
+        "residual_before": 15.51,
+        "residual_after": 16.97
+      }
+    },
+    {
+      "name": "improved",
+      "avatar_id": "acudx-p06-e79e384e-e3b0c44298",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 1.0734,
+        "rotation_deg": -0.365,
+        "shift_px": [
+          -26.2,
+          -12.5
+        ],
+        "inliers": 202,
+        "residual_before": 36.76,
+        "residual_after": 16.34
+      }
+    },
+    {
+      "name": "unresponsive",
+      "avatar_id": "acudx-p06-e79e384e-504e555336",
+      "registration": {
+        "method": "orb+ecc",
+        "scale": 0.992,
+        "rotation_deg": -0.083,
+        "shift_px": [
+          0.4,
+          1.6
+        ],
+        "inliers": 828,
+        "residual_before": 13.1,
+        "residual_after": 14.86
+      }
+    }
+  ],
+  "call_metrics": {
+    "av_shift_ms": 0,
+    "lip_lags": [
+      {
+        "lip_lag_ms": 120,
+        "score": 0.367,
+        "av_shift_ms": 160
+      },
+      {
+        "lip_lag_ms": 40,
+        "score": 0.45,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": 120,
+        "score": 0.519,
+        "av_shift_ms": 80
+      },
+      {
+        "lip_lag_ms": 120,
+        "score": 0.545,
+        "av_shift_ms": 0
+      },
+      {
+        "lip_lag_ms": -40,
+        "score": 0.341,
+        "av_shift_ms": 0
+      },
+      {
+        "lip_lag_ms": 80,
+        "score": 0.52,
+        "av_shift_ms": 0
+      }
+    ],
+    "preroll": {
+      "ms": 800,
+      "frames": 40,
+      "sent_ms": 49.9
+    },
+    "answer_ms": 247,
+    "prepare_ms": 133
+  },
+  "runner_call": [
+    {
+      "id": "875aefb9",
+      "tuning": {
+        "batch_size": 4,
+        "lookahead_frames": 4,
+        "ahead_frames": 6,
+        "av_shift_ms": 0
+      },
+      "avatar": "acudx-p06-e79e384e-05caf47968",
+      "speaking": false,
+      "warm_up_ms": 58.3,
+      "switches_applied": 1,
+      "switch_pending": false,
+      "infer_fps": 88.8,
+      "inferred_frames": 1620,
+      "sender_queue": {
+        "audio_frames": 8,
+        "video_frames": 3
+      },
+      "sent_frames": 2892,
+      "underruns": 0,
+      "out_fps": 25
+    }
+  ],
+  "rtc": {
+    "audioPackets": 5756,
+    "audioEnergy": 2.761900392279227,
+    "videoFrames": 2876,
+    "videoFps": 25,
+    "rttMs": 45,
+    "audioJitterMs": 190,
+    "videoJitterMs": 199,
+    "path": {
+      "localType": "relay",
+      "relayProtocol": "tcp",
+      "url": "turn:127.0.0.1:3486?transport=tcp",
+      "state": "succeeded"
+    }
+  },
+  "log": [
+    "2026-10-22T04:19:42.675Z case open",
+    "2026-10-22T04:19:53.926Z live video connected 9682 ms after the voice click; session {\"at\":1792642786034,\"prepare_ms\":133,\"prepare\":{\"avatar_id\":\"acudx-p06\",\"prepared\":false,\"face_box\":[179,132,525,586],\"width\":704,\"height\":720,\"idle_frames\":75},\"appearance\":{\"source\":\"portrait\",\"reason\":\"presenting look not ready yet; the call opens on the case portrait and switches when it lands\",\"current_key\":null},\"worker\":{\"infer_fps\":null,\"sessions\":0,\"max_sessions\":4,\"gpu\":{\"cuda\":true,\"name\":\"NVIDIA H100 80GB HBM3\",\"total_mb\":81079,\"free_mb\":60608,\"process_reserved_mb\":2650,\"process_allocated_mb\":2101},\"domain\":\"68-209-75-82.sslip.io\",\"max_calls\":4,\"active_calls\":1}}",
+    "2026-10-22T04:19:56.247Z line 1 sent",
+    "2026-10-22T04:20:22.611Z line 1: {\"s\":11020,\"lag\":120,\"score\":0.367,\"via\":\"server\"}",
+    "2026-10-22T04:20:24.213Z line 2 sent",
+    "2026-10-22T04:20:40.656Z line 2: {\"s\":3141,\"lag\":40,\"score\":0.45,\"via\":\"server\"}",
+    "2026-10-22T04:20:42.246Z line 3 sent",
+    "2026-10-22T04:20:57.546Z line 3: {\"s\":3323,\"lag\":120,\"score\":0.519,\"via\":\"server\"}",
+    "2026-10-22T04:20:59.175Z line 4 sent",
+    "2026-10-22T04:21:13.075Z line 4: {\"s\":3758,\"lag\":120,\"score\":0.545,\"via\":\"server\"}",
+    "2026-10-22T04:21:14.675Z line 5 sent",
+    "2026-10-22T04:21:31.212Z line 5: {\"s\":3281,\"lag\":-40,\"score\":0.341,\"via\":\"server\"}",
+    "2026-10-22T04:21:32.825Z line 6 sent",
+    "2026-10-22T04:21:46.961Z line 6: {\"s\":2754,\"lag\":80,\"score\":0.52,\"via\":\"server\"}",
+    "2026-10-22T04:21:48.487Z variants ready: 5"
+  ]
+}

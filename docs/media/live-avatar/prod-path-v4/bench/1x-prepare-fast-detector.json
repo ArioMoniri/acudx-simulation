@@ -1,0 +1,289 @@
+[
+ {
+  "id": "p08",
+  "status": 200,
+  "prepare_ms": 5481.8,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 385.1,
+   "vae_ms": 1148.8,
+   "vae_parse_ms": 4211.8,
+   "write_wait_ms": 42.8,
+   "load_ms": 97.6
+  },
+  "detect": {
+   "mode": "fast",
+   "canvas": [
+    384,
+    360
+   ],
+   "s3fd_net_ms": 4.2,
+   "s3fd_decode_ms": 1.1,
+   "s3fd_candidates": 25,
+   "s3fd_ms": 5.6,
+   "hog_ms": 16.1,
+   "landmarks_ms": 1.9,
+   "total_ms": 23.6,
+   "box_canvas": [
+    48,
+    78,
+    224,
+    318
+   ]
+  },
+  "face_box": [
+   188,
+   144,
+   512,
+   597
+  ],
+  "wall_s": 5.79
+ },
+ {
+  "id": "p19",
+  "status": 200,
+  "prepare_ms": 4015.6,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 462.5,
+   "vae_ms": 2105.8,
+   "vae_parse_ms": 2108.2,
+   "write_wait_ms": 644.5,
+   "load_ms": 99.3
+  },
+  "detect": {
+   "mode": "fast",
+   "canvas": [
+    384,
+    360
+   ],
+   "s3fd_net_ms": 5.3,
+   "s3fd_decode_ms": 1.1,
+   "s3fd_candidates": 19,
+   "s3fd_ms": 6.7,
+   "hog_ms": 16.0,
+   "landmarks_ms": 1.9,
+   "total_ms": 24.6,
+   "box_canvas": [
+    48,
+    54,
+    212,
+    298
+   ]
+  },
+  "face_box": [
+   207,
+   128,
+   513,
+   594
+  ],
+  "wall_s": 4.21
+ },
+ {
+  "id": "p29",
+  "status": 200,
+  "prepare_ms": 4230.1,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 749.0,
+   "vae_ms": 2048.5,
+   "vae_parse_ms": 2050.8,
+   "write_wait_ms": 632.5,
+   "load_ms": 97.3
+  },
+  "detect": {
+   "mode": "fast",
+   "canvas": [
+    384,
+    360
+   ],
+   "s3fd_net_ms": 5.2,
+   "s3fd_decode_ms": 1.1,
+   "s3fd_candidates": 17,
+   "s3fd_ms": 6.6,
+   "hog_ms": 16.1,
+   "landmarks_ms": 2.1,
+   "total_ms": 24.8,
+   "box_canvas": [
+    37,
+    51,
+    232,
+    327
+   ]
+  },
+  "face_box": [
+   198,
+   127,
+   522,
+   595
+  ],
+  "wall_s": 4.35
+ },
+ {
+  "id": "p30",
+  "status": 200,
+  "prepare_ms": 4641.7,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 3,
+   "detect_ms": 1126.9,
+   "vae_ms": 2079.8,
+   "vae_parse_ms": 2082.2,
+   "write_wait_ms": 632.9,
+   "load_ms": 95.5
+  },
+  "detect": {
+   "mode": "fast",
+   "canvas": [
+    384,
+    360
+   ],
+   "s3fd_net_ms": 5.3,
+   "s3fd_decode_ms": 0.9,
+   "s3fd_candidates": 13,
+   "s3fd_ms": 6.4,
+   "hog_ms": 16.0,
+   "landmarks_ms": 2.0,
+   "total_ms": 24.4,
+   "box_canvas": [
+    24,
+    48,
+    248,
+    362
+   ]
+  },
+  "face_box": [
+   200,
+   123,
+   527,
+   592
+  ],
+  "wall_s": 4.75
+ },
+ {
+  "id": "p06",
+  "status": 200,
+  "prepare_ms": 3903.9,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 289.9,
+   "vae_ms": 2145.3,
+   "vae_parse_ms": 2147.8,
+   "write_wait_ms": 650.8,
+   "load_ms": 100.6
+  },
+  "detect": {
+   "mode": "fast",
+   "canvas": [
+    384,
+    360
+   ],
+   "s3fd_net_ms": 5.0,
+   "s3fd_decode_ms": 1.1,
+   "s3fd_candidates": 22,
+   "s3fd_ms": 6.4,
+   "hog_ms": 16.1,
+   "landmarks_ms": 2.0,
+   "total_ms": 24.4,
+   "box_canvas": [
+    48,
+    62,
+    216,
+    290
+   ]
+  },
+  "face_box": [
+   193,
+   124,
+   529,
+   590
+  ],
+  "wall_s": 3.98
+ },
+ {
+  "id": "p31",
+  "status": 200,
+  "prepare_ms": 4009.5,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 432.4,
+   "vae_ms": 2076.8,
+   "vae_parse_ms": 2079.3,
+   "write_wait_ms": 636.5,
+   "load_ms": 98.9
+  },
+  "detect": {
+   "mode": "fast",
+   "canvas": [
+    384,
+    360
+   ],
+   "s3fd_net_ms": 5.2,
+   "s3fd_decode_ms": 1.1,
+   "s3fd_candidates": 23,
+   "s3fd_ms": 6.6,
+   "hog_ms": 16.1,
+   "landmarks_ms": 2.0,
+   "total_ms": 24.8,
+   "box_canvas": [
+    50,
+    65,
+    218,
+    307
+   ]
+  },
+  "face_box": [
+   204,
+   123,
+   522,
+   592
+  ],
+  "wall_s": 4.56
+ },
+ {
+  "id": "p01",
+  "status": 200,
+  "prepare_ms": 3455.2,
+  "phases_ms": {
+   "detections": 1,
+   "extend_passes": 1,
+   "detect_ms": 130.2,
+   "vae_ms": 2013.6,
+   "vae_parse_ms": 2016.0,
+   "write_wait_ms": 574.6,
+   "load_ms": 95.2
+  },
+  "detect": {
+   "mode": "fast",
+   "canvas": [
+    384,
+    360
+   ],
+   "s3fd_net_ms": 4.8,
+   "s3fd_decode_ms": 1.1,
+   "s3fd_candidates": 23,
+   "s3fd_ms": 6.2,
+   "hog_ms": 16.1,
+   "landmarks_ms": 2.0,
+   "total_ms": 24.2,
+   "box_canvas": [
+    61,
+    68,
+    207,
+    274
+   ]
+  },
+  "face_box": [
+   182,
+   136,
+   474,
+   558
+  ],
+  "wall_s": 3.53
+ }
+]
