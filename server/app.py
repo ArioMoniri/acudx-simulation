@@ -133,6 +133,7 @@ async def lifespan(app: FastAPI):
     # A Lambda key delivered over HTTPS (/bootstrap/provision) on an SSH-free deploy.
     load_lambda_key(settings, settings.bootstrap_dir)
     worker_manager = WorkerManager(settings, boot_timeout_s=settings.gpu_boot_timeout_s,
+                                   boot_stuck_s=settings.gpu_boot_stuck_s,
                                    ready_timeout_s=settings.gpu_ready_timeout_s)
     resolver = RegistryResolver(registry, settings, worker_manager=worker_manager)
     gateway = ModelGateway(settings, resolver=resolver, telemetry=telemetry)  # may raise EgressBlocked under AIRGAPPED+api

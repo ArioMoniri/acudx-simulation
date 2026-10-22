@@ -122,3 +122,19 @@ def test_policy_put_merges_partial_updates(tmp_path, monkeypatch):
     assert body["allowlist"] == ["gpu_1x_a100_sxm4"] and body["file_system_name"] == "acudx-wm"
     assert c.put("/admin/gpu/policy", json={"bogus": 1}, headers={"X-Admin-Token": "t"}).status_code == 422
     assert c.put("/admin/gpu/policy", json={"idle_minutes": 0}, headers={"X-Admin-Token": "t"}).status_code == 422
+
+
+def test_admin_status_lists_launch_cooldowns_and_they_can_be_cleared(tmp_path):
+    import time
+
+    app, m = _app(tmp_path)
+    now = time.time()
+    m.store.add_cooldown("gpu_1x_h100_pcie", "us-west-3", until=now + 3600, reason="boot_stuck", at=now)
+    c = TestClient(app, headers={"X-Admin-Token": "adm-secret"})
+    cds = c.get("/admin/gpu/status").json()["cooldowns"]
+    assert [(x["instance_type"], x["region"], x["reason"]) for x in cds] == [
+        ("gpu_1x_h100_pcie", "us-west-3", "boot_stuck")]
+    assert c.get("/admin/gpu/policy").json()["launch_cooldown_minutes"] == 60
+    r = c.post("/admin/gpu/cooldowns/clear")
+    assert r.status_code == 200 and r.json()["cleared"] == 1 and r.json()["cooldowns"] == []
+    assert TestClient(app).post("/admin/gpu/cooldowns/clear").status_code == 401

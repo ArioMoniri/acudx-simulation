@@ -210,7 +210,19 @@
       "card": "Kart",
       "cardGb": "{{gb}} GB",
       "fallback": "Yedek",
-      "fallbackNotice": "{{id}} numaralı sunucu {{gb}} GB kartta çalışıyor, çünkü başlatıldığında boşta {{pref}} GB kart yoktu. Canlı görüntü çalışır, ama Türkçe ses bu kartta daha geç başlar (3 sn altı yerine yaklaşık 5 sn)."
+      "fallbackNotice": "{{id}} numaralı sunucu {{gb}} GB kartta çalışıyor, çünkü başlatıldığında boşta {{pref}} GB kart yoktu. Canlı görüntü çalışır, ama Türkçe ses bu kartta daha geç başlar (3 sn altı yerine yaklaşık 5 sn).",
+      "cooldowns": "Atlanan seçenekler",
+      "cooldownsHint": "Açılmayan ya da Lambda'nın reddettiği bir kart türü ve bölge {{minutes}} dk atlanır. Bu sürede başlatmalar sıradaki bölgeyi, türü ya da 40 GB yedeği kullanır.",
+      "cooldownRow": "{{region}} bölgesinde {{type}}: {{reason}}, {{minutes}} dk daha atlanıyor",
+      "cooldownReason": {
+        "boot_stuck": "ilerleme olmadan açılışta kaldı",
+        "boot_timeout": "zamanında etkin olmadı",
+        "launch_failed": "Lambda başlatmayı reddetti",
+        "provider": "açılış sırasında Lambda tarafından durduruldu"
+      },
+      "clearCooldowns": "Yeniden dene",
+      "cooldownMinutes": "Başarısız seçeneği atlama süresi (dk)",
+      "cooldownMinutesHint": "Açılmayan ya da Lambda'nın reddettiği bir kart türü ve bölge bu süre atlanır. 0 kapatır."
     },
     "telemetry": {
       "title": "Model telemetrisi",

@@ -212,6 +212,11 @@ class Settings(BaseSettings):
     gpu_ready_timeout_s: float = 2700.0
     gpu_file_system_name: str | None = None
     gpu_boot_timeout_s: float = 900.0
+    # A boot Lambda keeps in ``booting`` with no progress (no IP, no status change) this long is given up
+    # before gpu_boot_timeout_s; production 2026-10-22 had two that never left ``booting`` (docs/review/09).
+    gpu_boot_stuck_s: float = 480.0
+    # After a boot failure or a refused launch, that (type, region) is skipped this long (0: off).
+    gpu_launch_cooldown_minutes: int = Field(default=60, ge=0, le=7 * 24 * 60)
     gpu_daily_budget_usd: float | None = None  # None = no cap; set a number to cap daily GPU spend
     gpu_llm_model: str = "Qwen/Qwen3-32B-AWQ"
     gpu_instance_allowlist: CsvList = Field(default_factory=lambda: [

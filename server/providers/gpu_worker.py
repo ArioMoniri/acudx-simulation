@@ -118,6 +118,23 @@ class WorkerFailed(WorkerRefused):
     reason = "worker_failed"
 
 
+class BootFailed(WorkerFailed):
+    """The instance never turned active on the provider (``kind``: boot_stuck, boot_timeout or
+    provider:<status>). Its (type, region) goes on the launch cooldown and the launch tries the next offer."""
+
+    def __init__(self, message: str, kind: str):
+        super().__init__(message)
+        self.kind = kind
+
+
+class _LaunchRefused(Exception):
+    """Lambda refused one launch (capacity gone since the listing, a provider error for that offer)."""
+
+    def __init__(self, error: Exception):
+        super().__init__(str(error))
+        self.error = error
+
+
 # --------------------------------------------------------------------------- #
 # Models                                                                       #
 # --------------------------------------------------------------------------- #
@@ -165,6 +182,12 @@ class WorkerPolicy(BaseModel):
     # on two gpu_1x_h100_pcie hosts, where the runner also fell to 19 to 23 fps (docs/architecture/18 6.3.10).
     # In this order, each on its own: the first that has capacity wins (not the cheapest of them).
     video_preferred_types: list[str] = Field(default_factory=lambda: list(DEFAULT_VIDEO_TYPES))
+    # After a boot that never turned active (Lambda kept it ``booting``) or a launch Lambda refused, that
+    # (type, region) is skipped for this long and the launch tries the next option (production 2026-10-22:
+    # two cold starts on the only 80 GB offer, gpu_1x_h100_pcie in us-west-3, stayed ``booting`` for 16 min
+    # each, and the gateway picked the same offer again). Stored in SQLite; 0 turns the cooldown off (a
+    # launch still moves on from the offer that just failed).
+    launch_cooldown_minutes: int = Field(default=60, ge=0, le=7 * 24 * 60)
 
     @field_validator("allowlist")
     @classmethod
@@ -253,6 +276,19 @@ def choose_offer(offers: dict[str, Any], policy: "WorkerPolicy", fs_region_pref:
     return pick_cheapest(offers, policy.allowlist, fs_region_pref, min_gpu_memory_gb=min_gb), fs_names
 
 
+def without_offers(offers: dict[str, Any], skip: set[tuple[str, str]]) -> dict[str, Any]:
+    """``offers`` with the (type, region) pairs in ``skip`` taken out of their capacity lists, so every
+    tier of :func:`choose_offer` moves on to another region, another type or the fallback tier."""
+    if not skip:
+        return offers
+    out: dict[str, Any] = {}
+    for name, offer in offers.items():
+        regions = [r for r in offer.regions_with_capacity_available if (name, r.name) not in skip]
+        out[name] = (offer if len(regions) == len(offer.regions_with_capacity_available)
+                     else offer.model_copy(update={"regions_with_capacity_available": regions}))
+    return out
+
+
 def video_tier(instance_type: str, policy: "WorkerPolicy") -> dict[str, Any]:
     """``preferred`` on a card with ``preferred_gpu_memory_gb`` per GPU, else ``fallback`` with the reason
     shown in the admin GPU section and the call tile."""
@@ -331,6 +367,9 @@ class WorkerStore:
                     worker_id INTEGER PRIMARY KEY, instance_id TEXT NOT NULL,
                     captured_at REAL NOT NULL, body TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS gpu_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS gpu_cooldowns (
+                    instance_type TEXT NOT NULL, region TEXT NOT NULL, until REAL NOT NULL,
+                    reason TEXT NOT NULL, at REAL NOT NULL, PRIMARY KEY (instance_type, region));
                 """
             )
 
@@ -404,6 +443,25 @@ class WorkerStore:
         with self._conn() as c:
             row = c.execute("SELECT * FROM gpu_workers ORDER BY id DESC LIMIT 1").fetchone()
         return WorkerRecord.model_validate(dict(row)) if row else None
+
+    # -- launch cooldowns ------------------------------------------------------ #
+    def add_cooldown(self, instance_type: str, region: str, *, until: float, reason: str, at: float) -> None:
+        """Skip (``instance_type``, ``region``) for launches until ``until`` (a later failure extends it)."""
+        with self._conn() as c:
+            c.execute("INSERT INTO gpu_cooldowns (instance_type, region, until, reason, at) VALUES (?, ?, ?, ?, ?) "
+                      "ON CONFLICT(instance_type, region) DO UPDATE SET until = MAX(until, excluded.until), "
+                      "reason = excluded.reason, at = excluded.at", (instance_type, region, until, reason, at))
+
+    def active_cooldowns(self, now: float) -> list[dict[str, Any]]:
+        """Cooldowns still running at ``now``, the one ending last first; expired rows are dropped."""
+        with self._conn() as c:
+            c.execute("DELETE FROM gpu_cooldowns WHERE until <= ?", (now,))
+            rows = c.execute("SELECT * FROM gpu_cooldowns ORDER BY until DESC").fetchall()
+        return [{**dict(r), "remaining_s": int(round(r["until"] - now))} for r in rows]
+
+    def clear_cooldowns(self) -> int:
+        with self._conn() as c:
+            return int(c.execute("DELETE FROM gpu_cooldowns").rowcount or 0)
 
     # -- boot-log evidence ----------------------------------------------------- #
     def save_boot_log(self, worker_id: int, instance_id: str, captured_at: float, body: dict[str, Any]) -> None:
@@ -480,7 +538,8 @@ class WorkerManager:
                  template_path: Path | str = DEFAULT_TEMPLATE,
                  clock: Callable[[], float] = time.time,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
-                 poll_interval_s: float = 5.0, boot_timeout_s: float = 900.0,
+                 poll_interval_s: float = 5.0, boot_timeout_s: float = 900.0, boot_stuck_s: float = 480.0,
+                 max_launch_attempts: int = 3,
                  ready_timeout_s: float = 1500.0, boot_log_interval_s: float = 60.0,
                  health_ttl_s: float = 30.0, call_refusal_window_s: float = 120.0,
                  calls_ttl_s: float = 120.0):
@@ -493,6 +552,12 @@ class WorkerManager:
         self._sleep = sleep
         self.poll_interval_s = poll_interval_s
         self.boot_timeout_s = boot_timeout_s
+        # Lambda reports ``booting`` until the instance is active. A boot that shows no progress (no IP, no
+        # status change) for this long is given up before boot_timeout_s; a healthy one is active in 2 to
+        # 5 min (docs/review/09: 321 s from launch to a ready worker on an A100 SXM4).
+        self.boot_stuck_s = min(boot_stuck_s, boot_timeout_s)
+        # Offers one launch tries in turn after a boot failure or a refused launch.
+        self.max_launch_attempts = max(1, int(max_launch_attempts))
         self.ready_timeout_s = ready_timeout_s
         self.boot_log_interval_s = boot_log_interval_s
         self._last_probe: dict[int, str] = {}
@@ -537,6 +602,7 @@ class WorkerManager:
             max_lifetime_hours=float(getattr(settings, "gpu_max_lifetime_hours", 6.0)),
             min_gpu_memory_gb=int(getattr(settings, "gpu_min_gpu_memory_gb", 40)),
             preferred_gpu_memory_gb=int(getattr(settings, "gpu_preferred_gpu_memory_gb", 80)),
+            launch_cooldown_minutes=int(getattr(settings, "gpu_launch_cooldown_minutes", 60)),
         )
 
     # -- policy -------------------------------------------------------------- #
@@ -786,6 +852,7 @@ class WorkerManager:
                          "launching": self._launching, "max_workers": self.policy.max_workers,
                          "gpus": sum(gpus_for(w.instance_type) for w in active),
                          "scale_up_needed": self.scale_up_needed(), "last_scale_up": self.last_scale_up},
+            "cooldowns": self.store.active_cooldowns(self._clock()),
             "spent_today_usd": spent,
             "budget_remaining_usd": (None if self.policy.daily_budget_usd is None
                                      else round(max(0.0, self.policy.daily_budget_usd - spent), 6)),
@@ -1155,9 +1222,40 @@ class WorkerManager:
         finally:
             release()
 
+    def cool_down(self, instance_type: str, region: str, reason: str) -> None:
+        """Skip (``instance_type``, ``region``) for ``policy.launch_cooldown_minutes`` (0: no cooldown)."""
+        minutes = self.policy.launch_cooldown_minutes
+        if minutes <= 0:
+            return
+        now = self._clock()
+        self.store.add_cooldown(instance_type, region, until=now + minutes * 60, reason=reason, at=now)
+        log.warning("gpu launch: %s in %s cooled down for %d min (%s)", instance_type, region, minutes, reason)
+
     async def _launch_inner(self, row_created: Callable[[], None]) -> WorkerRecord:
+        """Try up to ``max_launch_attempts`` offers: a boot that never turns active or a launch Lambda
+        refuses cools its (type, region) down and the next offer is launched (another region, another
+        type, then the 40 GB fallback). With nothing left the last failure is raised."""
+        tried: set[tuple[str, str]] = set()
+        last: WorkerRefused | None = None
+        for _ in range(self.max_launch_attempts):
+            try:
+                return await self._launch_one(row_created, tried)
+            except NoCapacity:
+                if last is not None:
+                    raise last
+                raise
+            except BootFailed as exc:
+                last = exc
+            except _LaunchRefused as exc:
+                last = WorkerFailed(str(exc.error))
+        assert last is not None
+        raise last
+
+    async def _launch_one(self, row_created: Callable[[], None], tried: set[tuple[str, str]]) -> WorkerRecord:
         api = self._lambda()
         offers = await api.list_instance_types()
+        skip = set(tried) | {(c["instance_type"], c["region"]) for c in self.store.active_cooldowns(self._clock())}
+        offers = without_offers(offers, skip)
         region_pref = list(self.policy.region_preference)
         fs_names: list[str] = []
         if self.policy.file_system_name:
@@ -1173,7 +1271,8 @@ class WorkerManager:
         if choice is None:
             raise NoCapacity(f"no capacity for any allow-listed type {self.policy.allowlist}"
                              + (f" with {min_gb} GB or more per GPU" if min_gb else "")
-                             + (f" in regions {self.policy.region_preference}" if self.policy.region_preference else ""))
+                             + (f" in regions {self.policy.region_preference}" if self.policy.region_preference else "")
+                             + (f" outside the cooled-down offers {sorted(skip)}" if skip else ""))
         offer = offers.get(choice.instance_type_name)
         llm_model = llm_model_for(self.policy.llm_model, gpu_memory_gb(offer.instance_type) if offer else None)
         self._check_budget(choice.price_cents_per_hour)
@@ -1184,13 +1283,24 @@ class WorkerManager:
                                       token=token, llm_model=llm_model, domain="auto")
         now = self._clock()
         gid = self.store.gateway_id()
-        ids = await api.launch(
-            region_name=choice.region_name, instance_type_name=choice.instance_type_name,
-            ssh_key_name=self.settings.lambda_ssh_key_name or "",
-            name=f"{WORKER_NAME_PREFIX}{int(now)}-g{gid}-{secrets.token_hex(2)}",
-            user_data=user_data, tags=[dict(WORKER_TAG), {"key": GATEWAY_TAG_KEY, "value": gid}],
-            file_system_names=fs_names or None, image_family=WORKER_IMAGE_FAMILY,
-        )
+        key = (choice.instance_type_name, choice.region_name)
+        try:
+            ids = await api.launch(
+                region_name=choice.region_name, instance_type_name=choice.instance_type_name,
+                ssh_key_name=self.settings.lambda_ssh_key_name or "",
+                name=f"{WORKER_NAME_PREFIX}{int(now)}-g{gid}-{secrets.token_hex(2)}",
+                user_data=user_data, tags=[dict(WORKER_TAG), {"key": GATEWAY_TAG_KEY, "value": gid}],
+                file_system_names=fs_names or None, image_family=WORKER_IMAGE_FAMILY,
+            )
+        except LambdaCloudError as exc:
+            # Capacity gone between the listing and the launch, or a provider error for this offer. A
+            # missing or wrong key (401/403) or no answer at all is not the offer's fault: raise as before.
+            if exc.status_code in (0, 401, 403):
+                raise
+            tried.add(key)
+            self.cool_down(*key, "launch_failed")
+            log.warning("gpu launch: %s in %s refused: %s", key[0], key[1], exc)
+            raise _LaunchRefused(exc) from exc
         if not ids:
             raise WorkerFailed("launch returned no instance id")
         w = self.store.insert_worker(
@@ -1205,7 +1315,11 @@ class WorkerManager:
             self._tasks[w.id] = current  # type: ignore[assignment]
         log.info("launched %s (%s @ %s, %d c/h)", w.instance_id, w.instance_type, w.region,
                  w.price_cents_per_hour)
-        return await self._wait_ready(w)
+        try:
+            return await self._wait_ready(w)
+        except BootFailed:
+            tried.add(key)
+            raise
 
     def _attempts(self, timeout_s: float) -> int:
         return max(1, int(timeout_s / max(self.poll_interval_s, 1.0)))
@@ -1219,19 +1333,40 @@ class WorkerManager:
             # Re-attaching to a ready row whose instance is gone: fail now, not after ready_timeout_s.
             raise WorkerFailed(f"instance {w.instance_id} is no longer running on the provider side")
         if not w.ip:
+            # Progress = a change of Lambda's (status, ip). A boot without any for boot_stuck_s is stuck.
+            progress_at = t0
+            seen: tuple[str, str | None] | None = None
             for _ in range(self._attempts(self.boot_timeout_s)):
                 inst = await api.get_instance(w.instance_id)
+                now = self._clock()
                 if inst.status in PROVIDER_GONE_STATUSES:
-                    self.store.close_ledger(w.instance_id, self._clock(), f"provider:{inst.status}")
-                    self.store.update_worker(w.id, status="failed", terminated_at=self._clock())
-                    raise WorkerFailed(f"instance {w.instance_id} is {inst.status} on the provider side")
+                    self.store.close_ledger(w.instance_id, now, f"provider:{inst.status}")
+                    self.store.update_worker(w.id, status="failed", terminated_at=now)
+                    self.cool_down(w.instance_type, w.region, f"provider:{inst.status}")
+                    raise BootFailed(f"instance {w.instance_id} is {inst.status} on the provider side",
+                                     f"provider:{inst.status}")
                 if inst.status == "active" and inst.ip:
                     w = self.store.update_worker(w.id, ip=inst.ip, domain=sslip_domain(inst.ip))
                     break
+                sig = (inst.status, inst.ip)
+                if seen is not None and sig != seen:
+                    progress_at = now
+                seen = sig
+                if inst.status == "booting" and not inst.ip and now - progress_at >= self.boot_stuck_s:
+                    log.warning("gpu worker %s (%s @ %s): still booting with no progress after %.0fs; giving up",
+                                w.instance_id, w.instance_type, w.region, now - progress_at)
+                    await self._terminate_one(w, "boot_stuck")
+                    self.cool_down(w.instance_type, w.region, "boot_stuck")
+                    raise BootFailed(f"instance {w.instance_id} stayed booting for {now - progress_at:.0f}s "
+                                     "with no progress", "boot_stuck")
+                if now - t0 >= self.boot_timeout_s:
+                    break
                 await self._sleep(self.poll_interval_s)
-            else:
+            if not w.ip:
                 await self._terminate_one(w, "boot_timeout")
-                raise WorkerFailed(f"instance {w.instance_id} did not become active in {self.boot_timeout_s:.0f}s")
+                self.cool_down(w.instance_type, w.region, "boot_timeout")
+                raise BootFailed(f"instance {w.instance_id} did not become active in {self.boot_timeout_s:.0f}s",
+                                 "boot_timeout")
         last_capture: float | None = None
         for _ in range(self._attempts(self.ready_timeout_s)):
             current = self.store.get_worker(w.id)

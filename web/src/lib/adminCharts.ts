@@ -263,3 +263,33 @@ export function poolRows(status: GpuStatus | null | undefined): PoolRow[] {
       fallback: w.video_tier?.tier === "fallback",
     }));
 }
+
+export interface CooldownRow {
+  key: string;
+  instance_type: string;
+  region: string;
+  /** i18n key under admin.gpu.cooldownReason (provider:<status> folds into `provider`). */
+  reason: "boot_stuck" | "boot_timeout" | "launch_failed" | "provider";
+  /** Whole minutes left, at least 1 while the cooldown runs. */
+  minutes_left: number;
+}
+
+const COOLDOWN_REASONS = new Set(["boot_stuck", "boot_timeout", "launch_failed"]);
+
+/** The launch cooldowns still running at `now` (seconds), the one ending last first. */
+export function cooldownRows(status: GpuStatus | null | undefined, now: number): CooldownRow[] {
+  return (status?.cooldowns ?? [])
+    .filter((c) => c.until > now)
+    .sort((a, b) => b.until - a.until)
+    .map((c) => ({
+      key: `${c.instance_type}@${c.region}`,
+      instance_type: c.instance_type,
+      region: c.region,
+      reason: c.reason.startsWith("provider")
+        ? "provider"
+        : COOLDOWN_REASONS.has(c.reason)
+          ? (c.reason as CooldownRow["reason"])
+          : "launch_failed",
+      minutes_left: Math.max(1, Math.ceil((c.until - now) / 60)),
+    }));
+}

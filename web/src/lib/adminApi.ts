@@ -215,6 +215,8 @@ export interface WorkerPolicy {
   min_gpu_memory_gb?: number;
   /** Card size tried first for live video calls (80); a smaller card only when none has capacity. */
   preferred_gpu_memory_gb?: number;
+  /** Minutes a (type, region) that failed to boot or was refused is skipped (60; 0 off). */
+  launch_cooldown_minutes?: number;
 }
 
 /** A worker's live-video tier: `preferred` on an 80 GB card, `fallback` when only a smaller card was free. */
@@ -261,6 +263,17 @@ export interface GpuCapacity {
   last_scale_up: { reason: string; at: number } | null;
 }
 
+/** A (type, region) the launcher skips after a boot failure or a refused launch. */
+export interface GpuCooldown {
+  instance_type: string;
+  region: string;
+  /** boot_stuck | boot_timeout | launch_failed | provider:<status> */
+  reason: string;
+  at: number;
+  until: number;
+  remaining_s: number;
+}
+
 export interface GpuStatus {
   configured: boolean;
   airgapped?: boolean;
@@ -271,6 +284,7 @@ export interface GpuStatus {
   /** Every worker of the pool (newer gateways). */
   workers?: WorkerPublic[];
   capacity?: GpuCapacity;
+  cooldowns?: GpuCooldown[];
   spent_today_usd: number;
   budget_remaining_usd?: number | null;
   reaper_running?: boolean;
@@ -471,6 +485,8 @@ export function createAdminApi(opts: AdminApiOptions = {}) {
       }),
     /** Launch one more worker now (up to the policy's max_workers). */
     gpuScaleUp: () => request<GpuStatus & { started: string }>("/admin/gpu/scale-up", { method: "POST" }),
+    gpuClearCooldowns: () =>
+      request<{ cleared: number; cooldowns: GpuCooldown[] }>("/admin/gpu/cooldowns/clear", { method: "POST" }),
     gpuLedger: (limit = 100) => request<GpuLedger>("/admin/gpu/ledger", { query: { limit } }),
     getGpuPolicy: () => request<WorkerPolicy>("/admin/gpu/policy"),
     putGpuPolicy: (policy: WorkerPolicy) =>

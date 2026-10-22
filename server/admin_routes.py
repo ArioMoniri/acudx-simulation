@@ -72,6 +72,14 @@ async def gpu_scale_up(request: Request) -> dict[str, Any]:
     return {"started": started, **(await m.status())}
 
 
+@router.post("/gpu/cooldowns/clear", dependencies=[Depends(require_admin)])
+async def gpu_cooldowns_clear(request: Request) -> dict[str, Any]:
+    """Drop every launch cooldown: a (type, region) that failed to boot is tried again on the next launch."""
+    m = _manager(request)
+    cleared = m.store.clear_cooldowns()
+    return {"cleared": cleared, "cooldowns": m.store.active_cooldowns(m._clock())}
+
+
 @router.post("/gpu/stop", dependencies=[Depends(require_admin)])
 async def gpu_stop(request: Request, worker_id: int | None = None) -> dict[str, Any]:
     """Stop one worker (``?worker_id=``) or every worker of the pool."""

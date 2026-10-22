@@ -210,7 +210,19 @@
       "card": "Card",
       "cardGb": "{{gb}} GB",
       "fallback": "Fallback",
-      "fallbackNotice": "Worker {{id}} runs on a {{gb}} GB card because no {{pref}} GB card had capacity at launch. Live video works, but the Turkish voice starts later on it (about 5 s instead of under 3 s)."
+      "fallbackNotice": "Worker {{id}} runs on a {{gb}} GB card because no {{pref}} GB card had capacity at launch. Live video works, but the Turkish voice starts later on it (about 5 s instead of under 3 s).",
+      "cooldowns": "Skipped offers",
+      "cooldownsHint": "A card type and region that did not boot, or that Lambda refused, is skipped for {{minutes}} min. Launches take the next region, type or the 40 GB fallback meanwhile.",
+      "cooldownRow": "{{type}} in {{region}}: {{reason}}, skipped for {{minutes}} more min",
+      "cooldownReason": {
+        "boot_stuck": "stayed booting with no progress",
+        "boot_timeout": "did not become active in time",
+        "launch_failed": "launch refused by Lambda",
+        "provider": "stopped by Lambda during boot"
+      },
+      "clearCooldowns": "Try them again",
+      "cooldownMinutes": "Skip a failed offer for (min)",
+      "cooldownMinutesHint": "A card type and region that did not boot, or that Lambda refused, is skipped this long. 0 turns it off."
     },
     "telemetry": {
       "title": "Model telemetry",

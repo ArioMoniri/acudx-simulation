@@ -22,7 +22,7 @@ import {
 } from "@/components/ui";
 import { EvilBarChart, type ChartConfig } from "@/components/charts";
 import type { WorkerPolicy } from "@/lib/adminApi";
-import { formatUsd, ledgerByDay, poolRows } from "@/lib/adminCharts";
+import { cooldownRows, formatUsd, ledgerByDay, poolRows } from "@/lib/adminCharts";
 import { ChartFrame, SERIES_COLORS, themed } from "./ChartFrame";
 import { formatDateTime, useAdminQuery, useAdminSession, useLocaleTag } from "./adminSession";
 
@@ -37,6 +37,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
   const [model, setModel] = useState(policy.llm_model);
   const [regions, setRegions] = useState(policy.region_preference.join("\n"));
   const [maxWorkers, setMaxWorkers] = useState(String(policy.max_workers ?? 3));
+  const [cooldown, setCooldown] = useState(String(policy.launch_cooldown_minutes ?? 60));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -47,6 +48,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
     setModel(policy.llm_model);
     setRegions(policy.region_preference.join("\n"));
     setMaxWorkers(String(policy.max_workers ?? 3));
+    setCooldown(String(policy.launch_cooldown_minutes ?? 60));
   }, [policy]);
 
   async function submit(e: FormEvent) {
@@ -54,6 +56,8 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
     setBusy(true);
     setMsg(null);
     const r = await api.putGpuPolicy({
+      // Fields this form does not edit (card tiers, video types) keep their saved values.
+      ...policy,
       idle_minutes: Number.parseInt(idle, 10),
       // Empty = no daily cap (the idle reaper still stops unused workers).
       daily_budget_usd: budget.trim() === "" ? null : Number.parseFloat(budget),
@@ -61,6 +65,7 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
       llm_model: model.trim(),
       region_preference: lines(regions),
       max_workers: Number.parseInt(maxWorkers, 10),
+      launch_cooldown_minutes: Number.parseInt(cooldown, 10),
     });
     setBusy(false);
     if (r.ok) {
@@ -80,6 +85,9 @@ function PolicyForm({ policy, onSaved }: { policy: WorkerPolicy; onSaved: (p: Wo
         </Field>
         <Field label={t("admin.gpu.dailyBudget")}>
           {(aria) => <TextInput {...aria} type="number" inputMode="decimal" min={0} step="0.5" value={budget} placeholder={t("admin.gpu.noCap", { defaultValue: "No cap" })} onChange={(e) => setBudget(e.target.value)} />}
+        </Field>
+        <Field label={t("admin.gpu.cooldownMinutes")} hint={t("admin.gpu.cooldownMinutesHint")}>
+          {(aria) => <TextInput {...aria} type="number" inputMode="numeric" min={0} max={10080} value={cooldown} onChange={(e) => setCooldown(e.target.value)} />}
         </Field>
       </div>
       <Field label={t("admin.gpu.model")}>
@@ -151,11 +159,21 @@ export function GpuSection() {
     void Promise.all([status.reload(), telemetry.reload()]);
   }
 
+  async function clearCooldowns() {
+    setActing("cooldowns");
+    setActionMsg(null);
+    const r = await api.gpuClearCooldowns();
+    setActing(null);
+    if (!r.ok) setActionMsg(t("admin.common.error", { code: r.error }));
+    void status.reload();
+  }
+
   const s = status.data;
   const w = s?.worker ?? null;
   const pool = poolRows(s);
   const cap = s?.capacity;
   const now = Date.now() / 1000;
+  const cooldowns = cooldownRows(s, now);
   const days = ledgerByDay(telemetry.data?.entries ?? [], now, locale, 14);
   const hasCost = days.some((d) => d.cost_usd > 0);
   const costConfig: ChartConfig = { cost_usd: { label: t("admin.telemetry.series.cost"), colors: themed(SERIES_COLORS.brand) } };
@@ -302,6 +320,31 @@ export function GpuSection() {
             ))}
           </div>
         )}
+        {cooldowns.length > 0 ? (
+          <div className="border-t border-[color:var(--border-subtle)] px-5 py-4" data-testid="gpu-cooldowns">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium">{t("admin.gpu.cooldowns")}</h3>
+                <p className="text-xs text-muted">
+                  {t("admin.gpu.cooldownsHint", { minutes: s?.policy?.launch_cooldown_minutes ?? 60 })}
+                </p>
+              </div>
+              <Button size="sm" variant="ghost" loading={acting === "cooldowns"} onClick={() => void clearCooldowns()}>
+                {t("admin.gpu.clearCooldowns")}
+              </Button>
+            </div>
+            <ul className="mt-2 space-y-1">
+              {cooldowns.map((c) => (
+                <li key={c.key} className="break-words text-xs text-[color:var(--state-caution)]">
+                  {t("admin.gpu.cooldownRow", {
+                    type: c.instance_type, region: c.region,
+                    reason: t(`admin.gpu.cooldownReason.${c.reason}`), minutes: c.minutes_left,
+                  })}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </Card>
 
       <ChartFrame

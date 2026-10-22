@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createAdminApi } from "@/lib/adminApi";
-import { poolRows } from "@/lib/adminCharts";
+import { cooldownRows, poolRows } from "@/lib/adminCharts";
 
 function fakeFetch(body: unknown = {}) {
   const calls: Array<{ url: string; init: RequestInit }> = [];
@@ -68,5 +68,36 @@ describe("poolRows", () => {
     expect(poolRows({ configured: true, spent_today_usd: 0, worker: w(3) }).map((r) => r.id)).toEqual([3]);
     expect(rows[0]).toMatchObject({ gpu_memory_gb: null, fallback: false });
     expect(poolRows({ configured: true, spent_today_usd: 0, worker: null })).toEqual([]);
+  });
+});
+
+describe("cooldownRows", () => {
+  it("lists running launch cooldowns with minutes left and folds provider reasons", () => {
+    const now = 1_000_000;
+    const c = (instance_type: string, region: string, reason: string, until: number) => ({
+      instance_type, region, reason, at: now - 60, until, remaining_s: until - now,
+    });
+    const rows = cooldownRows({
+      configured: true, spent_today_usd: 0, worker: null,
+      cooldowns: [
+        c("gpu_1x_h100_pcie", "us-west-3", "boot_stuck", now + 3000),
+        c("gpu_1x_h100_sxm5", "us-east-3", "provider:preempted", now + 3590),
+        c("gpu_1x_a100_sxm4", "us-east-1", "boot_timeout", now - 5),
+      ],
+    }, now);
+    expect(rows.map((r) => [r.key, r.reason, r.minutes_left])).toEqual([
+      ["gpu_1x_h100_sxm5@us-east-3", "provider", 60],
+      ["gpu_1x_h100_pcie@us-west-3", "boot_stuck", 50],
+    ]);
+    expect(cooldownRows(null, now)).toEqual([]);
+  });
+
+  it("clears the cooldowns through the admin API", async () => {
+    const { fn, calls } = fakeFetch({ cleared: 1, cooldowns: [] });
+    const api = createAdminApi({ baseUrl: base, fetchFn: fn, getToken: () => "t" });
+    const r = await api.gpuClearCooldowns();
+    expect(r.ok).toBe(true);
+    expect(calls[0].url).toBe(`${base}/admin/gpu/cooldowns/clear`);
+    expect(calls[0].init.method).toBe("POST");
   });
 });
