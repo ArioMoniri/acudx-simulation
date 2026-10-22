@@ -1,0 +1,2097 @@
+{
+ "note": "Private gateway (Claude as the model) and Lambda workers it launched, 2026-10-22 (7 workers, 30.13 USD). Speech start = question sent -> first audible patient sample in the page; the sandbox adds the WebSocket-tunnelled TURN and its egress proxy (about 0.6 to 0.9 s from first PCM at the runner to audible). Lip offsets with a score under 0.3 are not counted (the meter did not lock on). bench/ holds the direct Chatterbox and face-detection benches.",
+ "gpu_cost_usd": {
+  "total": 30.13,
+  "workers": 7
+ },
+ "runs": {
+  "en-2x-stream": {
+   "what": "2x, EN (worker Kokoro); line 1 guard model took 7.9 s",
+   "live_after_voice_click_ms": 12003,
+   "session_prepare_ms": 2798.9,
+   "runner": {
+    "infer_fps": 82.2,
+    "underruns": 0
+   },
+   "rtc_jitter_ms": {
+    "audio": 101,
+    "video": 103
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 8564,
+     "lip_lag_ms": 440,
+     "lip_score": 0.2,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 7932.5,
+     "history_ms": 7934.4,
+     "history_ready_ms": null,
+     "first_clause_ms": 1027.3,
+     "tts_first_chunk_ms": 1193.3,
+     "runner_first_chunk_ms": 7937.9,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 28,
+       "first_chunk_ms": 166
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 11,
+       "first_chunk_ms": 7797.3
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 140,
+       "first_chunk_ms": 1168.7
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 2608,
+     "lip_lag_ms": 160,
+     "lip_score": 0.314,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 785.3,
+     "history_ms": 789.6,
+     "history_ready_ms": null,
+     "first_clause_ms": 1792.5,
+     "tts_first_chunk_ms": 1951.4,
+     "runner_first_chunk_ms": 1951.7,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 25,
+       "first_chunk_ms": 158.9
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 37,
+       "first_chunk_ms": 452
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 46,
+       "first_chunk_ms": 2396.2
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 1817,
+     "lip_lag_ms": 0,
+     "lip_score": 0.479,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 879.3,
+     "history_ms": 882,
+     "history_ready_ms": null,
+     "first_clause_ms": 1056.2,
+     "tts_first_chunk_ms": 1173.1,
+     "runner_first_chunk_ms": 1173.4,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 26,
+       "first_chunk_ms": 116.9
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 42,
+       "first_chunk_ms": 453.4
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 66,
+       "first_chunk_ms": 2409.9
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 1713,
+     "lip_lag_ms": 80,
+     "lip_score": 0.246,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 794.2,
+     "history_ms": 797,
+     "history_ready_ms": null,
+     "first_clause_ms": 958.2,
+     "tts_first_chunk_ms": 1114.6,
+     "runner_first_chunk_ms": 1114.9,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 21,
+       "first_chunk_ms": 156.4
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 52,
+       "first_chunk_ms": 794.6
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 19,
+       "first_chunk_ms": 3170.6
+      }
+     ]
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 1988,
+     "lip_lag_ms": -40,
+     "lip_score": 0.288,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 905.2,
+     "history_ms": 908,
+     "history_ready_ms": null,
+     "first_clause_ms": 1064.5,
+     "tts_first_chunk_ms": 1183.5,
+     "runner_first_chunk_ms": 1183.8,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 20,
+       "first_chunk_ms": 118.9
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 56,
+       "first_chunk_ms": 456.9
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 49,
+       "first_chunk_ms": 3729
+      }
+     ]
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 1986,
+     "lip_lag_ms": 0,
+     "lip_score": 0.323,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 761.2,
+     "history_ms": 764.5,
+     "history_ready_ms": null,
+     "first_clause_ms": 1122.2,
+     "tts_first_chunk_ms": 1279.7,
+     "runner_first_chunk_ms": 1280,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 15,
+       "first_chunk_ms": 157.5
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 96,
+       "first_chunk_ms": 185.1
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 37,
+       "first_chunk_ms": 6334.2
+      }
+     ]
+    }
+   ]
+  },
+  "en-2x-stream-run2": {
+   "what": "2x, EN (worker Kokoro)",
+   "live_after_voice_click_ms": 15103,
+   "session_prepare_ms": 6460.2,
+   "runner": {
+    "infer_fps": 75.9,
+    "underruns": 19
+   },
+   "rtc_jitter_ms": {
+    "audio": 155,
+    "video": 171
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 2195,
+     "lip_lag_ms": 120,
+     "lip_score": 0.285,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 998,
+     "history_ms": 1002.2,
+     "history_ready_ms": null,
+     "first_clause_ms": 1007.6,
+     "tts_first_chunk_ms": 1192.2,
+     "runner_first_chunk_ms": 1192.5,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 20,
+       "first_chunk_ms": 184.5
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 23,
+       "first_chunk_ms": 452.2
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 121,
+       "first_chunk_ms": 1999.3
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 2461,
+     "lip_lag_ms": 40,
+     "lip_score": 0.25,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 949.5,
+     "history_ms": 952.5,
+     "history_ready_ms": null,
+     "first_clause_ms": 1671.3,
+     "tts_first_chunk_ms": 1825.9,
+     "runner_first_chunk_ms": 1826.2,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 12,
+       "first_chunk_ms": 154.5
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 49,
+       "first_chunk_ms": 601.2
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 53,
+       "first_chunk_ms": 3157.5
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 1940,
+     "lip_lag_ms": 120,
+     "lip_score": 0.494,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1060.8,
+     "history_ms": 1066.5,
+     "history_ready_ms": null,
+     "first_clause_ms": 744,
+     "tts_first_chunk_ms": 922.7,
+     "runner_first_chunk_ms": 1073.6,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 22,
+       "first_chunk_ms": 178.7
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 51,
+       "first_chunk_ms": 518.6
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 43,
+       "first_chunk_ms": 2869.2
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 34,
+       "first_chunk_ms": 2574.7
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 2622,
+     "lip_lag_ms": 0,
+     "lip_score": 0.587,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 845.4,
+     "history_ms": 848.7,
+     "history_ready_ms": null,
+     "first_clause_ms": 1725.2,
+     "tts_first_chunk_ms": 1902.2,
+     "runner_first_chunk_ms": 1902.5,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 26,
+       "first_chunk_ms": 177
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 73,
+       "first_chunk_ms": 453.1
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 106,
+       "first_chunk_ms": 4829.9
+      }
+     ]
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 1927,
+     "lip_lag_ms": -40,
+     "lip_score": 0.533,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1145.9,
+     "history_ms": 1149.3,
+     "history_ready_ms": null,
+     "first_clause_ms": 1089.3,
+     "tts_first_chunk_ms": 1263.6,
+     "runner_first_chunk_ms": 1263.9,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 24,
+       "first_chunk_ms": 174.3
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 133,
+       "first_chunk_ms": 793.5
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 59,
+       "first_chunk_ms": 8222.7
+      }
+     ]
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 1933,
+     "lip_lag_ms": -80,
+     "lip_score": 0.462,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 910.9,
+     "history_ms": 914.1,
+     "history_ready_ms": null,
+     "first_clause_ms": 1120,
+     "tts_first_chunk_ms": 1272,
+     "runner_first_chunk_ms": 1272.2,
+     "tts": [
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 15,
+       "first_chunk_ms": 152
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 7,
+       "first_chunk_ms": 167.6
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 105,
+       "first_chunk_ms": 831.2
+      },
+      {
+       "provider": "gpu-worker-kokoro",
+       "chars": 43,
+       "first_chunk_ms": 7174
+      }
+     ]
+    }
+   ]
+  },
+  "tr-1x-stream": {
+   "what": "1x H100 SXM5 (single-card fallback), streamed Chatterbox",
+   "live_after_voice_click_ms": 16113,
+   "session_prepare_ms": 5663.2,
+   "runner": {
+    "infer_fps": 60.8,
+    "underruns": 36
+   },
+   "rtc_jitter_ms": {
+    "audio": 136,
+    "video": 129
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 5009,
+     "lip_lag_ms": 0,
+     "lip_score": 0.278,
+     "speculative": "restarted",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "writing",
+      "outcome": "written_in_time"
+     },
+     "guard_ms": 1746.7,
+     "history_ms": 2268.5,
+     "history_ready_ms": null,
+     "first_clause_ms": 737.4,
+     "tts_first_chunk_ms": 1594.4,
+     "runner_first_chunk_ms": 4277,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 838.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 21,
+       "first_chunk_ms": 2209.7
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 68,
+       "first_chunk_ms": 1486.6
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 4075,
+     "lip_lag_ms": 80,
+     "lip_score": 0.379,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 3413.3,
+     "history_ms": 3416.3,
+     "history_ready_ms": null,
+     "first_clause_ms": 1867.4,
+     "tts_first_chunk_ms": 2898.2,
+     "runner_first_chunk_ms": 3420,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 22,
+       "first_chunk_ms": 1030.8
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 24,
+       "first_chunk_ms": 1489.9
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 58,
+       "first_chunk_ms": 2440.3
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 3048,
+     "lip_lag_ms": -120,
+     "lip_score": 0.302,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1070.2,
+     "history_ms": 1077.6,
+     "history_ready_ms": null,
+     "first_clause_ms": 1114.1,
+     "tts_first_chunk_ms": 2117.4,
+     "runner_first_chunk_ms": 2117.8,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 1003.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 39,
+       "first_chunk_ms": 2160.2
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 97,
+       "first_chunk_ms": 1806
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 2578,
+     "lip_lag_ms": 280,
+     "lip_score": 0.625,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 774.8,
+     "history_ms": 778.3,
+     "history_ready_ms": null,
+     "first_clause_ms": 875.2,
+     "tts_first_chunk_ms": 1861.2,
+     "runner_first_chunk_ms": 1861.5,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 17,
+       "first_chunk_ms": 986
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 66,
+       "first_chunk_ms": 3002.1
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 11,
+       "first_chunk_ms": 5535.3
+      }
+     ]
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 632,
+     "lip_lag_ms": -40,
+     "lip_score": 0.496,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 2301.9,
+     "history_ms": 2304.9,
+     "history_ready_ms": null,
+     "first_clause_ms": 1713.3,
+     "tts_first_chunk_ms": 2842.1,
+     "runner_first_chunk_ms": 2842.3,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 31,
+       "first_chunk_ms": 1128.8
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 82,
+       "first_chunk_ms": 1775.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 36,
+       "first_chunk_ms": 5334.6
+      }
+     ]
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 3246,
+     "lip_lag_ms": -280,
+     "lip_score": 0.301,
+     "speculative": "kept",
+     "history": null,
+     "guard_ms": 768.8,
+     "history_ms": 768.8,
+     "history_ready_ms": null,
+     "first_clause_ms": 1118.8,
+     "tts_first_chunk_ms": 2081.1,
+     "runner_first_chunk_ms": 2081.5,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 962.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 24,
+       "first_chunk_ms": 1150.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 85,
+       "first_chunk_ms": 3304.7
+      }
+     ]
+    }
+   ]
+  },
+  "tr-2x-baseline-wholeclause": {
+   "what": "2x H100 SXM5, launch code (whole-clause Chatterbox, legacy detector)",
+   "live_after_voice_click_ms": 9682,
+   "session_prepare_ms": 133,
+   "runner": {
+    "infer_fps": 88.8,
+    "underruns": 0
+   },
+   "rtc_jitter_ms": {
+    "audio": 190,
+    "video": 199
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 11020,
+     "lip_lag_ms": 120,
+     "lip_score": 0.367,
+     "speculative": "restarted",
+     "history": null,
+     "guard_ms": 1150.9,
+     "history_ms": 6726.2,
+     "history_ready_ms": null,
+     "first_clause_ms": 1140.4,
+     "tts_first_chunk_ms": 2048.6,
+     "runner_first_chunk_ms": 10044.9,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 39,
+       "first_chunk_ms": 2230.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 14,
+       "first_chunk_ms": 4553.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 66,
+       "first_chunk_ms": 2586.7
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 3141,
+     "lip_lag_ms": 40,
+     "lip_score": 0.45,
+     "speculative": "kept",
+     "history": null,
+     "guard_ms": 684.4,
+     "history_ms": 687.6,
+     "history_ready_ms": null,
+     "first_clause_ms": 1320.8,
+     "tts_first_chunk_ms": 2246.5,
+     "runner_first_chunk_ms": 2246.7,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 925.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 48,
+       "first_chunk_ms": 1738.1
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 55,
+       "first_chunk_ms": 3624.3
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 3323,
+     "lip_lag_ms": 120,
+     "lip_score": 0.519,
+     "speculative": "kept",
+     "history": null,
+     "guard_ms": 963,
+     "history_ms": 966.4,
+     "history_ready_ms": null,
+     "first_clause_ms": 1077.9,
+     "tts_first_chunk_ms": 2574.6,
+     "runner_first_chunk_ms": 2575.4,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 1496.7
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 41,
+       "first_chunk_ms": 2164.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 43,
+       "first_chunk_ms": 3260.6
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 3758,
+     "lip_lag_ms": 120,
+     "lip_score": 0.545,
+     "speculative": "kept",
+     "history": null,
+     "guard_ms": 830.3,
+     "history_ms": 834.1,
+     "history_ready_ms": null,
+     "first_clause_ms": 1214.6,
+     "tts_first_chunk_ms": 2938.2,
+     "runner_first_chunk_ms": 2938.5,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 34,
+       "first_chunk_ms": 1723.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 56,
+       "first_chunk_ms": 2845.4
+      }
+     ]
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 3281,
+     "lip_lag_ms": -40,
+     "lip_score": 0.341,
+     "speculative": "kept",
+     "history": null,
+     "guard_ms": 812.5,
+     "history_ms": 817.5,
+     "history_ready_ms": null,
+     "first_clause_ms": 980.3,
+     "tts_first_chunk_ms": 2627.7,
+     "runner_first_chunk_ms": 2628,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 34,
+       "first_chunk_ms": 1647.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 2505
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 66,
+       "first_chunk_ms": 1771.2
+      }
+     ]
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 2754,
+     "lip_lag_ms": 80,
+     "lip_score": 0.52,
+     "speculative": "kept",
+     "history": null,
+     "guard_ms": 1033.5,
+     "history_ms": 1033.5,
+     "history_ready_ms": null,
+     "first_clause_ms": 1182.4,
+     "tts_first_chunk_ms": 2058.8,
+     "runner_first_chunk_ms": 2059.3,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 17,
+       "first_chunk_ms": 876.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 39,
+       "first_chunk_ms": 1734.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 51,
+       "first_chunk_ms": 3471.5
+      }
+     ]
+    }
+   ]
+  },
+  "tr-2x-stream": {
+   "what": "2x H100 SXM5, streamed Chatterbox (24-token first window), voice on the call's worker",
+   "live_after_voice_click_ms": 8475,
+   "session_prepare_ms": 155.3,
+   "runner": {
+    "infer_fps": 78.9,
+    "underruns": 12
+   },
+   "rtc_jitter_ms": {
+    "audio": 181,
+    "video": 184
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 3347,
+     "lip_lag_ms": 0,
+     "lip_score": 0.672,
+     "speculative": "stalled",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "writing",
+      "outcome": "stalled_then_answered"
+     },
+     "guard_ms": 1240.7,
+     "history_ms": 2041.2,
+     "history_ready_ms": 6678.6,
+     "first_clause_ms": 1617.4,
+     "tts_first_chunk_ms": 2758.1,
+     "runner_first_chunk_ms": 2758.4,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 22,
+       "first_chunk_ms": 710.7
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 85,
+       "first_chunk_ms": 547.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 28,
+       "first_chunk_ms": 3988.4
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 2952,
+     "lip_lag_ms": 40,
+     "lip_score": 0.266,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1035.3,
+     "history_ms": 1038.3,
+     "history_ready_ms": null,
+     "first_clause_ms": 1275.9,
+     "tts_first_chunk_ms": 1810.6,
+     "runner_first_chunk_ms": 1811,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 22,
+       "first_chunk_ms": 534.7
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 22,
+       "first_chunk_ms": 2436.1
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 73,
+       "first_chunk_ms": 2096.2
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 2368,
+     "lip_lag_ms": 120,
+     "lip_score": 0.324,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 842.1,
+     "history_ms": 848,
+     "history_ready_ms": null,
+     "first_clause_ms": 1049.9,
+     "tts_first_chunk_ms": 1590,
+     "runner_first_chunk_ms": 1590.3,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 48,
+       "first_chunk_ms": 540
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 60,
+       "first_chunk_ms": 3334
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 38,
+       "first_chunk_ms": 6224.7
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 2352,
+     "lip_lag_ms": 0,
+     "lip_score": 0.48,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 779.4,
+     "history_ms": 782.7,
+     "history_ready_ms": null,
+     "first_clause_ms": 1056.8,
+     "tts_first_chunk_ms": 1605.9,
+     "runner_first_chunk_ms": 1606.2,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 17,
+       "first_chunk_ms": 549.2
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 41,
+       "first_chunk_ms": 734.8
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 56,
+       "first_chunk_ms": 2741.5
+      }
+     ]
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 2261,
+     "lip_lag_ms": 0,
+     "lip_score": 0.243,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1170.2,
+     "history_ms": 1174.9,
+     "history_ready_ms": null,
+     "first_clause_ms": 1030.4,
+     "tts_first_chunk_ms": 1572.2,
+     "runner_first_chunk_ms": 1572.5,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 40,
+       "first_chunk_ms": 541.7
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 9,
+       "first_chunk_ms": 1754.7
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 74,
+       "first_chunk_ms": 2093.3
+      }
+     ]
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 2798,
+     "lip_lag_ms": -40,
+     "lip_score": 0.301,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 903,
+     "history_ms": 905.9,
+     "history_ready_ms": null,
+     "first_clause_ms": 1534.3,
+     "tts_first_chunk_ms": 2071.8,
+     "runner_first_chunk_ms": 2072.2,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 537.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 26,
+       "first_chunk_ms": 1137.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 84,
+       "first_chunk_ms": 3595
+      }
+     ]
+    }
+   ]
+  },
+  "tr-2x-stream-run2": {
+   "what": "2x, streamed Chatterbox, second run",
+   "live_after_voice_click_ms": 12553,
+   "session_prepare_ms": 3418.4,
+   "runner": {
+    "infer_fps": 79.6,
+    "underruns": 13
+   },
+   "rtc_jitter_ms": {
+    "audio": 112,
+    "video": 105
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 5544,
+     "lip_lag_ms": -600,
+     "lip_score": 0.088,
+     "speculative": "restarted",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "writing",
+      "outcome": "written_in_time"
+     },
+     "guard_ms": 1847.9,
+     "history_ms": 1849.7,
+     "history_ready_ms": null,
+     "first_clause_ms": 1282.7,
+     "tts_first_chunk_ms": 1841.6,
+     "runner_first_chunk_ms": 4739.7,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 22,
+       "first_chunk_ms": 1757.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 65,
+       "first_chunk_ms": 1556.9
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 6715.7
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 2245,
+     "lip_lag_ms": -280,
+     "lip_score": -0.005,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 863.9,
+     "history_ms": 866.6,
+     "history_ready_ms": null,
+     "first_clause_ms": 988.9,
+     "tts_first_chunk_ms": 1548.7,
+     "runner_first_chunk_ms": 1549,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 22,
+       "first_chunk_ms": 559.8
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 51,
+       "first_chunk_ms": 1502.8
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 2233,
+     "lip_lag_ms": 40,
+     "lip_score": 0.556,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 868.3,
+     "history_ms": 872.9,
+     "history_ready_ms": null,
+     "first_clause_ms": 996.9,
+     "tts_first_chunk_ms": 1558.8,
+     "runner_first_chunk_ms": 1559.1,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 21,
+       "first_chunk_ms": 561.8
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 42,
+       "first_chunk_ms": 1291.2
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 44,
+       "first_chunk_ms": 5821.7
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 2669,
+     "lip_lag_ms": -40,
+     "lip_score": 0.555,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 990.8,
+     "history_ms": 995.3,
+     "history_ready_ms": null,
+     "first_clause_ms": 1411.5,
+     "tts_first_chunk_ms": 1965,
+     "runner_first_chunk_ms": 1965.4,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 553.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 15,
+       "first_chunk_ms": 2098.2
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 40,
+       "first_chunk_ms": 2234.4
+      }
+     ]
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 2406,
+     "lip_lag_ms": 80,
+     "lip_score": 0.476,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 703.6,
+     "history_ms": 706.9,
+     "history_ready_ms": null,
+     "first_clause_ms": 1169.7,
+     "tts_first_chunk_ms": 1719.4,
+     "runner_first_chunk_ms": 1719.7,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 17,
+       "first_chunk_ms": 549.7
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 75,
+       "first_chunk_ms": 1756.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 60,
+       "first_chunk_ms": 6442
+      }
+     ]
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 2354,
+     "lip_lag_ms": 40,
+     "lip_score": 0.5,
+     "speculative": "kept",
+     "history": null,
+     "guard_ms": 971.6,
+     "history_ms": 971.6,
+     "history_ready_ms": null,
+     "first_clause_ms": 1120.7,
+     "tts_first_chunk_ms": 1707,
+     "runner_first_chunk_ms": 1707.3,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 30,
+       "first_chunk_ms": 586.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 40,
+       "first_chunk_ms": 1426.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 48,
+       "first_chunk_ms": 4675.5
+      }
+     ]
+    }
+   ]
+  },
+  "tr-history-worst-case-2x": {
+   "what": "2x, whole-clause; history worst case attempt (call opened after the layers)",
+   "live_after_voice_click_ms": 24130,
+   "session_prepare_ms": 14994.8,
+   "runner": {
+    "infer_fps": 91.2,
+    "underruns": 0
+   },
+   "rtc_jitter_ms": {
+    "audio": 58,
+    "video": 72
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 2570,
+     "lip_lag_ms": -600,
+     "lip_score": 0.146,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1173.2,
+     "history_ms": 1175.9,
+     "history_ready_ms": null,
+     "first_clause_ms": 930.3,
+     "tts_first_chunk_ms": 1848.8,
+     "runner_first_chunk_ms": 1849,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 18,
+       "first_chunk_ms": 918.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 44,
+       "first_chunk_ms": 1741.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 152,
+       "first_chunk_ms": 6407.5
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 3001,
+     "lip_lag_ms": -600,
+     "lip_score": 0.002,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 962.9,
+     "history_ms": 966.5,
+     "history_ready_ms": null,
+     "first_clause_ms": 811.8,
+     "tts_first_chunk_ms": 2310.7,
+     "runner_first_chunk_ms": 2311,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 1498.9
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 29,
+       "first_chunk_ms": 2164
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 62,
+       "first_chunk_ms": 2353.9
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 3838,
+     "lip_lag_ms": 600,
+     "lip_score": 0.203,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 746.3,
+     "history_ms": 748.8,
+     "history_ready_ms": null,
+     "first_clause_ms": 1687.5,
+     "tts_first_chunk_ms": 3129.2,
+     "runner_first_chunk_ms": 3129.7,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 1441.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 2161.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 24,
+       "first_chunk_ms": 3380.8
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 3003,
+     "lip_lag_ms": -600,
+     "lip_score": 0.24,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.associated",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1510.7,
+     "history_ms": 1514.8,
+     "history_ready_ms": null,
+     "first_clause_ms": 1165.7,
+     "tts_first_chunk_ms": 2346.7,
+     "runner_first_chunk_ms": 2347,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 17,
+       "first_chunk_ms": 1181
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 18,
+       "first_chunk_ms": 1478.8
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 158,
+       "first_chunk_ms": 1564.5
+      }
+     ]
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 3136,
+     "lip_lag_ms": -600,
+     "lip_score": -0.075,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 977.9,
+     "history_ms": 981.1,
+     "history_ready_ms": null,
+     "first_clause_ms": 1093.4,
+     "tts_first_chunk_ms": 2485.7,
+     "runner_first_chunk_ms": 2486,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 16,
+       "first_chunk_ms": 1392.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 30,
+       "first_chunk_ms": 1820.1
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 143,
+       "first_chunk_ms": 4180.2
+      }
+     ]
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 3210,
+     "lip_lag_ms": -400,
+     "lip_score": 0.082,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1102.6,
+     "history_ms": 1111,
+     "history_ready_ms": null,
+     "first_clause_ms": 1158,
+     "tts_first_chunk_ms": 2548.3,
+     "runner_first_chunk_ms": 2548.6,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 17,
+       "first_chunk_ms": 1390.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 28,
+       "first_chunk_ms": 1819.9
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 152,
+       "first_chunk_ms": 4305.2
+      }
+     ]
+    }
+   ]
+  },
+  "tr-history-worst-case-2x-run2": {
+   "what": "2x, whole-clause; history worst case attempt 2",
+   "live_after_voice_click_ms": 23720,
+   "session_prepare_ms": 15016.7,
+   "runner": {
+    "infer_fps": 75.6,
+    "underruns": 16
+   },
+   "rtc_jitter_ms": {
+    "audio": 154,
+    "video": 170
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 3463,
+     "lip_lag_ms": 80,
+     "lip_score": 0.468,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1250.8,
+     "history_ms": 1255.1,
+     "history_ready_ms": null,
+     "first_clause_ms": 994.6,
+     "tts_first_chunk_ms": 2597.2,
+     "runner_first_chunk_ms": 2597.6,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 1602.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 69,
+       "first_chunk_ms": 2156.7
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 43,
+       "first_chunk_ms": 7037.1
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 2570,
+     "lip_lag_ms": 40,
+     "lip_score": 0.425,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 958,
+     "history_ms": 961.5,
+     "history_ready_ms": null,
+     "first_clause_ms": 788.5,
+     "tts_first_chunk_ms": 1959.1,
+     "runner_first_chunk_ms": 1959.4,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 22,
+       "first_chunk_ms": 1170.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 1601.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 88,
+       "first_chunk_ms": 2079.6
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 3972,
+     "lip_lag_ms": 120,
+     "lip_score": 0.611,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 888.1,
+     "history_ms": 891,
+     "history_ready_ms": null,
+     "first_clause_ms": 1601.5,
+     "tts_first_chunk_ms": 3091,
+     "runner_first_chunk_ms": 3091.3,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 1489.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 30,
+       "first_chunk_ms": 2162.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 83,
+       "first_chunk_ms": 3041.7
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 2958,
+     "lip_lag_ms": -40,
+     "lip_score": 0.484,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.associated",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1150.9,
+     "history_ms": 1156.3,
+     "history_ready_ms": null,
+     "first_clause_ms": 1474.2,
+     "tts_first_chunk_ms": 2360.8,
+     "runner_first_chunk_ms": 2361.1,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 16,
+       "first_chunk_ms": 886.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 62,
+       "first_chunk_ms": 1508.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 126,
+       "first_chunk_ms": 6186.8
+      }
+     ]
+    }
+   ]
+  },
+  "tr-history-worst-case-stall": {
+   "what": "2x, streamed; first question needs history.background while it is written",
+   "live_after_voice_click_ms": 13011,
+   "session_prepare_ms": 3722,
+   "runner": {
+    "infer_fps": 68.1,
+    "underruns": 31
+   },
+   "rtc_jitter_ms": {
+    "audio": 226,
+    "video": 237
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 3173,
+     "lip_lag_ms": 600,
+     "lip_score": 0.053,
+     "speculative": "stalled",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "writing",
+      "outcome": "stalled_then_answered"
+     },
+     "guard_ms": 972.8,
+     "history_ms": 1773.6,
+     "history_ready_ms": 10046.1,
+     "first_clause_ms": 1107.7,
+     "tts_first_chunk_ms": 2496.8,
+     "runner_first_chunk_ms": 2497,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 22,
+       "first_chunk_ms": 718.9
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 549.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 15,
+       "first_chunk_ms": 1752.1
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 58,
+       "first_chunk_ms": 616.3
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 2832,
+     "lip_lag_ms": 240,
+     "lip_score": 0.182,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1114.5,
+     "history_ms": 1117.3,
+     "history_ready_ms": null,
+     "first_clause_ms": 1261.9,
+     "tts_first_chunk_ms": 1841.5,
+     "runner_first_chunk_ms": 1841.9,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 19,
+       "first_chunk_ms": 579.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 37,
+       "first_chunk_ms": 878.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 74,
+       "first_chunk_ms": 2329.8
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 3392,
+     "lip_lag_ms": 280,
+     "lip_score": 0.08,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 965.4,
+     "history_ms": 968.2,
+     "history_ready_ms": null,
+     "first_clause_ms": 1764.6,
+     "tts_first_chunk_ms": 2317.1,
+     "runner_first_chunk_ms": 2317.4,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 552.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 39,
+       "first_chunk_ms": 2096
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 62,
+       "first_chunk_ms": 2672.8
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 3254,
+     "lip_lag_ms": 360,
+     "lip_score": 0.224,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.associated",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 932,
+     "history_ms": 935,
+     "history_ready_ms": null,
+     "first_clause_ms": 1901.2,
+     "tts_first_chunk_ms": 2472.3,
+     "runner_first_chunk_ms": 2472.6,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 16,
+       "first_chunk_ms": 571
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 47,
+       "first_chunk_ms": 1317.8
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 41,
+       "first_chunk_ms": 5194.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 56,
+       "first_chunk_ms": 10151.3
+      }
+     ]
+    }
+   ]
+  },
+  "tr-runner-2x-voice-on-other-worker": {
+   "what": "2x runner, but the voice resolved on the 1x pool worker (bug, fixed)",
+   "live_after_voice_click_ms": 13996,
+   "session_prepare_ms": 4093.5,
+   "runner": {
+    "infer_fps": 77.6,
+    "underruns": 26
+   },
+   "rtc_jitter_ms": {
+    "audio": 179,
+    "video": 180
+   },
+   "lines": [
+    {
+     "line": 1,
+     "speech_start_ms": 10916,
+     "lip_lag_ms": 40,
+     "lip_score": 0.42,
+     "speculative": "restarted",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "writing",
+      "outcome": "written_in_time"
+     },
+     "guard_ms": 1182,
+     "history_ms": 1183.8,
+     "history_ready_ms": null,
+     "first_clause_ms": 9397.9,
+     "tts_first_chunk_ms": 10264.2,
+     "runner_first_chunk_ms": 10264.5,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 18,
+       "first_chunk_ms": 866.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 54,
+       "first_chunk_ms": 2715.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 57,
+       "first_chunk_ms": 7895
+      }
+     ]
+    },
+    {
+     "line": 2,
+     "speech_start_ms": 4084,
+     "lip_lag_ms": 200,
+     "lip_score": 0.304,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 981.1,
+     "history_ms": 984.3,
+     "history_ready_ms": null,
+     "first_clause_ms": 2054.7,
+     "tts_first_chunk_ms": 3014.3,
+     "runner_first_chunk_ms": 3014.6,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 959.6
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 17,
+       "first_chunk_ms": 2073.8
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 66,
+       "first_chunk_ms": 3125
+      }
+     ]
+    },
+    {
+     "line": 3,
+     "speech_start_ms": 2671,
+     "lip_lag_ms": 0,
+     "lip_score": 0.452,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 1098.3,
+     "history_ms": 1102.7,
+     "history_ready_ms": null,
+     "first_clause_ms": 1107.9,
+     "tts_first_chunk_ms": 1933.3,
+     "runner_first_chunk_ms": 1933.6,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 21,
+       "first_chunk_ms": 825.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 38,
+       "first_chunk_ms": 1997.9
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 89,
+       "first_chunk_ms": 2644.6
+      }
+     ]
+    },
+    {
+     "line": 4,
+     "speech_start_ms": 3622,
+     "lip_lag_ms": 0,
+     "lip_score": 0.383,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 777,
+     "history_ms": 779.9,
+     "history_ready_ms": null,
+     "first_clause_ms": 1171.5,
+     "tts_first_chunk_ms": 2927.5,
+     "runner_first_chunk_ms": 2927.7,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 17,
+       "first_chunk_ms": 1755.9
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 45,
+       "first_chunk_ms": 1822.8
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 49,
+       "first_chunk_ms": 3616.7
+      }
+     ]
+    },
+    {
+     "line": 5,
+     "speech_start_ms": 3020,
+     "lip_lag_ms": 0,
+     "lip_score": 0.505,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.background",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 733.5,
+     "history_ms": 737.9,
+     "history_ready_ms": null,
+     "first_clause_ms": 1071.5,
+     "tts_first_chunk_ms": 2294.9,
+     "runner_first_chunk_ms": 2295.3,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 22,
+       "first_chunk_ms": 1223.3
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 35,
+       "first_chunk_ms": 1696.4
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 105,
+       "first_chunk_ms": 2798.3
+      }
+     ]
+    },
+    {
+     "line": 6,
+     "speech_start_ms": 3148,
+     "lip_lag_ms": -40,
+     "lip_score": 0.278,
+     "speculative": "kept",
+     "history": {
+      "layer": "history.presenting",
+      "at_ask": "ready",
+      "outcome": "ready"
+     },
+     "guard_ms": 929.7,
+     "history_ms": 932.9,
+     "history_ready_ms": null,
+     "first_clause_ms": 1326.8,
+     "tts_first_chunk_ms": 2487.3,
+     "runner_first_chunk_ms": 2487.6,
+     "tts": [
+      {
+       "provider": "gpu-worker",
+       "chars": 20,
+       "first_chunk_ms": 1160.5
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 6,
+       "first_chunk_ms": 975.7
+      },
+      {
+       "provider": "gpu-worker",
+       "chars": 137,
+       "first_chunk_ms": 1767.7
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
