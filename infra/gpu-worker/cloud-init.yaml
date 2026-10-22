@@ -3842,15 +3842,22 @@ runcmd:
   # NVSwitch hosts (gpu_4x/8x SXM): CUDA answers "Error 802: system not yet initialized" until the
   # fabric manager has registered the fabric (live 2026-10-21, gpu_4x_h100_sxm5: vLLM, the runner and
   # the image edit server all failed with 802). Start it and wait for the fabric before anything uses CUDA.
+  # Only hosts with NVSwitch need it: on a gpu_2x_h100_sxm5 (no NVSwitch, Lambda removes the unit from the boot
+  # targets) "systemctl enable --now" blocked until systemd gave up, 7.7 min before any image was fetched (live
+  # 2026-10-22). The start is bounded too.
   - |
-    if [ "$(nvidia-smi -L 2>/dev/null | wc -l)" -ge 2 ]; then
-      systemctl enable --now nvidia-fabricmanager 2>/dev/null || echo "acudx: nvidia-fabricmanager unit not present"
+    if [ "$(nvidia-smi -L 2>/dev/null | wc -l)" -ge 2 ] && { ls /dev/nvidia-nvswitch* >/dev/null 2>&1 || lspci 2>/dev/null | grep -qi nvswitch; }; then
+      . /opt/acudx/images.sh && mark "fabric manager: starting (NVSwitch host)"
+      timeout 90 systemctl enable --now nvidia-fabricmanager 2>/dev/null || echo "acudx: nvidia-fabricmanager did not start within 90 s or is not present"
       for _ in $(seq 1 90); do
         st=$(nvidia-smi -q 2>/dev/null | awk '/Fabric/{f=1} f && /State/{print $3; exit}')
         case "$st" in Completed|N/A|"") break ;; esac
         sleep 5
       done
       echo "acudx: GPU fabric state ${st:-none}"
+      mark "fabric manager: state ${st:-none}"
+    else
+      echo "acudx: no NVSwitch on this host; the fabric manager is not needed"
     fi
   # GPU layout. One GPU: every service shares card 0. Two or more (gpu_2x_*, gpu_8x_*): the avatar runner
   # gets card 1 to itself (more calls per worker) and the image edit server the next card.

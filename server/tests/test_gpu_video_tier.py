@@ -54,7 +54,9 @@ def test_defaults_prefer_80_gb_and_list_the_80_gb_cards():
     assert p.preferred_gpu_memory_gb == 80 and p.min_gpu_memory_gb == 40
     assert {"gpu_1x_h100_pcie", "gpu_1x_h100_sxm5"} <= set(p.allowlist)
     assert Settings(_env_file=None).gpu_preferred_gpu_memory_gb == 80
-    assert Settings(_env_file=None).gpu_instance_allowlist[:2] == ["gpu_1x_h100_pcie", "gpu_1x_h100_sxm5"]
+    assert Settings(_env_file=None).gpu_instance_allowlist[:3] == ["gpu_2x_h100_sxm5", "gpu_1x_h100_pcie",
+                                                                    "gpu_1x_h100_sxm5"]
+    assert p.video_preferred_types == ["gpu_2x_h100_sxm5", "gpu_1x_h100_sxm5"]
     # A policy saved before the field existed gets the default.
     assert WorkerPolicy.model_validate({"idle_minutes": 7}).preferred_gpu_memory_gb == 80
 
@@ -154,7 +156,7 @@ async def test_a_launch_takes_the_80_gb_card_with_the_32b_model_and_no_filesyste
         st = await m.status()
     finally:
         await m.aclose()
-    assert w.instance_type == "gpu_1x_h100_sxm5"
+    assert w.instance_type == "gpu_2x_h100_sxm5"            # the two-card host first for video
     body = json.loads(launch.calls.last.request.content)
     assert body["region_name"] == "us-southeast-1" and not body.get("file_system_names")
     assert "WORKER_LLM_MODEL=Qwen/Qwen3-32B-AWQ" in body["user_data"]
@@ -176,3 +178,18 @@ async def test_without_80_gb_capacity_the_40_gb_worker_is_marked_fallback(tmp_pa
     assert body.get("file_system_names") == ["acudx-wm"]
     tier = st["workers"][0]["video_tier"]
     assert tier["tier"] == "fallback" and "no 80 GB card had capacity" in tier["notice"]
+
+
+def test_two_card_h100_goes_first_for_video_and_falls_back_to_one_card():
+    # Owner decision 2026-10-22: the avatar runner and the edits on a card of their own, vLLM and the voices on
+    # the other; one H100 SXM5 card when no 2x host has capacity (docs/architecture/18 6.3.11).
+    pol = WorkerPolicy(allowlist=["gpu_2x_h100_sxm5", "gpu_1x_h100_pcie", "gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4"])
+    offers = _offers()
+    assert choose_offer(offers, pol, [], [])[0].instance_type_name == "gpu_2x_h100_sxm5"   # though 2x the price
+    offers["gpu_2x_h100_sxm5"].regions_with_capacity_available.clear()
+    assert choose_offer(offers, pol, [], [])[0].instance_type_name == "gpu_1x_h100_sxm5"
+    offers["gpu_1x_h100_sxm5"].regions_with_capacity_available.clear()
+    assert choose_offer(offers, pol, [], [])[0].instance_type_name == "gpu_1x_a100_sxm4"   # the 40 GB fallback
+    # A policy without the 2x type in its allowlist never launches one.
+    one = WorkerPolicy(allowlist=["gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4"])
+    assert choose_offer(_offers(), one, [], [])[0].instance_type_name == "gpu_1x_h100_sxm5"

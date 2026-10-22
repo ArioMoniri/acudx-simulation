@@ -55,7 +55,11 @@ log = logging.getLogger("acudx.gpu_worker")
 
 # 80 GB cards first in the list (the preferred tier for live video calls, WorkerPolicy.preferred_gpu_memory_gb),
 # then 40 GB; the A10 stays listed for a policy that lowers min_gpu_memory_gb.
-DEFAULT_ALLOWLIST = ["gpu_1x_h100_pcie", "gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4", "gpu_1x_a100", "gpu_1x_a10"]
+DEFAULT_ALLOWLIST = ["gpu_2x_h100_sxm5", "gpu_1x_h100_pcie", "gpu_1x_h100_sxm5", "gpu_1x_a100_sxm4", "gpu_1x_a100",
+                     "gpu_1x_a10"]
+# Live video calls: a two-card H100 SXM5 worker first (the avatar runner and the image edits on card 1, vLLM, the
+# voices and STT on card 0, docs/architecture/18 6.3.11), then one H100 SXM5 card, then the rest of the 80 GB tier.
+DEFAULT_VIDEO_TYPES = ["gpu_2x_h100_sxm5", "gpu_1x_h100_sxm5"]
 DEFAULT_TEMPLATE = Path(__file__).resolve().parents[2] / "infra" / "gpu-worker" / "cloud-init.yaml"
 SERVED_MODEL_NAME = "acudx-llm"   # --served-model-name in the worker's vLLM
 
@@ -159,7 +163,8 @@ class WorkerPolicy(BaseModel):
     # Inside the 80 GB tier these types go first (cheapest of them), then the rest of the tier. Measured
     # 2026-10-22 on Lambda: Chatterbox T3 13.4 to 16 ms a token on gpu_1x_h100_sxm5 against 24 to 35 ms
     # on two gpu_1x_h100_pcie hosts, where the runner also fell to 19 to 23 fps (docs/architecture/18 6.3.10).
-    video_preferred_types: list[str] = Field(default_factory=lambda: ["gpu_1x_h100_sxm5"])
+    # In this order, each on its own: the first that has capacity wins (not the cheapest of them).
+    video_preferred_types: list[str] = Field(default_factory=lambda: list(DEFAULT_VIDEO_TYPES))
 
     @field_validator("allowlist")
     @classmethod
@@ -226,7 +231,8 @@ def choose_offer(offers: dict[str, Any], policy: "WorkerPolicy", fs_region_pref:
                  fs_names: list[str]) -> tuple[Any, list[str]]:
     """The type to launch and the filesystems to attach. Tiers, first match wins:
 
-    0. tiers 1 and 2 are tried with ``video_preferred_types`` (H100 SXM5) first, then the whole allowlist;
+    0. tiers 1 and 2 are tried with each of ``video_preferred_types`` in order (2x H100 SXM5, then 1x H100
+       SXM5), then the whole allowlist;
     1. ``preferred_gpu_memory_gb`` (80) in the filesystem's region, with the filesystem;
     2. ``preferred_gpu_memory_gb`` in any region of ``policy.region_preference`` (any region when
        empty), without the filesystem (a Lambda filesystem attaches only in its own region);
@@ -234,8 +240,9 @@ def choose_offer(offers: dict[str, Any], policy: "WorkerPolicy", fs_region_pref:
     """
     pref_gb, min_gb = policy.preferred_gpu_memory_gb, policy.min_gpu_memory_gb
     if pref_gb and pref_gb >= min_gb:
-        first = [t for t in policy.allowlist if t in set(policy.video_preferred_types)]
-        for types in ([first] if first else []) + [policy.allowlist]:
+        allowed = set(policy.allowlist)
+        firsts = [[t] for t in dict.fromkeys(policy.video_preferred_types) if t in allowed]
+        for types in firsts + [policy.allowlist]:
             c = pick_cheapest(offers, types, fs_region_pref, min_gpu_memory_gb=pref_gb)
             if c is not None:
                 return c, fs_names

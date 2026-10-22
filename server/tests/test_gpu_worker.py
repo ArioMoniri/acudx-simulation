@@ -121,7 +121,7 @@ def test_policy_defaults_and_persist(tmp_path):
     again = WorkerStore(str(tmp_path / "acudx.db")).get_policy()
     assert again.idle_minutes == 5 and again.daily_budget_usd == 3.5
     assert again.llm_model == "Qwen/Qwen3-14B-AWQ"
-    assert again.allowlist[0] == "gpu_1x_h100_pcie"           # 80 GB first (the live-video tier)
+    assert again.allowlist[:2] == ["gpu_2x_h100_sxm5", "gpu_1x_h100_pcie"]   # 80 GB first (the live-video tier)
 
 
 # --- launch path ----------------------------------------------------------- #
