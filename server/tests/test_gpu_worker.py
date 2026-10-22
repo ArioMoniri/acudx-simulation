@@ -1260,6 +1260,21 @@ def test_streaming_route_and_switches_are_installed():
         assert _compose()["services"][svc]["restart"] == "unless-stopped"
 
 
+def test_a_streamed_clause_can_use_the_end_of_the_reference_prompt():
+    import numpy as np
+
+    p = _chatterbox_patch()
+    ref = {"prompt_token": np.arange(250)[None], "prompt_feat": np.arange(501 * 2).reshape(1, 501, 2),
+           "prompt_token_len": [250], "prompt_feat_len": None, "embedding": "x"}
+    out = p.trimmed_prompt(ref, 100)
+    assert out["prompt_token"].shape == (1, 100) and out["prompt_token"][0, 0] == 150
+    # tokens 150..249 go with mel frames 300..499 (two a token; the odd extra frame is dropped)
+    assert out["prompt_feat"].shape == (1, 200, 2) and out["prompt_feat"][0, 0, 0] == 600
+    assert out["prompt_token_len"] == [100] and out["embedding"] == "x"
+    assert p.trimmed_prompt(ref, 0) is ref and p.trimmed_prompt(ref, 300) is ref
+    assert p.TUNING["stream_prompt_tokens"] == 0 and p.TUNING["stream_flow_steps"] == 10
+
+
 def test_a_cuda_fatal_error_is_recognised():
     p = _chatterbox_patch()
     import threading as th

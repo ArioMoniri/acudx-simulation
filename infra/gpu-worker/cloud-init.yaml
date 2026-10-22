@@ -617,7 +617,51 @@ write_files:
           # while a window renders, so each window must arrive before the audio already sent has played out.
           "stream_schedule": [int(v) for v in os.getenv("ACUDX_STREAM_SCHEDULE", "24,24,48,64").split(",") if v.strip()],
           "stream_watermark": os.getenv("ACUDX_STREAM_WATERMARK", "1") != "0",
+          # The flow re-runs over the voice's reference prompt (up to 10 s, 250 tokens, 500 mel frames) plus the
+          # clause on every window, so the prompt sets the cost of a window (350 to 500 ms live). Streamed clauses
+          # may use only its last N tokens (0 = all of it); every window of a clause uses the same prompt.
+          "stream_prompt_tokens": int(os.getenv("ACUDX_STREAM_PROMPT_TOKENS", "0")),
+          # Euler steps of the flow's CFM decoder for streamed clauses (upstream 10).
+          "stream_flow_steps": int(os.getenv("ACUDX_STREAM_FLOW_STEPS", "10")),
       })
+      _FLOW_STEPS = threading.local()
+
+
+      def trimmed_prompt(ref: dict, keep_tokens: int, tensor: Any = None) -> dict:
+          """The S3Gen reference with only its last ``keep_tokens`` prompt tokens and their 2 mel frames each."""
+          tok = ref.get("prompt_token")
+          if not keep_tokens or tok is None or tok.shape[1] <= keep_tokens:
+              return ref
+          n = int(tok.shape[1])
+          out = dict(ref)
+          out["prompt_token"] = tok[:, n - keep_tokens:]
+          feat = ref["prompt_feat"][:, : 2 * n]
+          out["prompt_feat"] = feat[:, feat.shape[1] - 2 * keep_tokens:]
+          plen = ref.get("prompt_token_len")
+          if plen is not None and tensor is not None:
+              out["prompt_token_len"] = tensor([keep_tokens], dtype=plen.dtype, device=plen.device)
+          elif plen is not None:
+              out["prompt_token_len"] = [keep_tokens]
+          if out.get("prompt_feat_len") is not None and tensor is not None:
+              out["prompt_feat_len"] = tensor([2 * keep_tokens], device=out["prompt_feat"].device)
+          return out
+
+
+      def _install_flow_steps(s3: Any) -> None:
+          """Let a streamed clause choose the flow decoder's Euler steps (the decoder is called with 10)."""
+          dec = getattr(getattr(s3, "flow", None), "decoder", None)
+          if dec is None or getattr(dec, "_acudx_steps", False):
+              return
+          orig = dec.forward
+
+          def forward(*args, **kwargs):
+              steps = getattr(_FLOW_STEPS, "n", None)
+              if steps and "n_timesteps" in kwargs:
+                  kwargs["n_timesteps"] = int(steps)
+              return orig(*args, **kwargs)
+
+          dec.forward = forward
+          dec._acudx_steps = True
       STREAM_TIMINGS: deque = deque(maxlen=40)
 
 
@@ -783,7 +827,11 @@ write_files:
               row["token_cap"] = cap
               tokens: list = []
               s3 = model.s3gen
-              ref = model.conds.gen
+              ref = trimmed_prompt(model.conds.gen, int(TUNING.get("stream_prompt_tokens") or 0), torch.tensor)
+              row["prompt_tokens"] = int(ref["prompt_token"].shape[1]) if ref.get("prompt_token") is not None else None
+              _install_flow_steps(s3)
+              steps = int(TUNING.get("stream_flow_steps") or 10)
+              row["flow_steps"] = steps
               targets = window_targets(TUNING.get("stream_schedule") or [24, 24, 48, 64])
               next_at = next(targets)
               mel_done = 0
@@ -799,9 +847,14 @@ write_files:
               def render(final: bool) -> None:
                   nonlocal mel_done
                   tp = time.perf_counter()
+                  _FLOW_STEPS.n = steps if steps != 10 else None
+                  try:
+                      with torch.inference_mode():
+                          toks = torch.tensor([tokens], dtype=torch.long, device=model.device)
+                          mel = s3.flow_inference(toks, ref_dict=ref, finalize=final)
+                  finally:
+                      _FLOW_STEPS.n = None
                   with torch.inference_mode():
-                      toks = torch.tensor([tokens], dtype=torch.long, device=model.device)
-                      mel = s3.flow_inference(toks, ref_dict=ref, finalize=final)
                       new = mel[:, :, mel_done:]
                       mel_done = int(mel.shape[2])
                       if new.shape[2] == 0 and not final:
@@ -976,7 +1029,8 @@ write_files:
                   if not sched:
                       return {"error": "stream_schedule must not be empty"}
                   TUNING["stream_schedule"] = sched
-              for key, lo, hi in (("first_max_words", 3, 20), ("second_max_words", 0, 30), ("t3_tokens_base", 0, 200)):
+              for key, lo, hi in (("first_max_words", 3, 20), ("second_max_words", 0, 30), ("t3_tokens_base", 0, 200),
+                                  ("stream_prompt_tokens", 0, 250), ("stream_flow_steps", 2, 10)):
                   if key in body:
                       try:
                           TUNING[key] = max(lo, min(hi, int(body[key])))
