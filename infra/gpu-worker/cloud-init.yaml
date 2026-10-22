@@ -424,8 +424,40 @@ write_files:
           return int(int(TUNING.get("t3_tokens_base") or 0) + per * len(str(text or "").strip()))
 
 
+      def drop_alignment_hooks(t3: Any) -> int:
+          """Remove the attention hooks a finished T3 inference left behind; how many were removed.
+
+          Upstream T3.inference (chatterbox-multilingual c33cc02) builds a new AlignmentStreamAnalyzer on every
+          call, and each one registers forward hooks on three attention layers that are never removed. Every
+          hook copies its layer's attention to the CPU on every decoder step, so after n requests a step pays
+          3 n device-to-host copies: the decoder slowed with the worker's age (13.4 ms a token fresh, 17 to 24
+          ms later, docs/architecture/18 6.3.10). Only hooks whose function is the analyzer's
+          ``attention_forward_hook`` are removed."""
+          n = 0
+          try:
+              layers = t3.tfmr.layers
+          except AttributeError:
+              return 0
+          for layer in layers:
+              hooks = getattr(getattr(layer, "self_attn", None), "_forward_hooks", None)
+              if not hooks:
+                  continue
+              for hid in [k for k, f in hooks.items() if getattr(f, "__name__", "") == "attention_forward_hook"]:
+                  del hooks[hid]
+                  n += 1
+          STATS["t3_hooks_dropped"] = STATS.get("t3_hooks_dropped", 0) + n
+          return n
+
+
+      def t3_hook_count(t3: Any) -> int:
+          try:
+              return sum(len(getattr(layer.self_attn, "_forward_hooks", {}) or {}) for layer in t3.tfmr.layers)
+          except AttributeError:
+              return -1
+
+
       def _timed(store: dict, key: str, fn: Callable[..., Any], *, autocast: bool = False,
-                 sync: bool = False) -> Callable[..., Any]:
+                 sync: bool = False, after: Any = None) -> Callable[..., Any]:
           def run(*args, **kwargs):
               t0 = time.perf_counter()
               cap = store.pop("_cap", None) if key == "t3_ms" else None
@@ -446,6 +478,8 @@ write_files:
                   if torch.cuda.is_available():
                       torch.cuda.synchronize()
               store[key] = store.get(key, 0.0) + (time.perf_counter() - t0) * 1000.0
+              if key == "t3_ms":
+                  store["t3_hooks_dropped"] = drop_alignment_hooks(after) if after is not None else None
               if key == "t3_ms" and hasattr(out, "shape"):
                   store["tokens"] = int(out.shape[-1])
                   if cap and store["tokens"] >= int(store.get("token_cap") or 0):
@@ -463,7 +497,7 @@ write_files:
               return store
           model.__dict__["_acudx_instrumented"] = True
           try:
-              model.t3.inference = _timed(store, "t3_ms", model.t3.inference, autocast=True)
+              model.t3.inference = _timed(store, "t3_ms", model.t3.inference, autocast=True, after=model.t3)
               model.s3gen.inference = _timed(store, "s3gen_ms", model.s3gen.inference, sync=True)
               model.watermarker.apply_watermark = _timed(store, "watermark_ms", model.watermarker.apply_watermark)
           except AttributeError:
@@ -543,6 +577,379 @@ write_files:
           speech_module.split_text_for_streaming = split_text_for_streaming
 
 
+      # --------------------------------------------------------------------------------------------------------
+      # Token-level streaming (docs/architecture/18 6.3.11). Upstream speaks a chunk only after T3 has written
+      # every speech token of it and S3Gen has rendered the whole chunk, so the first audio of a Turkish clause
+      # waited 1.45 to 2.1 s on a shared H100. Here T3 runs in its own thread and hands each token over as it is
+      # sampled; S3Gen renders a window as soon as enough tokens are there, on its own CUDA stream, the way
+      # CosyVoice2 streams the same decoder: the flow re-runs on every token so far (its fixed noise keeps the
+      # rendered prefix stable) and only the new mel frames are vocoded, with the last 8 mel frames and the
+      # source signal carried into the next window and the 160 ms seam cross-faded with a Hamming window.
+      # The watermark is applied to every piece. A failure before the first piece falls back to upstream.
+      # --------------------------------------------------------------------------------------------------------
+      SPEECH_TOKEN_SAMPLES = 960       # 24 kHz / 25 tokens a second
+      MEL_CACHE_FRAMES = 8             # CosyVoice2 mel_cache_len
+      SOURCE_CACHE_SAMPLES = MEL_CACHE_FRAMES * 480
+      LOOKAHEAD_TOKENS = 3             # flow pre_lookahead_len: the last 3 tokens are rendered only at the end
+
+      TUNING.update({
+          "stream_tokens": os.getenv("ACUDX_STREAM_TOKENS", "1") != "0",
+          # Tokens before the first window, then the growth of each later window (the last value repeats).
+          "stream_schedule": [int(v) for v in os.getenv("ACUDX_STREAM_SCHEDULE", "20,16,32,48").split(",") if v.strip()],
+          "stream_watermark": os.getenv("ACUDX_STREAM_WATERMARK", "1") != "0",
+          "stream_side_stream": os.getenv("ACUDX_STREAM_SIDE_STREAM", "1") != "0",
+      })
+      STREAM_TIMINGS: deque = deque(maxlen=40)
+
+
+      def window_targets(schedule: list, n_max: int = 4096):
+          """Token counts at which a window is rendered: schedule [20, 16, 32] -> 20, 36, 68, 100, ..."""
+          sched = [max(4, int(v)) for v in (schedule or [20])]
+          at = sched[0]
+          i = 1
+          while at <= n_max:
+              yield at
+              at += sched[min(i, len(sched) - 1)]
+              i += 1
+
+
+      def hamming(n: int):
+          import numpy as np
+
+          return np.hamming(n).astype("float32")
+
+
+      def crossfade(new_head, old_tail, window):
+          """CosyVoice2 fade_in_out: the first len(window)/2 samples of ``new_head`` faded in over ``old_tail``."""
+          k = len(window) // 2
+          k = min(k, new_head.shape[-1], old_tail.shape[-1])
+          if k <= 0:
+              return new_head
+          out = new_head.copy()
+          out[..., :k] = new_head[..., :k] * window[:k] + old_tail[..., -k:] * window[len(window) - k:]
+          return out
+
+
+      class Vocoder:
+          """Mel windows -> audio pieces with the CosyVoice2 seam handling (mel and source cache, cross-fade).
+          ``hift(mel, cache_source) -> (wav, source)`` is S3Gen's hift_inference; arrays are numpy on the way out."""
+
+          def __init__(self, hift, *, to_numpy, cat, trim_fade=None):
+              self.hift = hift
+              self.to_numpy = to_numpy
+              self.cat = cat
+              self.cache = None
+              self.window = hamming(2 * SOURCE_CACHE_SAMPLES)
+              self.trim_fade = trim_fade
+              self.first = True
+
+          def piece(self, mel, final: bool, empty_source):
+              if self.cache is not None:
+                  mel = self.cat(self.cache["mel"], mel)
+                  src = self.cache["source"]
+              else:
+                  src = empty_source
+              wav, source = self.hift(mel, src)
+              wav = self.to_numpy(wav)
+              if self.cache is not None:
+                  wav = crossfade(wav, self.cache["speech"], self.window)
+              if not final:
+                  self.cache = {"mel": mel[:, :, -MEL_CACHE_FRAMES:], "source": source[:, :, -SOURCE_CACHE_SAMPLES:],
+                                "speech": wav[..., -SOURCE_CACHE_SAMPLES:]}
+                  wav = wav[..., :-SOURCE_CACHE_SAMPLES]
+              if self.first and self.trim_fade is not None and wav.shape[-1]:
+                  n = min(len(self.trim_fade), wav.shape[-1])
+                  wav = wav.copy()
+                  wav[..., :n] = wav[..., :n] * self.trim_fade[:n]
+              self.first = False
+              return wav
+
+
+      def _t3_token_loop(model, t3_cond, text_tokens, *, max_new_tokens, temperature, cfg_weight, repetition_penalty,
+                         min_p, top_p, put, stop):
+          """Upstream T3.inference (chatterbox-multilingual c33cc02, MIT License, Resemble AI) with each sampled
+          token handed to ``put`` as soon as it exists; ``stop()`` returning True ends it early."""
+          import torch
+          from transformers.generation.logits_process import (MinPLogitsWarper, RepetitionPenaltyLogitsProcessor,
+                                                              TopPLogitsWarper)
+          from chatterbox.models.t3.inference.alignment_stream_analyzer import AlignmentStreamAnalyzer
+          from chatterbox.models.t3.inference.t3_hf_backend import T3HuggingfaceBackend
+
+          t3 = model.t3
+          with torch.inference_mode():
+              text_tokens = torch.atleast_2d(text_tokens).to(dtype=torch.long, device=t3.device)
+              initial = t3.hp.start_speech_token * torch.ones_like(text_tokens[:, :1])
+              embeds, len_cond = t3.prepare_input_embeds(t3_cond=t3_cond, text_tokens=text_tokens, speech_tokens=initial,
+                                                         cfg_weight=cfg_weight)
+              analyzer = None
+              if t3.hp.is_multilingual:
+                  analyzer = AlignmentStreamAnalyzer(t3.tfmr, None, text_tokens_slice=(len_cond, len_cond + text_tokens.size(-1)),
+                                                     alignment_layer_idx=9, eos_idx=t3.hp.stop_speech_token)
+              try:
+                  patched = T3HuggingfaceBackend(config=t3.cfg, llama=t3.tfmr, speech_enc=t3.speech_emb,
+                                                 speech_head=t3.speech_head, alignment_stream_analyzer=analyzer)
+                  device = embeds.device
+                  bos = torch.tensor([[t3.hp.start_speech_token]], dtype=torch.long, device=device)
+                  bos_embed = t3.speech_emb(bos) + t3.speech_pos_emb.get_fixed_embedding(0)
+                  bos_embed = torch.cat([bos_embed, bos_embed])
+                  output = patched(inputs_embeds=torch.cat([embeds, bos_embed], dim=1), past_key_values=None, use_cache=True,
+                                   output_attentions=True, output_hidden_states=True, return_dict=True)
+                  past = output.past_key_values
+                  generated = bos.clone()
+                  top_p_w = TopPLogitsWarper(top_p=top_p)
+                  min_p_w = MinPLogitsWarper(min_p=min_p)
+                  rep = RepetitionPenaltyLogitsProcessor(penalty=float(repetition_penalty))
+                  n = 0
+                  for i in range(max_new_tokens):
+                      if stop():
+                          break
+                      logits_step = output.logits[:, -1, :]
+                      cond, uncond = logits_step[0:1, :], logits_step[1:2, :]
+                      logits = cond + torch.as_tensor(cfg_weight, device=cond.device, dtype=cond.dtype) * (cond - uncond)
+                      if patched.alignment_stream_analyzer is not None:
+                          if logits.dim() == 1:
+                              logits = logits.unsqueeze(0)
+                          last = generated[0, -1].item() if len(generated[0]) > 0 else None
+                          logits = patched.alignment_stream_analyzer.step(logits, next_token=last)
+                      ids = generated[:1, ...]
+                      logits = rep(ids, logits)
+                      if temperature != 1.0:
+                          logits = logits / temperature
+                      logits = top_p_w(ids, min_p_w(ids, logits))
+                      next_token = torch.multinomial(torch.softmax(logits, dim=-1), num_samples=1)
+                      generated = torch.cat([generated, next_token], dim=1)
+                      tok = int(next_token.view(-1)[0].item())
+                      if tok == t3.hp.stop_speech_token:
+                          break
+                      n += 1
+                      put(tok)
+                      emb = t3.speech_emb(next_token) + t3.speech_pos_emb.get_fixed_embedding(i + 1)
+                      output = patched(inputs_embeds=torch.cat([emb, emb]), past_key_values=past, output_attentions=True,
+                                       output_hidden_states=True, return_dict=True)
+                      past = output.past_key_values
+                  return n
+              finally:
+                  drop_alignment_hooks(t3)
+
+
+      def stream_generate(model, *, text, language_id, audio_prompt_path=None, exaggeration=0.5, cfg_weight=0.5,
+                          temperature=0.8, repetition_penalty=2.0, min_p=0.05, top_p=1.0, emit, stop=None) -> dict:
+          """Speak ``text`` piece by piece: ``emit(float32 numpy array at model.sr)`` is called for every piece as
+          soon as it is rendered. Holds the generate lock for the whole clause. Returns its timings."""
+          import queue as _queue
+
+          import torch
+          import torch.nn.functional as F
+          from chatterbox.mtl_tts import SUPPORTED_LANGUAGES, punc_norm
+
+          stop = stop or threading.Event()
+          halt = threading.Event()          # this clause only (stop is the whole request's)
+          t_wait = time.perf_counter()
+          with GENERATE_LOCK:
+              t0 = time.perf_counter()
+              row: dict = {"chars": len(str(text)), "words": len(str(text).split()), "lock_wait_ms": round((t0 - t_wait) * 1000.0, 1),
+                           "streamed": True, "pieces": 0, "passes": 0, "s3gen_ms": 0.0, "watermark_ms": 0.0}
+              if language_id and language_id.lower() not in SUPPORTED_LANGUAGES:
+                  raise ValueError(f"Unsupported language_id '{language_id}'")
+              if audio_prompt_path:
+                  model.prepare_conditionals(audio_prompt_path, exaggeration=exaggeration)
+              if float(exaggeration) != float(model.conds.t3.emotion_adv[0, 0, 0].item()):
+                  from chatterbox.models.t3.modules.cond_enc import T3Cond
+
+                  c = model.conds.t3
+                  model.conds.t3 = T3Cond(speaker_emb=c.speaker_emb, cond_prompt_speech_tokens=c.cond_prompt_speech_tokens,
+                                          emotion_adv=exaggeration * torch.ones(1, 1, 1)).to(device=model.device)
+              row["conds_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
+              norm = punc_norm(text)
+              tt = model.tokenizer.text_to_tokens(norm, language_id=language_id.lower() if language_id else None).to(model.device)
+              tt = torch.cat([tt, tt], dim=0)
+              tt = F.pad(F.pad(tt, (1, 0), value=model.t3.hp.start_text_token), (0, 1), value=model.t3.hp.stop_text_token)
+              cap = token_cap(str(text)) or 1000
+              row["token_cap"] = cap
+              tokens: list = []
+              q: _queue.Queue = _queue.Queue()
+              err: dict = {}
+
+              def produce() -> None:
+                  try:
+                      t3s = time.perf_counter()
+                      row["tokens"] = _t3_token_loop(model, model.conds.t3, tt, max_new_tokens=min(1000, int(cap)),
+                                                     temperature=temperature, cfg_weight=cfg_weight,
+                                                     repetition_penalty=repetition_penalty, min_p=min_p, top_p=top_p,
+                                                     put=q.put, stop=lambda: halt.is_set() or stop.is_set())
+                      row["t3_ms"] = round((time.perf_counter() - t3s) * 1000.0, 1)
+                  except BaseException as exc:  # noqa: BLE001 - reported to the consumer
+                      err["exc"] = exc
+                  finally:
+                      q.put(None)
+
+              producer = threading.Thread(target=produce, name="acudx-t3", daemon=True)
+              producer.start()
+              s3 = model.s3gen
+              side = torch.cuda.Stream() if (TUNING.get("stream_side_stream") and torch.cuda.is_available()) else None
+              ref = model.conds.gen
+              targets = window_targets(TUNING.get("stream_schedule") or [20, 16, 32, 48])
+              next_at = next(targets)
+              mel_done = 0
+              done = False
+              empty = torch.zeros(1, 1, 0, device=model.device)
+              voc = Vocoder(lambda m, c: s3.hift_inference(m, c), to_numpy=lambda w: w.squeeze(0).detach().float().cpu().numpy(),
+                            cat=lambda a, b: torch.cat([a, b], dim=2),
+                            trim_fade=s3.trim_fade.detach().float().cpu().numpy() if hasattr(s3, "trim_fade") else None)
+              try:
+                  while not done:
+                      item = q.get()
+                      if item is None:
+                          done = True
+                      else:
+                          tokens.append(item)
+                          while True:          # take every token already there without waiting
+                              try:
+                                  more = q.get_nowait()
+                              except _queue.Empty:
+                                  break
+                              if more is None:
+                                  done = True
+                                  break
+                              tokens.append(more)
+                      if stop.is_set():
+                          break
+                      if not done and len(tokens) < next_at:
+                          continue
+                      if not done:
+                          while next_at <= len(tokens):
+                              next_at = next(targets)
+                      if not tokens or (not done and len(tokens) <= LOOKAHEAD_TOKENS):
+                          continue
+                      tp = time.perf_counter()
+                      ctx = torch.cuda.stream(side) if side is not None else _nullctx()
+                      with torch.inference_mode(), ctx:
+                          toks = torch.tensor([tokens], dtype=torch.long, device=model.device)
+                          mel = s3.flow_inference(toks, ref_dict=ref, finalize=done)
+                          new = mel[:, :, mel_done:]
+                          mel_done = int(mel.shape[2])
+                          if new.shape[2] == 0 and not done:
+                              continue
+                          wav = voc.piece(new, done, empty)
+                      if side is not None:
+                          side.synchronize()
+                      row["passes"] += 1
+                      row["s3gen_ms"] += (time.perf_counter() - tp) * 1000.0
+                      if wav.shape[-1] == 0:
+                          continue
+                      if TUNING.get("stream_watermark", True):
+                          tw = time.perf_counter()
+                          wav = model.watermarker.apply_watermark(wav, sample_rate=model.sr)
+                          row["watermark_ms"] += (time.perf_counter() - tw) * 1000.0
+                      if row["pieces"] == 0:
+                          row["first_audio_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
+                          row["first_tokens"] = len(tokens)
+                      row["pieces"] += 1
+                      emit(wav)
+              finally:
+                  halt.set()
+                  producer.join(timeout=30)
+              if "exc" in err:
+                  raise err["exc"]
+              row["audio_ms"] = round(len(tokens) * SPEECH_TOKEN_SAMPLES / 24.0)
+              row["total_ms"] = round((time.perf_counter() - t0) * 1000.0, 1)
+              row["s3gen_ms"] = round(row["s3gen_ms"], 1)
+              row["watermark_ms"] = round(row["watermark_ms"], 1)
+              row["capped"] = bool(row.get("tokens") and row["tokens"] >= min(1000, int(cap)))
+              row["at"] = round(time.time(), 3)
+              STREAM_TIMINGS.append(row)
+              STATS["streamed_clauses"] = STATS.get("streamed_clauses", 0) + 1
+              return row
+
+
+      class _nullctx:
+          def __enter__(self):
+              return self
+
+          def __exit__(self, *a):
+              return False
+
+
+      def patch_streaming_route(speech_module: Any) -> None:
+          """Replace the /v1/audio/speech/stream generator with one that sends each clause piece by piece
+          (stream_generate). TUNING stream_tokens off, a model without the multilingual T3, or a failure before a
+          clause's first piece runs upstream's whole-clause generate for that clause instead."""
+          orig = speech_module.generate_speech_streaming
+          if getattr(orig, "_acudx_patched", False):
+              return
+
+          async def generate_speech_streaming(text, voice_sample_path, language_id="en", exaggeration=None,
+                                              cfg_weight=None, temperature=None, streaming_chunk_size=None,
+                                              streaming_strategy=None, streaming_quality=None):
+              import asyncio
+
+              model = speech_module.get_model()
+              multilingual = bool(getattr(getattr(getattr(model, "t3", None), "hp", None), "is_multilingual", False))
+              if not TUNING.get("stream_tokens", True) or model is None or not multilingual:
+                  async for b in orig(text, voice_sample_path, language_id, exaggeration, cfg_weight, temperature,
+                                      streaming_chunk_size, streaming_strategy, streaming_quality):
+                      yield b
+                  return
+              cfg = speech_module.Config
+              exaggeration = exaggeration if exaggeration is not None else cfg.EXAGGERATION
+              cfg_weight = cfg_weight if cfg_weight is not None else cfg.CFG_WEIGHT
+              temperature = temperature if temperature is not None else cfg.TEMPERATURE
+              if len(text) > cfg.MAX_TOTAL_LENGTH:
+                  raise speech_module.HTTPException(status_code=400, detail={"error": {
+                      "message": f"Input text too long. Maximum {cfg.MAX_TOTAL_LENGTH} characters allowed.",
+                      "type": "invalid_request_error"}})
+              st = speech_module.get_streaming_settings(streaming_chunk_size, streaming_strategy, streaming_quality)
+              chunks = speech_module.split_text_for_streaming(text, chunk_size=st["chunk_size"], strategy=st["strategy"],
+                                                              quality=st["quality"])
+              yield speech_module.create_wav_header(model.sr, 1, 16)
+              loop = asyncio.get_running_loop()
+              stop = threading.Event()
+              try:
+                  for chunk in chunks:
+                      q: asyncio.Queue = asyncio.Queue()
+                      sent = {"n": 0}
+
+                      def emit(wav, _q=q):
+                          loop.call_soon_threadsafe(_q.put_nowait, wav)
+
+                      def run(_chunk=chunk, _emit=emit):
+                          return stream_generate(model, text=_chunk, language_id=language_id, audio_prompt_path=voice_sample_path,
+                                                 exaggeration=exaggeration, cfg_weight=cfg_weight, temperature=temperature,
+                                                 emit=_emit, stop=stop)
+
+                      fut = loop.run_in_executor(None, run)
+                      fut.add_done_callback(lambda _f, _q=q: loop.call_soon_threadsafe(_q.put_nowait, None))
+                      while True:
+                          wav = await q.get()
+                          if wav is None:
+                              break
+                          sent["n"] += 1
+                          yield _pcm16(wav)
+                      try:
+                          await fut
+                      except Exception as exc:  # noqa: BLE001 - this clause again the upstream way, if nothing went out
+                          STATS["stream_failures"] = STATS.get("stream_failures", 0) + 1
+                          STATS["stream_last_error"] = f"{type(exc).__name__}: {exc}"[:200]
+                          if sent["n"]:
+                              raise
+                          wav = await loop.run_in_executor(None, lambda _c=chunk: model.generate(
+                              text=_c, audio_prompt_path=voice_sample_path, exaggeration=exaggeration, cfg_weight=cfg_weight,
+                              temperature=temperature, language_id=language_id))
+                          yield _pcm16(wav.squeeze(0).cpu().numpy() if hasattr(wav, "cpu") else wav)
+              finally:
+                  stop.set()   # the client went away (a cut reply): the clause in flight stops and frees the lock
+
+          generate_speech_streaming._acudx_patched = True
+          speech_module.generate_speech_streaming = generate_speech_streaming
+
+
+      def _pcm16(wav) -> bytes:
+          import numpy as np
+
+          a = np.clip(np.asarray(wav, dtype=np.float32).reshape(-1), -1.0, 1.0)
+          return (a * 32767.0).astype("<i2").tobytes()
+
+
       def install() -> None:
           from app.api.endpoints import speech
           from app.core import voice_library
@@ -553,11 +960,22 @@ write_files:
           patch_model_class(ChatterboxTTS)
           patch_voice_library(voice_library.VoiceLibrary)
           patch_streaming_split(speech)
+          patch_streaming_route(speech)
           # Counters for the live checks (GET /tts/acudx/stats through Caddy, behind the bearer).
           from app.main import app as api
 
-          api.add_api_route("/acudx/stats", lambda: {**STATS, "conds_cached": len(CACHE), "tuning": dict(TUNING),
-                                                     "timings": list(TIMINGS)}, methods=["GET"])
+          def stats() -> dict:
+              try:
+                  from app.core.tts_model import get_model
+
+                  m = get_model()
+                  hooks = t3_hook_count(m.t3) if m is not None else None
+              except Exception:  # noqa: BLE001 - the counters stay readable without the model
+                  hooks = None
+              return {**STATS, "conds_cached": len(CACHE), "tuning": dict(TUNING), "t3_hooks": hooks,
+                      "timings": list(TIMINGS), "stream_timings": list(STREAM_TIMINGS)}
+
+          api.add_api_route("/acudx/stats", stats, methods=["GET"])
 
           async def tuning(body: dict) -> dict:
               if "t3_autocast" in body:
@@ -567,6 +985,17 @@ write_files:
                   TUNING["t3_autocast"] = v
               if "first_clause" in body:
                   TUNING["first_clause"] = bool(body["first_clause"])
+              for key in ("stream_tokens", "stream_watermark", "stream_side_stream"):
+                  if key in body:
+                      TUNING[key] = bool(body[key])
+              if "stream_schedule" in body:
+                  try:
+                      sched = [max(4, min(200, int(v))) for v in list(body["stream_schedule"])[:8]]
+                  except (TypeError, ValueError):
+                      return {"error": "stream_schedule must be a list of integers"}
+                  if not sched:
+                      return {"error": "stream_schedule must not be empty"}
+                  TUNING["stream_schedule"] = sched
               for key, lo, hi in (("first_max_words", 3, 20), ("second_max_words", 0, 30), ("t3_tokens_base", 0, 200)):
                   if key in body:
                       try:
@@ -583,7 +1012,7 @@ write_files:
 
           api.add_api_route("/acudx/tuning", tuning, methods=["POST"])
           STATS["installed"] = True
-          print("acudx: conditionals cache, generate lock and first-clause streaming installed")
+          print("acudx: conditionals cache, generate lock, first-clause split and token-level streaming installed")
   # Chatterbox build override (task 24, "No CUDA GPUs are available"). Same layers as
   # docker/Dockerfile.uv.gpu at a5f4661 with three changes: uv is pinned (upstream copies
   # ghcr.io/astral-sh/uv:latest), chatterbox-multilingual is pinned to a commit (upstream
@@ -1358,6 +1787,8 @@ write_files:
         POST /tuning                 {sessionid, av_shift_ms}: move the call's video against its audio
         GET  /turn                   WebSocket <-> TCP byte bridge to the worker's TURN server, for
                                      clients whose network only allows HTTPS (see docs/architecture/18 6.3)
+        POST /detect_bench           body = portrait: face box and per-phase timings of each detection mode
+                                     (?modes=legacy,fast), in the preparation queue
         GET  /turn_check             TURN Allocate against this worker's public TURN endpoints, from
                                      inside the worker: turns:turn.<domain>:443 (TLS, certificate and
                                      host name verified), turn:<domain>:3478 over TCP and UDP
@@ -1980,6 +2411,7 @@ write_files:
           if img is None:
               raise ValueError("image could not be decoded")
           registration = None
+          detect_info = None
           base = None
           coords = None
           steps: list = []
@@ -2016,6 +2448,7 @@ write_files:
               img = img[: h - h % 2, : w - w % 2]
               steps.append(["crop", img.shape[1], img.shape[0]])
               raw_box = _detect_fixed(img, os.path.join(root, "detect.png"))
+              detect_info = dict(STATE.get("last_detect") or {})
               if raw_box is None:
                   raise NoFace("no face found in the portrait")
               # One detection: after a resize or an extension the box is moved with the picture (scaled,
@@ -2133,7 +2566,8 @@ write_files:
           return {"avatar_id": avatar_id, "width": int(base.shape[1]), "height": int(base.shape[0]),
                   "face_box": [int(v) for v in coords], "idle_frames": n, "extended_px": padded,
                   "extension": "mirrored+blurred" if padded else "none", "prepare_ms": ms, "ref": ref,
-                  "registration": registration, "phases_ms": {k: round(v, 1) for k, v in phases.items()}}
+                  "registration": registration, "phases_ms": {k: round(v, 1) for k, v in phases.items()},
+                  "detect": detect_info}
 
 
       class RefNotPrepared(ValueError):
@@ -2164,30 +2598,155 @@ write_files:
               time.sleep(0.05)
 
 
-      def _detect_fixed(img: np.ndarray, path: str) -> list | None:
-          """The face box of ``img`` from MuseTalk's get_landmark_and_bbox, run on a canvas of one fixed size at
-          half resolution. Live 2026-10-22 (H100 SXM5) one detection at full size took 0.37 s for one
-          portrait and 11.9 to 15.3 s for others, also after a warm-up on that canvas size (S3FD scores every
-          anchor in Python and dlib's HOG runs on the upsampled picture, both per pixel); the S3FD side also
-          turns cudnn.benchmark on, so one size is autotuned once. The picture is scaled to fit and pasted
-          top-left, so the box maps back by the scale."""
+      DETECT_MODE = os.environ.get("AVATAR_DETECT_MODE", "fast")   # fast | legacy (MuseTalk's get_landmark_and_bbox steps)
+      # dlib HOG upsampling for the landmarks' face location in fast mode (legacy: 1). A portrait's face spans a
+      # third of the 360 px canvas or more, far above HOG's 80 px window, so 0 finds it on a quarter of the pixels;
+      # 1 is tried when 0 finds nothing, and the S3FD box is used when HOG never finds the face.
+      HOG_UPSAMPLE = int(os.environ.get("AVATAR_HOG_UPSAMPLE", "0"))
+      S3FD_MIN_SCORE = 0.05
+
+
+      def _canvas_for(img: np.ndarray) -> tuple[np.ndarray, float]:
+          """``img`` scaled to fit DETECT_CANVAS and pasted top-left on it (black), and the scale."""
           ch, cw = DETECT_CANVAS
           h, w = img.shape[:2]
           s = min(1.0, ch / float(h), cw / float(w))
           src = img if s == 1.0 else cv2.resize(img, (int(w * s), int(h * s)), interpolation=cv2.INTER_AREA)
           canvas = np.zeros((ch, cw, 3), dtype=np.uint8)
           canvas[: src.shape[0], : src.shape[1]] = src
-          cv2.imwrite(path, canvas)
-          try:
-              coord_list, _frames = get_landmark_and_bbox([path], 0)
-          finally:
-              try:
-                  os.remove(path)
-              except OSError:
-                  pass
-          if not coord_list or tuple(coord_list[0]) == tuple(coord_placeholder):
+          return canvas, s
+
+
+      def _landmark_box(face_land_mark: np.ndarray, f: tuple) -> tuple:
+          """MuseTalk's get_landmark_and_bbox box rule (bbox_shift 0): from the nose bridge (landmark 29) up by the
+          distance to the chin, the landmarks' horizontal extent and the chin; the S3FD box when that is unusable."""
+          half_face_coord = face_land_mark[29]
+          half_face_dist = np.max(face_land_mark[:, 1]) - half_face_coord[1]
+          upper_bond = max(0, half_face_coord[1] - half_face_dist)
+          x1, y1, x2, y2 = (np.min(face_land_mark[:, 0]), int(upper_bond), np.max(face_land_mark[:, 0]),
+                            np.max(face_land_mark[:, 1]))
+          if y2 - y1 <= 0 or x2 - x1 <= 0 or x1 < 0:
+              return tuple(f)
+          return (x1, y1, x2, y2)
+
+
+      def _lm_array(lm: dict) -> np.ndarray:
+          return np.array(lm["chin"] + lm["left_eyebrow"] + lm["right_eyebrow"] + lm["nose_bridge"] + lm["nose_tip"]
+                          + lm["left_eye"] + lm["right_eye"] + lm["top_lip"] + lm["bottom_lip"]).astype(np.int32)
+
+
+      def s3fd_boxes(net, pic: np.ndarray, device: str) -> tuple[np.ndarray, dict]:
+          """S3FD on one picture (RGB, as upstream get_detections_for_batch feeds it) with the anchor decode
+          vectorised: every anchor scoring above 0.05 at once, instead of upstream batch_detect's Python loop that builds two small tensors and copies one box to the
+          CPU per anchor (detection/sfd/detect.py; live 2026-10-22 some portraits spent 15 to 20 s there). Same
+          priors, variances (0.1, 0.2) and threshold, so the boxes are upstream's; returns (N, 5) x1 y1 x2 y2 score
+          and the timings."""
+          import torch.nn.functional as F
+
+          if "cuda" in str(device):
+              torch.backends.cudnn.benchmark = True    # as upstream; the canvas has one fixed size
+          t0 = time.monotonic()
+          x = (pic.astype(np.float32) - np.array([104, 117, 123], dtype=np.float32)).transpose(2, 0, 1)[None]
+          with torch.no_grad():
+              olist = net(torch.from_numpy(np.ascontiguousarray(x)).to(device))
+              if torch.cuda.is_available():
+                  torch.cuda.synchronize()
+              t1 = time.monotonic()
+              rows = []
+              for i in range(len(olist) // 2):
+                  cls = F.softmax(olist[i * 2], dim=1)[0, 1]          # (H, W)
+                  reg = olist[i * 2 + 1][0]                           # (4, H, W)
+                  stride = float(2 ** (i + 2))
+                  hw = (cls > S3FD_MIN_SCORE).nonzero()
+                  if hw.numel() == 0:
+                      continue
+                  score = cls[hw[:, 0], hw[:, 1]]
+                  loc = reg[:, hw[:, 0], hw[:, 1]].t()                # (K, 4)
+                  axc = stride / 2 + hw[:, 1].float() * stride
+                  ayc = stride / 2 + hw[:, 0].float() * stride
+                  size = stride * 4
+                  cx = axc + loc[:, 0] * 0.1 * size
+                  cy = ayc + loc[:, 1] * 0.1 * size
+                  bw = size * torch.exp(loc[:, 2] * 0.2)
+                  bh = size * torch.exp(loc[:, 3] * 0.2)
+                  x1, y1 = cx - bw / 2, cy - bh / 2
+                  rows.append(torch.stack([x1, y1, x1 + bw, y1 + bh, score], dim=1))
+              out = torch.cat(rows).float().cpu().numpy() if rows else np.zeros((0, 5), np.float32)
+          return out, {"s3fd_net_ms": round((t1 - t0) * 1000.0, 1), "s3fd_decode_ms": round((time.monotonic() - t1) * 1000.0, 1),
+                       "s3fd_candidates": int(out.shape[0])}
+
+
+      def _sfd_first(boxes: np.ndarray) -> tuple | None:
+          """Upstream detect_from_batch + get_detections_for_batch: NMS 0.3, scores above 0.5, the first box, clipped."""
+          from face_detection.detection.sfd.bbox import nms
+
+          if boxes.shape[0] == 0:
               return None
-          return [float(v) / s for v in coord_list[0]]
+          keep = nms(boxes, 0.3)
+          kept = [b for b in boxes[keep, :] if b[-1] > 0.5]
+          if not kept:
+              return None
+          d = np.clip(kept[0], 0, None)
+          return tuple(int(v) for v in d[:-1])
+
+
+      def detect_face(img: np.ndarray, mode: str | None = None) -> tuple[list | None, dict]:
+          """The MuseTalk face box of ``img`` (on the fixed half-size canvas, mapped back), with per-phase timings.
+
+          ``legacy`` runs MuseTalk's get_landmark_and_bbox steps one by one (dlib HOG face location upsampled once
+          plus the 68 landmarks, then S3FD with upstream's per-anchor decode); ``fast`` (default) runs S3FD with the
+          vectorised decode and HOG without upsampling (see HOG_UPSAMPLE). The box rule is upstream's in both."""
+          import face_recognition
+          from avatars.musetalk.utils import preprocessing as mt_pre
+
+          mode = mode or DETECT_MODE
+          canvas, s = _canvas_for(img)
+          rgb = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+          info: dict = {"mode": mode, "canvas": [int(canvas.shape[1]), int(canvas.shape[0])]}
+          t0 = time.monotonic()
+          if mode == "legacy":
+              lms = face_recognition.face_landmarks(rgb)
+              info["landmarks_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+              t1 = time.monotonic()
+              f = mt_pre.fa.get_detections_for_batch(np.asarray([canvas]))[0]
+              info["s3fd_ms"] = round((time.monotonic() - t1) * 1000.0, 1)
+          else:
+              det = mt_pre.fa.face_detector
+              boxes, tim = s3fd_boxes(det.face_detector, rgb, det.device)
+              info.update(tim)
+              f = _sfd_first(boxes)
+              info["s3fd_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+              t1 = time.monotonic()
+              locs = face_recognition.face_locations(rgb, number_of_times_to_upsample=HOG_UPSAMPLE)
+              if not locs and HOG_UPSAMPLE < 1:
+                  locs = face_recognition.face_locations(rgb, number_of_times_to_upsample=1)
+                  info["hog_retry"] = True
+              info["hog_ms"] = round((time.monotonic() - t1) * 1000.0, 1)
+              if not locs and f is not None:
+                  locs = [(f[1], f[2], f[3], f[0])]      # (top, right, bottom, left) from the S3FD box
+                  info["landmarks_on"] = "s3fd_box"
+              t2 = time.monotonic()
+              lms = face_recognition.face_landmarks(rgb, face_locations=locs[:1]) if locs else []
+              info["landmarks_ms"] = round((time.monotonic() - t2) * 1000.0, 1)
+          info["total_ms"] = round((time.monotonic() - t0) * 1000.0, 1)
+          if f is None:
+              return None, info
+          flm = _lm_array(lms[0]) if lms else np.zeros((68, 2), dtype=np.int32)
+          box = _landmark_box(flm, f)
+          info["box_canvas"] = [int(v) for v in box]
+          if tuple(box) == tuple(coord_placeholder):
+              return None, info
+          return [float(v) / s for v in box], info
+
+
+      def _detect_fixed(img: np.ndarray, path: str = "") -> list | None:
+          """The face box of ``img`` on a canvas of one fixed size at half resolution (DETECT_CANVAS): MuseTalk's S3FD
+          turns cudnn.benchmark on, so each new size was autotuned first (11.9 to 15.3 s live 2026-10-22). The
+          picture is scaled to fit and pasted top-left, so the box maps back by the scale. Timings of the last call in
+          STATE["last_detect"]."""
+          box, info = detect_face(img)
+          STATE["last_detect"] = info
+          return box
 
 
       class _WarmingFeatQueue(queue.Queue):
@@ -2404,6 +2963,38 @@ write_files:
       async def list_avatars(_request: web.Request) -> web.Response:
           prepared = sorted(d for d in os.listdir(AVATAR_ROOT) if _is_prepared(d)) if os.path.isdir(AVATAR_ROOT) else []
           return web.json_response({"avatars": prepared})
+
+
+      async def detect_bench(request: web.Request) -> web.Response:
+          """POST body = a portrait: the face box and per-phase timings of each detection mode (?modes=legacy,fast),
+          on the picture as a preparation sees it. Runs in the preparation queue, so it never overlaps one."""
+          body = await request.read()
+          if not body or len(body) > MAX_IMAGE_BYTES:
+              return web.json_response({"error": "image required (at most 8 MB)"}, status=400)
+          img = cv2.imdecode(np.frombuffer(body, dtype=np.uint8), cv2.IMREAD_COLOR)
+          if img is None:
+              return web.json_response({"error": "image could not be decoded"}, status=400)
+          modes = [m for m in (request.query.get("modes") or "legacy,fast").split(",") if m in ("legacy", "fast")]
+          h, w = img.shape[:2]
+          if h > MAX_FRAME_H:
+              img = cv2.resize(img, (int(w * MAX_FRAME_H / h), MAX_FRAME_H), interpolation=cv2.INTER_AREA)
+          img = img[: img.shape[0] - img.shape[0] % 2, : img.shape[1] - img.shape[1] % 2]
+
+          def run() -> list:
+              out = []
+              PREP_QUEUE.acquire(PREP_PRIORITY_LADDER)
+              try:
+                  for m in modes:
+                      t = time.monotonic()
+                      box, info = detect_face(img, m)
+                      out.append({"mode": m, "box": [round(v, 1) for v in box] if box else None, "info": info,
+                                  "wall_ms": round((time.monotonic() - t) * 1000.0, 1)})
+              finally:
+                  PREP_QUEUE.release()
+              return out
+
+          res = await asyncio.get_running_loop().run_in_executor(None, run)
+          return web.json_response({"size": [int(img.shape[1]), int(img.shape[0])], "runs": res})
 
 
       async def get_avatar(request: web.Request) -> web.Response:
@@ -2769,6 +3360,7 @@ write_files:
           app.router.add_post("/tuning", tuning)
           app.router.add_get("/turn", turn_bridge)
           app.router.add_get("/turn_check", turn_check)
+          app.router.add_post("/detect_bench", detect_bench)
           def _warm_detector() -> None:
               # The first detection on a fresh runner paid 12 to 17 s (cuDNN autotune for the canvas size, live
               # 2026-10-22); pay it here at start-up instead of on the first case's portrait.
