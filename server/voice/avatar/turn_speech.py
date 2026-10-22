@@ -38,6 +38,10 @@ FIRST_MIN_WORDS = 3
 # 21-character clause and 3.0 to 3.7 s for 35 to 38 characters, so the opening clause is kept short.
 FIRST_MAX_WORDS = 6
 FIRST_MAX_CHARS = 28
+# Turkish goes to the worker's Chatterbox, whose first audio waits for the whole clause (about 2.5 speech
+# tokens a character at 15 ms a token on an H100 SXM5, live 2026-10-22): a shorter opening clause starts
+# the voice sooner, and the next request is already being synthesised while it plays (_requests).
+FIRST_MAX_CHARS_BY_LANG = {"tr": 22}
 # Audio forwarded to the runner at most this far ahead of real time.
 PACE_LEAD_S = 1.0
 _FIRST_BREAK = re.compile(r"[,;:.!?…](?=\s|$)")
@@ -55,9 +59,11 @@ class ClauseStream:
     clause (up to the first ``, ; : . ! ?`` after at least three words, else the first ten words once
     more text follows), then whole sentences. ``finish()`` returns what is left."""
 
-    def __init__(self, *, first_min_words: int = FIRST_MIN_WORDS, first_max_words: int = FIRST_MAX_WORDS):
+    def __init__(self, *, first_min_words: int = FIRST_MIN_WORDS, first_max_words: int = FIRST_MAX_WORDS,
+                 first_max_chars: int = FIRST_MAX_CHARS):
         self.first_min = first_min_words
         self.first_max = first_max_words
+        self.first_max_chars = first_max_chars
         self.pos = 0          # characters of the accumulated text already handed out
         self.first_done = False
 
@@ -73,8 +79,8 @@ class ClauseStream:
         if end is None:
             return None
         # Turkish words are long: cap the opening clause by characters too, at a word boundary.
-        if end > FIRST_MAX_CHARS:
-            fit = [w.end() for w in words if w.end() <= FIRST_MAX_CHARS]
+        if end > self.first_max_chars:
+            fit = [w.end() for w in words if w.end() <= self.first_max_chars]
             if len(fit) >= self.first_min:
                 end = fit[-1]
         return end
@@ -173,6 +179,20 @@ async def wait_until_quiet(origin: str, *, max_s: float = 60.0, poll_s: float = 
     return time.monotonic() - t
 
 
+async def _discard(pending: Any) -> None:
+    """Cancel a TTS request that will not be spoken (and close its stream if it already answered)."""
+    if not pending.done():
+        pending.cancel()
+        return
+    try:
+        out = pending.result()
+        close = getattr(getattr(out.stream, "chunks", None), "aclose", None)
+        if close is not None:
+            await close()
+    except BaseException:  # noqa: BLE001 - a failed request needs no cleanup
+        pass
+
+
 @dataclass
 class CallSpeaker:
     """Speaks a streaming reply into one live call: clauses -> gates -> TTS -> the runner socket.
@@ -230,7 +250,7 @@ class CallSpeaker:
 
     async def _pieces(self, persona: PersonaStream) -> AsyncIterator[str]:
         """Pieces as the reply grows: the first clause alone, then everything complete when asked."""
-        cs = ClauseStream()
+        cs = ClauseStream(first_max_chars=FIRST_MAX_CHARS_BY_LANG.get(str(self.lang or "")[:2], FIRST_MAX_CHARS))
         ready: list[str] = []
         while True:
             persona.updated.clear()
@@ -278,14 +298,42 @@ class CallSpeaker:
         finally:
             pumper.cancel()
 
+    def _tts(self, text: str) -> Any:
+        return self.svc.tts(text, lang=self.lang, sex=self.sex, age=self.age, output_format="wav", stream=True,
+                            speed=self.speed, prefer_fast=bool(getattr(self.svc.settings, "avatar_fast_en_tts", False)))
+
+    async def _requests(self, persona: PersonaStream) -> AsyncIterator[tuple[str, float, Any]]:
+        """Each TTS request as soon as its text is ready, one ahead of the one being spoken: the next
+        piece is synthesised (on the worker's second Chatterbox replica) while the current one plays, so
+        a short opening clause is not followed by a gap."""
+        q: asyncio.Queue[tuple[str, float, Any] | None] = asyncio.Queue(maxsize=1)
+
+        async def produce() -> None:
+            try:
+                async for text in self._batches(persona):
+                    self.timings.mark("first_clause_ms")
+                    await q.put((text, time.monotonic(), asyncio.ensure_future(self._tts(text))))
+            finally:
+                await q.put(None)
+
+        producer = asyncio.get_running_loop().create_task(produce())
+        try:
+            while True:
+                item = await q.get()
+                if item is None:
+                    return
+                yield item
+        finally:
+            producer.cancel()
+            while not q.empty():
+                left = q.get_nowait()
+                if left is not None:
+                    await _discard(left[2])
+
     async def _pcm(self, persona: PersonaStream, rate_box: dict[str, int]) -> AsyncIterator[bytes]:
         """PCM of every TTS request in order (one runner utterance: lips stay on one timeline)."""
-        async for text in self._batches(persona):
-            self.timings.mark("first_clause_ms")
-            t = time.monotonic()
-            out = await self.svc.tts(text, lang=self.lang, sex=self.sex, age=self.age, output_format="wav",
-                                     stream=True, speed=self.speed,
-                                     prefer_fast=bool(getattr(self.svc.settings, "avatar_fast_en_tts", False)))
+        async for text, t, pending in self._requests(persona):
+            out = await pending
             parser = mt.PcmStream(out.stream.content_type, sample_rate=out.stream.sample_rate)
             req: dict[str, Any] = {"chars": len(text), "provider": out.endpoint.name, "model": out.stream.model}
             self.requests.append(req)

@@ -179,7 +179,8 @@ async def test_a_voiced_turn_streams_the_reply_into_the_call_clause_by_clause(vo
     assert turn["error"] is None, turn
     # First clause alone in the first TTS request, the rest in the next one(s); one runner utterance.
     tts = [x["input"] for x in scenario.tts_calls if x.get("_route") == "stream"]
-    assert tts[0] == "Dün öğleden sonra başladı" and len(tts) >= 2
+    # Turkish: the opening clause is capped at 22 characters (Chatterbox waits for the whole clause).
+    assert tts[0] == "Dün öğleden sonra" and len(tts) >= 2
     spoken = " ".join(tts)
     assert "150/90" not in spoken and "Işığa bakınca gözüm yanıyor" in spoken and "kafam karışık" in spoken
     lines = _lines(sockets[0].sent)

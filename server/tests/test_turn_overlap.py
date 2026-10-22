@@ -180,3 +180,31 @@ async def test_a_line_cancelled_after_its_end_drops_the_socket(monkeypatch):
     assert out["frames"] == 1 and len(socks) == 2
     begin = json.loads(next(m for m in socks[1].sent if isinstance(m, str)))
     assert begin["type"] == "begin" and begin["interrupt"] is True
+
+
+async def test_the_next_piece_is_synthesised_while_the_first_one_plays():
+    # A short opening clause must not leave a gap: the next TTS request starts before the first ends.
+    svc = SlowTts(chunks=30, gap_s=0.02)
+    call = _call()
+    started_during_first: list[int] = []
+    real_tts = svc.tts
+
+    async def tts(text, **kw):
+        out = await real_tts(text, **kw)
+        inner = out.stream.chunks
+
+        async def watch():
+            async for c in inner:
+                yield c
+            started_during_first.append(len(svc.started))
+
+        out.stream.chunks = watch()
+        return out
+
+    svc.tts = tts
+    a = _speaker(svc, call, "Dün akşam başladı, sonra göğsüme yayıldı ve çok terledim doktor bey.")
+    a.release()
+    await asyncio.wait_for(a.task, 10)
+    assert len(svc.started) == 2
+    assert started_during_first[0] == 2          # the second request was already open when the first ended
+    assert call.audio_link.lines[0]["bytes"] == 2 * 30 * 960
