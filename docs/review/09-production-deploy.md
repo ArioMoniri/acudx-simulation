@@ -377,3 +377,47 @@ Defects and observations:
 | Two cold starts stuck in Lambda `booting` on the only 80 GB offer (gpu_1x_h100_pcie, us-west-3), 16 min each, then the same offer picked again | the boot wait only knew the 900 s budget, and nothing remembered a failed offer | a boot with no progress (no IP, no status change) for `GPU_BOOT_STUCK_S` (480 s) is terminated (`boot_stuck`); a boot failure or a refused launch puts that (type, region) on a cooldown (`launch_cooldown_minutes`, 60, in SQLite, so a restart keeps it) and the same launch tries the next offer (another region, another type, the 40 GB fallback), up to three offers. The admin GPU section lists the skipped offers with the minutes left and can clear them; the policy form edits the cooldown (`server/providers/gpu_worker.py`, `test_gpu_launch_cooldown.py`) |
 | Warm-worker TR call 54.9 s from the click to live video | the case-start ladder prepared the case portrait only after the image edit server answered; on the 40 GB fallback card that server has no room (and on a cold worker it starts last), so the portrait was prepared on the click, with the slow face detector of 5a9d68b; the call tile's capabilities read ran the voice, runner and image probes one after another inside a 6 s budget, and once the machine answered it still polled every 15 s | the portrait is prepared as soon as the runner answers (`state_sync.run_ladder`, `test_the_case_portrait_is_prepared_at_case_start_even_when_the_edit_server_is_not_up`); the probes run at once; the tile re-reads every 3 s once the machine is up (`workerWake.ts`). The fast face detector and the cached-portrait answer outside the queue (after 5a9d68b) also reach production with the next redeploy. Not re-measured on a live worker |
 | First typed reply 12.3 s (fever case) | the question, asked as the case opened, waited for the kernel (5.9 s) and history.presenting (7.4 s) before the persona; guard and persona ran one after the other; with guidance the tutor ran after the persona | a typed question waits at most 1 s for a history layer still being written; the patient answers from what is known and is unsure of details the story lacks; the layer keeps being written, is marked seen once ready, and later layers read what the patient said; the persona starts next to the guard (kept only for the same prompt); the tutor starts right after the guard. Local gateway, Claude, fever case: 15.3 s before, 2.1 to 3.2 s after over five cases, 2.9 to 3.2 s with guidance on (`server/interview/routes.py`, `test_interview.py`) |
+
+### Redeploy 2026-10-22 to 0c2a6bc (instance replaced, EIP kept)
+
+The user approved the release candidate `0c2a6bc`. On top of `5a9d68b` it adds:
+- Turkish streamed voice and face detection under 0.2 s.
+- History prefetch and a guard deadline.
+- The worker STT fix.
+- A GPU boot cooldown: a stuck boot is terminated at 480 s and its (type, region) skipped for
+  60 min.
+- The case portrait prepared at case start, and the first typed reply in 2.1 to 3.2 s.
+
+The server suite passed on it: 2714 passed, 3 skipped.
+
+Steps:
+- Lambda had no instance at all.
+- `i-0197847ad9f869851` was terminated. The EIP 63.178.127.100, the security group and the key
+  pair were kept.
+- The stale operator token and the SSM `operator_token` / `retrieval_code` were cleared.
+- `provision.sh` launched `i-075f173b727d1bfd3` (t3.large, eu-central-1). It was ready in about
+  7.5 min (10:18 to 10:26 UTC), with both keys sent.
+
+| Check | Result |
+|---|---|
+| `verify-roles.mjs` `START_CASE=1 FINALIZE=1` | PASS, 8 accounts, 80 checks |
+| 8 roles land on their panels; UI and API gates | PASS |
+| `/idp/admin/` 404, `http://` 308 to https, anonymous case start 401, anonymous mint-code 401, reused provision token 410 | PASS |
+| Student fever case (EN, API) | PASS: playable after 4.2 s; first typed reply 2.8 s after the question, in character (anthropic, claude-opus-5-5); it was 12.3 s on 5a9d68b |
+| TR stat lab (septic shock, UI) | PASS: Laktat landed in 45 s real time |
+| Rehberlik cited card (septic shock, TR) | PASS: NICE NG253 and SSC (SCCM/ESICM) 2021 |
+| Cold GPU launch picks a working offer | PASS: no 80 GB capacity was listed, so the prewarm at case start took gpu_1x_a100_sxm4 in us-east-1. Launch to ready took 5.6 min (10:26:47 to 10:32:22), with no stuck boot, so the cooldown was not needed |
+| Dictation TR (UI, fake microphone playing a WAV from the site's own TTS) | PASS: "Şimdi baskı tarzında bir ağrı var, iki saattir sürüyor." in the composer (gpu-worker, faster-whisper-large-v3-turbo, 757 ms for 7 s); the first word was cut by the looping fake microphone |
+| Dictation EN (same method) | PASS: "Have a crushing pain in my chest that started two hours ago." (771 ms); repeated because the fake microphone loops the clip |
+| Warm TR video call (migraine) | PASS: click to live video 38.8 s; speech start 3.8 / 3.9 s; replies in character |
+| GPU stop; no `acudx-worker-*` left | PASS: the worker was stopped by `/bootstrap/operator/gpu/stop`; afterwards Lambda listed no instance at all. GPU spend that day was 0.36 USD |
+
+Defects and observations:
+- **Lips ahead of the voice on the warm TR call:** −520 ms and −320 ms, against the ±80 ms claimed
+  from the other session's 2× H100 SXM5 runs. This worker was a 40 GB A100.
+- **Warm click to live video was 38.8 s, not 10 to 13 s.** It was 55 s on 5a9d68b.
+- **TR speech start was 3.8 to 3.9 s,** against the claimed 2.2 to 3.0 s on 2× H100 SXM5.
+- **TTS for dictation inputs is not streamed:** 20.5 s for the first TR line on a cold voice and
+  7.7 s for EN.
+- **No 80 GB capacity on Lambda during the run,** so the 80 GB preference and the H100 SXM5 path
+  were not exercised.
