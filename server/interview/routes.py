@@ -274,6 +274,17 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
                                       chief_complaint=complaint)
     timings.mark("guard_ms")
     locale = _locale(body, st, decision)
+    tutor_task: Optional[asyncio.Future[Any]] = None
+    if body.guidance and gateway is not None and not (
+            decision.label == "unsafe" and decision.reason in ("self_harm_disclosure", "abuse_disclosure")):
+        # Beside the history wait and the persona, not after them: it reads the question (the reply adds
+        # little to what to do next), so the attending's actions no longer add 2 s to the reply.
+        _tr = _transcript(st)
+        asked = {t.get("intent") for t in _tr if t.get("intent")}
+        if decision.intent:
+            asked.add(decision.intent)
+        tutor_task = asyncio.ensure_future(T.suggest(gateway, st, patient_view(st, locale=locale), _tr + [
+            {"role": "doctor", "text": message}], asked=asked, locale=locale))
     history_task = None
     history_meta: dict[str, Any] = {}
     cluster = intent_cluster(decision.intent) if decision.label == "clinical" and decision.intent else None
@@ -313,7 +324,6 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
     meta: dict[str, Any] = {"guard_source": decision.source, "guard_model": decision.model,
                             "guard_rule": decision.rule}
     speaker = None
-    tutor_task: Optional[asyncio.Future[Any]] = None
     if decision.label == "unsafe" and decision.reason in ("self_harm_disclosure", "abuse_disclosure"):
         # The Safety Interceptor breaks character with real support resources; no model call.
         if speculative is not None:
@@ -365,13 +375,6 @@ async def interview(thread_id: str, body: InterviewRequest, request: Request,
                 speaker = _call_speaker(request, call, persona=persona, timings=timings, gate=scrub)
             if speaker is not None:
                 speaker.release()
-        if body.guidance:
-            # Beside the persona, not after it (it reads the question; the reply adds little to what to do next).
-            asked = {t.get("intent") for t in transcript if t.get("intent")}
-            if decision.intent:
-                asked.add(decision.intent)
-            tutor_task = asyncio.ensure_future(T.suggest(gateway, st, view, transcript + [
-                {"role": "doctor", "text": message}], asked=asked, locale=locale))
         try:
             res = await persona.result() if persona is not None else await gateway.chat(
                 msgs, task="patient", max_tokens=PERSONA_MAX_TOKENS)
