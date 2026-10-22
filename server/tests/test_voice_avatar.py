@@ -348,7 +348,8 @@ def _call_flow(c, runner, worker, runner_sockets):
     assert c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "x"}, headers=USER).status_code == 409
     r = c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"}, headers=USER)
     assert r.status_code == 200 and r.json()["sdp"] == "v=0\r\nanswer"
-    assert runner.offers[0] == {"sdp": "v=0\r\noffer", "type": "offer", "avatar": "acudx-p04", "tuning": {"av_shift_ms": 160}}
+    assert runner.offers[0] == {"sdp": "v=0\r\noffer", "type": "offer", "avatar": "acudx-p04",
+                                "tuning": {"av_shift_ms": 160, "probe": True}}
     r = c.post("/v1/voice/avatar/speak", json={"session_id": sid, "text": "It started two hours ago."}, headers=USER)
     assert r.status_code == 200, r.text
     body = r.json()
@@ -715,7 +716,7 @@ def test_offer_carries_the_gateway_tuning(tmp_path, runner_sockets):
         sid = c.post("/v1/voice/avatar/session", json=SESSION, headers=USER).json()["session_id"]
         assert c.post("/v1/voice/avatar/offer", json={"session_id": sid, "sdp": "v=0\r\noffer"},
                       headers=USER).status_code == 200
-    assert runner.offers[0]["tuning"] == {"batch_size": 4, "ahead_frames": 10, "av_shift_ms": 240}
+    assert runner.offers[0]["tuning"] == {"batch_size": 4, "ahead_frames": 10, "av_shift_ms": 240, "probe": True}
 
 
 def test_speak_reports_a_broken_runner_stream(tmp_path, monkeypatch):

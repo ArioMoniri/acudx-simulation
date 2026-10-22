@@ -34,7 +34,7 @@ def _pieces(names: set[str], ns: dict) -> dict:
 
 class _Track:
     def __init__(self, offsets: list[float]):
-        self._acudx_offsets = collections.deque(offsets, maxlen=100)
+        self._acudx_offsets = collections.deque(((time.time(), o) for o in offsets), maxlen=1200)
 
 
 def _session(audio_offsets: list[float], video_offsets: list[float]):
@@ -47,9 +47,9 @@ def _session(audio_offsets: list[float], video_offsets: list[float]):
 
 
 def _ns(tracks, auto: bool = True, receiver: bool = False) -> dict:
-    ns = {"collections": collections, "np": np, "time": time, "AUTO_SYNC": auto, "MAX_SHIFT_FRAMES": 25, "RECEIVER_SYNC": receiver,
+    ns = {"collections": collections, "np": np, "time": time, "AUTO_SYNC": auto, "MAX_SHIFT_FRAMES": 25, "RECEIVER_SYNC": receiver, "SYNC_WINDOW_S": 20.0,
           "_tracks": lambda sess: tracks}
-    return _pieces({"_median", "sender_sync", "_install_av_shift"}, ns)
+    return _pieces({"_low", "sender_sync", "_install_av_shift"}, ns)
 
 
 def test_the_sender_skew_reads_the_lip_offset_the_browser_will_see():
@@ -73,6 +73,28 @@ def test_auto_sync_sets_the_video_delay_from_the_skew_with_the_right_sign():
     assert st["n"] == 10                     # 400 ms of video delay: video k - 10 with audio 2k
     assert shown[-1] == 25 * 12 - 1 - 10
     assert abs(ns["sender_sync"](sess)["lag_ms"]) <= 20
+
+
+def test_a_few_seconds_of_sender_lag_do_not_move_the_delay():
+    # Live 2026-10-22 (A100, sync probe): the video sender fell 400 ms behind for about 10 s at call start; followed
+    # per second it set a 440 ms audio delay and the lips played 360 ms early: the browser's clock kept the steady
+    # offset. The delay follows the frames sent on schedule (the 10th percentile over 20 s).
+    now = time.time()
+    sess, tracks, _, _ = _session([], [])
+    audio, video = tracks
+    audio._acudx_offsets.extend((now - 20 + k * 0.02, 100.0) for k in range(1000))
+    video._acudx_offsets.extend((now - 20 + k * 0.04, 100.0 if k < 250 else 100.4) for k in range(500))
+    ns = _ns(tracks)
+    ns["_install_av_shift"](sess, 0)
+    for k in range(25):
+        sess.output.push_video_frame(k)
+    assert sess._acudx_shift["n"] == 0                 # half the window late: the frames sent on schedule count
+    old = [(t - 30, o) for t, o in video._acudx_offsets]
+    video._acudx_offsets.clear()
+    video._acudx_offsets.extend(old + [(now - 1, 100.4)] * 30)   # older than the window: only the persistent lag
+    for k in range(25):
+        sess.output.push_video_frame(k)
+    assert sess._acudx_shift["n"] == -10               # persistent: the audio waits 400 ms
 
 
 def test_lips_late_at_the_sender_delay_the_audio_on_silent_frames_only():

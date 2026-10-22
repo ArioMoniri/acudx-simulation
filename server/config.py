@@ -265,6 +265,10 @@ class Settings(BaseSettings):
     # then adds it to its sender skew (docs/architecture/18 6.3.13). Off: on healthy lines it read +14 to +63 ms
     # while the lip meter read 0, and -1837 ms while the runner stalled; it is kept as telemetry.
     avatar_receiver_sync: bool = False
+    # The runner marks each frame with the loudness of its own audio (an 8 x 8 block in the bottom-right corner,
+    # hidden by the tile), and the tile measures the lip offset from it on every line whatever the face: the mouth
+    # box meter did not lock on two of three portraits on the A100 pass (docs/architecture/18 6.3.13).
+    avatar_sync_probe: bool = True
     # Silence streamed into a call right after the offer, before the first patient line, so the
     # runner's speech path and the browser's jitter buffer have settled when the first real line
     # plays (the first two lines swung up to 420 ms either way; docs/architecture/18 6.3.8). 0 = off.

@@ -218,7 +218,7 @@ async def ensure_avatar(client: httpx.AsyncClient, worker: WorkerAvatar, avatar_
 
 
 async def offer(client: httpx.AsyncClient, worker: WorkerAvatar, *, sdp: str, sdp_type: str,
-                avatar_id: str, tuning: dict[str, int] | None = None) -> dict[str, Any]:
+                avatar_id: str, tuning: dict[str, Any] | None = None) -> dict[str, Any]:
     payload: dict[str, Any] = {"sdp": sdp, "type": sdp_type, "avatar": avatar_id}
     if tuning:
         payload["tuning"] = tuning

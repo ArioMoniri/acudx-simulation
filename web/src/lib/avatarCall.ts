@@ -272,24 +272,6 @@ export function crossCorrelationLag(a: number[], b: number[], stepMs: number, ma
 }
 
 /**
- * Subtract a centred moving average (`windowSamples` wide): what is left is the syllable-rate movement
- * (3 to 8 Hz at 40 ms a sample), without the slow changes that are not speech: a crossfade to another
- * picture, the idle head loop's light on the lips, breathing.
- */
-export function highPass(x: number[], windowSamples = 11): number[] {
-  const half = Math.floor(windowSamples / 2);
-  return x.map((v, i) => {
-    let s = 0;
-    let n = 0;
-    for (let j = Math.max(0, i - half); j <= Math.min(x.length - 1, i + half); j++) {
-      s += x[j];
-      n++;
-    }
-    return v - s / n;
-  });
-}
-
-/**
  * The lag (ms) and the normalised correlation at it (how much the lag can be trusted). `absolute`: the lag
  * of the strongest correlation of either sign, scored by its size. For the mouth box a portrait whose teeth
  * show when the mouth opens gets brighter, not darker, as it speaks (live 2026-10-22, A100 pass: scores of
@@ -617,7 +599,7 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
       // mouth opens. The window is the whole voice plus 0.8 s either side.
       const win = samples.filter((s) => s.t >= (span.first ?? startAt) - 800 && s.t <= (span.last ?? t) + 800);
       const { rms, open, probe } = resample(win, 40);
-      const cc = crossCorrelation(highPass(rms), highPass(open), 40, 600, true);
+      const cc = crossCorrelation(rms, open, 40, 600, true);
       // The runner's sync probe, when on: louder audio = a brighter block, so a plain correlation.
       const probed = Math.max(...probe) - Math.min(...probe) > 20 ? crossCorrelation(rms, probe, 40) : null;
       if (probed) {

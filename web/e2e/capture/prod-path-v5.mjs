@@ -216,11 +216,11 @@ for (let i = 0; i < Math.min(LINES, UI.questions.length); i++) {
   await page.waitForFunction((n) => window.__acudxAvatarCall.lines.length > n
     && window.__acudxAvatarCall.lines.at(-1).lipLagMs != null, before, { timeout: 60_000 }).catch(() => undefined);
   const measure = await page.evaluate(() => window.__acudxAvatarCall.lines.at(-1));
-  // The meter's raw series for this line (page clock ms, audio RMS, mouth-box darkness), for re-analysis.
+  // The meter's raw series for this line (page clock ms, audio RMS, mouth-box darkness, probe block), for re-analysis.
   const rawSamples = await page.evaluate((agoMs) => {
     const since = performance.now() - agoMs;
     return window.__acudxAvatarCall.samples.filter((s) => s.t >= since)
-      .map((s) => [Math.round(s.t), Number(s.rms.toFixed(4)), Number((s.open ?? 0).toFixed(2))]);
+      .map((s) => [Math.round(s.t), Number(s.rms.toFixed(4)), Number((s.open ?? 0).toFixed(2)), Number((s.probe ?? 0).toFixed(1))]);
   }, Date.now() - sentAt);
   fs.writeFileSync(path.join(OUT, `line-${i + 1}-samples.json`), JSON.stringify(rawSamples));
   const runnerRows = await stopSampler();

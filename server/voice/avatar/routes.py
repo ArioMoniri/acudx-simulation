@@ -136,15 +136,17 @@ def _max_calls(svc: VoiceService) -> int:
     return int(getattr(svc.settings, "avatar_max_calls_per_worker", 2) or 2)
 
 
-def runner_tuning(settings: Any) -> dict[str, int]:
+def runner_tuning(settings: Any) -> dict[str, Any]:
     """The per-call runner tuning the gateway's settings pin (unset values keep the runner default)."""
     names = {"batch_size": "avatar_batch_size", "ahead_frames": "avatar_ahead_frames",
              "lookahead_frames": "avatar_lookahead_frames", "av_shift_ms": "avatar_av_shift_ms"}
-    out: dict[str, int] = {}
+    out: dict[str, Any] = {}
     for key, attr in names.items():
         v = getattr(settings, attr, None)
         if isinstance(v, int) and not isinstance(v, bool):
             out[key] = v
+    if getattr(settings, "avatar_sync_probe", False) is True:
+        out["probe"] = True
     return out
 
 

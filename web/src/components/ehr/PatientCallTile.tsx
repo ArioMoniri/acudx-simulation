@@ -748,8 +748,10 @@ export function PatientCallTile({
             ref={videoRef}
             // Transparent (not display:none) while connecting: a hidden element never presents
             // frames, so requestVideoFrameCallback would not report the first frame.
+            // The clip hides the runner's 8 x 8 sync probe in the bottom-right corner (lib/avatarCall.ts reads
+            // it from the decoded frame); object-cover usually crops it already.
             className={cn(
-              "absolute inset-0 h-full w-full object-cover",
+              "absolute inset-0 h-full w-full object-cover [clip-path:inset(0_2%_2%_0)]",
               !showRealtimeVideo && "pointer-events-none opacity-[0.01]",
             )}
             data-testid="patient-live-video"

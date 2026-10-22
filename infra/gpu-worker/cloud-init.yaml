@@ -2171,7 +2171,11 @@ write_files:
       import aiortc.rtcrtpsender as _aiortc_sender  # noqa: E402
 
       _orig_next_encoded = _aiortc_sender.RTCRtpSender._next_encoded_frame
-      SYNC_WINDOW = int(os.environ.get("AVATAR_SYNC_WINDOW", "100"))
+      # The browser maps RTP to its clock by a regression over the last sender reports (about 20 of them, one a
+      # second), so a send-time jump of a few seconds barely moves it. The median over as long a window follows
+      # the same clock: live 2026-10-22 (A100) a 10 s video-sender lag at call start, followed per second, put an
+      # audio delay of 440 ms on the first line and the lips 360 ms early (sync probe).
+      SYNC_WINDOW_S = float(os.environ.get("AVATAR_SYNC_WINDOW_S", "20"))
 
 
       async def _next_encoded(self, codec):
@@ -2181,26 +2185,31 @@ write_files:
               rate = 48000.0 if tr.kind == "audio" else 90000.0
               dq = tr.__dict__.get("_acudx_offsets")
               if dq is None:
-                  dq = tr.__dict__.setdefault("_acudx_offsets", collections.deque(maxlen=SYNC_WINDOW))
-              dq.append(time.time() - enc.timestamp / rate)
+                  dq = tr.__dict__.setdefault("_acudx_offsets", collections.deque(maxlen=int(SYNC_WINDOW_S * 60)))
+              now = time.time()
+              dq.append((now, now - enc.timestamp / rate))
           return enc
 
 
       _aiortc_sender.RTCRtpSender._next_encoded_frame = _next_encoded
 
 
-      def _median(xs) -> float | None:
+      def _low(xs) -> float | None:
+          """The 10th percentile: the offset of the frames sent on schedule. A track that falls behind sends late for
+          a while; the browser's RTP clock keeps its fit through such a stretch (live 2026-10-22 the lips followed
+          the steady offset, not the late one), so the steady offset is the one to cancel."""
           v = sorted(xs)
-          return v[len(v) // 2] if v else None
+          return v[len(v) // 10] if v else None
 
 
       def sender_sync(sess) -> dict | None:
-          """{audio_ms, video_ms (each track's send-time offset, median of the last SYNC_WINDOW frames, the
+          """{audio_ms, video_ms (each track's send-time offset, 10th percentile over the last SYNC_WINDOW_S s, the
           audio one relative to the video one), delay_ms (the video delay line), lag_ms (the lip offset the
           browser will see from the sender alone, positive = lips late)}; None before both tracks sent."""
           audio, video = _tracks(sess)
-          oa = _median(getattr(audio, "_acudx_offsets", None) or [])
-          ov = _median(getattr(video, "_acudx_offsets", None) or [])
+          since = time.time() - SYNC_WINDOW_S
+          oa = _low([o for t, o in list(getattr(audio, "_acudx_offsets", None) or []) if t >= since])
+          ov = _low([o for t, o in list(getattr(video, "_acudx_offsets", None) or []) if t >= since])
           if oa is None or ov is None:
               return None
           st = getattr(sess, "_acudx_shift", None) or {}
@@ -3515,9 +3524,13 @@ write_files:
           lag = params.get("browser_lag_ms")
           if isinstance(lag, (int, float)) and st["auto"]:
               # Inside 40 ms nothing moves (the meter's own noise); half the residual per line otherwise.
-              # At most 120 ms per line: one wrong reading must not throw the call off.
+              # Half the residual and at most 120 ms per line: one wrong reading must not throw the call off. A
+              # reading the browser trusts (score 0.7 or more: the sync probe) moves three quarters, up to 240 ms.
+              score = params.get("score")
+              sure = isinstance(score, (int, float)) and float(score) >= 0.7
               if abs(float(lag)) > 40.0:
-                  step = max(-120.0, min(120.0, 0.5 * float(lag)))
+                  cap = 240.0 if sure else 120.0
+                  step = max(-cap, min(cap, (0.75 if sure else 0.5) * float(lag)))
                   st["bias_ms"] = max(-300.0, min(300.0, float(st["bias_ms"]) + step))
           sess._acudx_shift_ms = int(st["n"]) * 40
           if isinstance(getattr(sess, "_acudx_tuning", None), dict):
