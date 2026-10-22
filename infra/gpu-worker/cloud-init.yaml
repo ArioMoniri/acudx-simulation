@@ -3479,8 +3479,10 @@ write_files:
           lag = params.get("browser_lag_ms")
           if isinstance(lag, (int, float)) and st["auto"]:
               # Inside 40 ms nothing moves (the meter's own noise); half the residual per line otherwise.
+              # At most 120 ms per line: one wrong reading must not throw the call off.
               if abs(float(lag)) > 40.0:
-                  st["bias_ms"] = max(-300.0, min(300.0, float(st["bias_ms"]) + 0.5 * float(lag)))
+                  step = max(-120.0, min(120.0, 0.5 * float(lag)))
+                  st["bias_ms"] = max(-300.0, min(300.0, float(st["bias_ms"]) + step))
           sess._acudx_shift_ms = int(st["n"]) * 40
           if isinstance(getattr(sess, "_acudx_tuning", None), dict):
               sess._acudx_tuning["av_shift_ms"] = sess._acudx_shift_ms
@@ -3754,6 +3756,14 @@ write_files:
               PREP_QUEUE.acquire(PREP_PRIORITY_LADDER)
               try:
                   _detect_fixed(np.full((MAX_FRAME_H, 700, 3), 128, dtype=np.uint8), os.path.join(AVATAR_ROOT, ".warm.png"))
+                  # The VAE at the preparation's batch shapes and the face parser: the first preparation on a
+                  # fresh A100 runner took 9 to 10 s against 6 s for the next ones (live 2026-10-22).
+                  grey = np.full((256, 256, 3), 128, dtype=np.uint8)
+                  vae_latents([grey] * max(2, VAE_BATCH))
+                  vae_latents([grey] * (IDLE_FRAMES % VAE_BATCH or 2))
+                  frame = np.full((MAX_FRAME_H, 700, 3), 128, dtype=np.uint8)
+                  with torch.no_grad():
+                      get_image_prepare_material(frame, [200, 200, 500, 560], fp=FACE_PARSER, mode="jaw")
               except Exception as exc:  # noqa: BLE001 - a failed warm-up only costs the first preparation
                   log.warning("detector warm-up failed: %s", type(exc).__name__)
               finally:

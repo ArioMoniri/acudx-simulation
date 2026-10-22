@@ -578,6 +578,8 @@ LIP_TOLERANCE_MS = 40
 # overlapping replies, which are skipped now (lip_overlap).
 LIP_MIN_SCORE = 0.25
 LIP_GAIN = 0.5
+# The browser meter searches +-600 ms in 40 ms steps; a lag this far out is the edge of the search, not a peak.
+LIP_EDGE_MS = 560
 
 
 def next_av_shift(current: int, lip_lag_ms: float, *, tolerance_ms: int = LIP_TOLERANCE_MS,
@@ -611,6 +613,10 @@ async def lipsync(request: Request, body: LipLagBody, user: Principal = Depends(
         return {"av_shift_ms": current, "changed": False, "why": "overlapping_lines"}
     if body.score is not None and body.score < LIP_MIN_SCORE:
         return {"av_shift_ms": current, "changed": False, "why": "weak_correlation"}
+    if abs(body.lip_lag_ms) >= LIP_EDGE_MS:
+        # The best lag at the end of the meter's +-600 ms search is no peak at all (live 2026-10-22, A100: +600 ms
+        # at score 0.32 on a portrait the meter could not lock on moved the delay 300 ms the wrong way).
+        return {"av_shift_ms": current, "changed": False, "why": "edge_of_search"}
     if s.metrics.get("auto_sync"):
         # The runner sets the delay from its measured send-time skew once a second (the sign comes from the
         # measurement); the browser's offset only trims the residual the sender cannot see (decode, render).

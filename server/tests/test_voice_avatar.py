@@ -799,6 +799,9 @@ def test_a_runner_with_auto_sync_gets_the_browser_measure_as_its_residual(tmp_pa
         weak = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 500, "score": 0.1},
                       headers=USER).json()
         assert weak["why"] == "weak_correlation" and len(runner.tunings) == 1
+        edge = c.post("/v1/voice/avatar/lipsync", json={"session_id": sid, "lip_lag_ms": 600, "score": 0.32},
+                      headers=USER).json()
+        assert edge["why"] == "edge_of_search" and len(runner.tunings) == 1   # no peak: the delay stays
         m = c.get("/v1/voice/avatar/metrics", params={"session_id": sid}, headers=USER).json()["metrics"]
         assert m["auto_sync"] is True and m["av_shift_ms"] == 400 and m["lip_lags"][0]["sync"]["lag_ms"] == 0.0
 

@@ -265,8 +265,31 @@ export function crossCorrelationLag(a: number[], b: number[], stepMs: number, ma
   return crossCorrelation(a, b, stepMs, maxLagMs)?.lagMs ?? null;
 }
 
-/** The lag (ms) and the normalised correlation at it (how much the lag can be trusted). */
-export function crossCorrelation(a: number[], b: number[], stepMs: number, maxLagMs = 600):
+/**
+ * Subtract a centred moving average (`windowSamples` wide): what is left is the syllable-rate movement
+ * (3 to 8 Hz at 40 ms a sample), without the slow changes that are not speech: a crossfade to another
+ * picture, the idle head loop's light on the lips, breathing.
+ */
+export function highPass(x: number[], windowSamples = 11): number[] {
+  const half = Math.floor(windowSamples / 2);
+  return x.map((v, i) => {
+    let s = 0;
+    let n = 0;
+    for (let j = Math.max(0, i - half); j <= Math.min(x.length - 1, i + half); j++) {
+      s += x[j];
+      n++;
+    }
+    return v - s / n;
+  });
+}
+
+/**
+ * The lag (ms) and the normalised correlation at it (how much the lag can be trusted). `absolute`: the lag
+ * of the strongest correlation of either sign, scored by its size. For the mouth box a portrait whose teeth
+ * show when the mouth opens gets brighter, not darker, as it speaks (live 2026-10-22, A100 pass: scores of
+ * -0.05 to -0.24 on every line of one portrait, so its offsets were never measured).
+ */
+export function crossCorrelation(a: number[], b: number[], stepMs: number, maxLagMs = 600, absolute = false):
   { lagMs: number; score: number } | null {
   const n = Math.min(a.length, b.length);
   if (n < 8) return null;
@@ -288,7 +311,8 @@ export function crossCorrelation(a: number[], b: number[], stepMs: number, maxLa
       if (j < 0 || j >= n) continue;
       s += da[i] * db[j];
     }
-    const score = s / (sa * sb);
+    const raw = s / (sa * sb);
+    const score = absolute ? Math.abs(raw) : raw;
     if (score > bestScore) {
       bestScore = score;
       best = lag;
@@ -571,7 +595,7 @@ export async function startAvatarCall(opts: StartAvatarCallOptions): Promise<Ava
       // mouth opens. The window is the whole voice plus 0.8 s either side.
       const win = samples.filter((s) => s.t >= (span.first ?? startAt) - 800 && s.t <= (span.last ?? t) + 800);
       const { rms, open } = resample(win, 40);
-      const cc = crossCorrelation(rms, open, 40);
+      const cc = crossCorrelation(highPass(rms), highPass(open), 40, 600, true);
       if (cc) {
         line.lipLagMs = cc.lagMs;
         line.lipScore = cc.score;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { crossCorrelation, crossCorrelationLag, mouthRegion, resample, selectedIcePath, sessionBody, utteranceSpan, waitForIce, playoutSample, receiverLagMs } from "@/lib/avatarCall";
+import { crossCorrelation, crossCorrelationLag, mouthRegion, resample, selectedIcePath, sessionBody, utteranceSpan, waitForIce, playoutSample, receiverLagMs, highPass } from "@/lib/avatarCall";
 import { createVoiceApi } from "@/lib/voiceApi";
 
 describe("selectedIcePath", () => {
@@ -242,5 +242,27 @@ describe("receiverLagMs", () => {
     expect(receiverLagMs(prev, cur)).toBe(150);
     expect(receiverLagMs(null, cur)).toBeNull();
     expect(receiverLagMs(cur, cur)).toBeNull();
+  });
+});
+
+describe("the lip meter on any portrait", () => {
+  const env = (n: number, shift = 0) =>
+    Array.from({ length: n }, (_, i) => Math.max(0, Math.sin(((i - shift) / (5 + ((i - shift + 40) % 13) / 3)) * Math.PI)));
+
+  it("finds the lag of a mouth box that gets brighter as the mouth opens (teeth)", () => {
+    const voice = env(200);
+    const brighter = env(200, 3).map((v) => 1 - v);
+    expect(crossCorrelation(voice, brighter, 40)!.score).toBeLessThan(0.3);   // the old meter: no lock
+    const cc = crossCorrelation(highPass(voice), highPass(brighter), 40, 600, true);
+    expect(cc?.lagMs).toBe(120);
+    expect(cc!.score).toBeGreaterThan(0.6);
+  });
+
+  it("ignores a slow change in the mouth box (a crossfade to another picture mid-line)", () => {
+    const voice = env(200);
+    const open = env(200, -2).map((v, i) => 0.5 * v + (i > 100 ? 2 : 0));
+    const cc = crossCorrelation(highPass(voice), highPass(open), 40, 600, true);
+    expect(cc?.lagMs).toBe(-80);
+    expect(cc!.score).toBeGreaterThan(0.5);
   });
 });
